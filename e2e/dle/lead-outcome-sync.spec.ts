@@ -748,6 +748,15 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     await expect(
       page.getByTestId(`dle-lead-evidence-coverage-${rentalSeed.leadId}`),
     ).toContainText('not lease readiness, inventory let status, or distribution payout readiness');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-label-${rentalSeed.leadId}`),
+    ).toContainText('1/3 evidence accepted');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-missing-${rentalSeed.leadId}`),
+    ).toContainText('Missing: Deposit readiness, Lease review');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-row-guardrail-${rentalSeed.leadId}`),
+    ).toContainText('not lease readiness');
 
     const reviewedRentalArtifacts = await db!
       .select()

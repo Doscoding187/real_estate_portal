@@ -108,6 +108,18 @@ export type DevelopmentEvidenceCoverageSummary = {
   guardrail: string;
 };
 
+export type LeadEvidenceCoverageSummary = {
+  leadId: number;
+  transactionType: 'for_rent' | 'auction';
+  title: string;
+  statusLabel: string;
+  acceptedCount: number;
+  requiredCount: number;
+  acceptedRoles: RequiredEvidenceRole[];
+  missingRoles: RequiredEvidenceRole[];
+  guardrail: string;
+};
+
 export function isRentalEvidenceRole(role: string): role is RentalEvidenceRole {
   return (RENTAL_EVIDENCE_ROLES as readonly string[]).includes(role);
 }
@@ -221,6 +233,45 @@ export function buildDevelopmentEvidenceCoverageSummary(params: {
     requiredRoles,
     acceptedRoleCounts,
     missingRoleCounts,
+    guardrail,
+  };
+}
+
+export function buildLeadEvidenceCoverageSummary(params: {
+  leadId: number;
+  transactionType: 'for_rent' | 'auction';
+  acceptedRoles: string[];
+}): LeadEvidenceCoverageSummary {
+  const requiredRoles = getRequiredEvidenceRolesForTransaction(params.transactionType);
+  const accepted = new Set(params.acceptedRoles);
+  const acceptedRoles = requiredRoles.filter(role => accepted.has(role.role));
+  const missingRoles = requiredRoles.filter(role => !accepted.has(role.role));
+  const title =
+    params.transactionType === 'for_rent'
+      ? 'Rental evidence coverage'
+      : 'Auction evidence coverage';
+  const statusLabel =
+    acceptedRoles.length >= requiredRoles.length && requiredRoles.length > 0
+      ? params.transactionType === 'for_rent'
+        ? 'Rental evidence roles accepted'
+        : 'Auction evidence roles accepted'
+      : acceptedRoles.length > 0
+        ? 'Evidence partially accepted'
+        : 'Evidence not accepted yet';
+  const guardrail =
+    params.transactionType === 'for_rent'
+      ? 'Accepted evidence coverage is not lease readiness, inventory let status, or distribution payout readiness.'
+      : 'Accepted evidence coverage is not bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.';
+
+  return {
+    leadId: params.leadId,
+    transactionType: params.transactionType,
+    title,
+    statusLabel,
+    acceptedCount: acceptedRoles.length,
+    requiredCount: requiredRoles.length,
+    acceptedRoles,
+    missingRoles,
     guardrail,
   };
 }
@@ -354,6 +405,74 @@ export async function listLeadEvidenceArtifacts(params: {
 
   return {
     items: getRows(result).map(normalizeArtifactRow),
+  };
+}
+
+export async function listLeadEvidenceCoverageSummaries(params: {
+  developerId: number;
+  leadIds: number[];
+}): Promise<{ items: LeadEvidenceCoverageSummary[] }> {
+  const leadIds = Array.from(
+    new Set(
+      params.leadIds
+        .map(id => Number(id))
+        .filter(id => Number.isFinite(id) && id > 0),
+    ),
+  ).slice(0, 50);
+
+  if (leadIds.length === 0) return { items: [] };
+
+  const leadResult = await db.execute(sql`
+    select
+      l.id as leadId,
+      d.transaction_type as transactionType
+    from leads l
+    inner join developments d on d.id = l.developmentId
+    where l.id in (${sql.join(leadIds, sql`, `)})
+      and d.developer_id = ${params.developerId}
+      and d.transaction_type in ('for_rent', 'auction')
+    order by l.id
+  `);
+
+  const leadRows = getRows(leadResult)
+    .map(row => ({
+      leadId: Number(row.leadId),
+      transactionType: String(row.transactionType || '') as 'for_rent' | 'auction',
+    }))
+    .filter(
+      row =>
+        Number.isFinite(row.leadId) &&
+        row.leadId > 0 &&
+        (row.transactionType === 'for_rent' || row.transactionType === 'auction'),
+    );
+
+  if (leadRows.length === 0) return { items: [] };
+
+  const ownedLeadIds = leadRows.map(row => row.leadId);
+  const acceptedArtifactsResult = await db.execute(sql`
+    select lead_id as leadId, artifact_role as artifactRole
+    from dle_evidence_artifacts
+    where lead_id in (${sql.join(ownedLeadIds, sql`, `)})
+      and status = 'accepted'
+  `);
+  const acceptedByLead = new Map<number, Set<string>>();
+  for (const lead of leadRows) {
+    acceptedByLead.set(lead.leadId, new Set());
+  }
+  for (const row of getRows(acceptedArtifactsResult)) {
+    const leadId = Number(row.leadId);
+    if (!acceptedByLead.has(leadId)) continue;
+    acceptedByLead.get(leadId)!.add(String(row.artifactRole || ''));
+  }
+
+  return {
+    items: leadRows.map(lead =>
+      buildLeadEvidenceCoverageSummary({
+        leadId: lead.leadId,
+        transactionType: lead.transactionType,
+        acceptedRoles: Array.from(acceptedByLead.get(lead.leadId) || []),
+      }),
+    ),
   };
 }
 

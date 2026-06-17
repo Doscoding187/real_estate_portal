@@ -6885,3 +6885,53 @@ Next recommended slice:
   still without readiness automation.
 Commit hash/tag: Included in `feat(dle): show evidence coverage dashboard`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Lead Row Evidence Coverage Labels
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Surface accepted/missing evidence coverage on Rental/Auction lead queue rows before opening
+lead detail, without introducing lease/bidder readiness automation.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- server/developerRouter.ts
+- client/src/components/developer/LeadsManager.tsx
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/evidence/2026-06-07/*.png
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 21 tests.
+- `pnpm run check` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1` passed with 4 tests.
+- `git diff --check` passed.
+Functional proof:
+- `buildLeadEvidenceCoverageSummary` now derives lead-row coverage labels from accepted required
+  Rental/Auction evidence roles.
+- `developer.listLeadEvidenceCoverageSummaries` returns bulk, read-only summaries only for
+  developer-owned Rental/Auction lead IDs.
+- Developer Leads Manager requests coverage for visible Rental/Auction rows and shows a compact
+  accepted/required badge, missing required roles, and the transaction-specific guardrail.
+- Browser proof accepts Rental proof-of-income, verifies the selected lead-detail coverage, then
+  verifies the lead row shows `1/3 evidence accepted`, keeps `Deposit readiness` and `Lease review`
+  missing, and says the row is not lease readiness.
+Guardrails:
+- Read-model/lead-row visibility only. No artifact status mutation, lead-stage movement, inventory
+  mutation, distribution deal movement, reward/payout readiness, autosave, draft, publish, public
+  listing, search-card, or wizard behavior is intended.
+- Accepted row coverage is not evidence completion automation and must not be used as lease
+  readiness, bidder registration, proof-of-funds readiness, let/sold status, or payout readiness.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Uploaded sensitive proof files still need protected storage and authorization.
+- Evidence completion automation remains future and requires transaction-specific mandatory role
+  rules plus explicit owner approval.
+- Admin/distribution readback of accepted-role coverage remains future.
+Next recommended slice:
+- Add protected evidence-file upload/storage design for Rental/Auction proof artifacts before
+  accepting sensitive uploaded documents.
+Commit hash/tag: Included in `feat(dle): show lead evidence coverage rows`.
+Uncommitted reason, if any: None.

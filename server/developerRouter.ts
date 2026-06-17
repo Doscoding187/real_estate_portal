@@ -50,6 +50,7 @@ import {
 import {
   createLeadEvidenceArtifact,
   getDevelopmentEvidenceCoverageSummary,
+  listLeadEvidenceCoverageSummaries,
   listLeadEvidenceArtifacts,
   updateLeadEvidenceArtifactReviewStatus,
 } from './services/dleEvidenceArtifactService';
@@ -1674,6 +1675,20 @@ export const developerRouter = router({
       return await listLeadEvidenceArtifacts({
         developerId: profile.id,
         leadId: input.leadId,
+      });
+    }),
+
+  listLeadEvidenceCoverageSummaries: protectedProcedure
+    .input(
+      z.object({
+        leadIds: z.array(z.number().int().positive()).max(50),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      return await listLeadEvidenceCoverageSummaries({
+        developerId: profile.id,
+        leadIds: input.leadIds,
       });
     }),
 

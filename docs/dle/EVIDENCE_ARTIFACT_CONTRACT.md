@@ -372,6 +372,17 @@ Implemented fourth runtime slice:
 - explicit guardrails that dashboard coverage is not lease readiness, bidder registration,
   proof-of-funds readiness, inventory movement, distribution payout readiness, or autosave safety.
 
+Implemented fifth runtime slice:
+
+- Developer Leads Manager row-level coverage labels for visible Rental/Auction leads;
+- bulk read-only coverage summaries for developer-owned visible lead IDs;
+- compact accepted/required evidence badges on lead rows;
+- missing-role labels on lead rows before opening lead detail;
+- row-level guardrails that accepted coverage is not lease readiness, bidder registration,
+  proof-of-funds readiness, inventory movement, distribution payout readiness, or autosave safety;
+- browser proof that accepted Rental proof-of-income appears in the queue row as `1/3 evidence
+  accepted` while deposit readiness and lease review remain missing.
+
 Not implemented in the runtime slices:
 
 - uploaded evidence files;

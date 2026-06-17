@@ -4,6 +4,7 @@ import {
   assertEvidenceArtifactReviewTransition,
   assertEvidenceRoleForTransaction,
   buildDevelopmentEvidenceCoverageSummary,
+  buildLeadEvidenceCoverageSummary,
   getDefaultReviewOwnerForEvidence,
   getEvidenceArtifactEventType,
   getEvidenceArtifactReviewEventType,
@@ -148,6 +149,52 @@ describe('dleEvidenceArtifactService helpers', () => {
       ],
       guardrail:
         'Coverage is not verified bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.',
+    });
+  });
+
+  it('builds Rental lead-row coverage labels without lease-readiness claims', () => {
+    expect(
+      buildLeadEvidenceCoverageSummary({
+        leadId: 42,
+        transactionType: 'for_rent',
+        acceptedRoles: ['proof_of_income'],
+      }),
+    ).toMatchObject({
+      leadId: 42,
+      title: 'Rental evidence coverage',
+      statusLabel: 'Evidence partially accepted',
+      acceptedCount: 1,
+      requiredCount: 3,
+      acceptedRoles: [{ role: 'proof_of_income', label: 'Proof of income' }],
+      missingRoles: [
+        { role: 'deposit_readiness', label: 'Deposit readiness' },
+        { role: 'signed_lease', label: 'Lease review' },
+      ],
+      guardrail:
+        'Accepted evidence coverage is not lease readiness, inventory let status, or distribution payout readiness.',
+    });
+  });
+
+  it('builds Auction lead-row coverage labels without bidder-readiness claims', () => {
+    expect(
+      buildLeadEvidenceCoverageSummary({
+        leadId: 77,
+        transactionType: 'auction',
+        acceptedRoles: [
+          'legal_pack_acknowledgement',
+          'proof_of_funds',
+          'bidder_registration',
+        ],
+      }),
+    ).toMatchObject({
+      leadId: 77,
+      title: 'Auction evidence coverage',
+      statusLabel: 'Auction evidence roles accepted',
+      acceptedCount: 3,
+      requiredCount: 3,
+      missingRoles: [],
+      guardrail:
+        'Accepted evidence coverage is not bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.',
     });
   });
 });

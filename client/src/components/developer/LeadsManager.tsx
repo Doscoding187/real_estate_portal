@@ -92,6 +92,17 @@ type LeadEvidenceArtifactItem = {
   createdAt?: string | null;
 };
 
+type LeadEvidenceCoverageRow = {
+  leadId: number;
+  title: string;
+  statusLabel: string;
+  acceptedCount: number;
+  requiredCount: number;
+  acceptedRoles: Array<{ label: string; role: string }>;
+  missingRoles: Array<{ label: string; role: string }>;
+  guardrail: string;
+};
+
 type OutcomeSyncAction =
   | 'sale_sold'
   | 'rental_let'
@@ -484,7 +495,10 @@ export default function LeadsManager() {
       toast.success('Evidence artifact saved.');
       setEvidenceArtifactDescription('');
       setEvidenceArtifactDisplayName('');
-      await evidenceArtifactsQuery.refetch();
+      await Promise.all([
+        evidenceArtifactsQuery.refetch(),
+        utils.developer.listLeadEvidenceCoverageSummaries.invalidate(),
+      ]);
     },
     onError: error => toast.error(error.message || 'Could not save evidence artifact.'),
   });
@@ -493,7 +507,10 @@ export default function LeadsManager() {
       onSuccess: async data => {
         toast.success(`Evidence artifact ${data.artifact.status.replace('_', ' ')}.`);
         setEvidenceArtifactReviewNote('');
-        await evidenceArtifactsQuery.refetch();
+        await Promise.all([
+          evidenceArtifactsQuery.refetch(),
+          utils.developer.listLeadEvidenceCoverageSummaries.invalidate(),
+        ]);
       },
       onError: error => toast.error(error.message || 'Could not update evidence artifact.'),
     });
@@ -543,6 +560,34 @@ export default function LeadsManager() {
   const totalPages = Math.max(1, Math.ceil(activeLeads.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const pagedLeads = activeLeads.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pagedEvidenceLeadIds = useMemo(
+    () =>
+      pagedLeads
+        .filter(lead => {
+          const transactionType = developmentTransactionById.get(String(lead.developmentId));
+          return transactionType === 'rent' || transactionType === 'auction';
+        })
+        .map(lead => Number(lead.id))
+        .filter(id => Number.isFinite(id) && id > 0),
+    [pagedLeads, developmentTransactionById],
+  );
+  const leadEvidenceCoverageQuery =
+    trpc.developer.listLeadEvidenceCoverageSummaries.useQuery(
+      {
+        leadIds: pagedEvidenceLeadIds,
+      },
+      {
+        enabled: pagedEvidenceLeadIds.length > 0,
+        refetchOnWindowFocus: false,
+      },
+    );
+  const leadEvidenceCoverageById = useMemo(() => {
+    const map = new Map<string, LeadEvidenceCoverageRow>();
+    for (const item of ((leadEvidenceCoverageQuery.data?.items || []) as LeadEvidenceCoverageRow[])) {
+      map.set(String(item.leadId), item);
+    }
+    return map;
+  }, [leadEvidenceCoverageQuery.data?.items]);
   const loading = leadsQuery.isLoading || (viewMode === 'attention' && attentionQuery.isLoading);
 
   const handleAssignToMe = () => {
@@ -853,6 +898,7 @@ export default function LeadsManager() {
                         leadTransactionType,
                       );
                       const evidenceReadiness = getLeadEvidenceReadinessSummary(leadTransactionType);
+                      const evidenceCoverage = leadEvidenceCoverageById.get(String(lead.id));
 
                       return (
                         <button
@@ -898,6 +944,15 @@ export default function LeadsManager() {
                               >
                                 {evidenceReadiness.statusLabel}
                               </Badge>
+                              {evidenceCoverage && (
+                                <Badge
+                                  data-testid={`dle-lead-evidence-coverage-label-${lead.id}`}
+                                  variant="outline"
+                                >
+                                  {evidenceCoverage.acceptedCount}/{evidenceCoverage.requiredCount}{' '}
+                                  evidence accepted
+                                </Badge>
+                              )}
                             </div>
                           </div>
 
@@ -907,6 +962,20 @@ export default function LeadsManager() {
                             <span>{formatRelative(lead.lastActivityAt || lead.createdAt)}</span>
                             <Badge className={slaBadgeClass(lead.sla.status)}>{lead.sla.status}</Badge>
                           </div>
+                          {evidenceCoverage && (
+                            <div className="mt-2 space-y-1 text-xs text-amber-900">
+                              <p data-testid={`dle-lead-evidence-coverage-missing-${lead.id}`}>
+                                {evidenceCoverage.missingRoles.length > 0
+                                  ? `Missing: ${evidenceCoverage.missingRoles
+                                      .map(role => role.label)
+                                      .join(', ')}`
+                                  : 'All required evidence roles accepted.'}
+                              </p>
+                              <p data-testid={`dle-lead-evidence-coverage-row-guardrail-${lead.id}`}>
+                                {evidenceCoverage.guardrail}
+                              </p>
+                            </div>
+                          )}
                         </button>
                       );
                     })}

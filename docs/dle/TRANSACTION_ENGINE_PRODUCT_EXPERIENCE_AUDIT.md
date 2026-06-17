@@ -731,6 +731,25 @@ non-mutating read model: it does not approve leases, register bidders, mark fund
 stages, move inventory, change public availability, trigger distribution payout/reward readiness,
 or enable autosave.
 
+## Thirty-Eighth Product-Visibility Slice
+
+Surface accepted evidence coverage on lead queue rows.
+
+DLE now shows persisted Rental/Auction accepted evidence coverage before the operator opens a lead:
+
+- visible Rental/Auction lead rows request bulk coverage summaries for developer-owned lead IDs;
+- each covered row shows an accepted/required evidence badge such as `1/3 evidence accepted`;
+- rows list the missing required roles, such as `Deposit readiness` and `Lease review`;
+- rows repeat the guardrail that accepted evidence coverage is not lease readiness, bidder
+  readiness, inventory movement, distribution payout readiness, or autosave safety.
+
+The focused browser proof accepts a Rental proof-of-income artifact, then verifies the Rental lead
+row shows `1/3 evidence accepted`, keeps `Deposit readiness` and `Lease review` missing, and says
+the row is not lease readiness.
+
+This makes the lead queue more operationally useful without changing artifact state, lead stage,
+inventory, distribution deals, rewards, public availability, wizard data, or autosave state.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -752,7 +771,8 @@ or enable autosave.
   the lead queue and dashboard now surface manual review demand/status. First-pass lead-level
   Rental/Auction evidence request/submission/readback, artifact-level review decisions, and
   accepted-role coverage readback now exist. The Developer Control Tower now aggregates accepted
-  coverage versus missing roles for selected Rental/Auction developments, but evidence completion
+  coverage versus missing roles for selected Rental/Auction developments, and lead queue rows now
+  surface per-lead accepted/missing evidence coverage before opening detail. Evidence completion
   automation, uploaded proof files, public applicant/bidder upload, sold/let/auction outcomes,
   pricing adjustments, release phases, and deeper audit dashboards remain future.
 
@@ -816,5 +836,8 @@ or enable autosave.
 - Component and browser proof that the Developer Control Tower aggregates accepted Rental/Auction
   coverage versus missing roles without claiming lease/bidder readiness. Status: complete for
   `Overview` helper tests and focused `lead-outcome-sync` proof.
+- Service and browser proof that Rental/Auction lead queue rows show accepted/missing evidence
+  coverage without claiming lease/bidder readiness. Status: complete for
+  `dleEvidenceArtifactService` helper tests and focused `lead-outcome-sync` proof.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
