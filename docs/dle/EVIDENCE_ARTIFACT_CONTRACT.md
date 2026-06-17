@@ -349,11 +349,22 @@ Implemented second runtime slice:
 - browser/API/DB proof that accepted Rental proof-of-income evidence does not move lead stage,
   inventory, distribution, rewards, public listing, or wizard data.
 
+Implemented third runtime slice:
+
+- lead-detail evidence coverage read model for Rental/Auction accepted artifact roles;
+- accepted-role count against required transaction-specific roles;
+- missing-role summaries for incomplete evidence coverage;
+- component proof for Rental and Auction coverage summaries;
+- browser proof that accepted Rental proof-of-income shows `1 of 3` roles accepted and still lists
+  deposit readiness and lease review as missing;
+- explicit guardrails that accepted-role coverage is not lease readiness, bidder readiness,
+  inventory movement, distribution payout readiness, or autosave safety.
+
 Not implemented in the runtime slices:
 
 - uploaded evidence files;
 - public applicant/bidder evidence upload;
 - `expired` or `withdrawn` mutations;
-- evidence completion/readiness read models;
+- evidence completion/readiness automation;
 - distribution/admin review linkage;
 - inventory, lead-stage, public listing, payout, reward, or autosave mutations.

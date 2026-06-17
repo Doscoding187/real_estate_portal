@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getLeadEvidenceArtifactCoverageSummary,
   getLeadEvidenceArtifactOptions,
   getLeadEvidenceChecklist,
   getLeadEvidenceReadinessSummary,
@@ -111,5 +112,48 @@ describe('lead evidence checklist', () => {
       expect.objectContaining({ label: 'Proof of funds', role: 'proof_of_funds' }),
       expect.objectContaining({ label: 'Registration review', role: 'bidder_registration' }),
     ]);
+  });
+
+  it('summarizes accepted rental evidence coverage without claiming lease readiness', () => {
+    expect(
+      getLeadEvidenceArtifactCoverageSummary('rent', [
+        { artifactRole: 'proof_of_income', status: 'accepted' },
+        { artifactRole: 'deposit_readiness', status: 'submitted' },
+      ]),
+    ).toEqual({
+      title: 'Rental evidence coverage',
+      statusLabel: 'Evidence partially accepted',
+      acceptedCount: 1,
+      requiredCount: 3,
+      acceptedRoles: [{ label: 'Proof of income', role: 'proof_of_income' }],
+      missingRoles: [
+        { label: 'Deposit readiness', role: 'deposit_readiness' },
+        { label: 'Lease review', role: 'signed_lease' },
+      ],
+      guardrail:
+        'Accepted evidence coverage is not lease readiness, inventory let status, or distribution payout readiness.',
+    });
+  });
+
+  it('summarizes accepted auction evidence coverage without claiming bidder readiness', () => {
+    expect(
+      getLeadEvidenceArtifactCoverageSummary('auction', [
+        { artifactRole: 'legal_pack_acknowledgement', status: 'accepted' },
+        { artifactRole: 'proof_of_funds', status: 'accepted' },
+        { artifactRole: 'bidder_registration', status: 'rejected' },
+      ]),
+    ).toEqual({
+      title: 'Auction evidence coverage',
+      statusLabel: 'Evidence partially accepted',
+      acceptedCount: 2,
+      requiredCount: 3,
+      acceptedRoles: [
+        { label: 'Legal-pack access', role: 'legal_pack_acknowledgement' },
+        { label: 'Proof of funds', role: 'proof_of_funds' },
+      ],
+      missingRoles: [{ label: 'Registration review', role: 'bidder_registration' }],
+      guardrail:
+        'Accepted evidence coverage is not bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.',
+    });
   });
 });

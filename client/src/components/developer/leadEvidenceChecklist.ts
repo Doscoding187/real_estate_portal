@@ -22,6 +22,21 @@ export type LeadEvidenceReadinessSummary = {
   optionalCount: number;
 };
 
+export type LeadEvidenceArtifactCoverageInput = {
+  artifactRole: string;
+  status: string;
+};
+
+export type LeadEvidenceArtifactCoverageSummary = {
+  title: string;
+  statusLabel: string;
+  acceptedCount: number;
+  requiredCount: number;
+  missingRoles: Array<{ label: string; role: string }>;
+  acceptedRoles: Array<{ label: string; role: string }>;
+  guardrail: string;
+};
+
 const STATUS_ORDER: Record<LeadEvidenceChecklistItem['status'], number> = {
   capture: 0,
   manual_review: 1,
@@ -197,4 +212,63 @@ export function getLeadEvidenceArtifactOptions(transactionType: LeadTransactionT
       description: item.description,
       status: item.status,
     }));
+}
+
+function coverageTitleFor(transactionType: LeadTransactionType): string {
+  if (transactionType === 'rent') return 'Rental evidence coverage';
+  if (transactionType === 'auction') return 'Auction evidence coverage';
+  return 'Sale evidence coverage';
+}
+
+function coverageStatusLabelFor(params: {
+  transactionType: LeadTransactionType;
+  acceptedCount: number;
+  requiredCount: number;
+}): string {
+  if (params.requiredCount === 0) return 'No structured evidence roles';
+  if (params.acceptedCount >= params.requiredCount) {
+    if (params.transactionType === 'rent') return 'Rental evidence roles accepted';
+    if (params.transactionType === 'auction') return 'Auction evidence roles accepted';
+    return 'Sale evidence roles accepted';
+  }
+  if (params.acceptedCount > 0) return 'Evidence partially accepted';
+  return 'Evidence not accepted yet';
+}
+
+function coverageGuardrailFor(transactionType: LeadTransactionType): string {
+  if (transactionType === 'rent') {
+    return 'Accepted evidence coverage is not lease readiness, inventory let status, or distribution payout readiness.';
+  }
+  if (transactionType === 'auction') {
+    return 'Accepted evidence coverage is not bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.';
+  }
+  return 'Accepted evidence coverage is not sold status, inventory movement, or distribution payout readiness.';
+}
+
+export function getLeadEvidenceArtifactCoverageSummary(
+  transactionType: LeadTransactionType,
+  artifacts: LeadEvidenceArtifactCoverageInput[],
+): LeadEvidenceArtifactCoverageSummary {
+  const requiredRoles = getLeadEvidenceArtifactOptions(transactionType);
+  const acceptedRoles = new Set(
+    artifacts
+      .filter(artifact => artifact.status === 'accepted')
+      .map(artifact => artifact.artifactRole),
+  );
+  const accepted = requiredRoles.filter(role => acceptedRoles.has(role.role));
+  const missing = requiredRoles.filter(role => !acceptedRoles.has(role.role));
+
+  return {
+    title: coverageTitleFor(transactionType),
+    statusLabel: coverageStatusLabelFor({
+      transactionType,
+      acceptedCount: accepted.length,
+      requiredCount: requiredRoles.length,
+    }),
+    acceptedCount: accepted.length,
+    requiredCount: requiredRoles.length,
+    missingRoles: missing.map(role => ({ label: role.label, role: role.role })),
+    acceptedRoles: accepted.map(role => ({ label: role.label, role: role.role })),
+    guardrail: coverageGuardrailFor(transactionType),
+  };
 }

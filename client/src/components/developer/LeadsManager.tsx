@@ -36,6 +36,7 @@ import {
 } from './leadOperatingStageDisplay';
 import { getLeadStageGuidance } from './leadStageGuidance';
 import {
+  getLeadEvidenceArtifactCoverageSummary,
   getLeadEvidenceArtifactOptions,
   getLeadEvidenceChecklist,
   getLeadEvidenceReadinessSummary,
@@ -498,6 +499,13 @@ export default function LeadsManager() {
     });
   const selectedLeadEvidenceArtifacts = ((evidenceArtifactsQuery.data?.items ||
     []) as LeadEvidenceArtifactItem[]);
+  const selectedLeadEvidenceCoverage =
+    selectedLead && selectedLeadEvidenceArtifactOptions.length > 0
+      ? getLeadEvidenceArtifactCoverageSummary(
+          selectedLeadTransactionType,
+          selectedLeadEvidenceArtifacts,
+        )
+      : null;
   const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
   const developmentTransactionById = useMemo(() => {
     const map = new Map<string, 'sale' | 'rent' | 'auction' | null>();
@@ -1105,6 +1113,45 @@ export default function LeadsManager() {
                             lease readiness, bidder registration, inventory, or rewards.
                           </p>
                         </div>
+                        {selectedLeadEvidenceCoverage && (
+                          <div
+                            className="rounded-md bg-amber-50 border border-amber-200 p-2 space-y-2 text-xs"
+                            data-testid={`dle-lead-evidence-coverage-${selectedLead.id}`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-medium">{selectedLeadEvidenceCoverage.title}</p>
+                                <p className="text-muted-foreground">
+                                  {selectedLeadEvidenceCoverage.acceptedCount} of{' '}
+                                  {selectedLeadEvidenceCoverage.requiredCount} required evidence
+                                  roles accepted.
+                                </p>
+                              </div>
+                              <Badge variant="outline">
+                                {selectedLeadEvidenceCoverage.statusLabel}
+                              </Badge>
+                            </div>
+                            {selectedLeadEvidenceCoverage.acceptedRoles.length > 0 && (
+                              <p>
+                                Accepted:{' '}
+                                {selectedLeadEvidenceCoverage.acceptedRoles
+                                  .map(role => role.label)
+                                  .join(', ')}
+                              </p>
+                            )}
+                            {selectedLeadEvidenceCoverage.missingRoles.length > 0 && (
+                              <p>
+                                Missing:{' '}
+                                {selectedLeadEvidenceCoverage.missingRoles
+                                  .map(role => role.label)
+                                  .join(', ')}
+                              </p>
+                            )}
+                            <p className="text-amber-950">
+                              {selectedLeadEvidenceCoverage.guardrail}
+                            </p>
+                          </div>
+                        )}
                         <div className="grid gap-2 md:grid-cols-2">
                           <Select
                             value={evidenceArtifactRole}

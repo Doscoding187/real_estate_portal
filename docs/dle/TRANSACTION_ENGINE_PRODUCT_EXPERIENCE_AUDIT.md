@@ -684,6 +684,30 @@ This moves Rental/Auction closer to operating proof, but it still does not claim
 bidder readiness, proof-of-funds readiness, inventory let/sold status, distribution payout/reward
 readiness, public availability mutation, or autosave safety.
 
+## Thirty-Sixth Product-Visibility Slice
+
+Implement non-automating evidence coverage read model.
+
+DLE lead detail now derives accepted-role coverage from persisted Rental/Auction evidence
+artifacts:
+
+- Rental coverage counts accepted proof-of-income, deposit-readiness, and signed-lease evidence
+  roles;
+- Auction coverage counts accepted legal-pack acknowledgement, proof-of-funds, and bidder
+  registration evidence roles;
+- missing-role summaries show exactly which transaction evidence roles still need accepted proof;
+- coverage is displayed beside the persisted artifact panel in the Developer Leads Manager;
+- the guardrail explicitly states that accepted coverage is not lease readiness, bidder readiness,
+  inventory movement, distribution payout readiness, or autosave safety.
+
+The focused browser proof accepts a Rental proof-of-income artifact and then verifies the coverage
+panel shows `1 of 3 required evidence roles accepted`, lists `Proof of income` as accepted, lists
+`Deposit readiness` and `Lease review` as missing, and repeats that this is not lease readiness,
+inventory let status, or distribution payout readiness.
+
+This is deliberately a read model only. It does not mutate artifact status, lead stage, inventory,
+distribution deals, rewards, public availability, wizard data, or autosave state.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -703,10 +727,10 @@ readiness, public availability mutation, or autosave safety.
   as lead activity notes, read back in the lead timeline, and browser-proven for Rental/Auction
   panels. Evidence readiness is now summarized as a transaction-specific manual review model, and
   the lead queue and dashboard now surface manual review demand/status. First-pass lead-level
-  Rental/Auction evidence request/submission/readback and artifact-level review decisions now
-  exist, but evidence completion semantics, uploaded proof files, public applicant/bidder upload,
-  sold/let/auction outcomes, pricing adjustments, release phases, and deeper audit dashboards
-  remain future.
+  Rental/Auction evidence request/submission/readback, artifact-level review decisions, and
+  accepted-role coverage readback now exist, but evidence completion automation, uploaded proof
+  files, public applicant/bidder upload, sold/let/auction outcomes, pricing adjustments, release
+  phases, and deeper audit dashboards remain future.
 
 ## Evidence To Attach Over Time
 
@@ -762,5 +786,8 @@ readiness, public availability mutation, or autosave safety.
 - Browser/API/DB proof that a Rental proof-of-income artifact can be accepted with review note,
   reviewer, timestamp, and audit event without moving lead stage or inventory. Status: complete for
   focused `lead-outcome-sync` proof.
+- Component and browser proof that accepted Rental/Auction artifact roles produce coverage and
+  missing-role summaries without claiming lease/bidder readiness. Status: complete for
+  `leadEvidenceChecklist` helper tests and focused `lead-outcome-sync` proof.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

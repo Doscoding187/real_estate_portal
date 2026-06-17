@@ -733,6 +733,21 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
     await expect(
       page.getByTestId(`dle-lead-evidence-artifacts-${rentalSeed.leadId}`),
     ).toContainText('Review note: Leasing team reviewed the submitted payslip attestation.');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-${rentalSeed.leadId}`),
+    ).toContainText('Rental evidence coverage');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-${rentalSeed.leadId}`),
+    ).toContainText('1 of 3 required evidence roles accepted.');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-${rentalSeed.leadId}`),
+    ).toContainText('Accepted: Proof of income');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-${rentalSeed.leadId}`),
+    ).toContainText('Missing: Deposit readiness, Lease review');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-coverage-${rentalSeed.leadId}`),
+    ).toContainText('not lease readiness, inventory let status, or distribution payout readiness');
 
     const reviewedRentalArtifacts = await db!
       .select()

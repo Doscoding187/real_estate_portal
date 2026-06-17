@@ -6782,3 +6782,51 @@ Next recommended slice:
   guardrails.
 Commit hash/tag: Included in `feat(dle): review lead evidence artifacts`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Evidence Coverage Read Model
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add a non-mutating Rental/Auction evidence coverage read model that shows accepted and missing
+required artifact roles without claiming lease/bidder readiness or triggering automation.
+Files changed:
+- client/src/components/developer/leadEvidenceChecklist.ts
+- client/src/components/developer/leadEvidenceChecklist.test.ts
+- client/src/components/developer/LeadsManager.tsx
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 17 tests.
+- `pnpm run check` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1` passed with 4 tests.
+Functional proof:
+- `getLeadEvidenceArtifactCoverageSummary` derives transaction-specific accepted coverage from
+  accepted evidence artifact roles.
+- Rental coverage tracks proof of income, deposit readiness, and signed lease.
+- Auction coverage tracks legal-pack acknowledgement, proof of funds, and bidder registration.
+- Lead detail shows accepted count, required count, accepted role labels, missing role labels, and
+  a transaction-specific guardrail.
+- Browser proof accepts Rental proof of income, then verifies `1 of 3 required evidence roles
+  accepted`, `Accepted: Proof of income`, `Missing: Deposit readiness, Lease review`, and the
+  guardrail that this is not lease readiness, inventory let status, or distribution payout
+  readiness.
+Guardrails:
+- Read-model only. No artifact status mutation, lead-stage movement, inventory mutation,
+  distribution deal movement, reward/payout readiness, autosave, draft, publish, public listing,
+  search-card, or wizard behavior is intended in this slice.
+- Accepted coverage is not evidence completion automation and must not be used as lease readiness,
+  bidder registration, proof-of-funds readiness, let/sold status, or payout readiness.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Uploaded sensitive proof files still need protected storage and authorization.
+- Evidence completion automation remains future and requires transaction-specific mandatory role
+  rules plus explicit owner approval.
+- Admin/distribution readback of accepted-role coverage remains future.
+Next recommended slice:
+- Add a non-mutating dashboard/lead-queue aggregate for accepted coverage versus missing evidence
+  roles across Rental/Auction leads, still without readiness automation.
+Commit hash/tag: Included in `feat(dle): summarize evidence coverage`.
+Uncommitted reason, if any: None.
