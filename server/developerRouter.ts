@@ -48,6 +48,7 @@ import {
   transitionSaleUnitReservation,
 } from './services/developmentOperatingEventsService';
 import {
+  completeLeadEvidenceFileUpload,
   createLeadEvidenceFileUploadIntent,
   createLeadEvidenceArtifact,
   getDevelopmentEvidenceCoverageSummary,
@@ -1746,6 +1747,26 @@ export const developerRouter = router({
         fileSizeBytes: input.fileSizeBytes,
         displayName: input.displayName,
         description: input.description,
+      });
+    }),
+
+  completeLeadEvidenceFileUpload: protectedProcedure
+    .input(
+      z.object({
+        artifactId: z.number().int().positive(),
+        uploadToken: z.string().trim().min(1),
+        checksumSha256: z.string().trim().max(128).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await completeLeadEvidenceFileUpload({
+        developerId: profile.id,
+        userId: user.id,
+        artifactId: input.artifactId,
+        uploadToken: input.uploadToken,
+        checksumSha256: input.checksumSha256,
       });
     }),
 

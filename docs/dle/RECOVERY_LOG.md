@@ -7035,3 +7035,52 @@ Next recommended slice:
   and `submitted` status only after the private upload is verified.
 Commit hash/tag: Included in `feat(dle): create protected evidence upload intents`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Protected Evidence Upload Completion Verification
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add a protected completion gate for Rental/Auction evidence uploads so uploaded-file evidence
+can become `submitted` only after token, ownership, private namespace, and storage verification.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- server/developerRouter.ts
+- docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 15 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `developer.completeLeadEvidenceFileUpload` now exposes a protected developer-only completion
+  endpoint.
+- Upload tokens are HMAC-signed and tampered tokens are rejected before completion.
+- Completion verifies artifact id, lead id, development id, developer ownership, private evidence
+  storage key, `uploaded_file` artifact type, and pending upload status before any mutation.
+- Completion requires private S3 storage and `HeadObject` verification before changing status to
+  `submitted`.
+- Successful completion writes `uploadStatus = uploaded`, uploader/time metadata, verified file
+  metadata, and an `evidence_artifact_submitted` operating event without a public URL.
+- DB-backed proof confirms that when private storage is not configured, completion fails without
+  changing artifact status, external URL, lead status, or funnel stage.
+Guardrails:
+- Completion-verification-only slice. No authenticated download, public applicant/bidder upload,
+  artifact acceptance, evidence completion/readiness automation, lead-stage movement, inventory
+  mutation, distribution deal movement, reward/payout readiness, autosave, draft, publish, public
+  listing, search-card, lead form, or wizard behavior is intended.
+- Successful completion should write only file metadata and an `evidence_artifact_submitted`
+  operating event; it must not store document contents or public URLs.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Authenticated evidence-file download, malware scanning/quarantine, public applicant/bidder
+  upload, file metadata client readback, distribution/admin linkage, and readiness automation
+  remain future.
+Next recommended slice:
+- Implement authenticated evidence-file download broker once upload completion has a verified
+  private-storage path and denial tests.
+Commit hash/tag: Included in `feat(dle): verify protected evidence uploads`.
+Uncommitted reason, if any: None.

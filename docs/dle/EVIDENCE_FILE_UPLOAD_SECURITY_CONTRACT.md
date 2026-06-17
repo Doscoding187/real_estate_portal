@@ -1,9 +1,10 @@
 # DLE Evidence File Upload Security Contract
 
 Date: 2026-06-17
-Status: Contract active. The first runtime slice now supports developer-only protected upload
-intents for existing Rental/Auction lead artifacts. Upload completion, authenticated download,
-public applicant/bidder upload, and evidence readiness automation remain unimplemented.
+Status: Contract active. Runtime slices now support developer-only protected upload intents and a
+guarded upload-completion path for existing Rental/Auction lead artifacts. Completion requires
+private storage verification; authenticated download, public applicant/bidder upload, and evidence
+readiness automation remain unimplemented.
 
 ## Purpose
 
@@ -94,8 +95,10 @@ developer.getLeadEvidenceFileDownloadUrl
 
 `completeLeadEvidenceFileUpload` must:
 
-- verify the upload token;
+- verify the signed upload token;
 - verify the artifact still belongs to the same lead/development/developer;
+- verify the private object exists before changing artifact status;
+- fail without mutation when private storage is not configured;
 - persist file metadata;
 - write an `evidence_artifact_submitted` operating event;
 - avoid storing full file contents in event metadata.

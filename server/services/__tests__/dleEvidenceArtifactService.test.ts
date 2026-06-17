@@ -7,12 +7,15 @@ import {
   assertEvidenceArtifactReviewTransition,
   assertEvidenceRoleForTransaction,
   buildDevelopmentEvidenceCoverageSummary,
+  buildEvidenceUploadToken,
   buildLeadEvidenceCoverageSummary,
   buildPrivateEvidenceStorageKey,
+  completeLeadEvidenceFileUpload,
   createLeadEvidenceFileUploadIntent,
   getDefaultReviewOwnerForEvidence,
   getEvidenceArtifactEventType,
   getEvidenceArtifactReviewEventType,
+  parseEvidenceUploadToken,
   validateEvidenceUploadFile,
 } from '../dleEvidenceArtifactService';
 
@@ -299,6 +302,40 @@ describe('dleEvidenceArtifactService helpers', () => {
     expect(key).not.toContain('local-uploads');
   });
 
+  it('signs evidence upload tokens and rejects tampering', () => {
+    const token = buildEvidenceUploadToken({
+      artifactId: 56,
+      leadId: 34,
+      developmentId: 12,
+      storageKey: 'dle/evidence/test/development-12/lead-34/artifact-56/fixed-upload-id.pdf',
+    });
+
+    expect(parseEvidenceUploadToken(token)).toMatchObject({
+      artifactId: 56,
+      leadId: 34,
+      developmentId: 12,
+      storageKey: 'dle/evidence/test/development-12/lead-34/artifact-56/fixed-upload-id.pdf',
+    });
+
+    const [payload, signature] = token.split('.');
+    const tamperedPayload = Buffer.from(
+      JSON.stringify({
+        artifactId: 999,
+        leadId: 34,
+        developmentId: 12,
+        storageKey: 'dle/evidence/test/development-12/lead-34/artifact-999/fixed-upload-id.pdf',
+        nonce: 'tampered',
+      }),
+    ).toString('base64url');
+
+    expect(() => parseEvidenceUploadToken(`${tamperedPayload}.${signature}`)).toThrow(
+      'Invalid evidence upload token.',
+    );
+    expect(() => parseEvidenceUploadToken(`${payload}.bad-signature`)).toThrow(
+      'Invalid evidence upload token.',
+    );
+  });
+
   it('creates developer-only upload intents with private storage metadata and no lead mutation', async () => {
     const db = await getDb();
     expect(db).toBeTruthy();
@@ -409,5 +446,101 @@ describe('dleEvidenceArtifactService helpers', () => {
     const [leadAfter] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);
     expect(leadAfter.status).toBe(leadBefore.status);
     expect(leadAfter.funnelStage).toBe(leadBefore.funnelStage);
+  });
+
+  it('does not submit uploaded-file evidence when private storage cannot be verified', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const userInsert = await db!.insert(users).values({
+      email: `dle-evidence-complete-${suffix}@example.com`,
+      passwordHash: 'test-password-hash',
+      role: 'property_developer',
+      firstName: 'Evidence',
+      lastName: 'Verifier',
+      name: 'Evidence Verifier',
+      emailVerified: 1,
+    });
+    const userId = getInsertId(userInsert);
+    cleanup.userIds.push(userId);
+
+    const developerInsert = await db!.insert(developers).values({
+      userId,
+      name: `Evidence Completion Developer ${suffix}`,
+      email: `completion-developer-${suffix}@example.com`,
+      category: 'residential',
+      status: 'approved',
+      isVerified: 1,
+    });
+    const developerId = getInsertId(developerInsert);
+    cleanup.developerIds.push(developerId);
+
+    const developmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Completion Auction ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'auction',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'launching-soon',
+      startingBid: '850000',
+      auctionDate: '2026-08-22',
+    });
+    const developmentId = getInsertId(developmentInsert);
+    cleanup.developmentIds.push(developmentId);
+
+    const leadInsert = await db!.insert(leads).values({
+      developmentId,
+      name: `Evidence Completion Lead ${suffix}`,
+      email: `completion-lead-${suffix}@example.com`,
+      phone: '0825550302',
+      leadType: 'inquiry',
+      status: 'qualified',
+      funnelStage: 'qualification',
+      source: 'development_detail',
+      leadSource: 'development_detail_contact',
+    });
+    const leadId = getInsertId(leadInsert);
+    cleanup.leadIds.push(leadId);
+
+    const intent = await createLeadEvidenceFileUploadIntent({
+      developerId,
+      userId,
+      leadId,
+      artifactRole: 'proof_of_funds',
+      filename: 'Proof of funds.pdf',
+      contentType: 'application/pdf',
+      fileSizeBytes: 750_000,
+      displayName: 'Proof of funds',
+    });
+    cleanup.artifactIds.push(intent.artifact.id);
+
+    await expect(
+      completeLeadEvidenceFileUpload({
+        developerId,
+        userId,
+        artifactId: intent.artifact.id,
+        uploadToken: intent.uploadToken,
+      }),
+    ).rejects.toThrow(
+      'Private evidence upload storage is not configured; upload completion cannot be verified.',
+    );
+
+    const [artifactRow] = await db!
+      .select()
+      .from(dleEvidenceArtifacts)
+      .where(eq(dleEvidenceArtifacts.id, intent.artifact.id))
+      .limit(1);
+    expect(artifactRow.status).toBe('requested');
+    expect(artifactRow.externalUrl).toBeNull();
+    expect(artifactRow.metadata).toMatchObject({
+      uploadStatus: 'pending_upload',
+      storageNamespace: 'private_dle_evidence',
+    });
+
+    const [leadAfter] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(leadAfter.status).toBe('qualified');
+    expect(leadAfter.funnelStage).toBe('qualification');
   });
 });

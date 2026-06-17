@@ -394,9 +394,20 @@ Implemented sixth runtime slice:
 - no public URL is returned, and local development does not fall back to public local media URLs;
 - DB-backed proof confirms the upload intent does not move lead status or funnel stage.
 
+Implemented seventh runtime slice:
+
+- developer-only upload completion endpoint for existing Rental/Auction uploaded-file artifacts;
+- signed upload-token parsing and tamper rejection;
+- ownership checks against the artifact's lead, development, and developer before mutation;
+- private evidence namespace guard before completion;
+- S3 object existence verification before changing artifact status to `submitted`;
+- guarded local behavior: when private storage is not configured, completion fails without changing
+  artifact status, external URL, lead status, or funnel stage;
+- successful completion writes `evidence_artifact_submitted` with file metadata only, not document
+  contents or public URLs.
+
 Not implemented in the runtime slices:
 
-- upload completion verification;
 - authenticated evidence-file download;
 - public applicant/bidder evidence upload;
 - `expired` or `withdrawn` mutations;

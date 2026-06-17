@@ -1,8 +1,13 @@
 import { TRPCError } from '@trpc/server';
 import { sql } from 'drizzle-orm';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  HeadObjectCommand,
+  type HeadObjectCommandOutput,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import { db } from '../db';
@@ -169,6 +174,14 @@ export type LeadEvidenceFileUploadIntent = {
   uploadUrl: string | null;
   uploadExpiresInSeconds: number | null;
   uploadUnavailableReason?: string;
+};
+
+type EvidenceUploadTokenClaims = {
+  artifactId: number;
+  leadId: number;
+  developmentId: number;
+  storageKey: string;
+  nonce: string;
 };
 
 export function isRentalEvidenceRole(role: string): role is RentalEvidenceRole {
@@ -408,13 +421,21 @@ export function buildPrivateEvidenceStorageKey(params: {
   ].join('/');
 }
 
-function buildEvidenceUploadToken(params: {
+function getEvidenceUploadTokenSecret(): string {
+  return ENV.cookieSecret || 'dle-evidence-upload-token-development-secret';
+}
+
+function signEvidenceUploadTokenPayload(payload: string): string {
+  return createHmac('sha256', getEvidenceUploadTokenSecret()).update(payload).digest('base64url');
+}
+
+export function buildEvidenceUploadToken(params: {
   artifactId: number;
   leadId: number;
   developmentId: number;
   storageKey: string;
 }): string {
-  return Buffer.from(
+  const payload = Buffer.from(
     JSON.stringify({
       artifactId: params.artifactId,
       leadId: params.leadId,
@@ -423,6 +444,64 @@ function buildEvidenceUploadToken(params: {
       nonce: randomUUID(),
     }),
   ).toString('base64url');
+  return `${payload}.${signEvidenceUploadTokenPayload(payload)}`;
+}
+
+export function parseEvidenceUploadToken(token: string): EvidenceUploadTokenClaims {
+  const [payload, signature, extra] = String(token || '').split('.');
+  if (!payload || !signature || extra) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invalid evidence upload token.',
+    });
+  }
+
+  const expectedSignature = signEvidenceUploadTokenPayload(payload);
+  if (signature !== expectedSignature) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invalid evidence upload token.',
+    });
+  }
+
+  let claims: Partial<EvidenceUploadTokenClaims>;
+  try {
+    claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  } catch {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invalid evidence upload token.',
+    });
+  }
+
+  const artifactId = Number(claims.artifactId);
+  const leadId = Number(claims.leadId);
+  const developmentId = Number(claims.developmentId);
+  const storageKey = String(claims.storageKey || '');
+  const nonce = String(claims.nonce || '');
+  if (
+    !Number.isFinite(artifactId) ||
+    artifactId <= 0 ||
+    !Number.isFinite(leadId) ||
+    leadId <= 0 ||
+    !Number.isFinite(developmentId) ||
+    developmentId <= 0 ||
+    !storageKey ||
+    !nonce
+  ) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Invalid evidence upload token.',
+    });
+  }
+
+  return {
+    artifactId,
+    leadId,
+    developmentId,
+    storageKey,
+    nonce,
+  };
 }
 
 export function assertEvidenceArtifactReviewTransition(params: {
@@ -919,6 +998,216 @@ export async function createLeadEvidenceFileUploadIntent(params: {
     uploadUrl,
     uploadExpiresInSeconds,
     uploadUnavailableReason,
+  };
+}
+
+export async function completeLeadEvidenceFileUpload(params: {
+  developerId: number;
+  userId: number;
+  artifactId: number;
+  uploadToken: string;
+  checksumSha256?: string;
+}): Promise<{ artifact: EvidenceArtifactRow }> {
+  const claims = parseEvidenceUploadToken(params.uploadToken);
+  if (claims.artifactId !== params.artifactId) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence upload token does not match this artifact.',
+    });
+  }
+
+  const currentResult = await db.execute(sql`
+    select
+      a.id,
+      a.development_id as developmentId,
+      a.transaction_type as transactionType,
+      a.lead_id as leadId,
+      a.artifact_role as artifactRole,
+      a.artifact_type as artifactType,
+      a.storage_key as storageKey,
+      a.external_url as externalUrl,
+      a.display_name as displayName,
+      a.description,
+      a.status,
+      a.review_owner as reviewOwner,
+      a.reviewed_by_user_id as reviewedByUserId,
+      a.reviewed_at as reviewedAt,
+      a.review_note as reviewNote,
+      a.metadata as metadata,
+      a.created_by_user_id as createdByUserId,
+      a.created_at as createdAt,
+      a.updated_at as updatedAt
+    from dle_evidence_artifacts a
+    inner join developments d on d.id = a.development_id
+    where a.id = ${params.artifactId}
+      and d.developer_id = ${params.developerId}
+      and a.lead_id is not null
+    limit 1
+  `);
+  const row = getRows(currentResult)[0];
+
+  if (!row) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Evidence artifact not found for this developer.',
+    });
+  }
+
+  const artifact = normalizeArtifactRow(row);
+  const storageKey = String(row.storageKey || '');
+  const metadata = (row.metadata && typeof row.metadata === 'object' ? row.metadata : {}) as {
+    uploadStatus?: string;
+    mimeType?: string;
+    fileSizeBytes?: number;
+  };
+
+  if (artifact.artifactType !== 'uploaded_file') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Only uploaded-file evidence artifacts can be completed.',
+    });
+  }
+  if (artifact.status !== 'requested' || metadata.uploadStatus !== 'pending_upload') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence upload has already been completed or is not pending upload.',
+    });
+  }
+  if (
+    claims.developmentId !== artifact.developmentId ||
+    claims.leadId !== artifact.leadId ||
+    claims.storageKey !== storageKey
+  ) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence upload token does not match this artifact.',
+    });
+  }
+  if (!storageKey.startsWith('dle/evidence/')) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence artifact storage key is not in the private evidence namespace.',
+    });
+  }
+  if (!evidenceS3Client || !ENV.s3BucketName) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Private evidence upload storage is not configured; upload completion cannot be verified.',
+    });
+  }
+
+  let objectHead: HeadObjectCommandOutput;
+  try {
+    objectHead = await evidenceS3Client.send(
+      new HeadObjectCommand({
+        Bucket: ENV.s3BucketName,
+        Key: storageKey,
+      }),
+    );
+  } catch {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Evidence upload was not found in private storage.',
+    });
+  }
+
+  const uploadedAt = new Date().toISOString();
+  const verifiedMimeType = objectHead.ContentType || metadata.mimeType || null;
+  const verifiedFileSizeBytes =
+    typeof objectHead.ContentLength === 'number'
+      ? objectHead.ContentLength
+      : metadata.fileSizeBytes || null;
+  const checksumSha256 = params.checksumSha256?.trim() || objectHead.ChecksumSHA256 || null;
+  const completionMetadata = {
+    uploadStatus: 'uploaded',
+    uploadedAt,
+    uploadedByUserId: params.userId,
+    verifiedMimeType,
+    verifiedFileSizeBytes,
+    checksumSha256,
+    storageNamespace: 'private_dle_evidence',
+  };
+
+  await db.execute(sql`
+    update dle_evidence_artifacts
+    set
+      status = 'submitted',
+      external_url = null,
+      metadata = JSON_MERGE_PATCH(
+        COALESCE(metadata, JSON_OBJECT()),
+        CAST(${JSON.stringify(completionMetadata)} AS JSON)
+      ),
+      updated_by_user_id = ${params.userId},
+      updated_at = CURRENT_TIMESTAMP
+    where id = ${params.artifactId}
+  `);
+
+  await db.execute(sql`
+    insert into development_operating_events (
+      development_id,
+      lead_id,
+      transaction_type,
+      event_type,
+      from_status,
+      to_status,
+      after_data,
+      metadata,
+      actor_user_id,
+      source_surface
+    )
+    values (
+      ${artifact.developmentId},
+      ${artifact.leadId},
+      ${artifact.transactionType},
+      'evidence_artifact_submitted',
+      ${artifact.status},
+      'submitted',
+      ${JSON.stringify({
+        artifactId: artifact.id,
+        artifactRole: artifact.artifactRole,
+        artifactType: artifact.artifactType,
+        status: 'submitted',
+        reviewOwner: artifact.reviewOwner,
+      })},
+      ${JSON.stringify({
+        artifactId: artifact.id,
+        artifactRole: artifact.artifactRole,
+        displayName: artifact.displayName,
+        mimeType: verifiedMimeType,
+        fileSizeBytes: verifiedFileSizeBytes,
+        checksumSha256,
+        storageNamespace: 'private_dle_evidence',
+      })},
+      ${params.userId},
+      'developer_leads_manager'
+    )
+  `);
+
+  const readback = await db.execute(sql`
+    select
+      id,
+      development_id as developmentId,
+      transaction_type as transactionType,
+      lead_id as leadId,
+      artifact_role as artifactRole,
+      artifact_type as artifactType,
+      display_name as displayName,
+      description,
+      status,
+      review_owner as reviewOwner,
+      reviewed_by_user_id as reviewedByUserId,
+      reviewed_at as reviewedAt,
+      review_note as reviewNote,
+      created_by_user_id as createdByUserId,
+      created_at as createdAt,
+      updated_at as updatedAt
+    from dle_evidence_artifacts
+    where id = ${params.artifactId}
+    limit 1
+  `);
+
+  return {
+    artifact: normalizeArtifactRow(getRows(readback)[0]),
   };
 }
 
