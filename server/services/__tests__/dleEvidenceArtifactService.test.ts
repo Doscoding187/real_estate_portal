@@ -15,6 +15,7 @@ import {
   getDefaultReviewOwnerForEvidence,
   getEvidenceArtifactEventType,
   getEvidenceArtifactReviewEventType,
+  getLeadEvidenceFileDownloadUrl,
   parseEvidenceUploadToken,
   validateEvidenceUploadFile,
 } from '../dleEvidenceArtifactService';
@@ -537,6 +538,211 @@ describe('dleEvidenceArtifactService helpers', () => {
     expect(artifactRow.metadata).toMatchObject({
       uploadStatus: 'pending_upload',
       storageNamespace: 'private_dle_evidence',
+    });
+
+    const [leadAfter] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(leadAfter.status).toBe('qualified');
+    expect(leadAfter.funnelStage).toBe('qualification');
+  });
+
+  it('does not issue download URLs for pending evidence uploads', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const userInsert = await db!.insert(users).values({
+      email: `dle-evidence-pending-download-${suffix}@example.com`,
+      passwordHash: 'test-password-hash',
+      role: 'property_developer',
+      firstName: 'Evidence',
+      lastName: 'Pending',
+      name: 'Evidence Pending',
+      emailVerified: 1,
+    });
+    const userId = getInsertId(userInsert);
+    cleanup.userIds.push(userId);
+
+    const developerInsert = await db!.insert(developers).values({
+      userId,
+      name: `Evidence Pending Download Developer ${suffix}`,
+      email: `pending-download-developer-${suffix}@example.com`,
+      category: 'residential',
+      status: 'approved',
+      isVerified: 1,
+    });
+    const developerId = getInsertId(developerInsert);
+    cleanup.developerIds.push(developerId);
+
+    const developmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Pending Download Rental ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      city: 'Cape Town',
+      province: 'Western Cape',
+      status: 'launching-soon',
+      monthlyRentFrom: '13000',
+      monthlyRentTo: '15000',
+    });
+    const developmentId = getInsertId(developmentInsert);
+    cleanup.developmentIds.push(developmentId);
+
+    const leadInsert = await db!.insert(leads).values({
+      developmentId,
+      name: `Evidence Pending Download Lead ${suffix}`,
+      email: `pending-download-lead-${suffix}@example.com`,
+      phone: '0825550303',
+      leadType: 'inquiry',
+      status: 'new',
+      funnelStage: 'qualification',
+      source: 'development_detail',
+      leadSource: 'development_detail_contact',
+    });
+    const leadId = getInsertId(leadInsert);
+    cleanup.leadIds.push(leadId);
+
+    const intent = await createLeadEvidenceFileUploadIntent({
+      developerId,
+      userId,
+      leadId,
+      artifactRole: 'proof_of_income',
+      filename: 'Pending payslip.pdf',
+      contentType: 'application/pdf',
+      fileSizeBytes: 640_000,
+    });
+    cleanup.artifactIds.push(intent.artifact.id);
+
+    await expect(
+      getLeadEvidenceFileDownloadUrl({
+        developerId,
+        userId,
+        artifactId: intent.artifact.id,
+      }),
+    ).rejects.toThrow(
+      'Evidence file is not available for download until upload completion is verified.',
+    );
+
+    const [artifactRow] = await db!
+      .select()
+      .from(dleEvidenceArtifacts)
+      .where(eq(dleEvidenceArtifacts.id, intent.artifact.id))
+      .limit(1);
+    expect(artifactRow.status).toBe('requested');
+    expect(artifactRow.metadata).toMatchObject({
+      uploadStatus: 'pending_upload',
+    });
+    expect(artifactRow.metadata).not.toMatchObject({
+      lastDownloadRequestedByUserId: userId,
+    });
+  });
+
+  it('does not issue download URLs when private download storage is not configured', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const userInsert = await db!.insert(users).values({
+      email: `dle-evidence-download-${suffix}@example.com`,
+      passwordHash: 'test-password-hash',
+      role: 'property_developer',
+      firstName: 'Evidence',
+      lastName: 'Downloader',
+      name: 'Evidence Downloader',
+      emailVerified: 1,
+    });
+    const userId = getInsertId(userInsert);
+    cleanup.userIds.push(userId);
+
+    const developerInsert = await db!.insert(developers).values({
+      userId,
+      name: `Evidence Download Developer ${suffix}`,
+      email: `download-developer-${suffix}@example.com`,
+      category: 'residential',
+      status: 'approved',
+      isVerified: 1,
+    });
+    const developerId = getInsertId(developerInsert);
+    cleanup.developerIds.push(developerId);
+
+    const developmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Download Auction ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'auction',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'launching-soon',
+      startingBid: '950000',
+      auctionDate: '2026-09-12',
+    });
+    const developmentId = getInsertId(developmentInsert);
+    cleanup.developmentIds.push(developmentId);
+
+    const leadInsert = await db!.insert(leads).values({
+      developmentId,
+      name: `Evidence Download Lead ${suffix}`,
+      email: `download-lead-${suffix}@example.com`,
+      phone: '0825550304',
+      leadType: 'inquiry',
+      status: 'qualified',
+      funnelStage: 'qualification',
+      source: 'development_detail',
+      leadSource: 'development_detail_contact',
+    });
+    const leadId = getInsertId(leadInsert);
+    cleanup.leadIds.push(leadId);
+
+    const intent = await createLeadEvidenceFileUploadIntent({
+      developerId,
+      userId,
+      leadId,
+      artifactRole: 'proof_of_funds',
+      filename: 'Proof of funds.pdf',
+      contentType: 'application/pdf',
+      fileSizeBytes: 700_000,
+    });
+    cleanup.artifactIds.push(intent.artifact.id);
+
+    const [artifactBefore] = await db!
+      .select()
+      .from(dleEvidenceArtifacts)
+      .where(eq(dleEvidenceArtifacts.id, intent.artifact.id))
+      .limit(1);
+    await db!
+      .update(dleEvidenceArtifacts)
+      .set({
+        status: 'submitted',
+        metadata: {
+          ...(artifactBefore.metadata as Record<string, unknown>),
+          uploadStatus: 'uploaded',
+          uploadedByUserId: userId,
+          uploadedAt: new Date().toISOString(),
+        },
+      })
+      .where(eq(dleEvidenceArtifacts.id, intent.artifact.id));
+
+    await expect(
+      getLeadEvidenceFileDownloadUrl({
+        developerId,
+        userId,
+        artifactId: intent.artifact.id,
+      }),
+    ).rejects.toThrow(
+      'Private evidence download storage is not configured; download URL cannot be issued.',
+    );
+
+    const [artifactAfter] = await db!
+      .select()
+      .from(dleEvidenceArtifacts)
+      .where(eq(dleEvidenceArtifacts.id, intent.artifact.id))
+      .limit(1);
+    expect(artifactAfter.externalUrl).toBeNull();
+    expect(artifactAfter.metadata).toMatchObject({
+      uploadStatus: 'uploaded',
+      storageNamespace: 'private_dle_evidence',
+    });
+    expect(artifactAfter.metadata).not.toMatchObject({
+      lastDownloadRequestedByUserId: userId,
     });
 
     const [leadAfter] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);

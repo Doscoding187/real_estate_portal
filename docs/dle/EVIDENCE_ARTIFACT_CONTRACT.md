@@ -406,9 +406,23 @@ Implemented seventh runtime slice:
 - successful completion writes `evidence_artifact_submitted` with file metadata only, not document
   contents or public URLs.
 
+Implemented eighth runtime slice:
+
+- developer-only authenticated download URL broker for existing Rental/Auction uploaded-file
+  artifacts;
+- ownership checks against the artifact's lead, development, and developer before URL issuance;
+- submitted/uploaded-state guard so pending uploads cannot be downloaded;
+- private evidence namespace and no-public-external-URL guards before URL issuance;
+- short-lived signed GET URL generation when private storage is configured;
+- guarded local behavior: when private storage is not configured, download URL issuance fails
+  without adding download metadata, public URLs, lead-stage movement, inventory movement, or
+  readiness claims;
+- download URL issuance currently updates artifact metadata after successful signing. Dedicated
+  operating-event audit for downloads remains a future schema slice.
+
 Not implemented in the runtime slices:
 
-- authenticated evidence-file download;
+- download operating events and audit dashboards;
 - public applicant/bidder evidence upload;
 - `expired` or `withdrawn` mutations;
 - evidence completion/readiness automation;

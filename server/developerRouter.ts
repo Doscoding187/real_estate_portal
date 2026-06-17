@@ -52,6 +52,7 @@ import {
   createLeadEvidenceFileUploadIntent,
   createLeadEvidenceArtifact,
   getDevelopmentEvidenceCoverageSummary,
+  getLeadEvidenceFileDownloadUrl,
   listLeadEvidenceCoverageSummaries,
   listLeadEvidenceArtifacts,
   updateLeadEvidenceArtifactReviewStatus,
@@ -1767,6 +1768,22 @@ export const developerRouter = router({
         artifactId: input.artifactId,
         uploadToken: input.uploadToken,
         checksumSha256: input.checksumSha256,
+      });
+    }),
+
+  getLeadEvidenceFileDownloadUrl: protectedProcedure
+    .input(
+      z.object({
+        artifactId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await getLeadEvidenceFileDownloadUrl({
+        developerId: profile.id,
+        userId: user.id,
+        artifactId: input.artifactId,
       });
     }),
 

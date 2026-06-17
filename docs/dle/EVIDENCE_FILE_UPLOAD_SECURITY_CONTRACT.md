@@ -1,10 +1,10 @@
 # DLE Evidence File Upload Security Contract
 
 Date: 2026-06-17
-Status: Contract active. Runtime slices now support developer-only protected upload intents and a
-guarded upload-completion path for existing Rental/Auction lead artifacts. Completion requires
-private storage verification; authenticated download, public applicant/bidder upload, and evidence
-readiness automation remain unimplemented.
+Status: Contract active. Runtime slices now support developer-only protected upload intents,
+guarded upload completion, and authenticated short-lived download URL brokering for existing
+Rental/Auction lead artifacts. Public applicant/bidder upload and evidence readiness automation
+remain unimplemented.
 
 ## Purpose
 
@@ -110,6 +110,16 @@ developer.getLeadEvidenceFileDownloadUrl
 - return a short-lived signed download URL or proxy stream;
 - log download/access where product policy requires it;
 - never be callable from public development pages or unauthenticated lead forms.
+
+Current runtime note:
+
+- Developer-owned Rental/Auction uploaded-file artifacts can request a short-lived signed download
+  URL only after upload completion is verified.
+- The endpoint refuses pending uploads, non-uploaded artifacts, non-private storage keys, public
+  external URLs, unrelated developers, and environments without private storage configuration.
+- Download URL issuance currently updates artifact metadata only after a signed URL is issued.
+  A dedicated `evidence_artifact_downloaded` operating event should be added in a later schema
+  slice before audit dashboards depend on download events.
 
 ## Authorization Matrix
 

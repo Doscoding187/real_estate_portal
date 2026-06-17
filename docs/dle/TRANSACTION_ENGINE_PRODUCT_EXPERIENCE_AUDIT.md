@@ -815,9 +815,9 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
   automation, uploaded proof completion/download, public applicant/bidder upload,
   sold/let/auction outcomes, pricing adjustments, release phases, and deeper audit dashboards
   remain future. Uploaded evidence files now have a security contract, a protected developer-only
-  upload-intent path, and a guarded completion path that submits evidence only after private
-  storage verification. Authenticated download, public applicant/bidder upload, and readiness
-  automation remain future.
+  upload-intent path, a guarded completion path that submits evidence only after private storage
+  verification, and an authenticated short-lived download URL broker for developer-owned submitted
+  evidence. Public applicant/bidder upload and readiness automation remain future.
 
 ## Evidence To Attach Over Time
 
@@ -891,5 +891,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Service proof that protected Rental/Auction evidence upload completion rejects tampered tokens
   and does not mark evidence submitted when private storage cannot be verified. Status: complete
   for `dleEvidenceArtifactService` helper/integration tests.
+- Service proof that authenticated Rental/Auction evidence download rejects pending uploads and
+  refuses to issue URLs when private storage is not configured. Status: complete for
+  `dleEvidenceArtifactService` helper/integration tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

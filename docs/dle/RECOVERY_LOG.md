@@ -7084,3 +7084,52 @@ Next recommended slice:
   private-storage path and denial tests.
 Commit hash/tag: Included in `feat(dle): verify protected evidence uploads`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Protected Evidence Download Broker
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add a protected developer-only download broker for submitted Rental/Auction evidence files
+without exposing public URLs or weakening the private evidence storage boundary.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- server/developerRouter.ts
+- docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- First `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` failed
+  because the new pending-download fixture used invalid `funnel_stage = new`.
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 17 tests after correcting the fixture.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `developer.getLeadEvidenceFileDownloadUrl` now exposes a protected developer-only query.
+- Download brokering verifies developer ownership, uploaded-file artifact type, submitted/uploaded
+  state, private evidence storage namespace, and absence of a public external URL before issuing a
+  URL.
+- The broker returns a short-lived signed GET URL only when private S3 storage is configured.
+- DB-backed proof confirms pending uploads cannot receive download URLs.
+- DB-backed proof confirms submitted/uploaded artifacts still do not receive download URLs when
+  private storage is not configured, and no download metadata, public URL, lead status, or funnel
+  stage is changed in that failure path.
+Guardrails:
+- Download-broker-only slice. No public applicant/bidder upload, artifact acceptance,
+  evidence completion/readiness automation, lead-stage movement, inventory mutation, distribution
+  deal movement, reward/payout readiness, autosave, draft, publish, public listing, search-card,
+  lead form, or wizard behavior is intended.
+- This slice does not add `evidence_artifact_downloaded` operating events because the runtime event
+  enum needs a deliberate schema/migration slice before download audit dashboards rely on it.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Dedicated download operating events, admin/distribution download authorization, malware
+  scanning/quarantine, public applicant/bidder upload, file metadata client readback, and readiness
+  automation remain future.
+Next recommended slice:
+- Add a deliberate evidence download audit-event schema slice or expose submitted uploaded-file
+  metadata in the Developer Leads Manager before broadening upload/download to admin/distribution.
+Commit hash/tag: Included in `feat(dle): broker protected evidence downloads`.
+Uncommitted reason, if any: None.

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { createHmac, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   type HeadObjectCommandOutput,
   PutObjectCommand,
@@ -174,6 +175,12 @@ export type LeadEvidenceFileUploadIntent = {
   uploadUrl: string | null;
   uploadExpiresInSeconds: number | null;
   uploadUnavailableReason?: string;
+};
+
+export type LeadEvidenceFileDownloadUrl = {
+  artifact: EvidenceArtifactRow;
+  downloadUrl: string;
+  downloadExpiresInSeconds: number;
 };
 
 type EvidenceUploadTokenClaims = {
@@ -1208,6 +1215,132 @@ export async function completeLeadEvidenceFileUpload(params: {
 
   return {
     artifact: normalizeArtifactRow(getRows(readback)[0]),
+  };
+}
+
+export async function getLeadEvidenceFileDownloadUrl(params: {
+  developerId: number;
+  userId: number;
+  artifactId: number;
+}): Promise<LeadEvidenceFileDownloadUrl> {
+  const currentResult = await db.execute(sql`
+    select
+      a.id,
+      a.development_id as developmentId,
+      a.transaction_type as transactionType,
+      a.lead_id as leadId,
+      a.artifact_role as artifactRole,
+      a.artifact_type as artifactType,
+      a.storage_key as storageKey,
+      a.external_url as externalUrl,
+      a.display_name as displayName,
+      a.description,
+      a.status,
+      a.review_owner as reviewOwner,
+      a.reviewed_by_user_id as reviewedByUserId,
+      a.reviewed_at as reviewedAt,
+      a.review_note as reviewNote,
+      a.metadata as metadata,
+      a.created_by_user_id as createdByUserId,
+      a.created_at as createdAt,
+      a.updated_at as updatedAt
+    from dle_evidence_artifacts a
+    inner join developments d on d.id = a.development_id
+    where a.id = ${params.artifactId}
+      and d.developer_id = ${params.developerId}
+      and a.lead_id is not null
+    limit 1
+  `);
+  const row = getRows(currentResult)[0];
+
+  if (!row) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Evidence artifact not found for this developer.',
+    });
+  }
+
+  const artifact = normalizeArtifactRow(row);
+  const storageKey = String(row.storageKey || '');
+  const externalUrl = row.externalUrl == null ? null : String(row.externalUrl);
+  const metadata = (row.metadata && typeof row.metadata === 'object' ? row.metadata : {}) as {
+    uploadStatus?: string;
+    mimeType?: string;
+    originalFilename?: string;
+    downloadCount?: number;
+  };
+
+  if (artifact.transactionType !== 'for_rent' && artifact.transactionType !== 'auction') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence file download is only enabled for Rental and Auction leads in this slice.',
+    });
+  }
+  if (artifact.artifactType !== 'uploaded_file') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Only uploaded evidence files can be downloaded through this endpoint.',
+    });
+  }
+  if (artifact.status !== 'submitted' || metadata.uploadStatus !== 'uploaded') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence file is not available for download until upload completion is verified.',
+    });
+  }
+  if (!storageKey.startsWith('dle/evidence/')) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence artifact storage key is not in the private evidence namespace.',
+    });
+  }
+  if (externalUrl) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Uploaded evidence artifacts must not use public external URLs.',
+    });
+  }
+  if (!evidenceS3Client || !ENV.s3BucketName) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Private evidence download storage is not configured; download URL cannot be issued.',
+    });
+  }
+
+  const expiresInSeconds = 300;
+  const downloadUrl = await getSignedUrl(
+    evidenceS3Client,
+    new GetObjectCommand({
+      Bucket: ENV.s3BucketName,
+      Key: storageKey,
+      ResponseContentType: metadata.mimeType,
+      ResponseContentDisposition: `attachment; filename="${(metadata.originalFilename || artifact.displayName)
+        .replace(/[^a-zA-Z0-9._ -]+/g, '-')
+        .slice(0, 160)}"`,
+    }),
+    { expiresIn: expiresInSeconds },
+  );
+
+  await db.execute(sql`
+    update dle_evidence_artifacts
+    set
+      metadata = JSON_MERGE_PATCH(
+        COALESCE(metadata, JSON_OBJECT()),
+        CAST(${JSON.stringify({
+          lastDownloadUrlIssuedAt: new Date().toISOString(),
+          lastDownloadRequestedByUserId: params.userId,
+          downloadCount: Number(metadata.downloadCount || 0) + 1,
+        })} AS JSON)
+      ),
+      updated_by_user_id = ${params.userId},
+      updated_at = CURRENT_TIMESTAMP
+    where id = ${params.artifactId}
+  `);
+
+  return {
+    artifact,
+    downloadUrl,
+    downloadExpiresInSeconds: expiresInSeconds,
   };
 }
 
