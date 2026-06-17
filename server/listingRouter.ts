@@ -378,6 +378,133 @@ export const listingRouter = router({
     }),
 
   /**
+   * Save draft (autosave endpoint)
+   * Upserts the wizard state into the listing's draft_data JSON field.
+   * Creates a new draft listing if one doesn't exist yet.
+   */
+  saveDraft: protectedProcedure
+    .input(
+      z.object({
+        listingId: z.number().optional(),
+        data: z.record(z.string(), z.any()),
+        currentStep: z.number().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = requireUser(ctx).id;
+
+      let listingId = input.listingId;
+
+      if (!listingId) {
+        // Create a new draft listing
+        const newId = await db.createListing({
+          userId,
+          action: input.data.action || 'sell',
+          propertyType: input.data.propertyType || 'house',
+          title: input.data.title || 'New Draft Listing',
+          description: input.data.description || '',
+          pricing: input.data.pricing || {},
+          propertyDetails: input.data.propertyDetails || {},
+          address: input.data.location?.address || '',
+          latitude: input.data.location?.latitude || 0,
+          longitude: input.data.location?.longitude || 0,
+          city: input.data.location?.city || '',
+          province: input.data.location?.province || '',
+          slug: `draft-${Date.now().toString(36)}`,
+          media: [],
+        });
+        listingId = newId;
+      }
+
+      if (!listingId) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create draft listing',
+        });
+      }
+
+      // Update with full draft state
+      await db.updateListing(listingId, {
+        draftData: JSON.stringify(input.data),
+        currentStep: input.currentStep ?? 1,
+        updatedAt: new Date(),
+        lastAutosavedAt: new Date(),
+      });
+
+      return {
+        listingId,
+        savedAt: new Date().toISOString(),
+      };
+    }),
+
+  /**
+   * Get user's draft listings
+   */
+  getDrafts: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = requireUser(ctx).id;
+      const drafts = await db.getUserListings(userId, 'draft', input.limit, input.offset);
+      return drafts.map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        slug: d.slug,
+        action: d.action,
+        propertyType: d.propertyType,
+        currentStep: d.currentStep ?? 1,
+        totalSteps: 8,
+        draftData: d.draftData ? JSON.parse(d.draftData) : null,
+        updatedAt: d.updatedAt,
+        lastAutosavedAt: d.lastAutosavedAt,
+      }));
+    }),
+
+  /**
+   * Load a specific draft by ID
+   */
+  getDraftById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const userId = requireUser(ctx).id;
+      const listing = await db.getListingById(input.id);
+      if (!listing || listing.ownerId !== userId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
+      }
+      return {
+        id: listing.id,
+        title: listing.title,
+        slug: listing.slug,
+        action: listing.action,
+        propertyType: listing.propertyType,
+        currentStep: listing.currentStep ?? 1,
+        totalSteps: 8,
+        draftData: listing.draftData ? JSON.parse(listing.draftData) : null,
+        updatedAt: listing.updatedAt,
+        lastAutosavedAt: listing.lastAutosavedAt,
+      };
+    }),
+
+  /**
+   * Delete a draft
+   */
+  deleteDraft: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = requireUser(ctx).id;
+      const listing = await db.getListingById(input.id);
+      if (!listing || listing.ownerId !== userId) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
+      }
+      await db.deleteListing(input.id);
+      return { success: true };
+    }),
+
+  /**
    * Get listing by ID
    * Returns data compatible with PropertyDetail page
    */

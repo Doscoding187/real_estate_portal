@@ -36,6 +36,7 @@ function ListingWizardInner() {
   const createListingMutation = trpc.listing.create.useMutation();
   const submitForReviewMutation = trpc.listing.submitForReview.useMutation();
   const updateListingMutation = trpc.listing.update.useMutation();
+  const saveDraftMutation = trpc.listing.saveDraft.useMutation();
 
   // ── Edit mode: parse URL params ────────────────────────────────
   const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -115,17 +116,50 @@ function ListingWizardInner() {
     }
   }, [existingListing, isEditMode]);
 
-  // ── Autosave (debounced to store — Zustand persist handles localStorage) ──
+  // ── Track listing draft ID for backend autosave ────────────────
+  const [draftListingId, setDraftListingId] = useState<number | undefined>(() => {
+    // Restore from localStorage if exists
+    const stored = localStorage.getItem('listing-draft-id');
+    return stored ? Number(stored) : undefined;
+  });
+
+  // ── Autosave (debounced — saves to backend via saveDraft endpoint) ──
   useEffect(() => {
     if (isSubmitting || store.currentStep <= 1) return;
 
-    const timer = setTimeout(() => {
-      // The Zustand persist middleware automatically saves to localStorage
-      // Here we also persist to the backend draft endpoint
+    const timer = setTimeout(async () => {
       ctx.setSaveStatus('saving');
-      // TODO: Backend draft save (Week 2)
-      ctx.setSaveStatus('saved');
-      ctx.setLastSavedAt(new Date());
+      try {
+        const wizardData = {
+          action: store.action,
+          propertyType: store.propertyType,
+          title: store.title,
+          description: store.description,
+          pricing: store.pricing,
+          propertyDetails: store.propertyDetails,
+          location: store.location,
+          media: store.media,
+          basicInfo: store.basicInfo,
+          additionalInfo: store.additionalInfo,
+        };
+
+        const result = await saveDraftMutation.mutateAsync({
+          listingId: draftListingId,
+          data: wizardData as any,
+          currentStep: store.currentStep,
+        });
+
+        if (result.listingId) {
+          setDraftListingId(result.listingId);
+          localStorage.setItem('listing-draft-id', String(result.listingId));
+        }
+
+        ctx.setSaveStatus('saved');
+        ctx.setLastSavedAt(new Date());
+      } catch (err) {
+        console.error('Autosave failed:', err);
+        ctx.setSaveStatus('error');
+      }
     }, 2000);
 
     return () => clearTimeout(timer);
@@ -138,14 +172,37 @@ function ListingWizardInner() {
     store.location,
     store.media,
     store.currentStep,
+    draftListingId,
   ]);
 
   // ── Save Draft (manual) ────────────────────────────────────────
   const handleSaveDraft = useCallback(async () => {
     ctx.setSaveStatus('saving');
     try {
-      // TODO: Backend draft save (Week 2)
-      await new Promise((r) => setTimeout(r, 500));
+      const wizardData = {
+        action: store.action,
+        propertyType: store.propertyType,
+        title: store.title,
+        description: store.description,
+        pricing: store.pricing,
+        propertyDetails: store.propertyDetails,
+        location: store.location,
+        media: store.media,
+        basicInfo: store.basicInfo,
+        additionalInfo: store.additionalInfo,
+      };
+
+      const result = await saveDraftMutation.mutateAsync({
+        listingId: draftListingId,
+        data: wizardData as any,
+        currentStep: store.currentStep,
+      });
+
+      if (result.listingId) {
+        setDraftListingId(result.listingId);
+        localStorage.setItem('listing-draft-id', String(result.listingId));
+      }
+
       ctx.setSaveStatus('saved');
       ctx.setLastSavedAt(new Date());
       toast.success('Draft saved');
@@ -153,7 +210,7 @@ function ListingWizardInner() {
       ctx.setSaveStatus('error');
       toast.error('Failed to save draft');
     }
-  }, [ctx]);
+  }, [ctx, store, draftListingId, saveDraftMutation]);
 
   // ── Submit Listing ─────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
