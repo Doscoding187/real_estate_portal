@@ -1,8 +1,9 @@
 # DLE Evidence File Upload Security Contract
 
 Date: 2026-06-17
-Status: Design gate active. No evidence-file upload runtime is approved until this contract is
-implemented and tested.
+Status: Contract active. The first runtime slice now supports developer-only protected upload
+intents for existing Rental/Auction lead artifacts. Upload completion, authenticated download,
+public applicant/bidder upload, and evidence readiness automation remain unimplemented.
 
 ## Purpose
 
@@ -220,15 +221,25 @@ Before runtime upload work starts, confirm:
 
 ## First Safe Runtime Slice
 
-Recommended first implementation:
+Implemented first runtime slice:
 
 - developer-only upload intent for an existing Rental/Auction lead evidence artifact;
 - PDF/JPEG/PNG/WebP only;
 - private storage key only;
-- authenticated download broker only;
+- no public URL returned;
+- local development does not fall back to public local media URLs when private upload storage is
+  unavailable;
+- uploaded-file artifact is created as `requested` with `uploadStatus = pending_upload` metadata;
+- S3 upload URL is returned only when private S3 storage is configured;
+- focused tests cover file validation and private evidence key construction.
+
+Still required before files are usable as submitted evidence:
+
+- upload completion verification;
+- authenticated download broker;
 - submitted status after verified upload;
-- operating event audit;
-- lead-detail readback of file metadata;
+- operating event audit for submission;
+- lead-detail readback of file metadata without raw storage keys;
 - no public applicant/bidder upload;
 - no artifact acceptance automation;
 - no readiness, inventory, distribution, reward, public listing, wizard, draft, or autosave

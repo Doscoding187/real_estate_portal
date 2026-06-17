@@ -385,9 +385,19 @@ Implemented fifth runtime slice:
 - browser proof that accepted Rental proof-of-income appears in the queue row as `1/3 evidence
   accepted` while deposit readiness and lease review remain missing.
 
+Implemented sixth runtime slice:
+
+- developer-only protected upload intent for existing Rental/Auction lead artifacts;
+- PDF/JPEG/PNG/WebP validation with a 10 MB first-pass limit;
+- private evidence storage keys under `dle/evidence/{environment}/...`;
+- uploaded-file artifacts are created as `requested` with `uploadStatus = pending_upload`;
+- no public URL is returned, and local development does not fall back to public local media URLs;
+- DB-backed proof confirms the upload intent does not move lead status or funnel stage.
+
 Not implemented in the runtime slices:
 
-- uploaded evidence files;
+- upload completion verification;
+- authenticated evidence-file download;
 - public applicant/bidder evidence upload;
 - `expired` or `withdrawn` mutations;
 - evidence completion/readiness automation;

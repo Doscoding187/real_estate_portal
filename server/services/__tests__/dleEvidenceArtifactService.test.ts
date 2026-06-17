@@ -1,16 +1,61 @@
-import { describe, expect, it } from 'vitest';
+import { eq } from 'drizzle-orm';
+import { afterAll, describe, expect, it } from 'vitest';
 
+import { developers, developments, dleEvidenceArtifacts, leads, users } from '../../../drizzle/schema';
+import { getDb } from '../../db-connection';
 import {
   assertEvidenceArtifactReviewTransition,
   assertEvidenceRoleForTransaction,
   buildDevelopmentEvidenceCoverageSummary,
   buildLeadEvidenceCoverageSummary,
+  buildPrivateEvidenceStorageKey,
+  createLeadEvidenceFileUploadIntent,
   getDefaultReviewOwnerForEvidence,
   getEvidenceArtifactEventType,
   getEvidenceArtifactReviewEventType,
+  validateEvidenceUploadFile,
 } from '../dleEvidenceArtifactService';
 
+function getInsertId(result: unknown): number {
+  return Number((result as Array<{ insertId: number }>)[0]?.insertId);
+}
+
 describe('dleEvidenceArtifactService helpers', () => {
+  const cleanup: {
+    userIds: number[];
+    developerIds: number[];
+    developmentIds: number[];
+    leadIds: number[];
+    artifactIds: number[];
+  } = {
+    userIds: [],
+    developerIds: [],
+    developmentIds: [],
+    leadIds: [],
+    artifactIds: [],
+  };
+
+  afterAll(async () => {
+    const db = await getDb();
+    if (!db) return;
+
+    for (const artifactId of cleanup.artifactIds.reverse()) {
+      await db.delete(dleEvidenceArtifacts).where(eq(dleEvidenceArtifacts.id, artifactId));
+    }
+    for (const leadId of cleanup.leadIds.reverse()) {
+      await db.delete(leads).where(eq(leads.id, leadId));
+    }
+    for (const developmentId of cleanup.developmentIds.reverse()) {
+      await db.delete(developments).where(eq(developments.id, developmentId));
+    }
+    for (const developerId of cleanup.developerIds.reverse()) {
+      await db.delete(developers).where(eq(developers.id, developerId));
+    }
+    for (const userId of cleanup.userIds.reverse()) {
+      await db.delete(users).where(eq(users.id, userId));
+    }
+  });
+
   it('accepts Rental evidence roles only for Rental leads', () => {
     expect(assertEvidenceRoleForTransaction('for_rent', 'proof_of_income')).toBe(
       'proof_of_income',
@@ -196,5 +241,173 @@ describe('dleEvidenceArtifactService helpers', () => {
       guardrail:
         'Accepted evidence coverage is not bidder registration, proof-of-funds readiness, winning-bid status, or distribution payout readiness.',
     });
+  });
+
+  it('validates evidence upload files conservatively', () => {
+    expect(
+      validateEvidenceUploadFile({
+        filename: 'June payslip.pdf',
+        contentType: 'application/pdf',
+        fileSizeBytes: 512_000,
+      }),
+    ).toMatchObject({
+      sanitizedFilename: 'June-payslip.pdf',
+      extension: 'pdf',
+      contentType: 'application/pdf',
+      fileSizeBytes: 512_000,
+    });
+
+    expect(() =>
+      validateEvidenceUploadFile({
+        filename: 'funds.exe',
+        contentType: 'application/octet-stream',
+        fileSizeBytes: 512_000,
+      }),
+    ).toThrow('Unsupported evidence file type.');
+
+    expect(() =>
+      validateEvidenceUploadFile({
+        filename: 'funds.pdf',
+        contentType: 'image/png',
+        fileSizeBytes: 512_000,
+      }),
+    ).toThrow('Evidence file extension does not match the selected file type.');
+
+    expect(() =>
+      validateEvidenceUploadFile({
+        filename: 'large.pdf',
+        contentType: 'application/pdf',
+        fileSizeBytes: 11 * 1024 * 1024,
+      }),
+    ).toThrow('Evidence file must be 10 MB or smaller.');
+  });
+
+  it('builds private evidence storage keys outside public media namespaces', () => {
+    const key = buildPrivateEvidenceStorageKey({
+      environment: 'test',
+      developmentId: 12,
+      leadId: 34,
+      artifactId: 56,
+      extension: 'pdf',
+      uuid: 'fixed-upload-id',
+    });
+
+    expect(key).toBe(
+      'dle/evidence/test/development-12/lead-34/artifact-56/fixed-upload-id.pdf',
+    );
+    expect(key).not.toContain('properties/');
+    expect(key).not.toContain('local-uploads');
+  });
+
+  it('creates developer-only upload intents with private storage metadata and no lead mutation', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const userInsert = await db!.insert(users).values({
+      email: `dle-evidence-upload-${suffix}@example.com`,
+      passwordHash: 'test-password-hash',
+      role: 'property_developer',
+      firstName: 'Evidence',
+      lastName: 'Uploader',
+      name: 'Evidence Uploader',
+      emailVerified: 1,
+    });
+    const userId = getInsertId(userInsert);
+    cleanup.userIds.push(userId);
+
+    const developerInsert = await db!.insert(developers).values({
+      userId,
+      name: `Evidence Upload Developer ${suffix}`,
+      email: `developer-${suffix}@example.com`,
+      category: 'residential',
+      status: 'approved',
+      isVerified: 1,
+    });
+    const developerId = getInsertId(developerInsert);
+    cleanup.developerIds.push(developerId);
+
+    const developmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Upload Rental ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      city: 'Cape Town',
+      province: 'Western Cape',
+      status: 'launching-soon',
+      monthlyRentFrom: '12000',
+      monthlyRentTo: '14000',
+    });
+    const developmentId = getInsertId(developmentInsert);
+    cleanup.developmentIds.push(developmentId);
+
+    const leadInsert = await db!.insert(leads).values({
+      developmentId,
+      name: `Evidence Upload Lead ${suffix}`,
+      email: `lead-${suffix}@example.com`,
+      phone: '0825550301',
+      leadType: 'inquiry',
+      status: 'qualified',
+      funnelStage: 'qualification',
+      source: 'development_detail',
+      leadSource: 'development_detail_contact',
+    });
+    const leadId = getInsertId(leadInsert);
+    cleanup.leadIds.push(leadId);
+
+    const [leadBefore] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    const result = await createLeadEvidenceFileUploadIntent({
+      developerId,
+      userId,
+      leadId,
+      artifactRole: 'proof_of_income',
+      filename: 'June payslip.pdf',
+      contentType: 'application/pdf',
+      fileSizeBytes: 512_000,
+      displayName: 'June payslip',
+      description: 'Applicant payslip for manual review.',
+    });
+    cleanup.artifactIds.push(result.artifact.id);
+
+    expect(result).toMatchObject({
+      uploadUrl: null,
+      uploadExpiresInSeconds: null,
+      uploadUnavailableReason: 'Private evidence upload storage is not configured in this environment.',
+    });
+    expect(result).not.toHaveProperty('publicUrl');
+    expect(result.uploadToken).toEqual(expect.any(String));
+    expect(result.artifact).toMatchObject({
+      developmentId,
+      transactionType: 'for_rent',
+      leadId,
+      artifactRole: 'proof_of_income',
+      artifactType: 'uploaded_file',
+      displayName: 'June payslip',
+      description: 'Applicant payslip for manual review.',
+      status: 'requested',
+      reviewOwner: 'leasing_team',
+    });
+
+    const [artifactRow] = await db!
+      .select()
+      .from(dleEvidenceArtifacts)
+      .where(eq(dleEvidenceArtifacts.id, result.artifact.id))
+      .limit(1);
+    expect(artifactRow.storageKey).toContain(
+      `dle/evidence/test/development-${developmentId}/lead-${leadId}/artifact-${result.artifact.id}/`,
+    );
+    expect(artifactRow.storageKey).not.toContain('properties/');
+    expect(artifactRow.externalUrl).toBeNull();
+    expect(artifactRow.metadata).toMatchObject({
+      uploadStatus: 'pending_upload',
+      storageNamespace: 'private_dle_evidence',
+      originalFilename: 'June-payslip.pdf',
+      mimeType: 'application/pdf',
+      fileSizeBytes: 512_000,
+    });
+
+    const [leadAfter] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(leadAfter.status).toBe(leadBefore.status);
+    expect(leadAfter.funnelStage).toBe(leadBefore.funnelStage);
   });
 });

@@ -769,6 +769,26 @@ This keeps the operating layer moving toward true proof documents while avoiding
 and privacy error: treating payslips, proof-of-funds files, legal packs, or signed leases like
 marketing images.
 
+## Fortieth Product-Visibility Slice
+
+Implement protected evidence-file upload intent.
+
+DLE now has the first runtime slice for private Rental/Auction evidence file handling:
+
+- developer operators can request an upload intent for an existing Rental/Auction lead artifact;
+- file type and extension are validated conservatively for PDF/JPEG/PNG/WebP only;
+- file size is capped at 10 MB for the first pass;
+- evidence storage keys use a private `dle/evidence/{environment}/...` namespace;
+- the returned payload contains no public URL;
+- when private upload storage is not configured, local development returns an explicit unavailable
+  reason rather than falling back to public local media URLs;
+- the artifact is created as `uploaded_file` + `requested` with `uploadStatus = pending_upload`;
+- lead status and funnel stage remain unchanged.
+
+This is still upload-intent only. Upload completion, authenticated download, lead-detail file
+metadata readback, public applicant/bidder upload, acceptance automation, readiness, inventory,
+distribution, reward, public listing, wizard, draft, and autosave mutation remain future.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -792,10 +812,11 @@ marketing images.
   accepted-role coverage readback now exist. The Developer Control Tower now aggregates accepted
   coverage versus missing roles for selected Rental/Auction developments, and lead queue rows now
   surface per-lead accepted/missing evidence coverage before opening detail. Evidence completion
-  automation, runtime uploaded proof files, public applicant/bidder upload, sold/let/auction
-  outcomes, pricing adjustments, release phases, and deeper audit dashboards remain future. Uploaded
-  evidence files now have a security contract that must be implemented before runtime upload is
-  enabled.
+  automation, uploaded proof completion/download, public applicant/bidder upload,
+  sold/let/auction outcomes, pricing adjustments, release phases, and deeper audit dashboards
+  remain future. Uploaded evidence files now have a security contract and a protected
+  developer-only upload-intent path, but files are not yet completed, downloaded, or used as
+  submitted evidence.
 
 ## Evidence To Attach Over Time
 
@@ -863,5 +884,8 @@ marketing images.
 - Documentation proof that Rental/Auction evidence files have a private upload/download security
   contract before runtime upload work. Status: complete for
   `EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md`.
+- Service proof that developer-only Rental/Auction evidence upload intents create private
+  `uploaded_file` artifacts without public URLs or lead mutation. Status: complete for
+  `dleEvidenceArtifactService` helper/integration tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

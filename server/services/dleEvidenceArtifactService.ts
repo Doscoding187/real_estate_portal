@@ -1,7 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import { db } from '../db';
+import { ENV } from '../_core/env';
 
 export const DLE_EVIDENCE_ARTIFACT_STATUSES = ['requested', 'submitted'] as const;
 export type DleEvidenceArtifactStatus = (typeof DLE_EVIDENCE_ARTIFACT_STATUSES)[number];
@@ -15,6 +20,7 @@ export type DleEvidenceArtifactReviewStatus =
   (typeof DLE_EVIDENCE_ARTIFACT_REVIEW_STATUSES)[number];
 
 export const DLE_EVIDENCE_ARTIFACT_TYPES = [
+  'uploaded_file',
   'manual_attestation',
   'system_note',
   'external_link',
@@ -62,6 +68,36 @@ const REQUIRED_AUCTION_EVIDENCE_ROLES: RequiredEvidenceRole[] = [
   { role: 'proof_of_funds', label: 'Proof of funds' },
   { role: 'bidder_registration', label: 'Registration review' },
 ];
+
+const DLE_EVIDENCE_UPLOAD_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+
+const DLE_EVIDENCE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+
+const DLE_EVIDENCE_UPLOAD_EXTENSIONS: Record<
+  (typeof DLE_EVIDENCE_UPLOAD_MIME_TYPES)[number],
+  string[]
+> = {
+  'application/pdf': ['pdf'],
+  'image/jpeg': ['jpg', 'jpeg'],
+  'image/png': ['png'],
+  'image/webp': ['webp'],
+};
+
+const evidenceS3Client =
+  ENV.awsAccessKeyId && ENV.awsSecretAccessKey && ENV.awsRegion && ENV.s3BucketName
+    ? new S3Client({
+        region: ENV.awsRegion,
+        credentials: {
+          accessKeyId: ENV.awsAccessKeyId,
+          secretAccessKey: ENV.awsSecretAccessKey,
+        },
+      })
+    : null;
 
 type LeadEvidenceScope = {
   leadId: number;
@@ -118,6 +154,21 @@ export type LeadEvidenceCoverageSummary = {
   acceptedRoles: RequiredEvidenceRole[];
   missingRoles: RequiredEvidenceRole[];
   guardrail: string;
+};
+
+export type EvidenceUploadFileValidation = {
+  sanitizedFilename: string;
+  extension: string;
+  contentType: (typeof DLE_EVIDENCE_UPLOAD_MIME_TYPES)[number];
+  fileSizeBytes: number;
+};
+
+export type LeadEvidenceFileUploadIntent = {
+  artifact: EvidenceArtifactRow;
+  uploadToken: string;
+  uploadUrl: string | null;
+  uploadExpiresInSeconds: number | null;
+  uploadUnavailableReason?: string;
 };
 
 export function isRentalEvidenceRole(role: string): role is RentalEvidenceRole {
@@ -274,6 +325,104 @@ export function buildLeadEvidenceCoverageSummary(params: {
     missingRoles,
     guardrail,
   };
+}
+
+function sanitizeEvidenceFilename(filename: string): string {
+  const base = path.basename(filename || 'evidence-file');
+  const sanitized = base
+    .trim()
+    .replace(/[^a-zA-Z0-9._ -]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 160);
+  return sanitized || 'evidence-file';
+}
+
+export function validateEvidenceUploadFile(params: {
+  filename: string;
+  contentType: string;
+  fileSizeBytes: number;
+}): EvidenceUploadFileValidation {
+  const contentType = params.contentType.trim().toLowerCase();
+  if (!(DLE_EVIDENCE_UPLOAD_MIME_TYPES as readonly string[]).includes(contentType)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Unsupported evidence file type.',
+    });
+  }
+
+  const fileSizeBytes = Number(params.fileSizeBytes);
+  if (!Number.isFinite(fileSizeBytes) || fileSizeBytes <= 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence file size is required.',
+    });
+  }
+  if (fileSizeBytes > DLE_EVIDENCE_UPLOAD_MAX_BYTES) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence file must be 10 MB or smaller.',
+    });
+  }
+
+  const sanitizedFilename = sanitizeEvidenceFilename(params.filename);
+  const extension = path.extname(sanitizedFilename).replace(/^\./, '').toLowerCase();
+  const allowedExtensions =
+    DLE_EVIDENCE_UPLOAD_EXTENSIONS[contentType as keyof typeof DLE_EVIDENCE_UPLOAD_EXTENSIONS];
+  if (!extension || !allowedExtensions.includes(extension)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence file extension does not match the selected file type.',
+    });
+  }
+
+  return {
+    sanitizedFilename,
+    extension,
+    contentType: contentType as EvidenceUploadFileValidation['contentType'],
+    fileSizeBytes,
+  };
+}
+
+export function buildPrivateEvidenceStorageKey(params: {
+  environment?: string;
+  developmentId: number;
+  leadId: number;
+  artifactId: number;
+  extension: string;
+  uuid?: string;
+}): string {
+  const environment = String(params.environment || process.env.NODE_ENV || 'development')
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase() || 'development';
+  return [
+    'dle',
+    'evidence',
+    environment,
+    `development-${Number(params.developmentId)}`,
+    `lead-${Number(params.leadId)}`,
+    `artifact-${Number(params.artifactId)}`,
+    `${params.uuid || randomUUID()}.${params.extension.replace(/[^a-zA-Z0-9]+/g, '').toLowerCase()}`,
+  ].join('/');
+}
+
+function buildEvidenceUploadToken(params: {
+  artifactId: number;
+  leadId: number;
+  developmentId: number;
+  storageKey: string;
+}): string {
+  return Buffer.from(
+    JSON.stringify({
+      artifactId: params.artifactId,
+      leadId: params.leadId,
+      developmentId: params.developmentId,
+      storageKey: params.storageKey,
+      nonce: randomUUID(),
+    }),
+  ).toString('base64url');
 }
 
 export function assertEvidenceArtifactReviewTransition(params: {
@@ -612,6 +761,164 @@ export async function createLeadEvidenceArtifact(params: {
 
   return {
     artifact: normalizeArtifactRow(getRows(readback)[0]),
+  };
+}
+
+export async function createLeadEvidenceFileUploadIntent(params: {
+  developerId: number;
+  userId: number;
+  leadId: number;
+  artifactRole: string;
+  filename: string;
+  contentType: string;
+  fileSizeBytes: number;
+  displayName?: string;
+  description?: string;
+}): Promise<LeadEvidenceFileUploadIntent> {
+  const scope = await getLeadEvidenceScope(params);
+  const artifactRole = assertEvidenceRoleForTransaction(scope.transactionType, params.artifactRole);
+  const file = validateEvidenceUploadFile({
+    filename: params.filename,
+    contentType: params.contentType,
+    fileSizeBytes: params.fileSizeBytes,
+  });
+  const reviewOwner = getDefaultReviewOwnerForEvidence(scope.transactionType);
+  const displayName = (params.displayName?.trim() || file.sanitizedFilename).slice(0, 160);
+  const description = params.description?.trim() || null;
+
+  const insertResult = await db.execute(sql`
+    insert into dle_evidence_artifacts (
+      development_id,
+      transaction_type,
+      lead_id,
+      artifact_role,
+      artifact_type,
+      display_name,
+      description,
+      status,
+      review_owner,
+      created_by_user_id,
+      updated_by_user_id,
+      metadata
+    )
+    values (
+      ${scope.developmentId},
+      ${scope.transactionType},
+      ${scope.leadId},
+      ${artifactRole},
+      'uploaded_file',
+      ${displayName},
+      ${description},
+      'requested',
+      ${reviewOwner},
+      ${params.userId},
+      ${params.userId},
+      ${JSON.stringify({
+        source: 'developer_leads_manager',
+        uploadStatus: 'pending_upload',
+        originalFilename: file.sanitizedFilename,
+        mimeType: file.contentType,
+        fileSizeBytes: file.fileSizeBytes,
+      })}
+    )
+  `);
+
+  const artifactId = readInsertId(insertResult);
+  if (!artifactId) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Evidence upload artifact was not created.',
+    });
+  }
+
+  const storageKey = buildPrivateEvidenceStorageKey({
+    developmentId: scope.developmentId,
+    leadId: scope.leadId,
+    artifactId,
+    extension: file.extension,
+  });
+  const uploadToken = buildEvidenceUploadToken({
+    artifactId,
+    leadId: scope.leadId,
+    developmentId: scope.developmentId,
+    storageKey,
+  });
+
+  await db.execute(sql`
+    update dle_evidence_artifacts
+    set
+      storage_key = ${storageKey},
+      metadata = JSON_MERGE_PATCH(
+        COALESCE(metadata, JSON_OBJECT()),
+        CAST(${JSON.stringify({
+          uploadStatus: 'pending_upload',
+          storageNamespace: 'private_dle_evidence',
+          storageKey,
+          uploadTokenIssued: true,
+          uploadTokenVersion: 1,
+        })} AS JSON)
+      ),
+      updated_by_user_id = ${params.userId},
+      updated_at = CURRENT_TIMESTAMP
+    where id = ${artifactId}
+  `);
+
+  let uploadUrl: string | null = null;
+  let uploadExpiresInSeconds: number | null = null;
+  let uploadUnavailableReason: string | undefined;
+
+  if (evidenceS3Client && ENV.s3BucketName) {
+    uploadExpiresInSeconds = 900;
+    uploadUrl = await getSignedUrl(
+      evidenceS3Client,
+      new PutObjectCommand({
+        Bucket: ENV.s3BucketName,
+        Key: storageKey,
+        ContentType: file.contentType,
+        Metadata: {
+          artifactId: String(artifactId),
+          developmentId: String(scope.developmentId),
+          leadId: String(scope.leadId),
+          originalFilename: file.sanitizedFilename,
+          storageNamespace: 'private_dle_evidence',
+        },
+      }),
+      { expiresIn: uploadExpiresInSeconds },
+    );
+  } else {
+    uploadUnavailableReason =
+      'Private evidence upload storage is not configured in this environment.';
+  }
+
+  const readback = await db.execute(sql`
+    select
+      id,
+      development_id as developmentId,
+      transaction_type as transactionType,
+      lead_id as leadId,
+      artifact_role as artifactRole,
+      artifact_type as artifactType,
+      display_name as displayName,
+      description,
+      status,
+      review_owner as reviewOwner,
+      reviewed_by_user_id as reviewedByUserId,
+      reviewed_at as reviewedAt,
+      review_note as reviewNote,
+      created_by_user_id as createdByUserId,
+      created_at as createdAt,
+      updated_at as updatedAt
+    from dle_evidence_artifacts
+    where id = ${artifactId}
+    limit 1
+  `);
+
+  return {
+    artifact: normalizeArtifactRow(getRows(readback)[0]),
+    uploadToken,
+    uploadUrl,
+    uploadExpiresInSeconds,
+    uploadUnavailableReason,
   };
 }
 

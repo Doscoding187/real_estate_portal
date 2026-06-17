@@ -6981,3 +6981,57 @@ Next recommended slice:
   artifacts with private storage keys and no public download URL.
 Commit hash/tag: Included in `docs(dle): define evidence file upload security`.
 Uncommitted reason, if any: None.
+
+## 2026-06-17 - Protected Evidence Upload Intent
+
+Date: 2026-06-17
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement developer-only protected upload intents for existing Rental/Auction lead evidence
+artifacts, with private storage keys and no public download URL.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- server/developerRouter.ts
+- docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm db:migrate:test` passed and applied `0072_create_dle_evidence_artifacts.sql` to the test DB where missing.
+- First focused test run failed because `listify_test.dle_evidence_artifacts` was missing before
+  the test migration was applied.
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 13 tests after test DB migration.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `developer.createLeadEvidenceFileUploadIntent` now creates a developer-owned Rental/Auction
+  uploaded-file evidence artifact intent.
+- Evidence upload validation allows PDF/JPEG/PNG/WebP only and rejects unsupported MIME types,
+  extension mismatches, missing/invalid sizes, and files above 10 MB.
+- Private evidence storage keys are generated under `dle/evidence/{environment}/development-{id}/lead-{id}/artifact-{id}/...`.
+- The response returns an opaque upload token and never returns a public URL.
+- If private S3 upload storage is not configured, local development returns an explicit
+  `uploadUnavailableReason` instead of falling back to public local media URLs.
+- DB-backed proof creates a Rental upload intent, verifies `artifactType = uploaded_file`,
+  `status = requested`, `uploadStatus = pending_upload`, private storage metadata, `externalUrl =
+  null`, and confirms lead status/funnel stage did not move.
+Guardrails:
+- Upload-intent-only slice. No upload completion, authenticated download, artifact submission
+  event, artifact acceptance, lead-stage movement, inventory mutation, distribution deal movement,
+  reward/payout readiness, autosave, draft, publish, public listing, search-card, lead form, or
+  wizard behavior is intended.
+- Uploaded evidence is not evidence completion automation and must not be used as lease readiness,
+  bidder registration, proof-of-funds readiness, let/sold status, or payout readiness.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Upload completion verification, checksum capture, authenticated download broker, file metadata
+  readback, denial tests for unrelated developers/public callers, and audit events for verified
+  submission remain future.
+- Malware scanning/quarantine remains future and should be added before broad public applicant or
+  bidder upload.
+Next recommended slice:
+- Implement upload completion verification for protected evidence files, setting uploaded metadata
+  and `submitted` status only after the private upload is verified.
+Commit hash/tag: Included in `feat(dle): create protected evidence upload intents`.
+Uncommitted reason, if any: None.
