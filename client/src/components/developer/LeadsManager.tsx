@@ -85,6 +85,9 @@ type LeadEvidenceArtifactItem = {
   description?: string | null;
   status: string;
   reviewOwner: string;
+  reviewedByUserId?: number | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
   createdAt?: string | null;
 };
 
@@ -240,6 +243,7 @@ export default function LeadsManager() {
   );
   const [evidenceArtifactDisplayName, setEvidenceArtifactDisplayName] = useState('');
   const [evidenceArtifactDescription, setEvidenceArtifactDescription] = useState('');
+  const [evidenceArtifactReviewNote, setEvidenceArtifactReviewNote] = useState('');
   const [transitionTarget, setTransitionTarget] = useState('');
   const [transitionNotes, setTransitionNotes] = useState('');
   const [outcomeSyncAction, setOutcomeSyncAction] = useState<OutcomeSyncAction | ''>('');
@@ -483,6 +487,15 @@ export default function LeadsManager() {
     },
     onError: error => toast.error(error.message || 'Could not save evidence artifact.'),
   });
+  const updateEvidenceArtifactReviewMutation =
+    trpc.developer.updateLeadEvidenceArtifactReviewStatus.useMutation({
+      onSuccess: async data => {
+        toast.success(`Evidence artifact ${data.artifact.status.replace('_', ' ')}.`);
+        setEvidenceArtifactReviewNote('');
+        await evidenceArtifactsQuery.refetch();
+      },
+      onError: error => toast.error(error.message || 'Could not update evidence artifact.'),
+    });
   const selectedLeadEvidenceArtifacts = ((evidenceArtifactsQuery.data?.items ||
     []) as LeadEvidenceArtifactItem[]);
   const outcomeSyncActions = getOutcomeSyncActions(selectedLeadTransactionType);
@@ -510,6 +523,7 @@ export default function LeadsManager() {
     setEvidenceArtifactRole(evidenceOptions[0]?.role || '');
     setEvidenceArtifactDescription('');
     setEvidenceArtifactDisplayName('');
+    setEvidenceArtifactReviewNote('');
     setEvidenceArtifactStatus('submitted');
     const actions = getOutcomeSyncActions(
       normalizeDevelopmentTransactionType((selectedLeadDevelopment as any)?.transactionType),
@@ -625,6 +639,22 @@ export default function LeadsManager() {
         'Evidence artifact',
       description: evidenceArtifactDescription.trim() || option?.description,
       status: evidenceArtifactStatus,
+    });
+  };
+
+  const handleUpdateEvidenceArtifactReview = (
+    artifact: LeadEvidenceArtifactItem,
+    status: 'under_review' | 'accepted' | 'rejected',
+  ) => {
+    if (status === 'rejected' && evidenceArtifactReviewNote.trim().length < 3) {
+      toast.error('Rejected evidence requires a review note.');
+      return;
+    }
+
+    updateEvidenceArtifactReviewMutation.mutate({
+      artifactId: artifact.id,
+      status,
+      reviewNote: evidenceArtifactReviewNote.trim() || undefined,
     });
   };
 
@@ -1128,6 +1158,13 @@ export default function LeadsManager() {
                             Save Evidence Artifact
                           </Button>
                         </div>
+                        <Textarea
+                          className="min-h-16"
+                          placeholder="Review note for artifact decision"
+                          value={evidenceArtifactReviewNote}
+                          onChange={event => setEvidenceArtifactReviewNote(event.target.value)}
+                          data-testid={`dle-lead-evidence-review-note-${selectedLead.id}`}
+                        />
                         <div className="space-y-2">
                           {evidenceArtifactsQuery.isLoading && (
                             <p className="text-xs text-muted-foreground">Loading evidence...</p>
@@ -1156,6 +1193,57 @@ export default function LeadsManager() {
                               {artifact.description && (
                                 <p className="mt-1 whitespace-pre-wrap">{artifact.description}</p>
                               )}
+                              {artifact.reviewNote && (
+                                <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                                  Review note: {artifact.reviewNote}
+                                </p>
+                              )}
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {(artifact.status === 'requested' ||
+                                  artifact.status === 'submitted') && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    type="button"
+                                    disabled={updateEvidenceArtifactReviewMutation.isPending}
+                                    onClick={() =>
+                                      handleUpdateEvidenceArtifactReview(artifact, 'under_review')
+                                    }
+                                    data-testid={`dle-lead-start-evidence-review-${artifact.id}`}
+                                  >
+                                    Start Review
+                                  </Button>
+                                )}
+                                {(artifact.status === 'submitted' ||
+                                  artifact.status === 'under_review') && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      type="button"
+                                      disabled={updateEvidenceArtifactReviewMutation.isPending}
+                                      onClick={() =>
+                                        handleUpdateEvidenceArtifactReview(artifact, 'accepted')
+                                      }
+                                      data-testid={`dle-lead-accept-evidence-artifact-${artifact.id}`}
+                                    >
+                                      Accept Evidence
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      type="button"
+                                      disabled={updateEvidenceArtifactReviewMutation.isPending}
+                                      onClick={() =>
+                                        handleUpdateEvidenceArtifactReview(artifact, 'rejected')
+                                      }
+                                      data-testid={`dle-lead-reject-evidence-artifact-${artifact.id}`}
+                                    >
+                                      Reject Evidence
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>

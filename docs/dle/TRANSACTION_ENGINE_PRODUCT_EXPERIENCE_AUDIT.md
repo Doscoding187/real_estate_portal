@@ -663,6 +663,27 @@ This is still not evidence completion. Uploaded files, public applicant/bidder u
 acceptance/rejection, evidence completion read models, admin/distribution review linkage, inventory
 movement, public availability changes, payout/reward readiness, and autosave remain future slices.
 
+## Thirty-Fifth Product-Visibility Slice
+
+Implement evidence artifact review-state transitions.
+
+DLE lead detail now supports artifact review decisions for Rental/Auction evidence artifacts:
+
+- `under_review` starts artifact review from requested/submitted evidence;
+- `accepted` records a reviewer, review timestamp, optional review note, and audit event;
+- `rejected` requires a review note and records the rejection audit trail;
+- requested artifacts cannot be accepted/rejected directly;
+- accepted/rejected artifacts remain artifact-level evidence decisions only.
+
+The focused browser proof accepts a Rental proof-of-income manual attestation after submission,
+reads back the accepted status and review note in the lead detail panel, verifies the DB artifact
+status/reviewer/timestamp, verifies `evidence_artifact_accepted` in
+`development_operating_events`, and confirms the lead status/funnel stage did not move.
+
+This moves Rental/Auction closer to operating proof, but it still does not claim lease readiness,
+bidder readiness, proof-of-funds readiness, inventory let/sold status, distribution payout/reward
+readiness, public availability mutation, or autosave safety.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
@@ -682,9 +703,10 @@ movement, public availability changes, payout/reward readiness, and autosave rem
   as lead activity notes, read back in the lead timeline, and browser-proven for Rental/Auction
   panels. Evidence readiness is now summarized as a transaction-specific manual review model, and
   the lead queue and dashboard now surface manual review demand/status. First-pass lead-level
-  Rental/Auction evidence request/submission/readback now exists, but accepted/rejected evidence
-  workflows, completion semantics, sold/let/auction outcomes, pricing adjustments, release phases,
-  and deeper audit dashboards remain future.
+  Rental/Auction evidence request/submission/readback and artifact-level review decisions now
+  exist, but evidence completion semantics, uploaded proof files, public applicant/bidder upload,
+  sold/let/auction outcomes, pricing adjustments, release phases, and deeper audit dashboards
+  remain future.
 
 ## Evidence To Attach Over Time
 
@@ -737,5 +759,8 @@ movement, public availability changes, payout/reward readiness, and autosave rem
 - Browser/API/DB proof that a Rental lead can persist and read back a proof-of-income manual
   attestation without moving lead stage or inventory. Status: complete for focused
   `lead-outcome-sync` proof.
+- Browser/API/DB proof that a Rental proof-of-income artifact can be accepted with review note,
+  reviewer, timestamp, and audit event without moving lead stage or inventory. Status: complete for
+  focused `lead-outcome-sync` proof.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

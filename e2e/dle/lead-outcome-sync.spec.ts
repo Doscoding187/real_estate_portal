@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import dotenv from 'dotenv';
 import fs from 'node:fs';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 
 dotenv.config({ path: '.env.local' });
 
@@ -717,6 +717,56 @@ test.describe.serial('DLE lead outcome sync browser proof', () => {
       artifactRole: 'proof_of_income',
       displayName: 'Proof of income attestation',
       reviewOwner: 'leasing_team',
+    });
+    await page
+      .getByTestId(`dle-lead-evidence-review-note-${rentalSeed.leadId}`)
+      .fill('Leasing team reviewed the submitted payslip attestation.');
+    await page
+      .getByTestId(`dle-lead-accept-evidence-artifact-${rentalArtifacts[0].id}`)
+      .click();
+    await expect(page.getByText('Evidence artifact accepted.')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByTestId(`dle-lead-evidence-artifacts-${rentalSeed.leadId}`),
+    ).toContainText('accepted');
+    await expect(
+      page.getByTestId(`dle-lead-evidence-artifacts-${rentalSeed.leadId}`),
+    ).toContainText('Review note: Leasing team reviewed the submitted payslip attestation.');
+
+    const reviewedRentalArtifacts = await db!
+      .select()
+      .from(dleEvidenceArtifacts)
+      .where(eq(dleEvidenceArtifacts.leadId, rentalSeed.leadId));
+    expect(reviewedRentalArtifacts).toHaveLength(1);
+    expect(reviewedRentalArtifacts[0]).toMatchObject({
+      status: 'accepted',
+      reviewNote: 'Leasing team reviewed the submitted payslip attestation.',
+    });
+    expect(reviewedRentalArtifacts[0].reviewedByUserId).toBe(rentalSeed.userId);
+    expect(reviewedRentalArtifacts[0].reviewedAt).toBeTruthy();
+
+    const evidenceEventsAfterReview = await db!
+      .select()
+      .from(developmentOperatingEvents)
+      .where(eq(developmentOperatingEvents.developmentId, rentalSeed.developmentId))
+      .orderBy(asc(developmentOperatingEvents.id));
+    expect(evidenceEventsAfterReview.map(event => event.eventType)).toEqual([
+      'evidence_artifact_submitted',
+      'evidence_artifact_accepted',
+    ]);
+    expect(evidenceEventsAfterReview[1]).toMatchObject({
+      leadId: rentalSeed.leadId,
+      transactionType: 'for_rent',
+      fromStatus: 'submitted',
+      toStatus: 'accepted',
+      sourceSurface: 'developer_leads_manager',
+    });
+    expect(parseJsonObject(evidenceEventsAfterReview[1].metadata)).toMatchObject({
+      artifactRole: 'proof_of_income',
+      displayName: 'Proof of income attestation',
+      reviewOwner: 'leasing_team',
+      note: 'Leasing team reviewed the submitted payslip attestation.',
     });
 
     const [rentalLeadAfterEvidence] = await db!

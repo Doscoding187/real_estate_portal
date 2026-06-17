@@ -6726,3 +6726,59 @@ Next recommended slice:
   lead-stage, payout/reward, public listing, or autosave mutation.
 Commit hash/tag: Included in `feat(dle): persist lead evidence artifacts`.
 Uncommitted reason, if any: None.
+
+## 2026-06-16 - Evidence Artifact Review States
+
+Date: 2026-06-16
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add lead-level Rental/Auction evidence artifact review-state transitions with readback and
+audit, without turning accepted artifacts into lease/bidder readiness or operational automation.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- server/developerRouter.ts
+- client/src/components/developer/LeadsManager.tsx
+- e2e/dle/lead-outcome-sync.spec.ts
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 15 tests.
+- `pnpm run check` passed.
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/lead-outcome-sync.spec.ts --project="Desktop Chrome" --workers=1` passed with 4 tests.
+Functional proof:
+- Developer lead detail can move Rental/Auction evidence artifacts to `under_review`, `accepted`,
+  or `rejected`.
+- Rejections require a review note.
+- Requested artifacts cannot be accepted/rejected directly; submitted or under-review artifacts can
+  be accepted/rejected.
+- Accepted/rejected artifacts record review note, reviewer, reviewed timestamp, updated user, and
+  status readback.
+- Review transitions write `development_operating_events` audit rows using
+  `evidence_artifact_review_started`, `evidence_artifact_accepted`, or
+  `evidence_artifact_rejected`.
+- Browser/API/DB proof accepts a Rental proof-of-income artifact, verifies the accepted artifact
+  readback, verifies the DB reviewer/timestamp/review note, verifies the audit event, and confirms
+  the lead status/funnel stage did not move.
+Guardrails:
+- No uploaded-file evidence, public applicant/bidder upload, evidence completion/readiness model,
+  lead-stage movement, inventory mutation, distribution deal movement, payout/reward readiness,
+  autosave, draft, publish, public listing, search-card, or wizard behavior is intended in this
+  slice.
+- Accepted artifacts remain artifact-level evidence decisions only. They do not mark lease
+  readiness, bidder registration, proof-of-funds readiness, inventory let/sold, or distribution
+  readiness.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Uploaded sensitive evidence files still need a dedicated protected storage and authorization
+  slice.
+- Evidence completion read models still need transaction-specific mandatory-role semantics before
+  any readiness claim.
+- Admin/distribution review linkage remains future and must preserve ownership boundaries.
+Next recommended slice:
+- Define the evidence completion read model for Rental/Auction mandatory roles without automation:
+  accepted artifact coverage by role, missing-role summaries, and explicit "not lease/bidder ready"
+  guardrails.
+Commit hash/tag: Included in `feat(dle): review lead evidence artifacts`.
+Uncommitted reason, if any: None.

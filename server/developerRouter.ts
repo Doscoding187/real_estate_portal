@@ -50,6 +50,7 @@ import {
 import {
   createLeadEvidenceArtifact,
   listLeadEvidenceArtifacts,
+  updateLeadEvidenceArtifactReviewStatus,
 } from './services/dleEvidenceArtifactService';
 import {
   developmentDrafts,
@@ -1700,6 +1701,26 @@ export const developerRouter = router({
         displayName: input.displayName,
         description: input.description,
         status: input.status,
+      });
+    }),
+
+  updateLeadEvidenceArtifactReviewStatus: protectedProcedure
+    .input(
+      z.object({
+        artifactId: z.number().int().positive(),
+        status: z.enum(['under_review', 'accepted', 'rejected']),
+        reviewNote: z.string().trim().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const profile = await requireDeveloperProfileByUserId(user.id);
+      return await updateLeadEvidenceArtifactReviewStatus({
+        developerId: profile.id,
+        userId: user.id,
+        artifactId: input.artifactId,
+        status: input.status,
+        reviewNote: input.reviewNote,
       });
     }),
 

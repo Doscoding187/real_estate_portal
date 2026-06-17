@@ -1,10 +1,11 @@
 # DLE Evidence Artifact Contract
 
 Date: 2026-06-13
-Status: Contract active. The first runtime slice now implements DLE-owned lead-level Rental/Auction
-evidence artifacts for `requested` and `submitted` manual attestations with lead-detail readback and
-operating-event audit. Evidence acceptance, rejection, completion, readiness, lead-stage movement,
-inventory movement, payout/reward movement, and autosave behavior remain explicitly unimplemented.
+Status: Contract active. Runtime slices now implement DLE-owned lead-level Rental/Auction evidence
+artifacts for `requested`, `submitted`, `under_review`, `accepted`, and `rejected` manual
+attestations with lead-detail readback and operating-event audit. Evidence completion, readiness,
+lead-stage movement, inventory movement, payout/reward movement, public listing mutation, and
+autosave behavior remain explicitly unimplemented.
 
 ## Purpose
 
@@ -337,11 +338,22 @@ Implemented first proof:
   `submitted`;
 - no inventory, lead stage, distribution deal, reward, public listing, or wizard data changes.
 
-Not implemented in the first runtime slice:
+Implemented second runtime slice:
+
+- lead-detail review-state transitions for `under_review`, `accepted`, and `rejected`;
+- review notes and reviewer/timestamp readback for accepted/rejected artifacts;
+- audit events for `evidence_artifact_review_started`, `evidence_artifact_accepted`, and
+  `evidence_artifact_rejected`;
+- transition guards so requested evidence cannot be accepted/rejected directly;
+- rejection note requirement;
+- browser/API/DB proof that accepted Rental proof-of-income evidence does not move lead stage,
+  inventory, distribution, rewards, public listing, or wizard data.
+
+Not implemented in the runtime slices:
 
 - uploaded evidence files;
 - public applicant/bidder evidence upload;
-- `under_review`, `accepted`, `rejected`, `expired`, or `withdrawn` mutations;
+- `expired` or `withdrawn` mutations;
 - evidence completion/readiness read models;
 - distribution/admin review linkage;
 - inventory, lead-stage, public listing, payout, reward, or autosave mutations.

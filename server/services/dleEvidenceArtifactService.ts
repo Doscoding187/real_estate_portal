@@ -6,6 +6,14 @@ import { db } from '../db';
 export const DLE_EVIDENCE_ARTIFACT_STATUSES = ['requested', 'submitted'] as const;
 export type DleEvidenceArtifactStatus = (typeof DLE_EVIDENCE_ARTIFACT_STATUSES)[number];
 
+export const DLE_EVIDENCE_ARTIFACT_REVIEW_STATUSES = [
+  'under_review',
+  'accepted',
+  'rejected',
+] as const;
+export type DleEvidenceArtifactReviewStatus =
+  (typeof DLE_EVIDENCE_ARTIFACT_REVIEW_STATUSES)[number];
+
 export const DLE_EVIDENCE_ARTIFACT_TYPES = [
   'manual_attestation',
   'system_note',
@@ -56,6 +64,9 @@ type EvidenceArtifactRow = {
   description: string | null;
   status: string;
   reviewOwner: string;
+  reviewedByUserId: number | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
   createdByUserId: number | null;
   createdAt: string | null;
   updatedAt: string | null;
@@ -99,6 +110,41 @@ export function getEvidenceArtifactEventType(
   status: DleEvidenceArtifactStatus,
 ): 'evidence_artifact_requested' | 'evidence_artifact_submitted' {
   return status === 'requested' ? 'evidence_artifact_requested' : 'evidence_artifact_submitted';
+}
+
+export function getEvidenceArtifactReviewEventType(
+  status: DleEvidenceArtifactReviewStatus,
+):
+  | 'evidence_artifact_review_started'
+  | 'evidence_artifact_accepted'
+  | 'evidence_artifact_rejected' {
+  if (status === 'under_review') return 'evidence_artifact_review_started';
+  if (status === 'accepted') return 'evidence_artifact_accepted';
+  return 'evidence_artifact_rejected';
+}
+
+export function assertEvidenceArtifactReviewTransition(params: {
+  fromStatus: string;
+  toStatus: DleEvidenceArtifactReviewStatus;
+}) {
+  const fromStatus = String(params.fromStatus || '');
+  const toStatus = params.toStatus;
+
+  if (toStatus === 'under_review') {
+    if (fromStatus === 'requested' || fromStatus === 'submitted') return;
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence review can only start from requested or submitted artifacts.',
+    });
+  }
+
+  if (toStatus === 'accepted' || toStatus === 'rejected') {
+    if (fromStatus === 'submitted' || fromStatus === 'under_review') return;
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence can only be accepted or rejected after submission or review start.',
+    });
+  }
 }
 
 function getRows(result: unknown): any[] {
@@ -166,6 +212,9 @@ function normalizeArtifactRow(row: any): EvidenceArtifactRow {
     description: row.description == null ? null : String(row.description),
     status: String(row.status || ''),
     reviewOwner: String(row.reviewOwner || ''),
+    reviewedByUserId: row.reviewedByUserId == null ? null : Number(row.reviewedByUserId),
+    reviewedAt: row.reviewedAt == null ? null : String(row.reviewedAt),
+    reviewNote: row.reviewNote == null ? null : String(row.reviewNote),
     createdByUserId: row.createdByUserId == null ? null : Number(row.createdByUserId),
     createdAt: row.createdAt == null ? null : String(row.createdAt),
     updatedAt: row.updatedAt == null ? null : String(row.updatedAt),
@@ -190,6 +239,9 @@ export async function listLeadEvidenceArtifacts(params: {
       description,
       status,
       review_owner as reviewOwner,
+      reviewed_by_user_id as reviewedByUserId,
+      reviewed_at as reviewedAt,
+      review_note as reviewNote,
       created_by_user_id as createdByUserId,
       created_at as createdAt,
       updated_at as updatedAt
@@ -326,11 +378,181 @@ export async function createLeadEvidenceArtifact(params: {
       description,
       status,
       review_owner as reviewOwner,
+      reviewed_by_user_id as reviewedByUserId,
+      reviewed_at as reviewedAt,
+      review_note as reviewNote,
       created_by_user_id as createdByUserId,
       created_at as createdAt,
       updated_at as updatedAt
     from dle_evidence_artifacts
     where id = ${artifactId}
+    limit 1
+  `);
+
+  return {
+    artifact: normalizeArtifactRow(getRows(readback)[0]),
+  };
+}
+
+export async function updateLeadEvidenceArtifactReviewStatus(params: {
+  developerId: number;
+  userId: number;
+  artifactId: number;
+  status: DleEvidenceArtifactReviewStatus;
+  reviewNote?: string;
+}): Promise<{ artifact: EvidenceArtifactRow }> {
+  if (!(DLE_EVIDENCE_ARTIFACT_REVIEW_STATUSES as readonly string[]).includes(params.status)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Unsupported evidence review status for this slice.',
+    });
+  }
+
+  const currentResult = await db.execute(sql`
+    select
+      a.id,
+      a.development_id as developmentId,
+      a.transaction_type as transactionType,
+      a.lead_id as leadId,
+      a.artifact_role as artifactRole,
+      a.artifact_type as artifactType,
+      a.display_name as displayName,
+      a.description,
+      a.status,
+      a.review_owner as reviewOwner,
+      a.reviewed_by_user_id as reviewedByUserId,
+      a.reviewed_at as reviewedAt,
+      a.review_note as reviewNote,
+      a.created_by_user_id as createdByUserId,
+      a.created_at as createdAt,
+      a.updated_at as updatedAt
+    from dle_evidence_artifacts a
+    inner join developments d on d.id = a.development_id
+    where a.id = ${params.artifactId}
+      and d.developer_id = ${params.developerId}
+      and a.lead_id is not null
+    limit 1
+  `);
+  const currentRow = getRows(currentResult)[0];
+
+  if (!currentRow) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Evidence artifact not found for this developer.',
+    });
+  }
+
+  const currentArtifact = normalizeArtifactRow(currentRow);
+  if (
+    currentArtifact.transactionType !== 'for_rent' &&
+    currentArtifact.transactionType !== 'auction'
+  ) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Evidence artifact review is only enabled for Rental and Auction leads in this slice.',
+    });
+  }
+
+  assertEvidenceRoleForTransaction(
+    currentArtifact.transactionType,
+    currentArtifact.artifactRole,
+  );
+  assertEvidenceArtifactReviewTransition({
+    fromStatus: currentArtifact.status,
+    toStatus: params.status,
+  });
+
+  const reviewNote = params.reviewNote?.trim() || null;
+  if (params.status === 'rejected' && !reviewNote) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Rejected evidence requires a review note.',
+    });
+  }
+
+  await db.execute(sql`
+    update dle_evidence_artifacts
+    set
+      status = ${params.status},
+      reviewed_by_user_id = ${
+        params.status === 'accepted' || params.status === 'rejected' ? params.userId : null
+      },
+      reviewed_at = ${
+        params.status === 'accepted' || params.status === 'rejected' ? sql`CURRENT_TIMESTAMP` : null
+      },
+      review_note = ${reviewNote},
+      updated_by_user_id = ${params.userId},
+      updated_at = CURRENT_TIMESTAMP,
+      metadata = JSON_MERGE_PATCH(
+        COALESCE(metadata, JSON_OBJECT()),
+        CAST(${JSON.stringify({
+          reviewSource: 'developer_leads_manager',
+          reviewStatus: params.status,
+        })} AS JSON)
+      )
+    where id = ${params.artifactId}
+  `);
+
+  const eventType = getEvidenceArtifactReviewEventType(params.status);
+  await db.execute(sql`
+    insert into development_operating_events (
+      development_id,
+      lead_id,
+      transaction_type,
+      event_type,
+      from_status,
+      to_status,
+      after_data,
+      metadata,
+      actor_user_id,
+      source_surface
+    )
+    values (
+      ${currentArtifact.developmentId},
+      ${currentArtifact.leadId},
+      ${currentArtifact.transactionType},
+      ${eventType},
+      ${currentArtifact.status},
+      ${params.status},
+      ${JSON.stringify({
+        artifactId: currentArtifact.id,
+        artifactRole: currentArtifact.artifactRole,
+        artifactType: currentArtifact.artifactType,
+        status: params.status,
+        reviewOwner: currentArtifact.reviewOwner,
+      })},
+      ${JSON.stringify({
+        artifactId: currentArtifact.id,
+        artifactRole: currentArtifact.artifactRole,
+        displayName: currentArtifact.displayName,
+        reviewOwner: currentArtifact.reviewOwner,
+        note: reviewNote,
+      })},
+      ${params.userId},
+      'developer_leads_manager'
+    )
+  `);
+
+  const readback = await db.execute(sql`
+    select
+      id,
+      development_id as developmentId,
+      transaction_type as transactionType,
+      lead_id as leadId,
+      artifact_role as artifactRole,
+      artifact_type as artifactType,
+      display_name as displayName,
+      description,
+      status,
+      review_owner as reviewOwner,
+      reviewed_by_user_id as reviewedByUserId,
+      reviewed_at as reviewedAt,
+      review_note as reviewNote,
+      created_by_user_id as createdByUserId,
+      created_at as createdAt,
+      updated_at as updatedAt
+    from dle_evidence_artifacts
+    where id = ${params.artifactId}
     limit 1
   `);
 
