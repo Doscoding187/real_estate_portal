@@ -7182,3 +7182,52 @@ Next recommended slice:
   operators can see uploaded/downloadable evidence without exposing private storage details.
 Commit hash/tag: Included in `feat(dle): audit evidence downloads`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence File Metadata Readback
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Surface submitted uploaded-file metadata and protected download affordance in Developer Leads
+Manager without exposing private storage keys, signed URLs, public URLs, or document contents.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- client/src/components/developer/LeadsManager.tsx
+- docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 18 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `listLeadEvidenceArtifacts` now returns a safe `file` object for uploaded-file artifacts.
+- The file read model includes original filename, MIME type, file size, upload status, uploaded
+  timestamp, uploader id, last download issue timestamp, last requester id, download count, and a
+  derived `isDownloadable` flag.
+- DB-backed proof confirms pending uploaded evidence is visible with safe metadata and is not
+  marked downloadable.
+- DB-backed proof confirms submitted/uploaded evidence is visible as downloadable while storage
+  keys and external URLs remain absent from the read model.
+- Developer Leads Manager now renders uploaded-file metadata and requests a protected download URL
+  only when an operator clicks the file action.
+Guardrails:
+- Readback/UI-only slice. No public applicant/bidder upload, artifact acceptance, evidence
+  completion/readiness automation, lead-stage movement, inventory mutation, distribution deal
+  movement, reward/payout readiness, autosave, draft, publish, public listing, search-card, or lead
+  form behavior is intended.
+- No private storage key, signed URL, public URL, or document contents are exposed in the artifact
+  list read model.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Browser proof for the download button, download audit dashboard/readback, admin/distribution
+  download authorization, malware scanning/quarantine, public applicant/bidder upload, and
+  readiness automation remain future.
+Next recommended slice:
+- Add browser/component proof for the Developer Leads Manager uploaded-file metadata row and
+  protected download affordance, or add admin/distribution download authorization if product
+  priority shifts to reviewer workflows.
+Commit hash/tag: Included in `feat(dle): show evidence file metadata`.
+Uncommitted reason, if any: None.

@@ -24,6 +24,7 @@ import {
   getEvidenceArtifactEventType,
   getEvidenceArtifactReviewEventType,
   getLeadEvidenceFileDownloadUrl,
+  listLeadEvidenceArtifacts,
   parseEvidenceUploadToken,
   validateEvidenceUploadFile,
 } from '../dleEvidenceArtifactService';
@@ -455,6 +456,24 @@ describe('dleEvidenceArtifactService helpers', () => {
       mimeType: 'application/pdf',
       fileSizeBytes: 512_000,
     });
+    const listedArtifacts = await listLeadEvidenceArtifacts({
+      developerId,
+      leadId,
+    });
+    expect(listedArtifacts.items[0]).toMatchObject({
+      id: result.artifact.id,
+      artifactType: 'uploaded_file',
+      file: {
+        originalFilename: 'June-payslip.pdf',
+        mimeType: 'application/pdf',
+        fileSizeBytes: 512_000,
+        uploadStatus: 'pending_upload',
+        downloadCount: 0,
+        isDownloadable: false,
+      },
+    });
+    expect(listedArtifacts.items[0]).not.toHaveProperty('storageKey');
+    expect(listedArtifacts.items[0]).not.toHaveProperty('externalUrl');
 
     const [leadAfter] = await db!.select().from(leads).where(eq(leads.id, leadId)).limit(1);
     expect(leadAfter.status).toBe(leadBefore.status);
@@ -756,6 +775,26 @@ describe('dleEvidenceArtifactService helpers', () => {
     expect(artifactAfter.metadata).not.toMatchObject({
       lastDownloadRequestedByUserId: userId,
     });
+    const listedArtifacts = await listLeadEvidenceArtifacts({
+      developerId,
+      leadId,
+    });
+    expect(listedArtifacts.items[0]).toMatchObject({
+      id: intent.artifact.id,
+      artifactType: 'uploaded_file',
+      status: 'submitted',
+      file: {
+        originalFilename: 'Proof-of-funds.pdf',
+        mimeType: 'application/pdf',
+        fileSizeBytes: 700_000,
+        uploadStatus: 'uploaded',
+        uploadedByUserId: userId,
+        downloadCount: 0,
+        isDownloadable: true,
+      },
+    });
+    expect(listedArtifacts.items[0]).not.toHaveProperty('storageKey');
+    expect(listedArtifacts.items[0]).not.toHaveProperty('externalUrl');
     const downloadEvents = await db!
       .select()
       .from(developmentOperatingEvents)

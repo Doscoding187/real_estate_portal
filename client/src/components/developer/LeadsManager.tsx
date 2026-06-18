@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   CircleDot,
   Clock3,
+  Download,
   PhoneCall,
   Search,
   UserPlus,
@@ -90,6 +91,18 @@ type LeadEvidenceArtifactItem = {
   reviewedAt?: string | null;
   reviewNote?: string | null;
   createdAt?: string | null;
+  file?: {
+    originalFilename?: string | null;
+    mimeType?: string | null;
+    fileSizeBytes?: number | null;
+    uploadStatus?: string | null;
+    uploadedAt?: string | null;
+    uploadedByUserId?: number | null;
+    lastDownloadUrlIssuedAt?: string | null;
+    lastDownloadRequestedByUserId?: number | null;
+    downloadCount?: number;
+    isDownloadable?: boolean;
+  };
 };
 
 type LeadEvidenceCoverageRow = {
@@ -120,6 +133,13 @@ const STAGE_TABS: Array<{ key: StageTab; label: string }> = [
   { key: 'won', label: 'Won' },
   { key: 'lost', label: 'Lost' },
 ];
+
+function formatEvidenceFileSize(bytes?: number | null): string {
+  const size = Number(bytes || 0);
+  if (!Number.isFinite(size) || size <= 0) return 'Unknown size';
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const LEADS_QUERY_LIMIT = 200;
 
@@ -256,6 +276,9 @@ export default function LeadsManager() {
   const [evidenceArtifactDisplayName, setEvidenceArtifactDisplayName] = useState('');
   const [evidenceArtifactDescription, setEvidenceArtifactDescription] = useState('');
   const [evidenceArtifactReviewNote, setEvidenceArtifactReviewNote] = useState('');
+  const [downloadingEvidenceArtifactId, setDownloadingEvidenceArtifactId] = useState<number | null>(
+    null,
+  );
   const [transitionTarget, setTransitionTarget] = useState('');
   const [transitionNotes, setTransitionNotes] = useState('');
   const [outcomeSyncAction, setOutcomeSyncAction] = useState<OutcomeSyncAction | ''>('');
@@ -709,6 +732,21 @@ export default function LeadsManager() {
       status,
       reviewNote: evidenceArtifactReviewNote.trim() || undefined,
     });
+  };
+
+  const handleDownloadEvidenceFile = async (artifact: LeadEvidenceArtifactItem) => {
+    setDownloadingEvidenceArtifactId(artifact.id);
+    try {
+      const result = await utils.developer.getLeadEvidenceFileDownloadUrl.fetch({
+        artifactId: artifact.id,
+      });
+      window.open(result.downloadUrl, '_blank', 'noopener,noreferrer');
+      void evidenceArtifactsQuery.refetch();
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not open evidence file.');
+    } finally {
+      setDownloadingEvidenceArtifactId(null);
+    }
   };
 
   const timeline = useMemo(() => {
@@ -1308,6 +1346,47 @@ export default function LeadsManager() {
                               </div>
                               {artifact.description && (
                                 <p className="mt-1 whitespace-pre-wrap">{artifact.description}</p>
+                              )}
+                              {artifact.file && (
+                                <div
+                                  className="mt-2 rounded border border-slate-200 bg-white p-2"
+                                  data-testid={`dle-lead-evidence-file-${artifact.id}`}
+                                >
+                                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                      <p className="font-medium">
+                                        {artifact.file.originalFilename || artifact.displayName}
+                                      </p>
+                                      <p className="text-muted-foreground">
+                                        {artifact.file.mimeType || 'Evidence file'} |{' '}
+                                        {formatEvidenceFileSize(artifact.file.fileSizeBytes)} |{' '}
+                                        {artifact.file.uploadStatus || 'pending upload'}
+                                      </p>
+                                      <p className="text-muted-foreground">
+                                        Downloads issued: {artifact.file.downloadCount || 0}
+                                      </p>
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      type="button"
+                                      className="gap-2"
+                                      disabled={
+                                        !artifact.file.isDownloadable ||
+                                        downloadingEvidenceArtifactId === artifact.id
+                                      }
+                                      onClick={() => handleDownloadEvidenceFile(artifact)}
+                                      data-testid={`dle-lead-download-evidence-file-${artifact.id}`}
+                                    >
+                                      <Download className="h-3.5 w-3.5" />
+                                      Open File
+                                    </Button>
+                                  </div>
+                                  <p className="mt-2 text-muted-foreground">
+                                    File access is protected and does not mark lease readiness,
+                                    bidder readiness, inventory, distribution, or payout complete.
+                                  </p>
+                                </div>
                               )}
                               {artifact.reviewNote && (
                                 <p className="mt-1 whitespace-pre-wrap text-muted-foreground">

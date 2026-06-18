@@ -897,5 +897,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Schema/service proof that `evidence_artifact_downloaded` is a valid operating event and is not
   written on protected download denial paths. Status: complete for SQL migration
   `0073_add_dle_evidence_download_event.sql` and `dleEvidenceArtifactService` tests.
+- Service/UI proof that uploaded Rental/Auction evidence file metadata is visible in Developer
+  Leads Manager without exposing private storage keys, signed URLs, public URLs, or document
+  contents. Status: complete for `dleEvidenceArtifactService` tests and `pnpm run check`.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

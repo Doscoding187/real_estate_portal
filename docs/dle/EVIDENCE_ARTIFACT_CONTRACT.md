@@ -428,6 +428,17 @@ Implemented ninth runtime slice:
   download count, without storage keys, signed URLs, public URLs, or document contents;
 - denial paths still do not write download metadata or download events.
 
+Implemented tenth runtime slice:
+
+- `listLeadEvidenceArtifacts` exposes safe uploaded-file metadata for Developer Leads Manager
+  readback;
+- metadata includes original file name, MIME type, file size, upload status, uploaded timestamp,
+  uploader id, download count, last issued timestamp, and a derived downloadable flag;
+- the read model does not expose private storage keys, external URLs, signed URLs, public URLs, or
+  document contents;
+- Developer Leads Manager displays uploaded-file metadata and requests protected download URLs only
+  on operator click.
+
 Not implemented in the runtime slices:
 
 - download audit dashboards;

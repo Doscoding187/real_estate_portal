@@ -187,6 +187,9 @@ Developer Leads Manager may show:
 - file name;
 - file type;
 - file size;
+- upload status;
+- whether a protected download can be requested;
+- download count;
 - submitted/review status;
 - review owner;
 - short guardrail copy.

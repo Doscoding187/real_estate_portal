@@ -129,6 +129,20 @@ type EvidenceArtifactRow = {
   createdByUserId: number | null;
   createdAt: string | null;
   updatedAt: string | null;
+  file?: EvidenceArtifactFileMetadata;
+};
+
+type EvidenceArtifactFileMetadata = {
+  originalFilename: string | null;
+  mimeType: string | null;
+  fileSizeBytes: number | null;
+  uploadStatus: string | null;
+  uploadedAt: string | null;
+  uploadedByUserId: number | null;
+  lastDownloadUrlIssuedAt: string | null;
+  lastDownloadRequestedByUserId: number | null;
+  downloadCount: number;
+  isDownloadable: boolean;
 };
 
 export type DevelopmentEvidenceCoverageLeadInput = {
@@ -589,16 +603,53 @@ async function getLeadEvidenceScope(params: {
 }
 
 function normalizeArtifactRow(row: any): EvidenceArtifactRow {
+  const artifactType = String(row.artifactType || '');
+  const status = String(row.status || '');
+  const metadata = row.metadata && typeof row.metadata === 'object' ? row.metadata : {};
+  const uploadStatus = metadata.uploadStatus == null ? null : String(metadata.uploadStatus);
+  const file =
+    artifactType === 'uploaded_file'
+      ? {
+          originalFilename:
+            metadata.originalFilename == null ? null : String(metadata.originalFilename),
+          mimeType: metadata.mimeType == null ? null : String(metadata.mimeType),
+          fileSizeBytes:
+            metadata.fileSizeBytes == null || !Number.isFinite(Number(metadata.fileSizeBytes))
+              ? null
+              : Number(metadata.fileSizeBytes),
+          uploadStatus,
+          uploadedAt: metadata.uploadedAt == null ? null : String(metadata.uploadedAt),
+          uploadedByUserId:
+            metadata.uploadedByUserId == null || !Number.isFinite(Number(metadata.uploadedByUserId))
+              ? null
+              : Number(metadata.uploadedByUserId),
+          lastDownloadUrlIssuedAt:
+            metadata.lastDownloadUrlIssuedAt == null
+              ? null
+              : String(metadata.lastDownloadUrlIssuedAt),
+          lastDownloadRequestedByUserId:
+            metadata.lastDownloadRequestedByUserId == null ||
+            !Number.isFinite(Number(metadata.lastDownloadRequestedByUserId))
+              ? null
+              : Number(metadata.lastDownloadRequestedByUserId),
+          downloadCount:
+            metadata.downloadCount == null || !Number.isFinite(Number(metadata.downloadCount))
+              ? 0
+              : Number(metadata.downloadCount),
+          isDownloadable: status === 'submitted' && uploadStatus === 'uploaded',
+        }
+      : undefined;
+
   return {
     id: Number(row.id),
     developmentId: Number(row.developmentId),
     transactionType: row.transactionType,
     leadId: row.leadId == null ? null : Number(row.leadId),
     artifactRole: String(row.artifactRole || ''),
-    artifactType: String(row.artifactType || ''),
+    artifactType,
     displayName: String(row.displayName || ''),
     description: row.description == null ? null : String(row.description),
-    status: String(row.status || ''),
+    status,
     reviewOwner: String(row.reviewOwner || ''),
     reviewedByUserId: row.reviewedByUserId == null ? null : Number(row.reviewedByUserId),
     reviewedAt: row.reviewedAt == null ? null : String(row.reviewedAt),
@@ -606,6 +657,7 @@ function normalizeArtifactRow(row: any): EvidenceArtifactRow {
     createdByUserId: row.createdByUserId == null ? null : Number(row.createdByUserId),
     createdAt: row.createdAt == null ? null : String(row.createdAt),
     updatedAt: row.updatedAt == null ? null : String(row.updatedAt),
+    file,
   };
 }
 
@@ -630,6 +682,7 @@ export async function listLeadEvidenceArtifacts(params: {
       reviewed_by_user_id as reviewedByUserId,
       reviewed_at as reviewedAt,
       review_note as reviewNote,
+      metadata,
       created_by_user_id as createdByUserId,
       created_at as createdAt,
       updated_at as updatedAt
