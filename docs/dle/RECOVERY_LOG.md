@@ -7715,3 +7715,52 @@ Next recommended slice:
   controlled create/draft autosave monitoring and edit-development autosave ownership design.
 Commit hash/tag: Included in `test(dle): prove distribution evidence grants`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Edit Autosave Ownership Boundary
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define and prove the first edit-development autosave ownership boundary without enabling
+background edit autosave.
+Files changed:
+- client/src/lib/developmentSubmitPayload.ts
+- client/src/lib/developmentSubmitPayload.test.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/lib/developmentSubmitPayload.test.ts` passed with 27 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `buildDevelopmentEditAutosavePayload` now exists as the named future edit-autosave payload
+  boundary.
+- The boundary delegates to the existing baseline-aware edit progress path instead of create/draft
+  full-snapshot persistence.
+- Focused payload tests prove edit autosave location payloads exclude media, governance, and unit
+  ownership.
+- Focused payload tests prove edit autosave media payloads exclude location, governance, and unit
+  ownership.
+- The new contract documents the remaining component and browser proof gates before edit autosave
+  can be enabled.
+Guardrails:
+- Edit-development autosave remains disabled.
+- No wizard scheduling, backend endpoint, route enablement, publish, public listing, search-card,
+  lead, evidence, distribution, inventory, payout, reward, or operating behavior is intended to
+  change.
+- Save Progress remains the manual fallback for edit journeys.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Component proof is still needed for any future edit-autosave rollout switch.
+- Browser proof is still needed for Sale, Rental, and Auction edit routes preserving unrelated
+  fields and public output.
+- Failed edit-autosave visibility, stale partial payload handling, and retry behavior remain future.
+Next recommended slice:
+- Either continue controlled create/draft autosave rollout monitoring, or add component proof that a
+  future edit-autosave switch remains disabled by default and can only route through
+  `buildDevelopmentEditAutosavePayload`.
+Commit hash/tag: Included in `test(dle): prove edit autosave ownership`.
+Uncommitted reason, if any: None.

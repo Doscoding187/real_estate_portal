@@ -180,8 +180,20 @@ Edit-development autosave is a separate later decision. It must preserve baselin
 ownership and must not reuse create/draft full-snapshot persistence as a published-development
 overwrite path.
 
+The 2026-06-18 edit-autosave ownership slice defines the first named payload boundary without
+enabling background edit autosave:
+
+- `buildDevelopmentEditAutosavePayload` delegates to the baseline-aware edit progress path;
+- edit-autosave payloads require a persisted canonical baseline;
+- location edit-autosave payloads exclude media, governance, and unit inventory ownership;
+- media edit-autosave payloads exclude location, governance, and unit inventory ownership;
+- `docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md` defines the remaining component and
+  browser proof gates before enablement.
+
 ## Recommended Next Slice
 
 Run a limited create/draft rollout with the switch enabled in a controlled environment and monitor
-the rollback triggers. Keep edit-development autosave out of scope until a separate
-baseline-aware partial-step ownership design and browser proof exist.
+the rollback triggers. Keep edit-development autosave disabled. If edit autosave becomes the next
+priority, add component proof that any future edit-autosave rollout switch routes only through
+`buildDevelopmentEditAutosavePayload`, then add browser proof for Sale, Rental, and Auction
+field-ownership preservation.

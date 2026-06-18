@@ -229,10 +229,14 @@ emulator autosave remains excluded until a publisher-scoped draft path is proven
 The UI must not tell users that progress is saved unless a real save path succeeds. Autosave failures must be visible, recoverable, or clearly handled; they must not silently claim safety while the backend failed.
 
 Manual Save Draft remains the trusted fallback during the guarded rollout. Edit-development
-autosave remains disabled until a separate baseline-aware partial-step ownership design is proven.
+autosave remains disabled until the baseline-aware partial-step ownership contract and browser
+proof gates pass.
 
 The authoritative enablement gates and save-state rules live in
 `docs/dle/AUTOSAVE_SAFETY_CONTRACT.md`.
+
+The edit-development autosave ownership boundary lives in
+`docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md`.
 
 ## 11. Field Ownership Rules
 
@@ -373,6 +377,7 @@ docs/
     TECHNICAL_ARCHITECTURE.md
     FIELD_OWNERSHIP_CONTRACT.md
     AUTOSAVE_SAFETY_CONTRACT.md
+    EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
     TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
     OPERATING_LAYER_AUDIT.md
     OPERATING_STATUS_AUDIT_CONTRACT.md

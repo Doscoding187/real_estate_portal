@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildDevelopmentEditAutosavePayload,
   buildDevelopmentEditProgressPayload,
   buildDevelopmentEditSavePayload,
   buildDevelopmentPartialUpdatePayload,
@@ -1221,6 +1222,189 @@ describe('development submit payload helpers', () => {
     expect(payload).not.toHaveProperty('city');
     expect(payload).not.toHaveProperty('unitTypes');
     expect(payload).not.toHaveProperty('priceFrom');
+  });
+
+  it('builds edit autosave location payloads without media, governance, or unit ownership', () => {
+    const previousCanonicalSnapshot = {
+      workflowId: 'residential_rent',
+      currentStepId: 'location',
+      completedSteps: ['configuration', 'identity_market', 'location', 'development_media'],
+      developmentData: {
+        name: 'Persisted Rental Edit',
+        developmentType: 'residential',
+        transactionType: 'for_rent',
+        location: {
+          city: 'Cape Town',
+          province: 'Western Cape',
+        },
+        media: {
+          photos: [{ url: 'https://example.com/original-photo.jpg' }],
+        },
+        monthlyLevyFrom: 900,
+      },
+      stepData: {
+        location: {
+          city: 'Cape Town',
+          province: 'Western Cape',
+        },
+        development_media: {
+          photos: [{ url: 'https://example.com/original-photo.jpg' }],
+        },
+        unit_types: {
+          unitTypes: [{ id: 'rent-a', name: 'Rental A', monthlyRentFrom: 12_500 }],
+        },
+      },
+    };
+
+    const payload = buildDevelopmentEditAutosavePayload(
+      {
+        amenities: [],
+        canonicalSnapshot: {
+          ...previousCanonicalSnapshot,
+          currentStepId: 'location',
+          developmentData: {
+            ...previousCanonicalSnapshot.developmentData,
+            location: {
+              city: 'Johannesburg',
+              province: 'Gauteng',
+              suburb: 'Rosebank',
+              address: '1 Autosave Street',
+            },
+            media: {
+              photos: [{ url: 'https://example.com/stale-mirror-photo.jpg' }],
+            },
+            monthlyLevyFrom: 1500,
+          },
+          stepData: {
+            ...previousCanonicalSnapshot.stepData,
+            location: {
+              city: 'Johannesburg',
+              province: 'Gauteng',
+              suburb: 'Rosebank',
+              address: '1 Autosave Street',
+            },
+          },
+        },
+      },
+      { previousCanonicalSnapshot },
+    );
+
+    expect(payload[CANONICAL_UPDATE_MODE_FIELD]).toBe(CANONICAL_PARTIAL_UPDATE_MODE);
+    expect(payload).toMatchObject({
+      currentStepId: 'location',
+      address: '1 Autosave Street',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      suburb: 'Rosebank',
+      stepData: {
+        location: {
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          suburb: 'Rosebank',
+          address: '1 Autosave Street',
+        },
+      },
+    });
+    expect(payload).not.toHaveProperty('images');
+    expect(payload).not.toHaveProperty('media');
+    expect(payload).not.toHaveProperty('monthlyLevyFrom');
+    expect(payload).not.toHaveProperty('unitTypes');
+    expect(payload.stepData).not.toHaveProperty('development_media');
+    expect(payload.stepData).not.toHaveProperty('unit_types');
+  });
+
+  it('builds edit autosave media payloads without location, governance, or unit ownership', () => {
+    const previousCanonicalSnapshot = {
+      workflowId: 'residential_auction',
+      currentStepId: 'development_media',
+      completedSteps: ['configuration', 'identity_market', 'location', 'development_media'],
+      developmentData: {
+        name: 'Persisted Auction Edit',
+        developmentType: 'residential',
+        transactionType: 'auction',
+        location: {
+          city: 'Pretoria',
+          province: 'Gauteng',
+        },
+        media: {
+          photos: [{ url: 'https://example.com/original-auction-photo.jpg' }],
+          brochures: [{ url: 'https://example.com/original-auction-pack.pdf' }],
+        },
+        ratesFrom: 1200,
+      },
+      stepData: {
+        location: {
+          city: 'Pretoria',
+          province: 'Gauteng',
+        },
+        development_media: {
+          photos: [{ url: 'https://example.com/original-auction-photo.jpg' }],
+          brochures: [{ url: 'https://example.com/original-auction-pack.pdf' }],
+        },
+        unit_types: {
+          unitTypes: [{ id: 'auction-a', name: 'Auction Lot A', startingBid: 950_000 }],
+        },
+      },
+    };
+
+    const payload = buildDevelopmentEditAutosavePayload(
+      {
+        amenities: [],
+        canonicalSnapshot: {
+          ...previousCanonicalSnapshot,
+          currentStepId: 'development_media',
+          developmentData: {
+            ...previousCanonicalSnapshot.developmentData,
+            location: {
+              city: 'Stale Mirror City',
+              province: 'Stale Mirror Province',
+            },
+            media: {
+              heroImage: { url: 'https://example.com/new-hero.jpg' },
+              photos: [{ url: 'https://example.com/new-gallery.jpg' }],
+              floorPlans: [{ url: 'https://example.com/new-plan.pdf' }],
+              brochures: [{ url: 'https://example.com/new-pack.pdf' }],
+            },
+            ratesFrom: 2200,
+          },
+          stepData: {
+            ...previousCanonicalSnapshot.stepData,
+            development_media: {
+              heroImage: { url: 'https://example.com/new-hero.jpg' },
+              photos: [{ url: 'https://example.com/new-gallery.jpg' }],
+              floorPlans: [{ url: 'https://example.com/new-plan.pdf' }],
+              brochures: [{ url: 'https://example.com/new-pack.pdf' }],
+            },
+          },
+        },
+      },
+      { previousCanonicalSnapshot },
+    );
+
+    expect(payload[CANONICAL_UPDATE_MODE_FIELD]).toBe(CANONICAL_PARTIAL_UPDATE_MODE);
+    expect(payload).toMatchObject({
+      currentStepId: 'development_media',
+      images: [
+        { url: 'https://example.com/new-hero.jpg', category: 'hero' },
+        { url: 'https://example.com/new-gallery.jpg', category: undefined },
+      ],
+      floorPlans: ['https://example.com/new-plan.pdf'],
+      brochures: ['https://example.com/new-pack.pdf'],
+      stepData: {
+        development_media: {
+          heroImage: { url: 'https://example.com/new-hero.jpg' },
+          photos: [{ url: 'https://example.com/new-gallery.jpg' }],
+          floorPlans: [{ url: 'https://example.com/new-plan.pdf' }],
+          brochures: [{ url: 'https://example.com/new-pack.pdf' }],
+        },
+      },
+    });
+    expect(payload).not.toHaveProperty('city');
+    expect(payload).not.toHaveProperty('province');
+    expect(payload).not.toHaveProperty('ratesFrom');
+    expect(payload).not.toHaveProperty('unitTypes');
+    expect(payload.stepData).not.toHaveProperty('location');
+    expect(payload.stepData).not.toHaveProperty('unit_types');
   });
 
   it('allows unit_types partial transaction switches when every persisted unit is included', () => {

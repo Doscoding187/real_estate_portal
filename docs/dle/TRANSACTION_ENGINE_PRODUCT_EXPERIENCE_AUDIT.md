@@ -937,5 +937,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
   real distribution programme/deal linkage, accept only active/unexpired/same-development grants,
   and keep manager evidence endpoints closed. Status: complete for `dleEvidenceArtifactService`
   tests.
+- Payload-helper proof that future edit-development autosave has a named baseline-aware partial
+  ownership boundary and cannot use create/draft full-snapshot persistence. Status: complete for
+  `developmentSubmitPayload` tests and `EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md`.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

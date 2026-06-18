@@ -828,6 +828,13 @@ export function buildDevelopmentEditProgressPayload(
   return buildDevelopmentPartialUpdatePayload(input, options);
 }
 
+export function buildDevelopmentEditAutosavePayload(
+  input: DevelopmentUpdatePayloadInput,
+  options: DevelopmentEditProgressPayloadOptions,
+): Record<string, any> {
+  return buildDevelopmentEditProgressPayload(input, options);
+}
+
 export function buildDevelopmentEditSavePayload(
   input: DevelopmentUpdatePayloadInput,
   options: DevelopmentEditSavePayloadOptions = {},
