@@ -7453,3 +7453,49 @@ Next recommended slice:
   reviewer/manager metadata endpoint.
 Commit hash/tag: Included in `feat(dle): enrich evidence download audit metadata`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence Linkage Persistence Contract
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define how DLE evidence artifacts may be linked to admin review and distribution workflows
+before opening any reviewer/manager metadata or download endpoint.
+Files changed:
+- docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md
+- docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `test -f docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md` passed.
+- `rg "EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT|distribution_deal_id|access_grants|admin_review_item_id|storage key|autosave" docs/dle` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The new contract documents existing linkage anchors: `dle_evidence_artifacts.distribution_deal_id`,
+  `lead_id`, and `development_operating_events.distribution_deal_id`.
+- It defines when the existing `distribution_deal_id` link is sufficient and when a future
+  explicit grant/link table is required.
+- It defines a future `dle_evidence_artifact_access_grants` shape for multi-surface, expiring, or
+  revocable admin/distribution access.
+- It documents safe metadata exposure and download audit requirements without storage keys, signed
+  URLs, public URLs, or document contents.
+Guardrails:
+- Documentation-only slice. No runtime, schema, router, upload, download, admin, distribution,
+  public, readiness, inventory, lead stage, payout, public listing, wizard, draft, or autosave
+  behavior is intended to change.
+- Existing admin/distribution evidence endpoints remain closed.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- A pure linkage/read-model helper still needs to be implemented and tested before endpoints are
+  opened.
+- Admin/distribution endpoint design, explicit grant persistence, reviewer surface tests, malware
+  scanning/quarantine, and public applicant/bidder upload remain future.
+Next recommended slice:
+- Implement a pure DLE evidence linkage helper that recognizes existing `distribution_deal_id`
+  linkage, reserves future access-grant inputs, and proves unlinked/wrong-development/revoked
+  cases without opening admin/distribution endpoints.
+Commit hash/tag: Included in `docs(dle): define evidence linkage persistence`.
+Uncommitted reason, if any: None.

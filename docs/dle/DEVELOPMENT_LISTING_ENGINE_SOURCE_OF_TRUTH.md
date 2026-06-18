@@ -207,6 +207,11 @@ mutation must follow `docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`. DLE e
 admin review and distribution workflows, but it must not bypass their owner boundaries or decision
 records.
 
+Future admin or distribution evidence linkage must also follow
+`docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md`. A nullable link such as
+`distribution_deal_id` is access context only; it must not become evidence acceptance, distribution
+document verification, payout readiness, inventory movement, or autosave safety.
+
 Until that artifact model is implemented and tested, DLE may show review demand and manual-review
 context only. It must not claim lease readiness, bidder registration, proof-of-funds readiness,
 distribution reward readiness, or automatic inventory outcome readiness from evidence prompts or

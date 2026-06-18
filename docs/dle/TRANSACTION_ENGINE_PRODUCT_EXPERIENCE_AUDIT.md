@@ -917,5 +917,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
   access level, actor type, storage namespace, expiry, and download count without storage keys,
   signed URLs, public URLs, or document contents. Status: complete for
   `dleEvidenceArtifactService` tests.
+- Documentation proof that admin/distribution evidence linkage persistence has an explicit
+  contract before any reviewer/manager metadata endpoint is opened. Status: complete for
+  `EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md`.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

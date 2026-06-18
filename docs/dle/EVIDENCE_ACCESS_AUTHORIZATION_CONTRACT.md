@@ -13,7 +13,8 @@ proof-of-funds information. Expanding access beyond the owning developer must be
 DLE, Distribution, and Admin Review have different ownership boundaries.
 
 This contract defines when admin reviewers and distribution managers may see DLE evidence metadata
-or request protected evidence-file download URLs.
+or request protected evidence-file download URLs. Linkage persistence rules live in
+`docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md`.
 
 ## Current Runtime State
 
@@ -224,12 +225,14 @@ Before adding admin or distribution evidence access, implement:
    Status: complete for `evaluateDleEvidenceAccess` helper tests.
 2. Source-surface-aware audit for every download URL issuance.
    Status: complete for the existing developer-only download audit metadata helper.
-3. Tests for unrelated developer denial.
-4. Tests for unrelated admin/distribution denial.
-5. Tests that distribution access requires explicit deal/programme/artifact linkage.
-6. Tests proving download access does not mutate lead stage, inventory, distribution stage, payout,
+3. Linkage persistence contract for admin/distribution review surfaces.
+   Status: complete for `EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md`.
+4. Tests for unrelated developer denial.
+5. Tests for unrelated admin/distribution denial.
+6. Tests that distribution access requires explicit deal/programme/artifact linkage.
+7. Tests proving download access does not mutate lead stage, inventory, distribution stage, payout,
    reward, public listing, wizard, draft, or autosave state.
-7. UI copy that distinguishes uploaded evidence from accepted readiness.
+8. UI copy that distinguishes uploaded evidence from accepted readiness.
 
 ## First Safe Expansion Slice
 
@@ -243,7 +246,7 @@ Completed first runtime guardrail slice:
 
 Recommended next runtime slice:
 
-- keep admin/distribution endpoints closed until linkage persistence and reviewer surface tests are
-  in place;
+- keep admin/distribution endpoints closed until linkage helper and reviewer surface tests are in
+  place;
 - prove no lead stage, inventory, distribution, payout, public listing, wizard, draft, or autosave
   mutation occurs on access decisions.

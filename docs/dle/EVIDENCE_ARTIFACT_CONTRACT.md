@@ -52,7 +52,8 @@ developer, programme, or compliance requirement.
 Evidence artifacts may be linked across these surfaces, but linking must preserve owner boundaries.
 The DLE artifact may provide context to distribution/admin review; it must not bypass those systems.
 Admin and distribution access expansion must follow
-`docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`.
+`docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md` and
+`docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md`.
 
 ## Required Artifact Scope
 
