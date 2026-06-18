@@ -923,5 +923,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Service-helper proof that evidence linkage can be normalized from existing `distribution_deal_id`
   linkage and future active/revoked/expired grant rows without opening admin/distribution
   endpoints. Status: complete for `dleEvidenceArtifactService` tests.
+- Service-helper proof that Distribution evidence access-policy decisions consume
+  `buildDleEvidenceLinkageDecision` output instead of hand-built linkage flags. Status: complete
+  for `dleEvidenceArtifactService` tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

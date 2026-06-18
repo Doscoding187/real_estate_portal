@@ -178,6 +178,5 @@ Completed first safe runtime slice:
 
 Recommended next implementation:
 
-- wire the existing distribution access policy tests through `buildDleEvidenceLinkageDecision`
-  before any metadata endpoint is opened;
+- define the admin review linkage helper path before any admin metadata endpoint is opened;
 - do not add admin/distribution routers yet.

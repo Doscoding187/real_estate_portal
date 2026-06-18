@@ -7541,3 +7541,42 @@ Next recommended slice:
   that future endpoints will use.
 Commit hash/tag: Included in `feat(dle): normalize evidence linkage`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Distribution Evidence Linkage Policy Proof
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Route the Distribution evidence access-policy proof through `buildDleEvidenceLinkageDecision`
+so future endpoints use the same linkage normalization path tested by the policy helper.
+Files changed:
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 27 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The Distribution access-policy test now derives linked-deal access context from
+  `buildDleEvidenceLinkageDecision` instead of hand-built linkage flags.
+- The policy proof still denies Distribution access when no explicit linkage exists.
+- The policy proof allows linked, role-relevant Distribution downloads through normalized linkage
+  output.
+- The policy proof denies role-irrelevant Distribution downloads through normalized linkage output.
+Guardrails:
+- Test/proof-only slice. No admin, distribution, public, schema, router, upload, download,
+  readiness, inventory, lead stage, payout, public listing, wizard, draft, or autosave behavior is
+  intended to change.
+- Admin/distribution evidence endpoints remain closed.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Admin linkage policy still needs the same normalized-linkage proof path.
+- Admin/distribution endpoint design, explicit grant persistence, reviewer surface tests, malware
+  scanning/quarantine, and public applicant/bidder upload remain future.
+Next recommended slice:
+- Wire the admin evidence access-policy helper proof through `buildDleEvidenceLinkageDecision`
+  using future admin-review grant inputs, keeping admin endpoints closed.
+Commit hash/tag: Included in `test(dle): prove distribution evidence linkage policy`.
+Uncommitted reason, if any: None.

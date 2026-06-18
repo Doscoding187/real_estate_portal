@@ -502,6 +502,23 @@ describe('dleEvidenceArtifactService helpers', () => {
       externalUrl: null,
       metadata: { uploadStatus: 'uploaded' },
     };
+    const linkedDecision = buildDleEvidenceLinkageDecision({
+      artifact: {
+        artifactId: artifact.id,
+        artifactDevelopmentId: artifact.developmentId,
+        artifactLeadId: artifact.leadId,
+        artifactDistributionDealId: 82,
+        artifactRole: artifact.artifactRole,
+      },
+      distributionDeal: {
+        dealId: 82,
+        developmentId: artifact.developmentId,
+        programmeId: 92,
+        managerHasActiveAccess: true,
+        roleRelevant: true,
+      },
+      requestedAccessLevel: 'download',
+    });
 
     expect(
       evaluateDleEvidenceAccess({
@@ -535,8 +552,8 @@ describe('dleEvidenceArtifactService helpers', () => {
         context: {
           accessLevel: 'download',
           sourceSurface: 'distribution_manager',
-          distributionLinkage: { dealLinked: true },
-          distributionRoleRelevant: true,
+          distributionLinkage: linkedDecision.distributionLinkage,
+          distributionRoleRelevant: linkedDecision.distributionRoleRelevant,
           privateStorageConfigured: true,
           canWriteDownloadAudit: true,
         },
@@ -559,12 +576,56 @@ describe('dleEvidenceArtifactService helpers', () => {
         context: {
           accessLevel: 'review_mutation',
           sourceSurface: 'distribution_manager',
-          distributionLinkage: { dealLinked: true },
+          distributionLinkage: linkedDecision.distributionLinkage,
         },
       }),
     ).toMatchObject({
       allowed: false,
       denialReason: 'Distribution access cannot mutate DLE evidence review status.',
+    });
+
+    const irrelevantRoleDecision = buildDleEvidenceLinkageDecision({
+      artifact: {
+        artifactId: artifact.id,
+        artifactDevelopmentId: artifact.developmentId,
+        artifactLeadId: artifact.leadId,
+        artifactDistributionDealId: 82,
+        artifactRole: artifact.artifactRole,
+      },
+      distributionDeal: {
+        dealId: 82,
+        developmentId: artifact.developmentId,
+        programmeId: 92,
+        managerHasActiveAccess: true,
+        roleRelevant: false,
+      },
+      requestedAccessLevel: 'download',
+    });
+    expect(irrelevantRoleDecision.denialReasons).toContain(
+      'Evidence role is not relevant to the linked distribution workflow.',
+    );
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: {
+          actorType: 'distribution_manager',
+          userId: 70,
+          managerId: 80,
+          hasActiveManagerAccess: true,
+        },
+        artifact,
+        context: {
+          accessLevel: 'download',
+          sourceSurface: 'distribution_manager',
+          distributionLinkage: irrelevantRoleDecision.distributionLinkage,
+          distributionRoleRelevant: irrelevantRoleDecision.distributionRoleRelevant,
+          privateStorageConfigured: true,
+          canWriteDownloadAudit: true,
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason:
+        'Distribution evidence download requires a role relevant to the distribution workflow.',
     });
   });
 
