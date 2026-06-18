@@ -290,6 +290,121 @@ export type DleEvidenceAccessDecision = {
   denialReason?: string;
 };
 
+export type DleEvidenceArtifactLinkageInput = {
+  artifactId: number;
+  artifactDevelopmentId: number;
+  artifactLeadId?: number | null;
+  artifactDistributionDealId?: number | null;
+  artifactRole?: string | null;
+};
+
+export type DleEvidenceDistributionLinkageInput = {
+  dealId: number;
+  developmentId: number;
+  programmeId?: number | null;
+  managerHasActiveAccess?: boolean;
+  roleRelevant?: boolean;
+};
+
+export type DleEvidenceAccessGrantInput = {
+  grantId: number;
+  artifactId: number;
+  developmentId: number;
+  leadId?: number | null;
+  distributionDealId?: number | null;
+  distributionProgramId?: number | null;
+  adminReviewItemId?: number | null;
+  grantedToSurface: 'distribution_manager' | 'admin_review';
+  accessLevel: DleEvidenceAccessLevel;
+  status: 'active' | 'revoked' | 'expired';
+  expiresAt?: string | Date | null;
+};
+
+export type DleEvidenceLinkageDecision = {
+  distributionLinkage: NonNullable<DleEvidenceAccessContext['distributionLinkage']>;
+  adminReviewLinked: boolean;
+  distributionRoleRelevant: boolean;
+  denialReasons: string[];
+  grantIds: number[];
+};
+
+function isFutureDate(value?: string | Date | null): boolean {
+  if (!value) return true;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) && date.getTime() > Date.now();
+}
+
+export function buildDleEvidenceLinkageDecision(params: {
+  artifact: DleEvidenceArtifactLinkageInput;
+  distributionDeal?: DleEvidenceDistributionLinkageInput | null;
+  accessGrants?: DleEvidenceAccessGrantInput[];
+  requestedAccessLevel?: DleEvidenceAccessLevel;
+}): DleEvidenceLinkageDecision {
+  const requestedAccessLevel = params.requestedAccessLevel || 'metadata';
+  const denialReasons: string[] = [];
+  const grantIds: number[] = [];
+  const distributionLinkage: NonNullable<DleEvidenceAccessContext['distributionLinkage']> = {};
+  let adminReviewLinked = false;
+  let distributionRoleRelevant = false;
+
+  const dealId = Number(params.artifact.artifactDistributionDealId || 0);
+  if (dealId > 0) {
+    const deal = params.distributionDeal;
+    if (!deal || deal.dealId !== dealId) {
+      denialReasons.push('Linked distribution deal was not supplied for access evaluation.');
+    } else if (deal.developmentId !== params.artifact.artifactDevelopmentId) {
+      denialReasons.push('Linked distribution deal does not belong to the evidence development.');
+    } else if (!deal.managerHasActiveAccess) {
+      denialReasons.push('Distribution manager does not have active access to the linked deal.');
+    } else {
+      distributionLinkage.dealLinked = true;
+      distributionRoleRelevant = Boolean(deal.roleRelevant);
+      if (!distributionRoleRelevant) {
+        denialReasons.push('Evidence role is not relevant to the linked distribution workflow.');
+      }
+    }
+  }
+
+  for (const grant of params.accessGrants || []) {
+    if (grant.artifactId !== params.artifact.artifactId) continue;
+    if (grant.developmentId !== params.artifact.artifactDevelopmentId) {
+      denialReasons.push(`Access grant ${grant.grantId} does not belong to the evidence development.`);
+      continue;
+    }
+    if (grant.status !== 'active') {
+      denialReasons.push(`Access grant ${grant.grantId} is ${grant.status}.`);
+      continue;
+    }
+    if (!isFutureDate(grant.expiresAt)) {
+      denialReasons.push(`Access grant ${grant.grantId} is expired.`);
+      continue;
+    }
+    if (grant.accessLevel !== requestedAccessLevel && grant.accessLevel !== 'download') {
+      denialReasons.push(`Access grant ${grant.grantId} does not cover ${requestedAccessLevel} access.`);
+      continue;
+    }
+
+    grantIds.push(grant.grantId);
+    if (grant.grantedToSurface === 'distribution_manager') {
+      distributionLinkage.accessGrantRecorded = true;
+      if (grant.distributionDealId) distributionLinkage.dealLinked = true;
+      if (grant.distributionProgramId) distributionLinkage.programmeRoleMappedAndShared = true;
+      distributionRoleRelevant = true;
+    }
+    if (grant.grantedToSurface === 'admin_review') {
+      adminReviewLinked = true;
+    }
+  }
+
+  return {
+    distributionLinkage,
+    adminReviewLinked,
+    distributionRoleRelevant,
+    denialReasons,
+    grantIds,
+  };
+}
+
 function denyEvidenceAccess(
   context: DleEvidenceAccessContext,
   denialReason: string,

@@ -15,6 +15,7 @@ import {
   assertEvidenceArtifactReviewTransition,
   assertEvidenceRoleForTransaction,
   buildDevelopmentEvidenceCoverageSummary,
+  buildDleEvidenceLinkageDecision,
   buildEvidenceDownloadAuditMetadata,
   buildEvidenceUploadToken,
   buildLeadEvidenceCoverageSummary,
@@ -642,6 +643,128 @@ describe('dleEvidenceArtifactService helpers', () => {
     expect(metadata).not.toHaveProperty('downloadUrl');
     expect(metadata).not.toHaveProperty('externalUrl');
     expect(metadata).not.toHaveProperty('documentContents');
+  });
+
+  it('recognizes existing distribution deal linkage without mutating access state', () => {
+    expect(
+      buildDleEvidenceLinkageDecision({
+        artifact: {
+          artifactId: 201,
+          artifactDevelopmentId: 301,
+          artifactLeadId: 401,
+          artifactDistributionDealId: 501,
+          artifactRole: 'signed_lease',
+        },
+        distributionDeal: {
+          dealId: 501,
+          developmentId: 301,
+          programmeId: 601,
+          managerHasActiveAccess: true,
+          roleRelevant: true,
+        },
+      }),
+    ).toEqual({
+      distributionLinkage: { dealLinked: true },
+      adminReviewLinked: false,
+      distributionRoleRelevant: true,
+      denialReasons: [],
+      grantIds: [],
+    });
+  });
+
+  it('rejects distribution linkage when the deal belongs to another development', () => {
+    expect(
+      buildDleEvidenceLinkageDecision({
+        artifact: {
+          artifactId: 202,
+          artifactDevelopmentId: 302,
+          artifactLeadId: 402,
+          artifactDistributionDealId: 502,
+          artifactRole: 'proof_of_funds',
+        },
+        distributionDeal: {
+          dealId: 502,
+          developmentId: 999,
+          programmeId: 602,
+          managerHasActiveAccess: true,
+          roleRelevant: true,
+        },
+      }),
+    ).toEqual({
+      distributionLinkage: {},
+      adminReviewLinked: false,
+      distributionRoleRelevant: false,
+      denialReasons: ['Linked distribution deal does not belong to the evidence development.'],
+      grantIds: [],
+    });
+  });
+
+  it('normalizes future active grants while rejecting revoked and expired grants', () => {
+    const futureDate = new Date(Date.now() + 60_000).toISOString();
+    const pastDate = new Date(Date.now() - 60_000).toISOString();
+
+    expect(
+      buildDleEvidenceLinkageDecision({
+        artifact: {
+          artifactId: 203,
+          artifactDevelopmentId: 303,
+          artifactLeadId: 403,
+          artifactDistributionDealId: null,
+          artifactRole: 'proof_of_income',
+        },
+        requestedAccessLevel: 'metadata',
+        accessGrants: [
+          {
+            grantId: 701,
+            artifactId: 203,
+            developmentId: 303,
+            distributionDealId: 503,
+            distributionProgramId: 603,
+            grantedToSurface: 'distribution_manager',
+            accessLevel: 'download',
+            status: 'active',
+            expiresAt: futureDate,
+          },
+          {
+            grantId: 702,
+            artifactId: 203,
+            developmentId: 303,
+            adminReviewItemId: 802,
+            grantedToSurface: 'admin_review',
+            accessLevel: 'metadata',
+            status: 'active',
+            expiresAt: futureDate,
+          },
+          {
+            grantId: 703,
+            artifactId: 203,
+            developmentId: 303,
+            grantedToSurface: 'distribution_manager',
+            accessLevel: 'metadata',
+            status: 'revoked',
+          },
+          {
+            grantId: 704,
+            artifactId: 203,
+            developmentId: 303,
+            grantedToSurface: 'admin_review',
+            accessLevel: 'metadata',
+            status: 'active',
+            expiresAt: pastDate,
+          },
+        ],
+      }),
+    ).toEqual({
+      distributionLinkage: {
+        accessGrantRecorded: true,
+        dealLinked: true,
+        programmeRoleMappedAndShared: true,
+      },
+      adminReviewLinked: true,
+      distributionRoleRelevant: true,
+      denialReasons: ['Access grant 703 is revoked.', 'Access grant 704 is expired.'],
+      grantIds: [701, 702],
+    });
   });
 
   it('creates developer-only upload intents with private storage metadata and no lead mutation', async () => {

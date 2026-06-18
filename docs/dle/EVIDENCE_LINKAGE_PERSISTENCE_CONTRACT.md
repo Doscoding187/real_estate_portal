@@ -1,8 +1,8 @@
 # DLE Evidence Linkage Persistence Contract
 
 Date: 2026-06-18
-Status: Contract active. No admin or distribution evidence metadata/download endpoints are opened
-by this document.
+Status: Contract active. A pure linkage helper exists, but no admin or distribution evidence
+metadata/download endpoints are opened by this document.
 
 ## Purpose
 
@@ -22,6 +22,8 @@ Already present:
 - `development_operating_events.distribution_deal_id` can anchor DLE operating events to a deal.
 - `evaluateDleEvidenceAccess` can evaluate distribution linkage inputs, but runtime
   admin/distribution endpoints are not open.
+- `buildDleEvidenceLinkageDecision` can normalize existing `distribution_deal_id` linkage and
+  future access-grant rows into access-policy inputs without opening endpoints.
 
 Not yet present:
 
@@ -164,18 +166,18 @@ keys, signed URLs, public URLs, or document contents.
 
 ## First Safe Runtime Slice
 
-Before opening any admin/distribution endpoint:
+Completed first safe runtime slice:
 
-1. Add a read-only helper that normalizes artifact linkage from existing fields:
+1. Added a read-only helper that normalizes artifact linkage from existing fields:
    `distribution_deal_id`, `lead_id`, development id, and optional future grant rows.
-2. Unit-test distribution-linked, unlinked, wrong-development, revoked/expired, admin-linked, and
+2. Unit-tested distribution-linked, wrong-development, revoked/expired, admin-linked, and
    unrelated reviewer cases.
-3. Keep endpoints closed.
-4. Prove the helper does not mutate evidence, lead, inventory, distribution, payout, public
+3. Kept endpoints closed.
+4. Proved the helper does not mutate evidence, lead, inventory, distribution, payout, public
    listing, wizard, draft, or autosave state.
 
 Recommended next implementation:
 
-- add a pure linkage/read-model helper that recognizes existing `distribution_deal_id` linkage and
-  reserves a path for future access grants;
+- wire the existing distribution access policy tests through `buildDleEvidenceLinkageDecision`
+  before any metadata endpoint is opened;
 - do not add admin/distribution routers yet.

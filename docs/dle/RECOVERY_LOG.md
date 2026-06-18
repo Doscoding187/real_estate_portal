@@ -7499,3 +7499,45 @@ Next recommended slice:
   cases without opening admin/distribution endpoints.
 Commit hash/tag: Included in `docs(dle): define evidence linkage persistence`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence Linkage Helper
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first pure linkage helper for DLE evidence access without opening admin or
+distribution metadata/download endpoints.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 27 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `buildDleEvidenceLinkageDecision` normalizes existing artifact `distribution_deal_id` linkage,
+  supplied distribution deal context, and future access-grant rows into access-policy inputs.
+- Helper tests prove valid distribution deal linkage, wrong-development deal denial, active future
+  distribution/admin grants, revoked grants, and expired grants.
+- The helper returns linkage flags, role relevance, grant ids, and denial reasons without DB writes
+  or endpoint exposure.
+Guardrails:
+- Pure-helper slice. No admin, distribution, public, schema, router, upload, download, readiness,
+  inventory, lead stage, payout, public listing, wizard, draft, or autosave behavior is intended to
+  change.
+- Admin/distribution evidence endpoints remain closed.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Existing distribution access-policy tests still use manual linkage inputs rather than this
+  helper's normalized output.
+- Admin/distribution endpoint design, explicit grant persistence, reviewer surface tests, malware
+  scanning/quarantine, and public applicant/bidder upload remain future.
+Next recommended slice:
+- Wire the existing distribution access-policy helper tests through
+  `buildDleEvidenceLinkageDecision` so the policy proof uses the same linkage normalization path
+  that future endpoints will use.
+Commit hash/tag: Included in `feat(dle): normalize evidence linkage`.
+Uncommitted reason, if any: None.
