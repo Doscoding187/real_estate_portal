@@ -268,6 +268,7 @@ export type DleEvidenceAccessContext = {
   };
   distributionRoleRelevant?: boolean;
   publicTokenScopedToArtifact?: boolean;
+  allowedDownloadStatuses?: string[];
 };
 
 export type DleEvidenceAccessDecision = {
@@ -311,16 +312,17 @@ function assertDownloadEvidencePolicy(
   artifact: DleEvidenceAccessArtifactInput,
   context: DleEvidenceAccessContext,
 ): string | null {
+  if (artifact.transactionType !== 'for_rent' && artifact.transactionType !== 'auction') {
+    return 'Evidence file download is only enabled for Rental and Auction leads in this slice.';
+  }
+
   if (artifact.artifactType !== 'uploaded_file') {
-    return 'Only uploaded evidence files can be downloaded.';
+    return 'Only uploaded evidence files can be downloaded through this endpoint.';
   }
 
-  if (!['submitted', 'under_review', 'accepted'].includes(artifact.status)) {
-    return 'Evidence file is not in a downloadable review state.';
-  }
-
-  if (artifact.metadata?.uploadStatus !== 'uploaded') {
-    return 'Evidence file upload has not been verified.';
+  const allowedStatuses = context.allowedDownloadStatuses || ['submitted', 'under_review', 'accepted'];
+  if (!allowedStatuses.includes(artifact.status) || artifact.metadata?.uploadStatus !== 'uploaded') {
+    return 'Evidence file is not available for download until upload completion is verified.';
   }
 
   if (!String(artifact.storageKey || '').startsWith('dle/evidence/')) {
@@ -332,7 +334,7 @@ function assertDownloadEvidencePolicy(
   }
 
   if (!context.privateStorageConfigured) {
-    return 'Private evidence storage is not configured.';
+    return 'Private evidence download storage is not configured; download URL cannot be issued.';
   }
 
   if (!context.canWriteDownloadAudit) {
@@ -1559,38 +1561,52 @@ export async function getLeadEvidenceFileDownloadUrl(params: {
     originalFilename?: string;
     downloadCount?: number;
   };
+  const privateEvidenceS3Client = evidenceS3Client;
+  const privateEvidenceBucket = ENV.s3BucketName;
 
-  if (artifact.transactionType !== 'for_rent' && artifact.transactionType !== 'auction') {
+  const accessDecision = evaluateDleEvidenceAccess({
+    actor: {
+      actorType: 'developer_operator',
+      developerId: params.developerId,
+      userId: params.userId,
+    },
+    artifact: {
+      id: artifact.id,
+      developmentId: artifact.developmentId,
+      developerId: params.developerId,
+      leadId: artifact.leadId,
+      transactionType: artifact.transactionType,
+      artifactRole: artifact.artifactRole,
+      artifactType: artifact.artifactType,
+      status: artifact.status,
+      reviewOwner: artifact.reviewOwner,
+      storageKey,
+      externalUrl,
+      metadata: {
+        uploadStatus: metadata.uploadStatus || null,
+      },
+    },
+    context: {
+      accessLevel: 'download',
+      sourceSurface: 'developer_leads_manager',
+      privateStorageConfigured: Boolean(privateEvidenceS3Client && privateEvidenceBucket),
+      canWriteDownloadAudit: true,
+      allowedDownloadStatuses: ['submitted'],
+    },
+  });
+
+  if (!accessDecision.allowed) {
+    const code =
+      accessDecision.denialReason ===
+      'Private evidence download storage is not configured; download URL cannot be issued.'
+        ? 'PRECONDITION_FAILED'
+        : 'BAD_REQUEST';
     throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Evidence file download is only enabled for Rental and Auction leads in this slice.',
+      code,
+      message: accessDecision.denialReason || 'Evidence file download is not allowed.',
     });
   }
-  if (artifact.artifactType !== 'uploaded_file') {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Only uploaded evidence files can be downloaded through this endpoint.',
-    });
-  }
-  if (artifact.status !== 'submitted' || metadata.uploadStatus !== 'uploaded') {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Evidence file is not available for download until upload completion is verified.',
-    });
-  }
-  if (!storageKey.startsWith('dle/evidence/')) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Evidence artifact storage key is not in the private evidence namespace.',
-    });
-  }
-  if (externalUrl) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Uploaded evidence artifacts must not use public external URLs.',
-    });
-  }
-  if (!evidenceS3Client || !ENV.s3BucketName) {
+  if (!privateEvidenceS3Client || !privateEvidenceBucket) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Private evidence download storage is not configured; download URL cannot be issued.',
@@ -1599,9 +1615,9 @@ export async function getLeadEvidenceFileDownloadUrl(params: {
 
   const expiresInSeconds = 300;
   const downloadUrl = await getSignedUrl(
-    evidenceS3Client,
+    privateEvidenceS3Client,
     new GetObjectCommand({
-      Bucket: ENV.s3BucketName,
+      Bucket: privateEvidenceBucket,
       Key: storageKey,
       ResponseContentType: metadata.mimeType,
       ResponseContentDisposition: `attachment; filename="${(metadata.originalFilename || artifact.displayName)

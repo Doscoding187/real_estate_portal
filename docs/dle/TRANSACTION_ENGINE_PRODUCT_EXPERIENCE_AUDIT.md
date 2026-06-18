@@ -910,5 +910,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
   distribution manager, future public applicant, metadata, download, and review mutation before
   admin/distribution endpoints are opened. Status: complete for `dleEvidenceArtifactService`
   helper tests.
+- Service proof that the existing developer-only protected download broker is wired through the
+  access-policy helper without opening admin/distribution access or mutating lead/inventory state
+  on denied downloads. Status: complete for `dleEvidenceArtifactService` tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

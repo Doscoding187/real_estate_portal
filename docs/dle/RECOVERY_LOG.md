@@ -7366,3 +7366,47 @@ Next recommended slice:
   preserving current behavior and denial semantics before opening any admin/distribution surface.
 Commit hash/tag: Included in `feat(dle): add evidence access policy helper`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Developer Evidence Download Policy Wiring
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Route the existing developer-only protected evidence download broker through the DLE evidence
+access-policy helper without broadening access.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 23 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `getLeadEvidenceFileDownloadUrl` now calls `evaluateDleEvidenceAccess` before issuing any signed
+  download URL.
+- The endpoint remains developer-only and constrains current runtime downloads to submitted,
+  uploaded-file evidence artifacts.
+- Existing denial semantics are preserved for pending uploads, non-private evidence namespace,
+  public external URLs, and missing private storage configuration.
+- New regression proof rejects uploaded evidence that has a public `externalUrl` and confirms no
+  download metadata, download audit event, lead-stage mutation, or funnel-stage mutation occurs.
+Guardrails:
+- No admin, distribution, public, schema, router, upload, readiness, inventory, payout, public
+  listing, wizard, draft, or autosave behavior is intended to change.
+- Admin/distribution access remains closed; the policy helper can evaluate those future decisions
+  but no endpoint exposes them.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Download audit metadata still uses the existing developer surface and needs explicit
+  source-surface/reason fields before admin/distribution expansion.
+- Admin/distribution endpoints, explicit linkage persistence, malware scanning/quarantine, and
+  public applicant/bidder upload remain future.
+Next recommended slice:
+- Add source-surface-aware metadata to protected evidence download audit events for the existing
+  developer surface, preserving current access scope and avoiding keys, signed URLs, public URLs,
+  and document contents.
+Commit hash/tag: Included in `feat(dle): enforce evidence download policy`.
+Uncommitted reason, if any: None.

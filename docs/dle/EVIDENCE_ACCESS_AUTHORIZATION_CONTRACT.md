@@ -2,8 +2,9 @@
 
 Date: 2026-06-18
 Status: Contract active. Runtime access is currently developer-owned only. A pure access-policy
-helper now exists for future expansion decisions, but admin and distribution metadata/download
-endpoints remain future runtime work and must follow this contract before implementation.
+helper now exists for future expansion decisions, and the existing developer-only download broker
+uses that helper. Admin and distribution metadata/download endpoints remain future runtime work and
+must follow this contract before implementation.
 
 ## Purpose
 
@@ -25,7 +26,7 @@ Implemented runtime access:
 - Developer operators who own the development can complete uploads only after private storage
   verification.
 - Developer operators who own the development can request a short-lived signed download URL for a
-  submitted uploaded-file artifact.
+  submitted uploaded-file artifact through `evaluateDleEvidenceAccess`.
 - Developer Leads Manager can show safe file metadata without storage keys, signed URLs, public
   URLs, or document contents.
 - `evaluateDleEvidenceAccess` can evaluate developer, admin review, distribution manager, and
@@ -239,8 +240,8 @@ Completed first runtime guardrail slice:
 
 Recommended next runtime slice:
 
-- wire the existing developer download broker through the proven policy helper without broadening
-  access;
+- add source-surface-aware audit metadata to the existing developer download event without
+  exposing keys, URLs, or document contents;
 - keep admin/distribution endpoints closed until source-surface audit and linkage tests are in
   place;
 - prove no lead stage, inventory, distribution, payout, public listing, wizard, draft, or autosave
