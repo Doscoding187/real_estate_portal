@@ -46,34 +46,35 @@ Implemented in this slice:
   - a persisted baseline is required through the shared edit progress contract;
   - location edit-autosave payloads exclude media, governance, and unit ownership;
   - media edit-autosave payloads exclude location, governance, and unit ownership.
+- Component tests prove:
+  - edit autosave remains disabled by default even when an edit baseline exists;
+  - `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true` is required before edit autosave can become eligible;
+  - explicitly enabled edit autosave routes through baseline-aware partial updates and does not call
+    the create/draft `saveDraft` path.
 
 Not implemented in this slice:
 
-- background edit autosave scheduling;
+- production rollout enablement;
 - edit autosave UI status changes;
 - edit autosave browser proof;
 - edit autosave backend endpoint changes;
-- route enablement behind a rollout switch.
 
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
 
-1. Component proof must show edit routes remain disabled unless a dedicated edit-autosave rollout
-   switch is enabled.
-2. Browser proof must cover Sale, Rental, and Auction edit routes.
-3. Browser proof must show location edits preserve media, governance, unit inventory, pricing, and
+1. Browser proof must cover Sale, Rental, and Auction edit routes.
+2. Browser proof must show location edits preserve media, governance, unit inventory, pricing, and
    public output.
-4. Browser proof must show media edits preserve location, governance, unit inventory, pricing, and
+3. Browser proof must show media edits preserve location, governance, unit inventory, pricing, and
    public output.
-5. Browser proof must show unit edits preserve media, location, governance, public pricing, search
+4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
    cards, and lead context.
-6. Failed edit-autosave attempts must remain visible and retryable.
-7. A stale partial payload must not mark newer edits as saved.
-8. Save Progress must remain the trusted manual fallback.
+5. Failed edit-autosave attempts must remain visible and retryable.
+6. A stale partial payload must not mark newer edits as saved.
+7. Save Progress must remain the trusted manual fallback.
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. Add component proof that any future edit-autosave rollout
-switch still routes through `buildDevelopmentEditAutosavePayload` and never through create/draft
-full-snapshot persistence.
+Keep edit-development autosave disabled. Add browser proof that Sale, Rental, and Auction edit
+autosave preserve unrelated fields and public output before considering rollout enablement.

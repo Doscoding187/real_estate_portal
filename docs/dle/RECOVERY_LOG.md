@@ -7764,3 +7764,49 @@ Next recommended slice:
   `buildDevelopmentEditAutosavePayload`.
 Commit hash/tag: Included in `test(dle): prove edit autosave ownership`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Edit Autosave Component Gate Proof
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add component proof that future edit-development autosave remains default-off and can only
+route through the baseline-aware partial update path.
+Files changed:
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/lib/developmentSubmitPayload.test.ts` passed with 53 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The wizard now has a dedicated `VITE_DLE_EDIT_AUTOSAVE_ENABLED` gate for future edit autosave
+  eligibility.
+- Edit autosave remains disabled by default even when an edit route has a persisted baseline.
+- When the future edit switch is explicitly enabled, the autosave callback builds a
+  baseline-aware partial payload and calls `developer.updateDevelopment`.
+- The explicitly enabled edit-autosave callback does not call the create/draft `saveDraft` path.
+- Publisher-context edit autosave remains excluded by the shared publisher API guard.
+Guardrails:
+- Default runtime behavior remains unchanged: edit autosave is off unless the dedicated switch is
+  explicitly enabled.
+- No browser rollout, backend endpoint, schema, migration, publish, public listing, search-card,
+  lead, evidence, distribution, inventory, payout, reward, or operating behavior is intended to
+  change.
+- Save Progress remains the trusted manual fallback for edit journeys.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Browser proof is still needed for Sale, Rental, and Auction edit routes preserving unrelated
+  fields and public output.
+- Failed edit-autosave visibility, stale partial payload handling, retry behavior, and rollout
+  monitoring remain future.
+Next recommended slice:
+- Keep edit autosave disabled and add browser proof for Sale, Rental, and Auction edit-autosave
+  field ownership before considering rollout enablement; or return to controlled create/draft
+  autosave monitoring if that is higher priority.
+Commit hash/tag: Included in `test(dle): prove edit autosave gate`.
+Uncommitted reason, if any: None.

@@ -18,6 +18,7 @@ import { trpc } from '@/lib/trpc';
 import { getVisibleSteps, getWorkflow } from '@/lib/workflows';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import {
+  buildDevelopmentEditAutosavePayload,
   buildDevelopmentEditProgressPayload,
   normalizeAmenitiesPayload,
 } from '@/lib/developmentSubmitPayload';
@@ -55,6 +56,22 @@ const getDraftStateSignature = (snapshot: any) => {
 };
 
 const CREATE_DRAFT_AUTOSAVE_DEBOUNCE_MS = 10_000;
+
+const buildEditProgressInput = (canonicalSnapshot: any) => ({
+  canonicalSnapshot,
+  amenities:
+    normalizeAmenitiesPayload(
+      canonicalSnapshot.stepData?.amenities_features?.amenities ??
+        canonicalSnapshot.developmentData?.amenities ??
+        canonicalSnapshot.selectedAmenities,
+    ) ?? [],
+  residentialConfig: canonicalSnapshot.residentialConfig,
+  landConfig: canonicalSnapshot.landConfig,
+  commercialConfig: canonicalSnapshot.commercialConfig,
+  mixedUseConfig: canonicalSnapshot.mixedUseConfig,
+  specifications: canonicalSnapshot.specifications,
+  fallbackOwnershipType: canonicalSnapshot.developmentData?.ownershipType,
+});
 
 export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const [, setLocation] = useLocation();
@@ -218,8 +235,14 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   const createDraftAutosaveRolloutEnabled =
     import.meta.env.VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED === 'true';
+  const editAutosaveRolloutEnabled =
+    import.meta.env.VITE_DLE_EDIT_AUTOSAVE_ENABLED === 'true';
+  const editAutosaveBaselineAvailable =
+    isEditMode && Boolean(useDevelopmentWizard.getState().getPersistedEditSnapshot());
   const autoSaveEnabled =
-    createDraftAutosaveRolloutEnabled && !isEditMode && !shouldUsePublisherApi;
+    !shouldUsePublisherApi &&
+    ((createDraftAutosaveRolloutEnabled && !isEditMode) ||
+      (editAutosaveRolloutEnabled && isEditMode && editAutosaveBaselineAvailable));
   const {
     lastSaved,
     isSaving,
@@ -233,7 +256,30 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     onSave: async snapshot => {
       setSaveFailure(null);
       setApiError(null);
-      await persistDraftSnapshot(snapshot);
+      if (isEditMode) {
+        const currentState = useDevelopmentWizard.getState();
+        const editingId = currentState.editingId;
+        const previousCanonicalSnapshot = currentState.getPersistedEditSnapshot();
+
+        if (!editingId || !previousCanonicalSnapshot) {
+          throw new Error('Edit autosave requires a persisted development baseline.');
+        }
+
+        const payload = buildDevelopmentEditAutosavePayload(
+          buildEditProgressInput(snapshot),
+          { previousCanonicalSnapshot },
+        );
+        const result = await updateDevelopmentMutation.mutateAsync({
+          id: editingId,
+          data: payload,
+        });
+        if (result?.success === false) {
+          throw new Error('Development progress could not be persisted');
+        }
+        useDevelopmentWizard.getState().markEditSnapshotPersisted();
+      } else {
+        await persistDraftSnapshot(snapshot);
+      }
       setPersistedSaveSignature(getDraftStateSignature(snapshot));
     },
   });
@@ -491,23 +537,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     setApiError(null);
     try {
       const canonicalSnapshot = currentState.getDraftData();
-      const amenities =
-        normalizeAmenitiesPayload(
-          canonicalSnapshot.stepData?.amenities_features?.amenities ??
-            canonicalSnapshot.developmentData?.amenities ??
-            canonicalSnapshot.selectedAmenities,
-        ) ?? [];
       const payload = buildDevelopmentEditProgressPayload(
-        {
-          canonicalSnapshot,
-          amenities,
-          residentialConfig: canonicalSnapshot.residentialConfig,
-          landConfig: canonicalSnapshot.landConfig,
-          commercialConfig: canonicalSnapshot.commercialConfig,
-          mixedUseConfig: canonicalSnapshot.mixedUseConfig,
-          specifications: canonicalSnapshot.specifications,
-          fallbackOwnershipType: canonicalSnapshot.developmentData?.ownershipType,
-        },
+        buildEditProgressInput(canonicalSnapshot),
         { previousCanonicalSnapshot },
       );
 

@@ -446,6 +446,7 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv('VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED', 'false');
+    vi.stubEnv('VITE_DLE_EDIT_AUTOSAVE_ENABLED', 'false');
     resetCanonicalRentalDraft();
     window.history.replaceState(
       {},
@@ -635,6 +636,80 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     expect(testState.autoSaveOptions.shouldSkipSave(testState.autoSaveData)).toBe(true);
     expect(screen.getByTestId('wizard-save-status').textContent).toBe('unsaved');
     expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps edit-development autosave disabled by default even when an edit baseline exists', async () => {
+    window.history.replaceState({}, '', '/developer/developments/edit?id=987&brandProfileId=55');
+    testState.currentUrl = '/developer/developments/edit?id=987&brandProfileId=55';
+    testState.editDevelopment.currentStepId = 'marketing_summary';
+    testState.editDevelopment.stepData = {
+      ...testState.editDevelopment.stepData,
+      marketing_summary: {
+        description: 'Default-off autosave description.',
+        tagline: 'Default-off autosave tagline',
+        keySellingPoints: ['Default off'],
+      },
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(useDevelopmentWizard.getState().getPersistedEditSnapshot()).toBeTruthy();
+    });
+
+    expect(testState.autoSaveOptions.enabled).toBe(false);
+    expect(testState.autoSaveOptions.shouldSkipSave(testState.autoSaveData)).toBe(true);
+    expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+    expect(testState.updateDevelopmentMock).not.toHaveBeenCalled();
+  });
+
+  it('routes explicitly enabled edit autosave through baseline-aware partial updates', async () => {
+    vi.stubEnv('VITE_DLE_EDIT_AUTOSAVE_ENABLED', 'true');
+    window.history.replaceState({}, '', '/developer/developments/edit?id=987&brandProfileId=55');
+    testState.currentUrl = '/developer/developments/edit?id=987&brandProfileId=55';
+    testState.editDevelopment.currentStepId = 'marketing_summary';
+    testState.editDevelopment.stepData = {
+      ...testState.editDevelopment.stepData,
+      marketing_summary: {
+        description: 'Autosave progress description.',
+        tagline: 'Autosave progress tagline',
+        keySellingPoints: ['Edit autosave ownership'],
+      },
+    };
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.autoSaveOptions.enabled).toBe(true);
+    });
+
+    await act(async () => {
+      await testState.autoSaveOptions.onSave(testState.autoSaveData);
+    });
+
+    await waitFor(() => {
+      expect(testState.updateDevelopmentMock).toHaveBeenCalledTimes(1);
+    });
+    expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+
+    const updateInput = testState.updateDevelopmentMock.mock.calls[0][0];
+    expect(updateInput.id).toBe(987);
+    expect(updateInput.data).toMatchObject({
+      canonicalUpdateMode: 'partial_step',
+      currentStepId: 'marketing_summary',
+      description: 'Autosave progress description.',
+      tagline: 'Autosave progress tagline',
+      highlights: ['Edit autosave ownership'],
+      stepData: {
+        marketing_summary: {
+          description: 'Autosave progress description.',
+          tagline: 'Autosave progress tagline',
+          keySellingPoints: ['Edit autosave ownership'],
+        },
+      },
+    });
+    expect(updateInput.data).not.toHaveProperty('unitTypes');
+    expect(updateInput.data).not.toHaveProperty('city');
   });
 
   it('keeps publisher-context create autosave disabled until a publisher draft path is proven', async () => {
