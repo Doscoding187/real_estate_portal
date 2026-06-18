@@ -1,8 +1,9 @@
 # DLE Evidence Access Authorization Contract
 
 Date: 2026-06-18
-Status: Contract active. Runtime access is currently developer-owned only. Admin and distribution
-access remain future runtime work and must follow this contract before implementation.
+Status: Contract active. Runtime access is currently developer-owned only. A pure access-policy
+helper now exists for future expansion decisions, but admin and distribution metadata/download
+endpoints remain future runtime work and must follow this contract before implementation.
 
 ## Purpose
 
@@ -27,6 +28,9 @@ Implemented runtime access:
   submitted uploaded-file artifact.
 - Developer Leads Manager can show safe file metadata without storage keys, signed URLs, public
   URLs, or document contents.
+- `evaluateDleEvidenceAccess` can evaluate developer, admin review, distribution manager, and
+  future public applicant access decisions for `metadata`, `download`, and `review_mutation`
+  without changing runtime endpoints.
 
 Not implemented:
 
@@ -214,6 +218,7 @@ Future public access requires:
 Before adding admin or distribution evidence access, implement:
 
 1. A shared access-policy helper that returns `metadata`, `download`, or `review_mutation` access.
+   Status: complete for `evaluateDleEvidenceAccess` helper tests.
 2. Source-surface-aware audit for every download URL issuance.
 3. Tests for unrelated developer denial.
 4. Tests for unrelated admin/distribution denial.
@@ -224,11 +229,19 @@ Before adding admin or distribution evidence access, implement:
 
 ## First Safe Expansion Slice
 
+Completed first runtime guardrail slice:
+
+- added a pure access-policy helper for DLE evidence artifacts;
+- kept runtime endpoints unchanged;
+- unit-tested developer, admin, distribution, public, and unrelated-developer access decisions;
+- returned explicit denial reasons;
+- issued no new download URLs.
+
 Recommended next runtime slice:
 
-- add a pure access-policy helper for DLE evidence artifacts;
-- keep runtime endpoints unchanged;
-- unit-test developer, admin, distribution, public, and unrelated-developer access decisions;
-- return explicit denial reasons;
-- do not issue any new download URLs until the policy helper is proven.
-
+- wire the existing developer download broker through the proven policy helper without broadening
+  access;
+- keep admin/distribution endpoints closed until source-surface audit and linkage tests are in
+  place;
+- prove no lead stage, inventory, distribution, payout, public listing, wizard, draft, or autosave
+  mutation occurs on access decisions.

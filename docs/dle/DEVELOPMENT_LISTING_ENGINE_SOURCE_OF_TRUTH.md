@@ -202,6 +202,11 @@ Future work that uploads, stores, downloads, previews, or exposes Rental/Auction
 also follow `docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md`. Evidence files are private proof
 documents, not public media assets.
 
+Future admin or distribution access to Rental/Auction evidence metadata, download URLs, or review
+mutation must follow `docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`. DLE evidence may inform
+admin review and distribution workflows, but it must not bypass their owner boundaries or decision
+records.
+
 Until that artifact model is implemented and tested, DLE may show review demand and manual-review
 context only. It must not claim lease readiness, bidder registration, proof-of-funds readiness,
 distribution reward readiness, or automatic inventory outcome readiness from evidence prompts or

@@ -7319,3 +7319,50 @@ Next recommended slice:
   endpoints unchanged.
 Commit hash/tag: Included in `docs(dle): define evidence access authorization`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence Access Policy Helper
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Implement the first runtime guardrail from the evidence access contract: a pure policy helper
+that evaluates DLE evidence access decisions without broadening endpoints.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/DEVELOPMENT_LISTING_ENGINE_SOURCE_OF_TRUTH.md
+- docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 22 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `evaluateDleEvidenceAccess` evaluates `metadata`, `download`, and `review_mutation` access
+  decisions with explicit allow/deny results and denial reasons.
+- Developer access is limited to developer-owned artifacts through the developer leads surface.
+- Admin access requires admin identity, admin review surface, and linked review context; download
+  additionally requires a review reason and protected download guards.
+- Distribution access requires active manager access plus explicit deal, programme, handoff, share,
+  or grant linkage; DLE review mutation is denied for distribution managers.
+- Public applicant access remains denied until a future scoped-token contract is implemented.
+- Download access checks uploaded-file type, downloadable status, verified upload state, private DLE
+  evidence namespace, no public external URL, private storage availability, and audit availability.
+Guardrails:
+- Pure-helper slice. No router endpoint, schema, upload, download, admin, distribution, public,
+  readiness, inventory, lead stage, payout, public listing, wizard, draft, or autosave behavior is
+  intended to change.
+- Existing developer download runtime still uses the existing DB-backed ownership checks and has
+  not been widened.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Existing developer download broker still needs to be wired through the policy helper in a focused
+  no-access-broadening slice.
+- Admin/distribution endpoints, source-surface download audit, explicit linkage persistence,
+  malware scanning/quarantine, and public applicant/bidder upload remain future.
+Next recommended slice:
+- Wire the existing developer-only protected download broker through `evaluateDleEvidenceAccess`,
+  preserving current behavior and denial semantics before opening any admin/distribution surface.
+Commit hash/tag: Included in `feat(dle): add evidence access policy helper`.
+Uncommitted reason, if any: None.

@@ -205,6 +205,243 @@ type EvidenceUploadTokenClaims = {
   nonce: string;
 };
 
+export type DleEvidenceAccessLevel = 'metadata' | 'download' | 'review_mutation';
+
+export type DleEvidenceAccessActor =
+  | {
+      actorType: 'developer_operator';
+      developerId: number;
+      userId?: number;
+    }
+  | {
+      actorType: 'admin_reviewer';
+      userId: number;
+      isAdmin: boolean;
+    }
+  | {
+      actorType: 'distribution_manager';
+      userId: number;
+      managerId: number;
+      hasActiveManagerAccess: boolean;
+    }
+  | {
+      actorType: 'public_applicant';
+      sessionId?: string;
+    };
+
+export type DleEvidenceAccessArtifactInput = {
+  id: number;
+  developmentId: number;
+  developerId: number;
+  leadId: number | null;
+  transactionType: string;
+  artifactRole: string;
+  artifactType: string;
+  status: string;
+  reviewOwner?: string | null;
+  storageKey?: string | null;
+  externalUrl?: string | null;
+  metadata?: {
+    uploadStatus?: string | null;
+  } | null;
+};
+
+export type DleEvidenceAccessContext = {
+  accessLevel: DleEvidenceAccessLevel;
+  sourceSurface:
+    | 'developer_leads_manager'
+    | 'admin_review'
+    | 'distribution_manager'
+    | 'public_lead_form'
+    | 'public_development_page'
+    | 'search_result_card';
+  privateStorageConfigured?: boolean;
+  canWriteDownloadAudit?: boolean;
+  adminReviewLinked?: boolean;
+  adminReviewReason?: string | null;
+  adminReviewMutationAllowed?: boolean;
+  distributionLinkage?: {
+    dealLinked?: boolean;
+    leadHandedOff?: boolean;
+    programmeRoleMappedAndShared?: boolean;
+    accessGrantRecorded?: boolean;
+  };
+  distributionRoleRelevant?: boolean;
+  publicTokenScopedToArtifact?: boolean;
+};
+
+export type DleEvidenceAccessDecision = {
+  allowed: boolean;
+  accessLevel: DleEvidenceAccessLevel;
+  sourceSurface: DleEvidenceAccessContext['sourceSurface'];
+  denialReason?: string;
+};
+
+function denyEvidenceAccess(
+  context: DleEvidenceAccessContext,
+  denialReason: string,
+): DleEvidenceAccessDecision {
+  return {
+    allowed: false,
+    accessLevel: context.accessLevel,
+    sourceSurface: context.sourceSurface,
+    denialReason,
+  };
+}
+
+function allowEvidenceAccess(context: DleEvidenceAccessContext): DleEvidenceAccessDecision {
+  return {
+    allowed: true,
+    accessLevel: context.accessLevel,
+    sourceSurface: context.sourceSurface,
+  };
+}
+
+function hasDistributionEvidenceLinkage(context: DleEvidenceAccessContext): boolean {
+  const linkage = context.distributionLinkage;
+  return Boolean(
+    linkage?.dealLinked ||
+      linkage?.leadHandedOff ||
+      linkage?.programmeRoleMappedAndShared ||
+      linkage?.accessGrantRecorded,
+  );
+}
+
+function assertDownloadEvidencePolicy(
+  artifact: DleEvidenceAccessArtifactInput,
+  context: DleEvidenceAccessContext,
+): string | null {
+  if (artifact.artifactType !== 'uploaded_file') {
+    return 'Only uploaded evidence files can be downloaded.';
+  }
+
+  if (!['submitted', 'under_review', 'accepted'].includes(artifact.status)) {
+    return 'Evidence file is not in a downloadable review state.';
+  }
+
+  if (artifact.metadata?.uploadStatus !== 'uploaded') {
+    return 'Evidence file upload has not been verified.';
+  }
+
+  if (!String(artifact.storageKey || '').startsWith('dle/evidence/')) {
+    return 'Evidence artifact storage key is not in the private evidence namespace.';
+  }
+
+  if (artifact.externalUrl) {
+    return 'Uploaded evidence artifacts must not use public external URLs.';
+  }
+
+  if (!context.privateStorageConfigured) {
+    return 'Private evidence storage is not configured.';
+  }
+
+  if (!context.canWriteDownloadAudit) {
+    return 'Evidence download audit cannot be written.';
+  }
+
+  return null;
+}
+
+export function evaluateDleEvidenceAccess(params: {
+  actor: DleEvidenceAccessActor;
+  artifact: DleEvidenceAccessArtifactInput;
+  context: DleEvidenceAccessContext;
+}): DleEvidenceAccessDecision {
+  const { actor, artifact, context } = params;
+
+  if (actor.actorType === 'public_applicant') {
+    if (!context.publicTokenScopedToArtifact) {
+      return denyEvidenceAccess(context, 'Public evidence access requires a scoped artifact token.');
+    }
+    return denyEvidenceAccess(context, 'Public applicant evidence access is not implemented.');
+  }
+
+  if (
+    context.sourceSurface === 'public_lead_form' ||
+    context.sourceSurface === 'public_development_page' ||
+    context.sourceSurface === 'search_result_card'
+  ) {
+    return denyEvidenceAccess(context, 'Public surfaces cannot access protected evidence.');
+  }
+
+  if (actor.actorType === 'developer_operator') {
+    if (context.sourceSurface !== 'developer_leads_manager') {
+      return denyEvidenceAccess(context, 'Developer evidence access requires the developer lead surface.');
+    }
+    if (actor.developerId !== artifact.developerId) {
+      return denyEvidenceAccess(context, 'Developer does not own this evidence artifact.');
+    }
+    if (context.accessLevel === 'download') {
+      const downloadDenial = assertDownloadEvidencePolicy(artifact, context);
+      if (downloadDenial) return denyEvidenceAccess(context, downloadDenial);
+    }
+    return allowEvidenceAccess(context);
+  }
+
+  if (actor.actorType === 'admin_reviewer') {
+    if (context.sourceSurface !== 'admin_review') {
+      return denyEvidenceAccess(context, 'Admin evidence access requires the admin review surface.');
+    }
+    if (!actor.isAdmin) {
+      return denyEvidenceAccess(context, 'Admin evidence access requires an admin reviewer.');
+    }
+    if (!context.adminReviewLinked) {
+      return denyEvidenceAccess(context, 'Admin evidence access requires a linked review item.');
+    }
+    if (context.accessLevel === 'download') {
+      if (!context.adminReviewReason?.trim()) {
+        return denyEvidenceAccess(context, 'Admin evidence download requires a review reason.');
+      }
+      const downloadDenial = assertDownloadEvidencePolicy(artifact, context);
+      if (downloadDenial) return denyEvidenceAccess(context, downloadDenial);
+    }
+    if (context.accessLevel === 'review_mutation' && !context.adminReviewMutationAllowed) {
+      return denyEvidenceAccess(
+        context,
+        'Admin evidence review mutation requires an explicit review-owner policy.',
+      );
+    }
+    return allowEvidenceAccess(context);
+  }
+
+  if (actor.actorType === 'distribution_manager') {
+    if (context.sourceSurface !== 'distribution_manager') {
+      return denyEvidenceAccess(
+        context,
+        'Distribution evidence access requires the distribution manager surface.',
+      );
+    }
+    if (!actor.hasActiveManagerAccess) {
+      return denyEvidenceAccess(context, 'Distribution manager does not have active access.');
+    }
+    if (!hasDistributionEvidenceLinkage(context)) {
+      return denyEvidenceAccess(
+        context,
+        'Distribution evidence access requires explicit deal, programme, handoff, share, or grant linkage.',
+      );
+    }
+    if (context.accessLevel === 'review_mutation') {
+      return denyEvidenceAccess(
+        context,
+        'Distribution access cannot mutate DLE evidence review status.',
+      );
+    }
+    if (context.accessLevel === 'download') {
+      if (!context.distributionRoleRelevant) {
+        return denyEvidenceAccess(
+          context,
+          'Distribution evidence download requires a role relevant to the distribution workflow.',
+        );
+      }
+      const downloadDenial = assertDownloadEvidencePolicy(artifact, context);
+      if (downloadDenial) return denyEvidenceAccess(context, downloadDenial);
+    }
+    return allowEvidenceAccess(context);
+  }
+
+  return denyEvidenceAccess(context, 'Unsupported evidence access actor.');
+}
+
 export function isRentalEvidenceRole(role: string): role is RentalEvidenceRole {
   return (RENTAL_EVIDENCE_ROLES as readonly string[]).includes(role);
 }

@@ -20,6 +20,7 @@ import {
   buildPrivateEvidenceStorageKey,
   completeLeadEvidenceFileUpload,
   createLeadEvidenceFileUploadIntent,
+  evaluateDleEvidenceAccess,
   getDefaultReviewOwnerForEvidence,
   getEvidenceArtifactEventType,
   getEvidenceArtifactReviewEventType,
@@ -348,6 +349,247 @@ describe('dleEvidenceArtifactService helpers', () => {
     expect(() => parseEvidenceUploadToken(`${payload}.bad-signature`)).toThrow(
       'Invalid evidence upload token.',
     );
+  });
+
+  it('allows owning developers to access evidence while denying unrelated developers', () => {
+    const artifact = {
+      id: 10,
+      developmentId: 20,
+      developerId: 30,
+      leadId: 40,
+      transactionType: 'for_rent',
+      artifactRole: 'proof_of_income',
+      artifactType: 'uploaded_file',
+      status: 'submitted',
+      storageKey: 'dle/evidence/test/development-20/lead-40/artifact-10/proof.pdf',
+      externalUrl: null,
+      metadata: { uploadStatus: 'uploaded' },
+    };
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'developer_operator', developerId: 30, userId: 50 },
+        artifact,
+        context: {
+          accessLevel: 'metadata',
+          sourceSurface: 'developer_leads_manager',
+        },
+      }),
+    ).toMatchObject({ allowed: true, accessLevel: 'metadata' });
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'developer_operator', developerId: 30, userId: 50 },
+        artifact,
+        context: {
+          accessLevel: 'download',
+          sourceSurface: 'developer_leads_manager',
+          privateStorageConfigured: true,
+          canWriteDownloadAudit: true,
+        },
+      }),
+    ).toMatchObject({ allowed: true, accessLevel: 'download' });
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'developer_operator', developerId: 31, userId: 51 },
+        artifact,
+        context: {
+          accessLevel: 'metadata',
+          sourceSurface: 'developer_leads_manager',
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason: 'Developer does not own this evidence artifact.',
+    });
+  });
+
+  it('keeps admin evidence access policy-scoped instead of global-by-default', () => {
+    const artifact = {
+      id: 11,
+      developmentId: 21,
+      developerId: 31,
+      leadId: 41,
+      transactionType: 'auction',
+      artifactRole: 'proof_of_funds',
+      artifactType: 'uploaded_file',
+      status: 'submitted',
+      storageKey: 'dle/evidence/test/development-21/lead-41/artifact-11/funds.pdf',
+      externalUrl: null,
+      metadata: { uploadStatus: 'uploaded' },
+    };
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'admin_reviewer', userId: 60, isAdmin: true },
+        artifact,
+        context: {
+          accessLevel: 'metadata',
+          sourceSurface: 'admin_review',
+          adminReviewLinked: false,
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason: 'Admin evidence access requires a linked review item.',
+    });
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'admin_reviewer', userId: 60, isAdmin: true },
+        artifact,
+        context: {
+          accessLevel: 'download',
+          sourceSurface: 'admin_review',
+          adminReviewLinked: true,
+          adminReviewReason: 'Policy review of proof-of-funds upload',
+          privateStorageConfigured: true,
+          canWriteDownloadAudit: true,
+        },
+      }),
+    ).toMatchObject({ allowed: true, accessLevel: 'download', sourceSurface: 'admin_review' });
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'admin_reviewer', userId: 60, isAdmin: true },
+        artifact,
+        context: {
+          accessLevel: 'review_mutation',
+          sourceSurface: 'admin_review',
+          adminReviewLinked: true,
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason: 'Admin evidence review mutation requires an explicit review-owner policy.',
+    });
+  });
+
+  it('requires explicit distribution linkage before metadata or download access', () => {
+    const artifact = {
+      id: 12,
+      developmentId: 22,
+      developerId: 32,
+      leadId: 42,
+      transactionType: 'for_rent',
+      artifactRole: 'signed_lease',
+      artifactType: 'uploaded_file',
+      status: 'accepted',
+      storageKey: 'dle/evidence/test/development-22/lead-42/artifact-12/lease.pdf',
+      externalUrl: null,
+      metadata: { uploadStatus: 'uploaded' },
+    };
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: {
+          actorType: 'distribution_manager',
+          userId: 70,
+          managerId: 80,
+          hasActiveManagerAccess: true,
+        },
+        artifact,
+        context: {
+          accessLevel: 'metadata',
+          sourceSurface: 'distribution_manager',
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason:
+        'Distribution evidence access requires explicit deal, programme, handoff, share, or grant linkage.',
+    });
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: {
+          actorType: 'distribution_manager',
+          userId: 70,
+          managerId: 80,
+          hasActiveManagerAccess: true,
+        },
+        artifact,
+        context: {
+          accessLevel: 'download',
+          sourceSurface: 'distribution_manager',
+          distributionLinkage: { dealLinked: true },
+          distributionRoleRelevant: true,
+          privateStorageConfigured: true,
+          canWriteDownloadAudit: true,
+        },
+      }),
+    ).toMatchObject({
+      allowed: true,
+      accessLevel: 'download',
+      sourceSurface: 'distribution_manager',
+    });
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: {
+          actorType: 'distribution_manager',
+          userId: 70,
+          managerId: 80,
+          hasActiveManagerAccess: true,
+        },
+        artifact,
+        context: {
+          accessLevel: 'review_mutation',
+          sourceSurface: 'distribution_manager',
+          distributionLinkage: { dealLinked: true },
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason: 'Distribution access cannot mutate DLE evidence review status.',
+    });
+  });
+
+  it('denies public evidence access and blocks unsafe download inputs', () => {
+    const artifact = {
+      id: 13,
+      developmentId: 23,
+      developerId: 33,
+      leadId: 43,
+      transactionType: 'auction',
+      artifactRole: 'legal_pack_acknowledgement',
+      artifactType: 'uploaded_file',
+      status: 'submitted',
+      storageKey: 'properties/public/legal-pack.pdf',
+      externalUrl: 'https://cdn.example.test/legal-pack.pdf',
+      metadata: { uploadStatus: 'uploaded' },
+    };
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'public_applicant', sessionId: 'public-session' },
+        artifact,
+        context: {
+          accessLevel: 'metadata',
+          sourceSurface: 'public_lead_form',
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason: 'Public evidence access requires a scoped artifact token.',
+    });
+
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: { actorType: 'developer_operator', developerId: 33, userId: 53 },
+        artifact,
+        context: {
+          accessLevel: 'download',
+          sourceSurface: 'developer_leads_manager',
+          privateStorageConfigured: true,
+          canWriteDownloadAudit: true,
+        },
+      }),
+    ).toMatchObject({
+      allowed: false,
+      denialReason: 'Evidence artifact storage key is not in the private evidence namespace.',
+    });
   });
 
   it('creates developer-only upload intents with private storage metadata and no lead mutation', async () => {

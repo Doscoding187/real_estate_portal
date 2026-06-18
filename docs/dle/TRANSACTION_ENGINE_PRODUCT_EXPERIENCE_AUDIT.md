@@ -906,5 +906,9 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Documentation proof that admin/distribution evidence access has an explicit authorization
   contract before runtime expansion. Status: complete for
   `EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`.
+- Service-helper proof that evidence access decisions are explicit for developer, admin review,
+  distribution manager, future public applicant, metadata, download, and review mutation before
+  admin/distribution endpoints are opened. Status: complete for `dleEvidenceArtifactService`
+  helper tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
