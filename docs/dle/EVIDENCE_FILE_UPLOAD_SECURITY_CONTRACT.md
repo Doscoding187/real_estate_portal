@@ -4,7 +4,8 @@ Date: 2026-06-17
 Status: Contract active. Runtime slices now support developer-only protected upload intents,
 guarded upload completion, and authenticated short-lived download URL brokering for existing
 Rental/Auction lead artifacts. Public applicant/bidder upload and evidence readiness automation
-remain unimplemented.
+remain unimplemented. Admin/distribution evidence access must follow
+`docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`.
 
 ## Purpose
 
@@ -121,6 +122,9 @@ Current runtime note:
   operating event only after a signed URL is issued.
 
 ## Authorization Matrix
+
+Admin and distribution expansion must follow
+`docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`.
 
 Allowed first-pass readers:
 

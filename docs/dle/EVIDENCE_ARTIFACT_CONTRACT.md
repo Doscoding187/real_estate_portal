@@ -51,6 +51,8 @@ developer, programme, or compliance requirement.
 
 Evidence artifacts may be linked across these surfaces, but linking must preserve owner boundaries.
 The DLE artifact may provide context to distribution/admin review; it must not bypass those systems.
+Admin and distribution access expansion must follow
+`docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`.
 
 ## Required Artifact Scope
 
@@ -300,6 +302,8 @@ Minimum requirements before implementation:
 - no public unauthenticated artifact access;
 - storage keys must not be exposed as direct unrestricted download paths;
 - uploaded evidence files must follow `docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md`;
+- admin/distribution evidence access must follow
+  `docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`;
 - audit events must avoid storing full sensitive document contents;
 - rejected/expired/withdrawn artifacts must remain auditable but should not be reused as accepted
   proof;

@@ -903,5 +903,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Component-helper proof that Developer Leads Manager uploaded-file labels, download-count copy,
   disabled/enabled download affordance state, and no-readiness guardrail copy are deterministic.
   Status: complete for `leadEvidenceChecklist` helper tests.
+- Documentation proof that admin/distribution evidence access has an explicit authorization
+  contract before runtime expansion. Status: complete for
+  `EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md`.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

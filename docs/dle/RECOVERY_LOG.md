@@ -7275,3 +7275,47 @@ Next recommended slice:
   authorization contract.
 Commit hash/tag: Included in `test(dle): prove evidence file display`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence Access Authorization Contract
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Define the authorization boundary for future admin and distribution access to protected DLE
+evidence files before broadening runtime access beyond developer-owned workflows.
+Files changed:
+- docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md
+- docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md
+- docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `test -f docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md` passed.
+- `rg "EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT|metadata|download|review_mutation|distribution deal|admin_review" docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md docs/dle/EVIDENCE_FILE_UPLOAD_SECURITY_CONTRACT.md docs/dle/EVIDENCE_ARTIFACT_CONTRACT.md` passed.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The new contract defines developer, admin review, distribution manager, and future public
+  applicant/bidder evidence access boundaries.
+- Access levels are explicit: metadata, download URL, and review mutation.
+- Admin access is policy-scoped rather than global-by-default.
+- Distribution access requires explicit deal, programme, handoff, share, or future grant linkage.
+- The first safe runtime expansion is documented as a pure access-policy helper with endpoints
+  unchanged until helper tests prove the policy.
+Guardrails:
+- Documentation-only slice. No runtime, schema, API, upload, download, readiness, inventory,
+  distribution, payout, public listing, wizard, draft, or autosave behavior is intended.
+- This slice does not broaden admin or distribution access and does not issue any new download
+  URLs.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Runtime access-policy helper, admin/distribution endpoint expansion, malware scanning/quarantine,
+  public applicant/bidder upload, and public scoped-token access remain future.
+- Admin/distribution UI copy still needs to distinguish uploaded evidence, accepted evidence, and
+  transaction readiness when those surfaces are implemented.
+Next recommended slice:
+- Implement a pure DLE evidence access-policy helper with unit tests for developer, admin,
+  distribution, public, unrelated-developer, and unrelated-reviewer decisions while keeping current
+  endpoints unchanged.
+Commit hash/tag: Included in `docs(dle): define evidence access authorization`.
+Uncommitted reason, if any: None.
