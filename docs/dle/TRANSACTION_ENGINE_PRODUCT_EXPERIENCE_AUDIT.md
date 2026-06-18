@@ -943,5 +943,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Component proof that edit-development autosave remains disabled by default and an explicitly
   enabled future edit-autosave callback routes through baseline-aware partial updates without using
   `saveDraft`. Status: complete for `DevelopmentWizard` tests.
+- Component proof that an explicitly enabled future edit-autosave safe-failure rejects without
+  advancing the persisted edit baseline, and a later retry uses the latest canonical partial
+  payload. Status: complete for `DevelopmentWizard` tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

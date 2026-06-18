@@ -191,6 +191,8 @@ enabling default background edit autosave:
   behind `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`;
 - component proof shows explicitly enabled edit autosave routes through baseline-aware partial
   updates and does not call the create/draft `saveDraft` path;
+- component proof shows backend `success: false` rejects without advancing the persisted edit
+  baseline, and a later retry uses the latest canonical partial payload;
 - `docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md` defines the remaining browser proof
   gates before rollout enablement.
 

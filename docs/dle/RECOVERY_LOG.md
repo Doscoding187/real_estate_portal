@@ -7810,3 +7810,46 @@ Next recommended slice:
   autosave monitoring if that is higher priority.
 Commit hash/tag: Included in `test(dle): prove edit autosave gate`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Edit Autosave Failure Retry Proof
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove future edit-development autosave safe-failure and retry behavior at the component
+boundary while keeping edit autosave default-off.
+Files changed:
+- client/src/components/development-wizard/DevelopmentWizard.test.tsx
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/AUTOSAVE_SAFETY_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/development-wizard/DevelopmentWizard.test.tsx client/src/lib/developmentSubmitPayload.test.ts` passed with 54 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- With `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`, a backend `success: false` edit-autosave response
+  rejects as `Development progress could not be persisted`.
+- The failed edit-autosave attempt does not call `saveDraft`.
+- The failed edit-autosave attempt does not advance the persisted edit baseline.
+- A later retry after a canonical marketing-summary change sends the latest baseline-aware partial
+  payload through `developer.updateDevelopment`.
+- The successful retry advances the persisted edit baseline to the latest partial snapshot.
+Guardrails:
+- Edit autosave remains disabled by default.
+- No runtime rollout, backend endpoint, schema, migration, publish, public listing, search-card,
+  lead, evidence, distribution, inventory, payout, reward, or operating behavior is intended to
+  change.
+- Browser proof is still required before any edit-autosave rollout enablement.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Browser proof is still needed for Sale, Rental, and Auction edit routes preserving unrelated
+  fields and public output.
+- Browser proof is still needed for visible failed edit-autosave state, stale partial payload
+  handling, and retry behavior in a real runtime.
+Next recommended slice:
+- Keep edit autosave disabled and add browser proof for Sale, Rental, and Auction edit-autosave
+  field ownership plus visible failure/retry before considering rollout enablement.
+Commit hash/tag: Included in `test(dle): prove edit autosave retry`.
+Uncommitted reason, if any: None.

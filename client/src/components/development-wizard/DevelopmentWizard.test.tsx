@@ -712,6 +712,88 @@ describe('DevelopmentWizard draft resume/manual save wiring', () => {
     expect(updateInput.data).not.toHaveProperty('city');
   });
 
+  it('rejects failed edit autosave attempts and retries the latest partial payload', async () => {
+    vi.stubEnv('VITE_DLE_EDIT_AUTOSAVE_ENABLED', 'true');
+    window.history.replaceState({}, '', '/developer/developments/edit?id=987&brandProfileId=55');
+    testState.currentUrl = '/developer/developments/edit?id=987&brandProfileId=55';
+    testState.editDevelopment.currentStepId = 'marketing_summary';
+    testState.editDevelopment.stepData = {
+      ...testState.editDevelopment.stepData,
+      marketing_summary: {
+        description: 'Initial autosave description.',
+        tagline: 'Initial autosave tagline',
+        keySellingPoints: ['Initial'],
+      },
+    };
+    testState.updateDevelopmentMock.mockResolvedValueOnce({ success: false });
+
+    render(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.autoSaveOptions.enabled).toBe(true);
+    });
+
+    await act(async () => {
+      await expect(testState.autoSaveOptions.onSave(testState.autoSaveData)).rejects.toThrow(
+        'Development progress could not be persisted',
+      );
+    });
+
+    expect(testState.updateDevelopmentMock).toHaveBeenCalledTimes(1);
+    expect(testState.saveDraftMutationMock).not.toHaveBeenCalled();
+    expect(useDevelopmentWizard.getState().getPersistedEditSnapshot()?.stepData).toMatchObject({
+      marketing_summary: {
+        description: 'Initial autosave description.',
+      },
+    });
+
+    testState.updateDevelopmentMock.mockResolvedValueOnce({ success: true });
+    act(() => {
+      useDevelopmentWizard.getState().saveWorkflowStepData('marketing_summary' as any, {
+        description: 'Retried autosave description.',
+        tagline: 'Retried autosave tagline',
+        keySellingPoints: ['Latest retry'],
+      });
+    });
+
+    await waitFor(() => {
+      expect(testState.autoSaveData.stepData.marketing_summary.description).toBe(
+        'Retried autosave description.',
+      );
+    });
+
+    await act(async () => {
+      await testState.autoSaveOptions.onSave(testState.autoSaveData);
+    });
+
+    expect(testState.updateDevelopmentMock).toHaveBeenCalledTimes(2);
+    const retryInput = testState.updateDevelopmentMock.mock.calls[1][0];
+    expect(retryInput).toMatchObject({
+      id: 987,
+      data: {
+        canonicalUpdateMode: 'partial_step',
+        currentStepId: 'marketing_summary',
+        description: 'Retried autosave description.',
+        tagline: 'Retried autosave tagline',
+        highlights: ['Latest retry'],
+        stepData: {
+          marketing_summary: {
+            description: 'Retried autosave description.',
+            tagline: 'Retried autosave tagline',
+            keySellingPoints: ['Latest retry'],
+          },
+        },
+      },
+    });
+    expect(retryInput.data).not.toHaveProperty('unitTypes');
+    expect(retryInput.data).not.toHaveProperty('city');
+    expect(useDevelopmentWizard.getState().getPersistedEditSnapshot()?.stepData).toMatchObject({
+      marketing_summary: {
+        description: 'Retried autosave description.',
+      },
+    });
+  });
+
   it('keeps publisher-context create autosave disabled until a publisher draft path is proven', async () => {
     vi.stubEnv('VITE_DLE_CREATE_DRAFT_AUTOSAVE_ENABLED', 'true');
     window.history.replaceState({}, '', '/developer/developments/new?brandProfileId=77');

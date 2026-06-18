@@ -50,7 +50,11 @@ Implemented in this slice:
   - edit autosave remains disabled by default even when an edit baseline exists;
   - `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true` is required before edit autosave can become eligible;
   - explicitly enabled edit autosave routes through baseline-aware partial updates and does not call
-    the create/draft `saveDraft` path.
+    the create/draft `saveDraft` path;
+  - a backend `success: false` edit-autosave response rejects and does not advance the persisted
+    edit baseline;
+  - a later retry uses the latest canonical partial payload and then advances the persisted edit
+    baseline.
 
 Not implemented in this slice:
 
@@ -70,8 +74,8 @@ Before edit-development autosave can be enabled:
    public output.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
    cards, and lead context.
-5. Failed edit-autosave attempts must remain visible and retryable.
-6. A stale partial payload must not mark newer edits as saved.
+5. Browser proof must show failed edit-autosave attempts remain visible and retryable.
+6. Browser proof must show a stale partial payload cannot mark newer edits as saved.
 7. Save Progress must remain the trusted manual fallback.
 
 ## Next Recommended Slice
