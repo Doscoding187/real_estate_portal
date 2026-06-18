@@ -8,6 +8,8 @@ import {
   developmentOperatingEvents,
   dleEvidenceArtifactAccessGrants,
   dleEvidenceArtifacts,
+  distributionDeals,
+  distributionPrograms,
   leads,
   users,
 } from '../../../drizzle/schema';
@@ -43,6 +45,8 @@ describe('dleEvidenceArtifactService helpers', () => {
     userIds: number[];
     developerIds: number[];
     developmentIds: number[];
+    distributionDealIds: number[];
+    distributionProgramIds: number[];
     leadIds: number[];
     artifactIds: number[];
     accessGrantIds: number[];
@@ -50,6 +54,8 @@ describe('dleEvidenceArtifactService helpers', () => {
     userIds: [],
     developerIds: [],
     developmentIds: [],
+    distributionDealIds: [],
+    distributionProgramIds: [],
     leadIds: [],
     artifactIds: [],
     accessGrantIds: [],
@@ -69,6 +75,14 @@ describe('dleEvidenceArtifactService helpers', () => {
     }
     for (const leadId of cleanup.leadIds.reverse()) {
       await db.delete(leads).where(eq(leads.id, leadId));
+    }
+    for (const distributionDealId of cleanup.distributionDealIds.reverse()) {
+      await db.delete(distributionDeals).where(eq(distributionDeals.id, distributionDealId));
+    }
+    for (const distributionProgramId of cleanup.distributionProgramIds.reverse()) {
+      await db
+        .delete(distributionPrograms)
+        .where(eq(distributionPrograms.id, distributionProgramId));
     }
     for (const developmentId of cleanup.developmentIds.reverse()) {
       await db.delete(developments).where(eq(developments.id, developmentId));
@@ -1087,6 +1101,292 @@ describe('dleEvidenceArtifactService helpers', () => {
       allowed: true,
       accessLevel: 'download',
       sourceSurface: 'admin_review',
+    });
+  });
+
+  it('normalizes persisted distribution manager access grants through a real deal and programme without opening endpoints', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const managerInsert = await db!.insert(users).values({
+      email: `dle-evidence-distribution-manager-${suffix}@example.com`,
+      passwordHash: 'test-password-hash',
+      role: 'super_admin',
+      firstName: 'Evidence',
+      lastName: 'Manager',
+      name: 'Evidence Manager',
+      emailVerified: 1,
+    });
+    const managerUserId = getInsertId(managerInsert);
+    cleanup.userIds.push(managerUserId);
+
+    const agentInsert = await db!.insert(users).values({
+      email: `dle-evidence-distribution-agent-${suffix}@example.com`,
+      passwordHash: 'test-password-hash',
+      role: 'agent',
+      firstName: 'Evidence',
+      lastName: 'Agent',
+      name: 'Evidence Agent',
+      emailVerified: 1,
+    });
+    const agentUserId = getInsertId(agentInsert);
+    cleanup.userIds.push(agentUserId);
+
+    const developerInsert = await db!.insert(developers).values({
+      userId: managerUserId,
+      name: `Evidence Distribution Grant Developer ${suffix}`,
+      email: `distribution-grant-developer-${suffix}@example.com`,
+      category: 'residential',
+      status: 'approved',
+      isVerified: 1,
+    });
+    const developerId = getInsertId(developerInsert);
+    cleanup.developerIds.push(developerId);
+
+    const developmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Distribution Grant Auction ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'auction',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'launching-soon',
+      startingBid: '950000',
+      auctionDate: '2026-09-12',
+    });
+    const developmentId = getInsertId(developmentInsert);
+    cleanup.developmentIds.push(developmentId);
+
+    const otherDevelopmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Distribution Grant Other ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'auction',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'launching-soon',
+      startingBid: '650000',
+      auctionDate: '2026-10-12',
+    });
+    const otherDevelopmentId = getInsertId(otherDevelopmentInsert);
+    cleanup.developmentIds.push(otherDevelopmentId);
+
+    const programInsert = await db!.insert(distributionPrograms).values({
+      developmentId,
+      isActive: 1,
+      isReferralEnabled: 1,
+      commissionModel: 'flat_percentage',
+      defaultCommissionPercent: '2.50',
+      tierAccessPolicy: 'restricted',
+      currencyCode: 'ZAR',
+    });
+    const programId = getInsertId(programInsert);
+    cleanup.distributionProgramIds.push(programId);
+
+    const dealInsert = await db!.insert(distributionDeals).values({
+      programId,
+      developmentId,
+      agentId: agentUserId,
+      managerUserId,
+      buyerName: `Evidence Distribution Buyer ${suffix}`,
+      buyerEmail: `distribution-buyer-${suffix}@example.com`,
+      buyerPhone: '0825550310',
+      currentStage: 'application_submitted',
+      commissionStatus: 'not_ready',
+      dealAmount: 950_000,
+    });
+    const dealId = getInsertId(dealInsert);
+    cleanup.distributionDealIds.push(dealId);
+
+    const leadInsert = await db!.insert(leads).values({
+      developmentId,
+      name: `Evidence Distribution Grant Lead ${suffix}`,
+      email: `distribution-grant-lead-${suffix}@example.com`,
+      phone: '0825550311',
+      leadType: 'inquiry',
+      status: 'qualified',
+      funnelStage: 'qualification',
+      source: 'development_detail',
+      leadSource: 'development_detail_contact',
+    });
+    const leadId = getInsertId(leadInsert);
+    cleanup.leadIds.push(leadId);
+
+    const storageKey = `dle/evidence/test/development-${developmentId}/lead-${leadId}/artifact-distribution-grant/proof.pdf`;
+    const artifactInsert = await db!.insert(dleEvidenceArtifacts).values({
+      developmentId,
+      transactionType: 'auction',
+      leadId,
+      artifactRole: 'proof_of_funds',
+      artifactType: 'uploaded_file',
+      storageKey,
+      displayName: 'Proof of funds',
+      description: 'Private proof document for distribution manager policy review.',
+      status: 'submitted',
+      reviewOwner: 'auction_team',
+      metadata: {
+        uploadStatus: 'uploaded',
+        storageNamespace: 'private_dle_evidence',
+        originalFilename: 'proof-of-funds.pdf',
+        mimeType: 'application/pdf',
+        fileSizeBytes: 84_000,
+      },
+      createdByUserId: managerUserId,
+      updatedByUserId: managerUserId,
+    });
+    const artifactId = getInsertId(artifactInsert);
+    cleanup.artifactIds.push(artifactId);
+
+    const futureDate = '2037-01-01 00:00:00';
+    const pastDate = '2000-01-01 00:00:00';
+    const grantRows = await Promise.all([
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId,
+        leadId,
+        distributionDealId: dealId,
+        distributionProgramId: programId,
+        sourceSurface: 'distribution_manager',
+        grantedToSurface: 'distribution_manager',
+        grantedToUserId: managerUserId,
+        grantedToRole: 'distribution_manager',
+        accessLevel: 'download',
+        reasonCode: 'manager_review',
+        reasonNote: 'Distribution manager review of proof-of-funds evidence.',
+        status: 'active',
+        expiresAt: futureDate,
+        grantedByUserId: managerUserId,
+      }),
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId,
+        leadId,
+        distributionDealId: dealId,
+        distributionProgramId: programId,
+        sourceSurface: 'distribution_manager',
+        grantedToSurface: 'distribution_manager',
+        grantedToUserId: managerUserId,
+        grantedToRole: 'distribution_manager',
+        accessLevel: 'metadata',
+        reasonCode: 'revoked_manager_review',
+        status: 'revoked',
+        grantedByUserId: managerUserId,
+        revokedByUserId: managerUserId,
+      }),
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId,
+        leadId,
+        distributionDealId: dealId,
+        distributionProgramId: programId,
+        sourceSurface: 'distribution_manager',
+        grantedToSurface: 'distribution_manager',
+        grantedToUserId: managerUserId,
+        grantedToRole: 'distribution_manager',
+        accessLevel: 'download',
+        reasonCode: 'expired_manager_review',
+        status: 'active',
+        expiresAt: pastDate,
+        grantedByUserId: managerUserId,
+      }),
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId: otherDevelopmentId,
+        leadId,
+        distributionDealId: dealId,
+        distributionProgramId: programId,
+        sourceSurface: 'distribution_manager',
+        grantedToSurface: 'distribution_manager',
+        grantedToUserId: managerUserId,
+        grantedToRole: 'distribution_manager',
+        accessLevel: 'download',
+        reasonCode: 'wrong_development_manager_review',
+        status: 'active',
+        expiresAt: futureDate,
+        grantedByUserId: managerUserId,
+      }),
+    ]);
+    cleanup.accessGrantIds.push(...grantRows.map(getInsertId));
+
+    const persistedGrants = await db!
+      .select()
+      .from(dleEvidenceArtifactAccessGrants)
+      .where(eq(dleEvidenceArtifactAccessGrants.artifactId, artifactId));
+    const accessGrants = persistedGrants.map(buildDleEvidenceAccessGrantInput);
+    const activeGrantId = getInsertId(grantRows[0]);
+
+    const linkedDecision = buildDleEvidenceLinkageDecision({
+      artifact: {
+        artifactId,
+        artifactDevelopmentId: developmentId,
+        artifactLeadId: leadId,
+        artifactDistributionDealId: null,
+        artifactRole: 'proof_of_funds',
+      },
+      distributionDeal: {
+        dealId,
+        developmentId,
+        programmeId: programId,
+        managerHasActiveAccess: true,
+        roleRelevant: true,
+      },
+      requestedAccessLevel: 'download',
+      accessGrants,
+    });
+
+    expect(linkedDecision).toMatchObject({
+      distributionLinkage: {
+        accessGrantRecorded: true,
+        dealLinked: true,
+        programmeRoleMappedAndShared: true,
+      },
+      adminReviewLinked: false,
+      distributionRoleRelevant: true,
+      grantIds: [activeGrantId],
+    });
+    expect(linkedDecision.denialReasons).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('is revoked'),
+        expect.stringContaining('is expired'),
+        expect.stringContaining('does not belong to the evidence development'),
+      ]),
+    );
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: {
+          actorType: 'distribution_manager',
+          userId: managerUserId,
+          managerId: managerUserId,
+          hasActiveManagerAccess: true,
+        },
+        artifact: {
+          id: artifactId,
+          developmentId,
+          developerId,
+          leadId,
+          transactionType: 'auction',
+          artifactRole: 'proof_of_funds',
+          artifactType: 'uploaded_file',
+          status: 'submitted',
+          reviewOwner: 'auction_team',
+          storageKey,
+          externalUrl: null,
+          metadata: { uploadStatus: 'uploaded' },
+        },
+        context: {
+          accessLevel: 'download',
+          sourceSurface: 'distribution_manager',
+          distributionLinkage: linkedDecision.distributionLinkage,
+          distributionRoleRelevant: linkedDecision.distributionRoleRelevant,
+          privateStorageConfigured: true,
+          canWriteDownloadAudit: true,
+        },
+      }),
+    ).toMatchObject({
+      allowed: true,
+      accessLevel: 'download',
+      sourceSurface: 'distribution_manager',
     });
   });
 

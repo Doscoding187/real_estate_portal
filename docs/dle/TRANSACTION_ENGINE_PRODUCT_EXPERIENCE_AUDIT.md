@@ -933,5 +933,9 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
   decision path, accept only active/unexpired/same-development grants, and keep admin/distribution
   evidence endpoints closed. Status: complete for `dleEvidenceArtifactService` tests and
   `0074_create_dle_evidence_access_grants.sql`.
+- DB-backed proof that persisted Distribution Manager evidence access-grant rows normalize through a
+  real distribution programme/deal linkage, accept only active/unexpired/same-development grants,
+  and keep manager evidence endpoints closed. Status: complete for `dleEvidenceArtifactService`
+  tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

@@ -7670,3 +7670,48 @@ Next recommended slice:
   create/draft autosave monitoring depending on product priority.
 Commit hash/tag: Included in `feat(dle): persist evidence access grants`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Distribution Evidence Grant Persistence Proof
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Prove persisted Distribution Manager evidence access grants with a real distribution
+programme/deal linkage while keeping manager evidence endpoints closed.
+Files changed:
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 29
+  tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The DB-backed test now creates a real `distribution_programs` row and a real
+  `distribution_deals` row linked to the same Auction development as the evidence artifact.
+- The test persists active, revoked, expired, and wrong-development Distribution Manager grants.
+- `buildDleEvidenceAccessGrantInput` maps persisted rows into `buildDleEvidenceLinkageDecision`.
+- The linkage proof accepts only the active, unexpired, same-development grant and derives
+  `dealLinked`, `programmeRoleMappedAndShared`, `accessGrantRecorded`, and role relevance from
+  persisted data.
+- The Distribution Manager access-policy helper is then evaluated through that normalized linkage
+  and can allow policy-scoped helper download access without opening a runtime endpoint.
+Guardrails:
+- Test/proof-only slice. No admin, distribution, public, schema, router, upload, download,
+  readiness, inventory, lead-stage, payout, public listing, wizard, draft, or autosave behavior is
+  intended to change.
+- Distribution evidence metadata/download endpoints remain closed.
+- This slice does not accept evidence, complete Auction bidder readiness, move distribution deal
+  stages, or automate payout/reward state.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Read-only admin metadata endpoint design, read-only distribution metadata endpoint design,
+  download endpoint design, malware scanning/quarantine, public applicant/bidder upload, and
+  reviewer surface UX remain future.
+Next recommended slice:
+- Decide between designing read-only admin/distribution evidence metadata endpoints or returning to
+  controlled create/draft autosave monitoring and edit-development autosave ownership design.
+Commit hash/tag: Included in `test(dle): prove distribution evidence grants`.
+Uncommitted reason, if any: None.

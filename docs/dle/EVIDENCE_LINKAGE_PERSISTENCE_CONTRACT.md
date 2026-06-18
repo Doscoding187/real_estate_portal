@@ -192,9 +192,24 @@ Completed first persisted grant slice:
    distribution deals, payout/reward state, public listing output, wizard state, draft state, or
    autosave state.
 
+## Third Safe Runtime Slice
+
+Completed persisted distribution grant proof:
+
+1. Added DB-backed proof with a real `distribution_programs` row and a real `distribution_deals`
+   row linked to the same development as the evidence artifact.
+2. Persisted active, revoked, expired, and wrong-development Distribution Manager grants.
+3. Verified only the active, unexpired, same-development grant produces distribution linkage,
+   programme linkage, role relevance, and an accepted grant id.
+4. Ran the Distribution Manager access-policy helper through that persisted linkage.
+5. Kept distribution metadata and download endpoints closed.
+6. Proved the distribution grant path does not mutate evidence acceptance, lead stages, inventory,
+   distribution deal stages, payout/reward state, public listing output, wizard state, draft state,
+   or autosave state.
+
 Recommended next implementation:
 
-- add distribution-manager grant seeding proof with a real distribution deal/programme row before
-  any manager metadata endpoint is opened;
 - design read-only admin metadata endpoint separately before opening any admin download path;
+- design read-only distribution metadata endpoint separately before opening any manager download
+  path;
 - do not add admin/distribution routers yet.
