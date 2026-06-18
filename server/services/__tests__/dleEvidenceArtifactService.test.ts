@@ -441,6 +441,29 @@ describe('dleEvidenceArtifactService helpers', () => {
       externalUrl: null,
       metadata: { uploadStatus: 'uploaded' },
     };
+    const linkedDecision = buildDleEvidenceLinkageDecision({
+      artifact: {
+        artifactId: artifact.id,
+        artifactDevelopmentId: artifact.developmentId,
+        artifactLeadId: artifact.leadId,
+        artifactDistributionDealId: null,
+        artifactRole: artifact.artifactRole,
+      },
+      requestedAccessLevel: 'download',
+      accessGrants: [
+        {
+          grantId: 611,
+          artifactId: artifact.id,
+          developmentId: artifact.developmentId,
+          leadId: artifact.leadId,
+          adminReviewItemId: 711,
+          grantedToSurface: 'admin_review',
+          accessLevel: 'download',
+          status: 'active',
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      ],
+    });
 
     expect(
       evaluateDleEvidenceAccess({
@@ -464,7 +487,7 @@ describe('dleEvidenceArtifactService helpers', () => {
         context: {
           accessLevel: 'download',
           sourceSurface: 'admin_review',
-          adminReviewLinked: true,
+          adminReviewLinked: linkedDecision.adminReviewLinked,
           adminReviewReason: 'Policy review of proof-of-funds upload',
           privateStorageConfigured: true,
           canWriteDownloadAudit: true,
@@ -479,7 +502,7 @@ describe('dleEvidenceArtifactService helpers', () => {
         context: {
           accessLevel: 'review_mutation',
           sourceSurface: 'admin_review',
-          adminReviewLinked: true,
+          adminReviewLinked: linkedDecision.adminReviewLinked,
         },
       }),
     ).toMatchObject({

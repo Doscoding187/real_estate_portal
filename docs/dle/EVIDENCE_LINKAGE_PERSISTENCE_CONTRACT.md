@@ -178,5 +178,6 @@ Completed first safe runtime slice:
 
 Recommended next implementation:
 
-- define the admin review linkage helper path before any admin metadata endpoint is opened;
+- define explicit grant persistence and reviewer surface tests before any admin metadata endpoint is
+  opened;
 - do not add admin/distribution routers yet.

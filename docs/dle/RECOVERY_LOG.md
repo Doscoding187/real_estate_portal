@@ -7580,3 +7580,42 @@ Next recommended slice:
   using future admin-review grant inputs, keeping admin endpoints closed.
 Commit hash/tag: Included in `test(dle): prove distribution evidence linkage policy`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Admin Evidence Linkage Policy Proof
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Route the Admin evidence access-policy proof through `buildDleEvidenceLinkageDecision` using
+future admin-review grant inputs while keeping admin endpoints closed.
+Files changed:
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 27 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- The Admin access-policy test now derives `adminReviewLinked` from
+  `buildDleEvidenceLinkageDecision` using a future active admin-review grant shape.
+- The policy proof still denies Admin access when no linked review item exists.
+- The policy proof allows policy-scoped Admin downloads through normalized linkage output and a
+  review reason.
+- Admin review mutation remains denied unless a future explicit review-owner policy allows it.
+Guardrails:
+- Test/proof-only slice. No admin, distribution, public, schema, router, upload, download,
+  readiness, inventory, lead stage, payout, public listing, wizard, draft, or autosave behavior is
+  intended to change.
+- Admin/distribution evidence endpoints remain closed.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Explicit grant persistence, reviewer surface tests, endpoint design, malware
+  scanning/quarantine, and public applicant/bidder upload remain future.
+Next recommended slice:
+- Design the explicit evidence access grant persistence implementation or stop the access-control
+  thread and return to Rental/Auction public merchandising or operating proof, depending on product
+  priority.
+Commit hash/tag: Included in `test(dle): prove admin evidence linkage policy`.
+Uncommitted reason, if any: None.

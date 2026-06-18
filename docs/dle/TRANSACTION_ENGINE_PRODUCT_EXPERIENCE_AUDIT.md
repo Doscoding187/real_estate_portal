@@ -926,5 +926,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Service-helper proof that Distribution evidence access-policy decisions consume
   `buildDleEvidenceLinkageDecision` output instead of hand-built linkage flags. Status: complete
   for `dleEvidenceArtifactService` tests.
+- Service-helper proof that Admin evidence access-policy decisions consume
+  `buildDleEvidenceLinkageDecision` future admin-review grant output instead of hand-built linkage
+  flags. Status: complete for `dleEvidenceArtifactService` tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
