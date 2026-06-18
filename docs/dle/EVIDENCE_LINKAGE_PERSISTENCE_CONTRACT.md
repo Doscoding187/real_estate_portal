@@ -176,8 +176,25 @@ Completed first safe runtime slice:
 4. Proved the helper does not mutate evidence, lead, inventory, distribution, payout, public
    listing, wizard, draft, or autosave state.
 
+## Second Safe Runtime Slice
+
+Completed first persisted grant slice:
+
+1. Added `dle_evidence_artifact_access_grants` as the explicit persistence anchor for future
+   admin/distribution evidence grants.
+2. Added schema coverage for grant source surface, target surface, access level, status, expiry,
+   review/deal/program link ids, reason code/note, actor ids, and safe metadata.
+3. Added a service mapper from persisted grant rows into `buildDleEvidenceLinkageDecision` inputs.
+4. DB-backed proof now persists Admin Review grants and verifies only active, unexpired,
+   same-development grants produce `adminReviewLinked` linkage.
+5. Kept admin/distribution metadata and download endpoints closed.
+6. Proved the persisted grant path does not mutate evidence acceptance, lead stages, inventory,
+   distribution deals, payout/reward state, public listing output, wizard state, draft state, or
+   autosave state.
+
 Recommended next implementation:
 
-- define explicit grant persistence and reviewer surface tests before any admin metadata endpoint is
-  opened;
+- add distribution-manager grant seeding proof with a real distribution deal/programme row before
+  any manager metadata endpoint is opened;
+- design read-only admin metadata endpoint separately before opening any admin download path;
 - do not add admin/distribution routers yet.

@@ -929,5 +929,9 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Service-helper proof that Admin evidence access-policy decisions consume
   `buildDleEvidenceLinkageDecision` future admin-review grant output instead of hand-built linkage
   flags. Status: complete for `dleEvidenceArtifactService` tests.
+- DB-backed proof that persisted Admin Review evidence access-grant rows normalize into the linkage
+  decision path, accept only active/unexpired/same-development grants, and keep admin/distribution
+  evidence endpoints closed. Status: complete for `dleEvidenceArtifactService` tests and
+  `0074_create_dle_evidence_access_grants.sql`.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

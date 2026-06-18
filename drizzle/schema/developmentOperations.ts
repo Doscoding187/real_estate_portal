@@ -9,7 +9,7 @@ import {
 } from 'drizzle-orm/mysql-core';
 
 import { users } from './core';
-import { distributionDeals } from './distribution';
+import { distributionDeals, distributionPrograms } from './distribution';
 import { developments, unitTypes } from './developments';
 import { leads } from './leads';
 
@@ -159,6 +159,30 @@ export const DLE_EVIDENCE_REVIEW_OWNERS = [
   'system',
 ] as const;
 
+export const DLE_EVIDENCE_ACCESS_GRANT_SOURCE_SURFACES = [
+  'developer_leads_manager',
+  'admin_review',
+  'distribution_manager',
+  'system',
+] as const;
+
+export const DLE_EVIDENCE_ACCESS_GRANT_TARGET_SURFACES = [
+  'admin_review',
+  'distribution_manager',
+] as const;
+
+export const DLE_EVIDENCE_ACCESS_GRANT_LEVELS = [
+  'metadata',
+  'download',
+  'review_mutation',
+] as const;
+
+export const DLE_EVIDENCE_ACCESS_GRANT_STATUSES = [
+  'active',
+  'revoked',
+  'expired',
+] as const;
+
 export const dleEvidenceArtifacts = mysqlTable(
   'dle_evidence_artifacts',
   {
@@ -224,6 +248,79 @@ export const dleEvidenceArtifacts = mysqlTable(
     index('idx_dle_evidence_artifacts_transaction').on(
       table.developmentId,
       table.transactionType,
+    ),
+  ],
+);
+
+export const dleEvidenceArtifactAccessGrants = mysqlTable(
+  'dle_evidence_artifact_access_grants',
+  {
+    id: int().autoincrement().primaryKey(),
+    artifactId: int('artifact_id')
+      .notNull()
+      .references(() => dleEvidenceArtifacts.id, { onDelete: 'cascade' }),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    leadId: int('lead_id').references(() => leads.id, { onDelete: 'set null' }),
+    distributionDealId: int('distribution_deal_id').references(() => distributionDeals.id, {
+      onDelete: 'set null',
+    }),
+    distributionProgramId: int('distribution_program_id').references(() => distributionPrograms.id, {
+      onDelete: 'set null',
+    }),
+    adminReviewItemId: int('admin_review_item_id'),
+    sourceSurface: mysqlEnum(
+      'source_surface',
+      DLE_EVIDENCE_ACCESS_GRANT_SOURCE_SURFACES as unknown as [string, ...string[]],
+    ).notNull(),
+    grantedToSurface: mysqlEnum(
+      'granted_to_surface',
+      DLE_EVIDENCE_ACCESS_GRANT_TARGET_SURFACES as unknown as [string, ...string[]],
+    ).notNull(),
+    grantedToUserId: int('granted_to_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    grantedToRole: varchar('granted_to_role', { length: 80 }),
+    accessLevel: mysqlEnum(
+      'access_level',
+      DLE_EVIDENCE_ACCESS_GRANT_LEVELS as unknown as [string, ...string[]],
+    ).notNull(),
+    reasonCode: varchar('reason_code', { length: 80 }).notNull(),
+    reasonNote: varchar('reason_note', { length: 2000 }),
+    status: mysqlEnum(
+      'status',
+      DLE_EVIDENCE_ACCESS_GRANT_STATUSES as unknown as [string, ...string[]],
+    )
+      .default('active')
+      .notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'string' }),
+    grantedByUserId: int('granted_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    revokedByUserId: int('revoked_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    metadata: json(),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_dle_evidence_access_grants_artifact_status').on(table.artifactId, table.status),
+    index('idx_dle_evidence_access_grants_deal_status').on(table.distributionDealId, table.status),
+    index('idx_dle_evidence_access_grants_program_status').on(
+      table.distributionProgramId,
+      table.status,
+    ),
+    index('idx_dle_evidence_access_grants_admin_status').on(
+      table.adminReviewItemId,
+      table.status,
+    ),
+    index('idx_dle_evidence_access_grants_user_status').on(table.grantedToUserId, table.status),
+    index('idx_dle_evidence_access_grants_development_access').on(
+      table.developmentId,
+      table.accessLevel,
+      table.status,
     ),
   ],
 );

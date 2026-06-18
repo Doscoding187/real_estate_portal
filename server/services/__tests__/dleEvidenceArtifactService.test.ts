@@ -6,6 +6,7 @@ import {
   developers,
   developments,
   developmentOperatingEvents,
+  dleEvidenceArtifactAccessGrants,
   dleEvidenceArtifacts,
   leads,
   users,
@@ -15,6 +16,7 @@ import {
   assertEvidenceArtifactReviewTransition,
   assertEvidenceRoleForTransaction,
   buildDevelopmentEvidenceCoverageSummary,
+  buildDleEvidenceAccessGrantInput,
   buildDleEvidenceLinkageDecision,
   buildEvidenceDownloadAuditMetadata,
   buildEvidenceUploadToken,
@@ -43,18 +45,25 @@ describe('dleEvidenceArtifactService helpers', () => {
     developmentIds: number[];
     leadIds: number[];
     artifactIds: number[];
+    accessGrantIds: number[];
   } = {
     userIds: [],
     developerIds: [],
     developmentIds: [],
     leadIds: [],
     artifactIds: [],
+    accessGrantIds: [],
   };
 
   afterAll(async () => {
     const db = await getDb();
     if (!db) return;
 
+    for (const accessGrantId of cleanup.accessGrantIds.reverse()) {
+      await db
+        .delete(dleEvidenceArtifactAccessGrants)
+        .where(eq(dleEvidenceArtifactAccessGrants.id, accessGrantId));
+    }
     for (const artifactId of cleanup.artifactIds.reverse()) {
       await db.delete(dleEvidenceArtifacts).where(eq(dleEvidenceArtifacts.id, artifactId));
     }
@@ -848,6 +857,236 @@ describe('dleEvidenceArtifactService helpers', () => {
       distributionRoleRelevant: true,
       denialReasons: ['Access grant 703 is revoked.', 'Access grant 704 is expired.'],
       grantIds: [701, 702],
+    });
+  });
+
+  it('normalizes persisted admin review access grants into linkage decisions without opening endpoints', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const userInsert = await db!.insert(users).values({
+      email: `dle-evidence-admin-grant-${suffix}@example.com`,
+      passwordHash: 'test-password-hash',
+      role: 'super_admin',
+      firstName: 'Evidence',
+      lastName: 'Reviewer',
+      name: 'Evidence Reviewer',
+      emailVerified: 1,
+    });
+    const userId = getInsertId(userInsert);
+    cleanup.userIds.push(userId);
+
+    const developerInsert = await db!.insert(developers).values({
+      userId,
+      name: `Evidence Admin Grant Developer ${suffix}`,
+      email: `admin-grant-developer-${suffix}@example.com`,
+      category: 'residential',
+      status: 'approved',
+      isVerified: 1,
+    });
+    const developerId = getInsertId(developerInsert);
+    cleanup.developerIds.push(developerId);
+
+    const developmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Admin Grant Rental ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      city: 'Cape Town',
+      province: 'Western Cape',
+      status: 'launching-soon',
+      monthlyRentFrom: '14000',
+      monthlyRentTo: '16000',
+    });
+    const developmentId = getInsertId(developmentInsert);
+    cleanup.developmentIds.push(developmentId);
+
+    const otherDevelopmentInsert = await db!.insert(developments).values({
+      developerId,
+      name: `Evidence Admin Grant Other ${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      city: 'Cape Town',
+      province: 'Western Cape',
+      status: 'launching-soon',
+      monthlyRentFrom: '9000',
+      monthlyRentTo: '11000',
+    });
+    const otherDevelopmentId = getInsertId(otherDevelopmentInsert);
+    cleanup.developmentIds.push(otherDevelopmentId);
+
+    const leadInsert = await db!.insert(leads).values({
+      developmentId,
+      name: `Evidence Admin Grant Lead ${suffix}`,
+      email: `admin-grant-lead-${suffix}@example.com`,
+      phone: '0825550300',
+      leadType: 'inquiry',
+      status: 'qualified',
+      funnelStage: 'qualification',
+      source: 'development_detail',
+      leadSource: 'development_detail_contact',
+    });
+    const leadId = getInsertId(leadInsert);
+    cleanup.leadIds.push(leadId);
+
+    const artifactInsert = await db!.insert(dleEvidenceArtifacts).values({
+      developmentId,
+      transactionType: 'for_rent',
+      leadId,
+      artifactRole: 'proof_of_income',
+      artifactType: 'uploaded_file',
+      storageKey: `dle/evidence/test/development-${developmentId}/lead-${leadId}/artifact-admin-grant/proof.pdf`,
+      displayName: 'Proof of income',
+      description: 'Private proof document for admin policy review.',
+      status: 'submitted',
+      reviewOwner: 'leasing_team',
+      metadata: {
+        uploadStatus: 'uploaded',
+        storageNamespace: 'private_dle_evidence',
+        originalFilename: 'proof.pdf',
+        mimeType: 'application/pdf',
+        fileSizeBytes: 42_000,
+      },
+      createdByUserId: userId,
+      updatedByUserId: userId,
+    });
+    const artifactId = getInsertId(artifactInsert);
+    cleanup.artifactIds.push(artifactId);
+
+    const futureDate = '2037-01-01 00:00:00';
+    const pastDate = '2000-01-01 00:00:00';
+    const grantRows = await Promise.all([
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId,
+        leadId,
+        adminReviewItemId: 9101,
+        sourceSurface: 'admin_review',
+        grantedToSurface: 'admin_review',
+        grantedToUserId: userId,
+        grantedToRole: 'admin_reviewer',
+        accessLevel: 'download',
+        reasonCode: 'policy_review',
+        reasonNote: 'Policy review of protected proof-of-income evidence.',
+        status: 'active',
+        expiresAt: futureDate,
+        grantedByUserId: userId,
+      }),
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId,
+        leadId,
+        adminReviewItemId: 9102,
+        sourceSurface: 'admin_review',
+        grantedToSurface: 'admin_review',
+        grantedToUserId: userId,
+        grantedToRole: 'admin_reviewer',
+        accessLevel: 'metadata',
+        reasonCode: 'revoked_review',
+        status: 'revoked',
+        grantedByUserId: userId,
+        revokedByUserId: userId,
+      }),
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId,
+        leadId,
+        adminReviewItemId: 9103,
+        sourceSurface: 'admin_review',
+        grantedToSurface: 'admin_review',
+        grantedToUserId: userId,
+        grantedToRole: 'admin_reviewer',
+        accessLevel: 'download',
+        reasonCode: 'expired_review',
+        status: 'active',
+        expiresAt: pastDate,
+        grantedByUserId: userId,
+      }),
+      db!.insert(dleEvidenceArtifactAccessGrants).values({
+        artifactId,
+        developmentId: otherDevelopmentId,
+        leadId,
+        adminReviewItemId: 9104,
+        sourceSurface: 'admin_review',
+        grantedToSurface: 'admin_review',
+        grantedToUserId: userId,
+        grantedToRole: 'admin_reviewer',
+        accessLevel: 'download',
+        reasonCode: 'wrong_development',
+        status: 'active',
+        expiresAt: futureDate,
+        grantedByUserId: userId,
+      }),
+    ]);
+    cleanup.accessGrantIds.push(...grantRows.map(getInsertId));
+
+    const persistedGrants = await db!
+      .select()
+      .from(dleEvidenceArtifactAccessGrants)
+      .where(eq(dleEvidenceArtifactAccessGrants.artifactId, artifactId));
+    const accessGrants = persistedGrants.map(buildDleEvidenceAccessGrantInput);
+    const activeGrantId = getInsertId(grantRows[0]);
+
+    const linkedDecision = buildDleEvidenceLinkageDecision({
+      artifact: {
+        artifactId,
+        artifactDevelopmentId: developmentId,
+        artifactLeadId: leadId,
+        artifactDistributionDealId: null,
+        artifactRole: 'proof_of_income',
+      },
+      requestedAccessLevel: 'download',
+      accessGrants,
+    });
+
+    expect(linkedDecision).toMatchObject({
+      distributionLinkage: {},
+      adminReviewLinked: true,
+      distributionRoleRelevant: false,
+      grantIds: [activeGrantId],
+    });
+    expect(linkedDecision.denialReasons).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('is revoked'),
+        expect.stringContaining('is expired'),
+        expect.stringContaining('does not belong to the evidence development'),
+      ]),
+    );
+    expect(
+      evaluateDleEvidenceAccess({
+        actor: {
+          actorType: 'admin_reviewer',
+          userId,
+          isAdmin: true,
+        },
+        artifact: {
+          id: artifactId,
+          developmentId,
+          developerId,
+          leadId,
+          transactionType: 'for_rent',
+          artifactRole: 'proof_of_income',
+          artifactType: 'uploaded_file',
+          status: 'submitted',
+          reviewOwner: 'leasing_team',
+          storageKey: `dle/evidence/test/development-${developmentId}/lead-${leadId}/artifact-admin-grant/proof.pdf`,
+          externalUrl: null,
+          metadata: { uploadStatus: 'uploaded' },
+        },
+        context: {
+          accessLevel: 'download',
+          sourceSurface: 'admin_review',
+          adminReviewLinked: linkedDecision.adminReviewLinked,
+          adminReviewReason: 'Policy review of protected proof-of-income evidence.',
+          privateStorageConfigured: true,
+          canWriteDownloadAudit: true,
+        },
+      }),
+    ).toMatchObject({
+      allowed: true,
+      accessLevel: 'download',
+      sourceSurface: 'admin_review',
     });
   });
 

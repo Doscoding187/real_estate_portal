@@ -7619,3 +7619,54 @@ Next recommended slice:
   priority.
 Commit hash/tag: Included in `test(dle): prove admin evidence linkage policy`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence Access Grant Persistence
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add the first explicit DLE evidence access-grant persistence anchor and prove persisted Admin
+Review grants feed the existing linkage/access-policy path without opening admin or distribution
+evidence endpoints.
+Files changed:
+- drizzle/schema/developmentOperations.ts
+- server/migrations/0074_create_dle_evidence_access_grants.sql
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_LINKAGE_PERSISTENCE_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm db:migrate:test` passed and applied
+  `0074_create_dle_evidence_access_grants.sql` to the test DB.
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 28
+  tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `dle_evidence_artifact_access_grants` now persists artifact, development, lead,
+  distribution-deal/program, admin-review item, source surface, target surface, access level,
+  reason, status, expiry/revocation, actor, and metadata context for future evidence access.
+- `buildDleEvidenceAccessGrantInput` maps persisted grant rows into
+  `buildDleEvidenceLinkageDecision` inputs.
+- DB-backed proof creates active, revoked, expired, and wrong-development Admin Review grants and
+  verifies only the active, unexpired, same-development grant produces `adminReviewLinked`.
+- The proof then runs the existing Admin evidence access policy through that persisted linkage and
+  confirms policy-scoped Admin download access can be allowed in helper space.
+Guardrails:
+- No admin, distribution, public, router, upload, download, readiness, inventory, lead-stage,
+  payout, public listing, wizard, draft, or autosave behavior is intended to change.
+- Admin/distribution evidence metadata and download endpoints remain closed.
+- This slice does not accept evidence, complete Rental lease readiness, complete Auction bidder
+  readiness, move distribution stages, or automate rewards/commissions.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Distribution-manager grant seeding still needs proof with real distribution deal/programme rows.
+- Read-only admin metadata endpoint design, admin download endpoint design, malware
+  scanning/quarantine, public applicant/bidder upload, and reviewer surface UX remain future.
+Next recommended slice:
+- Add distribution-manager evidence access-grant persistence proof with a real linked deal/programme
+  row, still without opening manager metadata/download endpoints; or return to controlled
+  create/draft autosave monitoring depending on product priority.
+Commit hash/tag: Included in `feat(dle): persist evidence access grants`.
+Uncommitted reason, if any: None.

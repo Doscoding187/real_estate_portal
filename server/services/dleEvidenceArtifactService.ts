@@ -320,6 +320,20 @@ export type DleEvidenceAccessGrantInput = {
   expiresAt?: string | Date | null;
 };
 
+export type DleEvidenceAccessGrantPersistenceRow = {
+  id: number;
+  artifactId: number;
+  developmentId: number;
+  leadId?: number | null;
+  distributionDealId?: number | null;
+  distributionProgramId?: number | null;
+  adminReviewItemId?: number | null;
+  grantedToSurface: string;
+  accessLevel: string;
+  status: string;
+  expiresAt?: string | Date | null;
+};
+
 export type DleEvidenceLinkageDecision = {
   distributionLinkage: NonNullable<DleEvidenceAccessContext['distributionLinkage']>;
   adminReviewLinked: boolean;
@@ -327,6 +341,39 @@ export type DleEvidenceLinkageDecision = {
   denialReasons: string[];
   grantIds: number[];
 };
+
+function assertGrantSurface(value: string): DleEvidenceAccessGrantInput['grantedToSurface'] {
+  if (value === 'distribution_manager' || value === 'admin_review') return value;
+  throw new Error(`Unsupported DLE evidence access grant surface: ${value}`);
+}
+
+function assertGrantAccessLevel(value: string): DleEvidenceAccessLevel {
+  if (value === 'metadata' || value === 'download' || value === 'review_mutation') return value;
+  throw new Error(`Unsupported DLE evidence access grant level: ${value}`);
+}
+
+function assertGrantStatus(value: string): DleEvidenceAccessGrantInput['status'] {
+  if (value === 'active' || value === 'revoked' || value === 'expired') return value;
+  throw new Error(`Unsupported DLE evidence access grant status: ${value}`);
+}
+
+export function buildDleEvidenceAccessGrantInput(
+  row: DleEvidenceAccessGrantPersistenceRow,
+): DleEvidenceAccessGrantInput {
+  return {
+    grantId: row.id,
+    artifactId: row.artifactId,
+    developmentId: row.developmentId,
+    leadId: row.leadId,
+    distributionDealId: row.distributionDealId,
+    distributionProgramId: row.distributionProgramId,
+    adminReviewItemId: row.adminReviewItemId,
+    grantedToSurface: assertGrantSurface(row.grantedToSurface),
+    accessLevel: assertGrantAccessLevel(row.accessLevel),
+    status: assertGrantStatus(row.status),
+    expiresAt: row.expiresAt,
+  };
+}
 
 function isFutureDate(value?: string | Date | null): boolean {
   if (!value) return true;
