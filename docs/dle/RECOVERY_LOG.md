@@ -7410,3 +7410,46 @@ Next recommended slice:
   and document contents.
 Commit hash/tag: Included in `feat(dle): enforce evidence download policy`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence Download Source-Surface Audit Metadata
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add source-surface-aware protected evidence download audit metadata for the existing
+developer-only download event without exposing sensitive storage or document details.
+Files changed:
+- server/services/dleEvidenceArtifactService.ts
+- server/services/__tests__/dleEvidenceArtifactService.test.ts
+- docs/dle/EVIDENCE_ACCESS_AUTHORIZATION_CONTRACT.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 24 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `buildEvidenceDownloadAuditMetadata` now centralizes the safe audit metadata shape for protected
+  evidence download events.
+- Developer download audit metadata includes artifact id, artifact role, display name, source
+  surface, access level, actor type, private storage namespace, expiry, and download count.
+- Helper proof confirms the metadata does not expose storage keys, signed/download URLs, public
+  external URLs, or document contents.
+- The existing developer download event now uses the helper while preserving developer-only access
+  and existing policy checks.
+Guardrails:
+- Audit-metadata-only slice. No admin, distribution, public, schema, router, upload, readiness,
+  inventory, lead stage, payout, public listing, wizard, draft, or autosave behavior is intended to
+  change.
+- Admin/distribution access remains closed.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Admin/distribution endpoints, explicit linkage persistence, reviewer surface tests, malware
+  scanning/quarantine, and public applicant/bidder upload remain future.
+- Live signed-download event writeback still needs environment-backed S3/browser proof when private
+  storage credentials are available.
+Next recommended slice:
+- Define the admin/distribution evidence linkage persistence shape before exposing any
+  reviewer/manager metadata endpoint.
+Commit hash/tag: Included in `feat(dle): enrich evidence download audit metadata`.
+Uncommitted reason, if any: None.

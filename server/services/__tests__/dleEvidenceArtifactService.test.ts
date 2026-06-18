@@ -15,6 +15,7 @@ import {
   assertEvidenceArtifactReviewTransition,
   assertEvidenceRoleForTransaction,
   buildDevelopmentEvidenceCoverageSummary,
+  buildEvidenceDownloadAuditMetadata,
   buildEvidenceUploadToken,
   buildLeadEvidenceCoverageSummary,
   buildPrivateEvidenceStorageKey,
@@ -610,6 +611,37 @@ describe('dleEvidenceArtifactService helpers', () => {
       allowed: false,
       denialReason: 'Evidence artifact storage key is not in the private evidence namespace.',
     });
+  });
+
+  it('builds source-surface-aware download audit metadata without sensitive file details', () => {
+    const metadata = buildEvidenceDownloadAuditMetadata({
+      artifact: {
+        id: 91,
+        artifactRole: 'proof_of_funds',
+        displayName: 'Proof of funds',
+      },
+      sourceSurface: 'developer_leads_manager',
+      actorType: 'developer_operator',
+      downloadExpiresInSeconds: 300,
+      previousDownloadCount: 2,
+    });
+
+    expect(metadata).toEqual({
+      artifactId: 91,
+      artifactRole: 'proof_of_funds',
+      displayName: 'Proof of funds',
+      sourceSurface: 'developer_leads_manager',
+      accessLevel: 'download',
+      actorType: 'developer_operator',
+      storageNamespace: 'private_dle_evidence',
+      downloadExpiresInSeconds: 300,
+      downloadCount: 3,
+    });
+    expect(metadata).not.toHaveProperty('storageKey');
+    expect(metadata).not.toHaveProperty('signedUrl');
+    expect(metadata).not.toHaveProperty('downloadUrl');
+    expect(metadata).not.toHaveProperty('externalUrl');
+    expect(metadata).not.toHaveProperty('documentContents');
   });
 
   it('creates developer-only upload intents with private storage metadata and no lead mutation', async () => {

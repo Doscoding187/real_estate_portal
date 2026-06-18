@@ -197,6 +197,18 @@ export type LeadEvidenceFileDownloadUrl = {
   downloadExpiresInSeconds: number;
 };
 
+export type EvidenceDownloadAuditMetadata = {
+  artifactId: number;
+  artifactRole: string;
+  displayName: string;
+  sourceSurface: DleEvidenceAccessContext['sourceSurface'];
+  accessLevel: Extract<DleEvidenceAccessLevel, 'download'>;
+  actorType: Extract<DleEvidenceAccessActor['actorType'], 'developer_operator'>;
+  storageNamespace: 'private_dle_evidence';
+  downloadExpiresInSeconds: number;
+  downloadCount: number;
+};
+
 type EvidenceUploadTokenClaims = {
   artifactId: number;
   leadId: number;
@@ -442,6 +454,26 @@ export function evaluateDleEvidenceAccess(params: {
   }
 
   return denyEvidenceAccess(context, 'Unsupported evidence access actor.');
+}
+
+export function buildEvidenceDownloadAuditMetadata(params: {
+  artifact: Pick<EvidenceArtifactRow, 'id' | 'artifactRole' | 'displayName'>;
+  sourceSurface: DleEvidenceAccessContext['sourceSurface'];
+  actorType: Extract<DleEvidenceAccessActor['actorType'], 'developer_operator'>;
+  downloadExpiresInSeconds: number;
+  previousDownloadCount?: number | null;
+}): EvidenceDownloadAuditMetadata {
+  return {
+    artifactId: params.artifact.id,
+    artifactRole: params.artifact.artifactRole,
+    displayName: params.artifact.displayName,
+    sourceSurface: params.sourceSurface,
+    accessLevel: 'download',
+    actorType: params.actorType,
+    storageNamespace: 'private_dle_evidence',
+    downloadExpiresInSeconds: params.downloadExpiresInSeconds,
+    downloadCount: Number(params.previousDownloadCount || 0) + 1,
+  };
 }
 
 export function isRentalEvidenceRole(role: string): role is RentalEvidenceRole {
@@ -1614,6 +1646,7 @@ export async function getLeadEvidenceFileDownloadUrl(params: {
   }
 
   const expiresInSeconds = 300;
+  const nextDownloadCount = Number(metadata.downloadCount || 0) + 1;
   const downloadUrl = await getSignedUrl(
     privateEvidenceS3Client,
     new GetObjectCommand({
@@ -1635,7 +1668,7 @@ export async function getLeadEvidenceFileDownloadUrl(params: {
         CAST(${JSON.stringify({
           lastDownloadUrlIssuedAt: new Date().toISOString(),
           lastDownloadRequestedByUserId: params.userId,
-          downloadCount: Number(metadata.downloadCount || 0) + 1,
+          downloadCount: nextDownloadCount,
         })} AS JSON)
       ),
       updated_by_user_id = ${params.userId},
@@ -1670,14 +1703,15 @@ export async function getLeadEvidenceFileDownloadUrl(params: {
         status: artifact.status,
         reviewOwner: artifact.reviewOwner,
       })},
-      ${JSON.stringify({
-        artifactId: artifact.id,
-        artifactRole: artifact.artifactRole,
-        displayName: artifact.displayName,
-        storageNamespace: 'private_dle_evidence',
-        downloadExpiresInSeconds: expiresInSeconds,
-        downloadCount: Number(metadata.downloadCount || 0) + 1,
-      })},
+      ${JSON.stringify(
+        buildEvidenceDownloadAuditMetadata({
+          artifact,
+          sourceSurface: 'developer_leads_manager',
+          actorType: 'developer_operator',
+          downloadExpiresInSeconds: expiresInSeconds,
+          previousDownloadCount: metadata.downloadCount,
+        }),
+      )},
       ${params.userId},
       'developer_leads_manager'
     )

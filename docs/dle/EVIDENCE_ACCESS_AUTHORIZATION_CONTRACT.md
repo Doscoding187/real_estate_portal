@@ -27,6 +27,8 @@ Implemented runtime access:
   verification.
 - Developer operators who own the development can request a short-lived signed download URL for a
   submitted uploaded-file artifact through `evaluateDleEvidenceAccess`.
+- Developer download audit metadata records the source surface, access level, actor type, storage
+  namespace, expiry, and download count without storage keys, URLs, or document contents.
 - Developer Leads Manager can show safe file metadata without storage keys, signed URLs, public
   URLs, or document contents.
 - `evaluateDleEvidenceAccess` can evaluate developer, admin review, distribution manager, and
@@ -221,6 +223,7 @@ Before adding admin or distribution evidence access, implement:
 1. A shared access-policy helper that returns `metadata`, `download`, or `review_mutation` access.
    Status: complete for `evaluateDleEvidenceAccess` helper tests.
 2. Source-surface-aware audit for every download URL issuance.
+   Status: complete for the existing developer-only download audit metadata helper.
 3. Tests for unrelated developer denial.
 4. Tests for unrelated admin/distribution denial.
 5. Tests that distribution access requires explicit deal/programme/artifact linkage.
@@ -240,9 +243,7 @@ Completed first runtime guardrail slice:
 
 Recommended next runtime slice:
 
-- add source-surface-aware audit metadata to the existing developer download event without
-  exposing keys, URLs, or document contents;
-- keep admin/distribution endpoints closed until source-surface audit and linkage tests are in
-  place;
+- keep admin/distribution endpoints closed until linkage persistence and reviewer surface tests are
+  in place;
 - prove no lead stage, inventory, distribution, payout, public listing, wizard, draft, or autosave
   mutation occurs on access decisions.

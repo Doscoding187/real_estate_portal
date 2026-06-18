@@ -913,5 +913,9 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Service proof that the existing developer-only protected download broker is wired through the
   access-policy helper without opening admin/distribution access or mutating lead/inventory state
   on denied downloads. Status: complete for `dleEvidenceArtifactService` tests.
+- Service-helper proof that protected evidence download audit metadata includes source surface,
+  access level, actor type, storage namespace, expiry, and download count without storage keys,
+  signed URLs, public URLs, or document contents. Status: complete for
+  `dleEvidenceArtifactService` tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.
