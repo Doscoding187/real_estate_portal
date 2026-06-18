@@ -40,6 +40,7 @@ import {
   getLeadEvidenceArtifactCoverageSummary,
   getLeadEvidenceArtifactOptions,
   getLeadEvidenceChecklist,
+  getLeadEvidenceFileDisplay,
   getLeadEvidenceReadinessSummary,
   getLeadEvidenceReviewNote,
   getLeadEvidenceStatusLabel,
@@ -133,13 +134,6 @@ const STAGE_TABS: Array<{ key: StageTab; label: string }> = [
   { key: 'won', label: 'Won' },
   { key: 'lost', label: 'Lost' },
 ];
-
-function formatEvidenceFileSize(bytes?: number | null): string {
-  const size = Number(bytes || 0);
-  if (!Number.isFinite(size) || size <= 0) return 'Unknown size';
-  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 const LEADS_QUERY_LIMIT = 200;
 
@@ -1329,118 +1323,124 @@ export default function LeadsManager() {
                                 No persisted evidence artifacts yet.
                               </p>
                             )}
-                          {selectedLeadEvidenceArtifacts.map(artifact => (
-                            <div
-                              key={artifact.id}
-                              className="rounded-md bg-slate-50 p-2 text-xs"
-                              data-testid={`dle-lead-evidence-artifact-${artifact.id}`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="font-medium">{artifact.displayName}</p>
-                                  <p className="text-muted-foreground">
-                                    {artifact.artifactRole} | {artifact.reviewOwner}
-                                  </p>
-                                </div>
-                                <Badge variant="outline">{artifact.status}</Badge>
-                              </div>
-                              {artifact.description && (
-                                <p className="mt-1 whitespace-pre-wrap">{artifact.description}</p>
-                              )}
-                              {artifact.file && (
-                                <div
-                                  className="mt-2 rounded border border-slate-200 bg-white p-2"
-                                  data-testid={`dle-lead-evidence-file-${artifact.id}`}
-                                >
-                                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                    <div>
-                                      <p className="font-medium">
-                                        {artifact.file.originalFilename || artifact.displayName}
-                                      </p>
-                                      <p className="text-muted-foreground">
-                                        {artifact.file.mimeType || 'Evidence file'} |{' '}
-                                        {formatEvidenceFileSize(artifact.file.fileSizeBytes)} |{' '}
-                                        {artifact.file.uploadStatus || 'pending upload'}
-                                      </p>
-                                      <p className="text-muted-foreground">
-                                        Downloads issued: {artifact.file.downloadCount || 0}
-                                      </p>
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      type="button"
-                                      className="gap-2"
-                                      disabled={
-                                        !artifact.file.isDownloadable ||
-                                        downloadingEvidenceArtifactId === artifact.id
-                                      }
-                                      onClick={() => handleDownloadEvidenceFile(artifact)}
-                                      data-testid={`dle-lead-download-evidence-file-${artifact.id}`}
-                                    >
-                                      <Download className="h-3.5 w-3.5" />
-                                      Open File
-                                    </Button>
+                          {selectedLeadEvidenceArtifacts.map(artifact => {
+                            const fileDisplay = artifact.file
+                              ? getLeadEvidenceFileDisplay({
+                                  file: artifact.file,
+                                  fallbackName: artifact.displayName,
+                                })
+                              : null;
+
+                            return (
+                              <div
+                                key={artifact.id}
+                                className="rounded-md bg-slate-50 p-2 text-xs"
+                                data-testid={`dle-lead-evidence-artifact-${artifact.id}`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="font-medium">{artifact.displayName}</p>
+                                    <p className="text-muted-foreground">
+                                      {artifact.artifactRole} | {artifact.reviewOwner}
+                                    </p>
                                   </div>
-                                  <p className="mt-2 text-muted-foreground">
-                                    File access is protected and does not mark lease readiness,
-                                    bidder readiness, inventory, distribution, or payout complete.
-                                  </p>
+                                  <Badge variant="outline">{artifact.status}</Badge>
                                 </div>
-                              )}
-                              {artifact.reviewNote && (
-                                <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
-                                  Review note: {artifact.reviewNote}
-                                </p>
-                              )}
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {(artifact.status === 'requested' ||
-                                  artifact.status === 'submitted') && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    type="button"
-                                    disabled={updateEvidenceArtifactReviewMutation.isPending}
-                                    onClick={() =>
-                                      handleUpdateEvidenceArtifactReview(artifact, 'under_review')
-                                    }
-                                    data-testid={`dle-lead-start-evidence-review-${artifact.id}`}
+                                {artifact.description && (
+                                  <p className="mt-1 whitespace-pre-wrap">
+                                    {artifact.description}
+                                  </p>
+                                )}
+                                {artifact.file && fileDisplay && (
+                                  <div
+                                    className="mt-2 rounded border border-slate-200 bg-white p-2"
+                                    data-testid={`dle-lead-evidence-file-${artifact.id}`}
                                   >
-                                    Start Review
-                                  </Button>
+                                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                                      <div>
+                                        <p className="font-medium">{fileDisplay.title}</p>
+                                        <p className="text-muted-foreground">
+                                          {fileDisplay.metaLine}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                          {fileDisplay.downloadsLabel}
+                                        </p>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        type="button"
+                                        className="gap-2"
+                                        disabled={
+                                          !fileDisplay.canRequestDownload ||
+                                          downloadingEvidenceArtifactId === artifact.id
+                                        }
+                                        onClick={() => handleDownloadEvidenceFile(artifact)}
+                                        data-testid={`dle-lead-download-evidence-file-${artifact.id}`}
+                                      >
+                                        <Download className="h-3.5 w-3.5" />
+                                        Open File
+                                      </Button>
+                                    </div>
+                                    <p className="mt-2 text-muted-foreground">
+                                      {fileDisplay.guardrail}
+                                    </p>
+                                  </div>
                                 )}
-                                {(artifact.status === 'submitted' ||
-                                  artifact.status === 'under_review') && (
-                                  <>
+                                {artifact.reviewNote && (
+                                  <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                                    Review note: {artifact.reviewNote}
+                                  </p>
+                                )}
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {(artifact.status === 'requested' ||
+                                    artifact.status === 'submitted') && (
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       type="button"
                                       disabled={updateEvidenceArtifactReviewMutation.isPending}
                                       onClick={() =>
-                                        handleUpdateEvidenceArtifactReview(artifact, 'accepted')
+                                        handleUpdateEvidenceArtifactReview(artifact, 'under_review')
                                       }
-                                      data-testid={`dle-lead-accept-evidence-artifact-${artifact.id}`}
+                                      data-testid={`dle-lead-start-evidence-review-${artifact.id}`}
                                     >
-                                      Accept Evidence
+                                      Start Review
                                     </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      type="button"
-                                      disabled={updateEvidenceArtifactReviewMutation.isPending}
-                                      onClick={() =>
-                                        handleUpdateEvidenceArtifactReview(artifact, 'rejected')
-                                      }
-                                      data-testid={`dle-lead-reject-evidence-artifact-${artifact.id}`}
-                                    >
-                                      Reject Evidence
-                                    </Button>
-                                  </>
-                                )}
+                                  )}
+                                  {(artifact.status === 'submitted' ||
+                                    artifact.status === 'under_review') && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        type="button"
+                                        disabled={updateEvidenceArtifactReviewMutation.isPending}
+                                        onClick={() =>
+                                          handleUpdateEvidenceArtifactReview(artifact, 'accepted')
+                                        }
+                                        data-testid={`dle-lead-accept-evidence-artifact-${artifact.id}`}
+                                      >
+                                        Accept Evidence
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        type="button"
+                                        disabled={updateEvidenceArtifactReviewMutation.isPending}
+                                        onClick={() =>
+                                          handleUpdateEvidenceArtifactReview(artifact, 'rejected')
+                                        }
+                                        data-testid={`dle-lead-reject-evidence-artifact-${artifact.id}`}
+                                      >
+                                        Reject Evidence
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}

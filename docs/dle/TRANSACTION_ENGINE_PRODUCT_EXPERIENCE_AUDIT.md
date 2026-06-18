@@ -900,5 +900,8 @@ distribution, reward, public listing, wizard, draft, and autosave mutation remai
 - Service/UI proof that uploaded Rental/Auction evidence file metadata is visible in Developer
   Leads Manager without exposing private storage keys, signed URLs, public URLs, or document
   contents. Status: complete for `dleEvidenceArtifactService` tests and `pnpm run check`.
+- Component-helper proof that Developer Leads Manager uploaded-file labels, download-count copy,
+  disabled/enabled download affordance state, and no-readiness guardrail copy are deterministic.
+  Status: complete for `leadEvidenceChecklist` helper tests.
 - Product screenshots showing before/after public merchandising improvements.
 - Dashboard/operations evidence when live-development management begins.

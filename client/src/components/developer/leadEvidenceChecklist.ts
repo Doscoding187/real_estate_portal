@@ -37,6 +37,23 @@ export type LeadEvidenceArtifactCoverageSummary = {
   guardrail: string;
 };
 
+export type LeadEvidenceFileMetadataInput = {
+  originalFilename?: string | null;
+  mimeType?: string | null;
+  fileSizeBytes?: number | null;
+  uploadStatus?: string | null;
+  downloadCount?: number | null;
+  isDownloadable?: boolean | null;
+};
+
+export type LeadEvidenceFileDisplay = {
+  title: string;
+  metaLine: string;
+  downloadsLabel: string;
+  canRequestDownload: boolean;
+  guardrail: string;
+};
+
 const STATUS_ORDER: Record<LeadEvidenceChecklistItem['status'], number> = {
   capture: 0,
   manual_review: 1,
@@ -200,6 +217,32 @@ export function getLeadEvidenceReviewNote(transactionType: LeadTransactionType):
   });
 
   return [`${checklist.title} review`, ...lines, 'Decision: pending manual review.'].join('\n');
+}
+
+export function formatLeadEvidenceFileSize(bytes?: number | null): string {
+  const size = Number(bytes || 0);
+  if (!Number.isFinite(size) || size <= 0) return 'Unknown size';
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function getLeadEvidenceFileDisplay(params: {
+  file: LeadEvidenceFileMetadataInput;
+  fallbackName: string;
+}): LeadEvidenceFileDisplay {
+  const title = params.file.originalFilename || params.fallbackName || 'Evidence file';
+  const mimeType = params.file.mimeType || 'Evidence file';
+  const uploadStatus = params.file.uploadStatus || 'pending upload';
+  const downloadCount = Number(params.file.downloadCount || 0);
+
+  return {
+    title,
+    metaLine: `${mimeType} | ${formatLeadEvidenceFileSize(params.file.fileSizeBytes)} | ${uploadStatus}`,
+    downloadsLabel: `Downloads issued: ${Number.isFinite(downloadCount) ? downloadCount : 0}`,
+    canRequestDownload: Boolean(params.file.isDownloadable),
+    guardrail:
+      'File access is protected and does not mark lease readiness, bidder readiness, inventory, distribution, or payout complete.',
+  };
 }
 
 export function getLeadEvidenceArtifactOptions(transactionType: LeadTransactionType) {

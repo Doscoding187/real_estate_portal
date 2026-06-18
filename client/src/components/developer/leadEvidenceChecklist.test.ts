@@ -3,9 +3,11 @@ import {
   getLeadEvidenceArtifactCoverageSummary,
   getLeadEvidenceArtifactOptions,
   getLeadEvidenceChecklist,
+  getLeadEvidenceFileDisplay,
   getLeadEvidenceReadinessSummary,
   getLeadEvidenceReviewNote,
   getLeadEvidenceStatusLabel,
+  formatLeadEvidenceFileSize,
 } from './leadEvidenceChecklist';
 
 describe('lead evidence checklist', () => {
@@ -54,6 +56,54 @@ describe('lead evidence checklist', () => {
     expect(getLeadEvidenceStatusLabel('capture')).toBe('Capture');
     expect(getLeadEvidenceStatusLabel('manual_review')).toBe('Manual review');
     expect(getLeadEvidenceStatusLabel('optional')).toBe('Optional');
+  });
+
+  it('formats uploaded evidence file sizes for operator readback', () => {
+    expect(formatLeadEvidenceFileSize(null)).toBe('Unknown size');
+    expect(formatLeadEvidenceFileSize(512_000)).toBe('500 KB');
+    expect(formatLeadEvidenceFileSize(1_572_864)).toBe('1.5 MB');
+  });
+
+  it('builds protected evidence file display without readiness claims', () => {
+    expect(
+      getLeadEvidenceFileDisplay({
+        fallbackName: 'Proof of funds',
+        file: {
+          originalFilename: 'Proof-of-funds.pdf',
+          mimeType: 'application/pdf',
+          fileSizeBytes: 700_000,
+          uploadStatus: 'uploaded',
+          downloadCount: 2,
+          isDownloadable: true,
+        },
+      }),
+    ).toEqual({
+      title: 'Proof-of-funds.pdf',
+      metaLine: 'application/pdf | 684 KB | uploaded',
+      downloadsLabel: 'Downloads issued: 2',
+      canRequestDownload: true,
+      guardrail:
+        'File access is protected and does not mark lease readiness, bidder readiness, inventory, distribution, or payout complete.',
+    });
+  });
+
+  it('keeps pending evidence files visible but not downloadable', () => {
+    expect(
+      getLeadEvidenceFileDisplay({
+        fallbackName: 'June payslip',
+        file: {
+          mimeType: 'application/pdf',
+          fileSizeBytes: 512_000,
+          uploadStatus: 'pending_upload',
+          isDownloadable: false,
+        },
+      }),
+    ).toMatchObject({
+      title: 'June payslip',
+      metaLine: 'application/pdf | 500 KB | pending_upload',
+      downloadsLabel: 'Downloads issued: 0',
+      canRequestDownload: false,
+    });
   });
 
   it('builds an evidence review note without claiming readiness is complete', () => {

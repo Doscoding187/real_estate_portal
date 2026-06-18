@@ -7231,3 +7231,47 @@ Next recommended slice:
   priority shifts to reviewer workflows.
 Commit hash/tag: Included in `feat(dle): show evidence file metadata`.
 Uncommitted reason, if any: None.
+
+## 2026-06-18 - Evidence File Metadata UI Helper Proof
+
+Date: 2026-06-18
+Branch: refine/homepage-phase1-clarity-trust
+Goal: Add focused component-helper proof for Developer Leads Manager uploaded-file metadata labels,
+download affordance state, and guardrail copy.
+Files changed:
+- client/src/components/developer/leadEvidenceChecklist.ts
+- client/src/components/developer/leadEvidenceChecklist.test.ts
+- client/src/components/developer/LeadsManager.tsx
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm vitest run client/src/components/developer/leadEvidenceChecklist.test.ts` passed with 14 tests.
+- `pnpm vitest run server/services/__tests__/dleEvidenceArtifactService.test.ts` passed with 18 tests.
+- `pnpm run check` passed.
+- `git diff --check` passed.
+Functional proof:
+- `getLeadEvidenceFileDisplay` now centralizes uploaded-file title, metadata line, download-count
+  label, downloadable state, and guardrail copy.
+- Helper tests prove uploaded evidence file size formatting, downloadable submitted-file display,
+  and pending-file non-downloadable display.
+- Developer Leads Manager uses the helper for uploaded-file metadata display and protected
+  download affordance state.
+Guardrails:
+- UI-helper-proof-only slice. No backend storage behavior, public applicant/bidder upload,
+  artifact acceptance, evidence completion/readiness automation, lead-stage movement, inventory
+  mutation, distribution deal movement, reward/payout readiness, autosave, draft, publish, public
+  listing, search-card, or lead form behavior is intended.
+- Display helper text must not imply lease readiness, bidder readiness, inventory movement,
+  distribution readiness, or payout completion.
+- Existing unrelated homepage files, older evidence screenshots, Playwright report output, and
+  unrelated test-results changes must not be staged.
+Remaining risks:
+- Browser proof for the full Developer Leads Manager panel, download audit dashboard/readback,
+  admin/distribution download authorization, malware scanning/quarantine, public applicant/bidder
+  upload, and readiness automation remain future.
+Next recommended slice:
+- Add browser proof for the full Developer Leads Manager uploaded-file row if local seeded
+  uploaded-file fixtures are available, otherwise continue with admin/distribution download
+  authorization contract.
+Commit hash/tag: Included in `test(dle): prove evidence file display`.
+Uncommitted reason, if any: None.
