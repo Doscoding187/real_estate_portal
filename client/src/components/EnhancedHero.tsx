@@ -23,9 +23,6 @@ import {
   Loader2,
   Key,
   Building,
-  ShieldCheck,
-  Map,
-  Route,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
@@ -61,24 +58,6 @@ const HERO_CATEGORIES = [
   { id: 'plot', label: 'Plots & Land', mobileLabel: 'Plots & Land', icon: MapPinned },
   { id: 'commercial', label: 'Commercial', mobileLabel: 'Commercial', icon: Briefcase },
   { id: 'agents', label: 'Agents', mobileLabel: 'Agents', icon: Users },
-] as const;
-
-const INTENT_HELPER_COPY: Record<string, string> = {
-  buy: 'Search homes for sale by suburb, city, or province.',
-  rental: 'Find rentals by area, budget, and property type.',
-  projects: 'Search new developments by city, suburb, developer, or project name.',
-  pg: 'Find shared living options that match your lifestyle and budget.',
-  plot: 'Explore land and plots across South Africa.',
-  commercial: 'Find offices, retail spaces, industrial property, and commercial opportunities.',
-  agents: 'Find trusted agents and property professionals.',
-};
-
-const TRUST_ITEMS = [
-  { label: 'Verified listings', icon: ShieldCheck },
-  { label: 'Trusted developers', icon: Building2 },
-  { label: 'Local suburb insights', icon: Map },
-  { label: 'Smart lead matching', icon: Route },
-  { label: 'Agent & agency tools', icon: Users },
 ] as const;
 
 export function EnhancedHero({
@@ -485,8 +464,6 @@ export function EnhancedHero({
   const normalizedActiveTab = String(activeTab || '')
     .trim()
     .toLowerCase();
-  const effectiveIntent = normalizedActiveTab || 'buy';
-  const intentHelperCopy = INTENT_HELPER_COPY[effectiveIntent] || INTENT_HELPER_COPY.buy;
 
   return (
     <div className="relative overflow-hidden bg-white text-slate-900">
@@ -500,9 +477,9 @@ export function EnhancedHero({
         </div>
       ) : null}
 
-      <div className="container relative z-10 flex flex-col py-4 md:py-20">
+      <div className="container relative z-10 flex flex-col py-3 md:py-24">
         {/* Hero Title */}
-        <div className="mx-auto mt-6 mb-6 max-w-[23rem] text-center sm:mt-0 sm:mb-6 sm:max-w-4xl">
+        <div className="mx-auto mt-7 mb-7 max-w-[22rem] text-center sm:mt-0 sm:mb-4 sm:max-w-4xl">
           {title ? (
             // Location / Context Title
             <h1 className="mb-3 text-2xl font-bold leading-tight text-blue-950 sm:text-3xl md:text-4xl lg:text-5xl">
@@ -510,17 +487,33 @@ export function EnhancedHero({
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="mb-3 text-[2rem] font-bold leading-[1.06] text-blue-950 sm:mb-4 sm:text-4xl md:text-5xl lg:text-6xl">
-              <span className="block">Find property with</span>
-              <span className="block text-blue-600">confidence in South Africa</span>
+            <h1 className="mb-0 text-[1.9rem] font-bold leading-[1.08] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-3xl sm:tracking-tight md:text-5xl lg:text-6xl">
+              {/* Mobile Title (3 Lines) */}
+              <span className="block sm:hidden">
+                South Africa&apos;s <span className="text-blue-600">Fastest</span>
+              </span>
+              <span className="block text-blue-600 sm:hidden">
+                Growing <span className="text-blue-950">Real Estate</span>
+              </span>
+              <span className="block sm:hidden">Platform</span>
+
+              {/* Desktop Title (2 Lines) */}
+              <span className="hidden sm:block">
+                South Africa&apos;s <span className="text-blue-600">Fastest Growing</span>
+              </span>
+              <span className="hidden sm:block">Real Estate Platform</span>
             </h1>
           )}
 
-          <p className="animate-fade-in text-[0.95rem] leading-6 text-slate-600 sm:mx-auto sm:block sm:max-w-2xl sm:text-base md:text-lg md:leading-relaxed">
+          <p className="hidden animate-fade-in text-[0.98rem] leading-7 text-slate-600 sm:mx-auto sm:block sm:max-w-2xl sm:text-base md:text-lg md:leading-relaxed">
             {subtitle || (
               <>
-                Search property, discover new developments, research suburbs, and connect with
-                trusted property professionals across South Africa.
+                Your dream home is just a search away.
+                <span className="hidden sm:inline">
+                  <br />
+                </span>
+                <span className="sm:hidden block h-0" />
+                Discover thousands of properties for sale and rent across South Africa.
               </>
             )}
           </p>
@@ -590,20 +583,8 @@ export function EnhancedHero({
 
         {/* Search Card */}
         <div className="mx-auto w-full max-w-5xl">
-          <Card className="rounded-[1rem] border border-slate-100 bg-white shadow-xl sm:rounded-2xl sm:shadow-2xl">
-            <CardContent className="p-3 sm:p-4 md:p-6">
-              <div className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
-                    Start with your property journey
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-slate-600">{intentHelperCopy}</p>
-                </div>
-                <div className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 md:block">
-                  Search, compare, and connect
-                </div>
-              </div>
-
+          <Card className="rounded-[1rem] border-0 bg-white shadow-lg sm:rounded-2xl sm:shadow-2xl">
+            <CardContent className="p-2 sm:p-4 md:p-6">
               {/* Main Search Row */}
               <div className="flex flex-col gap-2 md:flex-row sm:gap-4">
                 {/* Unified Search Input */}
@@ -1171,29 +1152,9 @@ export function EnhancedHero({
               )}
             </CardContent>
           </Card>
-
-          {!isNavigationMode && (
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-              {TRUST_ITEMS.map(item => {
-                const Icon = item.icon;
-                return (
-                  <div
-                    key={item.label}
-                    className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-left shadow-sm"
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="text-xs font-semibold leading-tight text-slate-700">
-                      {item.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 }
+

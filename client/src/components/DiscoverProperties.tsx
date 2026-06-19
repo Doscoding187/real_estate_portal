@@ -113,8 +113,8 @@ export function DiscoverProperties({
   subtitle,
   locationName = 'South Africa',
 }: DiscoverPropertiesProps = {}) {
-  const defaultTitle = `Browse by city, category, and property journey`;
-  const defaultSubtitle = `Not sure what to search yet? Explore homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
+  const defaultTitle = `Discover Properties in ${locationName}`;
+  const defaultSubtitle = `Browse homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
 
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
@@ -237,9 +237,7 @@ export function DiscoverProperties({
     <div className="py-4 md:py-5 bg-gradient-to-b from-white to-muted/20">
       <div className="container">
         <div className="mb-5 md:mb-6">
-          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
-            {displayTitle}
-          </h2>
+          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 

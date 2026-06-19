@@ -53,30 +53,34 @@ const PROVINCES = [
 
 const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
   buy: {
-    titleBase: 'Trending homes for sale',
-    subtitleBase: 'See live sale opportunities that match the intent you selected above.',
+    titleBase: 'Trending Residential Properties for Sale',
+    subtitleBase:
+      'Discover the latest and most popular homes for sale across South Africa’s top locations.',
   },
   rent: {
-    titleBase: 'Trending rentals',
-    subtitleBase: 'Browse in-demand rental homes and apartments by province.',
+    titleBase: 'Trending Residential Properties for Rent',
+    subtitleBase:
+      'Browse the newest and most in-demand rental homes and apartments available right now.',
   },
   developments: {
-    titleBase: 'Trending new developments',
-    subtitleBase: 'Explore development stock, new launches, and project opportunities by province.',
+    titleBase: 'Trending Developments',
+    subtitleBase:
+      'Explore the newest residential, commercial, and mixed-use developments across South Africa.',
   },
   shared_living: {
-    titleBase: 'Shared living opportunities',
-    subtitleBase: 'Find student accommodation and shared living options in active urban hubs.',
+    titleBase: 'Trending Student & Shared Living',
+    subtitleBase:
+      'Find modern student accommodation and shared living spaces in prime urban and campus locations.',
   },
   plot_land: {
-    titleBase: 'Land and plots to explore',
+    titleBase: 'Trending Plot & Land',
     subtitleBase:
-      'View land opportunities suited to building, development, or long-term investment.',
+      'View the latest plots and land opportunities ideal for building or investment projects.',
   },
   commercial: {
-    titleBase: 'Commercial property opportunities',
+    titleBase: 'Trending Commercial Developments',
     subtitleBase:
-      'Discover office, retail, industrial, and mixed-use opportunities in growth areas.',
+      'Discover newly listed office, retail, and industrial developments in high-growth business areas.',
   },
 };
 
@@ -214,26 +218,8 @@ export function HomeTrendingSection({
           </Carousel>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
-          <h3 className="text-sm font-bold text-slate-900">
-            No live matches in {selectedProvince} yet
-          </h3>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-            We are not showing placeholder inventory here. Try another province or start a broader
-            search while more listings are being added.
-          </p>
-          <a
-            href={
-              activeHeroTab === 'rent'
-                ? '/property-to-rent'
-                : activeHeroTab === 'developments'
-                  ? '/developments'
-                  : '/property-for-sale'
-            }
-            className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-          >
-            Browse available property
-          </a>
+        <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
+          No live inventory found for this province yet.
         </div>
       )}
     </section>

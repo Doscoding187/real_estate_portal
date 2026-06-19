@@ -236,11 +236,12 @@ export function PropertyInsights({
           {/* Header */}
           <div>
             <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
-              Make smarter property decisions
+              Property Price Insights in{' '}
+              {effectiveLevel === 'national' ? 'South Africa' : contextLabel || 'this market'}
             </h2>
             <p className="text-slate-500 mt-2 max-w-3xl leading-relaxed text-xs md:text-sm">
-              Compare price activity, market depth, and suburb signals across{' '}
-              {effectiveLevel === 'national' ? 'South Africa' : contextLabel || 'this market'}.
+              Track pricing trends, median rates, and local demand signals to make smarter
+              property decisions.
             </p>
           </div>
 

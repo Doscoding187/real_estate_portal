@@ -17,11 +17,10 @@ export function CTASection({ onBrowse }: CTASectionProps) {
             Start your search
           </div>
           <h2 className="mb-3 text-[1.65rem] font-bold leading-[1.08] tracking-tight text-white sm:mb-4 sm:text-3xl md:mb-6 md:text-5xl">
-            Ready to start your property journey?
+            Ready to Find Your Dream Property?
           </h2>
           <p className="mx-auto mb-5 max-w-[30rem] text-[13px] leading-5 text-blue-50 sm:text-base md:mb-10 md:text-xl md:leading-relaxed">
-            Browse listings, compare areas, discover developments, or list property with the right
-            audience.
+            Join thousands of satisfied users. Whether you're buying, renting, or selling.
           </p>
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <Button
