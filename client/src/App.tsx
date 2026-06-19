@@ -104,6 +104,9 @@ const LovableIntegrationHub = lazy(() => import('./pages/LovableIntegrationHub')
 const ListingWizard = lazy(() => import('./components/listing-wizard/ListingWizard'));
 const ListingTemplate = lazy(() => import('./pages/ListingTemplate'));
 
+// Import V2 Listing Wizard (behind feature flag)
+const ListingWizardV2 = lazy(() => import('./components/listing-wizard/ListingWizardV2'));
+
 // Import Development Wizard
 const CreateDevelopment = lazy(() => import('./pages/CreateDevelopment'));
 const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
@@ -363,6 +366,15 @@ function Router() {
           {/* Route Handlers / Wizards */}
           <Route path="/listings/create" component={ListingWizard} />
           <Route path="/listing-template" component={ListingTemplate} />
+          <Route
+            path="/listings/create-v2"
+            component={() => {
+              if (import.meta.env.VITE_LISTING_WIZARD_V2_ENABLED !== 'true') {
+                return <Redirect to="/listings/create" />;
+              }
+              return <ListingWizardV2 />;
+            }}
+          />
           <Route path="/developments/create" component={CreateDevelopment} />
           <Route path="/development-wizard" component={CreateDevelopment} />
 
