@@ -328,6 +328,34 @@
     padding-left: 0;
     padding-right: 0;
   }
+
+  .home-section {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .home-section-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .home-section-title {
+    margin-bottom: 0.5rem;
+  }
+
+  .home-section-tabs {
+    margin-bottom: 1.5rem;
+  }
+
+  .home-card-grid {
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .home-section {
+      padding-top: 2rem;
+      padding-bottom: 2rem;
+    }
+  }
 }
 
 @layer utilities {

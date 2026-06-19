@@ -218,7 +218,12 @@ export function LocationAutosuggest({
   if (!isLoaded) {
     return (
       <div className={`relative ${className}`}>
-        <Input type="text" placeholder="Loading maps..." disabled className="bg-gray-50" />
+        <Input
+          type="text"
+          placeholder={placeholder}
+          disabled
+          className={inputClassName || 'bg-gray-50'}
+        />
       </div>
     );
   }

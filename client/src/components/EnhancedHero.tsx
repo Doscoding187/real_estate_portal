@@ -23,6 +23,8 @@ import {
   Loader2,
   Key,
   Building,
+  ShieldCheck,
+  Map,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
@@ -58,6 +60,23 @@ const HERO_CATEGORIES = [
   { id: 'plot', label: 'Plots & Land', mobileLabel: 'Plots & Land', icon: MapPinned },
   { id: 'commercial', label: 'Commercial', mobileLabel: 'Commercial', icon: Briefcase },
   { id: 'agents', label: 'Agents', mobileLabel: 'Agents', icon: Users },
+] as const;
+
+const INTENT_HELPER_COPY: Record<string, string> = {
+  buy: 'Search homes for sale by suburb, city, or province.',
+  rental: 'Find rentals by area, budget, and property type.',
+  projects: 'Search new developments by city, suburb, developer, or project name.',
+  pg: 'Find shared living options that match your lifestyle and budget.',
+  plot: 'Explore land and plots across South Africa.',
+  commercial: 'Find offices, retail spaces, industrial property, and commercial opportunities.',
+  agents: 'Find trusted agents and property professionals.',
+};
+
+const TRUST_ITEMS = [
+  { label: 'Verified Listings', icon: ShieldCheck },
+  { label: 'New Developments', icon: Building2 },
+  { label: 'Local Insights', icon: Map },
+  { label: 'Agent Tools', icon: Users },
 ] as const;
 
 export function EnhancedHero({
@@ -464,63 +483,51 @@ export function EnhancedHero({
   const normalizedActiveTab = String(activeTab || '')
     .trim()
     .toLowerCase();
+  const effectiveIntent = normalizedActiveTab || 'buy';
+  const intentHelperCopy = INTENT_HELPER_COPY[effectiveIntent] || INTENT_HELPER_COPY.buy;
 
   return (
-    <div className="relative overflow-hidden bg-white text-slate-900">
+    <div className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-white to-white text-slate-900">
       {backgroundImage ? (
         <div className="absolute inset-0 z-0">
           <img
             src={backgroundImage}
             alt="Hero Background"
-            className="h-full w-full object-cover opacity-5"
+            className="h-full w-full object-cover opacity-[0.04]"
           />
         </div>
       ) : null}
 
-      <div className="container relative z-10 flex flex-col py-3 md:py-24">
+      <div className="container relative z-10 flex flex-col py-8 sm:py-12 md:py-16 lg:py-20">
         {/* Hero Title */}
-        <div className="mx-auto mt-7 mb-7 max-w-[22rem] text-center sm:mt-0 sm:mb-4 sm:max-w-4xl">
+        <div className="mx-auto mb-7 max-w-[24rem] text-center sm:mb-8 sm:max-w-4xl md:max-w-5xl">
           {title ? (
             // Location / Context Title
-            <h1 className="mb-3 text-2xl font-bold leading-tight text-blue-950 sm:text-3xl md:text-4xl lg:text-5xl">
+            <h1 className="mb-3 text-3xl font-bold leading-tight text-slate-950 sm:text-4xl md:text-5xl lg:text-6xl">
               {title}
             </h1>
           ) : (
             // Default Homepage Title
-            <h1 className="mb-0 text-[1.9rem] font-bold leading-[1.08] tracking-[-0.02em] text-blue-950 sm:mb-4 sm:text-3xl sm:tracking-tight md:text-5xl lg:text-6xl">
-              {/* Mobile Title (3 Lines) */}
-              <span className="block sm:hidden">
-                South Africa&apos;s <span className="text-blue-600">Fastest</span>
+            <h1 className="mb-4 text-[2.45rem] font-bold leading-[1.04] text-slate-950 sm:text-5xl md:text-6xl lg:text-7xl">
+              <span className="block">South Africa&apos;s smarter</span>
+              <span className="block bg-gradient-to-r from-blue-700 to-cyan-600 bg-clip-text text-transparent">
+                property platform
               </span>
-              <span className="block text-blue-600 sm:hidden">
-                Growing <span className="text-blue-950">Real Estate</span>
-              </span>
-              <span className="block sm:hidden">Platform</span>
-
-              {/* Desktop Title (2 Lines) */}
-              <span className="hidden sm:block">
-                South Africa&apos;s <span className="text-blue-600">Fastest Growing</span>
-              </span>
-              <span className="hidden sm:block">Real Estate Platform</span>
             </h1>
           )}
 
-          <p className="hidden animate-fade-in text-[0.98rem] leading-7 text-slate-600 sm:mx-auto sm:block sm:max-w-2xl sm:text-base md:text-lg md:leading-relaxed">
+          <p className="animate-fade-in text-base font-medium leading-7 text-slate-600 sm:mx-auto sm:block sm:max-w-2xl sm:text-lg md:text-xl md:leading-8">
             {subtitle || (
               <>
-                Your dream home is just a search away.
-                <span className="hidden sm:inline">
-                  <br />
-                </span>
-                <span className="sm:hidden block h-0" />
-                Discover thousands of properties for sale and rent across South Africa.
+                Search homes, discover new developments, explore local insights, and connect with
+                trusted property professionals.
               </>
             )}
           </p>
         </div>
 
         {/* Categories/Tabs */}
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-5 sm:mb-7">
           <div className="-mx-4 overflow-x-auto px-4 scrollbar-hide sm:mx-0 sm:overflow-visible sm:px-0">
             <div className="flex min-w-max items-stretch gap-0.5 sm:hidden">
               {HERO_CATEGORIES.map(category => {
@@ -555,7 +562,7 @@ export function EnhancedHero({
               })}
             </div>
 
-            <div className="hidden rounded-full border border-slate-200/50 bg-white p-1.5 shadow-lg scrollbar-hide sm:mx-auto sm:flex sm:w-fit sm:max-w-none sm:overflow-visible">
+            <div className="hidden rounded-full border border-slate-200 bg-white/95 p-1 shadow-sm scrollbar-hide sm:mx-auto sm:flex sm:w-fit sm:max-w-none sm:overflow-visible">
               {HERO_CATEGORIES.map(category => {
                 const Icon = category.icon;
                 const isActive = normalizedActiveTab === category.id;
@@ -564,15 +571,13 @@ export function EnhancedHero({
                   <button
                     key={category.id}
                     onClick={() => handleCategoryClick(category.id)}
-                    className={`flex items-center gap-2 px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
+                    className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-200 sm:px-5 sm:text-sm whitespace-nowrap flex-shrink-0 ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-md transform scale-105'
-                        : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
+                        ? 'bg-blue-700 text-white shadow-md shadow-blue-700/20'
+                        : 'text-slate-700 hover:bg-slate-50 hover:text-blue-700'
                     }`}
                   >
-                    <Icon
-                      className={`h-4 w-4 sm:h-5 sm:w-5 ${isActive ? 'text-white' : 'text-slate-400'}`}
-                    />
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                     {category.label}
                   </button>
                 );
@@ -582,579 +587,612 @@ export function EnhancedHero({
         </div>
 
         {/* Search Card */}
-        <div className="mx-auto w-full max-w-5xl">
-          <Card className="rounded-[1rem] border-0 bg-white shadow-lg sm:rounded-2xl sm:shadow-2xl">
-            <CardContent className="p-2 sm:p-4 md:p-6">
-              {/* Main Search Row */}
-              <div className="flex flex-col gap-2 md:flex-row sm:gap-4">
-                {/* Unified Search Input */}
-                <div className="flex-1 relative group">
-                  {/* Search Icon */}
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-[18px] w-[18px] sm:h-5 sm:w-5 text-muted-foreground z-10 pointer-events-none" />
-
-                  <LocationAutosuggest
-                    placeholder="Search by city, suburb, or area..."
-                    className="w-full"
-                    inputClassName="h-10 w-full rounded-2xl border-2 bg-transparent pl-11 pr-20 text-[15px] transition-colors hover:border-primary/50 focus:border-primary sm:h-14 sm:pr-24 sm:text-base"
-                    showIcon={false}
-                    selectedLocations={selectedLocations}
-                    onRemove={index => {
-                      setSelectedLocations(prev => prev.filter((_, i) => i !== index));
-                    }}
-                    onChange={value => {
-                      setSearchQuery(value);
-                    }}
-                    onSelect={loc => {
-                      // Optimistic Search Query Update (shows last selected name temporarily if needed, but pills handle UX)
-                      setSearchQuery('');
-
-                      setSelectedLocations(prev => {
-                        // 1. Prevent Duplicates
-                        if (prev.some(p => p.slug === loc.slug)) return prev;
-
-                        // 2. Hierarchy / Conflict Handling (Property24 style)
-                        // "Prevent selecting a child if parent is already selected" or vice versa
-                        // Case A: User creates specific list (e.g. Sea Point + Green Point).
-                        // Case B: User selects Province (Western Cape). Should we remove cities?
-                        // For V1, we append unique locations.
-
-                        return [...prev, loc];
-                      });
-                    }}
-                    onSubmit={handleSearch}
-                    maxLocations={5}
-                  />
-
-                  {/* Action Buttons (Voice/Location) */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1.5 z-10">
-                    <Button
-                      onClick={handleSearch}
-                      size="icon"
-                      className={`h-8.5 w-8.5 rounded-xl shadow-sm transition-all sm:hidden ${
-                        hasActiveSearchInput
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                      }`}
-                      title="Search"
-                    >
-                      <Search className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hidden h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:inline-flex sm:h-10 sm:w-10"
-                      title="Use current location"
-                    >
-                      <MapPinned className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8.5 w-8.5 rounded-xl hover:bg-primary/10 sm:h-10 sm:w-10"
-                      title="Voice search"
-                    >
-                      <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
+        <div className="mx-auto w-full max-w-4xl">
+          <Card className="overflow-hidden rounded-[1rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70 sm:rounded-2xl">
+            <CardContent className="p-0">
+              <div className="bg-gradient-to-r from-blue-700 to-cyan-600 px-4 py-4 text-white sm:px-6">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.12em]">
+                      Start with your property journey
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-blue-50">{intentHelperCopy}</p>
+                  </div>
+                  <div className="hidden rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white md:block">
+                    Search, compare, connect
                   </div>
                 </div>
-
-                {/* Search Button */}
-                <Button
-                  onClick={handleSearch}
-                  className="hidden h-10 min-w-[100px] rounded-2xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg transition-all hover:bg-blue-700 hover:shadow-xl sm:inline-flex sm:h-14 sm:min-w-[140px] sm:px-8 sm:text-base"
-                  size="lg"
-                >
-                  {isCountLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <div className="flex flex-col items-center leading-none">
-                      <span className="flex items-center gap-2">
-                        <Search className="h-4 w-4" /> Search
-                      </span>
-                    </div>
-                  )}
-                </Button>
               </div>
 
-              {/* FOOTER: Navigation Pills ONLY (Quick Searches hidden per request) */}
-              {isNavigationMode && (
-                <div className="mt-4 sm:mt-6 flex gap-2 sm:gap-3 items-center border-t border-slate-100 pt-3 sm:pt-4 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
-                  {navigationItems.map((item, idx) => (
-                    <Button
-                      key={idx}
-                      variant="outline"
-                      onClick={() => setLocation(item.path)}
-                      className={`
+              <div className="p-4 sm:p-6">
+                {/* Main Search Row */}
+                <div className="flex flex-col gap-2 md:flex-row sm:gap-4">
+                  {/* Unified Search Input */}
+                  <div className="flex-1 relative group">
+                    <LocationAutosuggest
+                      placeholder="Search by city, suburb, or area..."
+                      className="w-full"
+                      inputClassName="h-11 w-full rounded-xl border border-slate-200 bg-white pl-4 pr-20 text-[15px] shadow-sm transition-colors hover:border-blue-300 focus:border-blue-600 sm:h-12 sm:pr-24 sm:text-base"
+                      showIcon={false}
+                      selectedLocations={selectedLocations}
+                      onRemove={index => {
+                        setSelectedLocations(prev => prev.filter((_, i) => i !== index));
+                      }}
+                      onChange={value => {
+                        setSearchQuery(value);
+                      }}
+                      onSelect={loc => {
+                        // Optimistic Search Query Update (shows last selected name temporarily if needed, but pills handle UX)
+                        setSearchQuery('');
+
+                        setSelectedLocations(prev => {
+                          // 1. Prevent Duplicates
+                          if (prev.some(p => p.slug === loc.slug)) return prev;
+
+                          // 2. Hierarchy / Conflict Handling (Property24 style)
+                          // "Prevent selecting a child if parent is already selected" or vice versa
+                          // Case A: User creates specific list (e.g. Sea Point + Green Point).
+                          // Case B: User selects Province (Western Cape). Should we remove cities?
+                          // For V1, we append unique locations.
+
+                          return [...prev, loc];
+                        });
+                      }}
+                      onSubmit={handleSearch}
+                      maxLocations={5}
+                    />
+
+                    {/* Action Buttons (Voice/Location) */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1.5 z-10">
+                      <Button
+                        onClick={handleSearch}
+                        size="icon"
+                        className={`h-8 w-8 rounded-lg shadow-sm transition-all sm:hidden ${
+                          hasActiveSearchInput
+                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                        }`}
+                        title="Search"
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hidden h-8 w-8 rounded-lg hover:bg-blue-50 hover:text-blue-700 sm:inline-flex"
+                        title="Use current location"
+                      >
+                        <MapPinned className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg hover:bg-blue-50 hover:text-blue-700"
+                        title="Voice search"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Search Button */}
+                  <Button
+                    onClick={handleSearch}
+                    className="hidden h-11 min-w-[120px] rounded-xl bg-blue-700 px-6 text-sm font-semibold text-white shadow-md shadow-blue-700/20 transition-all hover:bg-blue-800 hover:shadow-lg sm:inline-flex sm:h-12 sm:min-w-[132px] sm:px-7 sm:text-base"
+                    size="lg"
+                  >
+                    {isCountLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <div className="flex flex-col items-center leading-none">
+                        <span className="flex items-center gap-2">
+                          <Search className="h-4 w-4" /> Search
+                        </span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+
+                {/* FOOTER: Navigation Pills ONLY (Quick Searches hidden per request) */}
+                {isNavigationMode && (
+                  <div className="mt-4 sm:mt-6 flex gap-2 sm:gap-3 items-center border-t border-slate-100 pt-3 sm:pt-4 overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+                    {navigationItems.map((item, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        onClick={() => setLocation(item.path)}
+                        className={`
                           h-7 sm:h-8 px-3 sm:px-4 rounded-full text-xs sm:text-sm font-medium border-blue-100 bg-blue-50/50 text-blue-700 
                           hover:bg-blue-100 hover:border-blue-200 hover:text-blue-800 transition-all whitespace-nowrap flex-shrink-0
                           ${item.active ? 'ring-2 ring-blue-500 ring-offset-1' : ''}
                         `}
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
-                </div>
-              )}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
 
-              {/* Dynamic Filter Panel */}
-              {showFilters && activeTab !== 'agents' && (
-                <div className="mt-6 pt-6 border-t animate-in slide-in-from-top-2 duration-200">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* BUY FILTERS */}
-                    {activeTab === 'buy' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Property Category
-                          </Label>
-                          <Select
-                            value={filters.propertyIntent}
-                            onValueChange={val => handleFilterChange('propertyIntent', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Category</SelectItem>
-                              {filterConfig.buy.intents.map(intent => (
-                                <SelectItem key={intent} value={intent}>
-                                  {intent}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-[10px] text-muted-foreground">
-                            Choose the main type of property you’re looking for
-                          </p>
-                        </div>
+                {/* Dynamic Filter Panel */}
+                {showFilters && activeTab !== 'agents' && (
+                  <div className="mt-5 border-t border-slate-100 pt-5 animate-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {/* BUY FILTERS */}
+                      {activeTab === 'buy' && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Property Category
+                            </Label>
+                            <Select
+                              value={filters.propertyIntent}
+                              onValueChange={val => handleFilterChange('propertyIntent', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Category</SelectItem>
+                                {filterConfig.buy.intents.map(intent => (
+                                  <SelectItem key={intent} value={intent}>
+                                    {intent}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-[10px] text-muted-foreground">
+                              Choose the main type of property you’re looking for
+                            </p>
+                          </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Property Type
-                          </Label>
-                          <Select
-                            value={filters.propertyTypes[0] || ''}
-                            onValueChange={val => handleFilterChange('propertyTypes', [val])}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Type</SelectItem>
-                              {(filters.propertyIntent &&
-                              filterConfig.buy.propertyTypes[
-                                filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                              ]
-                                ? filterConfig.buy.propertyTypes[
-                                    filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                                  ]
-                                : Object.values(filterConfig.buy.propertyTypes).flat()
-                              ).map((type: string) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Min Price
-                          </Label>
-                          <Select
-                            value={filters.priceMin}
-                            onValueChange={val => handleFilterChange('priceMin', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="No Min" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">R 0</SelectItem>
-                              <SelectItem value="500000">R 500,000</SelectItem>
-                              <SelectItem value="1000000">R 1,000,000</SelectItem>
-                              <SelectItem value="2000000">R 2,000,000</SelectItem>
-                              <SelectItem value="5000000">R 5,000,000</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Max Price
-                          </Label>
-                          <Select
-                            value={filters.priceMax}
-                            onValueChange={val => handleFilterChange('priceMax', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="No Max" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1000000">R 1,000,000</SelectItem>
-                              <SelectItem value="2000000">R 2,000,000</SelectItem>
-                              <SelectItem value="5000000">R 5,000,000</SelectItem>
-                              <SelectItem value="10000000">R 10,000,000</SelectItem>
-                              <SelectItem value="50000000">R 50,000,000+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
-                    )}
-
-                    {/* RENTAL FILTERS */}
-                    {activeTab === 'rental' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Property Type
-                          </Label>
-                          <Select
-                            value={filters.propertyTypes[0] || ''}
-                            onValueChange={val => handleFilterChange('propertyTypes', [val])}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Type</SelectItem>
-                              {Object.values(filterConfig.rental.propertyTypes)
-                                .flat()
-                                .map((type: string) => (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Property Type
+                            </Label>
+                            <Select
+                              value={filters.propertyTypes[0] || ''}
+                              onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Type</SelectItem>
+                                {(filters.propertyIntent &&
+                                filterConfig.buy.propertyTypes[
+                                  filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
+                                ]
+                                  ? filterConfig.buy.propertyTypes[
+                                      filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
+                                    ]
+                                  : Object.values(filterConfig.buy.propertyTypes).flat()
+                                ).map((type: string) => (
                                   <SelectItem key={type} value={type}>
                                     {type}
                                   </SelectItem>
                                 ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Lease Term
-                          </Label>
-                          <Select
-                            value={filters.leaseTerm}
-                            onValueChange={val => handleFilterChange('leaseTerm', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Term" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Term</SelectItem>
-                              {filterConfig.rental.leaseTerms.map(term => (
-                                <SelectItem key={term} value={term}>
-                                  {term}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Max Budget
-                          </Label>
-                          <Select
-                            value={filters.budgetMax}
-                            onValueChange={val => handleFilterChange('budgetMax', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Budget" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="5000">R 5,000</SelectItem>
-                              <SelectItem value="10000">R 10,000</SelectItem>
-                              <SelectItem value="20000">R 20,000</SelectItem>
-                              <SelectItem value="50000">R 50,000+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex items-center space-x-2 h-10 mt-6">
-                          <Checkbox
-                            id="furnished"
-                            checked={filters.furnished}
-                            onCheckedChange={checked => handleFilterChange('furnished', checked)}
-                          />
-                          <Label htmlFor="furnished" className="font-normal cursor-pointer">
-                            Furnished Only
-                          </Label>
-                        </div>
-                      </>
-                    )}
-
-                    {/* DEVELOPMENTS FILTERS */}
-                    {activeTab === 'projects' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Development Type
-                          </Label>
-                          <Select
-                            value={filters.developmentType}
-                            onValueChange={val => handleFilterChange('developmentType', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Type</SelectItem>
-                              {filterConfig.projects.types.map(type => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Status
-                          </Label>
-                          <Select
-                            value={filters.developmentStatus}
-                            onValueChange={val => handleFilterChange('developmentStatus', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Status</SelectItem>
-                              {filterConfig.projects.statuses.map(status => (
-                                <SelectItem key={status} value={status}>
-                                  {status}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Min Price
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="R Min"
-                            className="h-10 bg-gray-50/50 border-gray-200"
-                            value={filters.priceMin}
-                            onChange={e => handleFilterChange('priceMin', e.target.value)}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Max Price
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="R Max"
-                            className="h-10 bg-gray-50/50 border-gray-200"
-                            value={filters.priceMax}
-                            onChange={e => handleFilterChange('priceMax', e.target.value)}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    {/* PLOT & LAND FILTERS */}
-                    {activeTab === 'plot' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Land Type
-                          </Label>
-                          <Select
-                            value={filters.landType}
-                            onValueChange={val => handleFilterChange('landType', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Type</SelectItem>
-                              {filterConfig.plot.types.map(type => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Min Size (m²)
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="Min m²"
-                            className="h-10 bg-gray-50/50 border-gray-200"
-                            value={filters.sizeMin}
-                            onChange={e => handleFilterChange('sizeMin', e.target.value)}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Max Price
-                          </Label>
-                          <Select
-                            value={filters.priceMax}
-                            onValueChange={val => handleFilterChange('priceMax', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Price" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="500000">R 500k</SelectItem>
-                              <SelectItem value="1000000">R 1M</SelectItem>
-                              <SelectItem value="5000000">R 5M</SelectItem>
-                              <SelectItem value="10000000">R 10M+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
-                    )}
-
-                    {/* COMMERCIAL FILTERS */}
-                    {activeTab === 'commercial' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            I want to
-                          </Label>
-                          <div className="flex p-1 bg-gray-100 rounded-lg h-10">
-                            <button
-                              onClick={() => handleFilterChange('saleOrRent', 'sale')}
-                              className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'sale' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
-                            >
-                              Buy
-                            </button>
-                            <button
-                              onClick={() => handleFilterChange('saleOrRent', 'rent')}
-                              className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'rent' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
-                            >
-                              Rent
-                            </button>
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Use Type
-                          </Label>
-                          <Select
-                            value={filters.commercialUseType}
-                            onValueChange={val => handleFilterChange('commercialUseType', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Use" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Use</SelectItem>
-                              {filterConfig.commercial.useTypes.map(type => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Min Price
+                            </Label>
+                            <Select
+                              value={filters.priceMin}
+                              onValueChange={val => handleFilterChange('priceMin', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="No Min" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0">R 0</SelectItem>
+                                <SelectItem value="500000">R 500,000</SelectItem>
+                                <SelectItem value="1000000">R 1,000,000</SelectItem>
+                                <SelectItem value="2000000">R 2,000,000</SelectItem>
+                                <SelectItem value="5000000">R 5,000,000</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Min Size (m²)
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="Min m²"
-                            className="h-10 bg-gray-50/50 border-gray-200"
-                            value={filters.lotSizeMin}
-                            onChange={e => handleFilterChange('lotSizeMin', e.target.value)}
-                          />
-                        </div>
-                      </>
-                    )}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Max Price
+                            </Label>
+                            <Select
+                              value={filters.priceMax}
+                              onValueChange={val => handleFilterChange('priceMax', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="No Max" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1000000">R 1,000,000</SelectItem>
+                                <SelectItem value="2000000">R 2,000,000</SelectItem>
+                                <SelectItem value="5000000">R 5,000,000</SelectItem>
+                                <SelectItem value="10000000">R 10,000,000</SelectItem>
+                                <SelectItem value="50000000">R 50,000,000+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
 
-                    {/* SHARED LIVING FILTERS */}
-                    {activeTab === 'pg' && (
-                      <>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Room Type
-                          </Label>
-                          <Select
-                            value={filters.roomType}
-                            onValueChange={val => handleFilterChange('roomType', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Room" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any Room</SelectItem>
-                              {filterConfig.pg.roomTypes.map(type => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      {/* RENTAL FILTERS */}
+                      {activeTab === 'rental' && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Property Type
+                            </Label>
+                            <Select
+                              value={filters.propertyTypes[0] || ''}
+                              onValueChange={val => handleFilterChange('propertyTypes', [val])}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Type</SelectItem>
+                                {Object.values(filterConfig.rental.propertyTypes)
+                                  .flat()
+                                  .map((type: string) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Gender Preference
-                          </Label>
-                          <Select
-                            value={filters.genderPreference}
-                            onValueChange={val => handleFilterChange('genderPreference', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Any</SelectItem>
-                              {filterConfig.pg.genderOptions.map(opt => (
-                                <SelectItem key={opt} value={opt}>
-                                  {opt}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Lease Term
+                            </Label>
+                            <Select
+                              value={filters.leaseTerm}
+                              onValueChange={val => handleFilterChange('leaseTerm', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Term" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Term</SelectItem>
+                                {filterConfig.rental.leaseTerms.map(term => (
+                                  <SelectItem key={term} value={term}>
+                                    {term}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Max Budget
-                          </Label>
-                          <Select
-                            value={filters.budgetMax}
-                            onValueChange={val => handleFilterChange('budgetMax', val)}
-                          >
-                            <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                              <SelectValue placeholder="Any Budget" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="3000">R 3,000</SelectItem>
-                              <SelectItem value="5000">R 5,000</SelectItem>
-                              <SelectItem value="8000">R 8,000</SelectItem>
-                              <SelectItem value="10000">R 10,000+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
-                    )}
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Max Budget
+                            </Label>
+                            <Select
+                              value={filters.budgetMax}
+                              onValueChange={val => handleFilterChange('budgetMax', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Budget" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="5000">R 5,000</SelectItem>
+                                <SelectItem value="10000">R 10,000</SelectItem>
+                                <SelectItem value="20000">R 20,000</SelectItem>
+                                <SelectItem value="50000">R 50,000+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="flex items-center space-x-2 h-10 mt-6">
+                            <Checkbox
+                              id="furnished"
+                              checked={filters.furnished}
+                              onCheckedChange={checked => handleFilterChange('furnished', checked)}
+                            />
+                            <Label htmlFor="furnished" className="font-normal cursor-pointer">
+                              Furnished Only
+                            </Label>
+                          </div>
+                        </>
+                      )}
+
+                      {/* DEVELOPMENTS FILTERS */}
+                      {activeTab === 'projects' && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Development Type
+                            </Label>
+                            <Select
+                              value={filters.developmentType}
+                              onValueChange={val => handleFilterChange('developmentType', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Type</SelectItem>
+                                {filterConfig.projects.types.map(type => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Status
+                            </Label>
+                            <Select
+                              value={filters.developmentStatus}
+                              onValueChange={val => handleFilterChange('developmentStatus', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Status</SelectItem>
+                                {filterConfig.projects.statuses.map(status => (
+                                  <SelectItem key={status} value={status}>
+                                    {status}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Min Price
+                            </Label>
+                            <Input
+                              type="number"
+                              placeholder="R Min"
+                              className="h-10 bg-gray-50/50 border-gray-200"
+                              value={filters.priceMin}
+                              onChange={e => handleFilterChange('priceMin', e.target.value)}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Max Price
+                            </Label>
+                            <Input
+                              type="number"
+                              placeholder="R Max"
+                              className="h-10 bg-gray-50/50 border-gray-200"
+                              value={filters.priceMax}
+                              onChange={e => handleFilterChange('priceMax', e.target.value)}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* PLOT & LAND FILTERS */}
+                      {activeTab === 'plot' && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Land Type
+                            </Label>
+                            <Select
+                              value={filters.landType}
+                              onValueChange={val => handleFilterChange('landType', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Type</SelectItem>
+                                {filterConfig.plot.types.map(type => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Min Size (m²)
+                            </Label>
+                            <Input
+                              type="number"
+                              placeholder="Min m²"
+                              className="h-10 bg-gray-50/50 border-gray-200"
+                              value={filters.sizeMin}
+                              onChange={e => handleFilterChange('sizeMin', e.target.value)}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Max Price
+                            </Label>
+                            <Select
+                              value={filters.priceMax}
+                              onValueChange={val => handleFilterChange('priceMax', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Price" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="500000">R 500k</SelectItem>
+                                <SelectItem value="1000000">R 1M</SelectItem>
+                                <SelectItem value="5000000">R 5M</SelectItem>
+                                <SelectItem value="10000000">R 10M+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
+
+                      {/* COMMERCIAL FILTERS */}
+                      {activeTab === 'commercial' && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              I want to
+                            </Label>
+                            <div className="flex p-1 bg-gray-100 rounded-lg h-10">
+                              <button
+                                onClick={() => handleFilterChange('saleOrRent', 'sale')}
+                                className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'sale' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
+                              >
+                                Buy
+                              </button>
+                              <button
+                                onClick={() => handleFilterChange('saleOrRent', 'rent')}
+                                className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'rent' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
+                              >
+                                Rent
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Use Type
+                            </Label>
+                            <Select
+                              value={filters.commercialUseType}
+                              onValueChange={val => handleFilterChange('commercialUseType', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Use" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Use</SelectItem>
+                                {filterConfig.commercial.useTypes.map(type => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Min Size (m²)
+                            </Label>
+                            <Input
+                              type="number"
+                              placeholder="Min m²"
+                              className="h-10 bg-gray-50/50 border-gray-200"
+                              value={filters.lotSizeMin}
+                              onChange={e => handleFilterChange('lotSizeMin', e.target.value)}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* SHARED LIVING FILTERS */}
+                      {activeTab === 'pg' && (
+                        <>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Room Type
+                            </Label>
+                            <Select
+                              value={filters.roomType}
+                              onValueChange={val => handleFilterChange('roomType', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Room" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any Room</SelectItem>
+                                {filterConfig.pg.roomTypes.map(type => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Gender Preference
+                            </Label>
+                            <Select
+                              value={filters.genderPreference}
+                              onValueChange={val => handleFilterChange('genderPreference', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Any</SelectItem>
+                                {filterConfig.pg.genderOptions.map(opt => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Max Budget
+                            </Label>
+                            <Select
+                              value={filters.budgetMax}
+                              onValueChange={val => handleFilterChange('budgetMax', val)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Budget" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="3000">R 3,000</SelectItem>
+                                <SelectItem value="5000">R 5,000</SelectItem>
+                                <SelectItem value="8000">R 8,000</SelectItem>
+                                <SelectItem value="10000">R 10,000+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
+
+          {!isNavigationMode && (
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {TRUST_ITEMS.map(item => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.label}
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-center shadow-sm"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center text-cyan-700">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="whitespace-nowrap text-xs font-semibold leading-none text-slate-700">
+                      {item.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-

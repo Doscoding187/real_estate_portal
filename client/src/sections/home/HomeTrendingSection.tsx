@@ -28,7 +28,7 @@ type TrendingItem = {
   priceTo: number;
   image: string;
   href: string;
-  listingType?: 'sale' | 'rent';
+  listingType?: 'sale' | 'rent' | 'auction';
   bedrooms?: number | null;
   bathrooms?: number | null;
   area?: number | null;
@@ -53,34 +53,30 @@ const PROVINCES = [
 
 const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
   buy: {
-    titleBase: 'Trending Residential Properties for Sale',
-    subtitleBase:
-      'Discover the latest and most popular homes for sale across South Africa’s top locations.',
+    titleBase: 'Trending homes for sale',
+    subtitleBase: 'See live sale opportunities that match the intent you selected above.',
   },
   rent: {
-    titleBase: 'Trending Residential Properties for Rent',
-    subtitleBase:
-      'Browse the newest and most in-demand rental homes and apartments available right now.',
+    titleBase: 'Trending rentals',
+    subtitleBase: 'Browse in-demand rental homes and apartments by province.',
   },
   developments: {
-    titleBase: 'Trending Developments',
-    subtitleBase:
-      'Explore the newest residential, commercial, and mixed-use developments across South Africa.',
+    titleBase: 'Trending new developments',
+    subtitleBase: 'Explore development stock, new launches, and project opportunities by province.',
   },
   shared_living: {
-    titleBase: 'Trending Student & Shared Living',
-    subtitleBase:
-      'Find modern student accommodation and shared living spaces in prime urban and campus locations.',
+    titleBase: 'Shared living opportunities',
+    subtitleBase: 'Find student accommodation and shared living options in active urban hubs.',
   },
   plot_land: {
-    titleBase: 'Trending Plot & Land',
+    titleBase: 'Land and plots to explore',
     subtitleBase:
-      'View the latest plots and land opportunities ideal for building or investment projects.',
+      'View land opportunities suited to building, development, or long-term investment.',
   },
   commercial: {
-    titleBase: 'Trending Commercial Developments',
+    titleBase: 'Commercial property opportunities',
     subtitleBase:
-      'Discover newly listed office, retail, and industrial developments in high-growth business areas.',
+      'Discover office, retail, industrial, and mixed-use opportunities in growth areas.',
   },
 };
 
@@ -113,13 +109,13 @@ export function HomeTrendingSection({
   const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, railLimit);
 
   return (
-    <section className="py-4 md:py-5">
-      <div className="mb-5 md:mb-10">
+    <section className="home-section">
+      <div className="home-section-header">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1">
           <span className="text-lg">🔥</span>
           <span className="text-sm font-semibold text-orange-600">Trending Now</span>
         </div>
-        <h2 className="mb-2 max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
+        <h2 className="home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
           {heroContent.title}
         </h2>
         <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
@@ -127,7 +123,7 @@ export function HomeTrendingSection({
         </p>
       </div>
 
-      <div className="scrollbar-hide -mx-4 mb-5 flex justify-start overflow-x-auto px-4 pb-2 md:mb-10 md:pb-4 sm:mx-0 sm:px-0">
+      <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
         <div className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5">
           {PROVINCES.map(province => (
             <button
@@ -148,11 +144,11 @@ export function HomeTrendingSection({
       {trendingItems.length > 0 ? (
         <div className="group/carousel relative w-full">
           <Carousel opts={{ align: 'start', loop: trendingItems.length > 4 }} className="w-full">
-            <CarouselContent className="-ml-3 pb-2 justify-start">
+            <CarouselContent className="-ml-2 pb-2 justify-start">
               {trendingItems.map((item, index) => (
                 <CarouselItem
                   key={item.id}
-                  className="basis-[77%] pl-3 sm:basis-[64%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                  className="basis-[77%] pl-2 sm:basis-[64%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
                 >
                   <div className="relative">
                     <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
@@ -167,6 +163,7 @@ export function HomeTrendingSection({
                         image={item.image || ''}
                         href={item.href}
                         price={item.priceFrom}
+                        listingType={item.listingType}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
                         area={item.area}
@@ -185,6 +182,7 @@ export function HomeTrendingSection({
                         href={item.href}
                         priceFrom={item.priceFrom}
                         priceTo={item.priceTo}
+                        listingType={item.listingType}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
                         unitSize={item.unitSize}
@@ -216,8 +214,26 @@ export function HomeTrendingSection({
           </Carousel>
         </div>
       ) : (
-        <div className="py-12 text-center text-slate-500 bg-white rounded-lg border border-slate-100 border-dashed">
-          No live inventory found for this province yet.
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
+          <h3 className="text-sm font-bold text-slate-900">
+            No live matches in {selectedProvince} yet
+          </h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
+            We are not showing placeholder inventory here. Try another province or start a broader
+            search while more listings are being added.
+          </p>
+          <a
+            href={
+              activeHeroTab === 'rent'
+                ? '/property-to-rent'
+                : activeHeroTab === 'developments'
+                  ? '/developments'
+                  : '/property-for-sale'
+            }
+            className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+          >
+            Browse available property
+          </a>
         </div>
       )}
     </section>
