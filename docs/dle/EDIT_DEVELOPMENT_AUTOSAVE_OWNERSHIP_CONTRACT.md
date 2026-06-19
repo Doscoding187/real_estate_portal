@@ -63,6 +63,22 @@ Not implemented in this slice:
 - edit autosave browser proof;
 - edit autosave backend endpoint changes;
 
+## Browser Proof Progress
+
+2026-06-19 limited Rental proof:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` proves the explicitly enabled edit-autosave switch can
+  fail visibly on a published Rental development.
+- The failed browser autosave keeps the persisted development unchanged and preserves unrelated
+  location, media, approval, and unit inventory.
+- A later retry sends the latest `marketing_summary` partial payload through
+  `developer.updateDevelopment`.
+- The retry preserves unrelated rental unit pricing and public output, including rental-native
+  public page language.
+
+This proof is intentionally narrow. It does not enable edit autosave and it does not satisfy the
+Sale and Auction browser proof gates.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
