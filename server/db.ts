@@ -2426,44 +2426,87 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
   const mappedListingType =
     listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction';
 
-  const basePropertyMatch = [
-    eq(properties.ownerId, Number(listing.ownerId || 0)),
-    eq(properties.listingType, mappedListingType as any),
-  ] as SQL[];
-
+  // G-2: primary lookup by sourceListingId
   let mirroredProperty: { id: number } | undefined;
 
-  const normalizedPlaceId = String(listing.placeId || '').trim();
-  if (normalizedPlaceId) {
-    const [byPlaceId] = await db
-      .select({ id: properties.id })
-      .from(properties)
-      .where(and(...basePropertyMatch, eq(properties.placeId, normalizedPlaceId)))
-      .orderBy(desc(properties.createdAt))
-      .limit(1);
-    mirroredProperty = byPlaceId;
-  }
+  const [bySourceListingId] = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(
+      and(
+        eq(properties.sourceListingId, listingId),
+        isNotNull(properties.sourceListingId),
+      ),
+    )
+    .limit(1);
+  mirroredProperty = bySourceListingId;
 
+  // G-2 fallback: only use legacy identity matching for records where sourceListingId is null
   if (!mirroredProperty) {
-    const [byIdentity] = await db
-      .select({ id: properties.id })
-      .from(properties)
-      .where(
-        and(
-          ...basePropertyMatch,
-          eq(properties.title, listing.title),
-          eq(properties.address, listing.address),
-          eq(properties.city, listing.city),
-          eq(properties.province, listing.province),
-        ),
-      )
-      .orderBy(desc(properties.createdAt))
-      .limit(1);
-    mirroredProperty = byIdentity;
+    const basePropertyMatch = [
+      eq(properties.ownerId, Number(listing.ownerId || 0)),
+      eq(properties.listingType, mappedListingType as any),
+    ] as SQL[];
+
+    const normalizedPlaceId = String(listing.placeId || '').trim();
+    if (normalizedPlaceId) {
+      const [byPlaceId] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(
+          and(
+            ...basePropertyMatch,
+            eq(properties.placeId, normalizedPlaceId),
+            isNull(properties.sourceListingId),
+          ),
+        )
+        .orderBy(desc(properties.createdAt))
+        .limit(1);
+      mirroredProperty = byPlaceId;
+    }
+
+    if (!mirroredProperty) {
+      const [byIdentity] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(
+          and(
+            ...basePropertyMatch,
+            eq(properties.title, listing.title),
+            eq(properties.address, listing.address),
+            eq(properties.city, listing.city),
+            eq(properties.province, listing.province),
+            isNull(properties.sourceListingId),
+          ),
+        )
+        .orderBy(desc(properties.createdAt))
+        .limit(1);
+      mirroredProperty = byIdentity;
+    }
   }
 
   if (!mirroredProperty) {
     return { synced: false, reason: 'property_mirror_not_found' as const };
+  }
+
+  // If the matched property had no sourceListingId, stamp it now (migrate legacy record)
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  if (
+    inventoryBridgeCapabilities.propertiesSourceListingIdColumn &&
+    mirroredProperty.id
+  ) {
+    // Check if this property already has sourceListingId set
+    const [checkProp] = await db
+      .select({ sourceListingId: properties.sourceListingId })
+      .from(properties)
+      .where(eq(properties.id, mirroredProperty.id))
+      .limit(1);
+    if (checkProp && !checkProp.sourceListingId) {
+      await db
+        .update(properties)
+        .set({ sourceListingId: listingId })
+        .where(eq(properties.id, mirroredProperty.id));
+    }
   }
 
   const mediaItems = await getListingMedia(listingId);
@@ -2543,6 +2586,14 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   const listing = await getListingById(listingId);
   if (!listing) throw new Error('Listing not found');
 
+  // G-5 State guard: reject approval if listing is already published or not pending review
+  if (listing.status === 'published' || listing.status === 'approved') {
+    throw new Error('Listing is already published');
+  }
+  if (listing.status !== 'pending_review' && listing.status !== 'pending') {
+    throw new Error('Listing is not in a reviewable state');
+  }
+
   // 2. Prepare property data
   // Parse pricing JSON if it's a string
   let pricingData: any = {};
@@ -2588,16 +2639,16 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   ];
   const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
 
-  // 3. Insert into properties table
+  // 3. Upsert into properties table (G-1 idempotency: update if exists, insert if not)
 
   const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
 
-  const propertyInsertValues: any = {
+  const propertyValues: any = {
     title: listing.title,
     description: listing.description,
     propertyType: listing.propertyType,
     listingType:
-      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction', // Map 'sell' to 'sale'
+      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     transactionType:
       listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     price: price,
@@ -2610,11 +2661,10 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     zipCode: listing.postalCode,
     latitude: String(listing.latitude),
     longitude: String(listing.longitude),
-    // IDs for relations (would need lookup logic for IDs, skipping for now or using defaults)
     locationText: `${listing.city}, ${listing.province}`,
     placeId: listing.placeId,
     amenities: amenitiesString,
-    status: 'available' as any, // Make it live immediately
+    status: 'available' as any,
     featured: listing.featured || 0,
     views: 0,
     enquiries: 0,
@@ -2623,17 +2673,41 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     propertySettings: JSON.stringify(details),
     levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
     ratesAndTaxes: Number(details.ratesTaxes) || null,
-    createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
   if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
-    propertyInsertValues.sourceListingId = listingId;
+    propertyValues.sourceListingId = listingId;
   }
 
-  const [propertyResult] = await db.insert(properties).values(propertyInsertValues);
+  // Check for existing property projection by sourceListingId (G-1 idempotency)
+  const existingProperty = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(
+      and(
+        eq(properties.sourceListingId, listingId),
+        isNotNull(properties.sourceListingId),
+      ),
+    )
+    .limit(1);
 
-  const newPropertyId = Number(propertyResult.insertId);
+  let newPropertyId: number;
+
+  if (existingProperty.length > 0) {
+    // Update existing property projection
+    const existingId = existingProperty[0].id;
+    await db
+      .update(properties)
+      .set(propertyValues)
+      .where(eq(properties.id, existingId));
+    newPropertyId = existingId;
+  } else {
+    // Insert new property projection
+    propertyValues.createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const [propertyResult] = await db.insert(properties).values(propertyValues);
+    newPropertyId = Number(propertyResult.insertId);
+  }
 
   // 4. Sync Media
   const mediaItems = await getListingMedia(listingId);
@@ -2651,7 +2725,9 @@ export async function approveListing(listingId: number, reviewedBy: number, note
         .where(eq(properties.id, newPropertyId));
     }
 
-    // Insert all images into propertyImages table
+    // Replace all images in propertyImages table
+    await db.delete(propertyImages).where(eq(propertyImages.propertyId, newPropertyId));
+
     for (const item of mediaItems) {
       if (item.mediaType === 'image') {
         await db.insert(propertyImages).values({
@@ -2662,8 +2738,6 @@ export async function approveListing(listingId: number, reviewedBy: number, note
           createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
         });
       }
-      // Note: Videos are stored in properties.videoUrl or separate table depending on schema
-      // For now we only sync images to propertyImages as per schema
     }
   }
 
@@ -2757,6 +2831,20 @@ export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  // G-4: soft-archive linked property projection before deleting the listing
+  await db
+    .update(properties)
+    .set({
+      status: 'archived' as any,
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(
+      and(
+        eq(properties.sourceListingId, id),
+        isNotNull(properties.sourceListingId),
+      ),
+    );
+
   // Delete related media first to avoid foreign key constraint errors
   await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
 
@@ -2789,6 +2877,20 @@ export async function archiveListing(id: number) {
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(listings.id, id));
+
+  // G-3: cascade archive to linked property projection
+  await db
+    .update(properties)
+    .set({
+      status: 'archived' as any,
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(
+      and(
+        eq(properties.sourceListingId, id),
+        isNotNull(properties.sourceListingId),
+      ),
+    );
 }
 
 /**
