@@ -2426,20 +2426,25 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
   const mappedListingType =
     listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction';
 
-  // G-2: primary lookup by sourceListingId
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  const bridgeHasSourceListingId = inventoryBridgeCapabilities.propertiesSourceListingIdColumn;
+
+  // G-2: primary lookup by sourceListingId (only when bridge column is available)
   let mirroredProperty: { id: number } | undefined;
 
-  const [bySourceListingId] = await db
-    .select({ id: properties.id })
-    .from(properties)
-    .where(
-      and(
-        eq(properties.sourceListingId, listingId),
-        isNotNull(properties.sourceListingId),
-      ),
-    )
-    .limit(1);
-  mirroredProperty = bySourceListingId;
+  if (bridgeHasSourceListingId) {
+    const [bySourceListingId] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(
+        and(
+          eq(properties.sourceListingId, listingId),
+          isNotNull(properties.sourceListingId),
+        ),
+      )
+      .limit(1);
+    mirroredProperty = bySourceListingId;
+  }
 
   // G-2 fallback: only use legacy identity matching for records where sourceListingId is null
   if (!mirroredProperty) {
@@ -2448,17 +2453,21 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
       eq(properties.listingType, mappedListingType as any),
     ] as SQL[];
 
+    const legacyWhereConditions = [
+      ...basePropertyMatch,
+    ] as SQL[];
+
+    if (bridgeHasSourceListingId) {
+      legacyWhereConditions.push(isNull(properties.sourceListingId));
+    }
+
     const normalizedPlaceId = String(listing.placeId || '').trim();
     if (normalizedPlaceId) {
       const [byPlaceId] = await db
         .select({ id: properties.id })
         .from(properties)
         .where(
-          and(
-            ...basePropertyMatch,
-            eq(properties.placeId, normalizedPlaceId),
-            isNull(properties.sourceListingId),
-          ),
+          and(...legacyWhereConditions, eq(properties.placeId, normalizedPlaceId)),
         )
         .orderBy(desc(properties.createdAt))
         .limit(1);
@@ -2471,12 +2480,11 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
         .from(properties)
         .where(
           and(
-            ...basePropertyMatch,
+            ...legacyWhereConditions,
             eq(properties.title, listing.title),
             eq(properties.address, listing.address),
             eq(properties.city, listing.city),
             eq(properties.province, listing.province),
-            isNull(properties.sourceListingId),
           ),
         )
         .orderBy(desc(properties.createdAt))
@@ -2490,11 +2498,7 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
   }
 
   // If the matched property had no sourceListingId, stamp it now (migrate legacy record)
-  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-  if (
-    inventoryBridgeCapabilities.propertiesSourceListingIdColumn &&
-    mirroredProperty.id
-  ) {
+  if (bridgeHasSourceListingId) {
     // Check if this property already has sourceListingId set
     const [checkProp] = await db
       .select({ sourceListingId: properties.sourceListingId })
@@ -2642,6 +2646,7 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   // 3. Upsert into properties table (G-1 idempotency: update if exists, insert if not)
 
   const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  const bridgeHasSourceListingId = inventoryBridgeCapabilities.propertiesSourceListingIdColumn;
 
   const propertyValues: any = {
     title: listing.title,
@@ -2676,34 +2681,39 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
-  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
-    propertyValues.sourceListingId = listingId;
-  }
-
-  // Check for existing property projection by sourceListingId (G-1 idempotency)
-  const existingProperty = await db
-    .select({ id: properties.id })
-    .from(properties)
-    .where(
-      and(
-        eq(properties.sourceListingId, listingId),
-        isNotNull(properties.sourceListingId),
-      ),
-    )
-    .limit(1);
-
   let newPropertyId: number;
 
-  if (existingProperty.length > 0) {
-    // Update existing property projection
-    const existingId = existingProperty[0].id;
-    await db
-      .update(properties)
-      .set(propertyValues)
-      .where(eq(properties.id, existingId));
-    newPropertyId = existingId;
+  if (bridgeHasSourceListingId) {
+    propertyValues.sourceListingId = listingId;
+
+    // G-1 idempotency: check for existing property projection by sourceListingId
+    const existingProperty = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(
+        and(
+          eq(properties.sourceListingId, listingId),
+          isNotNull(properties.sourceListingId),
+        ),
+      )
+      .limit(1);
+
+    if (existingProperty.length > 0) {
+      // Update existing property projection
+      const existingId = existingProperty[0].id;
+      await db
+        .update(properties)
+        .set(propertyValues)
+        .where(eq(properties.id, existingId));
+      newPropertyId = existingId;
+    } else {
+      // Insert new property projection (no sourceListingId idempotency check)
+      propertyValues.createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const [propertyResult] = await db.insert(properties).values(propertyValues);
+      newPropertyId = Number(propertyResult.insertId);
+    }
   } else {
-    // Insert new property projection
+    // Bridge column unavailable — always insert (legacy behaviour)
     propertyValues.createdAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const [propertyResult] = await db.insert(properties).values(propertyValues);
     newPropertyId = Number(propertyResult.insertId);
@@ -2831,19 +2841,26 @@ export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  // G-4: soft-archive linked property projection before deleting the listing
-  await db
-    .update(properties)
-    .set({
-      status: 'archived' as any,
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(
-      and(
-        eq(properties.sourceListingId, id),
-        isNotNull(properties.sourceListingId),
-      ),
-    );
+  // G-4: soft-archive linked property projection before deleting the listing.
+  // This preserves the public projection for analytics/leads traceability,
+  // though the subsequent listing hard-delete will null out sourceListingId
+  // via FK onDelete: 'set null'. This is the chosen deletion semantics:
+  // the archived property row remains but loses canonical listing linkage.
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
+    await db
+      .update(properties)
+      .set({
+        status: 'archived' as any,
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      })
+      .where(
+        and(
+          eq(properties.sourceListingId, id),
+          isNotNull(properties.sourceListingId),
+        ),
+      );
+  }
 
   // Delete related media first to avoid foreign key constraint errors
   await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
@@ -2878,19 +2895,22 @@ export async function archiveListing(id: number) {
     })
     .where(eq(listings.id, id));
 
-  // G-3: cascade archive to linked property projection
-  await db
-    .update(properties)
-    .set({
-      status: 'archived' as any,
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(
-      and(
-        eq(properties.sourceListingId, id),
-        isNotNull(properties.sourceListingId),
-      ),
-    );
+  // G-3: cascade archive to linked property projection (only when bridge column exists)
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
+    await db
+      .update(properties)
+      .set({
+        status: 'archived' as any,
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      })
+      .where(
+        and(
+          eq(properties.sourceListingId, id),
+          isNotNull(properties.sourceListingId),
+        ),
+      );
+  }
 }
 
 /**

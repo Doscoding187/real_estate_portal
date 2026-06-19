@@ -264,10 +264,33 @@ Each assertion below is backed by a test in `server/__tests__/contract.listing-l
 - The V2 dry-run/readiness helpers (`calculateSubmitReadinessDryRun`) are client-side only and do not call the backend.
 - No V2-specific changes to the listing lifecycle are present in the baseline.
 
-### Phase 3B Recommendation
+### Phase 3B Identity Hardening (applied)
 
-1. Fix G-1 (idempotent approval) and G-5 (state guards) together — they share the same code path in `approveListing()`.
-2. Fix G-2 (sourceListingId lookup) in `syncPublishedListingMediaToPropertyMirror()`.
-3. Fix G-3 (archive cascade) in `archiveListing()`.
-4. Fix G-4 (delete cascade) in `deleteListing()`.
-5. All fixes are server-side `db.ts` changes only, with updated tests. No migrations or schema changes required — the `sourceListingId` column already exists.
+1. **G-1+G-5**: `approveListing()` now upserts by `sourceListingId` (UPDATE if exists, INSERT if not) and rejects already-published listings.
+2. **G-2**: `syncPublishedListingMediaToPropertyMirror()` uses `sourceListingId` as primary identity lookup; legacy fallback only for `sourceListingId IS NULL`; stamps `sourceListingId` on matched legacy records.
+3. **G-3**: `archiveListing()` cascades `properties.status='archived'` by `sourceListingId`.
+4. **G-4**: `deleteListing()` soft-archives the linked property by `sourceListingId` before hard-deleting the listing.
+
+### Phase 3B.1 Bridge Capability Hardening (applied)
+
+All `sourceListingId` queries are guarded behind `getInventoryBridgeSchemaCapabilities(db).propertiesSourceListingIdColumn`:
+- **approveListing**: idempotency upsert only when bridge column exists; falls back to unconditional INSERT.
+- **syncPublishedListingMediaToPropertyMirror**: sourceListingId primary lookup only when bridge column exists; legacy matching without `isNull(sourceListingId)` filter otherwise.
+- **archiveListing** / **deleteListing**: cascade only when bridge column exists.
+
+### Deletion Semantics (explicit)
+
+`deleteListing()` hard-deletes the listing row but soft-archives the linked property projection (`properties.status='archived'`). However, the schema has `properties.sourceListingId ON DELETE SET NULL`, so the final `DELETE FROM listings` nulls out the identity bridge. This is the chosen semantics:
+- The public property row is preserved for historical analytics and lead traceability, but it becomes an orphan (no canonical listing link).
+- This is acceptable for "hard delete" scenarios (admin removal of spam/duplicate listings) but should not be used if full traceability must be preserved.
+- If full lifecycle traceability is required, use `archiveListing()` instead, which keeps the listing row intact.
+
+### Production risk notes
+
+- `getInventoryBridgeSchemaCapabilities()` caches the column-existence check (TTL 300s), so it is safe to call repeatedly within a single request.
+- All `dataListingId` queries use both `eq(sourceListingId, id)` AND `isNotNull(sourceListingId)` to avoid matching rows with `NULL` bridge column references.
+- Legacy fallback paths remain active for records created before the bridge column migration.
+
+### Post-Phase-3B Gaps
+
+All 6 Phase 3A gaps (G-1 through G-6) are now closed. No `.skip` tests remain in the lifecycle contract test suite.
