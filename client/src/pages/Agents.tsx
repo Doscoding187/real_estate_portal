@@ -1,19 +1,17 @@
 // @ts-nocheck
 import { trpc } from '@/lib/trpc';
-import { Navbar } from '@/components/Navbar';
 import { Building2, Phone, Mail } from 'lucide-react';
 import { Link } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { HomeLayout } from '@/layouts/HomeLayout';
 
 export default function Agents() {
   const { data: agents, isLoading } = trpc.agent.list.useQuery();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-
+    <HomeLayout>
       <main className="flex-1">
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0A2540] to-[#0F4C75] text-white py-16">
@@ -132,13 +130,6 @@ export default function Agents() {
           )}
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-[#0A2540] text-white py-8 mt-auto">
-        <div className="container text-center text-sm text-gray-400">
-          © 2025 Real Estate Portal. All rights reserved.
-        </div>
-      </footer>
-    </div>
+    </HomeLayout>
   );
 }

@@ -3,7 +3,6 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { isSuperAdminRole } from '@/_core/roles';
-import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -222,7 +221,6 @@ export default function ListingOversight() {
 
   return (
     <div className="min-h-screen bg-transparent">
-      <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

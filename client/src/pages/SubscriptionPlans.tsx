@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Check, Zap, Crown, Building2, User, Rocket } from 'lucide-react';
-import { Navbar } from '@/components/Navbar';
+import { HomeLayout } from '@/layouts/HomeLayout';
 import type { PlanCategory } from '@/shared/subscription-types';
 
 export default function SubscriptionPlans() {
@@ -54,19 +54,16 @@ export default function SubscriptionPlans() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
+      <HomeLayout>
         <div className="container mx-auto px-4 py-24">
           <div className="text-center">Loading plans...</div>
         </div>
-      </div>
+      </HomeLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
+    <HomeLayout>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-24">
         {/* Header */}
         <div className="text-center mb-12">
@@ -205,6 +202,6 @@ export default function SubscriptionPlans() {
           </div>
         </div>
       </div>
-    </div>
+    </HomeLayout>
   );
 }

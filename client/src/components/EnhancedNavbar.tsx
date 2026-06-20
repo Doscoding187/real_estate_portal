@@ -487,7 +487,6 @@ export function EnhancedNavbar() {
 
   const sellersOptions = [
     { label: 'Agents', href: '/agents' },
-    { label: 'Agencies', href: '/agencies' },
     { label: 'Developers', href: '/developers' },
     { label: 'Property Owner (For sale by owner)', href: '/advertise' },
   ];
@@ -905,13 +904,6 @@ export function EnhancedNavbar() {
                             <Link href="/agents">
                               <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
                                 Find Estate Agents
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/agencies">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
-                                Find Agencies
                               </span>
                             </Link>
                           </li>
