@@ -98,6 +98,7 @@ export const listings = mysqlTable(
     publishedAt: timestamp({ mode: 'string' }),
     archivedAt: timestamp({ mode: 'string' }),
     locationId: int('location_id'),
+    draftData: json('draft_data'),
   },
   table => [
     index('idx_listings_place_id').on(table.placeId),

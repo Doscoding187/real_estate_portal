@@ -57,6 +57,13 @@
       "when": 1773312000000,
       "tag": "0007_30008_add_agent_os_inventory_bridge",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1774022400000,
+      "tag": "0008_30009_add_listings_draft_data",
+      "breakpoints": true
     }
   ]
 }

@@ -142,6 +142,8 @@ Upload flow:
 
 For draft rows that have never been saved, media S3 keys live in Zustand `localStorage` and are uploaded again if the user returns. S3 lifecycle policies handle orphaned uploads (standard practice).
 
+**Phase 3C.1 limitation:** the first backend implementation accepts `mediaIds: string[]` only. Those values are treated as draft image URLs/keys for lightweight persistence and are not a complete media contract. Structured media persistence (`type`, `originalFileName`, `displayOrder`, `isPrimary`, video/floorplan/pdf support, removal reconciliation) must be completed before V2 media draft support is considered production-ready.
+
 ### 2.6 How draft recovery works across devices
 
 **Decision: Server-side draft is authoritative. Client-side `localStorage` is a cache/fallback.**

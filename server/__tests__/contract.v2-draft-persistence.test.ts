@@ -32,6 +32,11 @@ const { mockDb } = vi.hoisted(() => ({
     getAgentByUserId: vi.fn(),
     getUserById: vi.fn(),
     getDb: vi.fn(),
+    // V2 draft persistence (Phase 3C.1)
+    saveDraft: vi.fn(),
+    getDraftById: vi.fn(),
+    getUserDrafts: vi.fn(),
+    deleteDraft: vi.fn(),
   },
 }));
 
@@ -332,45 +337,335 @@ describe('listing.submitForReview path unchanged (characterization)', () => {
 });
 
 // ===========================================================================
-// Schema gap characterization: listings has no draftData column
+// Contract: V2 draft persistence (Phase 3C.1)
+// ===========================================================================
+
+describe('listing.saveDraft (V2 draft persistence)', () => {
+  beforeEach(() => {
+    vi.mocked(mockDb.getAgentByUserId).mockResolvedValue({
+      id: 55,
+      userId: authUser.id,
+      phone: '+27123456789',
+      isVerified: 0,
+    } as any);
+  });
+
+  it('creates a new draft with minimum fields (action + propertyType)', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.saveDraft).mockResolvedValue(3001);
+
+    const result = await caller.listing.saveDraft({
+      action: 'sell',
+      propertyType: 'house',
+    });
+
+    expect(result).toEqual({ id: 3001, success: true });
+    expect(mockDb.saveDraft).toHaveBeenCalledOnce();
+    const payload = vi.mocked(mockDb.saveDraft).mock.calls[0][0];
+    expect(payload.action).toBe('sell');
+    expect(payload.propertyType).toBe('house');
+    expect(payload.userId).toBe(authUser.id);
+  });
+
+  it('creates a new draft with full wizard state in draftData', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.saveDraft).mockResolvedValue(3002);
+
+    const draftData = {
+      currentStep: 2,
+      completedSteps: [1],
+      basicInfo: { depositAmount: 50000 },
+      errors: [],
+      isValid: true,
+    };
+
+    await caller.listing.saveDraft({
+      action: 'rent',
+      propertyType: 'apartment',
+      title: 'Modern City Apartment',
+      draftData,
+    });
+
+    const payload = vi.mocked(mockDb.saveDraft).mock.calls[0][0];
+    expect(payload.draftData).toEqual(draftData);
+    expect(payload.title).toBe('Modern City Apartment');
+  });
+
+  it('updates an existing draft when id is provided', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 3003,
+      ownerId: authUser.id,
+      status: 'draft',
+      action: 'sell',
+      propertyType: 'house',
+    } as any);
+    vi.mocked(mockDb.saveDraft).mockResolvedValue(3003);
+
+    const result = await caller.listing.saveDraft({
+      id: 3003,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Updated Title',
+    });
+
+    expect(result).toEqual({ id: 3003, success: true });
+    expect(mockDb.getDraftById).toHaveBeenCalledWith(3003);
+    const payload = vi.mocked(mockDb.saveDraft).mock.calls[0][0];
+    expect(payload.id).toBe(3003);
+  });
+
+  it('rejects update when draft does not exist', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue(null);
+
+    await expect(
+      caller.listing.saveDraft({ id: 99999, action: 'sell', propertyType: 'house' }),
+    ).rejects.toThrow('Draft not found');
+    expect(mockDb.saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('rejects update when draft status is not draft', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 3004,
+      ownerId: authUser.id,
+      status: 'published',
+    } as any);
+
+    await expect(
+      caller.listing.saveDraft({ id: 3004, action: 'sell', propertyType: 'house' }),
+    ).rejects.toThrow('Only draft listings can be saved as drafts');
+    expect(mockDb.saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('rejects update when user does not own the draft and is not admin', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 3005,
+      ownerId: 999, // different user
+      status: 'draft',
+    } as any);
+
+    await expect(
+      caller.listing.saveDraft({ id: 3005, action: 'sell', propertyType: 'house' }),
+    ).rejects.toThrow('Not authorized to edit this draft');
+    expect(mockDb.saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('allows admin to save another user draft', async () => {
+    const adminUser = { ...authUser, id: 1, role: 'admin' };
+    const caller = makeCaller(adminUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 3006,
+      ownerId: 999,
+      status: 'draft',
+    } as any);
+    vi.mocked(mockDb.saveDraft).mockResolvedValue(3006);
+
+    const result = await caller.listing.saveDraft({
+      id: 3006,
+      action: 'sell',
+      propertyType: 'house',
+    });
+
+    expect(result).toEqual({ id: 3006, success: true });
+    expect(mockDb.saveDraft).toHaveBeenCalled();
+  });
+
+  it('promotes location fields to normalized columns when provided', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.saveDraft).mockResolvedValue(3007);
+
+    await caller.listing.saveDraft({
+      action: 'sell',
+      propertyType: 'house',
+      location: {
+        address: '123 Main St',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        latitude: -33.9249,
+        longitude: 18.4241,
+      },
+    });
+
+    const payload = vi.mocked(mockDb.saveDraft).mock.calls[0][0];
+    expect(payload.address).toBe('123 Main St');
+    expect(payload.city).toBe('Cape Town');
+    expect(payload.latitude).toBe(-33.9249);
+  });
+
+  it('does not call approval/publishing logic', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.saveDraft).mockResolvedValue(3008);
+
+    await caller.listing.saveDraft({
+      action: 'sell',
+      propertyType: 'house',
+    });
+
+    expect(mockDb.approveListing).not.toHaveBeenCalled();
+    expect(mockDb.submitListingForReview).not.toHaveBeenCalled();
+    expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
+  });
+});
+
+describe('listing.getDraft (V2 draft persistence)', () => {
+  it('returns a single draft by id', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 4001,
+      ownerId: authUser.id,
+      status: 'draft',
+      action: 'sell',
+      propertyType: 'house',
+      draftData: { currentStep: 3, errors: [], isValid: true },
+    } as any);
+
+    const result = await caller.listing.getDraft({ id: 4001 });
+
+    expect(result.id).toBe(4001);
+    expect(result.draftData).toEqual({ currentStep: 3, errors: [], isValid: true });
+  });
+
+  it('returns 404 for non-existent draft', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue(null);
+
+    await expect(caller.listing.getDraft({ id: 99999 })).rejects.toThrow('Draft not found');
+  });
+
+  it('returns forbidden for other user draft', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 4002,
+      ownerId: 999,
+      status: 'draft',
+    } as any);
+
+    await expect(caller.listing.getDraft({ id: 4002 })).rejects.toThrow('Not authorized');
+  });
+
+  it('rejects non-draft listings', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 4003,
+      ownerId: authUser.id,
+      status: 'published',
+    } as any);
+
+    await expect(caller.listing.getDraft({ id: 4003 })).rejects.toThrow(
+      'Only draft listings can be loaded as drafts',
+    );
+  });
+});
+
+describe('listing.getDrafts (V2 draft persistence)', () => {
+  it('returns all drafts for authenticated user', async () => {
+    const caller = makeCaller(authUser);
+    const mockDrafts = [
+      { id: 5001, title: 'Draft 1', action: 'sell', propertyType: 'house', status: 'draft', slug: 'draft-1', draftData: null, createdAt: '2026-01-01', updatedAt: '2026-01-02' },
+      { id: 5002, title: 'Draft 2', action: 'rent', propertyType: 'apartment', status: 'draft', slug: 'draft-2', draftData: null, createdAt: '2026-01-03', updatedAt: '2026-01-04' },
+    ];
+    vi.mocked(mockDb.getUserDrafts).mockResolvedValue(mockDrafts as any);
+
+    const result = await caller.listing.getDrafts();
+
+    expect(result).toHaveLength(2);
+    expect(mockDb.getUserDrafts).toHaveBeenCalledWith(authUser.id);
+  });
+
+  it('returns empty array when user has no drafts', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getUserDrafts).mockResolvedValue([]);
+
+    const result = await caller.listing.getDrafts();
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('listing.deleteDraft (V2 draft persistence)', () => {
+  it('deletes a draft by id', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 6001,
+      ownerId: authUser.id,
+      status: 'draft',
+    } as any);
+    vi.mocked(mockDb.deleteDraft).mockResolvedValue(undefined);
+
+    const result = await caller.listing.deleteDraft({ id: 6001 });
+
+    expect(result).toEqual({ success: true });
+    expect(mockDb.deleteDraft).toHaveBeenCalledWith(6001);
+  });
+
+  it('rejects delete for non-existent draft', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue(null);
+
+    await expect(caller.listing.deleteDraft({ id: 99999 })).rejects.toThrow('Draft not found');
+    expect(mockDb.deleteDraft).not.toHaveBeenCalled();
+  });
+
+  it('rejects delete for published listing', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 6002,
+      ownerId: authUser.id,
+      status: 'published',
+    } as any);
+
+    await expect(caller.listing.deleteDraft({ id: 6002 })).rejects.toThrow(
+      'Only draft listings can be deleted as drafts',
+    );
+    expect(mockDb.deleteDraft).not.toHaveBeenCalled();
+  });
+
+  it('rejects delete when user does not own the draft', async () => {
+    const caller = makeCaller(authUser);
+    vi.mocked(mockDb.getDraftById).mockResolvedValue({
+      id: 6003,
+      ownerId: 999,
+      status: 'draft',
+    } as any);
+
+    await expect(caller.listing.deleteDraft({ id: 6003 })).rejects.toThrow('Not authorized');
+    expect(mockDb.deleteDraft).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// Schema gap characterization: listings.draftData now exists
 // ===========================================================================
 //
-// Phase 3C.0 originally assumed listings.draftData already existed. It does
-// NOT. These tests document the gap so Phase 3C.1 must include a migration.
-//
-// Decision: Option B (schema change required) — add listings.draftData via
-// migration. Do NOT store V2 wizard state inside existing listings.propertyDetails.
-// Reason: propertyDetails is for property facts (bedrooms, bathrooms, etc.),
-// not for wizard UI state (currentStep, completedSteps, errors, isValid).
-// Mixing concerns corrupts the property details query path.
+// Phase 3C.0 corrected: listings.draftData JSON column was added via
+// migration 0008_30009_add_listings_draft_data.sql. These tests document
+// that the column now exists and is distinct from propertyDetails.
 
-describe('listings schema has no draftData column (characterization)', () => {
-  // JSON columns that exist on the `listings` table itself
-  // (viewsByDay/trafficSources are on listingAnalytics;
-  //  complianceChecks is on listingApprovalQueue — separate tables)
-  const JSON_COLUMNS_IN_LISTINGS = [
-    'propertyDetails',
-    'qualityBreakdown',
-    'rejectionReasons',
-  ];
-
-  it('listings table has known JSON columns but NOT draftData', () => {
-    // Pull column names from the Drizzle table definition
+describe('listings.draftData column exists (characterization)', () => {
+  it('listings table now has draftData column', () => {
     const columnEntries = Object.entries(listings).filter(
       ([key, val]) => val && typeof val === 'object' && 'name' in (val as any),
     );
     const columnNames = columnEntries.map(([key]) => key);
 
-    // Every known JSON column must be present
-    for (const col of JSON_COLUMNS_IN_LISTINGS) {
-      expect(columnNames).toContain(col);
-    }
-
-    // draftData must NOT be on the listings table
-    expect(columnNames).not.toContain('draftData');
+    expect(columnNames).toContain('draftData');
   });
 
-  it('developmentDrafts table DOES have draftData column', () => {
+  it('draftData is separate from propertyDetails', () => {
+    // propertyDetails: for property facts (bedrooms, bathrooms, etc.)
+    // draftData: for V2 wizard session state (currentStep, completedSteps,
+    //   errors, isValid, basicInfo overflow, partial pricing)
+    const pdCol = (listings as any).propertyDetails;
+    const ddCol = (listings as any).draftData;
+    expect(pdCol).toBeDefined();
+    expect(ddCol).toBeDefined();
+    expect(pdCol).not.toBe(ddCol);
+  });
+
+  it('developmentDrafts table continues to have its own draftData column', () => {
     const columnEntries = Object.entries(developmentDrafts).filter(
       ([key, val]) => val && typeof val === 'object' && 'name' in (val as any),
     );
@@ -379,30 +674,11 @@ describe('listings schema has no draftData column (characterization)', () => {
     expect(columnNames).toContain('draftData');
   });
 
-  it('confirming no overlap: existing listings JSON columns serve property/admin purposes, not wizard state', () => {
-    // propertyDetails stores property facts (bedrooms, bathrooms, etc.)
-    // qualityBreakdown stores quality analysis results
-    // rejectionReasons stores admin rejection data
-    //
-    // None of these were designed for wizard session state (currentStep,
-    // completedSteps, errors, isValid, basicInfo overflow, partial pricing).
-    // This is why Option B (new draftData column) is the correct decision.
-    expect(JSON_COLUMNS_IN_LISTINGS).not.toContain('draftData');
-  });
-
-  it('listing.propertyDetails is unrelated to wizard draft state', () => {
-    // propertyDetails is for property facts that V1 requires before submission.
-    // Using it for V2 wizard state would create an ownership collision:
-    //   - During draft editing: propertyDetails = wizard UI state
-    //   - During submission: propertyDetails = property facts
-    //   - On resume: ambiguous which is which
-    // This test exists to prevent future temptation to reuse propertyDetails
-    // as a draftData substitute.
-    const pdCol = (listings as any).propertyDetails;
-    expect(pdCol).toBeDefined();
-    // propertyDetails is not nullable in the schema — it's `json()` without
-    // `.default()` or `.notNull()`, meaning it defaults to NULL at the DB level
-    // but Drizzle will not auto-populate it. This further confirms it's not
-    // a draft store.
+  it('draftData column name in DB is draft_data', () => {
+    const ddCol = (listings as any).draftData;
+    expect(ddCol).toBeDefined();
+    // Drizzle maps `draftData: json('draft_data')` so the DB column name
+    // is draft_data, and the JS property is draftData
+    expect(ddCol.name).toBe('draft_data');
   });
 });

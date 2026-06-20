@@ -128,6 +128,55 @@ const createListingSchema = z.object({
   status: z.enum(['draft', 'pending_review']).optional(),
 });
 
+// ── Schemas for V2 draft persistence (Phase 3C.1) ──
+
+const saveDraftSchema = z.object({
+  id: z.number().optional(),
+  action: listingActionSchema,
+  propertyType: propertyTypeSchema,
+  title: z.string().max(255).optional(),
+  description: z.string().max(5000).optional(),
+  pricing: z
+    .object({
+      askingPrice: z.number().optional(),
+      negotiable: z.boolean().optional(),
+      monthlyRent: z.number().optional(),
+      deposit: z.number().optional(),
+      leaseTerms: z.string().optional(),
+      availableFrom: z.string().optional(),
+      utilitiesIncluded: z.boolean().optional(),
+      startingBid: z.number().optional(),
+      reservePrice: z.number().optional(),
+      auctionDateTime: z.string().optional(),
+      auctionTermsDocumentUrl: z.string().optional(),
+    })
+    .optional(),
+  propertyDetails: z.record(z.string(), z.any()).optional(),
+  location: z
+    .object({
+      address: z.string().optional(),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+      city: z.string().optional(),
+      suburb: z.string().optional(),
+      province: z.string().optional(),
+      postalCode: z.string().optional(),
+      placeId: z.string().optional(),
+    })
+    .optional(),
+  mediaIds: z.array(z.string()).optional(),
+  mainMediaId: z.string().optional().nullable(),
+  draftData: z.record(z.string(), z.any()).optional(),
+});
+
+const getDraftSchema = z.object({
+  id: z.number(),
+});
+
+const deleteDraftSchema = z.object({
+  id: z.number(),
+});
+
 export const listingRouter = router({
   /**
    * Create new listing
@@ -1136,6 +1185,174 @@ export const listingRouter = router({
         });
       }
     }),
+
+  // =====================================================================
+  // V2 Draft persistence (Phase 3C.1)
+  // =====================================================================
+
+  /**
+   * Save a V2 wizard draft — creates or updates a draft listing.
+   *
+   * Creates when `id` is omitted (minimum: action + propertyType).
+   * Updates when `id` is provided (only if status='draft' and owned by user).
+   *
+   * Does NOT call approval, publishing, submitForReview, or property mirror sync.
+   */
+  saveDraft: protectedProcedure.input(saveDraftSchema).mutation(async ({ ctx, input }) => {
+    const user = requireUser(ctx);
+
+    try {
+      // Look up agent profile for the user
+      const agent = await db.getAgentByUserId(user.id);
+      const agentId = agent ? agent.id : null;
+
+      // If updating, verify ownership and draft status
+      if (input.id) {
+        const existing = await db.getDraftById(input.id);
+        if (!existing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
+        }
+        if (existing.status !== 'draft') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Only draft listings can be saved as drafts',
+          });
+        }
+        // Ownership check (admin/super_admin can edit any draft)
+        if (existing.ownerId !== user.id && user.role !== 'admin' && user.role !== 'super_admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to edit this draft' });
+        }
+      }
+
+      // Build the save payload
+      const draftPayload: Parameters<typeof db.saveDraft>[0] = {
+        id: input.id,
+        userId: user.id,
+        agentId: agentId ?? undefined,
+        action: input.action,
+        propertyType: input.propertyType,
+        title: input.title,
+        description: input.description,
+        draftData: input.draftData as Record<string, unknown> | undefined,
+        pricing: input.pricing as Record<string, unknown> | undefined,
+        propertyDetails: input.propertyDetails as Record<string, unknown> | undefined,
+        mediaIds: input.mediaIds,
+        mainMediaId: input.mainMediaId ? Number(input.mainMediaId) : undefined,
+      };
+
+      // Promote location fields to normalized columns if provided
+      if (input.location) {
+        draftPayload.address = input.location.address;
+        draftPayload.latitude = input.location.latitude;
+        draftPayload.longitude = input.location.longitude;
+        draftPayload.city = input.location.city;
+        draftPayload.suburb = input.location.suburb;
+        draftPayload.province = input.location.province;
+        draftPayload.postalCode = input.location.postalCode;
+        draftPayload.placeId = input.location.placeId;
+      }
+
+      const listingId = await db.saveDraft(draftPayload);
+
+      return { id: listingId, success: true };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[saveDraft] Error:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to save draft',
+      });
+    }
+  }),
+
+  /**
+   * Get a single V2 draft by ID.
+   * Returns the listing row with draftData JSON.
+   */
+  getDraft: protectedProcedure.input(getDraftSchema).query(async ({ ctx, input }) => {
+    const user = requireUser(ctx);
+
+    try {
+      const draft = await db.getDraftById(input.id);
+      if (!draft) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
+      }
+      if (draft.status !== 'draft') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only draft listings can be loaded as drafts',
+        });
+      }
+      if (draft.ownerId !== user.id && user.role !== 'admin' && user.role !== 'super_admin') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to view this draft' });
+      }
+
+      return {
+        ...draft,
+        draftData: draft.draftData,
+      };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[getDraft] Error:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get draft',
+      });
+    }
+  }),
+
+  /**
+   * List the authenticated user's drafts (status = 'draft').
+   */
+  getDrafts: protectedProcedure.query(async ({ ctx }) => {
+    const user = requireUser(ctx);
+
+    try {
+      const drafts = await db.getUserDrafts(user.id);
+      return drafts;
+    } catch (error) {
+      console.error('[getDrafts] Error:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to get drafts',
+      });
+    }
+  }),
+
+  /**
+   * Delete a V2 draft listing.
+   * Only works for status='draft'. User must own the draft (or be admin/super_admin).
+   */
+  deleteDraft: protectedProcedure.input(deleteDraftSchema).mutation(async ({ ctx, input }) => {
+    const user = requireUser(ctx);
+
+    try {
+      const draft = await db.getDraftById(input.id);
+      if (!draft) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
+      }
+      if (draft.status !== 'draft') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only draft listings can be deleted as drafts',
+        });
+      }
+      if (draft.ownerId !== user.id && user.role !== 'admin' && user.role !== 'super_admin') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Not authorized to delete this draft' });
+      }
+
+      await db.deleteDraft(input.id);
+
+      return { success: true };
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      console.error('[deleteDraft] Error:', error);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to delete draft',
+      });
+    }
+  }),
 });
 
 // Export type router type signature

@@ -2881,6 +2881,293 @@ export async function deleteListing(id: number) {
   await db.delete(listings).where(eq(listings.id, id));
 }
 
+// =========================================================================
+// V2 Draft persistence
+// =========================================================================
+
+/**
+ * Save a V2 wizard draft — creates or updates a draft listing row.
+ *
+ * When `id` is omitted a new row is created (status='draft').
+ * When `id` is provided the existing draft is updated (only if status='draft').
+ *
+ * Stores the full wizard snapshot in `draftData` JSON and promotes known
+ * top-level fields to normalized columns when provided.
+ *
+ * Does NOT call approval, publishing, submitForReview, or property mirror sync.
+ */
+export async function saveDraft(data: {
+  id?: number;
+  userId: number;
+  agentId?: number | null;
+  action: string;
+  propertyType: string;
+  title?: string;
+  description?: string;
+  slug?: string;
+  draftData?: Record<string, unknown>;
+  pricing?: Record<string, unknown>;
+  propertyDetails?: Record<string, unknown>;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  suburb?: string;
+  province?: string;
+  postalCode?: string;
+  placeId?: string;
+  mainMediaId?: number | null;
+  mediaIds?: string[];
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  try {
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    if (data.id) {
+      // ── Update existing draft ──
+      const [existing] = await db
+        .select({ id: listings.id, status: listings.status, ownerId: listings.ownerId })
+        .from(listings)
+        .where(eq(listings.id, data.id))
+        .limit(1);
+
+      if (!existing) {
+        throw new Error('Draft not found');
+      }
+      if (existing.status !== 'draft') {
+        throw new Error('Only draft listings can be saved as drafts');
+      }
+
+      const updateFields: Record<string, unknown> = {
+        updatedAt: now,
+      };
+
+      if (data.title !== undefined) updateFields.title = data.title;
+      if (data.description !== undefined) updateFields.description = data.description;
+      if (data.action !== undefined) updateFields.action = data.action;
+      if (data.propertyType !== undefined) updateFields.propertyType = data.propertyType;
+      if (data.address !== undefined) updateFields.address = data.address;
+      if (data.latitude !== undefined) updateFields.latitude = Number(data.latitude).toFixed(7);
+      if (data.longitude !== undefined) updateFields.longitude = Number(data.longitude).toFixed(7);
+      if (data.city !== undefined) updateFields.city = data.city;
+      if (data.suburb !== undefined) updateFields.suburb = data.suburb;
+      if (data.province !== undefined) updateFields.province = data.province;
+      if (data.postalCode !== undefined) updateFields.postalCode = data.postalCode;
+      if (data.placeId !== undefined) updateFields.placeId = data.placeId;
+      if (data.mainMediaId !== undefined) updateFields.mainMediaId = data.mainMediaId;
+      if (data.propertyDetails !== undefined) updateFields.propertyDetails = data.propertyDetails;
+      if (data.draftData !== undefined) updateFields.draftData = data.draftData;
+      if (data.slug !== undefined) updateFields.slug = data.slug;
+
+      if (data.pricing) {
+        const p = data.pricing as Record<string, unknown>;
+        if (p.askingPrice !== undefined)
+          updateFields.askingPrice = p.askingPrice ? String(p.askingPrice) : null;
+        if (p.negotiable !== undefined) updateFields.negotiable = p.negotiable ? 1 : 0;
+        if (p.monthlyRent !== undefined)
+          updateFields.monthlyRent = p.monthlyRent ? String(p.monthlyRent) : null;
+        if (p.deposit !== undefined) updateFields.deposit = p.deposit ? String(p.deposit) : null;
+        if (p.leaseTerms !== undefined) updateFields.leaseTerms = p.leaseTerms;
+        if (p.availableFrom !== undefined)
+          updateFields.availableFrom = p.availableFrom
+            ? new Date(p.availableFrom as string).toISOString().slice(0, 19).replace('T', ' ')
+            : null;
+        if (p.startingBid !== undefined)
+          updateFields.startingBid = p.startingBid ? String(p.startingBid) : null;
+        if (p.reservePrice !== undefined)
+          updateFields.reservePrice = p.reservePrice ? String(p.reservePrice) : null;
+      }
+
+      await db.update(listings).set(updateFields).where(eq(listings.id, data.id));
+
+      // Handle media if provided
+      if (data.mediaIds && data.mediaIds.length > 0) {
+        for (const mediaId of data.mediaIds) {
+          const mediaExists = await db
+            .select({ id: listingMedia.id })
+            .from(listingMedia)
+            .where(
+              and(eq(listingMedia.listingId, data.id), eq(listingMedia.originalUrl, mediaId)),
+            )
+            .limit(1);
+          if (mediaExists.length === 0) {
+            await db.insert(listingMedia).values({
+              listingId: data.id,
+              mediaType: 'image',
+              originalUrl: mediaId,
+              displayOrder: 0,
+              isPrimary: data.mainMediaId ? mediaId === String(data.mainMediaId) : false,
+              processingStatus: 'completed',
+              createdAt: now,
+              uploadedAt: now,
+            });
+          }
+        }
+      }
+
+      return data.id;
+    } else {
+      // ── Create new draft ──
+      const slug =
+        data.slug ||
+        (data.title
+          ? data.title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-+|-+$/g, '') +
+            '-' +
+            Date.now().toString(36)
+          : `draft-${Date.now().toString(36)}`);
+
+      const insertValues: Record<string, unknown> = {
+        ownerId: data.userId,
+        agentId: data.agentId ?? null,
+        action: data.action,
+        propertyType: data.propertyType,
+        title: data.title || '',
+        description: data.description || '',
+        address: data.address || '',
+        latitude: data.latitude ? Number(data.latitude).toFixed(7) : 0,
+        longitude: data.longitude ? Number(data.longitude).toFixed(7) : 0,
+        city: data.city || '',
+        province: data.province || '',
+        slug,
+        status: 'draft',
+        approvalStatus: 'pending',
+        createdAt: now,
+        updatedAt: now,
+        draftData: data.draftData || null,
+      };
+
+      if (data.suburb) insertValues.suburb = data.suburb;
+      if (data.postalCode) insertValues.postalCode = data.postalCode;
+      if (data.placeId) insertValues.placeId = data.placeId;
+      if (data.mainMediaId !== undefined) insertValues.mainMediaId = data.mainMediaId;
+      if (data.propertyDetails) insertValues.propertyDetails = data.propertyDetails;
+
+      if (data.pricing) {
+        const p = data.pricing as Record<string, unknown>;
+        if (p.askingPrice) insertValues.askingPrice = String(p.askingPrice);
+        if (p.negotiable) insertValues.negotiable = 1;
+        if (p.monthlyRent) insertValues.monthlyRent = String(p.monthlyRent);
+        if (p.deposit) insertValues.deposit = String(p.deposit);
+        if (p.leaseTerms) insertValues.leaseTerms = p.leaseTerms as string;
+        if (p.startingBid) insertValues.startingBid = String(p.startingBid);
+        if (p.reservePrice) insertValues.reservePrice = String(p.reservePrice);
+      }
+
+      const [result] = await db.insert(listings).values(insertValues);
+      const listingId = Number(result.insertId);
+
+      // Handle media if provided
+      if (data.mediaIds && data.mediaIds.length > 0) {
+        for (const mediaId of data.mediaIds) {
+          await db.insert(listingMedia).values({
+            listingId,
+            mediaType: 'image',
+            originalUrl: mediaId,
+            displayOrder: 0,
+            isPrimary: data.mainMediaId ? mediaId === String(data.mainMediaId) : false,
+            processingStatus: 'completed',
+            createdAt: now,
+            uploadedAt: now,
+          });
+        }
+      }
+
+      return listingId;
+    }
+  } catch (error) {
+    console.error('[db.saveDraft] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get a single draft by ID.
+ * Returns the listing row with draftData JSON parsed.
+ */
+export async function getDraftById(listingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [listing] = await db
+    .select()
+    .from(listings)
+    .where(eq(listings.id, listingId))
+    .limit(1);
+
+  if (!listing) return null;
+
+  return {
+    ...listing,
+    draftData: listing.draftData || null,
+  };
+}
+
+/**
+ * Get all drafts belonging to a user (status = 'draft').
+ */
+export async function getUserDrafts(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const rows = await db
+    .select({
+      id: listings.id,
+      title: listings.title,
+      action: listings.action,
+      propertyType: listings.propertyType,
+      status: listings.status,
+      slug: listings.slug,
+      draftData: listings.draftData,
+      createdAt: listings.createdAt,
+      updatedAt: listings.updatedAt,
+    })
+    .from(listings)
+    .where(and(eq(listings.ownerId, userId), eq(listings.status, 'draft' as any)))
+    .orderBy(desc(listings.updatedAt));
+
+  return rows;
+}
+
+/**
+ * Delete a draft listing and its related media.
+ * Only works for listings with status = 'draft'.
+ */
+export async function deleteDraft(listingId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [listing] = await db
+    .select({ id: listings.id, status: listings.status })
+    .from(listings)
+    .where(eq(listings.id, listingId))
+    .limit(1);
+
+  if (!listing) {
+    throw new Error('Draft not found');
+  }
+  if (listing.status !== 'draft') {
+    throw new Error('Only draft listings can be deleted as drafts');
+  }
+
+  // Delete related media first
+  await db.delete(listingMedia).where(eq(listingMedia.listingId, listingId));
+  // Delete from approval queue if exists
+  await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, listingId));
+  // Delete analytics
+  await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, listingId));
+  // Delete leads
+  await db.delete(listingLeads).where(eq(listingLeads.listingId, listingId));
+  // Delete viewings
+  await db.delete(listingViewings).where(eq(listingViewings.listingId, listingId));
+  // Now delete the listing
+  await db.delete(listings).where(eq(listings.id, listingId));
+}
+
 /**
  * Archive listing (Soft Delete)
  */
