@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { HomeLayout } from '@/layouts/HomeLayout';
 import {
   Award,
   Building2,
@@ -114,9 +114,7 @@ export default function AgentMicrosite() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-
+    <HomeLayout>
       <main className="flex-1">
         {profileQuery.isLoading ? (
           <div className="container py-24 text-center">
@@ -370,12 +368,6 @@ export default function AgentMicrosite() {
           </>
         )}
       </main>
-
-      <footer className="bg-[#0A2540] text-white py-8 mt-auto">
-        <div className="container text-center text-sm text-gray-400">
-          © 2025 Real Estate Portal. All rights reserved.
-        </div>
-      </footer>
-    </div>
+    </HomeLayout>
   );
 }

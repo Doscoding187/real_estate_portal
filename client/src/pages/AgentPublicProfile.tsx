@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Navbar } from '@/components/Navbar';
 import { Building2 } from 'lucide-react';
+import { HomeLayout } from '@/layouts/HomeLayout';
 
 export default function AgentPublicProfile() {
   const [, params] = useRoute('/agent/profile/:agentId');
@@ -24,8 +24,7 @@ export default function AgentPublicProfile() {
   }, [routeQuery.data?.slug, setLocation]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
+    <HomeLayout>
       <main className="flex-1 flex items-center justify-center">
         {routeQuery.isLoading ? (
           <div className="text-center">
@@ -46,11 +45,6 @@ export default function AgentPublicProfile() {
           </div>
         )}
       </main>
-      <footer className="bg-[#0A2540] text-white py-8 mt-auto">
-        <div className="container text-center text-sm text-gray-400">
-          © 2025 Real Estate Portal. All rights reserved.
-        </div>
-      </footer>
-    </div>
+    </HomeLayout>
   );
 }

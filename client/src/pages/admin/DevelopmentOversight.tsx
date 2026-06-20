@@ -4,7 +4,6 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { isSuperAdminRole } from '@/_core/roles';
-import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlassCard } from '@/components/ui/glass-card';

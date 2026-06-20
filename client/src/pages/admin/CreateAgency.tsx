@@ -18,7 +18,6 @@ import {
   FormMessage,
   FormDescription,
 } from '@/components/ui/form';
-import { Navbar } from '@/components/Navbar';
 import { Building2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { isSuperAdminRole } from '@/_core/roles';
@@ -103,7 +102,6 @@ export default function CreateAgency() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Header */}
         <div className="mb-8">

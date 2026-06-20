@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { trpc } from '@/lib/trpc';
-import { Navbar } from '@/components/Navbar';
 import {
   Building2,
   MapPin,
@@ -15,7 +14,7 @@ import { useRoute } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-// PropertyCard import removed - not needed for agent detail page
+import { HomeLayout } from '@/layouts/HomeLayout';
 import { useState } from 'react';
 import {
   Dialog,
@@ -69,19 +68,17 @@ export default function AgentDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
+      <HomeLayout>
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0F4C75]"></div>
         </div>
-      </div>
+      </HomeLayout>
     );
   }
 
   if (!agent) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
+      <HomeLayout>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <Building2 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -89,14 +86,12 @@ export default function AgentDetail() {
             <p className="text-muted-foreground">The agent you're looking for doesn't exist.</p>
           </div>
         </div>
-      </div>
+      </HomeLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-
+    <HomeLayout>
       <main className="flex-1">
         {/* Agent Header */}
         <div className="bg-gradient-to-r from-[#0A2540] to-[#0F4C75] text-white py-12">
@@ -354,13 +349,6 @@ export default function AgentDetail() {
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Footer */}
-      <footer className="bg-[#0A2540] text-white py-8 mt-auto">
-        <div className="container text-center text-sm text-gray-400">
-          © 2025 Real Estate Portal. All rights reserved.
-        </div>
-      </footer>
-    </div>
+    </HomeLayout>
   );
 }

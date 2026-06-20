@@ -58,7 +58,6 @@ export function ModernFooter() {
       icon: Building2,
       links: [
         { label: 'Find Estate Agents', href: '/agents' },
-        { label: 'Find Agencies', href: '/agencies' },
         { label: 'Property Valuation', href: '#' },
         { label: 'Home Loans', href: '#' },
         { label: 'Property Insurance', href: '#' },
