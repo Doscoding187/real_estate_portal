@@ -45,4 +45,31 @@ test.describe('Listing Wizard V2 Smoke Test', () => {
     const heading = page.locator('h1, h2, h3').filter({ hasText: /Listing Action|Create New Listing/ }).first();
     await expect(heading).toBeVisible();
   });
+
+  test('V2 save draft button is visible when flag is on', async ({ page }) => {
+    test.skip(
+      process.env.VITE_LISTING_WIZARD_V2_ENABLED !== 'true',
+      'Flag is OFF — this test only applies when the flag is ON.',
+    );
+
+    await page.goto('/listings/create-v2');
+
+    // Save Draft button must be present in the header
+    const saveBtn = page.getByText('Save Draft');
+    await expect(saveBtn).toBeVisible({ timeout: 10000 });
+  });
+
+  test('V2 draft resume by URL shows loading state', async ({ page }) => {
+    test.skip(
+      process.env.VITE_LISTING_WIZARD_V2_ENABLED !== 'true',
+      'Flag is OFF — this test only applies when the flag is ON.',
+    );
+
+    // Navigating to a non-existent draftId should show error state
+    await page.goto('/listings/create-v2?draftId=999999');
+
+    // Should show error message, not crash
+    const errorMsg = page.getByText('Could not load draft');
+    await expect(errorMsg).toBeVisible({ timeout: 15000 });
+  });
 });

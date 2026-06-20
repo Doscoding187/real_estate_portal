@@ -11,6 +11,9 @@ interface ListingWizardHeaderProps {
   saveStatus?: 'saved' | 'saving' | 'error' | 'idle';
   lastSavedAt?: Date | null;
   workflowTitle?: string;
+  onSaveDraft?: () => void;
+  isSaving?: boolean;
+  canSaveDraft?: boolean;
 }
 
 export function ListingWizardHeader({
@@ -22,6 +25,9 @@ export function ListingWizardHeader({
   saveStatus = 'idle',
   lastSavedAt,
   workflowTitle,
+  onSaveDraft,
+  isSaving = false,
+  canSaveDraft = true,
 }: ListingWizardHeaderProps) {
   return (
     <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
@@ -46,7 +52,25 @@ export function ListingWizardHeader({
             )}
           </div>
 
-          <SaveStatusBadge status={saveStatus} lastSavedAt={lastSavedAt} />
+          <div className="flex items-center gap-3">
+            {onSaveDraft && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSaveDraft}
+                disabled={isSaving || !canSaveDraft}
+                className="text-slate-600 border-slate-300 hover:bg-slate-50"
+              >
+                {isSaving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                ) : (
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                )}
+                {isSaving ? 'Saving…' : 'Save Draft'}
+              </Button>
+            )}
+            <SaveStatusBadge status={saveStatus} lastSavedAt={lastSavedAt} />
+          </div>
         </div>
 
         <div className="mb-3">

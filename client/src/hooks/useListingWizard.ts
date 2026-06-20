@@ -79,9 +79,14 @@ interface ListingWizardStore extends ListingWizardState {
 
   // Load existing listing
   loadListing: (listingId: number) => Promise<void>;
+
+  // V2 draft persistence (Phase 3D) — pure state, no tRPC
+  serverDraftId: number | null;
+  setServerDraftId: (id: number | null) => void;
+  hydrateFromDraft: (state: Record<string, unknown>) => void;
 }
 
-const initialState: ListingWizardState = {
+const initialState: ListingWizardState & { serverDraftId: number | null } = {
   currentStep: 1,
   completedSteps: [],
   title: '',
@@ -91,6 +96,7 @@ const initialState: ListingWizardState = {
   errors: [],
   isValid: false,
   status: 'draft',
+  serverDraftId: null,
 };
 
 export const useListingWizardStore = create<ListingWizardStore>()(
@@ -400,11 +406,30 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           console.error('Error loading listing:', error);
         }
       },
+
+      // V2 draft persistence — pure state setters (no tRPC)
+      setServerDraftId: id => {
+        set({ serverDraftId: id });
+      },
+
+      hydrateFromDraft: (hydratedState: Record<string, unknown>) => {
+        const patch: Record<string, unknown> = {};
+        const allowed = [
+          'title', 'description', 'pricing', 'propertyDetails', 'location',
+          'media', 'mainMediaId', 'displayMediaType', 'badges',
+          'basicInfo', 'additionalInfo', 'currentStep', 'completedSteps',
+        ];
+        for (const key of allowed) {
+          if (hydratedState[key] !== undefined) {
+            patch[key] = hydratedState[key];
+          }
+        }
+        set(patch as Partial<ListingWizardState>);
+      },
     }),
     {
       name: 'listing-wizard-storage',
       partialize: state => ({
-        // Only persist certain fields
         action: state.action,
         propertyType: state.propertyType,
         title: state.title,
@@ -418,8 +443,9 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         additionalInfo: state.additionalInfo,
         currentStep: state.currentStep,
         completedSteps: state.completedSteps,
-        displayMediaType: state.displayMediaType, // Add this line
-        mainMediaId: state.mainMediaId, // Add this line to persist mainMediaId
+        displayMediaType: state.displayMediaType,
+        mainMediaId: state.mainMediaId,
+        serverDraftId: state.serverDraftId,
       }),
     },
   ),

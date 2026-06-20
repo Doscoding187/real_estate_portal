@@ -78,10 +78,16 @@ const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
 export interface ListingWizardEngineProps {
   onExit?: () => void;
+  onSaveDraft?: () => void;
+  isSaving?: boolean;
+  canSaveDraft?: boolean;
 }
 
 export function ListingWizardEngine({
   onExit,
+  onSaveDraft,
+  isSaving,
+  canSaveDraft,
 }: ListingWizardEngineProps) {
   const {
     workflow,
@@ -109,6 +115,9 @@ export function ListingWizardEngine({
           showExit={!!onExit}
           saveStatus={saveStatus}
           lastSavedAt={lastSavedAt}
+          onSaveDraft={onSaveDraft}
+          isSaving={isSaving}
+          canSaveDraft={canSaveDraft}
         />
         <main className="flex-1 py-8 px-4">
           <div className="max-w-5xl mx-auto">
@@ -150,6 +159,9 @@ export function ListingWizardEngine({
         saveStatus={saveStatus}
         lastSavedAt={lastSavedAt}
         workflowTitle={workflow.title}
+        onSaveDraft={onSaveDraft}
+        isSaving={isSaving}
+        canSaveDraft={canSaveDraft}
       />
 
       <main className="flex-1 py-8 px-4">
