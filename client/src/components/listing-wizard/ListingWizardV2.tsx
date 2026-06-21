@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 import { ListingWizardProvider } from './contexts/ListingWizardContext';
+import { useListingWizardContext } from './contexts/ListingWizardContext';
 import { ListingWizardEngine } from './ListingWizardEngine';
 import { useLocation } from 'wouter';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
@@ -12,6 +13,7 @@ import { hydrateStateFromDraftResponse } from '@/lib/workflows/listing/listingDr
 function ListingWizardInner() {
   const [, setLocation] = useLocation();
   const store = useListingWizardStore();
+  const ctx = useListingWizardContext();
   const canSaveDraft = Boolean(store.action && store.propertyType);
 
   // Read draftId from URL query param for resume
@@ -22,10 +24,19 @@ function ListingWizardInner() {
   const draftIdParam = searchParams.get('draftId');
   const draftId = draftIdParam ? Number(draftIdParam) : null;
 
-  const { manualSave, isSaving } = useListingDraftPersistence();
+  const { manualSave, isSaving, saveStatus, lastSavedAt } = useListingDraftPersistence();
   const { draft, isLoading: isResuming, isError: resumeError } = useResumeDraft(
     draftId && draftId > 0 ? draftId : null,
   );
+
+  // Sync hook save status to context for SaveStatusBadge rendering
+  useEffect(() => {
+    ctx.setSaveStatus(saveStatus);
+  }, [saveStatus, ctx.setSaveStatus]);
+
+  useEffect(() => {
+    ctx.setLastSavedAt(lastSavedAt);
+  }, [lastSavedAt, ctx.setLastSavedAt]);
 
   // Hydrate store when draft is loaded from server
   useEffect(() => {

@@ -5,11 +5,15 @@
  * It does NOT live in the Zustand store — the store remains pure.
  *
  * Exposes:
- *   manualSave()     — save current wizard state as a draft
- *   isSaving         — in-progress mutation flag
- *   saveError        — last mutation error (cleared on next save)
+ *   manualSave()  — save current wizard state as a draft
+ *   isSaving      — in-progress mutation flag
+ *   saveStatus    — derived from mutation lifecycle: idle | saving | saved | error
+ *   lastSavedAt   — timestamp of the last successful save (null if never saved)
+ *   saveError     — last mutation error (cleared on next save)
+ *   canSave       — true when action AND propertyType are set
+ *   resetSaveState — clear mutation state back to idle
  */
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { buildSaveDraftPayloadFromWizardState } from '@/lib/workflows/listing/listingDraftPayload';
@@ -17,10 +21,12 @@ import type { ListingWizardState } from '@shared/listing-types';
 
 export function useListingDraftPersistence() {
   const store = useListingWizardStore();
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   const saveMutation = trpc.listing.saveDraft.useMutation({
     onSuccess: (result) => {
       store.setServerDraftId(result.id);
+      setLastSavedAt(new Date());
     },
   });
 
@@ -33,22 +39,37 @@ export function useListingDraftPersistence() {
       state as Partial<ListingWizardState>,
       state.serverDraftId ?? undefined,
     );
-    await saveMutation.mutateAsync(payload);
+    setLastSavedAt(null);
+    try {
+      await saveMutation.mutateAsync(payload);
+    } catch {
+      // Mutation error is already captured by React Query's isError/error state.
+      // Swallow here to prevent unhandled promise rejection in the button's onClick handler.
+    }
   }, [store, saveMutation]);
+
+  const saveStatus: 'saving' | 'saved' | 'error' | 'idle' =
+    saveMutation.isPending ? 'saving' :
+    saveMutation.isError ? 'error' :
+    saveMutation.isSuccess ? 'saved' :
+    'idle';
 
   return {
     manualSave,
     isSaving: saveMutation.isPending,
+    saveStatus,
+    lastSavedAt,
     saveError: saveMutation.error,
-    resetSaveState: saveMutation.reset,
+    resetSaveState: () => {
+      saveMutation.reset();
+      setLastSavedAt(null);
+    },
+    canSave: store.action !== undefined && store.propertyType !== undefined,
   };
 }
 
 /**
  * Fetch a server-side draft by ID (for resume-by-URL flow).
- *
- * Returns the query result so the caller can hydrate the Zustand store
- * via an effect. The query is only enabled when draftId is non-null.
  */
 export function useResumeDraft(draftId: number | null) {
   const draftQuery = trpc.listing.getDraft.useQuery(
