@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
-import { Navbar } from '@/components/Navbar';
+import { AgencyLayout } from '@/components/agency/AgencyLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -73,12 +73,11 @@ export default function AgentManagement() {
 
   if (onboardingLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
+      <AgencyLayout>
         <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">
           Preparing your agency workspace...
         </div>
-      </div>
+      </AgencyLayout>
     );
   }
 
@@ -111,8 +110,7 @@ export default function AgentManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <AgencyLayout>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -293,6 +291,6 @@ export default function AgentManagement() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </div>
+    </AgencyLayout>
   );
 }
