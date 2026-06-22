@@ -6,12 +6,17 @@
 import type { ReactNode } from 'react';
 import { Navbar } from '@/components/Navbar';
 
-export function AgencyLayout({ children }: { children: ReactNode }) {
+export function AgencyLayout({
+  children,
+  className = 'bg-[#F4F7FA]',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="min-h-screen bg-[#F4F7FA]">
+    <div className={`min-h-screen ${className}`.trim()}>
       <Navbar />
       {children}
     </div>
   );
 }
-

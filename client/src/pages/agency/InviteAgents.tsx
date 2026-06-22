@@ -88,7 +88,7 @@ export default function InviteAgents() {
 
   if (onboardingLoading) {
     return (
-      <AgencyLayout>
+      <AgencyLayout className="bg-background">
         <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">
           Preparing your agency workspace...
         </div>
@@ -142,7 +142,7 @@ export default function InviteAgents() {
   };
 
   return (
-    <AgencyLayout>
+    <AgencyLayout className="bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
