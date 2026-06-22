@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
-import { AgencyLayout } from '@/components/agency/AgencyLayout';
+import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -88,11 +88,12 @@ export default function InviteAgents() {
 
   if (onboardingLoading) {
     return (
-      <AgencyLayout className="bg-background">
+      <div className="min-h-screen bg-background">
+        <Navbar />
         <div className="container mx-auto px-4 py-16 text-center text-muted-foreground">
           Preparing your agency workspace...
         </div>
-      </AgencyLayout>
+      </div>
     );
   }
 
@@ -142,7 +143,8 @@ export default function InviteAgents() {
   };
 
   return (
-    <AgencyLayout className="bg-background">
+    <div className="min-h-screen bg-background">
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -356,6 +358,6 @@ export default function InviteAgents() {
           </div>
         )}
       </div>
-    </AgencyLayout>
+    </div>
   );
 }

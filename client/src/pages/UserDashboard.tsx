@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { ProspectLayout } from '@/components/ProspectLayout';
+import { Navbar } from '@/components/Navbar';
 import { ProspectDashboard } from '@/components/ProspectDashboard';
 import { RecentlyViewedCarousel } from '@/components/RecentlyViewedCarousel';
 import { Badge } from '@/components/ui/badge';
@@ -1291,7 +1291,9 @@ export default function UserDashboard() {
   }
 
   return (
-    <ProspectLayout className="bg-[linear-gradient(180deg,#f7fafc_0%,#edf4f7_50%,#f8fbfd_100%)]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f7fafc_0%,#edf4f7_50%,#f8fbfd_100%)]">
+      <Navbar />
+
       <div className="container mx-auto px-4 py-8">
         <Card className="overflow-hidden border-white/60 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(37,99,235,0.1),_transparent_30%),white] shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
           <CardContent className="grid gap-8 p-6 lg:grid-cols-[1.25fr_0.75fr] lg:p-8">
@@ -2471,6 +2473,6 @@ export default function UserDashboard() {
       </div>
 
       <ProspectDashboard isOpen={plannerOpen} onClose={() => setPlannerOpen(false)} />
-    </ProspectLayout>
+    </div>
   );
 }

@@ -46,6 +46,7 @@ const AgentLeads = lazy(() => import('./pages/AgentLeads'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
+const AgentCalendar = lazy(() => import('./pages/AgentCalendar'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
@@ -308,7 +309,7 @@ function Router() {
           </Route>
           <Route path="/agent/calendar">
             <RequireRole role="agent">
-              <Redirect to="/agent/productivity" />
+              <AgentCalendar />
             </RequireRole>
           </Route>
           <Route path="/agent/productivity">

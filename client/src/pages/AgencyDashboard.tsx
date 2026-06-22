@@ -1,6 +1,6 @@
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { AgencyLayout } from '@/components/agency/AgencyLayout';
+import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,7 +62,8 @@ export default function AgencyDashboard() {
   const setupComplete = status?.fullFeaturesUnlocked;
 
   return (
-    <AgencyLayout>
+    <div className="min-h-screen bg-[#F4F7FA]">
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -263,6 +264,6 @@ export default function AgencyDashboard() {
           </CardContent>
         </Card>
       </div>
-    </AgencyLayout>
+    </div>
   );
 }

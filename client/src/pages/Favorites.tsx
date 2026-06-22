@@ -1,4 +1,4 @@
-import { ProspectLayout } from '@/components/ProspectLayout';
+import { Navbar } from '@/components/Navbar';
 import PropertyCard from '@/components/PropertyCard';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { Button } from '@/components/ui/button';
@@ -34,17 +34,19 @@ export default function Favorites() {
 
   if (loading || isLoading) {
     return (
-      <ProspectLayout>
+      <div className="min-h-screen bg-background">
+        <Navbar />
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
-      </ProspectLayout>
+      </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <ProspectLayout>
+      <div className="min-h-screen bg-background">
+        <Navbar />
         <div className="container py-20 text-center">
           <Heart className="h-20 w-20 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-2xl font-semibold mb-4">Login Required</h2>
@@ -53,12 +55,14 @@ export default function Favorites() {
           </p>
           <Button onClick={() => (window.location.href = getLoginUrl())}>Login</Button>
         </div>
-      </ProspectLayout>
+      </div>
     );
   }
 
   return (
-    <ProspectLayout>
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
       <div className="container py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">My Favorites</h1>
@@ -95,6 +99,6 @@ export default function Favorites() {
           <p>&copy; 2025 Real Estate Portal. All rights reserved.</p>
         </div>
       </footer>
-    </ProspectLayout>
+    </div>
   );
 }
