@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { useAgencyOnboardingStatus } from '@/hooks/useAgencyOnboardingStatus';
-import { Navbar } from '@/components/Navbar';
+import { AgencyLayout } from '@/components/agency/AgencyLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -149,8 +149,7 @@ export default function AgencySubscriptionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FA]">
-      <Navbar />
+    <AgencyLayout>
       <div className="container mx-auto px-4 py-8">
         {onboardingLoading ? (
           <div className="py-16 text-center text-slate-500">
@@ -533,6 +532,6 @@ export default function AgencySubscriptionPage() {
           </>
         )}
       </div>
-    </div>
+    </AgencyLayout>
   );
 }
