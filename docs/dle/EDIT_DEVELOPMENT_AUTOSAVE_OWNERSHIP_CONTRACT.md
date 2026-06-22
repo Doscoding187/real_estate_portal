@@ -60,24 +60,35 @@ Not implemented in this slice:
 
 - production rollout enablement;
 - edit autosave UI status changes;
-- edit autosave browser proof;
+- location/media/unit edit-autosave browser proof;
 - edit autosave backend endpoint changes;
 
 ## Browser Proof Progress
 
-2026-06-19 limited Rental proof:
+2026-06-20 Sale, Rental, and Auction marketing-summary proof implementation:
 
-- `e2e/dle/edit-autosave-browser.spec.ts` proves the explicitly enabled edit-autosave switch can
-  fail visibly on a published Rental development.
-- The failed browser autosave keeps the persisted development unchanged and preserves unrelated
-  location, media, approval, and unit inventory.
-- A later retry sends the latest `marketing_summary` partial payload through
-  `developer.updateDevelopment`.
-- The retry preserves unrelated rental unit pricing and public output, including rental-native
-  public page language.
+- `e2e/dle/edit-autosave-browser.spec.ts` now covers Sale, Rental, and Auction marketing-summary
+  failure/retry behavior through the explicitly enabled edit-autosave switch. Focused Playwright
+  runtime proof passed after the senior cleanup.
+- For each transaction lane:
+  - Seeds a published, approved development with stable location, media, highlights,
+    governance/finance, and one unit type.
+  - Navigates to the edit wizard marketing-summary step.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts the UI shows visible `Save Failed`.
+  - Asserts the failed attempt does not change persisted DB description.
+  - Asserts unrelated fields (city, suburb, media, unit inventory) remain preserved after failure.
+  - Changes the description again and asserts the retry succeeds.
+  - Asserts the retry payload has `canonicalUpdateMode: partial_step`.
+  - Asserts the retry payload owns marketing fields only (no `unitTypes`, `city`, `images`,
+    `address`, `suburb`, or transaction-specific pricing fields).
+  - Asserts the public development page still renders transaction-native output after retry.
+- Sale: sale unit name, sale price (Johannesburg/Sandton, full-title, `for_sale`).
+- Rental: `Rent From R 18 500 - R 21 000`, `R 18 500 / month`, rental unit name.
+- Auction: `Starting Bid`, auction unit name (Durban/Umhlanga, full-title, `auction`).
 
-This proof is intentionally narrow. It does not enable edit autosave and it does not satisfy the
-Sale and Auction browser proof gates.
+This proof implementation does not enable edit autosave and does not satisfy the location, media,
+or unit edit-autosave browser proof gates.
 
 ## Required Before Enablement
 

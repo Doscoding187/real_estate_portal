@@ -7944,3 +7944,71 @@ Next recommended slice:
   hand-entered Rental/Auction UX audit.
 Commit hash/tag: Pending.
 Uncommitted reason, if any: Pending senior/user approval to commit documentation-control slice.
+
+## 2026-06-20 - Junior Slice 001 - Sale/Rental/Auction Edit Autosave Marketing Proof
+
+Date: 2026-06-20
+Branch: feature/developer-listing-engine-isolated
+Goal: Extend the existing edit-autosave browser proof so Sale, Rental, and Auction each prove
+marketing-summary edit-autosave failure/retry behavior per the ownership contract.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+- Result: Passed after senior cleanup. Earlier junior run did not complete. Senior runtime review
+  later proved the edit page
+  eventually reached `Marketing Summary`; backend logs confirmed auth, ownership, development
+  hydration, and marketing-only update payloads were working. The clean rerun failed because a
+  temporary diagnostic called `page.evaluate` during navigation and triggered
+  `Execution context was destroyed`. That diagnostic has been removed.
+- Final focused browser result: 6 passed, 0 failed.
+- `pnpm run check`: Passed after senior cleanup.
+- `git diff --check`: Passed after senior cleanup.
+Evidence screenshots:
+- docs/dle/evidence/2026-06-20/qa-dle-rental-edit-autosave-failure-visible.png
+- docs/dle/evidence/2026-06-20/qa-dle-rental-edit-autosave-retry-saved.png
+- docs/dle/evidence/2026-06-20/qa-dle-rental-edit-autosave-public-preserved.png
+- docs/dle/evidence/2026-06-20/qa-dle-sale-edit-autosave-failure-visible.png
+- docs/dle/evidence/2026-06-20/qa-dle-sale-edit-autosave-retry-saved.png
+- docs/dle/evidence/2026-06-20/qa-dle-sale-edit-autosave-public-preserved.png
+- docs/dle/evidence/2026-06-20/qa-dle-auction-edit-autosave-failure-visible.png
+- docs/dle/evidence/2026-06-20/qa-dle-auction-edit-autosave-retry-saved.png
+- docs/dle/evidence/2026-06-20/qa-dle-auction-edit-autosave-public-preserved.png
+Functional proof intended by this slice:
+- Refactored the Rental-only spec into typed seed helpers (RentalSeed, SaleSeed, AuctionSeed)
+  and a shared transaction-lane runner.
+- Added `seedPublishedSaleEditDevelopment` and `seedPublishedAuctionEditDevelopment` fixtures.
+- Corrected Sale/Auction seeds to use persisted publish-ready ownership values (`full-title`), and
+  corrected Auction to use the canonical `auction` transaction type plus unit-level auction dates.
+- Each lane seeds a published, approved development with stable location, media, highlights,
+  governance/finance, and one unit type.
+- With `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`, the first `developer.updateDevelopment` request is
+  intercepted and returns `{ success: false }`.
+- Each lane asserts UI shows visible `Save Failed`, DB description is unchanged, and unrelated fields
+  (city, suburb, media, unit inventory) remain preserved after failure.
+- Each lane changes the description again and asserts the retry succeeds.
+- Each lane asserts the retry payload has `canonicalUpdateMode: partial_step`, owns marketing fields
+  only, and does not own `unitTypes`, `city`, or `images`.
+- Each lane asserts the public development page renders transaction-native output after retry.
+- Sale: sale unit name, `Price From R 1 750 000 - R 2 200 000` pricing visible.
+- Rental: `Rent From R 18 500 - R 21 000`, `R 18 500 / month`, rental unit name.
+- Auction: `Starting Bid`, auction unit name.
+- The retry-payload ownership proof now uses the same shared lane descriptors rather than copied
+  Sale/Rental/Auction blocks.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No backend endpoint, schema, migration, publish, search-card, lead, evidence, distribution,
+  inventory, payout, reward, or operating behavior changed.
+- Existing unrelated homepage, navigation, listing intelligence, and listing wizard files were not
+  touched.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Browser proof is still needed for location, media, and unit-edit autosave ownership across all
+  three lanes.
+- Browser proof is still needed for stale partial payload handling beyond the latest marketing retry.
+Next recommended slice:
+- Continue to location edit-autosave ownership proof for Sale, Rental, and Auction.
+Commit hash/tag: Included in `test(dle): prove edit autosave across transaction lanes`.
+Uncommitted reason, if any: None. Slice committed.
