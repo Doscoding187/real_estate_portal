@@ -10,6 +10,12 @@ import { getDb } from '../../server/db-connection';
 import { developmentService } from '../../server/services/developmentService';
 import { COOKIE_NAME } from '../../shared/const';
 
+const TINY_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64',
+);
+const AUTOSAVE_RESPONSE_TIMEOUT_MS = 45_000;
+
 test.skip(
   process.env.VITE_DLE_EDIT_AUTOSAVE_ENABLED !== 'true',
   'Edit autosave browser proof requires VITE_DLE_EDIT_AUTOSAVE_ENABLED=true.',
@@ -262,7 +268,7 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
         },
         development_media: {
           heroImage: { url: mediaUrl },
-          photos: [],
+          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
           videos: [],
           floorPlans: [],
           documents: [`https://example.com/dle-edit-autosave-brochure-${suffix}.pdf`],
@@ -304,7 +310,7 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
         amenities: ['Security', 'Backup power'],
         media: {
           heroImage: { url: mediaUrl },
-          photos: [],
+          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
           videos: [],
           documents: [`https://example.com/dle-edit-autosave-brochure-${suffix}.pdf`],
         },
@@ -475,7 +481,7 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
         },
         development_media: {
           heroImage: { url: mediaUrl },
-          photos: [],
+          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
           videos: [],
           floorPlans: [],
           documents: [`https://example.com/dle-edit-autosale-brochure-${suffix}.pdf`],
@@ -517,7 +523,7 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
         amenities: ['Pool', 'Gym', '24hr Security'],
         media: {
           heroImage: { url: mediaUrl },
-          photos: [],
+          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
           videos: [],
           documents: [`https://example.com/dle-edit-autosale-brochure-${suffix}.pdf`],
         },
@@ -689,7 +695,7 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
         },
         development_media: {
           heroImage: { url: mediaUrl },
-          photos: [],
+          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
           videos: [],
           floorPlans: [],
           documents: [`https://example.com/dle-edit-autosave-auction-brochure-${suffix}.pdf`],
@@ -733,7 +739,7 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
         amenities: ['Beach access', 'Clubhouse'],
         media: {
           heroImage: { url: mediaUrl },
-          photos: [],
+          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
           videos: [],
           documents: [`https://example.com/dle-edit-autosave-auction-brochure-${suffix}.pdf`],
         },
@@ -883,6 +889,15 @@ async function openLocation(page: Page, seed: Seed) {
   });
 }
 
+async function openMedia(page: Page, seed: Seed) {
+  await setCurrentStep(seed, 'development_media');
+  await loginAsSeededDeveloper(page, seed);
+  await page.goto(`/developer/create-development?id=${seed.developmentId}`);
+  await expect(page.getByRole('heading', { name: 'Development Media' }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
 async function setCurrentStep(seed: Seed, currentStepId: string) {
   const db = await getDb();
   expect(db).toBeTruthy();
@@ -929,7 +944,7 @@ async function fillDescriptionAndWaitForUpdate(page: Page, description: string) 
     response =>
       response.url().includes('/api/trpc/developer.updateDevelopment') &&
       response.request().method() === 'POST',
-    { timeout: 20_000 },
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
   );
 
   await descriptionInput.fill(description);
@@ -942,10 +957,29 @@ async function fillLocationAddressAndWaitForUpdate(page: Page, address: string) 
     response =>
       response.url().includes('/api/trpc/developer.updateDevelopment') &&
       response.request().method() === 'POST',
-    { timeout: 20_000 },
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
   );
 
   await addressInput.fill(address);
+  return responsePromise;
+}
+
+async function uploadGalleryImageAndWaitForUpdate(page: Page, fileName: string) {
+  const imageInputs = page.locator('input[type="file"][accept="image/*"]');
+  await expect(imageInputs.first()).toBeAttached({ timeout: 20_000 });
+  const inputIndex = (await imageInputs.count()) > 1 ? 1 : 0;
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+
+  await imageInputs.nth(inputIndex).setInputFiles({
+    name: fileName,
+    mimeType: 'image/png',
+    buffer: TINY_PNG,
+  });
   return responsePromise;
 }
 
@@ -965,6 +999,31 @@ function expectLocationPayload(request: Request, address: string) {
     canonicalUpdateMode: 'partial_step',
     currentStepId: 'location',
     address,
+  });
+  return input.data;
+}
+
+function expectMediaPayload(request: Request) {
+  const input = getTrpcRequestInput(request);
+  expect(input.data).toMatchObject({
+    canonicalUpdateMode: 'partial_step',
+    currentStepId: 'development_media',
+  });
+  expect(input.data.images).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        url: expect.stringContaining('/local-uploads/'),
+      }),
+    ]),
+  );
+  expect(input.data.stepData).toMatchObject({
+    development_media: {
+      photos: expect.arrayContaining([
+        expect.objectContaining({
+          url: expect.stringContaining('/local-uploads/'),
+        }),
+      ]),
+    },
   });
   return input.data;
 }
@@ -997,6 +1056,29 @@ function expectPayloadOwnsOnlyLocation(data: Record<string, unknown>, lane: Lane
   }
 }
 
+function expectPayloadOwnsOnlyMedia(data: Record<string, unknown>, lane: Lane) {
+  for (const field of [
+    'address',
+    'city',
+    'province',
+    'suburb',
+    'postalCode',
+    'description',
+    'tagline',
+    'highlights',
+    'monthlyLevyFrom',
+    'ratesFrom',
+    'unitTypes',
+    ...lane.pricingFields,
+  ]) {
+    expect(data).not.toHaveProperty(field);
+  }
+  expect(data.stepData).not.toHaveProperty('location');
+  expect(data.stepData).not.toHaveProperty('marketing_summary');
+  expect(data.stepData).not.toHaveProperty('governance_finances');
+  expect(data.stepData).not.toHaveProperty('unit_types');
+}
+
 async function expectBaselinePreserved(seed: Seed, lane: Lane, expectedDescription: string) {
   const row = await getDevelopmentRow(seed.developmentId);
   expect(row.description).toBe(expectedDescription);
@@ -1005,6 +1087,16 @@ async function expectBaselinePreserved(seed: Seed, lane: Lane, expectedDescripti
   expect(asArray(row.images).some(image => image?.url === seed.mediaUrl)).toBe(true);
   await lane.expectUnitPreserved(seed);
   return row;
+}
+
+function getUploadedMediaUrls(data: Record<string, any>): string[] {
+  const imageUrls = asArray(data.images)
+    .map(image => image?.url)
+    .filter((url): url is string => typeof url === 'string' && url.includes('/local-uploads/'));
+  const stepUrls = asArray(data.stepData?.development_media?.photos)
+    .map(image => image?.url)
+    .filter((url): url is string => typeof url === 'string' && url.includes('/local-uploads/'));
+  return Array.from(new Set([...imageUrls, ...stepUrls]));
 }
 
 async function expectCommercialPackagePreserved(
@@ -1023,6 +1115,16 @@ async function expectCommercialPackagePreserved(
   expect(row.approvalStatus).toBe('approved');
   expect(asArray(row.images).some(image => image?.url === seed.mediaUrl)).toBe(true);
   await lane.expectUnitPreserved(seed);
+  return row;
+}
+
+async function expectCommercialPackagePreservedExceptMedia(
+  seed: Seed,
+  lane: Lane,
+  baseline: Awaited<ReturnType<typeof getDevelopmentRow>>,
+) {
+  const row = await expectCommercialPackagePreserved(seed, lane, baseline);
+  expect(row.address).toBe(baseline.address);
   return row;
 }
 
@@ -1184,6 +1286,92 @@ test.describe.serial('DLE edit autosave browser proof', () => {
           lane.retryAddress,
         );
         expectPayloadOwnsOnlyLocation(retryData, lane);
+      });
+
+      test('keeps failed media autosave visible and retries latest partial media payload', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        await openMedia(page, seed);
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        const failedResponse = await uploadGalleryImageAndWaitForUpdate(
+          page,
+          `failed-${lane.name}-media.png`,
+        );
+        expect(getTrpcResponseData(await failedResponse.json())).toMatchObject({ success: false });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-media-failure-visible.png`,
+          fullPage: true,
+        });
+
+        expect(updateRequests).toHaveLength(1);
+        const failedData = expectMediaPayload(updateRequests[0]);
+        expectPayloadOwnsOnlyMedia(failedData, lane);
+        const failedUrls = getUploadedMediaUrls(failedData);
+        expect(failedUrls.length).toBeGreaterThan(0);
+
+        const afterFailure = await expectCommercialPackagePreservedExceptMedia(seed, lane, baseline);
+        const afterFailureImages = asArray(afterFailure.images);
+        expect(afterFailureImages.some(image => image?.url === seed.mediaUrl)).toBe(true);
+        for (const failedUrl of failedUrls) {
+          expect(afterFailureImages.some(image => image?.url === failedUrl)).toBe(false);
+        }
+
+        const retryResponse = await uploadGalleryImageAndWaitForUpdate(
+          page,
+          `retry-${lane.name}-media.png`,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-media-retry-saved.png`,
+          fullPage: true,
+        });
+
+        expect(updateRequests).toHaveLength(2);
+        const retryData = expectMediaPayload(updateRequests[1]);
+        expectPayloadOwnsOnlyMedia(retryData, lane);
+        const retryUrls = getUploadedMediaUrls(retryData);
+        expect(retryUrls.length).toBeGreaterThan(failedUrls.length);
+
+        const afterRetry = await expectCommercialPackagePreservedExceptMedia(seed, lane, baseline);
+        const afterRetryImages = asArray(afterRetry.images);
+        expect(afterRetryImages.some(image => image?.url === seed.mediaUrl)).toBe(true);
+        for (const retryUrl of retryUrls) {
+          expect(afterRetryImages.some(image => image?.url === retryUrl)).toBe(true);
+        }
+
+        await page.goto(`/development/${seed.slug}`);
+        await expect(page.getByRole('heading', { name: seed.developmentName })).toBeVisible({
+          timeout: 20_000,
+        });
+        await lane.expectPublicOutput(page, seed);
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-media-public-preserved.png`,
+          fullPage: true,
+        });
+      });
+
+      test('retry payload owns only media fields', async ({ page }) => {
+        await openMedia(page, seed);
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        await uploadGalleryImageAndWaitForUpdate(page, `failed-${lane.name}-media-payload.png`);
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 20_000,
+        });
+
+        await uploadGalleryImageAndWaitForUpdate(page, `retry-${lane.name}-media-payload.png`);
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+        expect(updateRequests.length).toBeGreaterThanOrEqual(2);
+        const retryData = expectMediaPayload(updateRequests[updateRequests.length - 1]);
+        expectPayloadOwnsOnlyMedia(retryData, lane);
       });
     });
   }

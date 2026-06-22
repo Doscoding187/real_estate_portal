@@ -60,7 +60,7 @@ Not implemented in this slice:
 
 - production rollout enablement;
 - edit autosave UI status changes;
-- media/unit edit-autosave browser proof;
+- unit edit-autosave browser proof;
 - edit autosave backend endpoint changes;
 
 ## Browser Proof Progress
@@ -111,6 +111,28 @@ or unit edit-autosave browser proof gates.
 This proof implementation does not enable edit autosave and does not satisfy the media or unit
 edit-autosave browser proof gates.
 
+2026-06-22 Sale, Rental, and Auction media proof implementation:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` now also covers Media step upload
+  failure/retry behavior for Sale, Rental, and Auction through the explicitly enabled
+  edit-autosave switch.
+- For each transaction lane:
+  - Seeds media in the canonical `development_media.photos` slice so the Media UI starts from the
+    same public media baseline stored on the development.
+  - Navigates to the edit wizard Development Media step.
+  - Uploads a real tiny PNG through the local upload fallback.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts the UI shows visible `Save Failed`.
+  - Asserts the failed media attempt does not add the new local-upload URL to persisted DB media.
+  - Uploads a second image and asserts the retry succeeds with the latest media payload.
+  - Asserts the retry payload has `canonicalUpdateMode: partial_step`.
+  - Asserts the retry payload owns media fields only (no location, marketing, governance,
+    unit inventory, or transaction-specific pricing fields).
+  - Asserts the public development page still renders transaction-native output after retry.
+
+This proof implementation does not enable edit autosave and does not satisfy the unit-edit
+autosave browser proof gate.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -120,7 +142,8 @@ Before edit-development autosave can be enabled:
    public output. Address-level proof is complete; broader city/suburb/province/postal coverage may
    still be added before rollout.
 3. Browser proof must show media edits preserve location, governance, unit inventory, pricing, and
-   public output.
+   public output. Upload/add proof is complete; remove/reorder coverage may still be added before
+   rollout.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
    cards, and lead context.
 5. Browser proof must show failed edit-autosave attempts remain visible and retryable.

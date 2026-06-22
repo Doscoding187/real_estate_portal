@@ -8065,5 +8065,63 @@ Remaining risks:
 Next recommended slice:
 - Continue to media edit-autosave ownership proof for Sale, Rental, and Auction after this slice
   passes.
-Commit hash/tag: Pending commit for `test(dle): prove location edit autosave ownership`.
+Commit hash/tag: Included in `test(dle): prove location edit autosave ownership`.
+Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-22 - Sale/Rental/Auction Edit Autosave Media Ownership Proof
+
+Date: 2026-06-22
+Branch: feature/developer-listing-engine-isolated
+Goal: Extend the edit-autosave browser proof so Sale, Rental, and Auction each prove Media step
+upload failure/retry behavior without letting a media edit wipe location, marketing, governance,
+pricing, or unit inventory.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+- Result: Passed after increasing the autosave response wait to match the 10s debounce plus
+  heavier Auction hydration path. Final focused browser result: 18 passed, 0 failed.
+- `pnpm run check`: Passed.
+- `git diff --check`: Passed.
+Evidence screenshots:
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-media-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-media-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-media-public-preserved.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-media-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-media-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-media-public-preserved.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-media-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-media-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-media-public-preserved.png
+Functional proof intended by this slice:
+- Seeds each published, approved transaction-lane development with stable media in the canonical
+  `development_media.photos` slice, matching the Media UI source of truth.
+- Moves the edit wizard to the Development Media step before each media proof.
+- Uploads a real tiny PNG through the local upload fallback.
+- With `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`, intercepts the first
+  `developer.updateDevelopment` request and returns `{ success: false }`.
+- Each lane asserts UI shows visible `Save Failed`, DB media does not include the failed
+  local-upload URL, and unrelated fields (description, address, city, province, suburb, postal
+  code, governance/finance, approval status, and unit inventory) remain preserved after failure.
+- Each lane uploads a second image and asserts the retry succeeds with the latest media payload.
+- Each lane asserts the retry payload has `canonicalUpdateMode: partial_step`, owns media fields
+  only, and does not own location, marketing, governance, unit inventory, or transaction-specific
+  pricing fields.
+- Each lane asserts the public development page renders transaction-native output after retry.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No backend endpoint, schema, migration, publish, search-card, lead, evidence, distribution,
+  inventory, payout, reward, or operating behavior changed.
+- This is media upload/add proof; remove/reorder browser coverage can still be added before rollout
+  if needed.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Browser proof is still needed for unit-edit autosave ownership across all three lanes.
+- Browser proof is still needed for stale partial payload handling beyond the latest retry checks.
+Next recommended slice:
+- Continue to unit edit-autosave ownership proof for Sale, Rental, and Auction after this slice
+  passes.
+Commit hash/tag: Pending commit for `test(dle): prove media edit autosave ownership`.
 Uncommitted reason, if any: Pending commit.
