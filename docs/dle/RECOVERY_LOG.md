@@ -8012,3 +8012,58 @@ Next recommended slice:
 - Continue to location edit-autosave ownership proof for Sale, Rental, and Auction.
 Commit hash/tag: Included in `test(dle): prove edit autosave across transaction lanes`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-22 - Sale/Rental/Auction Edit Autosave Location Ownership Proof
+
+Date: 2026-06-22
+Branch: feature/developer-listing-engine-isolated
+Goal: Extend the edit-autosave browser proof so Sale, Rental, and Auction each prove Location step
+failure/retry behavior without letting a location edit wipe marketing, media, governance, pricing,
+or unit inventory.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+- Result: Passed. Final focused browser result: 12 passed, 0 failed.
+- `pnpm run check`: Passed.
+- `git diff --check`: Passed.
+Evidence screenshots:
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-location-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-location-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-location-public-preserved.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-location-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-location-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-location-public-preserved.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-location-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-location-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-location-public-preserved.png
+Functional proof intended by this slice:
+- Reuses the published, approved transaction-lane seeds from the marketing proof.
+- Moves the edit wizard to the Location step before each location proof.
+- With `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`, intercepts the first
+  `developer.updateDevelopment` request and returns `{ success: false }`.
+- Each lane asserts UI shows visible `Save Failed`, DB address is unchanged, and unrelated fields
+  (description, city, province, suburb, postal code, media, governance/finance, approval status,
+  and unit inventory) remain preserved after failure.
+- Each lane changes the address again and asserts the retry succeeds.
+- Each lane asserts the retry payload has `canonicalUpdateMode: partial_step`, owns location
+  fields only, and does not own marketing, media, governance, unit inventory, or
+  transaction-specific pricing fields.
+- Each lane asserts the public development page renders transaction-native output after retry.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No backend endpoint, schema, migration, publish, search-card, lead, evidence, distribution,
+  inventory, payout, reward, or operating behavior changed.
+- This is address-level Location step proof; city/suburb/province/postal browser coverage can still
+  be added before rollout if needed.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Browser proof is still needed for media and unit-edit autosave ownership across all three lanes.
+- Browser proof is still needed for stale partial payload handling beyond the latest retry checks.
+Next recommended slice:
+- Continue to media edit-autosave ownership proof for Sale, Rental, and Auction after this slice
+  passes.
+Commit hash/tag: Pending commit for `test(dle): prove location edit autosave ownership`.
+Uncommitted reason, if any: Pending commit.

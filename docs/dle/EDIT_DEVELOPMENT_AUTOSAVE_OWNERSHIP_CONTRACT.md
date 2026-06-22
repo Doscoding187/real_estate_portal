@@ -60,7 +60,7 @@ Not implemented in this slice:
 
 - production rollout enablement;
 - edit autosave UI status changes;
-- location/media/unit edit-autosave browser proof;
+- media/unit edit-autosave browser proof;
 - edit autosave backend endpoint changes;
 
 ## Browser Proof Progress
@@ -90,13 +90,35 @@ Not implemented in this slice:
 This proof implementation does not enable edit autosave and does not satisfy the location, media,
 or unit edit-autosave browser proof gates.
 
+2026-06-22 Sale, Rental, and Auction location proof implementation:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` now also covers address-level Location step
+  failure/retry behavior for Sale, Rental, and Auction through the explicitly enabled
+  edit-autosave switch.
+- For each transaction lane:
+  - Navigates to the edit wizard Location step.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts the UI shows visible `Save Failed`.
+  - Asserts the failed location attempt does not change the persisted address.
+  - Asserts unrelated fields (description, city, province, suburb, postal code, media,
+    governance/finance, approval status, and unit inventory) remain preserved after failure.
+  - Changes the address again and asserts the retry succeeds.
+  - Asserts the retry payload has `canonicalUpdateMode: partial_step`.
+  - Asserts the retry payload owns location fields only (no marketing, media, governance,
+    unit inventory, or transaction-specific pricing fields).
+  - Asserts the public development page still renders transaction-native output after retry.
+
+This proof implementation does not enable edit autosave and does not satisfy the media or unit
+edit-autosave browser proof gates.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
 
 1. Browser proof must cover Sale, Rental, and Auction edit routes.
 2. Browser proof must show location edits preserve media, governance, unit inventory, pricing, and
-   public output.
+   public output. Address-level proof is complete; broader city/suburb/province/postal coverage may
+   still be added before rollout.
 3. Browser proof must show media edits preserve location, governance, unit inventory, pricing, and
    public output.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search

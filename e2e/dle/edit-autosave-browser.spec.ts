@@ -796,6 +796,8 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
 type Lane = {
   name: 'rental' | 'sale' | 'auction';
   seed: () => Promise<Seed>;
+  failedAddress: string;
+  retryAddress: string;
   expectedCity: string;
   expectedSuburb: string;
   failedDescription: string;
@@ -808,6 +810,8 @@ const lanes: Lane[] = [
   {
     name: 'rental',
     seed: seedPublishedRentalEditDevelopment,
+    failedAddress: '999 Failed Rental Autosave Road',
+    retryAddress: '51 Retried Rental Autosave Road',
     expectedCity: 'Cape Town',
     expectedSuburb: 'Autosave Browser Proof',
     failedDescription:
@@ -823,6 +827,8 @@ const lanes: Lane[] = [
   {
     name: 'sale',
     seed: seedPublishedSaleEditDevelopment,
+    failedAddress: '999 Failed Sale Autosave Avenue',
+    retryAddress: '83 Retried Sale Autosave Avenue',
     expectedCity: 'Johannesburg',
     expectedSuburb: 'Sandton',
     failedDescription:
@@ -837,6 +843,8 @@ const lanes: Lane[] = [
   {
     name: 'auction',
     seed: seedPublishedAuctionEditDevelopment,
+    failedAddress: '999 Failed Auction Autosave Lane',
+    retryAddress: '14 Retried Auction Autosave Lane',
     expectedCity: 'Durban',
     expectedSuburb: 'Umhlanga',
     failedDescription:
@@ -864,6 +872,24 @@ async function openMarketingSummary(page: Page, seed: Seed) {
   await expect(page.getByRole('heading', { name: 'Marketing Summary' }).first()).toBeVisible({
     timeout: 20_000,
   });
+}
+
+async function openLocation(page: Page, seed: Seed) {
+  await setCurrentStep(seed, 'location');
+  await loginAsSeededDeveloper(page, seed);
+  await page.goto(`/developer/create-development?id=${seed.developmentId}`);
+  await expect(page.getByRole('heading', { name: 'Location & Address' }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
+async function setCurrentStep(seed: Seed, currentStepId: string) {
+  const db = await getDb();
+  expect(db).toBeTruthy();
+  await db!
+    .update(developments)
+    .set({ currentStepId })
+    .where(eq(developments.id, seed.developmentId));
 }
 
 async function interceptFirstFailedUpdate(page: Page) {
@@ -910,12 +936,35 @@ async function fillDescriptionAndWaitForUpdate(page: Page, description: string) 
   return responsePromise;
 }
 
+async function fillLocationAddressAndWaitForUpdate(page: Page, address: string) {
+  const addressInput = page.locator('[data-field="location.address"]');
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: 20_000 },
+  );
+
+  await addressInput.fill(address);
+  return responsePromise;
+}
+
 function expectMarketingPayload(request: Request, description: string) {
   const input = getTrpcRequestInput(request);
   expect(input.data).toMatchObject({
     canonicalUpdateMode: 'partial_step',
     currentStepId: 'marketing_summary',
     description,
+  });
+  return input.data;
+}
+
+function expectLocationPayload(request: Request, address: string) {
+  const input = getTrpcRequestInput(request);
+  expect(input.data).toMatchObject({
+    canonicalUpdateMode: 'partial_step',
+    currentStepId: 'location',
+    address,
   });
   return input.data;
 }
@@ -933,6 +982,21 @@ function expectPayloadOwnsOnlyMarketing(data: Record<string, unknown>, lane: Lan
   }
 }
 
+function expectPayloadOwnsOnlyLocation(data: Record<string, unknown>, lane: Lane) {
+  for (const field of [
+    'unitTypes',
+    'images',
+    'description',
+    'tagline',
+    'highlights',
+    'monthlyLevyFrom',
+    'ratesFrom',
+    ...lane.pricingFields,
+  ]) {
+    expect(data).not.toHaveProperty(field);
+  }
+}
+
 async function expectBaselinePreserved(seed: Seed, lane: Lane, expectedDescription: string) {
   const row = await getDevelopmentRow(seed.developmentId);
   expect(row.description).toBe(expectedDescription);
@@ -943,11 +1007,30 @@ async function expectBaselinePreserved(seed: Seed, lane: Lane, expectedDescripti
   return row;
 }
 
+async function expectCommercialPackagePreserved(
+  seed: Seed,
+  lane: Lane,
+  baseline: Awaited<ReturnType<typeof getDevelopmentRow>>,
+) {
+  const row = await getDevelopmentRow(seed.developmentId);
+  expect(row.description).toBe(baseline.description);
+  expect(row.city).toBe(baseline.city);
+  expect(row.province).toBe(baseline.province);
+  expect(row.suburb).toBe(baseline.suburb);
+  expect(row.postalCode).toBe(baseline.postalCode);
+  expect(row.monthlyLevyFrom).toEqual(baseline.monthlyLevyFrom);
+  expect(row.ratesFrom).toEqual(baseline.ratesFrom);
+  expect(row.approvalStatus).toBe('approved');
+  expect(asArray(row.images).some(image => image?.url === seed.mediaUrl)).toBe(true);
+  await lane.expectUnitPreserved(seed);
+  return row;
+}
+
 test.describe.serial('DLE edit autosave browser proof', () => {
   test.setTimeout(120_000);
 
   for (const lane of lanes) {
-    test.describe.serial(`${lane.name} marketing-summary edit autosave`, () => {
+    test.describe.serial(`${lane.name} edit autosave`, () => {
       let seed: Seed;
 
       test.beforeAll(async () => {
@@ -1026,6 +1109,81 @@ test.describe.serial('DLE edit autosave browser proof', () => {
           seed.retryDescription,
         );
         expectPayloadOwnsOnlyMarketing(retryData, lane);
+      });
+
+      test('keeps failed location autosave visible and retries latest partial location payload', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        await openLocation(page, seed);
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        const failedResponse = await fillLocationAddressAndWaitForUpdate(
+          page,
+          lane.failedAddress,
+        );
+        expect(getTrpcResponseData(await failedResponse.json())).toMatchObject({ success: false });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-location-failure-visible.png`,
+          fullPage: true,
+        });
+
+        const afterFailure = await expectCommercialPackagePreserved(seed, lane, baseline);
+        expect(afterFailure.address).toBe(baseline.address);
+
+        const retryResponse = await fillLocationAddressAndWaitForUpdate(
+          page,
+          lane.retryAddress,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-location-retry-saved.png`,
+          fullPage: true,
+        });
+
+        expect(updateRequests).toHaveLength(2);
+        const failedData = expectLocationPayload(updateRequests[0], lane.failedAddress);
+        const retryData = expectLocationPayload(updateRequests[1], lane.retryAddress);
+        expectPayloadOwnsOnlyLocation(failedData, lane);
+        expectPayloadOwnsOnlyLocation(retryData, lane);
+
+        const afterRetry = await expectCommercialPackagePreserved(seed, lane, baseline);
+        expect(afterRetry.address).toBe(lane.retryAddress);
+
+        await page.goto(`/development/${seed.slug}`);
+        await expect(page.getByRole('heading', { name: seed.developmentName })).toBeVisible({
+          timeout: 20_000,
+        });
+        await lane.expectPublicOutput(page, seed);
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-location-public-preserved.png`,
+          fullPage: true,
+        });
+      });
+
+      test('retry payload owns only location fields', async ({ page }) => {
+        await openLocation(page, seed);
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        await fillLocationAddressAndWaitForUpdate(page, lane.failedAddress);
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 20_000,
+        });
+
+        await fillLocationAddressAndWaitForUpdate(page, lane.retryAddress);
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+        expect(updateRequests.length).toBeGreaterThanOrEqual(2);
+        const retryData = expectLocationPayload(
+          updateRequests[updateRequests.length - 1],
+          lane.retryAddress,
+        );
+        expectPayloadOwnsOnlyLocation(retryData, lane);
       });
     });
   }
