@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 
 dotenv.config({ path: '.env.local' });
 
-import { developers, developments, users } from '../../drizzle/schema';
+import { developers, developments, leads, users } from '../../drizzle/schema';
 import { authService } from '../../server/_core/auth';
 import { getDb } from '../../server/db-connection';
 import { developmentService } from '../../server/services/developmentService';
@@ -848,8 +848,12 @@ type Lane = {
   retryAddress: string;
   failedUnitValue: number;
   retryUnitValue: number;
+  merchandisingUnitValue: number;
   expectedCity: string;
+  expectedProvinceSlug: string;
   expectedSuburb: string;
+  expectedLeadTransactionType: 'sale' | 'rent' | 'auction';
+  expectedLeadPriceLabel: string;
   failedDescription: string;
   pricingFields: string[];
   expectUnitPreserved: (seed: Seed) => Promise<void>;
@@ -864,8 +868,12 @@ const lanes: Lane[] = [
     retryAddress: '51 Retried Rental Autosave Road',
     failedUnitValue: 19_500,
     retryUnitValue: 20_500,
+    merchandisingUnitValue: 20_750,
     expectedCity: 'Cape Town',
+    expectedProvinceSlug: 'western-cape',
     expectedSuburb: 'Autosave Browser Proof',
+    expectedLeadTransactionType: 'rent',
+    expectedLeadPriceLabel: 'Rent from',
     failedDescription:
       'Failed rental edit autosave description should stay out of the database until a real retry succeeds.',
     pricingFields: ['monthlyRentFrom', 'monthlyRentTo'],
@@ -883,8 +891,12 @@ const lanes: Lane[] = [
     retryAddress: '83 Retried Sale Autosave Avenue',
     failedUnitValue: 1_850_000,
     retryUnitValue: 1_950_000,
+    merchandisingUnitValue: 2_050_000,
     expectedCity: 'Johannesburg',
+    expectedProvinceSlug: 'gauteng',
     expectedSuburb: 'Sandton',
+    expectedLeadTransactionType: 'sale',
+    expectedLeadPriceLabel: 'Price from',
     failedDescription:
       'Failed sale edit autosave description should stay out of the database until a real retry succeeds.',
     pricingFields: ['priceFrom', 'priceTo'],
@@ -901,8 +913,12 @@ const lanes: Lane[] = [
     retryAddress: '14 Retried Auction Autosave Lane',
     failedUnitValue: 900_000,
     retryUnitValue: 950_000,
+    merchandisingUnitValue: 990_000,
     expectedCity: 'Durban',
+    expectedProvinceSlug: 'kwazulu-natal',
     expectedSuburb: 'Umhlanga',
+    expectedLeadTransactionType: 'auction',
+    expectedLeadPriceLabel: 'Starting bid',
     failedDescription:
       'Failed auction edit autosave description should stay out of the database until a real retry succeeds.',
     pricingFields: ['startingBid', 'reservePrice'],
@@ -917,6 +933,7 @@ const lanes: Lane[] = [
 async function cleanupSeed(seed: Seed | undefined) {
   const db = await getDb();
   if (!db || !seed) return;
+  await db.delete(leads).where(eq(leads.developmentId, seed.developmentId));
   await db.delete(developments).where(eq(developments.id, seed.developmentId));
   await db.delete(developers).where(eq(developers.id, seed.developerId));
   await db.delete(users).where(eq(users.id, seed.userId));
@@ -1107,11 +1124,56 @@ function formatRand(value: number) {
   return `R ${Math.round(value).toLocaleString('en-ZA')}`;
 }
 
+function formatSearchRand(value: number) {
+  return `R ${Math.round(value).toLocaleString('en-US')}`;
+}
+
+function getLeadContext(row: any) {
+  const raw = row?.affordabilityData;
+  if (!raw) return {};
+  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  return parsed?.leadContext ?? {};
+}
+
+function getSearchRoute(lane: Lane) {
+  const query = new URLSearchParams({
+    city: lane.expectedCity,
+    province: lane.expectedProvinceSlug,
+    listingSource: 'development',
+  });
+
+  if (lane.name === 'rental') return `/property-to-rent?${query.toString()}`;
+  if (lane.name === 'auction') {
+    query.set('listingType', 'auction');
+    return `/property-for-sale?${query.toString()}`;
+  }
+  return `/property-for-sale?${query.toString()}`;
+}
+
+function getSearchPriceText(lane: Lane, value: number) {
+  if (lane.name === 'rental') return `Rent from ${formatSearchRand(value)}`;
+  if (lane.name === 'auction') return `Bid from ${formatSearchRand(value)}`;
+  return `From ${formatSearchRand(value)}`;
+}
+
+function getLeadSubmitLabel(lane: Lane) {
+  if (lane.name === 'rental') return 'Send Rental Enquiry';
+  if (lane.name === 'auction') return 'Send Auction Enquiry';
+  return 'Send Enquiry';
+}
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function updateUnitPricingAndWaitForUpdate(page: Page, seed: Seed, lane: Lane, value: number) {
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+
   const unitCard = page
     .getByText(seed.unitName)
     .locator('xpath=ancestor::div[contains(@class,"group")]')
@@ -1140,13 +1202,6 @@ async function updateUnitPricingAndWaitForUpdate(page: Page, seed: Seed, lane: L
     .first()
     .locator('xpath=following::input[1]');
   await pricingInput.fill(String(value));
-
-  const responsePromise = page.waitForResponse(
-    response =>
-      response.url().includes('/api/trpc/developer.updateDevelopment') &&
-      response.request().method() === 'POST',
-    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
-  );
 
   await page.getByRole('tab', { name: 'Stock' }).click();
   await page.getByRole('button', { name: 'Update Unit Type' }).click();
@@ -1400,6 +1455,74 @@ async function expectPublicOutputForEditedUnit(page: Page, seed: Seed, lane: Lan
       .getByText(new RegExp(`${escapeRegExp(label)}\\s+${escapeRegExp(formatRand(value))}`))
       .first(),
   ).toBeVisible();
+}
+
+async function expectSearchCardForEditedUnit(page: Page, seed: Seed, lane: Lane, value: number) {
+  await page.goto(getSearchRoute(lane));
+  await expect(page.getByText(seed.unitName).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(getSearchPriceText(lane, value)).first()).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
+async function submitEditedUnitLeadAndExpectContext(
+  page: Page,
+  seed: Seed,
+  lane: Lane,
+  value: number,
+) {
+  const leadEmail = `dle-edit-autosave-${lane.name}-lead-${Date.now()}@example.com`;
+
+  await page.goto(`/development/${seed.slug}`);
+  await expect(page.getByRole('heading', { name: seed.developmentName })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expectPublicOutputForEditedUnit(page, seed, lane, value);
+
+  await page
+    .getByRole('button', {
+      name: /Request Callback|Request Rental Details|Register Auction Interest|Request Auction Details/i,
+    })
+    .first()
+    .click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await expect(dialog.getByText(`Unit: ${seed.unitName}`).first()).toBeVisible();
+  await expect(
+    dialog.getByText(lane.expectedLeadPriceLabel, { exact: false }).first(),
+  ).toBeVisible();
+
+  await page.getByPlaceholder('Full name').fill(`DLE ${lane.name} autosave lead`);
+  await page.getByPlaceholder('Email address').fill(leadEmail);
+  await page.getByPlaceholder('Phone number').fill('0820000000');
+  await page
+    .getByPlaceholder('Message (optional)')
+    .fill('Please send the autosaved transaction-specific development pack.');
+  await page.getByRole('button', { name: getLeadSubmitLabel(lane) }).click();
+
+  const db = await getDb();
+  expect(db).toBeTruthy();
+  await expect
+    .poll(
+      async () => {
+        const [lead] = await db!.select().from(leads).where(eq(leads.email, leadEmail)).limit(1);
+        return lead ?? null;
+      },
+      { timeout: 10_000 },
+    )
+    .not.toBeNull();
+
+  const [lead] = await db!.select().from(leads).where(eq(leads.email, leadEmail)).limit(1);
+  const leadContext = getLeadContext(lead);
+
+  expect(Number(lead.developmentId)).toBe(seed.developmentId);
+  expect(lead.unitId).toBe(seed.unitId);
+  expect(lead.unitName).toBe(seed.unitName);
+  expect(lead.leadSource).toBe('development_detail_contact');
+  expect(lead.funnelStage).toBe('interest');
+  expect(leadContext.transactionType).toBe(lane.expectedLeadTransactionType);
+  expect(leadContext.unitPriceLabel).toBe(lane.expectedLeadPriceLabel);
 }
 
 test.describe.serial('DLE edit autosave browser proof', () => {
@@ -1781,6 +1904,63 @@ test.describe.serial('DLE edit autosave browser proof', () => {
           lane.retryUnitValue,
         );
         expectPayloadOwnsOnlyUnitTypes(retryData);
+      });
+
+      test('keeps search card and lead context transaction-native after unit autosave', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        await openUnitTypes(page, seed);
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        const failedResponse = await updateUnitPricingAndWaitForUpdate(
+          page,
+          seed,
+          lane,
+          lane.failedUnitValue,
+        );
+        expect(getTrpcResponseData(await failedResponse.json())).toMatchObject({ success: false });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+
+        const retryResponse = await updateUnitPricingAndWaitForUpdate(
+          page,
+          seed,
+          lane,
+          lane.merchandisingUnitValue,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+        expect(updateRequests).toHaveLength(2);
+        const failedData = expectUnitPayload(updateRequests[0], lane, seed, lane.failedUnitValue);
+        const retryData = expectUnitPayload(
+          updateRequests[1],
+          lane,
+          seed,
+          lane.merchandisingUnitValue,
+        );
+        expectPayloadOwnsOnlyUnitTypes(failedData);
+        expectPayloadOwnsOnlyUnitTypes(retryData);
+
+        await expectCommercialPackagePreservedExceptUnitPricing(seed, baseline);
+        await expectUnitPricingValue(seed, lane, lane.merchandisingUnitValue);
+
+        await page.goto(`/development/${seed.slug}`);
+        await expect(page.getByRole('heading', { name: seed.developmentName })).toBeVisible({
+          timeout: 20_000,
+        });
+        await expectPublicOutputForEditedUnit(page, seed, lane, lane.merchandisingUnitValue);
+
+        await expectSearchCardForEditedUnit(page, seed, lane, lane.merchandisingUnitValue);
+        await submitEditedUnitLeadAndExpectContext(
+          page,
+          seed,
+          lane,
+          lane.merchandisingUnitValue,
+        );
       });
     });
   }

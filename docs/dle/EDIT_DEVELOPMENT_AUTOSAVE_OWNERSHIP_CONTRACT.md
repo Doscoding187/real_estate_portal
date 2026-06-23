@@ -182,6 +182,35 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
 - Result: 27 passed, 0 failed.
 
+2026-06-23 Sale, Rental, and Auction unit merchandising/lead proof implementation:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` now also proves autosaved Unit Types pricing changes
+  remain transaction-native through public merchandising and lead capture.
+- For each transaction lane:
+  - Navigates to the edit wizard Unit Types step.
+  - Opens the real Edit Unit Type dialog and changes the transaction-native pricing field.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts the failed attempt remains visible as `Save Failed`.
+  - Retries with a valid transaction-native merchandising value and asserts the retry succeeds.
+  - Asserts both failed and retry payloads use `canonicalUpdateMode: partial_step` and own
+    unit/inventory fields only.
+  - Asserts location, marketing, media, governance, approval, and non-unit commercial package
+    fields remain preserved.
+  - Asserts the public development page shows the retried transaction-native unit pricing.
+  - Asserts the public search card shows the retried transaction-native price language:
+    - Sale: `From`.
+    - Rental: `Rent from`.
+    - Auction: `Bid from`.
+  - Submits a unit-level public lead and asserts the persisted lead keeps development id, unit id,
+    unit name, `development_detail_contact` source, `interest` funnel stage, transaction type, and
+    unit price label.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the focused
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "search card and lead context"`
+- Result: 3 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -194,8 +223,8 @@ Before edit-development autosave can be enabled:
    public output. Upload/add proof is complete; remove/reorder coverage may still be added before
    rollout.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
-   cards, and lead context. Transaction-native pricing proof is implemented; search-card and lead
-   context assertions may still be added before rollout.
+   cards, and lead context. Transaction-native pricing, public page, search-card, and unit lead
+   context proof is complete across all three transaction lanes.
 5. Browser proof must show failed edit-autosave attempts remain visible and retryable.
 6. Browser proof must show a stale partial payload cannot mark newer edits as saved. Marketing
    stale-success proof is complete across all three transaction lanes; repeat for other high-risk
@@ -204,6 +233,6 @@ Before edit-development autosave can be enabled:
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. The next rollout gate should either add remove/reorder
-coverage for media/unit edits or prove search-card and lead-context preservation after autosaved
-unit edits before any production enablement.
+Keep edit-development autosave disabled. The next rollout gate should add remove/reorder coverage
+for media/unit edits or repeat stale-response ordering proof for high-risk media/unit flows before
+any production enablement.

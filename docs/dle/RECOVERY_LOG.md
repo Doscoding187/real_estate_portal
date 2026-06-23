@@ -8249,3 +8249,64 @@ Next recommended slice:
   post-autosave search-card/lead-context proof, depending on rollout priority.
 Commit hash/tag: Included in `test(dle): prove stale edit autosave status`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-23 - Sale/Rental/Auction Edit Autosave Merchandising And Lead Context Proof
+
+Date: 2026-06-23
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove autosaved Unit Types pricing changes flow from edit packaging into public
+merchandising and unit-level lead context across Sale, Rental, and Auction.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Comparison unit autosave ownership proof after hardening the shared unit update response wait:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "keeps failed unit autosave visible"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+- Focused unit autosave merchandising and lead-context browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "search card and lead context"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+- `pnpm run check`: Passed.
+- `git diff --check`: Passed.
+Evidence screenshots:
+- None added in this slice. The proof is browser/API/DB based and intentionally avoids rewriting
+  older evidence screenshots.
+Functional proof intended by this slice:
+- Extends the edit-autosave browser lane config with valid merchandising pricing values and
+  expected lead transaction context for Sale, Rental, and Auction.
+- Hardens the shared unit update helper so it starts waiting for the update response before modal
+  edits begin.
+- For each transaction lane:
+  - Opens the published, approved development at the Unit Types step.
+  - Edits the seeded unit through the real Edit Unit Type dialog.
+  - Forces the first `developer.updateDevelopment` request to return `{ success: false }`.
+  - Asserts `Save Failed` remains visible.
+  - Retries with a valid transaction-native unit price and asserts `Saved`.
+  - Asserts failed and retry payloads have `canonicalUpdateMode: partial_step` and own unit fields
+    only.
+  - Asserts non-unit commercial package fields, approval status, media, location, marketing, and
+    governance remain preserved.
+  - Asserts public development detail shows the retried transaction-native unit price.
+  - Asserts public search/list cards show the retried transaction-native price language:
+    Sale `From`, Rental `Rent from`, Auction `Bid from`.
+  - Submits a unit-level public lead and asserts the persisted lead keeps development id, unit id,
+    unit name, `development_detail_contact` source, `interest` funnel stage, normalized transaction
+    type, and unit price label.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No app runtime code, backend endpoint, schema, migration, publish behavior, search-card logic,
+  lead persistence logic, distribution, inventory outcome, payout, reward, or operating behavior
+  changed.
+- This is transaction-native unit pricing proof from packaging to merchandising to conversion;
+  media/unit remove-reorder coverage can still be added before rollout if needed.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Media remove/reorder and unit remove/reorder autosave ownership are not browser-proven.
+- Stale-response ordering proof currently covers marketing; high-risk media/unit stale ordering
+  can still be added before rollout if needed.
+Next recommended slice:
+- Keep edit-development autosave disabled and add media/unit remove-reorder proof or media/unit
+  stale-response ordering proof before any production enablement.
+Commit hash/tag: Included in `test(dle): prove autosaved unit merchandising context`.
+Uncommitted reason, if any: None. Slice committed.
