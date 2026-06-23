@@ -162,6 +162,26 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
 - Result: 24 passed, 0 failed.
 
+2026-06-23 Sale, Rental, and Auction stale-response proof implementation:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` now also covers stale successful marketing autosave
+  responses for Sale, Rental, and Auction.
+- For each transaction lane:
+  - Opens a published, approved development at the Marketing Summary step.
+  - Holds the first successful `developer.updateDevelopment` response open.
+  - Types a newer description while that older response is still pending.
+  - Releases the older successful response.
+  - Asserts the wizard does not show `Saved` for the newer unsaved content.
+  - Asserts the header remains at `Manual save ready` until the newer payload is sent and
+    persisted.
+  - Asserts both payloads use `canonicalUpdateMode: partial_step` and own marketing fields only.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the full
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+- Result: 27 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -177,10 +197,13 @@ Before edit-development autosave can be enabled:
    cards, and lead context. Transaction-native pricing proof is implemented; search-card and lead
    context assertions may still be added before rollout.
 5. Browser proof must show failed edit-autosave attempts remain visible and retryable.
-6. Browser proof must show a stale partial payload cannot mark newer edits as saved.
+6. Browser proof must show a stale partial payload cannot mark newer edits as saved. Marketing
+   stale-success proof is complete across all three transaction lanes; repeat for other high-risk
+   steps if needed before rollout.
 7. Save Progress must remain the trusted manual fallback.
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. The next rollout gate should browser-proof stale-response
-ordering so an older in-flight partial payload cannot mark a newer edit as saved.
+Keep edit-development autosave disabled. The next rollout gate should either add remove/reorder
+coverage for media/unit edits or prove search-card and lead-context preservation after autosaved
+unit edits before any production enablement.

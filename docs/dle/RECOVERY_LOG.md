@@ -8199,3 +8199,53 @@ Next recommended slice:
   response cannot mark a newer edit as saved.
 Commit hash/tag: Included in `test(dle): prove unit edit autosave ownership`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-23 - Sale/Rental/Auction Edit Autosave Stale Response Proof
+
+Date: 2026-06-23
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove an older in-flight successful edit-autosave response cannot mark a newer unsaved edit
+as saved across Sale, Rental, and Auction.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Focused stale-success browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "stale successful marketing"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+- Full Sale/Rental/Auction edit-autosave browser suite:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+  - Result: Passed. Final browser result: 27 passed, 0 failed.
+- `pnpm run check`: Passed.
+- `git diff --check`: Passed.
+Evidence screenshots:
+- None added in this slice. The proof is request/status/DB based and intentionally avoids
+  rewriting older evidence screenshots.
+Functional proof intended by this slice:
+- Adds a delayed-success route helper that holds the first `developer.updateDevelopment` response
+  open, then releases it after the browser has accepted a newer description edit.
+- For Sale, Rental, and Auction, verifies the stale successful response does not show `Saved` for
+  the newer unsaved content.
+- Verifies the header remains `Manual save ready` until the newer marketing payload is sent and
+  persisted.
+- Verifies both stale and newer payloads use `canonicalUpdateMode: partial_step` and own marketing
+  fields only.
+- Verifies the newer persisted description eventually becomes the DB baseline while approval stays
+  approved.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No app runtime code, backend endpoint, schema, migration, publish, search-card, lead, evidence,
+  distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is marketing-step stale-success proof; repeat for high-risk media/unit remove/reorder flows
+  if needed before rollout.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Media remove/reorder and unit remove/reorder autosave ownership are not browser-proven.
+- Search-card and lead-context preservation after autosaved unit edits remain optional rollout
+  hardening gates.
+Next recommended slice:
+- Keep edit-development autosave disabled and add either media/unit remove-reorder proof or
+  post-autosave search-card/lead-context proof, depending on rollout priority.
+Commit hash/tag: Included in `test(dle): prove stale edit autosave status`.
+Uncommitted reason, if any: None. Slice committed.

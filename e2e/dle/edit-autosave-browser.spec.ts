@@ -995,6 +995,49 @@ async function interceptFirstFailedUpdate(page: Page) {
   return updateRequests;
 }
 
+async function interceptFirstSuccessfulUpdateUntilReleased(page: Page) {
+  let releaseFirstSuccess!: () => void;
+  const firstRelease = new Promise<void>(resolve => {
+    releaseFirstSuccess = resolve;
+  });
+  const updateRequests: Request[] = [];
+
+  await page.route('**/api/trpc/developer.updateDevelopment**', async route => {
+    updateRequests.push(route.request());
+    if (updateRequests.length === 1) {
+      await firstRelease;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          result: {
+            data: {
+              json: {
+                success: true,
+              },
+            },
+          },
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  return {
+    releaseFirstSuccess,
+    updateRequests,
+  };
+}
+
+async function waitForUpdateRequestCount(updateRequests: Request[], count: number) {
+  await expect
+    .poll(() => updateRequests.length, {
+      timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS,
+    })
+    .toBe(count);
+}
+
 async function fillDescriptionAndWaitForUpdate(page: Page, description: string) {
   const descriptionInput = page.getByPlaceholder(
     'Describe the lifestyle, location benefits, and unique selling points...',
@@ -1008,6 +1051,12 @@ async function fillDescriptionAndWaitForUpdate(page: Page, description: string) 
 
   await descriptionInput.fill(description);
   return responsePromise;
+}
+
+async function fillDescriptionWithoutWaitingForResponse(page: Page, description: string) {
+  await page
+    .getByPlaceholder('Describe the lifestyle, location benefits, and unique selling points...')
+    .fill(description);
 }
 
 async function fillLocationAddressAndWaitForUpdate(page: Page, address: string) {
@@ -1436,6 +1485,49 @@ test.describe.serial('DLE edit autosave browser proof', () => {
           seed.retryDescription,
         );
         expectPayloadOwnsOnlyMarketing(retryData, lane);
+      });
+
+      test('does not let stale successful marketing autosave claim a newer edit is saved', async ({
+        page,
+      }) => {
+        await openMarketingSummary(page, seed);
+        const { releaseFirstSuccess, updateRequests } =
+          await interceptFirstSuccessfulUpdateUntilReleased(page);
+        const olderDescription =
+          `Older ${lane.name} edit autosave response must not claim the newer copy is saved.`;
+        const newerDescription =
+          `Newer ${lane.name} edit autosave copy must remain unsaved until its own response succeeds.`;
+
+        const firstResponsePromise = page.waitForResponse(
+          response =>
+            response.url().includes('/api/trpc/developer.updateDevelopment') &&
+            response.request().method() === 'POST',
+          { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+        );
+        await fillDescriptionWithoutWaitingForResponse(page, olderDescription);
+        await waitForUpdateRequestCount(updateRequests, 1);
+        const olderPayload = expectMarketingPayload(updateRequests[0], olderDescription);
+        expectPayloadOwnsOnlyMarketing(olderPayload, lane);
+
+        await fillDescriptionWithoutWaitingForResponse(page, newerDescription);
+        releaseFirstSuccess();
+        const firstResponse = await firstResponsePromise;
+        expect(getTrpcResponseData(await firstResponse.json())).toMatchObject({ success: true });
+
+        await expect(page.getByText('Saved', { exact: true })).toBeHidden({ timeout: 1_000 });
+        await expect(page.getByText('Manual save ready', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+        const afterStaleSuccess = await getDevelopmentRow(seed.developmentId);
+        expect(afterStaleSuccess.description).not.toBe(newerDescription);
+
+        await waitForUpdateRequestCount(updateRequests, 2);
+        const newerPayload = expectMarketingPayload(updateRequests[1], newerDescription);
+        expectPayloadOwnsOnlyMarketing(newerPayload, lane);
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+        const afterNewerSuccess = await expectBaselinePreserved(seed, lane, newerDescription);
+        expect(afterNewerSuccess.approvalStatus).toBe('approved');
       });
 
       test('keeps failed location autosave visible and retries latest partial location payload', async ({
