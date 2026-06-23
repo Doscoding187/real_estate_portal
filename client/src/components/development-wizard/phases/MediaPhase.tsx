@@ -138,8 +138,15 @@ export function MediaPhase() {
     newVideos?: MediaItem[],
     newDocuments?: MediaItem[],
   ) => {
+    const nextPhotos = newPhotos ?? photos;
+    const nextHeroImage =
+      nextPhotos.find(p => p.category === 'hero' || p.category === 'featured' || p.isPrimary) ??
+      nextPhotos[0] ??
+      null;
+
     saveWorkflowStepData('development_media', {
-      photos: newPhotos ?? photos,
+      heroImage: nextHeroImage,
+      photos: nextPhotos,
       videos: newVideos ?? videos,
       documents: newDocuments ?? documents,
     } as any);

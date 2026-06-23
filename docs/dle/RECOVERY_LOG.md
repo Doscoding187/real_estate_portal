@@ -8310,3 +8310,65 @@ Next recommended slice:
   stale-response ordering proof before any production enablement.
 Commit hash/tag: Included in `test(dle): prove autosaved unit merchandising context`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-23 - Sale/Rental/Auction Edit Autosave Media Removal Proof
+
+Date: 2026-06-23
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove Media step removal failure/retry behavior across Sale, Rental, and Auction without
+letting a visible media removal fall back to stale published hero media or wipe unrelated
+commercial package fields.
+Files changed:
+- client/src/components/development-wizard/phases/MediaPhase.tsx
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Local DB setup for this environment:
+  - Started a throwaway MySQL datadir under `/tmp/listify-mysql-v2` on `127.0.0.1:3307`.
+  - Ran `pnpm db:migrate:drizzle:local`: Passed.
+  - Ran `pnpm db:migrate:local`: Passed, including `[db:verify:distribution] OK`.
+- Focused media removal browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "media removal"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+Environment notes:
+- Backend was started with `pnpm dev:backend`.
+- Frontend must be started with `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm dev:frontend` for this
+  browser proof; setting the flag only on the Playwright command is not enough once Vite is already
+  running.
+Evidence screenshots:
+- None added in this slice. The proof is browser/API/DB based and intentionally avoids rewriting
+  older evidence screenshots.
+Functional proof intended by this slice:
+- Fixes Media step persistence so each media write carries the derived `heroImage` mirror, including
+  `null` when the last hero/photo is removed. This prevents the edit-autosave payload builder from
+  resurrecting stale published hero media after a visible removal.
+- Adds a browser helper that removes a rendered media card through the real Media UI and waits for
+  the `developer.updateDevelopment` response.
+- For each transaction lane:
+  - Opens the published, approved development at the Development Media step.
+  - Removes the seeded published media.
+  - Forces the first `developer.updateDevelopment` request to return `{ success: false }`.
+  - Asserts `Save Failed` remains visible.
+  - Asserts the failed removal payload has `canonicalUpdateMode: partial_step`, owns media fields
+    only, and excludes the removed media URL.
+  - Asserts the failed removal does not delete persisted media from the DB.
+  - Uploads a replacement image and asserts the retry succeeds with the latest media payload.
+  - Asserts the retry payload excludes the removed media URL and persists the replacement upload.
+  - Asserts location, marketing, governance, approval status, and unit inventory remain preserved.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No backend endpoint, schema, migration, publish behavior, search-card logic, lead persistence
+  logic, distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is seeded-media removal proof; media reorder and unit remove/reorder remain separate rollout
+  hardening gates.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Media reorder and unit remove/reorder autosave ownership are not browser-proven.
+- Stale-response ordering proof currently covers marketing; high-risk media/unit stale ordering can
+  still be added before rollout if needed.
+Next recommended slice:
+- Keep edit-development autosave disabled and add media reorder, unit remove/reorder, or high-risk
+  media/unit stale-response ordering proof before any production enablement.
+Commit hash/tag: Included in `test(dle): prove media removal edit autosave ownership`.
+Uncommitted reason, if any: None. Slice committed.

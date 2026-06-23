@@ -211,6 +211,34 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "search card and lead context"`
 - Result: 3 passed, 0 failed.
 
+2026-06-23 Sale, Rental, and Auction media removal proof implementation:
+
+- `client/src/components/development-wizard/phases/MediaPhase.tsx` now persists the derived
+  `heroImage` mirror with every Media step write, including `null` when the final hero/photo is
+  removed. This prevents edit-autosave payloads from falling back to stale published hero media
+  after a visible removal.
+- `e2e/dle/edit-autosave-browser.spec.ts` now covers Media step removal failure/retry behavior for
+  Sale, Rental, and Auction.
+- For each transaction lane:
+  - Navigates to the edit wizard Development Media step.
+  - Removes the seeded published media through the real Media UI.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts `Save Failed` remains visible.
+  - Asserts the failed removal payload uses `canonicalUpdateMode: partial_step`, owns media fields
+    only, and does not contain the removed media URL.
+  - Asserts the failed removal does not delete the persisted published media.
+  - Uploads a replacement image as the retry and asserts `Saved`.
+  - Asserts the retry payload owns media fields only, excludes the removed media URL, and includes
+    the replacement upload.
+  - Asserts non-media commercial package fields, approval status, and unit inventory remain
+    preserved after both failure and retry.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the focused
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "media removal"`
+- Result: 3 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -220,8 +248,8 @@ Before edit-development autosave can be enabled:
    public output. Address-level proof is complete; broader city/suburb/province/postal coverage may
    still be added before rollout.
 3. Browser proof must show media edits preserve location, governance, unit inventory, pricing, and
-   public output. Upload/add proof is complete; remove/reorder coverage may still be added before
-   rollout.
+   public output. Upload/add and seeded-media removal proof are complete; reorder coverage may
+   still be added before rollout.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
    cards, and lead context. Transaction-native pricing, public page, search-card, and unit lead
    context proof is complete across all three transaction lanes.
@@ -233,6 +261,6 @@ Before edit-development autosave can be enabled:
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. The next rollout gate should add remove/reorder coverage
-for media/unit edits or repeat stale-response ordering proof for high-risk media/unit flows before
-any production enablement.
+Keep edit-development autosave disabled. The next rollout gate should add media reorder, unit
+remove/reorder, or stale-response ordering proof for high-risk media/unit flows before any
+production enablement.

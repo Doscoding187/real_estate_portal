@@ -1108,6 +1108,23 @@ async function uploadGalleryImageAndWaitForUpdate(page: Page, fileName: string) 
   return responsePromise;
 }
 
+async function removeGalleryImageAndWaitForUpdate(page: Page, imageUrl: string) {
+  const fileName = imageUrl.split('/').pop() ?? imageUrl;
+  const image = page.locator(`img[src*="${fileName}"]`).first();
+  await expect(image).toBeVisible({ timeout: 20_000 });
+  const mediaCard = image.locator('xpath=ancestor::div[contains(@class,"group")]').first();
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+
+  await mediaCard.hover();
+  await mediaCard.locator('button').last().click();
+  return responsePromise;
+}
+
 function getUnitPricingFieldLabel(lane: Lane) {
   if (lane.name === 'rental') return 'Monthly Rent From';
   if (lane.name === 'auction') return 'Starting Bid';
@@ -1228,28 +1245,31 @@ function expectLocationPayload(request: Request, address: string) {
   return input.data;
 }
 
-function expectMediaPayload(request: Request) {
+function expectMediaPayload(request: Request, options: { requireLocalUpload?: boolean } = {}) {
+  const { requireLocalUpload = true } = options;
   const input = getTrpcRequestInput(request);
   expect(input.data).toMatchObject({
     canonicalUpdateMode: 'partial_step',
     currentStepId: 'development_media',
   });
-  expect(input.data.images).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        url: expect.stringContaining('/local-uploads/'),
-      }),
-    ]),
-  );
-  expect(input.data.stepData).toMatchObject({
-    development_media: {
-      photos: expect.arrayContaining([
+  if (requireLocalUpload) {
+    expect(input.data.images).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({
           url: expect.stringContaining('/local-uploads/'),
         }),
       ]),
-    },
-  });
+    );
+    expect(input.data.stepData).toMatchObject({
+      development_media: {
+        photos: expect.arrayContaining([
+          expect.objectContaining({
+            url: expect.stringContaining('/local-uploads/'),
+          }),
+        ]),
+      },
+    });
+  }
   return input.data;
 }
 
@@ -1385,6 +1405,22 @@ function getUploadedMediaUrls(data: Record<string, any>): string[] {
   return Array.from(new Set([...imageUrls, ...stepUrls]));
 }
 
+function getMediaPayloadUrls(data: Record<string, any>): string[] {
+  const imageUrls = asArray(data.images)
+    .map(image => image?.url)
+    .filter((url): url is string => typeof url === 'string');
+  const stepUrls = asArray(data.stepData?.development_media?.photos)
+    .map(image => image?.url)
+    .filter((url): url is string => typeof url === 'string');
+  return Array.from(new Set([...imageUrls, ...stepUrls]));
+}
+
+function getPersistedImageUrls(row: Awaited<ReturnType<typeof getDevelopmentRow>>): string[] {
+  return asArray(row.images)
+    .map(image => image?.url)
+    .filter((url): url is string => typeof url === 'string');
+}
+
 async function expectUnitPricingValue(seed: Seed, lane: Lane, value: number) {
   const unit = await getFirstUnit(seed.developmentId);
   expect(unit).toMatchObject({
@@ -1440,7 +1476,16 @@ async function expectCommercialPackagePreservedExceptMedia(
   lane: Lane,
   baseline: Awaited<ReturnType<typeof getDevelopmentRow>>,
 ) {
-  const row = await expectCommercialPackagePreserved(seed, lane, baseline);
+  const row = await getDevelopmentRow(seed.developmentId);
+  expect(row.description).toBe(baseline.description);
+  expect(row.city).toBe(baseline.city);
+  expect(row.province).toBe(baseline.province);
+  expect(row.suburb).toBe(baseline.suburb);
+  expect(row.postalCode).toBe(baseline.postalCode);
+  expect(row.monthlyLevyFrom).toEqual(baseline.monthlyLevyFrom);
+  expect(row.ratesFrom).toEqual(baseline.ratesFrom);
+  expect(row.approvalStatus).toBe('approved');
+  await lane.expectUnitPreserved(seed);
   expect(row.address).toBe(baseline.address);
   return row;
 }
@@ -1812,6 +1857,60 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         expect(updateRequests.length).toBeGreaterThanOrEqual(2);
         const retryData = expectMediaPayload(updateRequests[updateRequests.length - 1]);
         expectPayloadOwnsOnlyMedia(retryData, lane);
+      });
+
+      test('keeps failed media removal visible and retries latest partial media payload', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        await openMedia(page, seed);
+
+        const updateRequests = await interceptFirstFailedUpdate(page);
+        const failedRemoveResponse = await removeGalleryImageAndWaitForUpdate(
+          page,
+          seed.mediaUrl,
+        );
+        expect(getTrpcResponseData(await failedRemoveResponse.json())).toMatchObject({
+          success: false,
+        });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+
+        expect(updateRequests).toHaveLength(1);
+        const failedRemoveData = expectMediaPayload(updateRequests[0], {
+          requireLocalUpload: false,
+        });
+        expectPayloadOwnsOnlyMedia(failedRemoveData, lane);
+        expect(getMediaPayloadUrls(failedRemoveData)).not.toContain(seed.mediaUrl);
+
+        const afterFailedRemove = await expectCommercialPackagePreservedExceptMedia(
+          seed,
+          lane,
+          baseline,
+        );
+        expect(getPersistedImageUrls(afterFailedRemove)).toContain(seed.mediaUrl);
+
+        const retryResponse = await uploadGalleryImageAndWaitForUpdate(
+          page,
+          `retry-after-remove-${lane.name}-media.png`,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+        expect(updateRequests).toHaveLength(2);
+        const retryData = expectMediaPayload(updateRequests[1]);
+        expectPayloadOwnsOnlyMedia(retryData, lane);
+        const retryUrls = getUploadedMediaUrls(retryData);
+        expect(getMediaPayloadUrls(retryData)).not.toContain(seed.mediaUrl);
+
+        const afterRetry = await expectCommercialPackagePreservedExceptMedia(seed, lane, baseline);
+        const afterRetryUrls = getPersistedImageUrls(afterRetry);
+        expect(afterRetryUrls).not.toContain(seed.mediaUrl);
+        for (const retryUrl of retryUrls) {
+          expect(afterRetryUrls).toContain(retryUrl);
+        }
       });
 
       test('keeps failed unit autosave visible and retries latest partial unit payload', async ({
