@@ -192,8 +192,10 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const updatePublisherDevelopmentMutation = trpc.superAdminPublisher.updateDevelopment.useMutation();
   const draftPersistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
 
+  const liveCanonicalSignature = useDevelopmentWizard(state =>
+    getDraftStateSignature(state.getDraftData()),
+  );
   const liveCanonicalSnapshot = useDevelopmentWizard.getState().getDraftData();
-  const liveCanonicalSignature = getDraftStateSignature(liveCanonicalSnapshot);
   const canonicalSnapshotRef = useRef(liveCanonicalSnapshot);
   const canonicalSignatureRef = useRef(liveCanonicalSignature);
   if (canonicalSignatureRef.current !== liveCanonicalSignature) {

@@ -45,7 +45,9 @@ Implemented in this slice:
 - Focused tests prove:
   - a persisted baseline is required through the shared edit progress contract;
   - location edit-autosave payloads exclude media, governance, and unit ownership;
-  - media edit-autosave payloads exclude location, governance, and unit ownership.
+  - media edit-autosave payloads exclude location, governance, and unit ownership;
+  - unit edit-autosave payloads own the transaction-native inventory fields without owning
+    location, marketing, media, or governance.
 - Component tests prove:
   - edit autosave remains disabled by default even when an edit baseline exists;
   - `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true` is required before edit autosave can become eligible;
@@ -60,7 +62,6 @@ Not implemented in this slice:
 
 - production rollout enablement;
 - edit autosave UI status changes;
-- unit edit-autosave browser proof;
 - edit autosave backend endpoint changes;
 
 ## Browser Proof Progress
@@ -133,6 +134,34 @@ edit-autosave browser proof gates.
 This proof implementation does not enable edit autosave and does not satisfy the unit-edit
 autosave browser proof gate.
 
+2026-06-22 Sale, Rental, and Auction unit proof implementation:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` now also covers Unit Types step pricing
+  failure/retry behavior for Sale, Rental, and Auction through the explicitly enabled
+  edit-autosave switch.
+- For each transaction lane:
+  - Seeds the unit with the fields required to pass the real Unit Type edit dialog validation.
+  - Navigates to the edit wizard Unit Types step.
+  - Opens the seeded unit through the real Edit Unit Type dialog.
+  - Updates the transaction-native pricing field:
+    - Sale: `priceFrom`.
+    - Rental: `monthlyRentFrom`.
+    - Auction: `startingBid`.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts the UI shows visible `Save Failed`.
+  - Asserts the failed unit pricing attempt does not change persisted DB unit pricing.
+  - Reopens the unit, changes the pricing value again, and asserts the retry succeeds.
+  - Asserts the retry payload has `canonicalUpdateMode: partial_step`.
+  - Asserts the retry payload owns unit/inventory fields only (no location, marketing, media, or
+    governance fields).
+  - Asserts the public development page shows the retried transaction-native unit pricing value.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the full
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+- Result: 24 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -145,12 +174,13 @@ Before edit-development autosave can be enabled:
    public output. Upload/add proof is complete; remove/reorder coverage may still be added before
    rollout.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
-   cards, and lead context.
+   cards, and lead context. Transaction-native pricing proof is implemented; search-card and lead
+   context assertions may still be added before rollout.
 5. Browser proof must show failed edit-autosave attempts remain visible and retryable.
 6. Browser proof must show a stale partial payload cannot mark newer edits as saved.
 7. Save Progress must remain the trusted manual fallback.
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. Add browser proof that Sale, Rental, and Auction edit
-autosave preserve unrelated fields and public output before considering rollout enablement.
+Keep edit-development autosave disabled. The next rollout gate should browser-proof stale-response
+ordering so an older in-flight partial payload cannot mark a newer edit as saved.

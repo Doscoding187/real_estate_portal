@@ -279,8 +279,15 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
             {
               id: unitId,
               name: unitName,
+              description: 'Two bedroom rental apartment for edit autosave proof.',
               bedrooms: 2,
               bathrooms: 2,
+              parkingBays: 1,
+              parkingType: 'open',
+              unitSize: 82,
+              unitCategory: 'apartment',
+              unitSubType: 'apartment',
+              structuralType: 'apartment',
               monthlyRentFrom,
               monthlyRentTo,
               depositRequired: 37_000,
@@ -319,8 +326,15 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
         {
           id: unitId,
           name: unitName,
+          description: 'Two bedroom rental apartment for edit autosave proof.',
           bedrooms: 2,
           bathrooms: 2,
+          parkingBays: 1,
+          parkingType: 'open',
+          unitSize: 82,
+          unitCategory: 'apartment',
+          unitSubType: 'apartment',
+          structuralType: 'apartment',
           monthlyRentFrom,
           monthlyRentTo,
           depositRequired: 37_000,
@@ -492,8 +506,15 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
             {
               id: unitId,
               name: unitName,
+              description: 'Three bedroom sale unit for edit autosave proof.',
               bedrooms: 3,
               bathrooms: 2,
+              parkingBays: 2,
+              parkingType: 'covered',
+              unitSize: 118,
+              unitCategory: 'apartment',
+              unitSubType: 'apartment',
+              structuralType: 'apartment',
               priceFrom,
               priceTo,
               totalUnits: 12,
@@ -532,8 +553,15 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
         {
           id: unitId,
           name: unitName,
+          description: 'Three bedroom sale unit for edit autosave proof.',
           bedrooms: 3,
           bathrooms: 2,
+          parkingBays: 2,
+          parkingType: 'covered',
+          unitSize: 118,
+          unitCategory: 'apartment',
+          unitSubType: 'apartment',
+          structuralType: 'apartment',
           priceFrom,
           priceTo,
           totalUnits: 12,
@@ -706,8 +734,15 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
             {
               id: unitId,
               name: unitName,
+              description: 'Four bedroom auction lot for edit autosave proof.',
               bedrooms: 4,
               bathrooms: 3,
+              parkingBays: 2,
+              parkingType: 'garage',
+              unitSize: 162,
+              unitCategory: 'house',
+              unitSubType: 'duplex',
+              structuralType: 'duplex',
               startingBid,
               reservePrice,
               auctionStartDate: '2026-09-15T10:00:00.000Z',
@@ -748,8 +783,15 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
         {
           id: unitId,
           name: unitName,
+          description: 'Four bedroom auction lot for edit autosave proof.',
           bedrooms: 4,
           bathrooms: 3,
+          parkingBays: 2,
+          parkingType: 'garage',
+          unitSize: 162,
+          unitCategory: 'house',
+          unitSubType: 'duplex',
+          structuralType: 'duplex',
           startingBid,
           reservePrice,
           auctionStartDate: '2026-09-15T10:00:00.000Z',
@@ -804,6 +846,8 @@ type Lane = {
   seed: () => Promise<Seed>;
   failedAddress: string;
   retryAddress: string;
+  failedUnitValue: number;
+  retryUnitValue: number;
   expectedCity: string;
   expectedSuburb: string;
   failedDescription: string;
@@ -818,6 +862,8 @@ const lanes: Lane[] = [
     seed: seedPublishedRentalEditDevelopment,
     failedAddress: '999 Failed Rental Autosave Road',
     retryAddress: '51 Retried Rental Autosave Road',
+    failedUnitValue: 19_500,
+    retryUnitValue: 20_500,
     expectedCity: 'Cape Town',
     expectedSuburb: 'Autosave Browser Proof',
     failedDescription:
@@ -835,6 +881,8 @@ const lanes: Lane[] = [
     seed: seedPublishedSaleEditDevelopment,
     failedAddress: '999 Failed Sale Autosave Avenue',
     retryAddress: '83 Retried Sale Autosave Avenue',
+    failedUnitValue: 1_850_000,
+    retryUnitValue: 1_950_000,
     expectedCity: 'Johannesburg',
     expectedSuburb: 'Sandton',
     failedDescription:
@@ -851,6 +899,8 @@ const lanes: Lane[] = [
     seed: seedPublishedAuctionEditDevelopment,
     failedAddress: '999 Failed Auction Autosave Lane',
     retryAddress: '14 Retried Auction Autosave Lane',
+    failedUnitValue: 900_000,
+    retryUnitValue: 950_000,
     expectedCity: 'Durban',
     expectedSuburb: 'Umhlanga',
     failedDescription:
@@ -894,6 +944,15 @@ async function openMedia(page: Page, seed: Seed) {
   await loginAsSeededDeveloper(page, seed);
   await page.goto(`/developer/create-development?id=${seed.developmentId}`);
   await expect(page.getByRole('heading', { name: 'Development Media' }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
+async function openUnitTypes(page: Page, seed: Seed) {
+  await setCurrentStep(seed, 'unit_types');
+  await loginAsSeededDeveloper(page, seed);
+  await page.goto(`/developer/create-development?id=${seed.developmentId}`);
+  await expect(page.getByRole('heading', { name: 'Unit Types' }).first()).toBeVisible({
     timeout: 20_000,
   });
 }
@@ -983,6 +1042,68 @@ async function uploadGalleryImageAndWaitForUpdate(page: Page, fileName: string) 
   return responsePromise;
 }
 
+function getUnitPricingFieldLabel(lane: Lane) {
+  if (lane.name === 'rental') return 'Monthly Rent From';
+  if (lane.name === 'auction') return 'Starting Bid';
+  return 'Base Price (Starting From)';
+}
+
+function getUnitPricingPayloadField(lane: Lane) {
+  if (lane.name === 'rental') return 'monthlyRentFrom';
+  if (lane.name === 'auction') return 'startingBid';
+  return 'basePriceFrom';
+}
+
+function formatRand(value: number) {
+  return `R ${Math.round(value).toLocaleString('en-ZA')}`;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function updateUnitPricingAndWaitForUpdate(page: Page, seed: Seed, lane: Lane, value: number) {
+  const unitCard = page
+    .getByText(seed.unitName)
+    .locator('xpath=ancestor::div[contains(@class,"group")]')
+    .first();
+  await unitCard.hover();
+  await page.getByLabel(`Edit ${seed.unitName}`).click();
+  await expect(page.getByRole('heading', { name: 'Edit Unit Type' })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await page.getByRole('tab', { name: 'Basic Info' }).click();
+  await page
+    .getByPlaceholder('Highlight unique features...')
+    .fill(`Updated ${lane.name} unit package for edit autosave proof.`);
+  await page
+    .locator('label')
+    .filter({ hasText: 'Unit Size' })
+    .first()
+    .locator('xpath=following::input[1]')
+    .fill(lane.name === 'auction' ? '162' : lane.name === 'sale' ? '118' : '82');
+
+  await page.getByRole('tab', { name: 'Pricing' }).click();
+  const pricingInput = page
+    .locator('label')
+    .filter({ hasText: getUnitPricingFieldLabel(lane) })
+    .first()
+    .locator('xpath=following::input[1]');
+  await pricingInput.fill(String(value));
+
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+
+  await page.getByRole('tab', { name: 'Stock' }).click();
+  await page.getByRole('button', { name: 'Update Unit Type' }).click();
+  return responsePromise;
+}
+
 function expectMarketingPayload(request: Request, description: string) {
   const input = getTrpcRequestInput(request);
   expect(input.data).toMatchObject({
@@ -1025,6 +1146,42 @@ function expectMediaPayload(request: Request) {
       ]),
     },
   });
+  return input.data;
+}
+
+function expectUnitPayload(request: Request, lane: Lane, seed: Seed, value: number) {
+  const input = getTrpcRequestInput(request);
+  const pricingField = getUnitPricingPayloadField(lane);
+  expect(input.data).toMatchObject({
+    canonicalUpdateMode: 'partial_step',
+    currentStepId: 'unit_types',
+  });
+  expect(input.data.unitTypes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: seed.unitId,
+        name: seed.unitName,
+        [pricingField]: value,
+      }),
+    ]),
+  );
+  expect(input.data.stepData).toMatchObject({
+    unit_types: {
+      unitTypes: expect.arrayContaining([
+        expect.objectContaining({
+          id: seed.unitId,
+          [pricingField]: value,
+        }),
+      ]),
+    },
+  });
+  if (lane.name === 'rental') {
+    expect(input.data.monthlyRentFrom).toBe(value);
+  } else if (lane.name === 'auction') {
+    expect(input.data.startingBidFrom).toBe(value);
+  } else {
+    expect(input.data.priceFrom).toBe(value);
+  }
   return input.data;
 }
 
@@ -1079,6 +1236,31 @@ function expectPayloadOwnsOnlyMedia(data: Record<string, unknown>, lane: Lane) {
   expect(data.stepData).not.toHaveProperty('unit_types');
 }
 
+function expectPayloadOwnsOnlyUnitTypes(data: Record<string, unknown>) {
+  for (const field of [
+    'address',
+    'city',
+    'province',
+    'suburb',
+    'postalCode',
+    'description',
+    'tagline',
+    'highlights',
+    'images',
+    'videos',
+    'floorPlans',
+    'brochures',
+    'monthlyLevyFrom',
+    'ratesFrom',
+  ]) {
+    expect(data).not.toHaveProperty(field);
+  }
+  expect(data.stepData).not.toHaveProperty('location');
+  expect(data.stepData).not.toHaveProperty('marketing_summary');
+  expect(data.stepData).not.toHaveProperty('development_media');
+  expect(data.stepData).not.toHaveProperty('governance_finances');
+}
+
 async function expectBaselinePreserved(seed: Seed, lane: Lane, expectedDescription: string) {
   const row = await getDevelopmentRow(seed.developmentId);
   expect(row.description).toBe(expectedDescription);
@@ -1097,6 +1279,19 @@ function getUploadedMediaUrls(data: Record<string, any>): string[] {
     .map(image => image?.url)
     .filter((url): url is string => typeof url === 'string' && url.includes('/local-uploads/'));
   return Array.from(new Set([...imageUrls, ...stepUrls]));
+}
+
+async function expectUnitPricingValue(seed: Seed, lane: Lane, value: number) {
+  const unit = await getFirstUnit(seed.developmentId);
+  expect(unit).toMatchObject({
+    id: seed.unitId,
+    name: seed.unitName,
+  });
+  if (lane.name === 'sale') {
+    expect(Number(unit.priceFrom ?? unit.basePriceFrom)).toBe(value);
+    return;
+  }
+  expect(Number(unit[getUnitPricingPayloadField(lane)])).toBe(value);
 }
 
 async function expectCommercialPackagePreserved(
@@ -1118,6 +1313,24 @@ async function expectCommercialPackagePreserved(
   return row;
 }
 
+async function expectCommercialPackagePreservedExceptUnitPricing(
+  seed: Seed,
+  baseline: Awaited<ReturnType<typeof getDevelopmentRow>>,
+) {
+  const row = await getDevelopmentRow(seed.developmentId);
+  expect(row.description).toBe(baseline.description);
+  expect(row.address).toBe(baseline.address);
+  expect(row.city).toBe(baseline.city);
+  expect(row.province).toBe(baseline.province);
+  expect(row.suburb).toBe(baseline.suburb);
+  expect(row.postalCode).toBe(baseline.postalCode);
+  expect(row.monthlyLevyFrom).toEqual(baseline.monthlyLevyFrom);
+  expect(row.ratesFrom).toEqual(baseline.ratesFrom);
+  expect(row.approvalStatus).toBe('approved');
+  expect(asArray(row.images).some(image => image?.url === seed.mediaUrl)).toBe(true);
+  return row;
+}
+
 async function expectCommercialPackagePreservedExceptMedia(
   seed: Seed,
   lane: Lane,
@@ -1126,6 +1339,18 @@ async function expectCommercialPackagePreservedExceptMedia(
   const row = await expectCommercialPackagePreserved(seed, lane, baseline);
   expect(row.address).toBe(baseline.address);
   return row;
+}
+
+async function expectPublicOutputForEditedUnit(page: Page, seed: Seed, lane: Lane, value: number) {
+  await expect(page.getByText(seed.unitName).first()).toBeVisible();
+  const label =
+    lane.name === 'rental' ? 'Rent From' : lane.name === 'auction' ? 'Starting Bid' : 'Price From';
+  await expect(
+    page
+      .locator('#commercial-pack')
+      .getByText(new RegExp(`${escapeRegExp(label)}\\s+${escapeRegExp(formatRand(value))}`))
+      .first(),
+  ).toBeVisible();
 }
 
 test.describe.serial('DLE edit autosave browser proof', () => {
@@ -1372,6 +1597,98 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         expect(updateRequests.length).toBeGreaterThanOrEqual(2);
         const retryData = expectMediaPayload(updateRequests[updateRequests.length - 1]);
         expectPayloadOwnsOnlyMedia(retryData, lane);
+      });
+
+      test('keeps failed unit autosave visible and retries latest partial unit payload', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        await openUnitTypes(page, seed);
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        const failedResponse = await updateUnitPricingAndWaitForUpdate(
+          page,
+          seed,
+          lane,
+          lane.failedUnitValue,
+        );
+        expect(getTrpcResponseData(await failedResponse.json())).toMatchObject({ success: false });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-unit-failure-visible.png`,
+          fullPage: true,
+        });
+
+        expect(updateRequests).toHaveLength(1);
+        const failedData = expectUnitPayload(
+          updateRequests[0],
+          lane,
+          seed,
+          lane.failedUnitValue,
+        );
+        expectPayloadOwnsOnlyUnitTypes(failedData);
+        await expectCommercialPackagePreservedExceptUnitPricing(seed, baseline);
+        await lane.expectUnitPreserved(seed);
+
+        const retryResponse = await updateUnitPricingAndWaitForUpdate(
+          page,
+          seed,
+          lane,
+          lane.retryUnitValue,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-unit-retry-saved.png`,
+          fullPage: true,
+        });
+
+        expect(updateRequests).toHaveLength(2);
+        const retryData = expectUnitPayload(
+          updateRequests[1],
+          lane,
+          seed,
+          lane.retryUnitValue,
+        );
+        expectPayloadOwnsOnlyUnitTypes(retryData);
+
+        await expectCommercialPackagePreservedExceptUnitPricing(seed, baseline);
+        await expectUnitPricingValue(seed, lane, lane.retryUnitValue);
+
+        await page.goto(`/development/${seed.slug}`);
+        await expect(page.getByRole('heading', { name: seed.developmentName })).toBeVisible({
+          timeout: 20_000,
+        });
+        await expectPublicOutputForEditedUnit(page, seed, lane, lane.retryUnitValue);
+        await page.screenshot({
+          path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-unit-public-preserved.png`,
+          fullPage: true,
+        });
+      });
+
+      test('retry payload owns only unit fields', async ({ page }) => {
+        await openUnitTypes(page, seed);
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        await updateUnitPricingAndWaitForUpdate(page, seed, lane, lane.failedUnitValue);
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 20_000,
+        });
+
+        await updateUnitPricingAndWaitForUpdate(page, seed, lane, lane.retryUnitValue);
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+        expect(updateRequests.length).toBeGreaterThanOrEqual(2);
+        const retryData = expectUnitPayload(
+          updateRequests[updateRequests.length - 1],
+          lane,
+          seed,
+          lane.retryUnitValue,
+        );
+        expectPayloadOwnsOnlyUnitTypes(retryData);
       });
     });
   }

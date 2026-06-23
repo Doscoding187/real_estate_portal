@@ -8123,5 +8123,79 @@ Remaining risks:
 Next recommended slice:
 - Continue to unit edit-autosave ownership proof for Sale, Rental, and Auction after this slice
   passes.
-Commit hash/tag: Pending commit for `test(dle): prove media edit autosave ownership`.
-Uncommitted reason, if any: Pending commit.
+Commit hash/tag: Included in `test(dle): prove media edit autosave ownership`.
+Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-22 - Sale/Rental/Auction Edit Autosave Unit Ownership Proof
+
+Date: 2026-06-22
+Branch: feature/developer-listing-engine-isolated
+Goal: Extend the edit-autosave browser proof so Sale, Rental, and Auction each prove Unit Types
+pricing failure/retry behavior without letting a unit edit wipe location, marketing, media,
+governance, approval, or public listing context.
+Files changed:
+- client/src/components/development-wizard/DevelopmentWizard.tsx
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Focused sale unit proof after payload-contract correction:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "sale edit autosave.*unit"`
+  - Result: Passed. Final focused browser result: 2 passed, 0 failed.
+- Full Sale/Rental/Auction edit-autosave browser suite:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+  - Result: Passed. Final browser result: 24 passed, 0 failed.
+- `pnpm run check`: Passed.
+- `git diff --check`: Passed.
+Evidence screenshots:
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-unit-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-unit-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-rental-edit-autosave-unit-public-preserved.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-unit-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-unit-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-sale-edit-autosave-unit-public-preserved.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-unit-failure-visible.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-unit-retry-saved.png
+- docs/dle/evidence/2026-06-22/qa-dle-auction-edit-autosave-unit-public-preserved.png
+Functional proof intended by this slice:
+- Fixes edit-mode autosave observation for Unit Types by subscribing the wizard to a stable
+  canonical draft signature, so unit dialog saves are visible to the edit-autosave watcher without
+  introducing a render loop.
+- Extends each published, approved transaction-lane seed so the seeded unit passes the real Unit
+  Type edit dialog validation.
+- Moves the edit wizard to the Unit Types step before each unit proof.
+- Opens the seeded unit through the real edit dialog, changes the transaction-native pricing field,
+  and saves from the Stock tab:
+  - Sale: `priceFrom`.
+  - Rental: `monthlyRentFrom`.
+  - Auction: `startingBid`.
+- With `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`, intercepts the first
+  `developer.updateDevelopment` request and returns `{ success: false }`.
+- Each lane asserts UI shows visible `Save Failed`, DB unit pricing is unchanged after failure,
+  and unrelated fields (description, address, city, province, suburb, postal code, media,
+  governance/finance, and approval status) remain preserved.
+- Each lane reopens the unit, changes the pricing value again, and asserts the retry succeeds with
+  the latest unit payload.
+- Each lane asserts the retry payload has `canonicalUpdateMode: partial_step`, owns
+  unit/inventory fields only, and does not own location, marketing, media, or governance fields.
+- Each lane asserts the public development page renders the retried transaction-native unit pricing
+  value after retry.
+- Sale unit payload assertions use the current canonical vocabulary: `basePriceFrom` inside the
+  unit payload and development-level `priceFrom` for the public aggregate.
+- Public output assertions target the visible commercial-pack merchandising copy instead of hidden
+  duplicate price nodes.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No backend endpoint, schema, migration, publish, search-card, lead, evidence, distribution,
+  inventory outcome, payout, reward, or operating behavior changed.
+- This is transaction-native unit pricing proof; remove/reorder, search-card, and lead-context
+  assertions can still be added before rollout if needed.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Browser proof is still needed for stale in-flight partial response ordering beyond the latest
+  retry checks.
+Next recommended slice:
+- Keep edit-development autosave disabled and add browser proof that an older in-flight partial
+  response cannot mark a newer edit as saved.
+Commit hash/tag: Included in `test(dle): prove unit edit autosave ownership`.
+Uncommitted reason, if any: None. Slice committed.
