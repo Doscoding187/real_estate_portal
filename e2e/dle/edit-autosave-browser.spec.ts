@@ -1331,14 +1331,12 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function updateUnitPricingAndWaitForUpdate(page: Page, seed: Seed, lane: Lane, value: number) {
-  const responsePromise = page.waitForResponse(
-    response =>
-      response.url().includes('/api/trpc/developer.updateDevelopment') &&
-      response.request().method() === 'POST',
-    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
-  );
-
+async function updateUnitPricingWithoutWaitingForResponse(
+  page: Page,
+  seed: Seed,
+  lane: Lane,
+  value: number,
+) {
   const unitCard = page
     .getByText(seed.unitName)
     .locator('xpath=ancestor::div[contains(@class,"group")]')
@@ -1370,6 +1368,20 @@ async function updateUnitPricingAndWaitForUpdate(page: Page, seed: Seed, lane: L
 
   await page.getByRole('tab', { name: 'Stock' }).click();
   await page.getByRole('button', { name: 'Update Unit Type' }).click();
+  await expect(page.getByRole('heading', { name: 'Edit Unit Type' })).toBeHidden({
+    timeout: 10_000,
+  });
+}
+
+async function updateUnitPricingAndWaitForUpdate(page: Page, seed: Seed, lane: Lane, value: number) {
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+
+  await updateUnitPricingWithoutWaitingForResponse(page, seed, lane, value);
   return responsePromise;
 }
 
@@ -2151,6 +2163,57 @@ test.describe.serial('DLE edit autosave browser proof', () => {
           path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-unit-public-preserved.png`,
           fullPage: true,
         });
+      });
+
+      test('does not let stale successful unit autosave claim a newer unit edit is saved', async ({
+        page,
+      }) => {
+        await openUnitTypes(page, seed);
+        const { releaseFirstSuccess, updateRequests } =
+          await interceptFirstSuccessfulUpdateUntilReleased(page);
+
+        const firstResponsePromise = page.waitForResponse(
+          response =>
+            response.url().includes('/api/trpc/developer.updateDevelopment') &&
+            response.request().method() === 'POST',
+          { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+        );
+
+        await updateUnitPricingWithoutWaitingForResponse(
+          page,
+          seed,
+          lane,
+          lane.failedUnitValue,
+        );
+        await waitForUpdateRequestCount(updateRequests, 1);
+        const olderPayload = expectUnitPayload(updateRequests[0], lane, seed, lane.failedUnitValue);
+        expectPayloadOwnsOnlyUnitTypes(olderPayload);
+
+        await updateUnitPricingWithoutWaitingForResponse(
+          page,
+          seed,
+          lane,
+          lane.retryUnitValue,
+        );
+        releaseFirstSuccess();
+        const firstResponse = await firstResponsePromise;
+        expect(getTrpcResponseData(await firstResponse.json())).toMatchObject({ success: true });
+
+        await expect(page.getByText('Saved', { exact: true })).toBeHidden({ timeout: 1_000 });
+        await expect(page.getByText('Manual save ready', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+        const afterStaleSuccessUnit = await getFirstUnit(seed.developmentId);
+        expect(Number(afterStaleSuccessUnit[getUnitPricingPayloadField(lane)])).not.toBe(
+          lane.retryUnitValue,
+        );
+
+        await waitForUpdateRequestCount(updateRequests, 2);
+        const newerPayload = expectUnitPayload(updateRequests[1], lane, seed, lane.retryUnitValue);
+        expectPayloadOwnsOnlyUnitTypes(newerPayload);
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+        await expectUnitPricingValue(seed, lane, lane.retryUnitValue);
       });
 
       test('keeps failed unit removal visible and retries latest partial unit payload', async ({

@@ -7862,7 +7862,6 @@ Goal: Add the first browser-level proof for future edit-development autosave fai
 while keeping edit autosave gated and disabled by default.
 Files changed:
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 - docs/dle/evidence/2026-06-19/qa-dle-edit-autosave-browser-failure-visible.png
 - docs/dle/evidence/2026-06-19/qa-dle-edit-autosave-browser-retry-saved.png
@@ -7953,7 +7952,6 @@ Goal: Extend the existing edit-autosave browser proof so Sale, Rental, and Aucti
 marketing-summary edit-autosave failure/retry behavior per the ownership contract.
 Files changed:
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
@@ -8022,7 +8020,6 @@ failure/retry behavior without letting a location edit wipe marketing, media, go
 or unit inventory.
 Files changed:
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
@@ -8077,7 +8074,6 @@ upload failure/retry behavior without letting a media edit wipe location, market
 pricing, or unit inventory.
 Files changed:
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
@@ -8136,7 +8132,6 @@ governance, approval, or public listing context.
 Files changed:
 - client/src/components/development-wizard/DevelopmentWizard.tsx
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - Focused sale unit proof after payload-contract correction:
@@ -8208,7 +8203,6 @@ Goal: Prove an older in-flight successful edit-autosave response cannot mark a n
 as saved across Sale, Rental, and Auction.
 Files changed:
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - Focused stale-success browser proof:
@@ -8258,7 +8252,6 @@ Goal: Prove autosaved Unit Types pricing changes flow from edit packaging into p
 merchandising and unit-level lead context across Sale, Rental, and Auction.
 Files changed:
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - Comparison unit autosave ownership proof after hardening the shared unit update response wait:
@@ -8321,7 +8314,6 @@ commercial package fields.
 Files changed:
 - client/src/components/development-wizard/phases/MediaPhase.tsx
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - Local DB setup for this environment:
@@ -8384,7 +8376,6 @@ Files changed:
 - server/lib/developmentUpdateIntent.ts
 - server/lib/developmentUpdateIntent.test.ts
 - e2e/dle/edit-autosave-browser.spec.ts
-- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
 - docs/dle/RECOVERY_LOG.md
 Tests run:
 - Focused unit removal browser proof:
@@ -8437,3 +8428,48 @@ Next recommended slice:
   media/unit stale-response ordering proof before any production enablement.
 Commit hash/tag: Included in `test(dle): prove unit removal edit autosave ownership`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-23 - Sale/Rental/Auction Unit Stale Autosave Response Ordering Proof
+
+Date: 2026-06-23
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove that an older successful Unit Types edit-autosave response cannot falsely claim a newer
+unit pricing edit is saved across Sale, Rental, and Auction.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Focused unit stale-response browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "stale successful unit"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+- `git diff --check`
+  - Result: Passed before browser proof.
+- `pnpm run check`
+  - Result: Passed before browser proof.
+Environment notes:
+- Local MySQL was running on `127.0.0.1:3307`.
+- Backend was running on `5000`.
+- Frontend was running on `3009` with `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`.
+Functional proof intended by this slice:
+- Splits the Unit Types pricing helper so a unit pricing edit can be triggered without immediately
+  waiting for the autosave response.
+- Holds the first successful `developer.updateDevelopment` response open.
+- Makes a newer unit pricing edit while the older success is still pending.
+- Releases the older success and asserts it does not falsely show the latest state as `Saved`.
+- Asserts persisted unit pricing does not silently advance to the newer value from the stale response.
+- Waits for the newer autosave request and proves the newer value is the one that becomes persisted.
+- Covers Sale, Rental, and Auction transaction lanes.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No schema, migration, backend endpoint, publish behavior, search-card logic, lead persistence,
+  distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is Unit Types stale-response ordering proof only.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Unit reorder and media reorder autosave ownership are not browser-proven.
+- High-risk media stale-response ordering can still be added before rollout if needed.
+Next recommended slice:
+- Keep edit-development autosave disabled and add unit reorder, media reorder, or high-risk media
+  stale-response ordering proof before any production enablement.
+Commit hash/tag: Pending commit `test(dle): prove unit stale autosave response ordering`.
+Uncommitted reason, if any: Pending final checks and commit.
