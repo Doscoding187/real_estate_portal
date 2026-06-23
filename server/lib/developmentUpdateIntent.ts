@@ -27,9 +27,14 @@ export function resolveDevelopmentUpdateIntent(input: unknown): DevelopmentUpdat
     payload[CANONICAL_UPDATE_MODE_FIELD] === CANONICAL_PARTIAL_UPDATE_MODE;
 
   if (Array.isArray(stepUnitTypes)) {
+    const canonicalUnitTypesStepUpdate =
+      isCanonicalPartialUpdate && currentStepId === 'unit_types';
     return {
-      unitTypesMode: isCanonicalPartialUpdate ? 'canonical_patch' : 'canonical_full_sync',
-      deleteMissingUnitTypes: !isCanonicalPartialUpdate,
+      unitTypesMode:
+        isCanonicalPartialUpdate && !canonicalUnitTypesStepUpdate
+          ? 'canonical_patch'
+          : 'canonical_full_sync',
+      deleteMissingUnitTypes: !isCanonicalPartialUpdate || canonicalUnitTypesStepUpdate,
     };
   }
 

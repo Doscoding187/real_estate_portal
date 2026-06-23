@@ -28,6 +28,8 @@ type SeedBase = {
   email: string;
   initialDescription: string;
   mediaUrl: string;
+  removableUnitId: string;
+  removableUnitName: string;
   retryDescription: string;
   slug: string;
   userId: number;
@@ -123,7 +125,16 @@ async function getDevelopmentRow(developmentId: number) {
 
 async function getFirstUnit(developmentId: number) {
   const development = await developmentService.getDevelopmentWithPhases(developmentId);
-  return (development as any)?.unitTypes?.[0] ?? null;
+  return getUnitsFromDevelopment(development)[0] ?? null;
+}
+
+function getUnitsFromDevelopment(development: unknown) {
+  return ((development as any)?.unitTypes ?? []) as any[];
+}
+
+async function getUnits(developmentId: number) {
+  const development = await developmentService.getDevelopmentWithPhases(developmentId);
+  return getUnitsFromDevelopment(development);
 }
 
 async function expectSeedRentalUnitPreserved(seed: RentalSeed) {
@@ -165,6 +176,8 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
   const developmentName = `DLE Edit Autosave Rental ${suffix}`;
   const unitId = `edit-autosave-rent-${suffix}`.slice(0, 36);
   const unitName = `Edit Autosave Rental Unit ${suffix}`;
+  const removableUnitId = `remove-autosave-rent-${suffix}`.slice(0, 36);
+  const removableUnitName = `Remove Autosave Rental Unit ${suffix}`;
   const mediaUrl = `https://example.com/dle-edit-autosave-original-${suffix}.jpg`;
   const monthlyRentFrom = 18_500;
   const monthlyRentTo = 21_000;
@@ -294,6 +307,24 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
               totalUnits: 8,
               availableUnits: 5,
             },
+            {
+              id: removableUnitId,
+              name: removableUnitName,
+              description: 'Secondary rental apartment used to prove unit removal autosave.',
+              bedrooms: 3,
+              bathrooms: 2,
+              parkingBays: 2,
+              parkingType: 'covered',
+              unitSize: 96,
+              unitCategory: 'apartment',
+              unitSubType: 'apartment',
+              structuralType: 'apartment',
+              monthlyRentFrom: 22_500,
+              monthlyRentTo: 25_000,
+              depositRequired: 45_000,
+              totalUnits: 3,
+              availableUnits: 2,
+            },
           ],
         },
       },
@@ -341,6 +372,24 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
           totalUnits: 8,
           availableUnits: 5,
         },
+        {
+          id: removableUnitId,
+          name: removableUnitName,
+          description: 'Secondary rental apartment used to prove unit removal autosave.',
+          bedrooms: 3,
+          bathrooms: 2,
+          parkingBays: 2,
+          parkingType: 'covered',
+          unitSize: 96,
+          unitCategory: 'apartment',
+          unitSubType: 'apartment',
+          structuralType: 'apartment',
+          monthlyRentFrom: 22_500,
+          monthlyRentTo: 25_000,
+          depositRequired: 45_000,
+          totalUnits: 3,
+          availableUnits: 2,
+        },
       ],
     } as any);
     developmentId = Number(created.id);
@@ -373,6 +422,8 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
     email,
     initialDescription,
     mediaUrl,
+    removableUnitId,
+    removableUnitName,
     retryDescription,
     slug: row.slug,
     unitId,
@@ -392,6 +443,8 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
   const developmentName = `DLE Edit Autosave Sale ${suffix}`;
   const unitId = `edit-autosave-sale-${suffix}`.slice(0, 36);
   const unitName = `Edit Autosave Sale Unit ${suffix}`;
+  const removableUnitId = `remove-autosave-sale-${suffix}`.slice(0, 36);
+  const removableUnitName = `Remove Autosave Sale Unit ${suffix}`;
   const mediaUrl = `https://example.com/dle-edit-autosave-sale-original-${suffix}.jpg`;
   const priceFrom = 1_750_000;
   const priceTo = 2_200_000;
@@ -520,6 +573,23 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
               totalUnits: 12,
               availableUnits: 7,
             },
+            {
+              id: removableUnitId,
+              name: removableUnitName,
+              description: 'Secondary sale unit used to prove unit removal autosave.',
+              bedrooms: 4,
+              bathrooms: 3,
+              parkingBays: 2,
+              parkingType: 'garage',
+              unitSize: 140,
+              unitCategory: 'apartment',
+              unitSubType: 'apartment',
+              structuralType: 'apartment',
+              priceFrom: 2_450_000,
+              priceTo: 2_900_000,
+              totalUnits: 5,
+              availableUnits: 3,
+            },
           ],
         },
       },
@@ -567,6 +637,23 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
           totalUnits: 12,
           availableUnits: 7,
         },
+        {
+          id: removableUnitId,
+          name: removableUnitName,
+          description: 'Secondary sale unit used to prove unit removal autosave.',
+          bedrooms: 4,
+          bathrooms: 3,
+          parkingBays: 2,
+          parkingType: 'garage',
+          unitSize: 140,
+          unitCategory: 'apartment',
+          unitSubType: 'apartment',
+          structuralType: 'apartment',
+          priceFrom: 2_450_000,
+          priceTo: 2_900_000,
+          totalUnits: 5,
+          availableUnits: 3,
+        },
       ],
     } as any);
     developmentId = Number(created.id);
@@ -599,6 +686,8 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
     email,
     initialDescription,
     mediaUrl,
+    removableUnitId,
+    removableUnitName,
     retryDescription,
     slug: row.slug,
     unitId,
@@ -618,6 +707,8 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
   const developmentName = `DLE Edit Autosave Auction ${suffix}`;
   const unitId = `edit-autosave-auction-${suffix}`.slice(0, 36);
   const unitName = `Edit Autosave Auction Unit ${suffix}`;
+  const removableUnitId = `remove-autosave-auction-${suffix}`.slice(0, 36);
+  const removableUnitName = `Remove Autosave Auction Unit ${suffix}`;
   const mediaUrl = `https://example.com/dle-edit-autosave-auction-original-${suffix}.jpg`;
   const startingBid = 800_000;
   const reservePrice = 1_200_000;
@@ -750,6 +841,25 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
               totalUnits: 6,
               availableUnits: 4,
             },
+            {
+              id: removableUnitId,
+              name: removableUnitName,
+              description: 'Secondary auction lot used to prove unit removal autosave.',
+              bedrooms: 5,
+              bathrooms: 4,
+              parkingBays: 3,
+              parkingType: 'garage',
+              unitSize: 188,
+              unitCategory: 'house',
+              unitSubType: 'duplex',
+              structuralType: 'duplex',
+              startingBid: 1_100_000,
+              reservePrice: 1_500_000,
+              auctionStartDate: '2026-09-15T10:00:00.000Z',
+              auctionEndDate: '2026-09-17T10:00:00.000Z',
+              totalUnits: 2,
+              availableUnits: 1,
+            },
           ],
         },
       },
@@ -799,6 +909,25 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
           totalUnits: 6,
           availableUnits: 4,
         },
+        {
+          id: removableUnitId,
+          name: removableUnitName,
+          description: 'Secondary auction lot used to prove unit removal autosave.',
+          bedrooms: 5,
+          bathrooms: 4,
+          parkingBays: 3,
+          parkingType: 'garage',
+          unitSize: 188,
+          unitCategory: 'house',
+          unitSubType: 'duplex',
+          structuralType: 'duplex',
+          startingBid: 1_100_000,
+          reservePrice: 1_500_000,
+          auctionStartDate: '2026-09-15T10:00:00.000Z',
+          auctionEndDate: '2026-09-17T10:00:00.000Z',
+          totalUnits: 2,
+          availableUnits: 1,
+        },
       ],
     } as any);
     developmentId = Number(created.id);
@@ -831,6 +960,8 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
     email,
     initialDescription,
     mediaUrl,
+    removableUnitId,
+    removableUnitName,
     retryDescription,
     slug: row.slug,
     unitId,
@@ -1125,6 +1256,23 @@ async function removeGalleryImageAndWaitForUpdate(page: Page, imageUrl: string) 
   return responsePromise;
 }
 
+async function removeUnitAndWaitForUpdate(page: Page, unitName: string) {
+  const unitCard = page
+    .getByText(unitName)
+    .locator('xpath=ancestor::div[contains(@class,"group")]')
+    .first();
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+
+  await unitCard.hover();
+  await page.getByLabel(`Remove ${unitName}`).click();
+  return responsePromise;
+}
+
 function getUnitPricingFieldLabel(lane: Lane) {
   if (lane.name === 'rental') return 'Monthly Rent From';
   if (lane.name === 'auction') return 'Starting Bid';
@@ -1309,6 +1457,23 @@ function expectUnitPayload(request: Request, lane: Lane, seed: Seed, value: numb
   return input.data;
 }
 
+function expectUnitRemovalPayload(request: Request, seed: Seed) {
+  const input = getTrpcRequestInput(request);
+  expect(input.data).toMatchObject({
+    canonicalUpdateMode: 'partial_step',
+    currentStepId: 'unit_types',
+  });
+
+  const payloadUnits = asArray(input.data.unitTypes);
+  const stepUnits = asArray(input.data.stepData?.unit_types?.unitTypes);
+  expect(payloadUnits.some(unit => unit?.id === seed.unitId)).toBe(true);
+  expect(stepUnits.some(unit => unit?.id === seed.unitId)).toBe(true);
+  expect(payloadUnits.some(unit => unit?.id === seed.removableUnitId)).toBe(false);
+  expect(stepUnits.some(unit => unit?.id === seed.removableUnitId)).toBe(false);
+
+  return input.data;
+}
+
 function expectPayloadOwnsOnlyMarketing(data: Record<string, unknown>, lane: Lane) {
   for (const field of [
     'unitTypes',
@@ -1432,6 +1597,11 @@ async function expectUnitPricingValue(seed: Seed, lane: Lane, value: number) {
     return;
   }
   expect(Number(unit[getUnitPricingPayloadField(lane)])).toBe(value);
+}
+
+async function expectUnitPresence(seed: Seed, unitId: string, shouldExist: boolean) {
+  const units = await getUnits(seed.developmentId);
+  expect(units.some(unit => unit?.id === unitId)).toBe(shouldExist);
 }
 
 async function expectCommercialPackagePreserved(
@@ -1980,6 +2150,70 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         await page.screenshot({
           path: `docs/dle/evidence/2026-06-22/qa-dle-${lane.name}-edit-autosave-unit-public-preserved.png`,
           fullPage: true,
+        });
+      });
+
+      test('keeps failed unit removal visible and retries latest partial unit payload', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        await openUnitTypes(page, seed);
+        await expect(page.getByText(seed.removableUnitName).first()).toBeVisible({
+          timeout: 10_000,
+        });
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        const failedRemoveResponse = await removeUnitAndWaitForUpdate(
+          page,
+          seed.removableUnitName,
+        );
+        expect(getTrpcResponseData(await failedRemoveResponse.json())).toMatchObject({
+          success: false,
+        });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+
+        expect(updateRequests).toHaveLength(1);
+        const failedRemoveData = expectUnitRemovalPayload(updateRequests[0], seed);
+        expectPayloadOwnsOnlyUnitTypes(failedRemoveData);
+        await expectCommercialPackagePreservedExceptUnitPricing(seed, baseline);
+        await lane.expectUnitPreserved(seed);
+        await expectUnitPresence(seed, seed.removableUnitId, true);
+
+        const retryResponse = await updateUnitPricingAndWaitForUpdate(
+          page,
+          seed,
+          lane,
+          lane.retryUnitValue,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+        expect(updateRequests).toHaveLength(2);
+        const retryData = expectUnitPayload(updateRequests[1], lane, seed, lane.retryUnitValue);
+        expectPayloadOwnsOnlyUnitTypes(retryData);
+        expect(asArray(retryData.unitTypes).some(unit => unit?.id === seed.removableUnitId)).toBe(
+          false,
+        );
+        expect(
+          asArray(retryData.stepData?.unit_types?.unitTypes).some(
+            unit => unit?.id === seed.removableUnitId,
+          ),
+        ).toBe(false);
+
+        await expectCommercialPackagePreservedExceptUnitPricing(seed, baseline);
+        await expectUnitPricingValue(seed, lane, lane.retryUnitValue);
+        await expectUnitPresence(seed, seed.removableUnitId, false);
+
+        await page.goto(`/development/${seed.slug}`);
+        await expect(page.getByRole('heading', { name: seed.developmentName })).toBeVisible({
+          timeout: 20_000,
+        });
+        await expectPublicOutputForEditedUnit(page, seed, lane, lane.retryUnitValue);
+        await expect(page.getByText(seed.removableUnitName).first()).toBeHidden({
+          timeout: 10_000,
         });
       });
 

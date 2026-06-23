@@ -19,11 +19,29 @@ describe('resolveDevelopmentUpdateIntent', () => {
     });
   });
 
-  it('treats canonical partial unit_types saves as patches that preserve omitted units', () => {
+  it('treats canonical partial unit_types step saves as full inventory syncs', () => {
     expect(
       resolveDevelopmentUpdateIntent({
         canonicalUpdateMode: 'partial_step',
         currentStepId: 'unit_types',
+        unitTypes: [{ id: 'canonical-unit' }],
+        stepData: {
+          unit_types: {
+            unitTypes: [{ id: 'canonical-unit' }],
+          },
+        },
+      }),
+    ).toEqual({
+      unitTypesMode: 'canonical_full_sync',
+      deleteMissingUnitTypes: true,
+    });
+  });
+
+  it('treats canonical partial unit mirrors outside the Unit Types step as patches', () => {
+    expect(
+      resolveDevelopmentUpdateIntent({
+        canonicalUpdateMode: 'partial_step',
+        currentStepId: 'review_publish',
         unitTypes: [{ id: 'canonical-unit' }],
         stepData: {
           unit_types: {

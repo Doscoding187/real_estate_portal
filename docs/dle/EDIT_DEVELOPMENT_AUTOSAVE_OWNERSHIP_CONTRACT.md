@@ -239,6 +239,35 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "media removal"`
 - Result: 3 passed, 0 failed.
 
+2026-06-23 Sale, Rental, and Auction unit removal proof implementation:
+
+- `server/lib/developmentUpdateIntent.ts` now treats canonical partial saves from the real
+  `unit_types` step as full inventory syncs for unit persistence. This allows an intentional Unit
+  Types removal to delete omitted unit rows while stale unit mirrors from non-inventory steps remain
+  ignored or patch-only.
+- `e2e/dle/edit-autosave-browser.spec.ts` now seeds a second removable unit in each transaction
+  lane and covers Unit Types removal failure/retry behavior.
+- For each transaction lane:
+  - Navigates to the edit wizard Unit Types step.
+  - Removes the secondary unit through the real Unit Types UI.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts `Save Failed` remains visible.
+  - Asserts the failed removal payload has `canonicalUpdateMode: partial_step`, owns unit/inventory
+    fields only, and excludes the removed unit.
+  - Asserts the failed removal does not delete the persisted DB unit.
+  - Edits the remaining primary unit pricing as the retry and asserts `Saved`.
+  - Asserts the retry payload still excludes the removed unit.
+  - Asserts persisted inventory now excludes the removed unit while non-unit commercial package
+    fields, approval status, media, location, marketing, and governance remain preserved.
+  - Asserts the public development page still renders the remaining primary unit with
+    transaction-native pricing.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the focused
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "unit removal"`
+- Result: 3 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -252,7 +281,9 @@ Before edit-development autosave can be enabled:
    still be added before rollout.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
    cards, and lead context. Transaction-native pricing, public page, search-card, and unit lead
-   context proof is complete across all three transaction lanes.
+   context proof is complete across all three transaction lanes. Secondary-unit removal
+   failure/retry proof is also complete across all three lanes; reorder coverage may still be added
+   before rollout.
 5. Browser proof must show failed edit-autosave attempts remain visible and retryable.
 6. Browser proof must show a stale partial payload cannot mark newer edits as saved. Marketing
    stale-success proof is complete across all three transaction lanes; repeat for other high-risk
@@ -262,5 +293,5 @@ Before edit-development autosave can be enabled:
 ## Next Recommended Slice
 
 Keep edit-development autosave disabled. The next rollout gate should add media reorder, unit
-remove/reorder, or stale-response ordering proof for high-risk media/unit flows before any
-production enablement.
+reorder, or stale-response ordering proof for high-risk media/unit flows before any production
+enablement.

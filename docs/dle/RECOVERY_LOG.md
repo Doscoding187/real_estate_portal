@@ -8372,3 +8372,68 @@ Next recommended slice:
   media/unit stale-response ordering proof before any production enablement.
 Commit hash/tag: Included in `test(dle): prove media removal edit autosave ownership`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-23 - Sale/Rental/Auction Edit Autosave Unit Removal Proof
+
+Date: 2026-06-23
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove Unit Types removal failure/retry behavior across Sale, Rental, and Auction, including
+truthful save-state handling, deletion persistence, and preservation of unrelated commercial
+package fields.
+Files changed:
+- server/lib/developmentUpdateIntent.ts
+- server/lib/developmentUpdateIntent.test.ts
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Focused unit removal browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "unit removal"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+Environment notes:
+- Backend was started with `pnpm dev:backend`.
+- Frontend was started with `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm dev:frontend`.
+- Local MySQL was running on `127.0.0.1:3307` from `/tmp/listify-mysql-v2`.
+Evidence screenshots:
+- None added in this slice. The proof is browser/API/DB based and intentionally avoids rewriting
+  older evidence screenshots.
+Functional proof intended by this slice:
+- The first focused run exposed a real persistence gap: canonical partial Unit Types saves were
+  treated as patch payloads, so a successful retry could omit a removed unit while the backend
+  preserved the stale DB row.
+- `resolveDevelopmentUpdateIntent` now treats canonical partial saves from the actual
+  `unit_types` step as full inventory syncs for unit persistence, while stale unit mirrors outside
+  inventory-owning steps remain ignored or patch-only.
+- The browser proof now seeds a secondary removable unit for Sale, Rental, and Auction without
+  disturbing the primary unit used by existing pricing, merchandising, and lead-context proof.
+- For each transaction lane:
+  - Opens the published, approved development at the Unit Types step.
+  - Removes the secondary unit through the real Unit Types UI.
+  - Forces the first `developer.updateDevelopment` request to return `{ success: false }`.
+  - Asserts `Save Failed` remains visible.
+  - Asserts the failed removal payload has `canonicalUpdateMode: partial_step`, owns unit fields
+    only, and excludes the removed unit.
+  - Asserts the failed removal does not delete the persisted DB unit.
+  - Edits the remaining primary unit pricing as the retry and asserts `Saved`.
+  - Asserts the retry payload excludes the removed unit.
+  - Asserts persisted inventory now excludes the removed unit and the remaining primary unit keeps
+    transaction-native pricing.
+  - Asserts non-unit commercial package fields, approval status, media, location, marketing, and
+    governance remain preserved.
+  - Asserts the public development page still renders the remaining primary unit.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No schema, migration, publish behavior, search-card logic, lead persistence logic,
+  distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is secondary-unit removal proof; unit reorder, media reorder, and high-risk stale response
+  ordering for media/unit flows remain separate rollout hardening gates.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Unit reorder and media reorder autosave ownership are not browser-proven.
+- Stale-response ordering proof currently covers marketing; high-risk media/unit stale ordering can
+  still be added before rollout if needed.
+Next recommended slice:
+- Keep edit-development autosave disabled and add unit reorder, media reorder, or high-risk
+  media/unit stale-response ordering proof before any production enablement.
+Commit hash/tag: Included in `test(dle): prove unit removal edit autosave ownership`.
+Uncommitted reason, if any: None. Slice committed.
