@@ -8526,3 +8526,59 @@ Next recommended slice:
   production enablement.
 Commit hash/tag: Included in `test(dle): prove media stale autosave response ordering`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-24 - Sale/Rental/Auction Media Reorder Edit Autosave Ownership Proof
+
+Date: 2026-06-24
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove that Development Media gallery reordering remains visible after a failed edit-autosave,
+does not mutate persisted media until a successful retry, and retries the latest media order across
+Sale, Rental, and Auction.
+Files changed:
+- client/src/components/media/SortableMediaGrid.tsx
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+- Focused media reorder browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "media reorder"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+Environment notes:
+- Local MySQL was running on `127.0.0.1:3307`.
+- Backend was running on `5000`.
+- Frontend was running on `3009` with `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`.
+- The first sandboxed browser attempt failed before proof execution with `EPERM 127.0.0.1:3307`;
+  the same command passed with local loopback access.
+Functional proof intended by this slice:
+- Adds stable accessible reorder handles to sortable media items so Playwright can drive the real
+  Media UI instead of bypassing it.
+- Seeds two canonical `general` gallery images in each transaction lane.
+- Reorders the seeded gallery pair through the real sortable Media UI.
+- Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+- Asserts the failed reorder remains visible as `Save Failed`.
+- Asserts the failed payload uses `canonicalUpdateMode: partial_step`, owns media fields only, and
+  carries the latest reordered gallery order.
+- Asserts the failed reorder does not change persisted DB media order.
+- Uploads a later gallery image as the retry and asserts the retry succeeds.
+- Asserts the retry payload still carries the reordered seeded gallery order, while allowing the
+  later upload to share the same gallery category.
+- Asserts persisted media keeps the reordered gallery pair and includes the retry upload.
+- Asserts location, marketing, governance, approval status, and unit inventory remain preserved.
+- Covers Sale, Rental, and Auction transaction lanes.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No schema, migration, backend endpoint, publish behavior, search-card logic, lead persistence,
+  distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is Development Media reorder ownership proof only.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Unit reorder autosave ownership is not browser-proven.
+Next recommended slice:
+- Keep edit-development autosave disabled and add unit reorder proof before any production
+  enablement.
+Commit hash/tag: Included in `test(dle): prove media reorder edit autosave ownership`.
+Uncommitted reason, if any: None. Slice committed.

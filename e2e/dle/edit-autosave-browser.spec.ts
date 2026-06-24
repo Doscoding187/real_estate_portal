@@ -26,6 +26,12 @@ type SeedBase = {
   developmentId: number;
   developmentName: string;
   email: string;
+  galleryMediaFileName: string;
+  galleryMediaId: string;
+  galleryMediaUrl: string;
+  galleryReorderMediaFileName: string;
+  galleryReorderMediaId: string;
+  galleryReorderMediaUrl: string;
   initialDescription: string;
   mediaUrl: string;
   removableUnitId: string;
@@ -179,6 +185,12 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
   const removableUnitId = `remove-autosave-rent-${suffix}`.slice(0, 36);
   const removableUnitName = `Remove Autosave Rental Unit ${suffix}`;
   const mediaUrl = `https://example.com/dle-edit-autosave-original-${suffix}.jpg`;
+  const galleryMediaId = `gallery-autosave-rent-${suffix}`.slice(0, 36);
+  const galleryReorderMediaId = `gallery-reorder-rent-${suffix}`.slice(0, 36);
+  const galleryMediaFileName = `rental-gallery-${suffix}.jpg`;
+  const galleryReorderMediaFileName = `rental-gallery-reorder-${suffix}.jpg`;
+  const galleryMediaUrl = `https://example.com/dle-edit-autosave-gallery-${suffix}.jpg`;
+  const galleryReorderMediaUrl = `https://example.com/dle-edit-autosave-gallery-reorder-${suffix}.jpg`;
   const monthlyRentFrom = 18_500;
   const monthlyRentTo = 21_000;
   const initialDescription =
@@ -239,7 +251,25 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
       completionDate: '2030-06-30',
       description: initialDescription,
       highlights: ['Stable edit baseline', 'Failure is visible', 'Retry saves latest copy'],
-      images: [{ url: mediaUrl }],
+      images: [
+        { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+        {
+          id: galleryMediaId,
+          url: galleryMediaUrl,
+          type: 'image',
+          category: 'general',
+          displayOrder: 1,
+          fileName: galleryMediaFileName,
+        },
+        {
+          id: galleryReorderMediaId,
+          url: galleryReorderMediaUrl,
+          type: 'image',
+          category: 'general',
+          displayOrder: 2,
+          fileName: galleryReorderMediaFileName,
+        },
+      ],
       brochures: [`https://example.com/dle-edit-autosave-brochure-${suffix}.pdf`],
       monthlyLevyFrom: 1_350,
       ratesFrom: 980,
@@ -281,7 +311,25 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
         },
         development_media: {
           heroImage: { url: mediaUrl },
-          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
+          photos: [
+            { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+            {
+              id: galleryMediaId,
+              url: galleryMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 1,
+              fileName: galleryMediaFileName,
+            },
+            {
+              id: galleryReorderMediaId,
+              url: galleryReorderMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 2,
+              fileName: galleryReorderMediaFileName,
+            },
+          ],
           videos: [],
           floorPlans: [],
           documents: [`https://example.com/dle-edit-autosave-brochure-${suffix}.pdf`],
@@ -348,7 +396,25 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
         amenities: ['Security', 'Backup power'],
         media: {
           heroImage: { url: mediaUrl },
-          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
+          photos: [
+            { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+            {
+              id: galleryMediaId,
+              url: galleryMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 1,
+              fileName: galleryMediaFileName,
+            },
+            {
+              id: galleryReorderMediaId,
+              url: galleryReorderMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 2,
+              fileName: galleryReorderMediaFileName,
+            },
+          ],
           videos: [],
           documents: [`https://example.com/dle-edit-autosave-brochure-${suffix}.pdf`],
         },
@@ -420,6 +486,12 @@ async function seedPublishedRentalEditDevelopment(): Promise<RentalSeed> {
     developmentId,
     developmentName,
     email,
+    galleryMediaFileName,
+    galleryMediaId,
+    galleryMediaUrl,
+    galleryReorderMediaFileName,
+    galleryReorderMediaId,
+    galleryReorderMediaUrl,
     initialDescription,
     mediaUrl,
     removableUnitId,
@@ -446,6 +518,12 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
   const removableUnitId = `remove-autosave-sale-${suffix}`.slice(0, 36);
   const removableUnitName = `Remove Autosave Sale Unit ${suffix}`;
   const mediaUrl = `https://example.com/dle-edit-autosave-sale-original-${suffix}.jpg`;
+  const galleryMediaId = `gallery-autosave-sale-${suffix}`.slice(0, 36);
+  const galleryReorderMediaId = `gallery-reorder-sale-${suffix}`.slice(0, 36);
+  const galleryMediaFileName = `sale-gallery-${suffix}.jpg`;
+  const galleryReorderMediaFileName = `sale-gallery-reorder-${suffix}.jpg`;
+  const galleryMediaUrl = `https://example.com/dle-edit-autosave-sale-gallery-${suffix}.jpg`;
+  const galleryReorderMediaUrl = `https://example.com/dle-edit-autosave-sale-gallery-reorder-${suffix}.jpg`;
   const priceFrom = 1_750_000;
   const priceTo = 2_200_000;
   const initialDescription =
@@ -506,7 +584,25 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
       completionDate: '2027-12-31',
       description: initialDescription,
       highlights: ['Prime location', 'Sale edit baseline stable', 'Retry preserves sale fields'],
-      images: [{ url: mediaUrl }],
+      images: [
+        { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+        {
+          id: galleryMediaId,
+          url: galleryMediaUrl,
+          type: 'image',
+          category: 'general',
+          displayOrder: 1,
+          fileName: galleryMediaFileName,
+        },
+        {
+          id: galleryReorderMediaId,
+          url: galleryReorderMediaUrl,
+          type: 'image',
+          category: 'general',
+          displayOrder: 2,
+          fileName: galleryReorderMediaFileName,
+        },
+      ],
       brochures: [`https://example.com/dle-edit-autosale-brochure-${suffix}.pdf`],
       monthlyLevyFrom: 2_500,
       ratesFrom: 1_200,
@@ -548,7 +644,25 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
         },
         development_media: {
           heroImage: { url: mediaUrl },
-          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
+          photos: [
+            { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+            {
+              id: galleryMediaId,
+              url: galleryMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 1,
+              fileName: galleryMediaFileName,
+            },
+            {
+              id: galleryReorderMediaId,
+              url: galleryReorderMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 2,
+              fileName: galleryReorderMediaFileName,
+            },
+          ],
           videos: [],
           floorPlans: [],
           documents: [`https://example.com/dle-edit-autosale-brochure-${suffix}.pdf`],
@@ -614,7 +728,25 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
         amenities: ['Pool', 'Gym', '24hr Security'],
         media: {
           heroImage: { url: mediaUrl },
-          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
+          photos: [
+            { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+            {
+              id: galleryMediaId,
+              url: galleryMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 1,
+              fileName: galleryMediaFileName,
+            },
+            {
+              id: galleryReorderMediaId,
+              url: galleryReorderMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 2,
+              fileName: galleryReorderMediaFileName,
+            },
+          ],
           videos: [],
           documents: [`https://example.com/dle-edit-autosale-brochure-${suffix}.pdf`],
         },
@@ -684,6 +816,12 @@ async function seedPublishedSaleEditDevelopment(): Promise<SaleSeed> {
     developmentId,
     developmentName,
     email,
+    galleryMediaFileName,
+    galleryMediaId,
+    galleryMediaUrl,
+    galleryReorderMediaFileName,
+    galleryReorderMediaId,
+    galleryReorderMediaUrl,
     initialDescription,
     mediaUrl,
     removableUnitId,
@@ -710,6 +848,12 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
   const removableUnitId = `remove-autosave-auction-${suffix}`.slice(0, 36);
   const removableUnitName = `Remove Autosave Auction Unit ${suffix}`;
   const mediaUrl = `https://example.com/dle-edit-autosave-auction-original-${suffix}.jpg`;
+  const galleryMediaId = `gallery-autosave-auction-${suffix}`.slice(0, 36);
+  const galleryReorderMediaId = `gallery-reorder-auction-${suffix}`.slice(0, 36);
+  const galleryMediaFileName = `auction-gallery-${suffix}.jpg`;
+  const galleryReorderMediaFileName = `auction-gallery-reorder-${suffix}.jpg`;
+  const galleryMediaUrl = `https://example.com/dle-edit-autosave-auction-gallery-${suffix}.jpg`;
+  const galleryReorderMediaUrl = `https://example.com/dle-edit-autosave-auction-gallery-reorder-${suffix}.jpg`;
   const startingBid = 800_000;
   const reservePrice = 1_200_000;
   const initialDescription =
@@ -770,7 +914,25 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
       completionDate: '2027-11-30',
       description: initialDescription,
       highlights: ['Auction prime lot', 'Auction edit baseline stable', 'Retry preserves auction fields'],
-      images: [{ url: mediaUrl }],
+      images: [
+        { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+        {
+          id: galleryMediaId,
+          url: galleryMediaUrl,
+          type: 'image',
+          category: 'general',
+          displayOrder: 1,
+          fileName: galleryMediaFileName,
+        },
+        {
+          id: galleryReorderMediaId,
+          url: galleryReorderMediaUrl,
+          type: 'image',
+          category: 'general',
+          displayOrder: 2,
+          fileName: galleryReorderMediaFileName,
+        },
+      ],
       brochures: [`https://example.com/dle-edit-autosave-auction-brochure-${suffix}.pdf`],
       monthlyLevyFrom: 1_800,
       ratesFrom: 850,
@@ -814,7 +976,25 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
         },
         development_media: {
           heroImage: { url: mediaUrl },
-          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
+          photos: [
+            { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+            {
+              id: galleryMediaId,
+              url: galleryMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 1,
+              fileName: galleryMediaFileName,
+            },
+            {
+              id: galleryReorderMediaId,
+              url: galleryReorderMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 2,
+              fileName: galleryReorderMediaFileName,
+            },
+          ],
           videos: [],
           floorPlans: [],
           documents: [`https://example.com/dle-edit-autosave-auction-brochure-${suffix}.pdf`],
@@ -884,7 +1064,25 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
         amenities: ['Beach access', 'Clubhouse'],
         media: {
           heroImage: { url: mediaUrl },
-          photos: [{ url: mediaUrl, type: 'image', category: 'hero', isPrimary: true }],
+          photos: [
+            { url: mediaUrl, type: 'image', category: 'hero', isPrimary: true, displayOrder: 0 },
+            {
+              id: galleryMediaId,
+              url: galleryMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 1,
+              fileName: galleryMediaFileName,
+            },
+            {
+              id: galleryReorderMediaId,
+              url: galleryReorderMediaUrl,
+              type: 'image',
+              category: 'general',
+              displayOrder: 2,
+              fileName: galleryReorderMediaFileName,
+            },
+          ],
           videos: [],
           documents: [`https://example.com/dle-edit-autosave-auction-brochure-${suffix}.pdf`],
         },
@@ -958,6 +1156,12 @@ async function seedPublishedAuctionEditDevelopment(): Promise<AuctionSeed> {
     developmentId,
     developmentName,
     email,
+    galleryMediaFileName,
+    galleryMediaId,
+    galleryMediaUrl,
+    galleryReorderMediaFileName,
+    galleryReorderMediaId,
+    galleryReorderMediaUrl,
     initialDescription,
     mediaUrl,
     removableUnitId,
@@ -1258,6 +1462,26 @@ async function removeGalleryImageAndWaitForUpdate(page: Page, imageUrl: string) 
 
   await mediaCard.hover();
   await mediaCard.locator('button').last().click();
+  return responsePromise;
+}
+
+async function reorderGeneralGalleryAndWaitForUpdate(page: Page, seed: Seed) {
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+  const sourceHandle = page.getByLabel(`Reorder ${seed.galleryReorderMediaFileName}`);
+  const targetHandle = page.getByLabel(`Reorder ${seed.galleryMediaFileName}`);
+
+  await expect(sourceHandle).toBeAttached({ timeout: 20_000 });
+  await expect(targetHandle).toBeAttached({ timeout: 20_000 });
+  await sourceHandle.focus();
+  await page.keyboard.press('Space');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Space');
+
   return responsePromise;
 }
 
@@ -1597,10 +1821,38 @@ function getMediaPayloadUrls(data: Record<string, any>): string[] {
   return Array.from(new Set([...imageUrls, ...stepUrls]));
 }
 
+function getGeneralMediaPayloadUrls(data: Record<string, any>): string[] {
+  return asArray(data.stepData?.development_media?.photos)
+    .filter(image => image?.category === 'general')
+    .map(image => image?.url)
+    .filter((url): url is string => typeof url === 'string');
+}
+
 function getPersistedImageUrls(row: Awaited<ReturnType<typeof getDevelopmentRow>>): string[] {
   return asArray(row.images)
     .map(image => image?.url)
     .filter((url): url is string => typeof url === 'string');
+}
+
+function getPersistedGeneralImageUrls(row: Awaited<ReturnType<typeof getDevelopmentRow>>): string[] {
+  return asArray(row.images)
+    .filter(image => image?.category === 'general')
+    .map(image => image?.url)
+    .filter((url): url is string => typeof url === 'string');
+}
+
+function expectReorderedGalleryUrls(urls: string[], seed: Seed) {
+  const seededGalleryUrls = urls.filter(
+    url => url === seed.galleryMediaUrl || url === seed.galleryReorderMediaUrl,
+  );
+  expect(seededGalleryUrls).toEqual([seed.galleryReorderMediaUrl, seed.galleryMediaUrl]);
+}
+
+function expectOriginalGalleryUrls(urls: string[], seed: Seed) {
+  const seededGalleryUrls = urls.filter(
+    url => url === seed.galleryMediaUrl || url === seed.galleryReorderMediaUrl,
+  );
+  expect(seededGalleryUrls).toEqual([seed.galleryMediaUrl, seed.galleryReorderMediaUrl]);
 }
 
 async function expectUnitPricingValue(seed: Seed, lane: Lane, value: number) {
@@ -2044,6 +2296,58 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         expect(updateRequests.length).toBeGreaterThanOrEqual(2);
         const retryData = expectMediaPayload(updateRequests[updateRequests.length - 1]);
         expectPayloadOwnsOnlyMedia(retryData, lane);
+      });
+
+      test('keeps failed media reorder visible and retries latest partial media payload', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        expectOriginalGalleryUrls(getPersistedGeneralImageUrls(baseline), seed);
+
+        await openMedia(page, seed);
+        await expect(page.getByText('Interior & Living')).toBeVisible({ timeout: 20_000 });
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        const failedResponse = await reorderGeneralGalleryAndWaitForUpdate(page, seed);
+        expect(getTrpcResponseData(await failedResponse.json())).toMatchObject({ success: false });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+
+        expect(updateRequests).toHaveLength(1);
+        const failedData = expectMediaPayload(updateRequests[0], {
+          requireLocalUpload: false,
+        });
+        expectPayloadOwnsOnlyMedia(failedData, lane);
+        expectReorderedGalleryUrls(getGeneralMediaPayloadUrls(failedData), seed);
+
+        const afterFailure = await expectCommercialPackagePreservedExceptMedia(
+          seed,
+          lane,
+          baseline,
+        );
+        expectOriginalGalleryUrls(getPersistedGeneralImageUrls(afterFailure), seed);
+
+        const retryResponse = await uploadGalleryImageAndWaitForUpdate(
+          page,
+          `retry-after-reorder-${lane.name}-media.png`,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+        expect(updateRequests).toHaveLength(2);
+        const retryData = expectMediaPayload(updateRequests[1]);
+        expectPayloadOwnsOnlyMedia(retryData, lane);
+        expectReorderedGalleryUrls(getGeneralMediaPayloadUrls(retryData), seed);
+        const retryUrls = getUploadedMediaUrls(retryData);
+
+        const afterRetry = await expectCommercialPackagePreservedExceptMedia(seed, lane, baseline);
+        expectReorderedGalleryUrls(getPersistedGeneralImageUrls(afterRetry), seed);
+        const afterRetryUrls = getPersistedImageUrls(afterRetry);
+        for (const retryUrl of retryUrls) {
+          expect(afterRetryUrls).toContain(retryUrl);
+        }
       });
 
       test('does not let stale successful media autosave claim newer media is saved', async ({

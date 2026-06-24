@@ -132,6 +132,7 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
         <div
           {...attributes}
           {...listeners}
+          aria-label={`Reorder ${item.fileName || item.id}`}
           className="absolute top-2 left-2 p-1.5 bg-white/90 rounded-md cursor-grab active:cursor-grabbing hover:bg-white"
         >
           <GripVertical className="w-4 h-4 text-gray-700" />

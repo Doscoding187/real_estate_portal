@@ -312,6 +312,32 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "stale successful media"`
 - Result: 3 passed, 0 failed.
 
+2026-06-24 Sale, Rental, and Auction media reorder proof implementation:
+
+- `client/src/components/media/SortableMediaGrid.tsx` now exposes an accessible reorder handle for
+  seeded media items so browser proof can drive the real sortable media UI.
+- `e2e/dle/edit-autosave-browser.spec.ts` seeds two canonical gallery images in each transaction
+  lane and covers Development Media reorder failure/retry behavior.
+- For each transaction lane:
+  - Navigates to the edit wizard Development Media step.
+  - Reorders the seeded gallery images through the real sortable Media UI.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts `Save Failed` remains visible.
+  - Asserts the failed reorder payload has `canonicalUpdateMode: partial_step`, owns media fields
+    only, and carries the latest gallery order.
+  - Asserts the failed reorder does not change persisted DB media order.
+  - Uploads a later gallery image as the retry and asserts `Saved`.
+  - Asserts the retry payload still carries the reordered seeded gallery order.
+  - Asserts persisted media keeps the reordered gallery pair and includes the later retry upload.
+  - Asserts non-media commercial package fields, approval status, and unit inventory remain
+    preserved.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the focused
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "media reorder"`
+- Result: 3 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -321,8 +347,8 @@ Before edit-development autosave can be enabled:
    public output. Address-level proof is complete; broader city/suburb/province/postal coverage may
    still be added before rollout.
 3. Browser proof must show media edits preserve location, governance, unit inventory, pricing, and
-   public output. Upload/add and seeded-media removal proof are complete; reorder coverage may
-   still be added before rollout.
+   public output. Upload/add, seeded-media removal, stale-response, and reorder proof are complete
+   across all three transaction lanes.
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
    cards, and lead context. Transaction-native pricing, public page, search-card, and unit lead
    context proof is complete across all three transaction lanes. Secondary-unit removal
@@ -336,5 +362,5 @@ Before edit-development autosave can be enabled:
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. The next rollout gate should add media reorder or unit
-reorder proof before any production enablement.
+Keep edit-development autosave disabled. The next rollout gate should add unit reorder proof before
+any production enablement.
