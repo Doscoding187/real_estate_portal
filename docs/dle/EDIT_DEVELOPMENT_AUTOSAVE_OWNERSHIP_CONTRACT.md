@@ -268,6 +268,50 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "unit removal"`
 - Result: 3 passed, 0 failed.
 
+2026-06-23 Sale, Rental, and Auction unit stale-response proof implementation:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` covers stale successful Unit Types edit-autosave
+  responses for Sale, Rental, and Auction.
+- For each transaction lane:
+  - Navigates to the edit wizard Unit Types step.
+  - Holds the first successful `developer.updateDevelopment` response open.
+  - Makes a newer transaction-native unit pricing edit while that older success is still pending.
+  - Releases the older successful response.
+  - Asserts the wizard does not show `Saved` for the newer unsaved unit pricing.
+  - Asserts the header remains `Manual save ready` until the newer Unit Types payload is sent and
+    persisted.
+  - Asserts both payloads use `canonicalUpdateMode: partial_step` and own unit/inventory fields
+    only.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the focused
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "stale successful unit"`
+- Result: 3 passed, 0 failed.
+
+2026-06-24 Sale, Rental, and Auction media stale-response proof implementation:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` now covers stale successful Development Media
+  edit-autosave responses for Sale, Rental, and Auction.
+- For each transaction lane:
+  - Navigates to the edit wizard Development Media step.
+  - Holds the first successful `developer.updateDevelopment` response open.
+  - Uploads newer media while that older success is still pending.
+  - Releases the older successful response.
+  - Asserts the wizard does not show `Saved` for the newer unsaved media.
+  - Asserts the header remains `Manual save ready` until the newer media payload is sent and
+    persisted.
+  - Asserts both payloads use `canonicalUpdateMode: partial_step` and own media fields only.
+  - Asserts the stale success does not persist local-upload media and the newer success does.
+  - Asserts non-media commercial package fields, approval status, and unit inventory remain
+    preserved.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the focused
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "stale successful media"`
+- Result: 3 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -286,12 +330,11 @@ Before edit-development autosave can be enabled:
    before rollout.
 5. Browser proof must show failed edit-autosave attempts remain visible and retryable.
 6. Browser proof must show a stale partial payload cannot mark newer edits as saved. Marketing
-   stale-success proof is complete across all three transaction lanes; repeat for other high-risk
-   steps if needed before rollout.
+   stale-success, Unit Types stale-success, and Development Media stale-success proof are complete
+   across all three transaction lanes.
 7. Save Progress must remain the trusted manual fallback.
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. The next rollout gate should add media reorder, unit
-reorder, or stale-response ordering proof for high-risk media/unit flows before any production
-enablement.
+Keep edit-development autosave disabled. The next rollout gate should add media reorder or unit
+reorder proof before any production enablement.

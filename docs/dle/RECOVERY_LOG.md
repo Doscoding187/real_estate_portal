@@ -8471,5 +8471,58 @@ Remaining risks:
 Next recommended slice:
 - Keep edit-development autosave disabled and add unit reorder, media reorder, or high-risk media
   stale-response ordering proof before any production enablement.
-Commit hash/tag: Pending commit `test(dle): prove unit stale autosave response ordering`.
-Uncommitted reason, if any: Pending final checks and commit.
+Commit hash/tag: Included in `test(dle): prove unit stale autosave response ordering`.
+Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-24 - Sale/Rental/Auction Media Stale Autosave Response Ordering Proof
+
+Date: 2026-06-24
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove that an older successful Development Media edit-autosave response cannot falsely claim
+newer media uploads are saved across Sale, Rental, and Auction.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Local DB setup for this environment:
+  - Recreated `/tmp/listify-mysql-v2` after the temporary datadir was gone.
+  - Created `listify_local` and the `listify_app` user expected by `.env.local`.
+  - Ran `pnpm db:migrate:drizzle:local`: Passed.
+  - Ran `pnpm db:migrate:local`: Passed, including `[db:verify:distribution] OK`.
+- Focused media stale-response browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "stale successful media"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+Environment notes:
+- Local MySQL was running on `127.0.0.1:3307`.
+- Backend was running on `5000`.
+- Frontend was running on `3009` with `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`.
+Evidence screenshots:
+- None added in this slice. The proof is browser/API/DB based and intentionally avoids rewriting
+  older evidence screenshots.
+Functional proof intended by this slice:
+- Splits the Media upload helper so a gallery upload can be triggered without immediately waiting
+  for the autosave response.
+- Holds the first successful `developer.updateDevelopment` response open.
+- Uploads newer media while the older success is still pending.
+- Releases the older success and asserts it does not falsely show the latest media state as
+  `Saved`.
+- Asserts persisted media does not silently advance from the stale response.
+- Waits for the newer autosave request and proves the latest local-upload media URLs are the ones
+  that become persisted.
+- Asserts both media payloads use `canonicalUpdateMode: partial_step` and own media fields only.
+- Asserts location, marketing, governance, approval status, and unit inventory remain preserved.
+- Covers Sale, Rental, and Auction transaction lanes.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No schema, migration, backend endpoint, publish behavior, search-card logic, lead persistence,
+  distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is Development Media stale-response ordering proof only.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- Unit reorder and media reorder autosave ownership are not browser-proven.
+Next recommended slice:
+- Keep edit-development autosave disabled and add media reorder or unit reorder proof before any
+  production enablement.
+Commit hash/tag: Included in `test(dle): prove media stale autosave response ordering`.
+Uncommitted reason, if any: None. Slice committed.

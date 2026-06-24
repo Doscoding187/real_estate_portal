@@ -1220,10 +1220,19 @@ async function fillLocationAddressAndWaitForUpdate(page: Page, address: string) 
   return responsePromise;
 }
 
-async function uploadGalleryImageAndWaitForUpdate(page: Page, fileName: string) {
+async function uploadGalleryImageWithoutWaitingForResponse(page: Page, fileName: string) {
   const imageInputs = page.locator('input[type="file"][accept="image/*"]');
   await expect(imageInputs.first()).toBeAttached({ timeout: 20_000 });
   const inputIndex = (await imageInputs.count()) > 1 ? 1 : 0;
+
+  await imageInputs.nth(inputIndex).setInputFiles({
+    name: fileName,
+    mimeType: 'image/png',
+    buffer: TINY_PNG,
+  });
+}
+
+async function uploadGalleryImageAndWaitForUpdate(page: Page, fileName: string) {
   const responsePromise = page.waitForResponse(
     response =>
       response.url().includes('/api/trpc/developer.updateDevelopment') &&
@@ -1231,11 +1240,7 @@ async function uploadGalleryImageAndWaitForUpdate(page: Page, fileName: string) 
     { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
   );
 
-  await imageInputs.nth(inputIndex).setInputFiles({
-    name: fileName,
-    mimeType: 'image/png',
-    buffer: TINY_PNG,
-  });
+  await uploadGalleryImageWithoutWaitingForResponse(page, fileName);
   return responsePromise;
 }
 
@@ -2039,6 +2044,72 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         expect(updateRequests.length).toBeGreaterThanOrEqual(2);
         const retryData = expectMediaPayload(updateRequests[updateRequests.length - 1]);
         expectPayloadOwnsOnlyMedia(retryData, lane);
+      });
+
+      test('does not let stale successful media autosave claim newer media is saved', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        await openMedia(page, seed);
+        const { releaseFirstSuccess, updateRequests } =
+          await interceptFirstSuccessfulUpdateUntilReleased(page);
+
+        const firstResponsePromise = page.waitForResponse(
+          response =>
+            response.url().includes('/api/trpc/developer.updateDevelopment') &&
+            response.request().method() === 'POST',
+          { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+        );
+
+        await uploadGalleryImageWithoutWaitingForResponse(
+          page,
+          `older-stale-${lane.name}-media.png`,
+        );
+        await waitForUpdateRequestCount(updateRequests, 1);
+        const olderPayload = expectMediaPayload(updateRequests[0]);
+        expectPayloadOwnsOnlyMedia(olderPayload, lane);
+        const olderUploadUrls = getUploadedMediaUrls(olderPayload);
+        expect(olderUploadUrls.length).toBeGreaterThan(0);
+
+        await uploadGalleryImageWithoutWaitingForResponse(
+          page,
+          `newer-stale-${lane.name}-media.png`,
+        );
+        releaseFirstSuccess();
+        const firstResponse = await firstResponsePromise;
+        expect(getTrpcResponseData(await firstResponse.json())).toMatchObject({ success: true });
+
+        await expect(page.getByText('Saved', { exact: true })).toBeHidden({ timeout: 1_000 });
+        await expect(page.getByText('Manual save ready', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+
+        const afterStaleSuccess = await expectCommercialPackagePreservedExceptMedia(
+          seed,
+          lane,
+          baseline,
+        );
+        const staleSuccessUrls = getPersistedImageUrls(afterStaleSuccess);
+        for (const olderUploadUrl of olderUploadUrls) {
+          expect(staleSuccessUrls).not.toContain(olderUploadUrl);
+        }
+
+        await waitForUpdateRequestCount(updateRequests, 2);
+        const newerPayload = expectMediaPayload(updateRequests[1]);
+        expectPayloadOwnsOnlyMedia(newerPayload, lane);
+        const newerUploadUrls = getUploadedMediaUrls(newerPayload);
+        expect(newerUploadUrls.length).toBeGreaterThan(olderUploadUrls.length);
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+        const afterNewerSuccess = await expectCommercialPackagePreservedExceptMedia(
+          seed,
+          lane,
+          baseline,
+        );
+        const newerSuccessUrls = getPersistedImageUrls(afterNewerSuccess);
+        for (const newerUploadUrl of newerUploadUrls) {
+          expect(newerSuccessUrls).toContain(newerUploadUrl);
+        }
       });
 
       test('keeps failed media removal visible and retries latest partial media payload', async ({
