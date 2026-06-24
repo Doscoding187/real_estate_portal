@@ -8582,3 +8582,66 @@ Next recommended slice:
   enablement.
 Commit hash/tag: Included in `test(dle): prove media reorder edit autosave ownership`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-24 - Sale/Rental/Auction Unit Reorder Edit Autosave Ownership Proof
+
+Date: 2026-06-24
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove that Unit Types reordering remains visible after a failed edit-autosave, does not
+mutate persisted unit order until a successful retry, and retries the latest unit order across Sale,
+Rental, and Auction.
+Files changed:
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/pages/DevelopmentDetail.tsx
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+- Focused unit reorder browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "unit reorder"`
+  - Result: Passed. Final focused browser result: 3 passed, 0 failed.
+Environment notes:
+- Local MySQL was running on `127.0.0.1:3307`.
+- Backend was running on `5000`.
+- Frontend was running on `3009` with `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`.
+- An earlier rerun failed after the frontend/backend processes had stopped; the same proof was
+  rerun after restarting the local stack.
+- Initial public-page assertions revealed the Available Units section was ordering tabs by bedroom
+  count rather than persisted unit `displayOrder`; this slice fixes that merchandising truth gap.
+Functional proof intended by this slice:
+- Adds explicit move-up/move-down controls to Unit Types cards so developers can intentionally
+  merchandise unit order without introducing a new drag system.
+- Persists reordered unit arrays through the canonical `unit_types` step slice with updated
+  `displayOrder`.
+- Changes the public Available Units section to order tab groups and cards by persisted unit
+  `displayOrder`.
+- Moves the primary seeded unit below the secondary seeded unit through the real Unit Types UI.
+- Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+- Asserts the failed reorder remains visible as `Save Failed`.
+- Asserts the failed payload uses `canonicalUpdateMode: partial_step`, owns unit fields only, and
+  carries the latest reordered unit order.
+- Asserts the failed reorder does not change persisted DB unit order.
+- Edits the reordered primary unit pricing as the retry and asserts the retry succeeds.
+- Asserts the retry payload still carries the reordered unit order.
+- Asserts persisted units keep the reordered order and transaction-native pricing.
+- Asserts the public Available Units merchandising now surfaces the moved unit first, with the
+  primary unit available in the next tab.
+- Covers Sale, Rental, and Auction transaction lanes.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No schema, migration, backend endpoint, publish behavior, search-card logic, lead persistence,
+  distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is Unit Types reorder ownership and public merchandising order proof only.
+Remaining risks:
+- Edit autosave is not enabled by default and must not be claimed as ready.
+- A full Sale/Rental/Auction edit-autosave browser suite rerun is still recommended before any
+  production enablement decision.
+Next recommended slice:
+- Keep edit-development autosave disabled and run the full edit-autosave browser suite, then review
+  any remaining rollout evidence gaps before production enablement.
+Commit hash/tag: Included in `test(dle): prove unit reorder edit autosave ownership`.
+Uncommitted reason, if any: None. Slice committed.

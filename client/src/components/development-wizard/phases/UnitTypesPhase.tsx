@@ -42,6 +42,8 @@ import {
   BarChart3,
   ArrowLeft,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
   Upload,
   X,
   FileImage,
@@ -1064,6 +1066,23 @@ export function UnitTypesPhase() {
     toast.success('Draft discarded');
   };
 
+  const handleMoveUnitType = (unitId: string, direction: -1 | 1) => {
+    const currentIndex = unitTypes.findIndex(unit => unit.id === unitId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= unitTypes.length) return;
+
+    const nextUnits = [...unitTypes];
+    const [movedUnit] = nextUnits.splice(currentIndex, 1);
+    nextUnits.splice(nextIndex, 0, movedUnit);
+
+    saveWorkflowStepData('unit_types', {
+      unitTypes: nextUnits.map((unit, index) => ({
+        ...unit,
+        displayOrder: index,
+      })),
+    });
+  };
+
   const handleDuplicate = (unit: UnitType) => {
     const classification = inferClassification(unit);
     // --- Hydrate Parking UI State (Same as Edit) ---
@@ -1907,7 +1926,7 @@ export function UnitTypesPhase() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {unitTypes.map(unit => {
+          {unitTypes.map((unit, unitIndex) => {
             const classification = inferClassification(unit as any);
             const priceDisplay = getUnitTypesPhasePriceDisplay(unit, normalizedTransactionType);
             const merchandisingPreview = getUnitTypesPhaseMerchandisingPreview(
@@ -1936,6 +1955,28 @@ export function UnitTypesPhase() {
                   </div>
                 )}
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-8 w-8"
+                    onClick={() => handleMoveUnitType(unit.id, -1)}
+                    disabled={unitIndex === 0}
+                    aria-label={`Move ${unit.name} up`}
+                    title="Move Unit Type Up"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    className="h-8 w-8"
+                    onClick={() => handleMoveUnitType(unit.id, 1)}
+                    disabled={unitIndex === unitTypes.length - 1}
+                    aria-label={`Move ${unit.name} down`}
+                    title="Move Unit Type Down"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </Button>
                   <Button
                     size="icon"
                     variant="secondary"

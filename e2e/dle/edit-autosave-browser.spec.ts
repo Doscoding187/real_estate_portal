@@ -143,8 +143,15 @@ async function getUnits(developmentId: number) {
   return getUnitsFromDevelopment(development);
 }
 
+async function getUnitById(developmentId: number, unitId: string) {
+  const units = await getUnits(developmentId);
+  const unit = units.find(candidate => candidate?.id === unitId);
+  expect(unit).toBeTruthy();
+  return unit!;
+}
+
 async function expectSeedRentalUnitPreserved(seed: RentalSeed) {
-  const unit = await getFirstUnit(seed.developmentId);
+  const unit = await getUnitById(seed.developmentId, seed.unitId);
   expect(unit).toMatchObject({
     id: seed.unitId,
     name: seed.unitName,
@@ -154,7 +161,7 @@ async function expectSeedRentalUnitPreserved(seed: RentalSeed) {
 }
 
 async function expectSeedSaleUnitPreserved(seed: SaleSeed) {
-  const unit = await getFirstUnit(seed.developmentId);
+  const unit = await getUnitById(seed.developmentId, seed.unitId);
   expect(unit).toMatchObject({
     id: seed.unitId,
     name: seed.unitName,
@@ -164,7 +171,7 @@ async function expectSeedSaleUnitPreserved(seed: SaleSeed) {
 }
 
 async function expectSeedAuctionUnitPreserved(seed: AuctionSeed) {
-  const unit = await getFirstUnit(seed.developmentId);
+  const unit = await getUnitById(seed.developmentId, seed.unitId);
   expect(unit).toMatchObject({
     id: seed.unitId,
     name: seed.unitName,
@@ -1502,6 +1509,23 @@ async function removeUnitAndWaitForUpdate(page: Page, unitName: string) {
   return responsePromise;
 }
 
+async function movePrimaryUnitDownAndWaitForUpdate(page: Page, seed: Seed) {
+  const unitCard = page
+    .getByText(seed.unitName)
+    .locator('xpath=ancestor::div[contains(@class,"group")]')
+    .first();
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/trpc/developer.updateDevelopment') &&
+      response.request().method() === 'POST',
+    { timeout: AUTOSAVE_RESPONSE_TIMEOUT_MS },
+  );
+
+  await unitCard.hover();
+  await page.getByLabel(`Move ${seed.unitName} down`).click();
+  return responsePromise;
+}
+
 function getUnitPricingFieldLabel(lane: Lane) {
   if (lane.name === 'rental') return 'Monthly Rent From';
   if (lane.name === 'auction') return 'Starting Bid';
@@ -1715,6 +1739,35 @@ function expectUnitRemovalPayload(request: Request, seed: Seed) {
   return input.data;
 }
 
+function getSeededUnitOrder(units: any[], seed: Seed): string[] {
+  return units
+    .map(unit => unit?.id)
+    .filter((id): id is string => id === seed.unitId || id === seed.removableUnitId);
+}
+
+function expectOriginalSeededUnitOrder(units: any[], seed: Seed) {
+  expect(getSeededUnitOrder(units, seed)).toEqual([seed.unitId, seed.removableUnitId]);
+}
+
+function expectReorderedSeededUnitOrder(units: any[], seed: Seed) {
+  expect(getSeededUnitOrder(units, seed)).toEqual([seed.removableUnitId, seed.unitId]);
+}
+
+function expectUnitReorderPayload(request: Request, seed: Seed) {
+  const input = getTrpcRequestInput(request);
+  expect(input.data).toMatchObject({
+    canonicalUpdateMode: 'partial_step',
+    currentStepId: 'unit_types',
+  });
+
+  const payloadUnits = asArray(input.data.unitTypes);
+  const stepUnits = asArray(input.data.stepData?.unit_types?.unitTypes);
+  expectReorderedSeededUnitOrder(payloadUnits, seed);
+  expectReorderedSeededUnitOrder(stepUnits, seed);
+
+  return input.data;
+}
+
 function expectPayloadOwnsOnlyMarketing(data: Record<string, unknown>, lane: Lane) {
   for (const field of [
     'unitTypes',
@@ -1856,7 +1909,7 @@ function expectOriginalGalleryUrls(urls: string[], seed: Seed) {
 }
 
 async function expectUnitPricingValue(seed: Seed, lane: Lane, value: number) {
-  const unit = await getFirstUnit(seed.developmentId);
+  const unit = await getUnitById(seed.developmentId, seed.unitId);
   expect(unit).toMatchObject({
     id: seed.unitId,
     name: seed.unitName,
@@ -1939,6 +1992,27 @@ async function expectPublicOutputForEditedUnit(page: Page, seed: Seed, lane: Lan
       .getByText(new RegExp(`${escapeRegExp(label)}\\s+${escapeRegExp(formatRand(value))}`))
       .first(),
   ).toBeVisible();
+}
+
+async function expectPublicReorderedUnitCards(page: Page, seed: Seed) {
+  await page.goto(`/development/${seed.slug}`);
+  await expect(page.getByRole('heading', { name: seed.developmentName })).toBeVisible({
+    timeout: 20_000,
+  });
+
+  const availableUnits = page.locator('#available-units');
+  const movedFirstUnit = availableUnits.getByText(/Remove Autosave/).first();
+  await expect(movedFirstUnit).toBeVisible({ timeout: 20_000 });
+
+  const tabTriggers = availableUnits.getByRole('tab');
+  await expect(tabTriggers.first()).toHaveAttribute('data-state', 'active');
+  await expect(tabTriggers.first()).toContainText(/Bedroom|Other|Studio|Unknown/);
+  await expect(tabTriggers.nth(1)).toBeVisible();
+
+  await tabTriggers.nth(1).click();
+  await expect(availableUnits.getByText(/Edit Autosave/).first()).toBeVisible({
+    timeout: 10_000,
+  });
 }
 
 async function expectSearchCardForEditedUnit(page: Page, seed: Seed, lane: Lane, value: number) {
@@ -2589,6 +2663,54 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
 
         await expectUnitPricingValue(seed, lane, lane.retryUnitValue);
+      });
+
+      test('keeps failed unit reorder visible and retries latest partial unit payload', async ({
+        page,
+      }) => {
+        const baseline = await getDevelopmentRow(seed.developmentId);
+        expectOriginalSeededUnitOrder(await getUnits(seed.developmentId), seed);
+
+        await openUnitTypes(page, seed);
+        await expect(page.getByText(seed.unitName).first()).toBeVisible({ timeout: 10_000 });
+        await expect(page.getByText(seed.removableUnitName).first()).toBeVisible({
+          timeout: 10_000,
+        });
+        const updateRequests = await interceptFirstFailedUpdate(page);
+
+        const failedReorderResponse = await movePrimaryUnitDownAndWaitForUpdate(page, seed);
+        expect(getTrpcResponseData(await failedReorderResponse.json())).toMatchObject({
+          success: false,
+        });
+        await expect(page.getByText('Save Failed', { exact: true })).toBeVisible({
+          timeout: 10_000,
+        });
+
+        expect(updateRequests).toHaveLength(1);
+        const failedReorderData = expectUnitReorderPayload(updateRequests[0], seed);
+        expectPayloadOwnsOnlyUnitTypes(failedReorderData);
+        expectOriginalSeededUnitOrder(await getUnits(seed.developmentId), seed);
+
+        const retryResponse = await updateUnitPricingAndWaitForUpdate(
+          page,
+          seed,
+          lane,
+          lane.retryUnitValue,
+        );
+        expect(retryResponse.ok()).toBeTruthy();
+        expect(getTrpcResponseData(await retryResponse.json())).toMatchObject({ success: true });
+        await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+        expect(updateRequests).toHaveLength(2);
+        const retryData = expectUnitPayload(updateRequests[1], lane, seed, lane.retryUnitValue);
+        expectPayloadOwnsOnlyUnitTypes(retryData);
+        expectReorderedSeededUnitOrder(asArray(retryData.unitTypes), seed);
+        expectReorderedSeededUnitOrder(asArray(retryData.stepData?.unit_types?.unitTypes), seed);
+
+        await expectCommercialPackagePreservedExceptUnitPricing(seed, baseline);
+        await expectUnitPricingValue(seed, lane, lane.retryUnitValue);
+        expectReorderedSeededUnitOrder(await getUnits(seed.developmentId), seed);
+        await expectPublicReorderedUnitCards(page, seed);
       });
 
       test('keeps failed unit removal visible and retries latest partial unit payload', async ({

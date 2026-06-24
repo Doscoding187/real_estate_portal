@@ -338,6 +338,36 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "media reorder"`
 - Result: 3 passed, 0 failed.
 
+2026-06-24 Sale, Rental, and Auction unit reorder proof implementation:
+
+- `client/src/components/development-wizard/phases/UnitTypesPhase.tsx` now exposes explicit
+  move-up/move-down controls on unit cards so developers can intentionally merchandise unit order.
+- `client/src/pages/DevelopmentDetail.tsx` now orders the public Available Units tabs and cards by
+  persisted unit `displayOrder`, so backend unit order is reflected in buyer-facing merchandising.
+- `e2e/dle/edit-autosave-browser.spec.ts` covers Unit Types reorder failure/retry behavior for
+  Sale, Rental, and Auction.
+- For each transaction lane:
+  - Navigates to the edit wizard Unit Types step.
+  - Moves the primary seeded unit below the secondary seeded unit through the real Unit Types UI.
+  - Intercepts the first `developer.updateDevelopment` request and returns `{ success: false }`.
+  - Asserts `Save Failed` remains visible.
+  - Asserts the failed reorder payload has `canonicalUpdateMode: partial_step`, owns unit fields
+    only, and carries the latest unit order.
+  - Asserts the failed reorder does not change persisted DB unit order.
+  - Edits the reordered primary unit pricing as the retry and asserts `Saved`.
+  - Asserts the retry payload still carries the reordered unit order.
+  - Asserts persisted units keep the reordered order and transaction-native pricing.
+  - Asserts non-unit commercial package fields, approval status, media, location, marketing, and
+    governance remain preserved.
+  - Asserts the public Available Units section surfaces the moved unit first and the primary unit in
+    the next tab.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the focused
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "unit reorder"`
+- Result: 3 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:
@@ -352,8 +382,7 @@ Before edit-development autosave can be enabled:
 4. Browser proof must show unit edits preserve media, location, governance, public pricing, search
    cards, and lead context. Transaction-native pricing, public page, search-card, and unit lead
    context proof is complete across all three transaction lanes. Secondary-unit removal
-   failure/retry proof is also complete across all three lanes; reorder coverage may still be added
-   before rollout.
+   failure/retry proof and unit reorder proof are also complete across all three lanes.
 5. Browser proof must show failed edit-autosave attempts remain visible and retryable.
 6. Browser proof must show a stale partial payload cannot mark newer edits as saved. Marketing
    stale-success, Unit Types stale-success, and Development Media stale-success proof are complete
@@ -362,5 +391,6 @@ Before edit-development autosave can be enabled:
 
 ## Next Recommended Slice
 
-Keep edit-development autosave disabled. The next rollout gate should add unit reorder proof before
-any production enablement.
+Keep edit-development autosave disabled. The next rollout gate should run the full
+Sale/Rental/Auction edit-autosave browser suite and review any remaining rollout evidence gaps
+before production enablement.

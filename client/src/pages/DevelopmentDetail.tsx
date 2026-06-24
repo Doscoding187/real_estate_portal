@@ -2960,7 +2960,22 @@ export default function DevelopmentDetail() {
                       }
                       bedroomGroups.get(key)!.units.push(u);
                     });
+                    bedroomGroups.forEach(group => {
+                      group.units.sort(
+                        (a: any, b: any) =>
+                          Number(a.displayOrder ?? Number.MAX_SAFE_INTEGER) -
+                            Number(b.displayOrder ?? Number.MAX_SAFE_INTEGER) ||
+                          Number(a.bedrooms ?? Number.MAX_SAFE_INTEGER) -
+                            Number(b.bedrooms ?? Number.MAX_SAFE_INTEGER) ||
+                          String(a.name ?? '').localeCompare(String(b.name ?? '')),
+                      );
+                    });
                     const orderedKeys = Array.from(bedroomGroups.keys()).sort((a, b) => {
+                      const firstA = bedroomGroups.get(a)?.units[0];
+                      const firstB = bedroomGroups.get(b)?.units[0];
+                      const displayOrderA = Number(firstA?.displayOrder ?? Number.MAX_SAFE_INTEGER);
+                      const displayOrderB = Number(firstB?.displayOrder ?? Number.MAX_SAFE_INTEGER);
+                      if (displayOrderA !== displayOrderB) return displayOrderA - displayOrderB;
                       if (a === 'other') return 1;
                       if (b === 'other') return -1;
                       return Number(a) - Number(b);
