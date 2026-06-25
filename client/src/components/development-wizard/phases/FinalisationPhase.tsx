@@ -135,6 +135,56 @@ export const getFinalisationPublishCopy = (transactionType: unknown) => {
   };
 };
 
+export const getFinalisationPrePublishGuidance = (transactionType: unknown) => {
+  const lane = getFinalisationLane(transactionType);
+
+  if (lane === 'rental') {
+    return {
+      title: 'Rental package guidance',
+      summary:
+        'Before publishing, make sure the renter journey explains cost, lease expectations, and application handoff.',
+      items: [
+        {
+          label: 'Lease pack',
+          detail: 'Confirm the brochure or document pack explains lease terms and renter next steps.',
+        },
+        {
+          label: 'Application holds',
+          detail: 'Use reserved stock for application holds, not sold inventory language.',
+        },
+        {
+          label: 'Upfront cost clarity',
+          detail: 'Keep deposit, furnished state, and monthly rent expectations visible before enquiries start.',
+        },
+      ],
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      title: 'Auction package guidance',
+      summary:
+        'Before publishing, make sure bidders understand timing, legal-pack access, and registration expectations.',
+      items: [
+        {
+          label: 'Legal pack',
+          detail: 'Confirm auction terms, FICA, and bidder documents are requestable or attached.',
+        },
+        {
+          label: 'Bidder registration',
+          detail: 'Make auction window, registration state, and bidder next steps clear before traffic starts.',
+        },
+        {
+          label: 'Proof-of-funds posture',
+          detail: 'Keep proof-of-funds and reserve expectations framed as manual auction-team review.',
+        },
+      ],
+    };
+  }
+
+  return null;
+};
+
 export function FinalisationPhase({
   onManualSaveDraft,
   isManualSaveDraftPending = false,
@@ -156,6 +206,7 @@ export function FinalisationPhase({
   const isAuction = wizardData.transactionType === 'auction';
   const transactionType = wizardData.transactionType;
   const publishCopy = getFinalisationPublishCopy(transactionType);
+  const prePublishGuidance = getFinalisationPrePublishGuidance(transactionType);
 
   const stepAmenities = normalizeAmenitiesPayload(stepAmenitiesRaw);
   const developmentAmenities = normalizeAmenitiesPayload(developmentAmenitiesRaw);
@@ -662,6 +713,30 @@ export function FinalisationPhase({
               </CardContent>
             )}
           </Card>
+
+          {prePublishGuidance && (
+            <Card className="border-blue-200 bg-blue-50/40 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-blue-950">
+                  {prePublishGuidance.title}
+                </CardTitle>
+                <CardDescription className="text-blue-800">
+                  {prePublishGuidance.summary}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 pt-0">
+                {prePublishGuidance.items.map(item => (
+                  <div key={item.label} className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-950">{item.label}</p>
+                      <p className="text-xs leading-5 text-blue-800">{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Detailed Summary */}
           <div className="space-y-4">

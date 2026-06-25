@@ -204,6 +204,10 @@ Product issues:
   `Live Preview Mode`.
 - Rental/Auction validation success copy now uses rental-package or auction-package readiness
   language.
+- Review & Publish now surfaces pre-publish Rental guidance for lease-pack expectations,
+  application holds, and upfront cost clarity.
+- Review & Publish now surfaces pre-publish Auction guidance for legal-pack access, bidder
+  registration, and proof-of-funds posture.
 
 ## Public Output Audit
 
@@ -278,10 +282,6 @@ P0 before broad product rollout:
 
 P1 near-term product quality:
 
-- Add Rental-specific guidance for deposit, lease term, furnished state, application holds, and
-  lease-pack documents before Review & Publish.
-- Add Auction-specific guidance for auction window, reserve visibility, legal pack, bidder
-  registration, auction terms, FICA, and proof-of-funds expectations before Review & Publish.
 - Explain that hero image, gallery order, and unit order affect public cards and conversion.
 - Show a small lead-handoff preview in Review & Publish so developers understand what renters or
   bidders will receive.
@@ -310,9 +310,8 @@ Autosave remains behind:
 
 Implement the next P1 product-quality slice:
 
-- add Rental-specific guidance for deposit, lease term, furnished state, application holds, and
-  lease-pack documents before Review & Publish;
-- add Auction-specific guidance for auction window, reserve visibility, legal pack, bidder
-  registration, auction terms, FICA, and proof-of-funds expectations before Review & Publish;
+- explain that hero image, gallery order, and unit order affect public cards and conversion;
+- show a small lead-handoff preview in Review & Publish so developers understand what renters or
+  bidders will receive;
 - keep behavior, schemas, save/publish endpoints, lead persistence, and autosave flags unchanged;
 - add or update focused component tests for the changed copy.

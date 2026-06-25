@@ -205,6 +205,7 @@ vi.mock('canvas-confetti', () => ({
 import {
   FinalisationPhase,
   getFinalisationAvailabilityLabel,
+  getFinalisationPrePublishGuidance,
   getFinalisationPublishCopy,
   getFinalisationPriceLine,
 } from './FinalisationPhase';
@@ -244,6 +245,24 @@ describe('FinalisationPhase transaction copy helpers', () => {
       publishButton: 'Publish Auction Package',
       validationTitle: 'Auction Package Ready',
       confirmButton: 'Confirm & Publish Auction',
+    });
+  });
+
+  it('surfaces transaction-specific pre-publish guidance', () => {
+    expect(getFinalisationPrePublishGuidance('for_sale')).toBeNull();
+    expect(getFinalisationPrePublishGuidance('for_rent')).toMatchObject({
+      title: 'Rental package guidance',
+      items: expect.arrayContaining([
+        expect.objectContaining({ label: 'Lease pack' }),
+        expect.objectContaining({ label: 'Application holds' }),
+      ]),
+    });
+    expect(getFinalisationPrePublishGuidance('auction')).toMatchObject({
+      title: 'Auction package guidance',
+      items: expect.arrayContaining([
+        expect.objectContaining({ label: 'Legal pack' }),
+        expect.objectContaining({ label: 'Proof-of-funds posture' }),
+      ]),
     });
   });
 });
@@ -470,6 +489,9 @@ describe('FinalisationPhase', () => {
 
   it('uses canonical update payloads for edit-mode publish', async () => {
     render(<FinalisationPhase />);
+
+    expect(screen.getByText('Rental package guidance')).toBeInTheDocument();
+    expect(screen.getByText('Application holds')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /publish rental package/i }));
     fireEvent.click(screen.getByRole('button', { name: /confirm & publish rental/i }));

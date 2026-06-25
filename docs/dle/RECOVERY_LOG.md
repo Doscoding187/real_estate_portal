@@ -8931,3 +8931,44 @@ Next recommended slice:
   bidder/legal-pack guidance before Review & Publish, with focused component tests.
 Commit hash/tag: Included in `fix(dle): polish rental auction publish copy`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Rental/Auction Pre-Publish Guidance
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Add P1 Rental/Auction guidance before Review & Publish without changing save or publish
+behavior.
+Files changed:
+- client/src/components/development-wizard/phases/FinalisationPhase.tsx
+- client/src/components/development-wizard/phases/FinalisationPhase.test.tsx
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+Tests run:
+- Focused Finalisation guidance/publish tests:
+  `pnpm vitest run client/src/components/development-wizard/phases/FinalisationPhase.test.tsx`
+  - Result: Passed. 1 file, 7 tests.
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+Functional proof intended by this slice:
+- Adds Rental pre-publish guidance for lease-pack expectations, application holds, and upfront cost
+  clarity.
+- Adds Auction pre-publish guidance for legal-pack access, bidder registration, and proof-of-funds
+  posture.
+- Keeps Sale Review & Publish unchanged.
+Guardrails:
+- No schema, migration, endpoint, validation, save/publish behavior, lead persistence, evidence,
+  distribution, payout, reward, operating mutation, or autosave flag changed.
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+Remaining risks:
+- Public card/media-order impact guidance and lead-handoff preview remain product polish gaps.
+- Product-quality review is still required after guidance changes.
+Next recommended slice:
+- Continue the P1 product-quality backlog: explain hero/gallery/unit ordering impact and show a
+  renter/bidder lead-handoff preview before Review & Publish, with focused component tests.
+Commit hash/tag: Included in `feat(dle): add rental auction prepublish guidance`.
+Uncommitted reason, if any: None. Slice committed.

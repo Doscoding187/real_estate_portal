@@ -846,6 +846,23 @@ Rental and Auction Review & Publish:
 Focused component tests cover the helper copy and publish flow selectors. Rental/Auction browser
 proof selectors were updated to click the new package-specific publish controls.
 
+## Forty-Fourth Product-Visibility Slice
+
+Add Rental/Auction pre-publish guidance to Review & Publish.
+
+Review & Publish now surfaces a compact transaction-specific guidance card before the detailed
+summary:
+
+- Rental guidance reminds developers to confirm lease-pack next steps, application-hold semantics,
+  and upfront cost clarity before renter traffic starts;
+- Auction guidance reminds developers to confirm legal-pack access, bidder registration timing, and
+  proof-of-funds/reserve expectations as manual auction-team review;
+- Sale remains unchanged.
+
+This improves packaging confidence without changing validation, save, publish, lead persistence,
+autosave, evidence, distribution, payout, reward, or operating behavior. Focused component tests
+cover the guidance helper and the visible Rental render path.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
