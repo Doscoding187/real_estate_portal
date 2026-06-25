@@ -368,6 +368,26 @@ Sale/Rental/Auction browser suite:
 - `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1 --grep "unit reorder"`
 - Result: 3 passed, 0 failed.
 
+2026-06-25 Full Sale, Rental, and Auction edit-autosave browser suite proof:
+
+- `e2e/dle/edit-autosave-browser.spec.ts` now runs as one serial browser suite across all three
+  transaction lanes without relying on original seed state after earlier proof cases intentionally
+  mutate media order, unit order, unit pricing, and removable unit presence.
+- The suite keeps assertions transaction-native and baseline-aware:
+  - Rental public output now matches the current merchandising copy and monthly-rent spacing.
+  - Media stale-response proof filters new upload URLs against the live baseline media state.
+  - Unit preservation helpers compare media against the live baseline for the current proof case.
+  - Unit stale-response proof uses local stale values that cannot be mistaken for values persisted
+    by earlier unit retry proof.
+  - Unit removal proof snapshots the current persisted unit pricing before removal and proves the
+    failed removal does not mutate that baseline.
+
+This proof implementation does not enable edit autosave. Runtime proof passed in the full
+Sale/Rental/Auction browser suite:
+
+- `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+- Result: 48 passed, 0 failed.
+
 ## Required Before Enablement
 
 Before edit-development autosave can be enabled:

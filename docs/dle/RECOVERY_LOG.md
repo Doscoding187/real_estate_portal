@@ -8645,3 +8645,49 @@ Next recommended slice:
   any remaining rollout evidence gaps before production enablement.
 Commit hash/tag: Included in `test(dle): prove unit reorder edit autosave ownership`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Full Sale/Rental/Auction Edit Autosave Browser Suite Proof
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove the complete edit-autosave browser suite passes across Sale, Rental, and Auction after
+the media/unit stale-response, removal, and reorder ownership slices.
+Files changed:
+- e2e/dle/edit-autosave-browser.spec.ts
+- docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md
+- docs/dle/RECOVERY_LOG.md
+Tests run:
+- Full edit-autosave browser proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 VITE_DLE_EDIT_AUTOSAVE_ENABLED=true pnpm exec playwright test e2e/dle/edit-autosave-browser.spec.ts --project="Desktop Chrome" --workers=1`
+  - Result: Passed. Final full browser result: 48 passed, 0 failed.
+Environment notes:
+- Local MySQL was running on `127.0.0.1:3307`.
+- Backend was running on `5000`.
+- Frontend was running on `3009` with `VITE_DLE_EDIT_AUTOSAVE_ENABLED=true`.
+- The full suite ran serially and intentionally reused transaction-lane state across proof cases.
+Functional proof intended by this slice:
+- Hardens browser assertions so the full serial suite proves current persisted state instead of
+  assuming the original seed remains untouched after earlier successful proof retries.
+- Aligns Rental public output assertions with current buyer-facing price copy and monthly-rent
+  spacing.
+- Filters Development Media stale-response upload assertions against the live baseline media state
+  so prior successful local-upload proof does not look like a new stale upload.
+- Compares unit preservation media against the current baseline row for each proof case.
+- Uses unique local Unit Types stale-response values so a stale proof cannot be confused with
+  values persisted by earlier unit retry proof.
+- Snapshots current unit pricing before unit removal proof and verifies failed removal preserves
+  that live baseline until retry succeeds.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- No schema, migration, backend endpoint, publish behavior, search-card logic, lead persistence,
+  distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is full-suite browser proof and serial-state hardening only.
+Remaining risks:
+- Edit autosave is still not enabled by default and must remain behind the manual save/resume,
+  field ownership, and truthful save-state rollout gate.
+- Any production enablement decision still needs explicit rollout approval and release controls.
+Next recommended slice:
+- Keep edit-development autosave disabled and review the rollout gate for the smallest truthful
+  enablement step, likely starting with a non-production or developer-only flag path.
+Commit hash/tag: Included in `test(dle): prove full edit autosave suite`.
+Uncommitted reason, if any: None. Slice committed.

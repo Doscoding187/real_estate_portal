@@ -1221,8 +1221,8 @@ const lanes: Lane[] = [
     pricingFields: ['monthlyRentFrom', 'monthlyRentTo'],
     expectUnitPreserved: seed => expectSeedRentalUnitPreserved(seed as RentalSeed),
     expectPublicOutput: async (page, seed) => {
-      await expect(page.getByText('Rent From R 18 500 - R 21 000').first()).toBeVisible();
-      await expect(page.getByText('R 18 500 / month').first()).toBeVisible();
+      await expect(page.getByText('R 18 500 - R 21 000').first()).toBeVisible();
+      await expect(page.getByText(/R\s*18\s*500\s*\/\s*month/i).first()).toBeVisible();
       await expect(page.getByText(seed.unitName).first()).toBeVisible();
     },
   },
@@ -1959,7 +1959,7 @@ async function expectCommercialPackagePreservedExceptUnitPricing(
   expect(row.monthlyLevyFrom).toEqual(baseline.monthlyLevyFrom);
   expect(row.ratesFrom).toEqual(baseline.ratesFrom);
   expect(row.approvalStatus).toBe('approved');
-  expect(asArray(row.images).some(image => image?.url === seed.mediaUrl)).toBe(true);
+  expect(getPersistedImageUrls(row)).toEqual(getPersistedImageUrls(baseline));
   return row;
 }
 
@@ -2428,6 +2428,7 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         page,
       }) => {
         const baseline = await getDevelopmentRow(seed.developmentId);
+        const baselineImageUrls = new Set(getPersistedImageUrls(baseline));
         await openMedia(page, seed);
         const { releaseFirstSuccess, updateRequests } =
           await interceptFirstSuccessfulUpdateUntilReleased(page);
@@ -2446,7 +2447,9 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         await waitForUpdateRequestCount(updateRequests, 1);
         const olderPayload = expectMediaPayload(updateRequests[0]);
         expectPayloadOwnsOnlyMedia(olderPayload, lane);
-        const olderUploadUrls = getUploadedMediaUrls(olderPayload);
+        const olderUploadUrls = getUploadedMediaUrls(olderPayload).filter(
+          url => !baselineImageUrls.has(url),
+        );
         expect(olderUploadUrls.length).toBeGreaterThan(0);
 
         await uploadGalleryImageWithoutWaitingForResponse(
@@ -2475,7 +2478,9 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         await waitForUpdateRequestCount(updateRequests, 2);
         const newerPayload = expectMediaPayload(updateRequests[1]);
         expectPayloadOwnsOnlyMedia(newerPayload, lane);
-        const newerUploadUrls = getUploadedMediaUrls(newerPayload);
+        const newerUploadUrls = getUploadedMediaUrls(newerPayload).filter(
+          url => !baselineImageUrls.has(url),
+        );
         expect(newerUploadUrls.length).toBeGreaterThan(olderUploadUrls.length);
         await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
 
@@ -2617,6 +2622,8 @@ test.describe.serial('DLE edit autosave browser proof', () => {
       test('does not let stale successful unit autosave claim a newer unit edit is saved', async ({
         page,
       }) => {
+        const staleOlderUnitValue = lane.retryUnitValue + (lane.name === 'rental' ? 100 : 10_000);
+        const staleNewerUnitValue = lane.retryUnitValue + (lane.name === 'rental' ? 200 : 20_000);
         await openUnitTypes(page, seed);
         const { releaseFirstSuccess, updateRequests } =
           await interceptFirstSuccessfulUpdateUntilReleased(page);
@@ -2632,17 +2639,17 @@ test.describe.serial('DLE edit autosave browser proof', () => {
           page,
           seed,
           lane,
-          lane.failedUnitValue,
+          staleOlderUnitValue,
         );
         await waitForUpdateRequestCount(updateRequests, 1);
-        const olderPayload = expectUnitPayload(updateRequests[0], lane, seed, lane.failedUnitValue);
+        const olderPayload = expectUnitPayload(updateRequests[0], lane, seed, staleOlderUnitValue);
         expectPayloadOwnsOnlyUnitTypes(olderPayload);
 
         await updateUnitPricingWithoutWaitingForResponse(
           page,
           seed,
           lane,
-          lane.retryUnitValue,
+          staleNewerUnitValue,
         );
         releaseFirstSuccess();
         const firstResponse = await firstResponsePromise;
@@ -2654,15 +2661,15 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         });
         const afterStaleSuccessUnit = await getFirstUnit(seed.developmentId);
         expect(Number(afterStaleSuccessUnit[getUnitPricingPayloadField(lane)])).not.toBe(
-          lane.retryUnitValue,
+          staleNewerUnitValue,
         );
 
         await waitForUpdateRequestCount(updateRequests, 2);
-        const newerPayload = expectUnitPayload(updateRequests[1], lane, seed, lane.retryUnitValue);
+        const newerPayload = expectUnitPayload(updateRequests[1], lane, seed, staleNewerUnitValue);
         expectPayloadOwnsOnlyUnitTypes(newerPayload);
         await expect(page.getByText('Saved', { exact: true })).toBeVisible({ timeout: 15_000 });
 
-        await expectUnitPricingValue(seed, lane, lane.retryUnitValue);
+        await expectUnitPricingValue(seed, lane, staleNewerUnitValue);
       });
 
       test('keeps failed unit reorder visible and retries latest partial unit payload', async ({
@@ -2717,6 +2724,8 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         page,
       }) => {
         const baseline = await getDevelopmentRow(seed.developmentId);
+        const baselineUnit = await getUnitById(seed.developmentId, seed.unitId);
+        const baselineUnitValue = Number(baselineUnit[getUnitPricingPayloadField(lane)]);
         await openUnitTypes(page, seed);
         await expect(page.getByText(seed.removableUnitName).first()).toBeVisible({
           timeout: 10_000,
@@ -2738,7 +2747,7 @@ test.describe.serial('DLE edit autosave browser proof', () => {
         const failedRemoveData = expectUnitRemovalPayload(updateRequests[0], seed);
         expectPayloadOwnsOnlyUnitTypes(failedRemoveData);
         await expectCommercialPackagePreservedExceptUnitPricing(seed, baseline);
-        await lane.expectUnitPreserved(seed);
+        await expectUnitPricingValue(seed, lane, baselineUnitValue);
         await expectUnitPresence(seed, seed.removableUnitId, true);
 
         const retryResponse = await updateUnitPricingAndWaitForUpdate(
