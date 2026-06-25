@@ -95,9 +95,9 @@ What works:
 
 Polish issues:
 
-- Location is transaction-neutral. That is acceptable, but the UI could frame the location story
-  differently for renters and bidders, such as commute/lease convenience for Rental and auction
-  inspection/legal-pack context for Auction.
+- Location now frames the story by transaction lane: Rental emphasizes renter convenience, commute
+  access, and leasing handoff; Auction emphasizes inspection access, legal-pack context, and bidder
+  registration confidence.
 
 ### Governance & Finances
 
@@ -125,8 +125,9 @@ What works:
 
 Polish issues:
 
-- The step is usable but generic. It does not help a Rental developer prioritize renter-fit signals,
-  or an Auction developer prioritize inspection/legal-pack/bidder confidence signals.
+- Amenities now gives transaction-specific prioritization: Rental emphasizes renter-fit signals
+  such as daily convenience, security, backup services, and pet/family fit; Auction emphasizes
+  inspection confidence, access control, utility resilience, and shared assets.
 
 ### Marketing Summary
 
@@ -283,12 +284,11 @@ P0 before broad product rollout:
 
 P1 near-term product quality:
 
-- Make Location and Amenities guidance more transaction-specific without adding new required data.
+- Split generic governance/cost language into owner governance, renter cost, and bidder cost
+  framing.
 
 P2 later polish:
 
-- Split generic governance/cost language into owner governance, renter cost, and bidder cost
-  framing.
 - Add a compact pre-publish public-preview checklist that mirrors the public commercial pack.
 
 ## Autosave Boundary
@@ -308,7 +308,7 @@ Autosave remains behind:
 
 Implement the next P1 product-quality slice:
 
-- make Location and Amenities guidance more transaction-specific for Rental/Auction without adding
-  new required data;
+- split generic governance/cost language into owner governance, renter cost, and bidder cost
+  framing without adding new required data;
 - keep behavior, schemas, save/publish endpoints, lead persistence, and autosave flags unchanged;
 - add or update focused component tests for the changed copy.

@@ -26,8 +26,57 @@ const CATEGORY_ICONS: Record<AmenityCategory, typeof Shield> = {
   family: Baby,
 };
 
+type AmenitiesPhaseLane = 'sale' | 'rental' | 'auction';
+
+const normalizeAmenitiesPhaseLane = (transactionType: unknown): AmenitiesPhaseLane => {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['for-rent', 'to-rent', 'rent', 'rental', 'lease'].includes(normalized)) return 'rental';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+export const getAmenitiesPhaseGuidance = (transactionType: unknown) => {
+  const lane = normalizeAmenitiesPhaseLane(transactionType);
+
+  if (lane === 'rental') {
+    return {
+      lane,
+      title: 'Rental fit signals',
+      summary:
+        'Prioritize amenities that help renters decide quickly: daily convenience, security, backup services, pet fit, and furnished lifestyle cues.',
+      items: ['Daily convenience', 'Security', 'Backup services', 'Pet or family fit'],
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      lane,
+      title: 'Auction confidence signals',
+      summary:
+        'Prioritize features that support inspection and bidder confidence: access control, condition cues, utility resilience, and high-value shared assets.',
+      items: ['Inspection confidence', 'Access control', 'Utility resilience', 'Shared assets'],
+    };
+  }
+
+  return {
+    lane,
+    title: 'Buyer lifestyle signals',
+    summary:
+      'Prioritize amenities that help buyers compare value: security, lifestyle facilities, sustainability, convenience, and family features.',
+    items: ['Security', 'Lifestyle', 'Sustainability', 'Convenience'],
+  };
+};
+
 export function AmenitiesPhase() {
   const { stepData, saveWorkflowStepData } = useDevelopmentWizard();
+  const transactionType = useDevelopmentWizard(
+    state => state.transactionType ?? state.developmentData?.transactionType,
+  );
+  const amenitiesGuidance = getAmenitiesPhaseGuidance(transactionType);
 
   // Local state for UI responsiveness
   const [activeTab, setActiveTab] = useState<AmenityCategory>('security');
@@ -144,6 +193,21 @@ export function AmenitiesPhase() {
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Amenities & Features</h2>
           <p className="text-slate-600">What lifestyle features does the development offer?</p>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-teal-100 bg-teal-50/60 p-4">
+        <p className="text-sm font-semibold text-teal-950">{amenitiesGuidance.title}</p>
+        <p className="mt-1 text-sm leading-6 text-teal-800">{amenitiesGuidance.summary}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {amenitiesGuidance.items.map(item => (
+            <span
+              key={item}
+              className="rounded-full border border-teal-200 bg-white px-2.5 py-1 text-xs font-medium text-teal-800"
+            >
+              {item}
+            </span>
+          ))}
         </div>
       </div>
 

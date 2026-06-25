@@ -15,8 +15,57 @@ import { MapPin } from 'lucide-react';
 import { LocationMapPicker, type LocationData } from '@/components/location/LocationMapPicker';
 import { WizardData } from '@/lib/types/wizard-workflows';
 
+type LocationPhaseLane = 'sale' | 'rental' | 'auction';
+
+const normalizeLocationPhaseLane = (transactionType: unknown): LocationPhaseLane => {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['for-rent', 'to-rent', 'rent', 'rental', 'lease'].includes(normalized)) return 'rental';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+export const getLocationPhaseGuidance = (transactionType: unknown) => {
+  const lane = normalizeLocationPhaseLane(transactionType);
+
+  if (lane === 'rental') {
+    return {
+      lane,
+      title: 'Rental location story',
+      summary:
+        'Frame the address around renter convenience: commute routes, daily amenities, lease handoff, and what the leasing team can confirm.',
+      items: ['Commute access', 'Daily convenience', 'Leasing handoff'],
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      lane,
+      title: 'Auction inspection story',
+      summary:
+        'Frame the address around bidder confidence: inspection access, legal-pack context, auction timing, and exact entrance details.',
+      items: ['Inspection access', 'Legal-pack context', 'Registration confidence'],
+    };
+  }
+
+  return {
+    lane,
+    title: 'Buyer location story',
+    summary:
+      'Frame the address around buyer confidence: suburb, access, lifestyle convenience, and the exact development entrance.',
+    items: ['Suburb signal', 'Lifestyle access', 'Buyer confidence'],
+  };
+};
+
 export function LocationPhase() {
   const { developmentData, setIdentity, saveWorkflowStepData } = useDevelopmentWizard();
+  const transactionType = useDevelopmentWizard(
+    state => state.transactionType ?? state.developmentData?.transactionType,
+  );
+  const locationGuidance = getLocationPhaseGuidance(transactionType);
 
   // Helper to sync updates to both Legacy (UI) and Workflow (Validation) stores
   const handleUpdate = useCallback(
@@ -64,6 +113,21 @@ export function LocationPhase() {
 
       <Card className="border-slate-200/60 shadow-sm">
         <CardContent className="pt-6 space-y-6">
+          <div className="rounded-lg border border-indigo-100 bg-indigo-50/60 p-4">
+            <p className="text-sm font-semibold text-indigo-950">{locationGuidance.title}</p>
+            <p className="mt-1 text-sm leading-6 text-indigo-800">{locationGuidance.summary}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {locationGuidance.items.map(item => (
+                <span
+                  key={item}
+                  className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs font-medium text-indigo-800"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
           {/* Map Section */}
           <div className="space-y-2">
             <Label className="text-base font-medium text-slate-900">Pin Drop Location</Label>

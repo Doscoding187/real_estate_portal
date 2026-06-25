@@ -9062,3 +9062,51 @@ Next recommended slice:
   transaction-specific for Rental/Auction without adding new required data.
 Commit hash/tag: Included in `feat(dle): add rental auction document hold guidance`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Rental/Auction Location Amenities Guidance
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Make Location and Amenities guidance transaction-specific for Rental/Auction without changing
+fields, validation, save, publish, lead, inventory, or autosave behavior.
+Files changed:
+- client/src/components/development-wizard/phases/AmenitiesPhase.tsx
+- client/src/components/development-wizard/phases/AmenitiesPhase.test.ts
+- client/src/components/development-wizard/phases/LocationPhase.tsx
+- client/src/components/development-wizard/phases/LocationPhase.test.ts
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+Tests run:
+- Focused Location/Amenities guidance tests:
+  `pnpm vitest run client/src/components/development-wizard/phases/LocationPhase.test.ts client/src/components/development-wizard/phases/AmenitiesPhase.test.ts`
+  - Result: Passed. 2 files, 2 tests.
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+Functional proof intended by this slice:
+- Location guidance now frames Rental around renter convenience, commute access, daily amenities,
+  and leasing handoff.
+- Location guidance now frames Auction around inspection access, legal-pack context, auction timing,
+  exact entrance detail, and bidder confidence.
+- Amenities guidance now frames Rental around renter-fit signals such as daily convenience,
+  security, backup services, and pet/family fit.
+- Amenities guidance now frames Auction around inspection confidence, access control, utility
+  resilience, and shared assets.
+- Sale keeps buyer-oriented location and lifestyle guidance.
+Guardrails:
+- No schema, migration, endpoint, validation, save/publish behavior, lead persistence, evidence,
+  distribution, payout, reward, operating mutation, or autosave flag changed.
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+Remaining risks:
+- Governance/cost language still needs better separation between owner governance, renter cost, and
+  bidder cost framing.
+- Product-quality review is still required after guidance changes.
+Next recommended slice:
+- Continue the P1 product-quality backlog: split generic governance/cost language into owner
+  governance, renter cost, and bidder cost framing without adding new required data.
+Commit hash/tag: Included in `feat(dle): add rental auction location amenity guidance`.
+Uncommitted reason, if any: None. Slice committed.

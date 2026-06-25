@@ -178,8 +178,8 @@ Primary docs:
 Recommended slice:
 
 - Continue the P1 product-quality backlog in
-  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, focusing next on transaction-specific
-  Location and Amenities guidance without adding required data.
+  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, focusing next on splitting generic
+  governance/cost language into owner governance, renter cost, and bidder cost framing.
 
 ### Gap 3: Product Polish Is Not Complete
 

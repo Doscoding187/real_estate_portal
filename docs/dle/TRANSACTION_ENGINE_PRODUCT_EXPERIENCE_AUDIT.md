@@ -906,6 +906,27 @@ persistence, autosave, evidence, distribution, payout, reward, or operating beha
 component tests cover Media document-pack copy, Unit stock labels, and Auction reserve visibility
 copy.
 
+## Forty-Seventh Product-Visibility Slice
+
+Add Rental/Auction Location and Amenities packaging guidance.
+
+The wizard now frames Location and Amenities as transaction-aware packaging surfaces without adding
+required data:
+
+- Rental Location guidance emphasizes renter convenience, commute access, daily amenity context, and
+  leasing-team handoff;
+- Auction Location guidance emphasizes inspection access, legal-pack context, auction timing, exact
+  entrance detail, and bidder registration confidence;
+- Rental Amenities guidance prioritizes renter-fit signals such as daily convenience, security,
+  backup services, and pet or family fit;
+- Auction Amenities guidance prioritizes inspection and bidder-confidence signals such as access
+  control, condition cues, utility resilience, and shared assets;
+- Sale keeps buyer-oriented location and lifestyle guidance.
+
+This improves packaging clarity without changing validation, schemas, save, publish, lead
+persistence, autosave, evidence, distribution, payout, reward, or operating behavior. Focused
+component tests cover the Location and Amenities guidance helpers across Sale, Rental, and Auction.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
