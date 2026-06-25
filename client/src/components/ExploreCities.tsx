@@ -177,9 +177,8 @@ export function ExploreCities({
     },
   ];
 
-  // If custom locations are provided (even empty), use them. Only fall back to hardcoded cities when prop is undefined.
   const allCities =
-    customLocations !== undefined
+    customLocations && customLocations.length > 0
       ? customLocations
       : provinceSlug
         ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
@@ -188,24 +187,29 @@ export function ExploreCities({
   const displayedCities = allCities.slice(0, visibleCount);
   const remainingCount = allCities.length - visibleCount;
 
-  const displayTitle = title || 'Explore Real Estate in Popular Cities';
+  const displayTitle = title || 'Explore real estate by popular city';
   const displayDescription =
-    description || "Browse properties in South Africa's most sought-after locations.";
+    description ||
+    'Use city pages as a starting point for local listings, suburb research, and market discovery.';
 
   return (
-    <section className="bg-white py-4 md:py-8">
+    <section className="home-section bg-white">
       <div className="container">
         {/* Section Header */}
-        <div className="mb-5 flex flex-col items-center gap-2.5 text-center md:mb-10 md:gap-3">
-          <div className="max-w-3xl text-center">
-            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
-            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">{displayDescription}</p>
+        <div className="home-section-header flex flex-col items-start gap-3 text-left">
+          <div className="max-w-3xl text-left">
+            <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
+              {displayTitle}
+            </h2>
+            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">
+              {displayDescription}
+            </p>
           </div>
 
           <Link href="/property-for-sale">
             <Button
               variant="ghost"
-              className="group h-9 justify-start rounded-full border border-slate-200 px-3.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:justify-center md:rounded-md md:border-0 md:px-0 md:text-sm"
+              className="group h-9 justify-start rounded-full border border-slate-200 px-3.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:rounded-md md:border-0 md:px-0 md:text-sm"
             >
               View All Locations{' '}
               <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
@@ -215,7 +219,7 @@ export function ExploreCities({
 
         {/* Grid Layout */}
         <div className="relative">
-          <div className="scrollbar-hide -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+          <div className="home-card-grid scrollbar-hide -mx-4 flex snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
             {displayedCities.map(city => (
               <Link
                 key={city.slug}
