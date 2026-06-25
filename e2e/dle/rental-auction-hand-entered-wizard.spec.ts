@@ -234,7 +234,9 @@ async function fillMarketing(page: Page, scenario: Scenario) {
       : ['Auction window scheduled', 'Reserve strategy tracked', 'Bidder pack ready'];
 
   for (const highlight of highlights) {
-    const highlightInput = page.getByPlaceholder(/No Transfer Duty/i);
+    const highlightInput = page.getByPlaceholder(
+      /No Transfer Duty|Lease terms visible|Auction window scheduled/i,
+    );
     await highlightInput.fill(highlight);
     await highlightInput.press('Enter');
     await expect(page.getByText(highlight)).toBeVisible();

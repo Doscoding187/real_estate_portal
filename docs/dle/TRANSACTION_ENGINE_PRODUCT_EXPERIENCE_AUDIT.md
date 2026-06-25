@@ -806,6 +806,28 @@ Key audit outcome:
 - the next P0 product slice should be copy-only and preserve schemas, save/publish endpoints, lead
   persistence, autosave flags, evidence, distribution, and operating behavior.
 
+## Forty-Second Product-Visibility Slice
+
+Polish first hand-entered Rental/Auction wizard copy issues.
+
+The first P0 copy-only polish slice now makes the proven hand-entered wizard path feel more
+transaction-native without changing save, publish, lead, schema, autosave, evidence, distribution,
+or operating behavior:
+
+- Marketing Summary highlight guidance now uses Rental Package Highlights with lease/deposit
+  language for Rental;
+- Marketing Summary highlight guidance now uses Auction Package Highlights with auction
+  timing/reserve/bidder-pack language for Auction;
+- Review & Publish unit summaries now lead Rental prices with `Rent from` and show rental
+  availability as `rentals available` or `Fully let`;
+- Review & Publish unit summaries now lead Auction prices with `Starting bid` and show lot
+  availability as `lots open` or `Auction closed`;
+- the live preview price heading now uses the same transaction-native price line.
+
+Focused component tests cover the new copy helpers. The hand-entered browser spec selector now
+accepts the transaction-native highlight placeholders so the existing browser proof can keep driving
+the real UI.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document

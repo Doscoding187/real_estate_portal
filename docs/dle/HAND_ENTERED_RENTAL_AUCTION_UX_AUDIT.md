@@ -139,8 +139,7 @@ What works:
 
 Product issues:
 
-- Existing helper copy still includes sale-shaped language such as buyer-focused highlight guidance.
-- The highlight input example `No Transfer Duty` is sale-native and awkward in Rental/Auction.
+- Rental/Auction helper copy now uses transaction-native highlight titles and examples.
 - Missing highlight requirements can still feel like a publishing blocker discovered late rather
   than a transaction-specific packaging target.
 
@@ -180,10 +179,8 @@ What works:
 
 Product issues:
 
-- Some summary surfaces still use generic `Avail` instead of `rentals available`, `fully let`, `lots
-  open`, or `auction closed`.
-- The Review & Publish unit summary still displays `R ...` with small contextual suffixes rather
-  than always leading with `Rent from` or `Starting bid`.
+- Review & Publish unit summaries now use `Rent from`, `rentals available`, `Starting bid`, and
+  `lots open` language for Rental/Auction.
 - Reserve strategy is tracked but should more clearly say whether it is public, internal, or
   request-led.
 - Rental available/reserved wording needs leasing semantics. `Reserved / Under Offer` can be
@@ -206,8 +203,8 @@ Product issues:
   feel like publishing a rental package or auction package, not a generic listing.
 - Confirmation copy mentions search indexing and notifications, but not transaction consequences:
   renter enquiries/lease packs for Rental, bidder interest/auction pack for Auction.
-- The live preview title `Live Preview Mode` and price heading `From R ...` are too generic. Rental
-  should lead with `Rent from`; Auction should lead with `Starting bid` or `Bid from`.
+- The live preview title `Live Preview Mode` is still generic, but the price heading now leads with
+  `Rent from` or `Starting bid` for Rental/Auction.
 - The validation success message says `quality standards`; transaction lanes need clearer standards:
   rental package readiness or auction package readiness.
 
@@ -280,13 +277,9 @@ The current codebase has browser proof for hand-entered Rental and Auction:
 
 P0 before broad product rollout:
 
-- Replace sale-shaped Marketing Summary examples in Rental/Auction with transaction-native example
-  highlights.
-- Change Review & Publish live preview price headings from generic `From R` to `Rent from` and
-  `Starting bid`/`Bid from`.
-- Replace generic unit summary `Avail` in Rental/Auction review contexts with leasing/auction
-  availability language.
 - Make publish confirmation copy transaction-native for Rental and Auction.
+- Replace the remaining generic `Live Preview Mode` label with transaction-preview language.
+- Replace generic validation success copy with rental-package or auction-package readiness language.
 
 P1 near-term product quality:
 
@@ -320,9 +313,9 @@ Autosave remains behind:
 
 ## Next Recommended Slice
 
-Implement the smallest P0 copy-only product polish slice:
+Implement the next P0 copy-only product polish slice:
 
-- update Rental/Auction Marketing Summary example highlight copy;
-- update Review & Publish preview price labels for Rental/Auction;
+- make publish confirmation copy transaction-native for Rental and Auction;
+- replace the remaining generic preview and validation-success labels;
 - keep behavior, schemas, save/publish endpoints, lead persistence, and autosave flags unchanged;
 - add or update focused component tests for the changed copy.

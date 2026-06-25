@@ -48,6 +48,47 @@ interface FinalisationPhaseProps {
   isManualSaveDraftPending?: boolean;
 }
 
+type FinalisationLane = 'sale' | 'rental' | 'auction';
+
+export const getFinalisationLane = (transactionType: unknown): FinalisationLane => {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['for-rent', 'to-rent', 'rent', 'rental', 'lease'].includes(normalized)) return 'rental';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+export const getFinalisationPriceLine = (
+  transactionType: unknown,
+  renderedPrice: string,
+): string => {
+  const lane = getFinalisationLane(transactionType);
+  const price = renderedPrice && renderedPrice !== '---' ? renderedPrice : '---';
+
+  if (lane === 'rental') return `Rent from R ${price} / month`;
+  if (lane === 'auction') return `Starting bid R ${price}`;
+  return `From R ${price}`;
+};
+
+export const getFinalisationAvailabilityLabel = (
+  transactionType: unknown,
+  availableUnits: unknown,
+): string => {
+  const lane = getFinalisationLane(transactionType);
+  const parsed =
+    typeof availableUnits === 'number'
+      ? availableUnits
+      : Number(String(availableUnits ?? '').trim());
+  const count = Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
+
+  if (lane === 'rental') return count > 0 ? `${count} rentals available` : 'Fully let';
+  if (lane === 'auction') return count > 0 ? `${count} lots open` : 'Auction closed';
+  return count > 0 ? `${count} Avail` : 'Sold out';
+};
+
 export function FinalisationPhase({
   onManualSaveDraft,
   isManualSaveDraftPending = false,
@@ -67,6 +108,7 @@ export function FinalisationPhase({
   const wizardData = store.getWizardData();
   const isRent = wizardData.transactionType === 'for_rent';
   const isAuction = wizardData.transactionType === 'auction';
+  const transactionType = wizardData.transactionType;
 
   const stepAmenities = normalizeAmenitiesPayload(stepAmenitiesRaw);
   const developmentAmenities = normalizeAmenitiesPayload(developmentAmenitiesRaw);
@@ -726,8 +768,7 @@ export function FinalisationPhase({
                           <span>{u.bedrooms} Bed</span>
                           <span>{u.bathrooms} Bath</span>
                           <span>
-                            R {renderUnitPriceLabel(u)}
-                            {isRent ? ' / month' : ''}
+                            {getFinalisationPriceLine(transactionType, renderUnitPriceLabel(u))}
                           </span>
                           <Badge
                             variant="outline"
@@ -737,7 +778,10 @@ export function FinalisationPhase({
                                 : 'text-red-600 border-red-200'
                             }
                           >
-                            {toDisplayInt(u?.availableUnits, 0)} Avail
+                            {getFinalisationAvailabilityLabel(
+                              transactionType,
+                              toDisplayInt(u?.availableUnits, 0),
+                            )}
                           </Badge>
                         </div>
                       </div>
@@ -861,8 +905,10 @@ export function FinalisationPhase({
                   <div className="p-4 space-y-3">
                     <div className="space-y-1">
                       <h3 className="text-xs font-bold text-slate-700 uppercase">
-                        From R {renderUnitPriceLabel((wizardData.unitTypes ?? [])[0])}
-                        {isRent ? ' / month' : ''}
+                        {getFinalisationPriceLine(
+                          transactionType,
+                          renderUnitPriceLabel((wizardData.unitTypes ?? [])[0]),
+                        )}
                       </h3>
                       <p className="text-[10px] text-slate-500 line-clamp-2">
                         {wizardData.description || 'Description...'}

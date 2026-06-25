@@ -8841,3 +8841,50 @@ Next recommended slice:
   plus Review & Publish preview price labels, with focused component tests.
 Commit hash/tag: Included in `docs(dle): audit hand-entered rental auction ux`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Hand-Entered Rental/Auction Copy Polish
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Implement the smallest P0 copy-only polish slice from the hand-entered Rental/Auction UX
+audit while preserving save/publish/autosave/runtime behavior.
+Files changed:
+- client/src/components/development-wizard/phases/FinalisationPhase.tsx
+- client/src/components/development-wizard/phases/FinalisationPhase.test.tsx
+- client/src/components/development-wizard/phases/OverviewPhase.tsx
+- client/src/components/development-wizard/phases/OverviewPhase.test.ts
+- e2e/dle/rental-auction-hand-entered-wizard.spec.ts
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+Tests run:
+- Focused component copy/publish tests:
+  `pnpm vitest run client/src/components/development-wizard/phases/OverviewPhase.test.ts client/src/components/development-wizard/phases/FinalisationPhase.test.tsx`
+  - Result: Passed. 2 files, 8 tests.
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+Functional proof intended by this slice:
+- Replaces sale-shaped Rental/Auction Marketing Summary highlight titles/examples with
+  transaction-native Rental Package Highlights and Auction Package Highlights copy.
+- Changes Review & Publish unit summary and live-preview price lines so Rental leads with
+  `Rent from` and Auction leads with `Starting bid`.
+- Changes Review & Publish unit availability language so Rental shows rentals available/Fully let
+  and Auction shows lots open/Auction closed.
+- Keeps the hand-entered browser spec aligned with the transaction-native highlight placeholders.
+Guardrails:
+- No schema, migration, endpoint, save/publish behavior, lead persistence, evidence, distribution,
+  payout, reward, operating mutation, or autosave flag changed.
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+Remaining risks:
+- Publish confirmation copy, generic preview heading, and validation-success copy still need a
+  follow-up P0 polish slice.
+- Product-quality review is still required after copy changes.
+Next recommended slice:
+- Continue the P0 copy-only polish backlog: make publish confirmation copy, preview headings, and
+  validation-success copy transaction-native for Rental and Auction, with focused component tests.
+Commit hash/tag: Included in `fix(dle): polish rental auction wizard copy`.
+Uncommitted reason, if any: None. Slice committed.

@@ -11,6 +11,47 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { WizardData } from '@/lib/types/wizard-workflows';
 
+type MarketingSummaryLane = 'sale' | 'rental' | 'auction';
+
+export const getMarketingSummaryLane = (transactionType: unknown): MarketingSummaryLane => {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['for-rent', 'to-rent', 'rent', 'rental', 'lease'].includes(normalized)) return 'rental';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+export const getMarketingSummaryHighlightCopy = (transactionType: unknown) => {
+  const lane = getMarketingSummaryLane(transactionType);
+
+  if (lane === 'rental') {
+    return {
+      title: 'Rental Package Highlights',
+      description:
+        'Add 3-8 renter-facing points that make lease terms, deposits, and availability clear.',
+      placeholder: 'e.g. Lease terms visible',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      title: 'Auction Package Highlights',
+      description:
+        'Add 3-8 bidder-facing points that make auction timing, reserve strategy, and bidder packs clear.',
+      placeholder: 'e.g. Auction window scheduled',
+    };
+  }
+
+  return {
+    title: 'Key Selling Points',
+    description: 'Add 3-8 bullet points summarizing why buyers should choose this estate.',
+    placeholder: 'e.g. No Transfer Duty',
+  };
+};
+
 export function OverviewPhase() {
   const { developmentData, saveWorkflowStepData, stepData: allStepData } = useDevelopmentWizard();
 
@@ -21,6 +62,11 @@ export function OverviewPhase() {
   const currentTagline = marketingData.tagline ?? developmentData.subtitle ?? '';
   const currentDescription = marketingData.description ?? developmentData.description ?? '';
   const currentHighlights = marketingData.keySellingPoints ?? developmentData.highlights ?? [];
+  const transactionType =
+    marketingData.transactionType ??
+    allStepData?.configuration?.transactionType ??
+    developmentData.transactionType;
+  const highlightCopy = getMarketingSummaryHighlightCopy(transactionType);
 
   // Helper to persist to 'marketing_summary'
   // We use developmentData (merged) for reading, but ensure we write back to the correct step bucket.
@@ -162,17 +208,15 @@ export function OverviewPhase() {
                 <Sparkles className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <CardTitle className="text-lg text-slate-900">Key Selling Points</CardTitle>
-                <CardDescription>
-                  Add 3-8 bullet points summarizing why buyers should choose this estate.
-                </CardDescription>
+                <CardTitle className="text-lg text-slate-900">{highlightCopy.title}</CardTitle>
+                <CardDescription>{highlightCopy.description}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             <div className="flex gap-2">
               <Input
-                placeholder="e.g. No Transfer Duty"
+                placeholder={highlightCopy.placeholder}
                 value={highlightInput}
                 onChange={e => setHighlightInput(e.target.value)}
                 onKeyDown={e => {

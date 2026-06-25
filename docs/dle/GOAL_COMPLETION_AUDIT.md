@@ -177,9 +177,9 @@ Primary docs:
 
 Recommended slice:
 
-- Implement the smallest P0 copy-only polish slice from
-  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, starting with Rental/Auction Marketing
-  Summary examples and Review & Publish preview price labels.
+- Continue the P0 copy-only polish backlog in
+  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, focusing next on transaction-native publish
+  confirmation, preview headings, and validation-success copy.
 
 ### Gap 3: Product Polish Is Not Complete
 

@@ -202,7 +202,30 @@ vi.mock('canvas-confetti', () => ({
   default: vi.fn(),
 }));
 
-import { FinalisationPhase } from './FinalisationPhase';
+import {
+  FinalisationPhase,
+  getFinalisationAvailabilityLabel,
+  getFinalisationPriceLine,
+} from './FinalisationPhase';
+
+describe('FinalisationPhase transaction copy helpers', () => {
+  it('uses transaction-native review and preview price labels', () => {
+    expect(getFinalisationPriceLine('for_sale', '1,200,000')).toBe('From R 1,200,000');
+    expect(getFinalisationPriceLine('for_rent', '16,000')).toBe('Rent from R 16,000 / month');
+    expect(getFinalisationPriceLine('auction', '850,000 (starting bid)')).toBe(
+      'Starting bid R 850,000 (starting bid)',
+    );
+  });
+
+  it('uses transaction-native availability language', () => {
+    expect(getFinalisationAvailabilityLabel('for_sale', 7)).toBe('7 Avail');
+    expect(getFinalisationAvailabilityLabel('for_sale', 0)).toBe('Sold out');
+    expect(getFinalisationAvailabilityLabel('for_rent', 7)).toBe('7 rentals available');
+    expect(getFinalisationAvailabilityLabel('for_rent', 0)).toBe('Fully let');
+    expect(getFinalisationAvailabilityLabel('auction', 2)).toBe('2 lots open');
+    expect(getFinalisationAvailabilityLabel('auction', 0)).toBe('Auction closed');
+  });
+});
 
 function makeFinalisationRentalSnapshot() {
   return {
