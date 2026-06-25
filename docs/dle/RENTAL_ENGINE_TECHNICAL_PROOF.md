@@ -1,14 +1,14 @@
 # DLE Rental Engine Technical Proof Checkpoint
 
-Date: 2026-06-03; updated 2026-06-04
+Date: 2026-06-03; updated 2026-06-25
 Branch: recovery/lead-routing-verification-2026-06-02
-Status: Focused API/unit/integration proof passed, including rental edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is now proven.
+Status: Focused API/unit/integration proof passed, including rental edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is proven. Browser proof now also covers a hand-entered Rental package from Project Setup through Review & Publish draft save.
 
 ## Purpose
 
 This checkpoint records what is technically proven for the Rental Engine, including the later browser public-output proof for edit-published ownership.
 
-It does not claim that Rental is world-class or that the full hand-entered wizard UX has been proven from Project Setup through every form step. It establishes that the current codebase already has meaningful rental transaction guardrails, and it defines the remaining proof needed before autosave or broad UI/product upgrades.
+It does not claim that Rental is world-class. It establishes that the current codebase already has meaningful rental transaction guardrails, including a hand-entered wizard path through Review & Publish draft save, and it defines the remaining product-quality proof needed before broad UI/product upgrades.
 
 ## Test Run
 
@@ -134,29 +134,48 @@ Evidence:
 - `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-search-card.png`
 - `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-lead-context.png`
 
+## Hand-Entered Wizard Packaging Browser Proof
+
+Focused browser spec:
+
+- `e2e/dle/rental-auction-hand-entered-wizard.spec.ts`
+- Test name: `saves a hand-entered rental package with transaction-native draft fields`
+
+Proof covered:
+
+- Starts from `/developer/create-development` with a real seeded developer account.
+- Selects `Residential Development` and `To Let / Rent` through Project Setup.
+- Enters configuration, identity/status, location, governance rates, marketing description,
+  highlights, hero media, brochure document, and a real Unit Types rental dialog.
+- Saves the draft through the real `developer.saveDraft` route from Review & Publish.
+- Asserts the persisted draft keeps `workflowId: residential_rent`, `transactionType: for_rent`,
+  canonical step data, local-upload media/document URLs, rental unit identity, monthly rent range,
+  deposit, lease term, furnished state, and live rental availability.
+- Asserts stale auction pricing and sale pricing do not appear in the hand-entered rental unit
+  payload.
+
 ## What This Does Not Yet Prove
 
 The Rental Engine is much closer to Sale parity, but not yet a full product-quality rental journey.
 
 Still pending:
 
-- Full hand-entered rental wizard UX from Project Setup through every form step.
 - Product-quality audit of rental-specific wizard language and public merchandising.
 - Product-quality audit of rental language, especially avoiding sale-shaped inventory copy such as sold/sold-out where leasing language is more appropriate.
 
 ## Next Required Slice
 
-Run the Rental Engine autosave preflight or full hand-entered rental UX proof:
-
-1. If preparing autosave, define and prove truthful save-state, failed-save messaging, retry, conflict handling, and transaction-scoped payload ownership.
-2. If preparing product polish, run a fully hand-entered rental browser journey from Project Setup through Review & Publish and record UX gaps.
+Run a product-quality Rental UX audit or extend the hand-entered Rental proof through publish/public output using the same real-entry path.
 
 ## Autosave Decision
 
-Autosave is still not safe to start from this checkpoint alone.
+Create/draft autosave remains default-off and edit-development autosave remains default-off.
 
 Reason:
 
-- Rental has strong focused technical/API coverage, browser public-output edit-published ownership proof, and browser save/resume/publish proof from a review-ready canonical draft.
-- Transaction-lane save/resume/publish is no longer the main rental blocker.
-- Autosave still requires a dedicated failure/retry/conflict design and proof that the UI never claims saved progress unless a real save succeeds.
+- Rental now has strong focused technical/API coverage, browser public-output edit-published
+  ownership proof, browser save/resume/publish proof from a review-ready canonical draft, full
+  edit-autosave ownership/failure/retry/stale-response proof across transaction lanes, and
+  hand-entered Rental draft-save proof.
+- Any rollout still requires explicit release control; default-off autosave posture remains the
+  safe operating mode.

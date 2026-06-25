@@ -8691,3 +8691,59 @@ Next recommended slice:
   enablement step, likely starting with a non-production or developer-only flag path.
 Commit hash/tag: Included in `test(dle): prove full edit autosave suite`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Rental/Auction Hand-Entered Wizard Packaging Draft Proof
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Prove that real developer-entered Rental and Auction wizard packages can travel from Project
+Setup through Review & Publish and persist transaction-native canonical draft data.
+Files changed:
+- e2e/dle/rental-auction-hand-entered-wizard.spec.ts
+- docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md
+Tests run:
+- `pnpm run check`
+  - Result: Passed before the browser proof.
+- `git diff --check`
+  - Result: Passed before the browser proof.
+- Focused hand-entered Rental/Auction wizard packaging proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-hand-entered-wizard.spec.ts --project="Desktop Chrome" --workers=1`
+  - Result: Passed. Final focused browser result: 2 passed, 0 failed.
+Environment notes:
+- Local MySQL was running on `127.0.0.1:3307`.
+- Backend was running on `5000`.
+- Frontend was running on `3009`.
+- The first sandboxed Playwright run failed before proof execution because Chromium could not launch
+  in the managed sandbox; the same focused browser proof passed with approved local browser access.
+Functional proof intended by this slice:
+- Starts from `/developer/create-development` with real seeded developer accounts.
+- Selects Residential Rental and Residential Auction through the actual Project Setup UI.
+- Drives the real wizard shell through configuration, identity/status, location, governance,
+  marketing copy, highlights, media uploads, brochure upload, Unit Types dialog, and Review &
+  Publish.
+- Saves drafts through the real `developer.saveDraft` route.
+- Asserts persisted Rental draft data keeps `workflowId: residential_rent`, `transactionType:
+  for_rent`, local-upload media/document URLs, monthly rent range, deposit, lease term, furnished
+  state, and rental availability.
+- Asserts persisted Auction draft data keeps `workflowId: residential_auction`, `transactionType:
+  auction`, local-upload media/document URLs, starting bid, reserve price, auction window,
+  scheduled lifecycle, and lot availability.
+- Asserts stale wrong-lane pricing fields stay absent or neutral in both hand-entered unit payloads.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+- No schema, migration, backend endpoint, publish behavior, public listing, search-card logic, lead
+  persistence, distribution, inventory outcome, payout, reward, or operating behavior changed.
+- This is hand-entered packaging draft-save proof only, not full hand-entered publish proof.
+Remaining risks:
+- Full hand-entered Rental/Auction publish, public output, search card, and lead context can still
+  be proven using the same real-entry path.
+- Product-quality Rental/Auction copy audit remains incomplete.
+Next recommended slice:
+- Extend the hand-entered Rental/Auction wizard proof through publish/public/search/lead output, or
+  run a focused UX copy audit if product polish is the priority.
+Commit hash/tag: Included in `test(dle): prove hand-entered rental auction drafts`.
+Uncommitted reason, if any: None. Slice committed.

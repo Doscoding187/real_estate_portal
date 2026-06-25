@@ -1,14 +1,14 @@
 # DLE Auction Engine Technical Proof Checkpoint
 
-Date: 2026-06-03; updated 2026-06-04
+Date: 2026-06-03; updated 2026-06-25
 Branch: refine/homepage-phase1-clarity-trust
-Status: Focused API/unit/integration proof passed, including auction edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is now proven.
+Status: Focused API/unit/integration proof passed, including auction edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is proven. Browser proof now also covers a hand-entered Auction package from Project Setup through Review & Publish draft save.
 
 ## Purpose
 
 This checkpoint records what is technically proven for the Auction Engine, including the later browser public-output proof for edit-published ownership.
 
-It does not claim that Auction is world-class or that the full hand-entered wizard UX has been proven from Project Setup through every form step. It proves that the current codebase treats auction as its own transaction lane with bid/reserve pricing, auction dates, stale sale/rent stripping, public output, edit-published field ownership, and review-ready canonical draft save/resume/publish behavior.
+It does not claim that Auction is world-class. It proves that the current codebase treats auction as its own transaction lane with bid/reserve pricing, auction dates, stale sale/rent stripping, public output, edit-published field ownership, review-ready canonical draft save/resume/publish behavior, and a hand-entered wizard path through Review & Publish draft save.
 
 ## Test Run
 
@@ -117,28 +117,46 @@ Evidence:
 - `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-search-card.png`
 - `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-lead-context.png`
 
+## Hand-Entered Wizard Packaging Browser Proof
+
+Focused browser spec:
+
+- `e2e/dle/rental-auction-hand-entered-wizard.spec.ts`
+- Test name: `saves a hand-entered auction package with transaction-native draft fields`
+
+Proof covered:
+
+- Starts from `/developer/create-development` with a real seeded developer account.
+- Selects `Residential Development` and `Auction` through Project Setup.
+- Enters configuration, identity/status, auction type, location, governance rates, marketing
+  description, highlights, hero media, brochure document, and a real Unit Types auction dialog.
+- Saves the draft through the real `developer.saveDraft` route from Review & Publish.
+- Asserts the persisted draft keeps `workflowId: residential_auction`, `transactionType: auction`,
+  canonical step data, local-upload media/document URLs, auction unit identity, starting bid,
+  reserve price, auction window, scheduled lifecycle, and live lot availability.
+- Asserts stale rental rent and sale pricing do not appear in the hand-entered auction unit payload.
+
 ## What This Does Not Yet Prove
 
 The Auction Engine is much closer to Sale browser parity, but not yet a full product-quality auction journey.
 
 Still pending:
 
-- Full hand-entered auction wizard UX from Project Setup through every form step.
 - Product-quality audit of auction language, especially registration, auction timing, legal pack readiness, and bid CTA language.
 
 ## Next Required Slice
 
-Run the Auction Engine autosave preflight or full hand-entered auction UX proof:
-
-1. If preparing autosave, define and prove truthful save-state, failed-save messaging, retry, conflict handling, and transaction-scoped payload ownership.
-2. If preparing product polish, run a fully hand-entered auction browser journey from Project Setup through Review & Publish and record UX gaps.
+Run a product-quality Auction UX audit or extend the hand-entered Auction proof through publish/public output using the same real-entry path.
 
 ## Autosave Decision
 
-Autosave is still not safe to start from this checkpoint alone.
+Create/draft autosave remains default-off and edit-development autosave remains default-off.
 
 Reason:
 
-- Sale has browser/API proof, and Auction now has strong technical/API ownership proof, browser public-output edit-published proof, and browser save/resume/publish proof from a review-ready canonical draft.
-- Transaction-lane save/resume/publish is no longer the main auction blocker.
-- Autosave still requires a dedicated failure/retry/conflict design and proof that the UI never claims saved progress unless a real save succeeds.
+- Auction now has strong technical/API ownership proof, browser public-output edit-published proof,
+  browser save/resume/publish proof from a review-ready canonical draft, full edit-autosave
+  ownership/failure/retry/stale-response proof across transaction lanes, and hand-entered Auction
+  draft-save proof.
+- Any rollout still requires explicit release control; default-off autosave posture remains the
+  safe operating mode.

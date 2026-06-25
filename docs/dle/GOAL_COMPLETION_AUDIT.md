@@ -63,6 +63,7 @@ Rental has credible technical and browser proof for:
 - transaction-native pricing using monthly rent;
 - stale sale/auction field stripping;
 - readiness validation;
+- hand-entered wizard packaging from Project Setup through Review & Publish draft save;
 - manual save/resume/publish from canonical draft;
 - public detail/search/lead context;
 - edit-published ownership;
@@ -81,6 +82,7 @@ Auction has credible technical and browser proof for:
 - auction date/window semantics;
 - stale sale/rent field stripping;
 - readiness validation;
+- hand-entered wizard packaging from Project Setup through Review & Publish draft save;
 - manual save/resume/publish from canonical draft;
 - public detail/search/lead context;
 - edit-published ownership;
@@ -115,25 +117,30 @@ Edit autosave remains disabled by default. The following is proven:
 - baseline-aware partial-step payload boundary;
 - component gate behind `VITE_DLE_EDIT_AUTOSAVE_ENABLED`;
 - backend `success: false` handling at component level;
-- limited Rental browser failure/retry proof for `marketing_summary`.
+- Sale/Rental/Auction browser ownership, failure/retry, stale-response, remove/reorder, public
+  merchandising, and lead-context proof for the current edit-autosave suite.
 
 ## Completion Gaps
 
-### Gap 1: Edit Autosave Is Not Ready For Enablement
+### Gap 1: Edit Autosave Rollout Still Requires Explicit Release Control
 
 Status: incomplete.
 
+Current proof:
+
+- full Sale/Rental/Auction edit-autosave browser suite passed with 48 tests;
+- location, media, unit, stale-response, removal, reorder, public merchandising, and lead-context
+  proof is recorded in `docs/dle/EDIT_DEVELOPMENT_AUTOSAVE_OWNERSHIP_CONTRACT.md`;
+- Save Progress remains the trusted manual fallback;
+- edit autosave remains disabled by default.
+
 Required before enablement:
 
-- browser proof for Sale edit autosave;
-- browser proof for Rental edit autosave beyond the current marketing-summary path;
-- browser proof for Auction edit autosave;
-- location edit autosave preserving media, governance, unit inventory, pricing, and public output;
-- media edit autosave preserving location, governance, unit inventory, pricing, and public output;
-- unit edit autosave preserving media, location, governance, public pricing, search cards, and lead
-  context;
-- stale partial payload proof so older saves cannot mark newer edits as saved;
-- Save Progress remains the trusted fallback.
+- explicit release-control decision for the default-off rollout flag;
+- production/non-production rollout scope;
+- post-enable monitoring and rollback plan;
+- confirmation that no broader operating, distribution, evidence, or payout state can be mutated by
+  edit autosave.
 
 Primary docs:
 
@@ -146,17 +153,18 @@ Recommended next slice:
   `marketing_summary` failure/retry proof.
 - Keep `VITE_DLE_EDIT_AUTOSAVE_ENABLED` off by default.
 
-### Gap 2: Full Hand-Entered Rental And Auction Wizard UX Is Still Not Proven
+### Gap 2: Full Hand-Entered Rental And Auction Publish UX Still Needs Extension
 
 Status: incomplete.
 
-Current proof uses strong canonical draft/browser paths, but the docs still do not claim full
-hand-entered Rental/Auction UX from Project Setup through every form step.
+Current proof now covers hand-entered Rental/Auction packaging from Project Setup through Review &
+Publish draft save. Existing canonical draft browser proof covers manual save/resume/publish,
+public page, search card, and lead context.
 
 Required:
 
-- full hand-entered Rental journey from Project Setup to publish;
-- full hand-entered Auction journey from Project Setup to publish;
+- extend the hand-entered Rental journey through publish/public output;
+- extend the hand-entered Auction journey through publish/public output;
 - UX gap list for confusing copy, hidden requirements, weak readiness feedback, and sale-shaped
   language.
 
@@ -168,8 +176,8 @@ Primary docs:
 
 Recommended slice:
 
-- Run one no-code browser audit for hand-entered Rental and Auction. Only fix defects after the
-  audit is logged.
+- Extend `e2e/dle/rental-auction-hand-entered-wizard.spec.ts` through publish/public/search/lead
+  output, or run a no-code UX audit if product copy quality is the priority.
 
 ### Gap 3: Product Polish Is Not Complete
 
