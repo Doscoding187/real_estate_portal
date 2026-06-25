@@ -8972,3 +8972,45 @@ Next recommended slice:
   renter/bidder lead-handoff preview before Review & Publish, with focused component tests.
 Commit hash/tag: Included in `feat(dle): add rental auction prepublish guidance`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Rental/Auction Merchandising Handoff Guidance
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Add Review & Publish merchandising-order and lead-handoff guidance for Rental/Auction without
+changing save, publish, lead, or autosave behavior.
+Files changed:
+- client/src/components/development-wizard/phases/FinalisationPhase.tsx
+- client/src/components/development-wizard/phases/FinalisationPhase.test.tsx
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+Tests run:
+- Focused Finalisation merchandising/publish tests:
+  `pnpm vitest run client/src/components/development-wizard/phases/FinalisationPhase.test.tsx`
+  - Result: Passed. 1 file, 8 tests.
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+Functional proof intended by this slice:
+- Adds Rental Review & Publish guidance explaining hero image, gallery order, unit order, and renter
+  lead handoff.
+- Adds Auction Review & Publish guidance explaining hero image, gallery order, lot order, and bidder
+  lead handoff.
+- Keeps Sale Review & Publish unchanged.
+Guardrails:
+- No schema, migration, endpoint, validation, save/publish behavior, lead persistence, evidence,
+  distribution, payout, reward, operating mutation, or autosave flag changed.
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+Remaining risks:
+- Rental/Auction document guidance, reserve visibility, and renter application-hold wording remain
+  product polish gaps.
+- Product-quality review is still required after guidance changes.
+Next recommended slice:
+- Continue the P1 product-quality backlog: tighten Rental/Auction document, reserve-visibility, and
+  application-hold guidance where generic brochure or inventory wording remains.
+Commit hash/tag: Included in `feat(dle): add rental auction merchandising handoff guidance`.
+Uncommitted reason, if any: None. Slice committed.

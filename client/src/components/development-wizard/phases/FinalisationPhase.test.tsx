@@ -205,6 +205,7 @@ vi.mock('canvas-confetti', () => ({
 import {
   FinalisationPhase,
   getFinalisationAvailabilityLabel,
+  getFinalisationMerchandisingGuidance,
   getFinalisationPrePublishGuidance,
   getFinalisationPublishCopy,
   getFinalisationPriceLine,
@@ -262,6 +263,26 @@ describe('FinalisationPhase transaction copy helpers', () => {
       items: expect.arrayContaining([
         expect.objectContaining({ label: 'Legal pack' }),
         expect.objectContaining({ label: 'Proof-of-funds posture' }),
+      ]),
+    });
+  });
+
+  it('surfaces transaction-specific merchandising guidance', () => {
+    expect(getFinalisationMerchandisingGuidance('for_sale')).toBeNull();
+    expect(getFinalisationMerchandisingGuidance('for_rent')).toMatchObject({
+      title: 'Rental merchandising preview',
+      handoffTitle: 'Renter lead handoff',
+      items: expect.arrayContaining([
+        expect.objectContaining({ label: 'Hero image' }),
+        expect.objectContaining({ label: 'Unit order' }),
+      ]),
+    });
+    expect(getFinalisationMerchandisingGuidance('auction')).toMatchObject({
+      title: 'Auction merchandising preview',
+      handoffTitle: 'Bidder lead handoff',
+      items: expect.arrayContaining([
+        expect.objectContaining({ label: 'Gallery order' }),
+        expect.objectContaining({ label: 'Lot order' }),
       ]),
     });
   });
@@ -492,6 +513,8 @@ describe('FinalisationPhase', () => {
 
     expect(screen.getByText('Rental package guidance')).toBeInTheDocument();
     expect(screen.getByText('Application holds')).toBeInTheDocument();
+    expect(screen.getByText('Rental merchandising preview')).toBeInTheDocument();
+    expect(screen.getByText('Renter lead handoff')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /publish rental package/i }));
     fireEvent.click(screen.getByRole('button', { name: /confirm & publish rental/i }));

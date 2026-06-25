@@ -241,8 +241,8 @@ What works:
 
 Product issues:
 
-- Search-card quality depends heavily on the first unit and media order. The wizard should explain
-  that media order and unit order directly affect public merchandising.
+- Review & Publish now explains that hero image, gallery order, and unit or lot order shape public
+  card quality and conversion.
 
 ### Lead Forms
 
@@ -258,8 +258,8 @@ What works:
 
 Product issues:
 
-- The form context is good after opening, but the wizard does not yet show developers enough of the
-  lead handoff text that renters or bidders will see.
+- Review & Publish now shows a compact Rental/Auction lead-handoff preview so developers understand
+  the renter or bidder context before publishing.
 
 ## Functional Blockers
 
@@ -282,9 +282,8 @@ P0 before broad product rollout:
 
 P1 near-term product quality:
 
-- Explain that hero image, gallery order, and unit order affect public cards and conversion.
-- Show a small lead-handoff preview in Review & Publish so developers understand what renters or
-  bidders will receive.
+- Continue tightening generic guidance around Rental/Auction documents, reserve visibility, and
+  renter application-hold language without adding required data.
 
 P2 later polish:
 
@@ -310,8 +309,7 @@ Autosave remains behind:
 
 Implement the next P1 product-quality slice:
 
-- explain that hero image, gallery order, and unit order affect public cards and conversion;
-- show a small lead-handoff preview in Review & Publish so developers understand what renters or
-  bidders will receive;
+- tighten Rental/Auction document, reserve-visibility, and application-hold guidance where the UI
+  still relies on generic brochure or inventory wording;
 - keep behavior, schemas, save/publish endpoints, lead persistence, and autosave flags unchanged;
 - add or update focused component tests for the changed copy.

@@ -185,6 +185,62 @@ export const getFinalisationPrePublishGuidance = (transactionType: unknown) => {
   return null;
 };
 
+export const getFinalisationMerchandisingGuidance = (transactionType: unknown) => {
+  const lane = getFinalisationLane(transactionType);
+
+  if (lane === 'rental') {
+    return {
+      title: 'Rental merchandising preview',
+      summary:
+        'Your hero image, gallery order, and first rental unit shape what renters see on public cards.',
+      items: [
+        {
+          label: 'Hero image',
+          detail: 'The first image should make the rental feel ready, trustworthy, and easy to inspect.',
+        },
+        {
+          label: 'Gallery order',
+          detail: 'Lead with lifestyle, room flow, and amenities before lower-priority supporting media.',
+        },
+        {
+          label: 'Unit order',
+          detail: 'Put the strongest rental option first when availability, rent, or furnished state matters.',
+        },
+      ],
+      handoffTitle: 'Renter lead handoff',
+      handoffDetail:
+        'Renters will enquire with the selected unit context, rent-from language, and application next steps.',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      title: 'Auction merchandising preview',
+      summary:
+        'Your hero image, gallery order, and first lot shape bidder confidence before registration.',
+      items: [
+        {
+          label: 'Hero image',
+          detail: 'The first image should make the asset clear enough for bidders to keep investigating.',
+        },
+        {
+          label: 'Gallery order',
+          detail: 'Lead with proof, condition, and key spaces before lower-priority supporting media.',
+        },
+        {
+          label: 'Lot order',
+          detail: 'Put the most commercially important auction lot first when bid range or timing matters.',
+        },
+      ],
+      handoffTitle: 'Bidder lead handoff',
+      handoffDetail:
+        'Bidders will enquire with lot context, starting-bid language, and auction-team registration next steps.',
+    };
+  }
+
+  return null;
+};
+
 export function FinalisationPhase({
   onManualSaveDraft,
   isManualSaveDraftPending = false,
@@ -207,6 +263,7 @@ export function FinalisationPhase({
   const transactionType = wizardData.transactionType;
   const publishCopy = getFinalisationPublishCopy(transactionType);
   const prePublishGuidance = getFinalisationPrePublishGuidance(transactionType);
+  const merchandisingGuidance = getFinalisationMerchandisingGuidance(transactionType);
 
   const stepAmenities = normalizeAmenitiesPayload(stepAmenitiesRaw);
   const developmentAmenities = normalizeAmenitiesPayload(developmentAmenitiesRaw);
@@ -734,6 +791,37 @@ export function FinalisationPhase({
                     </div>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {merchandisingGuidance && (
+            <Card className="border-emerald-200 bg-emerald-50/40 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-emerald-950">
+                  {merchandisingGuidance.title}
+                </CardTitle>
+                <CardDescription className="text-emerald-800">
+                  {merchandisingGuidance.summary}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-0">
+                <div className="grid gap-3 md:grid-cols-3">
+                  {merchandisingGuidance.items.map(item => (
+                    <div key={item.label} className="rounded-md border border-emerald-200 bg-white/70 p-3">
+                      <p className="text-sm font-semibold text-emerald-950">{item.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-emerald-800">{item.detail}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-md border border-emerald-200 bg-white/80 p-3">
+                  <p className="text-sm font-semibold text-emerald-950">
+                    {merchandisingGuidance.handoffTitle}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-800">
+                    {merchandisingGuidance.handoffDetail}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}

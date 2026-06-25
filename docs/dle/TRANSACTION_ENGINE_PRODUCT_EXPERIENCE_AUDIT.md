@@ -863,6 +863,27 @@ This improves packaging confidence without changing validation, save, publish, l
 autosave, evidence, distribution, payout, reward, or operating behavior. Focused component tests
 cover the guidance helper and the visible Rental render path.
 
+## Forty-Fifth Product-Visibility Slice
+
+Add Rental/Auction merchandising and lead-handoff guidance to Review & Publish.
+
+Review & Publish now surfaces a compact transaction-specific merchandising preview for Rental and
+Auction packages:
+
+- Rental explains that the hero image, gallery order, and unit order shape public card quality,
+  conversion, and renter confidence;
+- Auction explains that the hero image, gallery order, and lot order shape bidder confidence before
+  registration;
+- Rental shows a renter lead-handoff preview with selected-unit context, rent-from language, and
+  application next steps;
+- Auction shows a bidder lead-handoff preview with lot context, starting-bid language, and
+  auction-team registration next steps;
+- Sale remains unchanged.
+
+This improves merchandising confidence without changing validation, schemas, save, publish, lead
+persistence, autosave, evidence, distribution, payout, reward, or operating behavior. Focused
+component tests cover the merchandising helper and the visible Rental render path.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document
