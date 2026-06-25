@@ -113,8 +113,8 @@ export function DiscoverProperties({
   subtitle,
   locationName = 'South Africa',
 }: DiscoverPropertiesProps = {}) {
-  const defaultTitle = `Discover Properties in ${locationName}`;
-  const defaultSubtitle = `Browse homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
+  const defaultTitle = `Browse by city, category, and property journey`;
+  const defaultSubtitle = `Not sure what to search yet? Explore homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
 
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
@@ -234,15 +234,17 @@ export function DiscoverProperties({
   };
 
   return (
-    <div className="py-4 md:py-5 bg-gradient-to-b from-white to-muted/20">
+    <div className="home-section bg-gradient-to-b from-white to-muted/20">
       <div className="container">
-        <div className="mb-5 md:mb-6">
-          <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">{displayTitle}</h2>
+        <div className="home-section-header">
+          <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
+            {displayTitle}
+          </h2>
           <p className="text-muted-foreground text-xs md:text-sm max-w-2xl">{displaySubtitle}</p>
         </div>
 
         {/* City Tabs */}
-        <div className="flex justify-start mb-6 md:mb-10 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="home-section-tabs flex justify-start overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
             {displayCities.map(city => (
               <button
@@ -306,7 +308,7 @@ export function DiscoverProperties({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+        <div className="home-card-grid grid grid-cols-1 lg:grid-cols-12">
           {/* Left Sidebar - Listing Type Toggle */}
           <div className="hidden lg:block lg:col-span-3">
             <div className="rounded-2xl border border-slate-200 shadow-xl bg-white overflow-hidden h-full flex flex-col">
@@ -432,11 +434,8 @@ export function DiscoverProperties({
 
           {/* Right Side - Property Carousel */}
           <div className="lg:col-span-9 relative group/carousel">
-            <div
-              className="overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5"
-              ref={emblaRef}
-            >
-              <div className="flex gap-4 md:gap-6 pl-4 py-1">
+            <div className="overflow-hidden rounded-2xl" ref={emblaRef}>
+              <div className="home-card-grid flex py-0.5">
                 {filteredProperties.map((property, idx) => (
                   <div
                     key={idx}
@@ -452,8 +451,8 @@ export function DiscoverProperties({
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity duration-300" />
 
                       {/* Content Overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                        <div className="w-10 h-1 bg-blue-500 mb-3 sm:mb-4 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 delay-100" />
+                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
+                        <div className="w-10 h-1 bg-blue-500 mb-3 rounded-full transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 delay-100" />
 
                         <div className="hidden sm:flex items-center gap-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-75 transform -translate-y-2 group-hover:translate-y-0">
                           <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
@@ -461,7 +460,7 @@ export function DiscoverProperties({
                           </span>
                         </div>
 
-                        <h3 className="text-lg sm:text-2xl font-bold mb-1.5 sm:mb-2 text-white group-hover:text-blue-50 transition-colors">
+                        <h3 className="text-lg sm:text-2xl font-bold mb-1.5 text-white group-hover:text-blue-50 transition-colors">
                           {property.type}
                         </h3>
                         <p className="text-xs sm:text-sm text-slate-300 font-medium flex items-center gap-2">

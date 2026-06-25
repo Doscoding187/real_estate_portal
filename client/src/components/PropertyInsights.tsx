@@ -97,7 +97,7 @@ function InsightCard({
   return (
     <div
       className={cn(
-        'flex-none w-[80vw] max-w-[17rem] sm:w-[245px] lg:w-auto rounded-xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm',
+        'flex-none w-[80vw] max-w-[17rem] sm:w-[245px] lg:w-auto lg:max-w-none rounded-xl border transition-all hover:shadow-lg flex flex-col snap-center bg-opacity-40 backdrop-blur-sm',
         t.bg,
         t.border,
         className,
@@ -221,7 +221,7 @@ export function PropertyInsights({
 
   if (insightsQuery.isLoading) {
     return (
-      <div className="py-4 md:py-5 bg-white">
+      <div className="home-section bg-white">
         <div className="container">
           <div className="h-64 bg-slate-50 rounded-xl animate-pulse w-full" />
         </div>
@@ -230,28 +230,23 @@ export function PropertyInsights({
   }
 
   return (
-    <div className="py-4 md:py-5 bg-white">
+    <div className="home-section bg-white">
       <div className="container">
-        <div className="w-full space-y-5 md:space-y-6">
+        <div className="w-full">
           {/* Header */}
-          <div>
-            <h2 className="text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900 mb-2">
-              Property Price Insights in{' '}
-              {effectiveLevel === 'national' ? 'South Africa' : contextLabel || 'this market'}
+          <div className="home-section-header">
+            <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
+              Make smarter property decisions
             </h2>
-            <p className="text-slate-500 mt-2 max-w-3xl leading-relaxed text-xs md:text-sm">
-              Track pricing trends, median rates, and local demand signals to make smarter
-              property decisions.
+            <p className="text-slate-500 max-w-3xl leading-relaxed text-xs md:text-sm">
+              Compare price activity, market depth, and suburb signals across{' '}
+              {effectiveLevel === 'national' ? 'South Africa' : contextLabel || 'this market'}.
             </p>
           </div>
 
-          <Tabs
-            value={activeTabId}
-            onValueChange={setActiveTabId}
-            className="w-full space-y-5 md:space-y-6"
-          >
+          <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
             {/* Left Aligned Tabs to match Header Alignment standard */}
-            <div className="flex justify-start overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="home-section-tabs flex justify-start overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
               <TabsList className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200 h-auto">
                 {displayTabs.map(tab => (
                   <TabsTrigger
@@ -273,7 +268,7 @@ export function PropertyInsights({
               value={activeTabId}
               className="relative mt-0 focus-visible:outline-none animate-in fade-in slide-in-from-bottom-2 duration-500"
             >
-              <div className="flex overflow-x-auto pb-4 md:pb-6 gap-3 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide lg:grid lg:grid-cols-4 lg:gap-3 lg:overflow-visible lg:items-stretch">
+              <div className="home-card-grid flex overflow-x-auto pb-4 md:pb-6 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide lg:grid lg:grid-cols-4 lg:overflow-visible lg:items-stretch">
                 {/* 1. AVERAGE PRICE MAP (Blue) */}
                 <InsightCard
                   title="Average Price Map"
