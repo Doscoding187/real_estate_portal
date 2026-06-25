@@ -789,6 +789,23 @@ This is still upload-intent only. Upload completion, authenticated download, lea
 metadata readback, public applicant/bidder upload, acceptance automation, readiness, inventory,
 distribution, reward, public listing, wizard, draft, and autosave mutation remain future.
 
+## Forty-First Product-Visibility Slice
+
+Audit the full hand-entered Rental/Auction UX after publish proof.
+
+`docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md` now records a no-code product audit against the
+real hand-entered Rental and Auction journeys. It uses the browser-proven path from Project Setup
+through draft save, publish, public detail, search card, and lead context as its functional
+baseline, then separates blockers from product polish.
+
+Key audit outcome:
+
+- no functional blocker is proven in the current hand-entered Rental/Auction path;
+- the remaining weakness is language and preview quality, especially generic `listing`, `buyer`,
+  `From R`, and `Avail` wording on surfaces that should feel rental-native or auction-native;
+- the next P0 product slice should be copy-only and preserve schemas, save/publish endpoints, lead
+  persistence, autosave flags, evidence, distribution, and operating behavior.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document

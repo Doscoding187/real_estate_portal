@@ -8797,3 +8797,47 @@ Next recommended slice:
   language, auction registration/timing/legal-pack clarity, and transaction-aware CTAs.
 Commit hash/tag: Included in `test(dle): prove hand-entered rental auction publish`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Hand-Entered Rental/Auction UX Audit
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Run the approved no-code UX audit for hand-entered Rental and Auction journeys after browser
+proof closed draft-save, publish, public detail, search card, and lead-context coverage.
+Files changed:
+- docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+Tests run:
+- Documentation-only slice; no browser flow rerun.
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+Functional proof intended by this slice:
+- Records every hand-entered Rental/Auction wizard step from Project Setup through Review &
+  Publish.
+- Separates functional blockers from product polish issues.
+- Identifies sale-shaped or generic language in Rental/Auction flows, including Marketing Summary
+  examples, Review & Publish controls, live preview price labels, and generic unit availability
+  wording.
+- Confirms current hand-entered Rental/Auction public detail, search card, and lead-form output is
+  functionally transaction-native based on the committed browser proof.
+- Defines a P0 copy-only product polish backlog that preserves schemas, save/publish endpoints,
+  lead persistence, autosave flags, evidence, distribution, and operating behavior.
+Guardrails:
+- No source behavior changed.
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+- No schema, migration, endpoint, public listing behavior, search-card behavior, lead persistence,
+  evidence, distribution, payout, reward, or operating mutation changed.
+Remaining risks:
+- The audit identifies product polish work; it does not implement the copy fixes.
+- Product-quality review is still required after any copy-only polish slice.
+Next recommended slice:
+- Implement the smallest P0 copy-only product polish slice from
+  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`: Rental/Auction Marketing Summary examples
+  plus Review & Publish preview price labels, with focused component tests.
+Commit hash/tag: Included in `docs(dle): audit hand-entered rental auction ux`.
+Uncommitted reason, if any: None. Slice committed.

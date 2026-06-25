@@ -170,14 +170,16 @@ Required:
 
 Primary docs:
 
+- `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`
 - `docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md`
 - `docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md`
 - `docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md`
 
 Recommended slice:
 
-- Run a no-code UX audit against the hand-entered Rental/Auction wizard and public output, then
-  record concrete product polish fixes in `docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md`.
+- Implement the smallest P0 copy-only polish slice from
+  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, starting with Rental/Auction Marketing
+  Summary examples and Review & Publish preview price labels.
 
 ### Gap 3: Product Polish Is Not Complete
 
