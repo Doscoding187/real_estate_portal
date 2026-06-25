@@ -884,6 +884,28 @@ This improves merchandising confidence without changing validation, schemas, sav
 persistence, autosave, evidence, distribution, payout, reward, or operating behavior. Focused
 component tests cover the merchandising helper and the visible Rental render path.
 
+## Forty-Sixth Product-Visibility Slice
+
+Add Rental/Auction document-pack, reserve-visibility, and held-stock guidance.
+
+The wizard now removes the remaining generic document and held-stock wording from key Rental and
+Auction packaging surfaces:
+
+- Media names Rental Pack documents with lease terms, deposit guidance, furnished-state notes, and
+  renter application steps;
+- Media names Auction Legal & Bidder Pack documents with auction terms, legal-pack access, FICA,
+  registration, and proof-of-funds expectations;
+- Rental unit stock now uses available rentals, application holds, let units, and fully-let status;
+- Auction unit stock now uses open lots, bidder holds, closed lots, and auction-closed status;
+- Auction reserve copy now frames reserve visibility as bidder-facing, request-led, or
+  auction-team reviewed instead of a vague internal flag;
+- Sale keeps the existing brochure/document and sale stock language.
+
+This improves packaging clarity without changing validation, schemas, save, publish, lead
+persistence, autosave, evidence, distribution, payout, reward, or operating behavior. Focused
+component tests cover Media document-pack copy, Unit stock labels, and Auction reserve visibility
+copy.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document

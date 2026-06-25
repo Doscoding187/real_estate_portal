@@ -159,10 +159,11 @@ What works:
 
 Product issues:
 
-- Documents are still treated mostly as generic brochure/document uploads. Rental needs rental pack
-  language. Auction needs legal pack, bidder pack, auction terms, FICA, and proof-of-funds framing.
-- The media hierarchy is technically present, but the wizard should make hero/search-card impact
-  more explicit before publish.
+- Media now uses transaction-native document copy: Rental Pack and Auction Pack tabs, Rental pack
+  document readiness, and Auction legal/bidder pack guidance for terms, FICA, registration, and
+  proof-of-funds expectations.
+- The media hierarchy is technically present, and Review & Publish now explains hero/search-card
+  impact before publish.
 
 ### Unit Types
 
@@ -181,10 +182,10 @@ Product issues:
 
 - Review & Publish unit summaries now use `Rent from`, `rentals available`, `Starting bid`, and
   `lots open` language for Rental/Auction.
-- Reserve strategy is tracked but should more clearly say whether it is public, internal, or
-  request-led.
-- Rental available/reserved wording needs leasing semantics. `Reserved / Under Offer` can be
-  confusing for rental inventory unless the UI explains application holds.
+- Auction reserve strategy now frames reserve visibility as public, request-led, or auction-team
+  reviewed rather than vague internal tracking.
+- Rental stock wording now uses leasing semantics: available rentals, application holds, let units,
+  and fully-let status instead of sale-shaped under-offer/sold wording.
 
 ### Review & Publish
 
@@ -226,8 +227,8 @@ Product issues:
 
 - The public layer is stronger than the wizard layer. The wizard should preview more of this public
   intelligence while the developer is entering data.
-- Rental and Auction legal/document readiness should become more explicit before publish, especially
-  when only a generic PDF brochure exists.
+- Rental and Auction legal/document readiness is now more explicit in the Media step and before
+  publish, even when the uploaded PDF is technically a generic document.
 
 ### Search Cards
 
@@ -282,12 +283,10 @@ P0 before broad product rollout:
 
 P1 near-term product quality:
 
-- Continue tightening generic guidance around Rental/Auction documents, reserve visibility, and
-  renter application-hold language without adding required data.
+- Make Location and Amenities guidance more transaction-specific without adding new required data.
 
 P2 later polish:
 
-- Make Location and Amenities guidance more transaction-specific without adding new required data.
 - Split generic governance/cost language into owner governance, renter cost, and bidder cost
   framing.
 - Add a compact pre-publish public-preview checklist that mirrors the public commercial pack.
@@ -309,7 +308,7 @@ Autosave remains behind:
 
 Implement the next P1 product-quality slice:
 
-- tighten Rental/Auction document, reserve-visibility, and application-hold guidance where the UI
-  still relies on generic brochure or inventory wording;
+- make Location and Amenities guidance more transaction-specific for Rental/Auction without adding
+  new required data;
 - keep behavior, schemas, save/publish endpoints, lead persistence, and autosave flags unchanged;
 - add or update focused component tests for the changed copy.

@@ -261,6 +261,50 @@ export const getUnitTypesPhaseTransactionCopy = (transactionType: unknown) => {
   };
 };
 
+export const getUnitTypesPhaseStockCopy = (transactionType: unknown) => {
+  const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
+
+  if (normalized === 'for_rent') {
+    return {
+      transactionType: normalized,
+      availableLabel: 'Available Rentals',
+      reservedLabel: 'Application Holds',
+      historicalLabel: 'Let Units (Historical)',
+      formulaLabel: 'Available rentals',
+      reservedFormulaLabel: 'Application holds',
+      historicalFormulaLabel: 'Let',
+      availableStatus: 'RENTALS AVAILABLE',
+      emptyStatus: 'FULLY LET',
+    };
+  }
+
+  if (normalized === 'auction') {
+    return {
+      transactionType: normalized,
+      availableLabel: 'Open Lots',
+      reservedLabel: 'Bidder Holds',
+      historicalLabel: 'Closed Lots (Historical)',
+      formulaLabel: 'Open lots',
+      reservedFormulaLabel: 'Bidder holds',
+      historicalFormulaLabel: 'Closed',
+      availableStatus: 'LOTS OPEN',
+      emptyStatus: 'AUCTION CLOSED',
+    };
+  }
+
+  return {
+    transactionType: normalized,
+    availableLabel: 'Available Units',
+    reservedLabel: 'Reserved / Under Offer',
+    historicalLabel: 'Sold Units (Historical)',
+    formulaLabel: 'Available',
+    reservedFormulaLabel: 'Reserved',
+    historicalFormulaLabel: 'Sold',
+    availableStatus: 'AVAILABLE',
+    emptyStatus: 'SOLD OUT / LISTING',
+  };
+};
+
 export const getUnitTypesPhasePricingRepairCopy = (transactionType: unknown) => {
   const normalized = normalizeUnitTypesPhaseTransactionType(transactionType);
 
@@ -591,7 +635,9 @@ export const getUnitTypesPhaseMerchandisingPreview = (
       leadContextLabel: 'Auction lead context',
       supportingDetails: [
         auctionWindow,
-        reservePrice > 0 ? 'Reserve tracked internally' : 'Reserve to confirm',
+        reservePrice > 0
+          ? 'Internal reserve tracked for auction-team review'
+          : 'Reserve visibility to confirm',
         availableUnits > 0 ? `${availableUnits} lots open` : 'Auction inventory closed',
       ],
     };
@@ -713,8 +759,8 @@ export const getUnitTypesPhasePackagingChecklist = (
           label: 'Reserve strategy',
           detail:
             reservePrice > 0
-              ? 'Reserve tracked internally'
-              : 'Confirm reserve before bidder registration opens.',
+              ? 'Internal reserve tracked; keep bidder-facing copy clear about whether reserve is public, request-led, or team-reviewed.'
+              : 'Confirm reserve visibility before bidder registration opens.',
           state: reservePrice > 0 ? 'complete' : 'attention',
         },
         {
@@ -790,6 +836,7 @@ export function UnitTypesPhase() {
   const isRental = normalizedTransactionType === 'for_rent';
   const isAuction = normalizedTransactionType === 'auction';
   const transactionCopy = getUnitTypesPhaseTransactionCopy(normalizedTransactionType);
+  const stockCopy = getUnitTypesPhaseStockCopy(normalizedTransactionType);
   const pricingRepairCopy = getUnitTypesPhasePricingRepairCopy(normalizedTransactionType);
   const pricingRepairDiagnostic = getUnitTypesPhasePricingRepairDiagnostic({
     developmentData,
@@ -2646,7 +2693,7 @@ export function UnitTypesPhase() {
                 <div className="p-6 bg-slate-50/50 border rounded-xl space-y-8">
                   <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
-                      <Label className="text-green-600">Available Units</Label>
+                      <Label className="text-green-600">{stockCopy.availableLabel}</Label>
                       <Input
                         type="number"
                         className="border-green-200 focus:border-green-500"
@@ -2658,7 +2705,7 @@ export function UnitTypesPhase() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-blue-600">Reserved / Under Offer</Label>
+                      <Label className="text-blue-600">{stockCopy.reservedLabel}</Label>
                       <Input
                         type="number"
                         className="border-blue-200 focus:border-blue-500"
@@ -2668,7 +2715,7 @@ export function UnitTypesPhase() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-slate-600">Sold Units (Historical)</Label>
+                      <Label className="text-slate-600">{stockCopy.historicalLabel}</Label>
                       <Input
                         type="number"
                         className="border-slate-300 focus:border-slate-500"
@@ -2692,8 +2739,10 @@ export function UnitTypesPhase() {
                           className="font-semibold"
                         />
                         <p className="text-xs text-slate-500">
-                          Available {stockAvailableUnits} + Reserved {stockReservedUnits} + Sold{' '}
-                          {stockSoldHistoricalUnits} = Total {stockTotalUnits}
+                          {stockCopy.formulaLabel} {stockAvailableUnits} +{' '}
+                          {stockCopy.reservedFormulaLabel} {stockReservedUnits} +{' '}
+                          {stockCopy.historicalFormulaLabel} {stockSoldHistoricalUnits} = Total{' '}
+                          {stockTotalUnits}
                         </p>
                       </div>
                       <div className="flex-1">
@@ -2705,7 +2754,9 @@ export function UnitTypesPhase() {
                               : 'bg-red-50 border-red-200 text-red-700',
                           )}
                         >
-                          {stockAvailableUnits > 0 ? 'AVAILABLE' : 'SOLD OUT / LISTING'}
+                          {stockAvailableUnits > 0
+                            ? stockCopy.availableStatus
+                            : stockCopy.emptyStatus}
                         </div>
                       </div>
                     </div>

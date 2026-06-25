@@ -178,8 +178,8 @@ Primary docs:
 Recommended slice:
 
 - Continue the P1 product-quality backlog in
-  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, focusing next on Rental/Auction document
-  guidance, reserve visibility, and renter application-hold language.
+  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, focusing next on transaction-specific
+  Location and Amenities guidance without adding required data.
 
 ### Gap 3: Product Polish Is Not Complete
 

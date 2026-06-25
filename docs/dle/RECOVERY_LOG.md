@@ -9014,3 +9014,51 @@ Next recommended slice:
   application-hold guidance where generic brochure or inventory wording remains.
 Commit hash/tag: Included in `feat(dle): add rental auction merchandising handoff guidance`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Rental/Auction Document Reserve Hold Guidance
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Tighten Rental/Auction document-pack, reserve-visibility, and held-stock language without
+changing save, publish, lead, inventory, or autosave behavior.
+Files changed:
+- client/src/components/development-wizard/phases/MediaPhase.tsx
+- client/src/components/development-wizard/phases/MediaPhase.test.ts
+- client/src/components/development-wizard/phases/UnitTypesPhase.tsx
+- client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+Tests run:
+- Focused Media/Unit guidance tests:
+  `pnpm vitest run client/src/components/development-wizard/phases/MediaPhase.test.ts client/src/components/development-wizard/phases/UnitTypesPhase.test.tsx`
+  - Result: Passed. 2 files, 15 tests.
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+Functional proof intended by this slice:
+- Media document copy now names Rental Pack documents with lease/deposit/furnished/application-step
+  guidance.
+- Media document copy now names Auction Legal & Bidder Pack documents with auction terms,
+  legal-pack access, FICA, registration, and proof-of-funds guidance.
+- Rental stock language now uses available rentals, application holds, let units, and fully-let
+  status.
+- Auction stock language now uses open lots, bidder holds, closed lots, and auction-closed status.
+- Auction reserve copy now frames reserve visibility as bidder-facing, request-led, or
+  auction-team reviewed.
+Guardrails:
+- No schema, migration, endpoint, validation, save/publish behavior, lead persistence, evidence,
+  distribution, payout, reward, operating mutation, or autosave flag changed.
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+Remaining risks:
+- Location and Amenities guidance remain less transaction-specific than Review & Publish, Media,
+  and Unit Types.
+- Product-quality review is still required after guidance changes.
+Next recommended slice:
+- Continue the P1 product-quality backlog: make Location and Amenities guidance more
+  transaction-specific for Rental/Auction without adding new required data.
+Commit hash/tag: Included in `feat(dle): add rental auction document hold guidance`.
+Uncommitted reason, if any: None. Slice committed.

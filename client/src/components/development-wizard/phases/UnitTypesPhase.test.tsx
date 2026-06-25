@@ -7,6 +7,7 @@ import {
   getUnitTypesPhasePricingRepairAffectedUnits,
   getUnitTypesPhasePricingRepairDiagnostic,
   getUnitTypesPhasePricingRepairCopy,
+  getUnitTypesPhaseStockCopy,
   getUnitTypesPhaseTransactionCopy,
   isValidUnitTypesPhaseMonthlyRentRange,
   normalizeUnitTypesPhaseTransactionType,
@@ -46,6 +47,29 @@ describe('UnitTypesPhase transaction helpers', () => {
       recommendation:
         'Recommended for cards: add at least 2 unit types with clear names and starting bids.',
       emptyVerb: 'auctioning',
+    });
+  });
+
+  it('uses transaction-specific stock labels for held inventory', () => {
+    expect(getUnitTypesPhaseStockCopy('for_sale')).toMatchObject({
+      availableLabel: 'Available Units',
+      reservedLabel: 'Reserved / Under Offer',
+      historicalLabel: 'Sold Units (Historical)',
+      emptyStatus: 'SOLD OUT / LISTING',
+    });
+
+    expect(getUnitTypesPhaseStockCopy('for_rent')).toMatchObject({
+      availableLabel: 'Available Rentals',
+      reservedLabel: 'Application Holds',
+      historicalLabel: 'Let Units (Historical)',
+      emptyStatus: 'FULLY LET',
+    });
+
+    expect(getUnitTypesPhaseStockCopy('auction')).toMatchObject({
+      availableLabel: 'Open Lots',
+      reservedLabel: 'Bidder Holds',
+      historicalLabel: 'Closed Lots (Historical)',
+      emptyStatus: 'AUCTION CLOSED',
     });
   });
 
@@ -290,7 +314,9 @@ describe('UnitTypesPhase transaction helpers', () => {
       availabilityLabel: '2 lots open',
       ctaLabel: 'Register auction interest',
       leadContextLabel: 'Auction lead context',
-      supportingDetails: expect.arrayContaining(['Reserve tracked internally']),
+      supportingDetails: expect.arrayContaining([
+        'Internal reserve tracked for auction-team review',
+      ]),
     });
     expect(auctionPreview.supportingDetails.some(detail => detail.includes('2030'))).toBe(true);
   });
@@ -360,7 +386,11 @@ describe('UnitTypesPhase transaction helpers', () => {
       expect.arrayContaining([
         expect.objectContaining({ label: 'Starting bid', state: 'complete' }),
         expect.objectContaining({ label: 'Auction window', state: 'complete' }),
-        expect.objectContaining({ label: 'Reserve strategy', state: 'complete' }),
+        expect.objectContaining({
+          label: 'Reserve strategy',
+          detail: expect.stringContaining('bidder-facing copy'),
+          state: 'complete',
+        }),
         expect.objectContaining({
           label: 'Auction lifecycle',
           detail: 'Registration open',

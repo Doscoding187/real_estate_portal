@@ -31,6 +31,58 @@ import { SortableMediaGrid } from '@/components/media/SortableMediaGrid';
 import type { MediaItem as GridMediaItem } from '@/components/media/SortableMediaGrid';
 import { WizardData } from '@/lib/types/wizard-workflows';
 
+type MediaPhaseLane = 'sale' | 'rental' | 'auction';
+
+const normalizeMediaPhaseLane = (transactionType: unknown): MediaPhaseLane => {
+  const normalized = String(transactionType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, '-');
+
+  if (['for-rent', 'to-rent', 'rent', 'rental', 'lease'].includes(normalized)) return 'rental';
+  if (['auction', 'on-auction'].includes(normalized)) return 'auction';
+  return 'sale';
+};
+
+export const getMediaPhaseDocumentCopy = (transactionType: unknown) => {
+  const lane = normalizeMediaPhaseLane(transactionType);
+
+  if (lane === 'rental') {
+    return {
+      lane,
+      progressLabel: 'Rental pack document (Required)',
+      tabLabel: 'Rental Pack',
+      uploadTitle: 'Rental Pack Documents',
+      uploadDescription:
+        'Upload lease terms, deposit guidance, furnished-state notes, or renter application steps.',
+      guidance:
+        'A rental pack should help renters understand lease expectations before the leasing team follows up.',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      lane,
+      progressLabel: 'Auction legal pack (Required)',
+      tabLabel: 'Auction Pack',
+      uploadTitle: 'Auction Legal & Bidder Pack',
+      uploadDescription:
+        'Upload auction terms, legal-pack access notes, FICA requirements, or bidder registration documents.',
+      guidance:
+        'An auction pack should make bidder registration, legal review, and proof-of-funds expectations clear.',
+    };
+  }
+
+  return {
+    lane,
+    progressLabel: 'Brochure/Documents (Required)',
+    tabLabel: 'Documents',
+    uploadTitle: 'Brochures & Floor Plans',
+    uploadDescription: 'Downloadable PDFs for buyers.',
+    guidance: 'Upload buyer-facing brochures, plans, or supporting development documents.',
+  };
+};
+
 // Helper component for Video URL input
 function VideoUrlInput({ onAdd }: { onAdd: (url: string) => void }) {
   const [url, setUrl] = useState('');
@@ -83,6 +135,10 @@ function VideoUrlInput({ onAdd }: { onAdd: (url: string) => void }) {
 
 export function MediaPhase() {
   const { developmentData, saveWorkflowStepData, stepData: allStepData } = useDevelopmentWizard();
+  const transactionType = useDevelopmentWizard(
+    state => state.transactionType ?? state.developmentData?.transactionType,
+  );
+  const documentCopy = getMediaPhaseDocumentCopy(transactionType);
 
   const [activeTab, setActiveTab] = useState('gallery');
 
@@ -570,7 +626,7 @@ export function MediaPhase() {
                 <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
               )}
               <span className={hasDocuments ? 'text-slate-600' : 'text-slate-400'}>
-                Brochure/Documents (Required)
+                {documentCopy.progressLabel}
               </span>
             </div>
           </div>
@@ -612,7 +668,7 @@ export function MediaPhase() {
               <TabsTrigger value="gallery">Photos</TabsTrigger>
               <TabsTrigger value="videos">Videos</TabsTrigger>
               <TabsTrigger value="docs">
-                Documents
+                {documentCopy.tabLabel}
                 {documents.length > 0 && (
                   <Badge variant="secondary" className="ml-2 h-5 px-1">
                     {documents.length}
@@ -710,11 +766,12 @@ export function MediaPhase() {
               <CardContent className="pt-6">
                 <UploadSection
                   category="document"
-                  title="Brochures & Floor Plans"
-                  description="Downloadable PDFs for buyers."
+                  title={documentCopy.uploadTitle}
+                  description={documentCopy.uploadDescription}
                   icon={FileText}
                   acceptedTypes="application/pdf"
                 />
+                <p className="mt-3 text-xs leading-5 text-slate-500">{documentCopy.guidance}</p>
               </CardContent>
             </Card>
           </TabsContent>
