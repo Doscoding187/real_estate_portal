@@ -4,7 +4,7 @@ import { eq, inArray } from 'drizzle-orm';
 
 dotenv.config({ path: '.env.local' });
 
-import { developers, developmentDrafts, users } from '../../drizzle/schema';
+import { developers, developmentDrafts, developments, leads, users } from '../../drizzle/schema';
 import { authService } from '../../server/_core/auth';
 import { getDb } from '../../server/db-connection';
 import { COOKIE_NAME } from '../../shared/const';
@@ -16,6 +16,11 @@ type Scenario = {
   auctionStart?: string;
   auctionType?: string;
   deposit?: number;
+  expectedLeadPriceLabel: 'Rent from' | 'Starting bid';
+  expectedLeadTransactionType: 'rent' | 'auction';
+  expectedPublicPricing: RegExp;
+  expectedSearchPricing: RegExp;
+  expectedSubmitCta: RegExp;
   expectedTransactionType: 'for_rent' | 'auction';
   lane: Lane;
   leaseTerm?: string;
@@ -54,6 +59,13 @@ function getTrpcRequestInput(request: Request) {
   const payload = request.postDataJSON();
   const input = Array.isArray(payload) ? payload[0] : payload;
   return input?.json ?? input?.['0']?.json ?? input;
+}
+
+function getLeadContext(row: any) {
+  const raw = row?.affordabilityData;
+  if (!raw) return {};
+  const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  return parsed?.leadContext ?? {};
 }
 
 async function seedDeveloper(lane: Lane): Promise<Seed> {
@@ -301,6 +313,105 @@ async function saveDraftAndRead(page: Page) {
   return draft;
 }
 
+async function publishAndFindDevelopment(page: Page, scenario: Scenario) {
+  await page.getByText('Publishing Controls').scrollIntoViewIfNeeded();
+  await expect(page.getByRole('button', { name: 'Publish Listing' })).toBeEnabled();
+
+  await page.getByRole('button', { name: 'Publish Listing' }).click();
+  await page.getByRole('button', { name: 'Confirm & Publish' }).click();
+  await expect(page).toHaveURL(/\/developer\/developments/, { timeout: 20_000 });
+
+  const db = await getDb();
+  expect(db).toBeTruthy();
+
+  await expect
+    .poll(
+      async () => {
+        const [row] = await db!
+          .select()
+          .from(developments)
+          .where(eq(developments.name, scenario.name))
+          .limit(1);
+        return row ?? null;
+      },
+      { timeout: 15_000 },
+    )
+    .not.toBeNull();
+
+  const [development] = await db!
+    .select()
+    .from(developments)
+    .where(eq(developments.name, scenario.name))
+    .limit(1);
+
+  expect(development.isPublished).toBe(1);
+  expect(development.approvalStatus).toBe('approved');
+  expect(development.transactionType).toBe(scenario.expectedTransactionType);
+  return development as any;
+}
+
+async function provePublicSearchAndLead(page: Page, scenario: Scenario, development: any, unitId: string) {
+  await page.goto(`/development/${development.slug}`);
+  await expect(page.getByRole('heading', { name: scenario.name })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(scenario.unitName).first()).toBeVisible();
+  await expect(page.locator('body')).toContainText(scenario.expectedPublicPricing);
+  await expect(page.getByText(scenario.lane === 'rental' ? 'Lease terms visible' : 'Auction window scheduled').first()).toBeVisible();
+
+  if (scenario.lane === 'rental') {
+    await page.goto('/property-to-rent?city=Cape%20Town&province=western-cape&listingSource=development');
+  } else {
+    await page.goto(
+      '/property-for-sale?listingType=auction&city=Cape%20Town&province=western-cape&listingSource=development',
+    );
+  }
+  await expect(page.getByText(scenario.unitName).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(scenario.expectedSearchPricing).first()).toBeVisible();
+
+  await page.goto(`/development/${development.slug}`);
+  await page
+    .getByRole('button', {
+      name: /Request Rental Details|Register Auction Interest|Request Auction Details/i,
+    })
+    .first()
+    .click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await expect(dialog.getByText(`Unit: ${scenario.unitName}`).first()).toBeVisible();
+  await expect(dialog.getByText(scenario.expectedLeadPriceLabel, { exact: false }).first()).toBeVisible();
+
+  const email = `lead-hand-entered-${scenario.lane}-${Date.now()}@example.com`;
+  await page.getByPlaceholder('Full name').fill(`${scenario.lane} Hand Entered Lead`);
+  await page.getByPlaceholder('Email address').fill(email);
+  await page.getByPlaceholder('Phone number').fill('0820000000');
+  await page
+    .getByPlaceholder('Message (optional)')
+    .fill('Please send the hand-entered development pack.');
+  await page.getByRole('button', { name: scenario.expectedSubmitCta }).click();
+
+  const db = await getDb();
+  expect(db).toBeTruthy();
+  await expect
+    .poll(
+      async () => {
+        const [lead] = await db!.select().from(leads).where(eq(leads.email, email)).limit(1);
+        return lead ?? null;
+      },
+      { timeout: 10_000 },
+    )
+    .not.toBeNull();
+
+  const [lead] = await db!.select().from(leads).where(eq(leads.email, email)).limit(1);
+  const leadContext = getLeadContext(lead);
+  expect(Number(lead.developmentId)).toBe(Number(development.id));
+  expect(lead.unitId).toBe(unitId);
+  expect(lead.unitName).toBe(scenario.unitName);
+  expect(lead.leadSource).toBe('development_detail_contact');
+  expect(lead.funnelStage).toBe('interest');
+  expect(leadContext.transactionType).toBe(scenario.expectedLeadTransactionType);
+  expect(leadContext.unitPriceLabel).toBe(scenario.expectedLeadPriceLabel);
+}
+
 function expectHandEnteredDraft(draftData: any, scenario: Scenario) {
   expect(draftData).toMatchObject({
     workflowId: scenario.workflowId,
@@ -362,11 +473,16 @@ test.describe.serial('DLE Rental and Auction hand-entered wizard packaging proof
   const createdUserIds: number[] = [];
   const createdDeveloperIds: number[] = [];
   const createdDraftIds: number[] = [];
+  const createdDevelopmentIds: number[] = [];
 
   test.afterAll(async () => {
     const db = await getDb();
     if (!db) return;
 
+    if (createdDevelopmentIds.length > 0) {
+      await db.delete(leads).where(inArray(leads.developmentId, createdDevelopmentIds));
+      await db.delete(developments).where(inArray(developments.id, createdDevelopmentIds));
+    }
     if (createdDraftIds.length > 0) {
       await db.delete(developmentDrafts).where(inArray(developmentDrafts.id, createdDraftIds));
     }
@@ -381,6 +497,11 @@ test.describe.serial('DLE Rental and Auction hand-entered wizard packaging proof
   const scenarios: Scenario[] = [
     {
       deposit: 38_000,
+      expectedLeadPriceLabel: 'Rent from',
+      expectedLeadTransactionType: 'rent',
+      expectedPublicPricing: /R\s*18[\s,]500\s*-\s*R\s*21[\s,]000/i,
+      expectedSearchPricing: /Rent from\s+R\s*18,500/i,
+      expectedSubmitCta: /Send Rental Enquiry/i,
       expectedTransactionType: 'for_rent',
       lane: 'rental',
       leaseTerm: '12 months',
@@ -395,6 +516,11 @@ test.describe.serial('DLE Rental and Auction hand-entered wizard packaging proof
       auctionEnd: '2030-04-08T17:00',
       auctionStart: '2030-04-01T09:00',
       auctionType: 'Online Auction',
+      expectedLeadPriceLabel: 'Starting bid',
+      expectedLeadTransactionType: 'auction',
+      expectedPublicPricing: /R\s*920[\s,]000/i,
+      expectedSearchPricing: /Bid from\s+R\s*920,000/i,
+      expectedSubmitCta: /Register Auction Interest|Send Auction Enquiry/i,
       expectedTransactionType: 'auction',
       lane: 'auction',
       name: 'DLE Hand Entered Auction Package Proof',
@@ -407,7 +533,7 @@ test.describe.serial('DLE Rental and Auction hand-entered wizard packaging proof
   ];
 
   for (const scenario of scenarios) {
-    test(`saves a hand-entered ${scenario.lane} package with transaction-native draft fields`, async ({
+    test(`publishes a hand-entered ${scenario.lane} package with transaction-native public output`, async ({
       page,
     }) => {
       test.setTimeout(180_000);
@@ -457,6 +583,11 @@ test.describe.serial('DLE Rental and Auction hand-entered wizard packaging proof
       const draft = await saveDraftAndRead(page);
       createdDraftIds.push(Number(draft.id));
       expectHandEnteredDraft(draft.draftData as any, seededScenario);
+      const unitId = String((draft.draftData as any).stepData.unit_types.unitTypes[0].id);
+
+      const development = await publishAndFindDevelopment(page, seededScenario);
+      createdDevelopmentIds.push(Number(development.id));
+      await provePublicSearchAndLead(page, seededScenario, development, unitId);
     });
   }
 });

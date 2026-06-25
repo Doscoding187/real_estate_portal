@@ -2,13 +2,13 @@
 
 Date: 2026-06-03; updated 2026-06-25
 Branch: recovery/lead-routing-verification-2026-06-02
-Status: Focused API/unit/integration proof passed, including rental edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is proven. Browser proof now also covers a hand-entered Rental package from Project Setup through Review & Publish draft save.
+Status: Focused API/unit/integration proof passed, including rental edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is proven. Browser proof now also covers a hand-entered Rental package from Project Setup through Review & Publish draft save, publish, public detail, search card, and lead context.
 
 ## Purpose
 
 This checkpoint records what is technically proven for the Rental Engine, including the later browser public-output proof for edit-published ownership.
 
-It does not claim that Rental is world-class. It establishes that the current codebase already has meaningful rental transaction guardrails, including a hand-entered wizard path through Review & Publish draft save, and it defines the remaining product-quality proof needed before broad UI/product upgrades.
+It does not claim that Rental is world-class. It establishes that the current codebase already has meaningful rental transaction guardrails, including a hand-entered wizard path through Review & Publish draft save, publish, public detail, search card, and lead context, and it defines the remaining product-quality proof needed before broad UI/product upgrades.
 
 ## Test Run
 
@@ -134,12 +134,12 @@ Evidence:
 - `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-search-card.png`
 - `docs/dle/evidence/2026-06-04/qa-dle-rental-wizard-lead-context.png`
 
-## Hand-Entered Wizard Packaging Browser Proof
+## Hand-Entered Wizard Publish Browser Proof
 
 Focused browser spec:
 
 - `e2e/dle/rental-auction-hand-entered-wizard.spec.ts`
-- Test name: `saves a hand-entered rental package with transaction-native draft fields`
+- Test name: `publishes a hand-entered rental package with transaction-native public output`
 
 Proof covered:
 
@@ -153,6 +153,14 @@ Proof covered:
   deposit, lease term, furnished state, and live rental availability.
 - Asserts stale auction pricing and sale pricing do not appear in the hand-entered rental unit
   payload.
+- Publishes the same hand-entered package through the browser and asserts the approved published
+  development remains `transactionType: for_rent`.
+- Proves the public detail page renders the hand-entered unit, rental highlight, and rental price
+  range.
+- Proves the search card renders the hand-entered unit with `Rent from` pricing.
+- Submits a lead from the public detail unit CTA and asserts persisted lead context includes
+  development id, selected unit id/name, `transactionType: rent`, `unitPriceLabel: Rent from`,
+  `leadSource: development_detail_contact`, and `funnelStage: interest`.
 
 ## What This Does Not Yet Prove
 
@@ -165,7 +173,7 @@ Still pending:
 
 ## Next Required Slice
 
-Run a product-quality Rental UX audit or extend the hand-entered Rental proof through publish/public output using the same real-entry path.
+Run a product-quality Rental UX audit focused on confusing copy, hidden requirements, weak readiness feedback, and sale-shaped leasing language.
 
 ## Autosave Decision
 
@@ -176,6 +184,6 @@ Reason:
 - Rental now has strong focused technical/API coverage, browser public-output edit-published
   ownership proof, browser save/resume/publish proof from a review-ready canonical draft, full
   edit-autosave ownership/failure/retry/stale-response proof across transaction lanes, and
-  hand-entered Rental draft-save proof.
+  hand-entered Rental draft-save, publish, public-output, search-card, and lead-context proof.
 - Any rollout still requires explicit release control; default-off autosave posture remains the
   safe operating mode.

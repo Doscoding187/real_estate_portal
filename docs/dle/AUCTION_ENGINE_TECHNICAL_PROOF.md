@@ -2,13 +2,13 @@
 
 Date: 2026-06-03; updated 2026-06-25
 Branch: refine/homepage-phase1-clarity-trust
-Status: Focused API/unit/integration proof passed, including auction edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is proven. Browser proof now also covers a hand-entered Auction package from Project Setup through Review & Publish draft save.
+Status: Focused API/unit/integration proof passed, including auction edit-published ownership. Browser public-output parity for edit-published ownership is proven. Browser save/resume/publish proof from a review-ready canonical draft is proven. Browser proof now also covers a hand-entered Auction package from Project Setup through Review & Publish draft save, publish, public detail, search card, and lead context.
 
 ## Purpose
 
 This checkpoint records what is technically proven for the Auction Engine, including the later browser public-output proof for edit-published ownership.
 
-It does not claim that Auction is world-class. It proves that the current codebase treats auction as its own transaction lane with bid/reserve pricing, auction dates, stale sale/rent stripping, public output, edit-published field ownership, review-ready canonical draft save/resume/publish behavior, and a hand-entered wizard path through Review & Publish draft save.
+It does not claim that Auction is world-class. It proves that the current codebase treats auction as its own transaction lane with bid/reserve pricing, auction dates, stale sale/rent stripping, public output, edit-published field ownership, review-ready canonical draft save/resume/publish behavior, and a hand-entered wizard path through Review & Publish draft save, publish, public detail, search card, and lead context.
 
 ## Test Run
 
@@ -117,12 +117,12 @@ Evidence:
 - `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-search-card.png`
 - `docs/dle/evidence/2026-06-04/qa-dle-auction-wizard-lead-context.png`
 
-## Hand-Entered Wizard Packaging Browser Proof
+## Hand-Entered Wizard Publish Browser Proof
 
 Focused browser spec:
 
 - `e2e/dle/rental-auction-hand-entered-wizard.spec.ts`
-- Test name: `saves a hand-entered auction package with transaction-native draft fields`
+- Test name: `publishes a hand-entered auction package with transaction-native public output`
 
 Proof covered:
 
@@ -135,6 +135,14 @@ Proof covered:
   canonical step data, local-upload media/document URLs, auction unit identity, starting bid,
   reserve price, auction window, scheduled lifecycle, and live lot availability.
 - Asserts stale rental rent and sale pricing do not appear in the hand-entered auction unit payload.
+- Publishes the same hand-entered package through the browser and asserts the approved published
+  development remains `transactionType: auction`.
+- Proves the public detail page renders the hand-entered lot, auction highlight, and starting-bid
+  pricing.
+- Proves the search card renders the hand-entered lot with `Bid from` pricing.
+- Submits a lead from the public detail unit CTA and asserts persisted lead context includes
+  development id, selected unit id/name, `transactionType: auction`, `unitPriceLabel: Starting
+  bid`, `leadSource: development_detail_contact`, and `funnelStage: interest`.
 
 ## What This Does Not Yet Prove
 
@@ -146,7 +154,7 @@ Still pending:
 
 ## Next Required Slice
 
-Run a product-quality Auction UX audit or extend the hand-entered Auction proof through publish/public output using the same real-entry path.
+Run a product-quality Auction UX audit focused on registration, auction timing, legal-pack readiness, bid CTA language, confusing copy, hidden requirements, and weak readiness feedback.
 
 ## Autosave Decision
 
@@ -157,6 +165,6 @@ Reason:
 - Auction now has strong technical/API ownership proof, browser public-output edit-published proof,
   browser save/resume/publish proof from a review-ready canonical draft, full edit-autosave
   ownership/failure/retry/stale-response proof across transaction lanes, and hand-entered Auction
-  draft-save proof.
+  draft-save, publish, public-output, search-card, and lead-context proof.
 - Any rollout still requires explicit release control; default-off autosave posture remains the
   safe operating mode.

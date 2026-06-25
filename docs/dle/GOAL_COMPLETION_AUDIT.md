@@ -63,7 +63,8 @@ Rental has credible technical and browser proof for:
 - transaction-native pricing using monthly rent;
 - stale sale/auction field stripping;
 - readiness validation;
-- hand-entered wizard packaging from Project Setup through Review & Publish draft save;
+- hand-entered wizard packaging from Project Setup through Review & Publish draft save, publish,
+  public detail, search card, and lead context;
 - manual save/resume/publish from canonical draft;
 - public detail/search/lead context;
 - edit-published ownership;
@@ -82,7 +83,8 @@ Auction has credible technical and browser proof for:
 - auction date/window semantics;
 - stale sale/rent field stripping;
 - readiness validation;
-- hand-entered wizard packaging from Project Setup through Review & Publish draft save;
+- hand-entered wizard packaging from Project Setup through Review & Publish draft save, publish,
+  public detail, search card, and lead context;
 - manual save/resume/publish from canonical draft;
 - public detail/search/lead context;
 - edit-published ownership;
@@ -153,18 +155,16 @@ Recommended next slice:
   `marketing_summary` failure/retry proof.
 - Keep `VITE_DLE_EDIT_AUTOSAVE_ENABLED` off by default.
 
-### Gap 2: Full Hand-Entered Rental And Auction Publish UX Still Needs Extension
+### Gap 2: Full Hand-Entered Rental And Auction UX Still Needs Product Audit
 
 Status: incomplete.
 
 Current proof now covers hand-entered Rental/Auction packaging from Project Setup through Review &
-Publish draft save. Existing canonical draft browser proof covers manual save/resume/publish,
-public page, search card, and lead context.
+Publish draft save, publish, public page, search card, and lead context. Existing canonical draft
+browser proof also covers manual save/resume/publish, public page, search card, and lead context.
 
 Required:
 
-- extend the hand-entered Rental journey through publish/public output;
-- extend the hand-entered Auction journey through publish/public output;
 - UX gap list for confusing copy, hidden requirements, weak readiness feedback, and sale-shaped
   language.
 
@@ -176,8 +176,8 @@ Primary docs:
 
 Recommended slice:
 
-- Extend `e2e/dle/rental-auction-hand-entered-wizard.spec.ts` through publish/public/search/lead
-  output, or run a no-code UX audit if product copy quality is the priority.
+- Run a no-code UX audit against the hand-entered Rental/Auction wizard and public output, then
+  record concrete product polish fixes in `docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md`.
 
 ### Gap 3: Product Polish Is Not Complete
 

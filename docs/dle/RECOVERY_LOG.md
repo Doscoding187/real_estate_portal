@@ -8747,3 +8747,53 @@ Next recommended slice:
   run a focused UX copy audit if product polish is the priority.
 Commit hash/tag: Included in `test(dle): prove hand-entered rental auction drafts`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Rental/Auction Hand-Entered Wizard Publish/Public Proof
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Extend the real hand-entered Rental and Auction wizard proof beyond Review & Publish draft
+save into publish, public detail, search card, and lead-context output.
+Files changed:
+- e2e/dle/rental-auction-hand-entered-wizard.spec.ts
+- docs/dle/AUCTION_ENGINE_TECHNICAL_PROOF.md
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/RENTAL_ENGINE_TECHNICAL_PROOF.md
+Tests run:
+- Focused hand-entered Rental/Auction wizard publish/public proof:
+  `PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=http://localhost:3009 pnpm exec playwright test e2e/dle/rental-auction-hand-entered-wizard.spec.ts --project="Desktop Chrome" --workers=1`
+  - Result: Passed. Final focused browser result: 2 passed, 0 failed.
+Environment notes:
+- Local MySQL was running on `127.0.0.1:3307`.
+- Backend was running on `5000`.
+- Frontend was running on `3009`.
+Functional proof intended by this slice:
+- Keeps the real developer-entered Rental and Auction wizard journey from Project Setup through
+  Review & Publish.
+- Saves each package through `developer.saveDraft` and reasserts canonical transaction-native draft
+  data before publishing.
+- Publishes the same hand-entered package through the browser and verifies the published row remains
+  `for_rent` or `auction`.
+- Proves Rental public detail and search output use the hand-entered unit, highlight, and `Rent
+  from` pricing.
+- Proves Auction public detail and search output use the hand-entered lot, highlight, and `Bid
+  from` pricing.
+- Submits public detail leads for both lanes and asserts selected unit id/name, lead source,
+  interest funnel stage, and transaction-native lead context.
+Guardrails:
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+- No schema, migration, backend endpoint, public listing implementation, search-card implementation,
+  lead persistence implementation, distribution, inventory outcome, payout, reward, or operating
+  behavior changed.
+- This is proof extension only; it does not claim product-copy polish is complete.
+Remaining risks:
+- Product-quality Rental/Auction copy audit remains incomplete.
+- Edit autosave is still not enabled by default and must remain behind explicit release control.
+Next recommended slice:
+- Run a no-code product-quality UX audit for hand-entered Rental/Auction wizard and public output,
+  focusing on confusing copy, hidden requirements, weak readiness feedback, sale-shaped rental
+  language, auction registration/timing/legal-pack clarity, and transaction-aware CTAs.
+Commit hash/tag: Included in `test(dle): prove hand-entered rental auction publish`.
+Uncommitted reason, if any: None. Slice committed.
