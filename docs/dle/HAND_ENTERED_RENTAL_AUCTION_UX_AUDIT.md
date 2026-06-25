@@ -199,14 +199,11 @@ What works:
 
 Product issues:
 
-- Primary controls still say `Publish Listing`, `Confirm Publication`, and listing terms. DLE should
-  feel like publishing a rental package or auction package, not a generic listing.
-- Confirmation copy mentions search indexing and notifications, but not transaction consequences:
-  renter enquiries/lease packs for Rental, bidder interest/auction pack for Auction.
-- The live preview title `Live Preview Mode` is still generic, but the price heading now leads with
-  `Rent from` or `Starting bid` for Rental/Auction.
-- The validation success message says `quality standards`; transaction lanes need clearer standards:
-  rental package readiness or auction package readiness.
+- Rental/Auction publish controls and confirmation copy now use transaction-native package language.
+- Rental/Auction preview headings now use Rental Preview or Auction Preview instead of the generic
+  `Live Preview Mode`.
+- Rental/Auction validation success copy now uses rental-package or auction-package readiness
+  language.
 
 ## Public Output Audit
 
@@ -277,9 +274,7 @@ The current codebase has browser proof for hand-entered Rental and Auction:
 
 P0 before broad product rollout:
 
-- Make publish confirmation copy transaction-native for Rental and Auction.
-- Replace the remaining generic `Live Preview Mode` label with transaction-preview language.
-- Replace generic validation success copy with rental-package or auction-package readiness language.
+- No remaining P0 copy-only issues from this audit slice.
 
 P1 near-term product quality:
 
@@ -313,9 +308,11 @@ Autosave remains behind:
 
 ## Next Recommended Slice
 
-Implement the next P0 copy-only product polish slice:
+Implement the next P1 product-quality slice:
 
-- make publish confirmation copy transaction-native for Rental and Auction;
-- replace the remaining generic preview and validation-success labels;
+- add Rental-specific guidance for deposit, lease term, furnished state, application holds, and
+  lease-pack documents before Review & Publish;
+- add Auction-specific guidance for auction window, reserve visibility, legal pack, bidder
+  registration, auction terms, FICA, and proof-of-funds expectations before Review & Publish;
 - keep behavior, schemas, save/publish endpoints, lead persistence, and autosave flags unchanged;
 - add or update focused component tests for the changed copy.

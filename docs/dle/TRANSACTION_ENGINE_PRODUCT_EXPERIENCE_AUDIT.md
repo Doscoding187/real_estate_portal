@@ -828,6 +828,24 @@ Focused component tests cover the new copy helpers. The hand-entered browser spe
 accepts the transaction-native highlight placeholders so the existing browser proof can keep driving
 the real UI.
 
+## Forty-Third Product-Visibility Slice
+
+Polish Rental/Auction Review & Publish confirmation copy.
+
+The second P0 copy-only polish slice removes the remaining generic publish-confirmation wording from
+Rental and Auction Review & Publish:
+
+- Rental now uses `Publish Rental Package`, `Confirm Rental Publication`, `Confirm & Publish
+  Rental`, `Rental Preview`, and `Rental Package Ready`;
+- Auction now uses `Publish Auction Package`, `Confirm Auction Publication`, `Confirm & Publish
+  Auction`, `Auction Preview`, and `Auction Package Ready`;
+- confirmation text now explains renter search/leasing-team/rental-pack consequences for Rental and
+  bidder search/auction-team/bidder-pack consequences for Auction;
+- Sale keeps the existing generic listing labels.
+
+Focused component tests cover the helper copy and publish flow selectors. Rental/Auction browser
+proof selectors were updated to click the new package-specific publish controls.
+
 ## Remaining Product Gaps
 
 - Deepen Rental qualification beyond model metadata into proof-of-income capture, document

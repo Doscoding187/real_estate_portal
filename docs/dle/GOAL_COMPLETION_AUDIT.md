@@ -177,9 +177,9 @@ Primary docs:
 
 Recommended slice:
 
-- Continue the P0 copy-only polish backlog in
-  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, focusing next on transaction-native publish
-  confirmation, preview headings, and validation-success copy.
+- Continue the P1 product-quality backlog in
+  `docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md`, focusing next on Rental lease-pack guidance
+  and Auction bidder/legal-pack guidance before Review & Publish.
 
 ### Gap 3: Product Polish Is Not Complete
 

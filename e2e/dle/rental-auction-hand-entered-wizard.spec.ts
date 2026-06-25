@@ -317,10 +317,14 @@ async function saveDraftAndRead(page: Page) {
 
 async function publishAndFindDevelopment(page: Page, scenario: Scenario) {
   await page.getByText('Publishing Controls').scrollIntoViewIfNeeded();
-  await expect(page.getByRole('button', { name: 'Publish Listing' })).toBeEnabled();
+  const publishButtonName =
+    scenario.lane === 'rental' ? 'Publish Rental Package' : 'Publish Auction Package';
+  const confirmButtonName =
+    scenario.lane === 'rental' ? 'Confirm & Publish Rental' : 'Confirm & Publish Auction';
+  await expect(page.getByRole('button', { name: publishButtonName })).toBeEnabled();
 
-  await page.getByRole('button', { name: 'Publish Listing' }).click();
-  await page.getByRole('button', { name: 'Confirm & Publish' }).click();
+  await page.getByRole('button', { name: publishButtonName }).click();
+  await page.getByRole('button', { name: confirmButtonName }).click();
   await expect(page).toHaveURL(/\/developer\/developments/, { timeout: 20_000 });
 
   const db = await getDb();

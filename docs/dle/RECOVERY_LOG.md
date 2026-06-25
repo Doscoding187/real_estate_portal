@@ -8888,3 +8888,46 @@ Next recommended slice:
   validation-success copy transaction-native for Rental and Auction, with focused component tests.
 Commit hash/tag: Included in `fix(dle): polish rental auction wizard copy`.
 Uncommitted reason, if any: None. Slice committed.
+
+## 2026-06-25 - Rental/Auction Publish Confirmation Copy Polish
+
+Date: 2026-06-25
+Branch: feature/developer-listing-engine-isolated
+Goal: Close the remaining P0 copy-only Review & Publish polish items from the hand-entered
+Rental/Auction UX audit without changing publish behavior.
+Files changed:
+- client/src/components/development-wizard/phases/FinalisationPhase.tsx
+- client/src/components/development-wizard/phases/FinalisationPhase.test.tsx
+- e2e/dle/rental-auction-hand-entered-wizard.spec.ts
+- e2e/dle/rental-auction-wizard-save-publish.spec.ts
+- docs/dle/GOAL_COMPLETION_AUDIT.md
+- docs/dle/HAND_ENTERED_RENTAL_AUCTION_UX_AUDIT.md
+- docs/dle/RECOVERY_LOG.md
+- docs/dle/TRANSACTION_ENGINE_PRODUCT_EXPERIENCE_AUDIT.md
+Tests run:
+- Focused Finalisation copy/publish tests:
+  `pnpm vitest run client/src/components/development-wizard/phases/FinalisationPhase.test.tsx`
+  - Result: Passed. 1 file, 6 tests.
+- `pnpm run check`
+  - Result: Passed.
+- `git diff --check`
+  - Result: Passed.
+Functional proof intended by this slice:
+- Adds transaction-native Rental/Auction publish button, confirmation title, confirmation body,
+  confirmation action, preview heading, terms, and validation-success copy.
+- Keeps Sale publish labels unchanged.
+- Updates Rental/Auction browser proof selectors to use package-specific publish controls.
+Guardrails:
+- No schema, migration, endpoint, save/publish behavior, lead persistence, evidence, distribution,
+  payout, reward, operating mutation, or autosave flag changed.
+- Edit-development autosave remains disabled by default.
+- Create/draft autosave remains behind its default-off rollout flag.
+Remaining risks:
+- Deeper P1 guidance remains: Rental lease-pack/application-hold guidance and Auction
+  bidder/legal-pack guidance before Review & Publish.
+- Product-quality review is still required after copy changes.
+Next recommended slice:
+- Continue the P1 product-quality backlog: add Rental lease-pack guidance and Auction
+  bidder/legal-pack guidance before Review & Publish, with focused component tests.
+Commit hash/tag: Included in `fix(dle): polish rental auction publish copy`.
+Uncommitted reason, if any: None. Slice committed.

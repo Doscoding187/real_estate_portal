@@ -205,6 +205,7 @@ vi.mock('canvas-confetti', () => ({
 import {
   FinalisationPhase,
   getFinalisationAvailabilityLabel,
+  getFinalisationPublishCopy,
   getFinalisationPriceLine,
 } from './FinalisationPhase';
 
@@ -224,6 +225,26 @@ describe('FinalisationPhase transaction copy helpers', () => {
     expect(getFinalisationAvailabilityLabel('for_rent', 0)).toBe('Fully let');
     expect(getFinalisationAvailabilityLabel('auction', 2)).toBe('2 lots open');
     expect(getFinalisationAvailabilityLabel('auction', 0)).toBe('Auction closed');
+  });
+
+  it('uses transaction-native publish confirmation copy', () => {
+    expect(getFinalisationPublishCopy('for_sale')).toMatchObject({
+      previewHeading: 'Live Preview Mode',
+      publishButton: 'Publish Listing',
+      confirmButton: 'Confirm & Publish',
+    });
+    expect(getFinalisationPublishCopy('for_rent')).toMatchObject({
+      previewHeading: 'Rental Preview',
+      publishButton: 'Publish Rental Package',
+      validationTitle: 'Rental Package Ready',
+      confirmButton: 'Confirm & Publish Rental',
+    });
+    expect(getFinalisationPublishCopy('auction')).toMatchObject({
+      previewHeading: 'Auction Preview',
+      publishButton: 'Publish Auction Package',
+      validationTitle: 'Auction Package Ready',
+      confirmButton: 'Confirm & Publish Auction',
+    });
   });
 });
 
@@ -450,8 +471,8 @@ describe('FinalisationPhase', () => {
   it('uses canonical update payloads for edit-mode publish', async () => {
     render(<FinalisationPhase />);
 
-    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
-    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+    fireEvent.click(screen.getByRole('button', { name: /publish rental package/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & publish rental/i }));
 
     await waitFor(() => expect(testState.updateDevelopmentMock).toHaveBeenCalledTimes(1));
 
@@ -498,8 +519,8 @@ describe('FinalisationPhase', () => {
 
     render(<FinalisationPhase />);
 
-    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
-    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+    fireEvent.click(screen.getByRole('button', { name: /publish rental package/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & publish rental/i }));
 
     await waitFor(() => expect(testState.createDevelopmentMock).toHaveBeenCalledTimes(1));
 
@@ -544,8 +565,8 @@ describe('FinalisationPhase', () => {
 
     render(<FinalisationPhase />);
 
-    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
-    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+    fireEvent.click(screen.getByRole('button', { name: /publish auction package/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & publish auction/i }));
 
     await waitFor(() => expect(testState.createDevelopmentMock).toHaveBeenCalledTimes(1));
 

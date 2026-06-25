@@ -325,7 +325,14 @@ async function proveDraftListAndResume(page: Page, scenario: DraftScenario, seed
   await expect(page).toHaveURL(new RegExp(`/developer/create-development\\?draftId=${seed.draftId}`));
   await expect(page.getByText('Publishing Controls')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'Save Draft' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Publish Listing' })).toBeEnabled();
+  await expect(
+    page.getByRole('button', {
+      name:
+        scenario.lane === 'rental'
+          ? 'Publish Rental Package'
+          : 'Publish Auction Package',
+    }),
+  ).toBeEnabled();
   await expect(page.getByText(scenario.name).first()).toBeVisible();
   await expect(page.getByText(scenario.unitName).first()).toBeVisible();
   await expect(page.getByText(scenario.highlights[0]).first()).toBeVisible();
@@ -447,8 +454,22 @@ async function provePreReviewManualSave(page: Page, scenario: DraftScenario) {
 }
 
 async function publishAndFindDevelopment(page: Page, scenario: DraftScenario) {
-  await page.getByRole('button', { name: 'Publish Listing' }).click();
-  await page.getByRole('button', { name: 'Confirm & Publish' }).click();
+  await page
+    .getByRole('button', {
+      name:
+        scenario.lane === 'rental'
+          ? 'Publish Rental Package'
+          : 'Publish Auction Package',
+    })
+    .click();
+  await page
+    .getByRole('button', {
+      name:
+        scenario.lane === 'rental'
+          ? 'Confirm & Publish Rental'
+          : 'Confirm & Publish Auction',
+    })
+    .click();
   await expect(page).toHaveURL(/\/developer\/developments/, { timeout: 20_000 });
 
   const db = await getDb();

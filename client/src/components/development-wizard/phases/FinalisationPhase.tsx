@@ -89,6 +89,52 @@ export const getFinalisationAvailabilityLabel = (
   return count > 0 ? `${count} Avail` : 'Sold out';
 };
 
+export const getFinalisationPublishCopy = (transactionType: unknown) => {
+  const lane = getFinalisationLane(transactionType);
+
+  if (lane === 'rental') {
+    return {
+      previewHeading: 'Rental Preview',
+      publishButton: 'Publish Rental Package',
+      terms: 'By publishing, you agree to rental package terms.',
+      confirmTitle: 'Confirm Rental Publication',
+      confirmDescription:
+        'You are about to make this rental package live to renters. This will activate rental search visibility, leasing-team enquiries, and rental-pack requests.',
+      validationTitle: 'Rental Package Ready',
+      validationDescription:
+        'Your rental package meets the required rent, availability, media, and lead-context standards.',
+      confirmButton: 'Confirm & Publish Rental',
+    };
+  }
+
+  if (lane === 'auction') {
+    return {
+      previewHeading: 'Auction Preview',
+      publishButton: 'Publish Auction Package',
+      terms: 'By publishing, you agree to auction package terms.',
+      confirmTitle: 'Confirm Auction Publication',
+      confirmDescription:
+        'You are about to make this auction package live to bidders. This will activate auction search visibility, auction-team enquiries, and bidder-pack requests.',
+      validationTitle: 'Auction Package Ready',
+      validationDescription:
+        'Your auction package meets the required bid, auction-window, media, and lead-context standards.',
+      confirmButton: 'Confirm & Publish Auction',
+    };
+  }
+
+  return {
+    previewHeading: 'Live Preview Mode',
+    publishButton: 'Publish Listing',
+    terms: 'By publishing, you agree to our listing terms.',
+    confirmTitle: 'Confirm Publication',
+    confirmDescription:
+      'You are about to make this listing live to the public. This will activate search indexing and notifications.',
+    validationTitle: 'Passed Validation',
+    validationDescription: 'Your listing meets 100% of the quality standards.',
+    confirmButton: 'Confirm & Publish',
+  };
+};
+
 export function FinalisationPhase({
   onManualSaveDraft,
   isManualSaveDraftPending = false,
@@ -109,6 +155,7 @@ export function FinalisationPhase({
   const isRent = wizardData.transactionType === 'for_rent';
   const isAuction = wizardData.transactionType === 'auction';
   const transactionType = wizardData.transactionType;
+  const publishCopy = getFinalisationPublishCopy(transactionType);
 
   const stepAmenities = normalizeAmenitiesPayload(stepAmenitiesRaw);
   const developmentAmenities = normalizeAmenitiesPayload(developmentAmenitiesRaw);
@@ -830,7 +877,7 @@ export function FinalisationPhase({
                   onClick={() => setShowConfirmPublish(true)}
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Publish Listing
+                  {publishCopy.publishButton}
                 </Button>
                 {!canPublish && (
                   <p className="text-xs text-center text-red-500">
@@ -838,7 +885,7 @@ export function FinalisationPhase({
                   </p>
                 )}
                 <p className="text-xs text-center text-slate-400">
-                  By publishing, you agree to our listing terms.
+                  {publishCopy.terms}
                 </p>
               </div>
             </CardContent>
@@ -849,7 +896,7 @@ export function FinalisationPhase({
             <CardHeader className="pb-2 border-b">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-sm font-medium uppercase tracking-wide text-slate-500">
-                  Live Preview Mode
+                  {publishCopy.previewHeading}
                 </CardTitle>
                 <div className="flex bg-slate-100 rounded-lg p-1">
                   <button
@@ -963,17 +1010,16 @@ export function FinalisationPhase({
       <Dialog open={showConfirmPublish} onOpenChange={setShowConfirmPublish}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Publication</DialogTitle>
+            <DialogTitle>{publishCopy.confirmTitle}</DialogTitle>
             <DialogDescription>
-              You are about to make <strong>{wizardData.name}</strong> live to the public. This will
-              activate search indexing and notifications.
+              <strong>{wizardData.name}</strong>: {publishCopy.confirmDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Alert className="bg-blue-50 border-blue-200 text-blue-800">
               <CheckCircle2 className="w-4 h-4 text-blue-600" />
-              <AlertTitle className="text-blue-900">Passed Validation</AlertTitle>
-              <AlertDescription>Your listing meets 100% of the quality standards.</AlertDescription>
+              <AlertTitle className="text-blue-900">{publishCopy.validationTitle}</AlertTitle>
+              <AlertDescription>{publishCopy.validationDescription}</AlertDescription>
             </Alert>
           </div>
           <DialogFooter>
@@ -985,7 +1031,7 @@ export function FinalisationPhase({
               disabled={isPublishing}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isPublishing ? 'Publishing...' : 'Confirm & Publish'}
+              {isPublishing ? 'Publishing...' : publishCopy.confirmButton}
             </Button>
           </DialogFooter>
         </DialogContent>
