@@ -612,19 +612,22 @@ export function EnhancedNavbar() {
                   For Buyers
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex">
+                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
                     {/* Main Content */}
-                    <div className="flex-1 p-6 grid grid-cols-3 gap-8 bg-white">
+                    <div className="flex-1 p-7 grid grid-cols-3 gap-10 bg-white">
                       {/* Residential */}
                       <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                          <Home className="h-4 w-4 text-blue-600" /> Residential
+                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                            <Home className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Residential
                         </h4>
-                        <ul className="space-y-2 text-sm">
+                        <ul className="space-y-1 text-sm">
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'house', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Houses for Sale
                             </span>
@@ -632,7 +635,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'apartment', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Apartments / Flats
                             </span>
@@ -640,14 +643,14 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'townhouse', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Townhouses
                             </span>
                           </li>
                           <li>
                             <Link href="/new-developments">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 New Developments
                               </span>
                             </Link>
@@ -657,14 +660,17 @@ export function EnhancedNavbar() {
 
                       {/* Commercial */}
                       <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-blue-600" /> Commercial
+                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                            <Briefcase className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Commercial
                         </h4>
-                        <ul className="space-y-2 text-sm">
+                        <ul className="space-y-1 text-sm">
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'office', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Office Spaces
                             </span>
@@ -672,7 +678,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'retail', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Retail Shops
                             </span>
@@ -680,7 +686,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'industrial', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Industrial / Warehouse
                             </span>
@@ -690,14 +696,17 @@ export function EnhancedNavbar() {
 
                       {/* Land & Plot */}
                       <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                          <MapPinned className="h-4 w-4 text-blue-600" /> Land
+                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                            <MapPinned className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Land
                         </h4>
-                        <ul className="space-y-2 text-sm">
+                        <ul className="space-y-1 text-sm">
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'land', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Residential Land
                             </span>
@@ -705,7 +714,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'commercial-land', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Commercial Land
                             </span>
@@ -713,7 +722,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'farm', 'sale')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Farms
                             </span>
@@ -723,10 +732,10 @@ export function EnhancedNavbar() {
                     </div>
 
                     {/* Featured / Insights Sidebar */}
-                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
-                          <TrendingUp className="h-5 w-5 text-blue-600" />
+                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
+                          <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-1">Market Insights</h5>
                         <p className="text-xs text-slate-500 mb-3">
@@ -735,7 +744,7 @@ export function EnhancedNavbar() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                          className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
                         >
                           Read More
                         </Button>
@@ -751,19 +760,22 @@ export function EnhancedNavbar() {
                   For Renters
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex">
+                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
                     {/* Main Content */}
-                    <div className="flex-1 p-6 grid grid-cols-3 gap-8 bg-white">
+                    <div className="flex-1 p-7 grid grid-cols-3 gap-10 bg-white">
                       {/* Residential */}
                       <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                          <Home className="h-4 w-4 text-blue-600" /> Residential
+                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                            <Home className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Residential
                         </h4>
                         <ul className="space-y-2 text-sm">
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'apartment', 'rent')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Apartments for Rent
                             </span>
@@ -771,7 +783,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'house', 'rent')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Houses for Rent
                             </span>
@@ -779,7 +791,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'student', 'rent')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Student Accommodation
                             </span>
@@ -787,7 +799,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'room', 'rent')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Rooms / Flatshares
                             </span>
@@ -797,14 +809,17 @@ export function EnhancedNavbar() {
 
                       {/* Commercial */}
                       <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-blue-600" /> Commercial
+                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                            <Briefcase className="h-4 w-4 text-blue-600" />
+                          </div>
+                          Commercial
                         </h4>
                         <ul className="space-y-2 text-sm">
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'office', 'rent')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Offices to Let
                             </span>
@@ -812,7 +827,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'retail', 'rent')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Retail Space
                             </span>
@@ -820,7 +835,7 @@ export function EnhancedNavbar() {
                           <li>
                             <span
                               onClick={e => handlePropertyClick(e, 'industrial', 'rent')}
-                              className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1"
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
                             >
                               Industrial Space
                             </span>
@@ -836,21 +851,21 @@ export function EnhancedNavbar() {
                         <ul className="space-y-2 text-sm">
                           <li>
                             <Link href="/property-to-rent/gauteng/johannesburg">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Rent in Johannesburg
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/property-to-rent/western-cape/cape-town">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Rent in Cape Town
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/property-to-rent/kwazulu-natal/durban">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Rent in Durban
                               </span>
                             </Link>
@@ -860,10 +875,10 @@ export function EnhancedNavbar() {
                     </div>
 
                     {/* Featured / Tools Sidebar */}
-                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
-                          <Calculator className="h-5 w-5 text-blue-600" />
+                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
+                          <Calculator className="h-5 w-5 text-white" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-1">Affordability Calc</h5>
                         <p className="text-xs text-slate-500 mb-3">
@@ -872,7 +887,7 @@ export function EnhancedNavbar() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                          className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
                         >
                           Calculate Now
                         </Button>
@@ -888,9 +903,9 @@ export function EnhancedNavbar() {
                   For Sellers
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[850px] p-0 overflow-hidden flex">
+                  <div className="w-[850px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
                     {/* Main Content */}
-                    <div className="flex-1 p-8 grid grid-cols-3 gap-12 bg-white">
+                    <div className="flex-1 p-7 grid grid-cols-3 gap-10 bg-white">
                       {/* Find Professionals */}
                       <div className="space-y-5">
                         <h4 className="font-bold text-slate-800 text-base flex items-center gap-3">
@@ -902,14 +917,14 @@ export function EnhancedNavbar() {
                         <ul className="space-y-3 text-sm pl-1">
                           <li>
                             <Link href="/agents">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Find Estate Agents
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/developers">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Property Developers
                               </span>
                             </Link>
@@ -928,21 +943,21 @@ export function EnhancedNavbar() {
                         <ul className="space-y-3 text-sm pl-1">
                           <li>
                             <Link href="/advertise">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Post For Sale by Owner
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/advertise">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 List Privately
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/dashboard">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 My Dashboard
                               </span>
                             </Link>
@@ -961,28 +976,28 @@ export function EnhancedNavbar() {
                         <ul className="space-y-3 text-sm pl-1">
                           <li>
                             <Link href="/tools/property-valuation">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Property Valuation
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/tools/sold-house-prices">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Sold House Prices
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/guides/selling-property">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Seller Guide
                               </span>
                             </Link>
                           </li>
                           <li>
                             <Link href="/insights/market-trends">
-                              <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1.5">
+                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                 Market Trends
                               </span>
                             </Link>
@@ -992,10 +1007,10 @@ export function EnhancedNavbar() {
                     </div>
 
                     {/* Featured Sidebar */}
-                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-                        <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
-                          <Building2 className="h-6 w-6 text-blue-600" />
+                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
+                          <Building2 className="h-5 w-5 text-white" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-2">For Developers</h5>
                         <p className="text-sm text-slate-500 mb-4">
@@ -1005,7 +1020,7 @@ export function EnhancedNavbar() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full text-sm h-9 border-blue-200 text-blue-600 hover:bg-blue-50"
+                            className="w-full text-sm h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
                           >
                             Developer Portal
                           </Button>
@@ -1022,26 +1037,29 @@ export function EnhancedNavbar() {
                   Insights
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex">
+                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
                     {/* Main Content */}
-                    <div className="flex-1 p-6 bg-white">
+                    <div className="flex-1 p-7 bg-white">
                       <div className="grid grid-cols-2 gap-8">
                         {/* Market Data */}
                         <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-blue-600" /> Market Data
+                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                              <TrendingUp className="h-4 w-4 text-blue-600" />
+                            </div>
+                            Market Data
                           </h4>
                           <ul className="space-y-2 text-sm">
                             <li>
                               <Link href="/insights/market-trends">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Market Trends
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/insights/property-insights">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Property Insights
                                 </span>
                               </Link>
@@ -1050,27 +1068,30 @@ export function EnhancedNavbar() {
                         </div>
                         {/* Resources */}
                         <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                            <Lightbulb className="h-4 w-4 text-blue-600" /> Resources
+                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                              <Lightbulb className="h-4 w-4 text-blue-600" />
+                            </div>
+                            Resources
                           </h4>
                           <ul className="space-y-2 text-sm">
                             <li>
                               <Link href="/guides/buying-property">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Buying Guide
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/guides/selling-property">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Selling Guide
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/insights/blog">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Blog
                                 </span>
                               </Link>
@@ -1080,10 +1101,10 @@ export function EnhancedNavbar() {
                       </div>
                     </div>
                     {/* CTA Sidebar */}
-                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
-                          <Calculator className="h-5 w-5 text-blue-600" />
+                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
+                          <Calculator className="h-5 w-5 text-white" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-1">Property Intelligence</h5>
                         <p className="text-xs text-slate-500 mb-3">
@@ -1093,7 +1114,7 @@ export function EnhancedNavbar() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                            className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
                           >
                             Explore Insights
                           </Button>
@@ -1113,33 +1134,36 @@ export function EnhancedNavbar() {
                   </Badge>
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[750px] p-0 overflow-hidden flex">
+                  <div className="w-[750px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
                     {/* Main Content */}
-                    <div className="flex-1 p-6 bg-white">
+                    <div className="flex-1 p-7 bg-white">
                       <div className="grid grid-cols-2 gap-8">
                         {/* Property Discovery */}
                         <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                            <Home className="h-4 w-4 text-blue-600" /> Property Discovery
+                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                              <Home className="h-4 w-4 text-blue-600" />
+                            </div>
+                            Property Discovery
                           </h4>
                           <ul className="space-y-2 text-sm">
                             <li>
                               <Link href="/property-for-sale">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Buy Property
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/property-to-rent">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Rent Property
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/new-developments">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   New Developments
                                 </span>
                               </Link>
@@ -1148,20 +1172,23 @@ export function EnhancedNavbar() {
                         </div>
                         {/* Guides & People */}
                         <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                            <User className="h-4 w-4 text-blue-600" /> Guides & People
+                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                              <User className="h-4 w-4 text-blue-600" />
+                            </div>
+                            Guides & People
                           </h4>
                           <ul className="space-y-2 text-sm">
                             <li>
                               <Link href="/explore/home">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Explore Home
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/agents">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Find Agents
                                 </span>
                               </Link>
@@ -1171,10 +1198,10 @@ export function EnhancedNavbar() {
                       </div>
                     </div>
                     {/* CTA Sidebar */}
-                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
-                          <TrendingUp className="h-5 w-5 text-blue-600" />
+                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
+                          <TrendingUp className="h-5 w-5 text-white" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-1">Discover & Explore</h5>
                         <p className="text-xs text-slate-500 mb-3">
@@ -1184,7 +1211,7 @@ export function EnhancedNavbar() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                            className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
                           >
                             Explore Now
                           </Button>
@@ -1200,33 +1227,36 @@ export function EnhancedNavbar() {
                   Services
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex">
+                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
                     {/* Main Content */}
-                    <div className="flex-1 p-6 bg-white">
+                    <div className="flex-1 p-7 bg-white">
                       <div className="grid grid-cols-2 gap-8">
                         {/* Financial Services */}
                         <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                            <Calculator className="h-4 w-4 text-blue-600" /> Financial
+                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                              <Calculator className="h-4 w-4 text-blue-600" />
+                            </div>
+                            Financial
                           </h4>
                           <ul className="space-y-2 text-sm">
                             <li>
                               <Link href="/services/home-loans">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Home Loans
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/services/property-valuation">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Property Valuation
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/services/home-insurance">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Home Insurance
                                 </span>
                               </Link>
@@ -1235,20 +1265,23 @@ export function EnhancedNavbar() {
                         </div>
                         {/* Professional Services */}
                         <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                            <Briefcase className="h-4 w-4 text-blue-600" /> Professional
+                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                              <Briefcase className="h-4 w-4 text-blue-600" />
+                            </div>
+                            Professional
                           </h4>
                           <ul className="space-y-2 text-sm">
                             <li>
                               <Link href="/services/legal-services">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Legal Services
                                 </span>
                               </Link>
                             </li>
                             <li>
                               <Link href="/services/interior-design">
-                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
                                   Interior Design
                                 </span>
                               </Link>
@@ -1258,10 +1291,10 @@ export function EnhancedNavbar() {
                       </div>
                     </div>
                     {/* CTA Sidebar */}
-                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
-                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
-                          <Lightbulb className="h-5 w-5 text-blue-600" />
+                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
+                          <Lightbulb className="h-5 w-5 text-white" />
                         </div>
                         <h5 className="font-bold text-slate-800 mb-1">All Services</h5>
                         <p className="text-xs text-slate-500 mb-3">
@@ -1271,7 +1304,7 @@ export function EnhancedNavbar() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                            className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
                           >
                             View All Services
                           </Button>
