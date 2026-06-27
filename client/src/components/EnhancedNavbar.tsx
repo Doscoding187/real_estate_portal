@@ -74,7 +74,7 @@ function CityDropdownContent() {
       'Parkmore',
       'Linden',
     ],
-    Capetown: [
+    'Cape Town': [
       'Sea Point',
       'Camps Bay',
       'Constantia',
