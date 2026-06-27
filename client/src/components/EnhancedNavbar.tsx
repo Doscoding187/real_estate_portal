@@ -1104,20 +1104,95 @@ export function EnhancedNavbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Explore Button - Enhanced */}
+              {/* Explore Mega Menu */}
               <NavigationMenuItem>
-                <Link href="/explore/home">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="relative border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 transition-all duration-200 font-semibold"
-                  >
-                    Explore
-                    <Badge className="ml-2 bg-blue-600 text-white text-[10px] px-1.5 py-0 h-4 border-0">
-                      NEW
-                    </Badge>
-                  </Button>
-                </Link>
+                <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
+                  Explore
+                  <Badge className="ml-2 bg-blue-600 text-white text-[10px] px-1.5 py-0 h-4 border-0">
+                    NEW
+                  </Badge>
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <div className="w-[750px] p-0 overflow-hidden flex">
+                    {/* Main Content */}
+                    <div className="flex-1 p-6 bg-white">
+                      <div className="grid grid-cols-2 gap-8">
+                        {/* Property Discovery */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <Home className="h-4 w-4 text-blue-600" /> Property Discovery
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/property-for-sale">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Buy Property
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/property-to-rent">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Rent Property
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/new-developments">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  New Developments
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                        {/* Guides & People */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <User className="h-4 w-4 text-blue-600" /> Guides & People
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/explore/home">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Explore Home
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/agents">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Find Agents
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    {/* CTA Sidebar */}
+                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+                          <TrendingUp className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h5 className="font-bold text-slate-800 mb-1">Discover & Explore</h5>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Find trending properties, new developments, and agents near you.
+                        </p>
+                        <Link href="/explore/home">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                          >
+                            Explore Now
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </NavigationMenuContent>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
