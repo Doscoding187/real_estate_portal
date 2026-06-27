@@ -74,7 +74,7 @@ function CityDropdownContent() {
       'Parkmore',
       'Linden',
     ],
-    Capetown: [
+    'Cape Town': [
       'Sea Point',
       'Camps Bay',
       'Constantia',
@@ -1022,43 +1022,264 @@ export function EnhancedNavbar() {
                   Insights
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[250px] p-2">
-                    {insightsOptions.map(option => (
-                      <NavigationMenuLink key={option.label} asChild>
-                        <a
-                          href={option.href}
-                          className="block p-3 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-colors"
-                        >
-                          {option.label}
-                        </a>
-                      </NavigationMenuLink>
-                    ))}
+                  <div className="w-[800px] p-0 overflow-hidden flex">
+                    {/* Main Content */}
+                    <div className="flex-1 p-6 bg-white">
+                      <div className="grid grid-cols-2 gap-8">
+                        {/* Market Data */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-blue-600" /> Market Data
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/insights/market-trends">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Market Trends
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/insights/property-insights">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Property Insights
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                        {/* Resources */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4 text-blue-600" /> Resources
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/guides/buying-property">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Buying Guide
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/guides/selling-property">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Selling Guide
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/insights/blog">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Blog
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    {/* CTA Sidebar */}
+                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+                          <Calculator className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h5 className="font-bold text-slate-800 mb-1">Property Intelligence</h5>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Data-driven insights to help you make smarter property decisions.
+                        </p>
+                        <Link href="/insights/property-insights">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                          >
+                            Explore Insights
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Explore Button - Enhanced */}
+              {/* Explore Mega Menu */}
               <NavigationMenuItem>
-                <Link href="/explore/home">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="relative border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 transition-all duration-200 font-semibold"
-                  >
-                    Explore
-                    <Badge className="ml-2 bg-blue-600 text-white text-[10px] px-1.5 py-0 h-4 border-0">
-                      NEW
-                    </Badge>
-                  </Button>
-                </Link>
+                <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
+                  Explore
+                  <Badge className="ml-2 bg-blue-600 text-white text-[10px] px-1.5 py-0 h-4 border-0">
+                    NEW
+                  </Badge>
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <div className="w-[750px] p-0 overflow-hidden flex">
+                    {/* Main Content */}
+                    <div className="flex-1 p-6 bg-white">
+                      <div className="grid grid-cols-2 gap-8">
+                        {/* Property Discovery */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <Home className="h-4 w-4 text-blue-600" /> Property Discovery
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/property-for-sale">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Buy Property
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/property-to-rent">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Rent Property
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/new-developments">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  New Developments
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                        {/* Guides & People */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <User className="h-4 w-4 text-blue-600" /> Guides & People
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/explore/home">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Explore Home
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/agents">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Find Agents
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    {/* CTA Sidebar */}
+                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+                          <TrendingUp className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h5 className="font-bold text-slate-800 mb-1">Discover & Explore</h5>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Find trending properties, new developments, and agents near you.
+                        </p>
+                        <Link href="/explore/home">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                          >
+                            Explore Now
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </NavigationMenuContent>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
-                <Link href="/services">
-                  <span className="inline-flex h-9 items-center justify-center rounded-md px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
-                    Services
-                  </span>
-                </Link>
+                <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
+                  Services
+                </NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <div className="w-[800px] p-0 overflow-hidden flex">
+                    {/* Main Content */}
+                    <div className="flex-1 p-6 bg-white">
+                      <div className="grid grid-cols-2 gap-8">
+                        {/* Financial Services */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <Calculator className="h-4 w-4 text-blue-600" /> Financial
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/services/home-loans">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Home Loans
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/services/property-valuation">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Property Valuation
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/services/home-insurance">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Home Insurance
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                        {/* Professional Services */}
+                        <div className="space-y-4">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-blue-600" /> Professional
+                          </h4>
+                          <ul className="space-y-2 text-sm">
+                            <li>
+                              <Link href="/services/legal-services">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Legal Services
+                                </span>
+                              </Link>
+                            </li>
+                            <li>
+                              <Link href="/services/interior-design">
+                                <span className="text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
+                                  Interior Design
+                                </span>
+                              </Link>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    {/* CTA Sidebar */}
+                    <div className="w-64 bg-slate-50 p-6 border-l border-slate-100 flex flex-col justify-center">
+                      <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-100">
+                        <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+                          <Lightbulb className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h5 className="font-bold text-slate-800 mb-1">All Services</h5>
+                        <p className="text-xs text-slate-500 mb-3">
+                          Explore all our property services in one place.
+                        </p>
+                        <Link href="/services">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-xs h-8 border-blue-200 text-blue-600 hover:bg-blue-50"
+                          >
+                            View All Services
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </NavigationMenuContent>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
