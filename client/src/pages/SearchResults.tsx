@@ -587,15 +587,15 @@ export default function SearchResults({
                                 listerType: card.listerType,
                                 contactRole: card.contactRole,
                                 propertyId: card.propertyId,
-                                agentId: card.identity.agentId,
-                                agencyId: card.identity.agencyId,
-                                developerBrandProfileId: card.identity.developerBrandProfileId,
+                                agentId: card.identity?.agentId,
+                                agencyId: card.identity?.agencyId,
+                                developerBrandProfileId: card.identity?.developerBrandProfileId,
                                 developmentId: card.developmentId,
-                                postedBy: card.identity.name,
-                                agentAvatarUrl: card.identity.avatarUrl || undefined,
-                                contactPhone: card.identity.phone || undefined,
-                                contactWhatsapp: card.identity.whatsapp || undefined,
-                                contactEmail: card.identity.email || undefined,
+                                postedBy: card.identity?.name,
+                                agentAvatarUrl: card.identity?.avatarUrl ?? undefined,
+                                contactPhone: card.identity?.phone ?? undefined,
+                                contactWhatsapp: card.identity?.whatsapp ?? undefined,
+                                contactEmail: card.identity?.email ?? undefined,
                               }}
                             />
                           );
