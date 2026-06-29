@@ -24,6 +24,15 @@ export const VITE_ANALYTICS_ENDPOINT = getEnvVar(
 );
 export const VITE_ANALYTICS_WEBSITE_ID = getEnvVar('VITE_ANALYTICS_WEBSITE_ID', 'local-test-site');
 
+// ===== Search Discovery Engine — Feature Flags =====
+// When enabled, homepage autosuggest may use static/adapter-safe location suggestions
+// as a foundation for future Search Discovery Engine behaviour.
+// This flag does NOT replace the existing location autosuggest — only adds foundation support.
+export const VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED = getEnvVar(
+  'VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED',
+  '0',
+);
+
 // ===== Login URL =====
 export const getLoginUrl = (): string => {
   // Use frontend login route instead of backend auth route

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Loader2, X } from 'lucide-react';
+import { MapPin, Loader2, X, Compass } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { CITY_PROVINCE_MAP, PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
 import { slugify } from '@/lib/urlUtils';
 import { LocationNode } from '@/types/location';
+import type { SearchDiscoverySuggestion } from '@/lib/searchDiscovery';
 
 interface PlacePrediction {
   place_id: string;
@@ -28,6 +29,9 @@ interface LocationAutosuggestProps {
   inputClassName?: string;
   showIcon?: boolean;
   maxLocations?: number;
+  // Search Discovery Engine — foundation for future smart suggestions
+  discoverySuggestions?: SearchDiscoverySuggestion[];
+  onDiscoveryNavigate?: (canonicalPath: string) => void;
 }
 
 export function LocationAutosuggest({
@@ -41,6 +45,8 @@ export function LocationAutosuggest({
   inputClassName = '',
   showIcon = true,
   maxLocations = 5,
+  discoverySuggestions,
+  onDiscoveryNavigate,
 }: LocationAutosuggestProps) {
   const [query, setQuery] = useState('');
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
@@ -291,8 +297,39 @@ export function LocationAutosuggest({
       </div>
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && predictions.length > 0 && !isLimitReached && (
+      {showSuggestions && !isLimitReached && (predictions.length > 0 || (discoverySuggestions?.length ?? 0) > 0) && (
         <div className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-200">
+          {/* Search Discovery Engine — static/fallback suggestions */}
+          {discoverySuggestions && discoverySuggestions.length > 0 && (
+            <>
+              <div className="px-4 pt-2.5 pb-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                Discover
+              </div>
+              {discoverySuggestions.map((s) => (
+                <div
+                  key={`disc-${s.canonicalPath}`}
+                  onClick={() => onDiscoveryNavigate?.(s.canonicalPath)}
+                  className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-blue-50"
+                >
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                    <Compass className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-gray-900 truncate">{s.label}</div>
+                    <div className="text-xs text-gray-500 truncate capitalize">{s.type}</div>
+                  </div>
+                  <div className="text-xs text-emerald-600 font-medium whitespace-nowrap">
+                    {s.source}
+                  </div>
+                </div>
+              ))}
+              {predictions.length > 0 && (
+                <div className="mx-3 my-1 border-t border-slate-100" />
+              )}
+            </>
+          )}
+
+          {/* Google Places predictions */}
           {predictions.map((prediction, index) => {
             const locationType = getLocationType(prediction.types);
             return (
