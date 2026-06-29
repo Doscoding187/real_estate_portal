@@ -100,21 +100,20 @@ export default function CityPage({
 
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
+  // Data fetching — must be before conditional early returns for hook-order safety
+  const { data, isLoading, error } = trpc.locationPages.getCityData.useQuery(
+    { provinceSlug, citySlug },
+    { enabled: !isTransactionMode },
+  );
+
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery(
+    { locationSlug: `${provinceSlug}/${citySlug}`, fallbacks: campaignHierarchy.slice(1) },
+    { enabled: !isTransactionMode },
+  );
+
   if (isTransactionMode) {
     return <SearchResults province={provinceSlug} city={citySlug} locationId={locationId} />;
   }
-
-  // Restore data fetching
-  const { data, isLoading, error } = trpc.locationPages.getCityData.useQuery({
-    provinceSlug,
-    citySlug,
-  });
-
-  // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
-    locationSlug: `${provinceSlug}/${citySlug}`,
-    fallbacks: campaignHierarchy.slice(1),
-  });
 
   if (isLoading) {
     return <CityPageSkeleton />;
