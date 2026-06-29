@@ -17,6 +17,28 @@ import { eq, and, desc, sql, like, inArray, count, avg } from 'drizzle-orm';
  *
  * This version uses slug columns for better matching and performance
  */
+function safeParseImages(value: unknown): string[] {
+  if (value == null) return [];
+
+  if (Array.isArray(value)) {
+    return value.map(img => (typeof img === 'string' ? img : typeof img === 'object' && img !== null && 'url' in img ? String(img.url) : '')).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.map(img => (typeof img === 'string' ? img : typeof img === 'object' && img !== null && 'url' in img ? String(img.url) : '')).filter(Boolean);
+      }
+    } catch {
+      console.warn('[LocationPages] Failed to parse images JSON string');
+    }
+    return [];
+  }
+
+  return [];
+}
+
 export const locationPagesService = {
   async getPopularCities(limit = 12) {
     const db = await getDb();
@@ -118,78 +140,85 @@ export const locationPagesService = {
 
     console.log(`[LocationPages] Found province: ${province.name} (id: ${province.id})`);
 
-    // 2. Get Child Cities (Top 12 by listing count or default)
-    const cityList = await db
-      .select({
-        id: cities.id,
-        name: cities.name,
-        slug: cities.slug,
-        isMetro: cities.isMetro,
-        listingCount: sql<number>`count(${properties.id})`,
-        avgPrice: sql<number>`avg(cast(${properties.price} as decimal(12,2)))`,
-      })
-      .from(cities)
-      .leftJoin(
-        properties,
-        and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
-      )
-      .where(eq(cities.provinceId, province.id))
-      .groupBy(cities.id)
-      .orderBy(desc(sql`count(${properties.id})`))
-      .limit(12);
+    // Secondary queries wrapped individually so a single failure doesn't kill the whole page
+    let cityList: any[] = [];
+    let featuredDevelopments: any[] = [];
+    let trendingSuburbs: any[] = [];
+    let stats: any = {};
 
-    console.log(`[LocationPages] Fetched ${cityList.length} cities`);
+    try {
+      cityList = await db
+        .select({
+          id: cities.id,
+          name: cities.name,
+          slug: cities.slug,
+          isMetro: cities.isMetro,
+          listingCount: sql<number>`count(${properties.id})`,
+          avgPrice: sql<number>`avg(cast(${properties.price} as decimal(12,2)))`,
+        })
+        .from(cities)
+        .leftJoin(
+          properties,
+          and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
+        )
+        .where(eq(cities.provinceId, province.id))
+        .groupBy(cities.id)
+        .orderBy(desc(sql`count(${properties.id})`))
+        .limit(12);
+    } catch (error) {
+      console.warn('[LocationPages] City list query failed for province, returning empty', error);
+    }
 
-    // 3. Featured Developments in Province (show all published developments, regardless of status)
-    console.log('[LocationPages] Fetching featured developments...');
-    const featuredDevelopments = await db
-      .select()
-      .from(developments)
-      .where(
-        and(
-          sql`TRIM(LOWER(${developments.province})) = LOWER(${province.name})`,
-          eq(developments.isPublished, 1),
-        ),
-      )
-      .limit(6);
+    try {
+      featuredDevelopments = await db
+        .select()
+        .from(developments)
+        .where(
+          and(
+            sql`TRIM(LOWER(${developments.province})) = LOWER(${province.name})`,
+            eq(developments.isPublished, 1),
+          ),
+        )
+        .limit(6);
+    } catch (error) {
+      console.warn('[LocationPages] Developments query failed for province, returning empty', error);
+    }
 
-    console.log(`[LocationPages] Fetched ${featuredDevelopments.length} featured developments`);
+    try {
+      trendingSuburbs = await db
+        .select({
+          id: suburbs.id,
+          name: suburbs.name,
+          slug: suburbs.slug,
+          cityName: cities.name,
+          citySlug: cities.slug,
+          listingCount: sql<number>`count(${properties.id})`,
+        })
+        .from(suburbs)
+        .leftJoin(cities, eq(suburbs.cityId, cities.id))
+        .leftJoin(
+          properties,
+          and(eq(properties.suburbId, suburbs.id), eq(properties.status, 'published')),
+        )
+        .where(eq(cities.provinceId, province.id))
+        .groupBy(suburbs.id, cities.name, cities.slug)
+        .orderBy(desc(sql`count(${properties.id})`))
+        .limit(10);
+    } catch (error) {
+      console.warn('[LocationPages] Trending suburbs query failed for province, returning empty', error);
+    }
 
-    // 4. Trending Suburbs
-    console.log('[LocationPages] Fetching trending suburbs...');
-    const trendingSuburbs = await db
-      .select({
-        id: suburbs.id,
-        name: suburbs.name,
-        slug: suburbs.slug,
-        cityName: cities.name,
-        citySlug: cities.slug,
-        listingCount: sql<number>`count(${properties.id})`,
-      })
-      .from(suburbs)
-      .leftJoin(cities, eq(suburbs.cityId, cities.id))
-      .leftJoin(
-        properties,
-        and(eq(properties.suburbId, suburbs.id), eq(properties.status, 'published')),
-      )
-      .where(eq(cities.provinceId, province.id))
-      .groupBy(suburbs.id, cities.name, cities.slug)
-      .orderBy(desc(sql`count(${properties.id})`))
-      .limit(10);
-
-    console.log(`[LocationPages] Fetched ${trendingSuburbs.length} trending suburbs`);
-
-    // 5. Aggregate Stats
-    console.log('[LocationPages] Fetching stats...');
-    const [stats] = await db
-      .select({
-        totalListings: sql<number>`count(*)`,
-        avgPrice: sql<number>`avg(${properties.price})`,
-      })
-      .from(properties)
-      .where(and(eq(properties.provinceId, province.id), eq(properties.status, 'published')));
-
-    console.log('[LocationPages] Stats fetched. Returning data.');
+    try {
+      [stats] = await db
+        .select({
+          totalListings: sql<number>`count(*)`,
+          avgPrice: sql<number>`avg(${properties.price})`,
+        })
+        .from(properties)
+        .where(and(eq(properties.provinceId, province.id), eq(properties.status, 'published')));
+    } catch (error) {
+      console.warn('[LocationPages] Stats query failed for province, returning defaults', error);
+    }
 
     return {
       province,
@@ -366,7 +395,7 @@ export const locationPagesService = {
         suburbs: suburbList || [],
         featuredProperties: (featuredProperties || []).map((p: any) => ({
           ...p,
-          images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images,
+          images: safeParseImages(p.images),
         })),
         developments: cityDevelopments || [],
         stats: {
@@ -471,24 +500,34 @@ export const locationPagesService = {
 
     console.log(`[LocationPages] Found suburb: ${suburb.name} (id: ${suburb.id})`);
 
-    // 2. Listing Stats
-    const [stats] = await db
-      .select({
-        totalListings: sql<number>`count(*)`,
-        avgPrice: sql<number>`avg(${properties.price})`,
-        rentalCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'rent' THEN 1 END)`,
-        saleCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'sale' THEN 1 END)`,
-      })
-      .from(properties)
-      .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')));
+    // 2. Listing Stats — wrap in try/catch so schema drift or empty DB doesn't crash the page
+    let stats: any = {};
+    try {
+      [stats] = await db
+        .select({
+          totalListings: sql<number>`count(*)`,
+          avgPrice: sql<number>`avg(${properties.price})`,
+          rentalCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'rent' THEN 1 END)`,
+          saleCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'sale' THEN 1 END)`,
+        })
+        .from(properties)
+        .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')));
+    } catch (error) {
+      console.warn('[LocationPages] Stats query failed for suburb, returning defaults', error);
+    }
 
-    // 3. Featured Properties in Suburb
-    const localProperties = await db
-      .select()
-      .from(properties)
-      .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')))
-      .orderBy(desc(properties.createdAt))
-      .limit(12);
+    // 3. Featured Properties in Suburb — wrap so media parsing or schema mismatch doesn't crash
+    let localProperties: any[] = [];
+    try {
+      localProperties = await db
+        .select()
+        .from(properties)
+        .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')))
+        .orderBy(desc(properties.createdAt))
+        .limit(12);
+    } catch (error) {
+      console.warn('[LocationPages] Properties query failed for suburb, returning empty', error);
+    }
 
     // 4. Market Insights (Price Analytics)
     let analytics: any = null;
@@ -502,14 +541,20 @@ export const locationPagesService = {
       console.warn('[LocationPages] suburbPriceAnalytics query failed, returning null', error);
     }
 
-    // 5. AI Insights & Reviews
-    const { locationInsightsService } = await import('./locationInsightsService');
-    const insights = await locationInsightsService.getInsights(
-      suburb.id,
-      suburb.name,
-      suburb.cityName,
-    );
-    const reviews = await locationInsightsService.getReviews(suburb.id);
+    // 5. AI Insights & Reviews — wrap import + calls so module failures don't crash
+    let insights: any = null;
+    let reviews: any[] = [];
+    try {
+      const { locationInsightsService } = await import('./locationInsightsService');
+      insights = await locationInsightsService.getInsights(
+        suburb.id,
+        suburb.name,
+        suburb.cityName,
+      );
+      reviews = await locationInsightsService.getReviews(suburb.id);
+    } catch (error) {
+      console.warn('[LocationPages] locationInsightsService failed, returning null insights', error);
+    }
 
     return {
       suburb,
@@ -521,7 +566,7 @@ export const locationPagesService = {
       },
       listings: localProperties.map((p: any) => ({
         ...p,
-        images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images,
+        images: safeParseImages(p.images),
       })),
       analytics: analytics || null,
       insights,
