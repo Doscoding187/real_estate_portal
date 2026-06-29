@@ -42,8 +42,31 @@ import {
 } from '@/components/ui/navigation-menu';
 import { trpc } from '@/lib/trpc';
 import { generatePropertyUrl } from '@/lib/urlUtils';
-import { useEffect, useState } from 'react';
+import { FALLBACK_CITY_LINKS, cityToNavLink } from '@/lib/locationDataAdapter';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
+import { useEffect, useState } from 'react';
+
+// Static fallback city links for the For Renters mega menu.
+// Derived from the central fallback adapter — not a ranking algorithm.
+// Real dynamic ranking belongs in the future Search Discovery Engine API.
+const rentCityFallbackLinks = FALLBACK_CITY_LINKS
+  .filter(l => l.type === 'city' && l.citySlug)
+  .slice(0, 3)
+  .map(l =>
+    cityToNavLink(
+      {
+        name: l.label,
+        citySlug: l.citySlug,
+        provinceSlug: l.provinceSlug,
+      },
+      { transactionType: 'rent' },
+    ),
+  )
+  .filter((link): link is NonNullable<typeof link> => Boolean(link))
+  .map(link => ({
+    label: `Rent in ${link.label}`,
+    href: link.href,
+  }));
 import { LocationSelectionModal } from '@/components/LocationSelectionModal';
 
 // City dropdown content component
@@ -741,9 +764,9 @@ export function EnhancedNavbar() {
                         </div>
                         <div className="space-y-5">
                           <MegaMenuSection title="Popular Cities">
-                            <MegaMenuLinkCard label="Rent in Johannesburg" href="/property-to-rent/gauteng/johannesburg" />
-                            <MegaMenuLinkCard label="Rent in Cape Town" href="/property-to-rent/western-cape/cape-town" />
-                            <MegaMenuLinkCard label="Rent in Durban" href="/property-to-rent/kwazulu-natal/durban" />
+                            {rentCityFallbackLinks.map(link => (
+                              <MegaMenuLinkCard key={link.href} label={link.label} href={link.href} />
+                            ))}
                           </MegaMenuSection>
                         </div>
                       </div>
