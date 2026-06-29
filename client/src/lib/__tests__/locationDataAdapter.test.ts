@@ -215,9 +215,9 @@ describe('popularCitiesToNavLinks', () => {
 });
 
 describe('FALLBACK_CITY_LINKS', () => {
-  it('is an array with 9 entries', () => {
+  it('is an array with 13 entries', () => {
     expect(Array.isArray(FALLBACK_CITY_LINKS)).toBe(true);
-    expect(FALLBACK_CITY_LINKS).toHaveLength(9);
+    expect(FALLBACK_CITY_LINKS).toHaveLength(13);
   });
 
   it('contains Johannesburg, Cape Town, Durban, Pretoria, Sandton', () => {
@@ -227,6 +227,36 @@ describe('FALLBACK_CITY_LINKS', () => {
     expect(labels).toContain('Durban');
     expect(labels).toContain('Pretoria');
     expect(labels).toContain('Sandton');
+  });
+
+  it('includes Kimberley, Gqeberha, Mbombela, Mahikeng for dropdown coverage', () => {
+    const labels = FALLBACK_CITY_LINKS.map(l => l.label);
+    expect(labels).toContain('Kimberley');
+    expect(labels).toContain('Gqeberha');
+    expect(labels).toContain('Mbombela');
+    expect(labels).toContain('Mahikeng');
+  });
+
+  it('Kimberley, Gqeberha, Mbombela, Mahikeng use canonical path-based hrefs', () => {
+    const kimberley = FALLBACK_CITY_LINKS.find(l => l.label === 'Kimberley');
+    expect(kimberley).toBeDefined();
+    expect(kimberley!.href).toBe('/property-for-sale/northern-cape/kimberley');
+    expect(kimberley!.type).toBe('city');
+
+    const gqeberha = FALLBACK_CITY_LINKS.find(l => l.label === 'Gqeberha');
+    expect(gqeberha).toBeDefined();
+    expect(gqeberha!.href).toBe('/property-for-sale/eastern-cape/gqeberha');
+    expect(gqeberha!.type).toBe('city');
+
+    const mbombela = FALLBACK_CITY_LINKS.find(l => l.label === 'Mbombela');
+    expect(mbombela).toBeDefined();
+    expect(mbombela!.href).toBe('/property-for-sale/mpumalanga/mbombela');
+    expect(mbombela!.type).toBe('city');
+
+    const mahikeng = FALLBACK_CITY_LINKS.find(l => l.label === 'Mahikeng');
+    expect(mahikeng).toBeDefined();
+    expect(mahikeng!.href).toBe('/property-for-sale/north-west/mahikeng');
+    expect(mahikeng!.type).toBe('city');
   });
 
   it('every link has a canonical path without query params', () => {

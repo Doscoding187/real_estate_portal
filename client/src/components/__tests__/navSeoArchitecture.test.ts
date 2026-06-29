@@ -109,6 +109,43 @@ describe('nav SEO architecture guardrails', () => {
     expect(adapter).not.toContain('suburb=');
   });
 
+  it('CityDropdownContent sources city links from FALLBACK_CITY_LINKS adapter', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    // topCities is the only place using new Map( with FALLBACK_CITY_LINKS
+    expect(nav).toContain('new Map(');
+    expect(nav).toContain('FALLBACK_CITY_LINKS');
+    // No hardcoded city entry shape remains — data comes from adapter
+    expect(nav).not.toContain("slug: 'johannesburg', provinceSlug: 'gauteng'");
+    expect(nav).not.toContain("slug: 'kimberley', provinceSlug: 'northern-cape'");
+  });
+
+  it('CityDropdownContent renders exactly 9 city entries via slice(0, 9)', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('.slice(0, 9)');
+  });
+
+  it('CityDropdownContent has no hardcoded city hrefs from the legacy list', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    // These paths no longer appear as literal strings in the nav file;
+    // they are constructed by the adapter at runtime.
+    expect(nav).not.toContain('/property-for-sale/northern-cape/kimberley');
+    expect(nav).not.toContain('/property-for-sale/eastern-cape/gqeberha');
+    expect(nav).not.toContain('/property-for-sale/mpumalanga/mbombela');
+    expect(nav).not.toContain('/property-for-sale/north-west/mahikeng');
+  });
+
+  it('CityDropdownContent city links are path-based, not query-param-based', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    // City link template literal produces canonical paths
+    expect(nav).toContain('href={`/property-for-sale/${city.provinceSlug}/${city.slug}`}');
+    // The city rendering block does not use query-param hrefs
+    expect(nav).not.toContain('href={`/property-for-sale?city');
+  });
+
   it('covers Sellers desktop menu static routes', () => {
     const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
 
