@@ -76,22 +76,20 @@ export default function SuburbPage({
 
   const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
 
+  // Data fetching — must be before conditional early returns for hook-order safety
+  const { data, isLoading, error } = trpc.locationPages.getSuburbData.useQuery(
+    { provinceSlug, citySlug, suburbSlug },
+    { enabled: !isTransactionMode },
+  );
+
+  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery(
+    { locationSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`, fallbacks: campaignHierarchy.slice(1) },
+    { enabled: !isTransactionMode },
+  );
+
   if (isTransactionMode) {
     return <SearchResults locationId={locationId} />;
   }
-
-  // Restore data fetching
-  const { data, isLoading, error } = trpc.locationPages.getSuburbData.useQuery({
-    provinceSlug,
-    citySlug,
-    suburbSlug,
-  });
-
-  // Fetch campaign for banner
-  const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery({
-    locationSlug: `${provinceSlug}/${citySlug}/${suburbSlug}`,
-    fallbacks: campaignHierarchy.slice(1),
-  });
 
   if (isLoading) {
     return <SuburbPageSkeleton />;
