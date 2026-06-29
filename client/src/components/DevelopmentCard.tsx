@@ -177,19 +177,24 @@ export function DevelopmentCard({
 
           {/* Unit Types with Pricing */}
           <div className="flex gap-3 mb-5 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-            {unitTypes.map((unit, index) => (
-              <div
-                key={index}
-                className="flex-none w-[160px] sm:w-[180px] border border-slate-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-slate-50/30"
-              >
-                <div className="text-xs text-slate-600 mb-1 truncate" title={unit.label}>
-                  {unit.label}
+            {unitTypes.map((unit, index) => {
+              const price = typeof unit.priceFrom === 'number' ? unit.priceFrom : 0;
+              return (
+                <div
+                  key={index}
+                  className="flex-none w-[160px] sm:w-[180px] border border-slate-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50/50 transition-colors bg-slate-50/30"
+                >
+                  <div className="text-xs text-slate-600 mb-1 truncate" title={unit.label || ''}>
+                    {unit.label || ''}
+                  </div>
+                  {price > 0 && (
+                    <div className="text-lg font-bold text-[#1e1b4b]">
+                      From {formatPrice(price)}
+                    </div>
+                  )}
                 </div>
-                <div className="text-lg font-bold text-[#1e1b4b]">
-                  From {formatPrice(unit.priceFrom)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Description */}

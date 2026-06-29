@@ -108,7 +108,7 @@ export default function DevelopmentsDemo() {
                       location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}
                       description={dev.description || ''}
                       image={images[0] || ''}
-                      unitTypes={dev.unitTypes}
+                      unitTypes={dev.unitTypes || dev.configurations || []}
                       highlights={(dev.highlights as string[]) || []}
                       developer={{
                         name: dev.developerName || 'Unknown Developer',

@@ -695,6 +695,7 @@ export async function listPublicDevelopments(options: {
   const unitsByDevelopment = new Map<
     number,
     Array<{
+      bedrooms: number;
       label: string;
       priceFrom: number | null;
     }>
@@ -718,6 +719,7 @@ export async function listPublicDevelopments(options: {
     const label =
       unit.name || (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
     unitsByDevelopment.get(devId)!.push({
+      bedrooms: unit.bedrooms != null ? Number(unit.bedrooms) : 0,
       label,
       priceFrom: unit.basePriceFrom != null ? Number(unit.basePriceFrom) : null,
     });
@@ -736,6 +738,7 @@ export async function listPublicDevelopments(options: {
     referrerCommissionValue: d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
     referrerCommissionAmount: d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
     configurations: unitsByDevelopment.get(Number(d.id)) || [],
+    unitTypes: unitsByDevelopment.get(Number(d.id)) || [],
   }));
 }
 
