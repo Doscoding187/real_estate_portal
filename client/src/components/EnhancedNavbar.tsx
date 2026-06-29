@@ -16,6 +16,7 @@ import {
   Key,
   Building2,
   Lightbulb,
+  ChevronRight,
   Menu,
   X,
   LayoutDashboard,
@@ -168,7 +169,7 @@ function CityDropdownContent() {
   );
 
   return (
-    <div className="w-[580px] p-6">
+    <div className="w-[680px] p-7">
       {/* Search Bar with Autosuggest */}
       <div className="mb-6">
         <LocationAutosuggest
@@ -202,54 +203,56 @@ function CityDropdownContent() {
         />
       </div>
 
-      {/* Top Cities */}
-      <div className="mb-6">
-        <h4 className="font-bold text-lg text-slate-900 mb-4">Top cities</h4>
-        <div className="grid grid-cols-3 gap-4">
-          {filteredCities.map(city => (
-            <Link
-              key={city.slug}
-              href={`/property-for-sale/${city.provinceSlug}/${city.slug}`}
-              onMouseEnter={() => setHoveredCity(city.name)}
-            >
-              <div className="flex flex-col items-center gap-2 p-3 hover:bg-blue-50 rounded-lg transition-all group cursor-pointer">
-                <div className="w-12 h-12 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors border border-blue-100">
-                  <MapPin className="h-5 w-5 text-blue-600" />
+      {/* Two-panel layout */}
+      <div className="flex gap-8">
+        {/* Popular Cities */}
+        <div className="flex-1 min-w-0">
+          <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">Popular Cities</h4>
+          <div className="space-y-1">
+            {filteredCities.map(city => (
+              <Link
+                key={city.slug}
+                href={`/property-for-sale/${city.provinceSlug}/${city.slug}`}
+                onMouseEnter={() => setHoveredCity(city.name)}
+              >
+                <div className="flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:shadow-sm hover:border-slate-200 border border-transparent cursor-pointer group">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 transition-colors group-hover:bg-blue-50">
+                    <MapPin className="h-4 w-4 text-slate-500 transition-colors group-hover:text-blue-600" />
+                  </div>
+                  <span className="whitespace-nowrap">{city.name}</span>
                 </div>
-                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">
-                  {city.name}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Popular Suburbs */}
-      {filteredSuburbs.length > 0 && (
-        <div className="pt-4 border-t border-slate-200">
-          <h4 className="font-bold text-sm text-slate-900 mb-3">Popular Suburbs</h4>
-          <div className="grid grid-cols-4 gap-2">
-            {filteredSuburbs.map((suburb, index) => {
-              const citySlug = hoveredCity.toLowerCase().replace(/\s+/g, '-');
-              // Helper to find province of hovered city
-              const provinceSlug =
-                topCities.find(c => c.name === hoveredCity)?.provinceSlug || 'gauteng';
-
-              return (
-                <Link
-                  key={index}
-                  href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  <span className="text-sm text-slate-600 hover:text-blue-600 cursor-pointer block py-1">
-                    {suburb}
-                  </span>
-                </Link>
-              );
-            })}
+              </Link>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Popular Suburbs */}
+        {filteredSuburbs.length > 0 && (
+          <div className="w-[240px] shrink-0 pl-8 border-l border-slate-100">
+            <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+              Suburbs in {hoveredCity}
+            </h4>
+            <div className="space-y-1">
+              {filteredSuburbs.map((suburb, index) => {
+                const citySlug = hoveredCity.toLowerCase().replace(/\s+/g, '-');
+                const provinceSlug =
+                  topCities.find(c => c.name === hoveredCity)?.provinceSlug || 'gauteng';
+
+                return (
+                  <Link
+                    key={index}
+                    href={`/property-for-sale/${provinceSlug}/${citySlug}/${suburb.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <span className="block rounded-xl px-3.5 py-2 text-sm text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-900 hover:shadow-sm hover:border-slate-200 border border-transparent cursor-pointer whitespace-nowrap">
+                      {suburb}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -310,6 +313,75 @@ function getPrimaryAccountRoute(user: NavbarUser, hasReferrerAccess: boolean) {
     default:
       return '/user/dashboard';
   }
+}
+
+// Mega menu helper components
+function MegaMenuShell({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`p-0 overflow-hidden flex rounded-2xl border border-slate-200/80 bg-white shadow-2xl ${className || 'w-[1100px]'}`}>
+      {children}
+    </div>
+  );
+}
+
+function MegaMenuFeatureCard({ icon: Icon, title, description, ctaLabel, ctaHref }: { icon: React.ComponentType<{ className?: string }>; title: string; description: string; ctaLabel: string; ctaHref: string }) {
+  return (
+    <div className="w-[240px] bg-gradient-to-br from-slate-50 to-blue-50/40 p-7 border-r border-slate-100 flex flex-col justify-between shrink-0">
+      <div>
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 shadow-md">
+          <Icon className="h-6 w-6 text-white" />
+        </div>
+        <h3 className="text-base font-bold text-slate-900 mb-1.5 leading-snug">{title}</h3>
+        <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
+      </div>
+      <Link href={ctaHref}>
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors mt-8 cursor-pointer group">
+          {ctaLabel}
+          <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </span>
+      </Link>
+    </div>
+  );
+}
+
+function MegaMenuLinkCard({ href, label, onClick }: { href?: string; label: string; onClick?: (e: React.MouseEvent) => void }) {
+  const classes = 'flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 hover:shadow-sm hover:border-slate-200 border border-transparent cursor-pointer group';
+  const content = (
+    <>
+      <span className="whitespace-nowrap">{label}</span>
+      <ChevronRight className="h-4 w-4 text-slate-300 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
+    </>
+  );
+  if (onClick) {
+    return <span onClick={onClick} className={classes}>{content}</span>;
+  }
+  return <Link href={href!}><span className={classes}>{content}</span></Link>;
+}
+
+function MegaMenuSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">{title}</h4>
+      <div className="space-y-1">{children}</div>
+    </div>
+  );
+}
+
+function MegaMenuCtaPanel({ icon: Icon, title, description, ctaLabel, ctaHref }: { icon: React.ComponentType<{ className?: string }>; title: string; description: string; ctaLabel: string; ctaHref: string }) {
+  return (
+    <div className="w-[240px] bg-gradient-to-b from-slate-50/80 to-white p-7 border-l border-slate-100 flex flex-col justify-between shrink-0">
+      <div>
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-4 shadow-md">
+          <Icon className="h-6 w-6 text-white" />
+        </div>
+        <h5 className="text-base font-bold text-slate-900 mb-1.5 leading-snug">{title}</h5>
+        <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
+      </div>
+      <Link href={ctaHref}>
+        <Button variant="outline" size="default" className="w-full text-sm h-10 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all mt-6">{ctaLabel}</Button>
+      </Link>
+    </div>
+  );
 }
 
 export function EnhancedNavbar() {
@@ -612,146 +684,35 @@ export function EnhancedNavbar() {
                   For Buyers
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
-                    {/* Main Content */}
-                    <div className="flex-1 p-7 grid grid-cols-3 gap-10 bg-white">
-                      {/* Residential */}
-                      <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                            <Home className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Residential
-                        </h4>
-                        <ul className="space-y-1 text-sm">
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'house', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Houses for Sale
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'apartment', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Apartments / Flats
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'townhouse', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Townhouses
-                            </span>
-                          </li>
-                          <li>
-                            <Link href="/new-developments">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                New Developments
-                              </span>
-                            </Link>
-                          </li>
-                        </ul>
-                      </div>
-
-                      {/* Commercial */}
-                      <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                            <Briefcase className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Commercial
-                        </h4>
-                        <ul className="space-y-1 text-sm">
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'office', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Office Spaces
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'retail', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Retail Shops
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'industrial', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Industrial / Warehouse
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      {/* Land & Plot */}
-                      <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                            <MapPinned className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Land
-                        </h4>
-                        <ul className="space-y-1 text-sm">
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'land', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Residential Land
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'commercial-land', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Commercial Land
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'farm', 'sale')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Farms
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Featured / Insights Sidebar */}
-                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
-                          <TrendingUp className="h-5 w-5 text-white" />
+                    <MegaMenuShell>
+                      <MegaMenuFeatureCard icon={Home} title="Find Your Dream Home" description="Browse thousands of premium properties for sale across South Africa." ctaLabel="Browse all properties" ctaHref="/property-for-sale" />
+                      <div className="flex-1 p-7 grid grid-cols-3 gap-6">
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Residential">
+                            <MegaMenuLinkCard label="Houses for Sale" onClick={e => handlePropertyClick(e, 'house', 'sale')} />
+                            <MegaMenuLinkCard label="Apartments / Flats" onClick={e => handlePropertyClick(e, 'apartment', 'sale')} />
+                            <MegaMenuLinkCard label="Townhouses" onClick={e => handlePropertyClick(e, 'townhouse', 'sale')} />
+                            <MegaMenuLinkCard label="New Developments" href="/new-developments" />
+                          </MegaMenuSection>
                         </div>
-                        <h5 className="font-bold text-slate-800 mb-1">Market Insights</h5>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Read our latest analysis on property trends in South Africa.
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
-                        >
-                          Read More
-                        </Button>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Commercial">
+                            <MegaMenuLinkCard label="Office Spaces" onClick={e => handlePropertyClick(e, 'office', 'sale')} />
+                            <MegaMenuLinkCard label="Retail Shops" onClick={e => handlePropertyClick(e, 'retail', 'sale')} />
+                            <MegaMenuLinkCard label="Industrial / Warehouse" onClick={e => handlePropertyClick(e, 'industrial', 'sale')} />
+                          </MegaMenuSection>
+                        </div>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Land">
+                            <MegaMenuLinkCard label="Residential Land" onClick={e => handlePropertyClick(e, 'land', 'sale')} />
+                            <MegaMenuLinkCard label="Commercial Land" onClick={e => handlePropertyClick(e, 'commercial-land', 'sale')} />
+                            <MegaMenuLinkCard label="Farms" onClick={e => handlePropertyClick(e, 'farm', 'sale')} />
+                          </MegaMenuSection>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
+                      <MegaMenuCtaPanel icon={TrendingUp} title="Market Insights" description="Read our latest analysis on property trends in South Africa." ctaLabel="Read More" ctaHref="/insights/market-trends" />
+                    </MegaMenuShell>
+                  </NavigationMenuContent>
               </NavigationMenuItem>
 
               {/* For Renters Mega Menu */}
@@ -760,141 +721,35 @@ export function EnhancedNavbar() {
                   For Renters
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
-                    {/* Main Content */}
-                    <div className="flex-1 p-7 grid grid-cols-3 gap-10 bg-white">
-                      {/* Residential */}
-                      <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                            <Home className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Residential
-                        </h4>
-                        <ul className="space-y-2 text-sm">
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'apartment', 'rent')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Apartments for Rent
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'house', 'rent')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Houses for Rent
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'student', 'rent')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Student Accommodation
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'room', 'rent')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Rooms / Flatshares
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      {/* Commercial */}
-                      <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                            <Briefcase className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Commercial
-                        </h4>
-                        <ul className="space-y-2 text-sm">
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'office', 'rent')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Offices to Let
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'retail', 'rent')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Retail Space
-                            </span>
-                          </li>
-                          <li>
-                            <span
-                              onClick={e => handlePropertyClick(e, 'industrial', 'rent')}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer"
-                            >
-                              Industrial Space
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      {/* Popular Cities */}
-                      <div className="space-y-4">
-                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-blue-600" /> Popular Cities
-                        </h4>
-                        <ul className="space-y-2 text-sm">
-                          <li>
-                            <Link href="/property-to-rent/gauteng/johannesburg">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Rent in Johannesburg
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/property-to-rent/western-cape/cape-town">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Rent in Cape Town
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/property-to-rent/kwazulu-natal/durban">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Rent in Durban
-                              </span>
-                            </Link>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Featured / Tools Sidebar */}
-                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
-                          <Calculator className="h-5 w-5 text-white" />
+                    <MegaMenuShell>
+                      <MegaMenuFeatureCard icon={Key} title="Move In With Confidence" description="Discover rental properties that match your lifestyle and budget." ctaLabel="Browse rentals" ctaHref="/property-to-rent" />
+                      <div className="flex-1 p-7 grid grid-cols-3 gap-6">
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Residential">
+                            <MegaMenuLinkCard label="Apartments for Rent" onClick={e => handlePropertyClick(e, 'apartment', 'rent')} />
+                            <MegaMenuLinkCard label="Houses for Rent" onClick={e => handlePropertyClick(e, 'house', 'rent')} />
+                            <MegaMenuLinkCard label="Student Accommodation" onClick={e => handlePropertyClick(e, 'student', 'rent')} />
+                            <MegaMenuLinkCard label="Rooms / Flatshares" onClick={e => handlePropertyClick(e, 'room', 'rent')} />
+                          </MegaMenuSection>
                         </div>
-                        <h5 className="font-bold text-slate-800 mb-1">Affordability Calc</h5>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Calculate how much rent you can afford based on your income.
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
-                        >
-                          Calculate Now
-                        </Button>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Commercial">
+                            <MegaMenuLinkCard label="Offices to Let" onClick={e => handlePropertyClick(e, 'office', 'rent')} />
+                            <MegaMenuLinkCard label="Retail Space" onClick={e => handlePropertyClick(e, 'retail', 'rent')} />
+                            <MegaMenuLinkCard label="Industrial Space" onClick={e => handlePropertyClick(e, 'industrial', 'rent')} />
+                          </MegaMenuSection>
+                        </div>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Popular Cities">
+                            <MegaMenuLinkCard label="Rent in Johannesburg" href="/property-to-rent/gauteng/johannesburg" />
+                            <MegaMenuLinkCard label="Rent in Cape Town" href="/property-to-rent/western-cape/cape-town" />
+                            <MegaMenuLinkCard label="Rent in Durban" href="/property-to-rent/kwazulu-natal/durban" />
+                          </MegaMenuSection>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
+                      <MegaMenuCtaPanel icon={Calculator} title="Affordability Calc" description="Calculate how much rent you can afford based on your income." ctaLabel="Calculate Now" ctaHref="/services/home-loans" />
+                    </MegaMenuShell>
+                  </NavigationMenuContent>
               </NavigationMenuItem>
 
               {/* For Sellers Mega Menu */}
@@ -903,132 +758,34 @@ export function EnhancedNavbar() {
                   For Sellers
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[850px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
-                    {/* Main Content */}
-                    <div className="flex-1 p-7 grid grid-cols-3 gap-10 bg-white">
-                      {/* Find Professionals */}
-                      <div className="space-y-5">
-                        <h4 className="font-bold text-slate-800 text-base flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                            <User className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Find Professionals
-                        </h4>
-                        <ul className="space-y-3 text-sm pl-1">
-                          <li>
-                            <Link href="/agents">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Find Estate Agents
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/developers">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Property Developers
-                              </span>
-                            </Link>
-                          </li>
-                        </ul>
-                      </div>
-
-                      {/* Sell Your Property */}
-                      <div className="space-y-5">
-                        <h4 className="font-bold text-slate-800 text-base flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                            <Key className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Sell Your Property
-                        </h4>
-                        <ul className="space-y-3 text-sm pl-1">
-                          <li>
-                            <Link href="/advertise">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Post For Sale by Owner
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/advertise">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                List Privately
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/dashboard">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                My Dashboard
-                              </span>
-                            </Link>
-                          </li>
-                        </ul>
-                      </div>
-
-                      {/* Selling Tools */}
-                      <div className="space-y-5">
-                        <h4 className="font-bold text-slate-800 text-base flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                            <Lightbulb className="h-4 w-4 text-blue-600" />
-                          </div>
-                          Selling Tools
-                        </h4>
-                        <ul className="space-y-3 text-sm pl-1">
-                          <li>
-                            <Link href="/tools/property-valuation">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Property Valuation
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/tools/sold-house-prices">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Sold House Prices
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/guides/selling-property">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Seller Guide
-                              </span>
-                            </Link>
-                          </li>
-                          <li>
-                            <Link href="/insights/market-trends">
-                              <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                Market Trends
-                              </span>
-                            </Link>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    {/* Featured Sidebar */}
-                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
-                          <Building2 className="h-5 w-5 text-white" />
+                    <MegaMenuShell>
+                      <MegaMenuFeatureCard icon={Megaphone} title="Sell With Confidence" description="Get expert guidance and reach the right buyers for your property." ctaLabel="Start selling" ctaHref="/advertise" />
+                      <div className="flex-1 p-7 grid grid-cols-3 gap-6">
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Find Professionals">
+                            <MegaMenuLinkCard label="Find Estate Agents" href="/agents" />
+                            <MegaMenuLinkCard label="Property Developers" href="/developers" />
+                          </MegaMenuSection>
                         </div>
-                        <h5 className="font-bold text-slate-800 mb-2">For Developers</h5>
-                        <p className="text-sm text-slate-500 mb-4">
-                          List your development and reach thousands of buyers.
-                        </p>
-                        <Link href="/advertise/sell/developers">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-sm h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
-                          >
-                            Developer Portal
-                          </Button>
-                        </Link>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Sell Your Property">
+                            <MegaMenuLinkCard label="Post For Sale by Owner" href="/advertise" />
+                            <MegaMenuLinkCard label="List Privately" href="/advertise" />
+                            <MegaMenuLinkCard label="My Dashboard" href="/dashboard" />
+                          </MegaMenuSection>
+                        </div>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Selling Tools">
+                            <MegaMenuLinkCard label="Property Valuation" href="/tools/property-valuation" />
+                            <MegaMenuLinkCard label="Sold House Prices" href="/tools/sold-house-prices" />
+                            <MegaMenuLinkCard label="Seller Guide" href="/guides/selling-property" />
+                            <MegaMenuLinkCard label="Market Trends" href="/insights/market-trends" />
+                          </MegaMenuSection>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
+                      <MegaMenuCtaPanel icon={Building2} title="For Developers" description="List your development and reach thousands of buyers." ctaLabel="Developer Portal" ctaHref="/advertise/sell/developers" />
+                    </MegaMenuShell>
+                  </NavigationMenuContent>
               </NavigationMenuItem>
 
               {/* Insights Dropdown */}
@@ -1037,92 +794,26 @@ export function EnhancedNavbar() {
                   Insights
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
-                    {/* Main Content */}
-                    <div className="flex-1 p-7 bg-white">
-                      <div className="grid grid-cols-2 gap-8">
-                        {/* Market Data */}
-                        <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                              <TrendingUp className="h-4 w-4 text-blue-600" />
-                            </div>
-                            Market Data
-                          </h4>
-                          <ul className="space-y-2 text-sm">
-                            <li>
-                              <Link href="/insights/market-trends">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Market Trends
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/insights/property-insights">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Property Insights
-                                </span>
-                              </Link>
-                            </li>
-                          </ul>
+                    <MegaMenuShell className="w-[960px]">
+                      <MegaMenuFeatureCard icon={Lightbulb} title="Smarter Property Decisions" description="Data-driven insights and expert guides to help you navigate the market." ctaLabel="Explore insights" ctaHref="/insights/property-insights" />
+                      <div className="flex-1 p-7 grid grid-cols-2 gap-6">
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Market Data">
+                            <MegaMenuLinkCard label="Market Trends" href="/insights/market-trends" />
+                            <MegaMenuLinkCard label="Property Insights" href="/insights/property-insights" />
+                          </MegaMenuSection>
                         </div>
-                        {/* Resources */}
-                        <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                              <Lightbulb className="h-4 w-4 text-blue-600" />
-                            </div>
-                            Resources
-                          </h4>
-                          <ul className="space-y-2 text-sm">
-                            <li>
-                              <Link href="/guides/buying-property">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Buying Guide
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/guides/selling-property">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Selling Guide
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/insights/blog">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Blog
-                                </span>
-                              </Link>
-                            </li>
-                          </ul>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Resources">
+                            <MegaMenuLinkCard label="Buying Guide" href="/guides/buying-property" />
+                            <MegaMenuLinkCard label="Selling Guide" href="/guides/selling-property" />
+                            <MegaMenuLinkCard label="Blog" href="/insights/blog" />
+                          </MegaMenuSection>
                         </div>
                       </div>
-                    </div>
-                    {/* CTA Sidebar */}
-                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
-                          <Calculator className="h-5 w-5 text-white" />
-                        </div>
-                        <h5 className="font-bold text-slate-800 mb-1">Property Intelligence</h5>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Data-driven insights to help you make smarter property decisions.
-                        </p>
-                        <Link href="/insights/property-insights">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
-                          >
-                            Explore Insights
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
+                      <MegaMenuCtaPanel icon={Calculator} title="Property Intelligence" description="Data-driven insights to help you make smarter property decisions." ctaLabel="Explore Insights" ctaHref="/insights/property-insights" />
+                    </MegaMenuShell>
+                  </NavigationMenuContent>
               </NavigationMenuItem>
 
               {/* Explore Mega Menu */}
@@ -1134,92 +825,26 @@ export function EnhancedNavbar() {
                   </Badge>
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[750px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
-                    {/* Main Content */}
-                    <div className="flex-1 p-7 bg-white">
-                      <div className="grid grid-cols-2 gap-8">
-                        {/* Property Discovery */}
-                        <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                              <Home className="h-4 w-4 text-blue-600" />
-                            </div>
-                            Property Discovery
-                          </h4>
-                          <ul className="space-y-2 text-sm">
-                            <li>
-                              <Link href="/property-for-sale">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Buy Property
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/property-to-rent">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Rent Property
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/new-developments">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  New Developments
-                                </span>
-                              </Link>
-                            </li>
-                          </ul>
+                    <MegaMenuShell className="w-[960px]">
+                      <MegaMenuFeatureCard icon={Home} title="Discover What's Next" description="Trending properties, hot spots, and expert guidance all in one place." ctaLabel="Start exploring" ctaHref="/explore/home" />
+                      <div className="flex-1 p-7 grid grid-cols-2 gap-6">
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Property Discovery">
+                            <MegaMenuLinkCard label="Buy Property" href="/property-for-sale" />
+                            <MegaMenuLinkCard label="Rent Property" href="/property-to-rent" />
+                            <MegaMenuLinkCard label="New Developments" href="/new-developments" />
+                          </MegaMenuSection>
                         </div>
-                        {/* Guides & People */}
-                        <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                              <User className="h-4 w-4 text-blue-600" />
-                            </div>
-                            Guides & People
-                          </h4>
-                          <ul className="space-y-2 text-sm">
-                            <li>
-                              <Link href="/explore/home">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Explore Home
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/agents">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Find Agents
-                                </span>
-                              </Link>
-                            </li>
-                          </ul>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Guides & People">
+                            <MegaMenuLinkCard label="Explore Home" href="/explore/home" />
+                            <MegaMenuLinkCard label="Find Agents" href="/agents" />
+                          </MegaMenuSection>
                         </div>
                       </div>
-                    </div>
-                    {/* CTA Sidebar */}
-                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
-                          <TrendingUp className="h-5 w-5 text-white" />
-                        </div>
-                        <h5 className="font-bold text-slate-800 mb-1">Discover & Explore</h5>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Find trending properties, new developments, and agents near you.
-                        </p>
-                        <Link href="/explore/home">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
-                          >
-                            Explore Now
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
+                      <MegaMenuCtaPanel icon={TrendingUp} title="Discover & Explore" description="Find trending properties, new developments, and agents near you." ctaLabel="Explore Now" ctaHref="/explore/home" />
+                    </MegaMenuShell>
+                  </NavigationMenuContent>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
@@ -1227,92 +852,26 @@ export function EnhancedNavbar() {
                   Services
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <div className="w-[800px] p-0 overflow-hidden flex rounded-xl border border-slate-200 shadow-lg">
-                    {/* Main Content */}
-                    <div className="flex-1 p-7 bg-white">
-                      <div className="grid grid-cols-2 gap-8">
-                        {/* Financial Services */}
-                        <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                              <Calculator className="h-4 w-4 text-blue-600" />
-                            </div>
-                            Financial
-                          </h4>
-                          <ul className="space-y-2 text-sm">
-                            <li>
-                              <Link href="/services/home-loans">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Home Loans
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/services/property-valuation">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Property Valuation
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/services/home-insurance">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Home Insurance
-                                </span>
-                              </Link>
-                            </li>
-                          </ul>
+                    <MegaMenuShell className="w-[960px]">
+                      <MegaMenuFeatureCard icon={Briefcase} title="Everything You Need" description="From home loans to interior design — we connect you with trusted providers." ctaLabel="View all services" ctaHref="/services" />
+                      <div className="flex-1 p-7 grid grid-cols-2 gap-6">
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Financial">
+                            <MegaMenuLinkCard label="Home Loans" href="/services/home-loans" />
+                            <MegaMenuLinkCard label="Property Valuation" href="/services/property-valuation" />
+                            <MegaMenuLinkCard label="Home Insurance" href="/services/home-insurance" />
+                          </MegaMenuSection>
                         </div>
-                        {/* Professional Services */}
-                        <div className="space-y-4">
-                          <h4 className="font-bold text-slate-800 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                              <Briefcase className="h-4 w-4 text-blue-600" />
-                            </div>
-                            Professional
-                          </h4>
-                          <ul className="space-y-2 text-sm">
-                            <li>
-                              <Link href="/services/legal-services">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Legal Services
-                                </span>
-                              </Link>
-                            </li>
-                            <li>
-                              <Link href="/services/interior-design">
-                                <span className="flex items-center gap-3 rounded-lg px-3 py-2 text-slate-600 transition-all hover:bg-blue-50 hover:text-blue-700 cursor-pointer">
-                                  Interior Design
-                                </span>
-                              </Link>
-                            </li>
-                          </ul>
+                        <div className="space-y-5">
+                          <MegaMenuSection title="Professional">
+                            <MegaMenuLinkCard label="Legal Services" href="/services/legal-services" />
+                            <MegaMenuLinkCard label="Interior Design" href="/services/interior-design" />
+                          </MegaMenuSection>
                         </div>
                       </div>
-                    </div>
-                    {/* CTA Sidebar */}
-                    <div className="w-64 bg-gradient-to-b from-blue-50/80 to-white p-6 border-l border-slate-100 flex flex-col justify-center">
-                      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 shadow-md border border-blue-100/60">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3 shadow-sm">
-                          <Lightbulb className="h-5 w-5 text-white" />
-                        </div>
-                        <h5 className="font-bold text-slate-800 mb-1">All Services</h5>
-                        <p className="text-xs text-slate-500 mb-3">
-                          Explore all our property services in one place.
-                        </p>
-                        <Link href="/services">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-xs h-9 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all"
-                          >
-                            View All Services
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </NavigationMenuContent>
+                      <MegaMenuCtaPanel icon={Lightbulb} title="All Services" description="Explore all our property services in one place." ctaLabel="View All Services" ctaHref="/services" />
+                    </MegaMenuShell>
+                  </NavigationMenuContent>
               </NavigationMenuItem>
 
               <NavigationMenuItem>
