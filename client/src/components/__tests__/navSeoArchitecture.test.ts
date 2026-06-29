@@ -68,4 +68,99 @@ describe('nav SEO architecture guardrails', () => {
     expect(sitemap).toContain('/tools/property-valuation');
     expect(sitemap).toContain('/company/about');
   });
+
+  it('covers Buyers desktop menu static routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('href="/property-for-sale"');
+    expect(nav).toContain('href="/new-developments"');
+    expect(nav).toContain('href="/insights/market-trends"');
+  });
+
+  it('covers Renters desktop menu static routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('href="/property-to-rent"');
+    expect(nav).toContain('href="/property-to-rent/gauteng/johannesburg"');
+    expect(nav).toContain('href="/property-to-rent/western-cape/cape-town"');
+    expect(nav).toContain('href="/property-to-rent/kwazulu-natal/durban"');
+  });
+
+  it('covers Sellers desktop menu static routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('href="/agents"');
+    expect(nav).toContain('href="/developers"');
+    expect(nav).toContain('href="/advertise"');
+    expect(nav).toContain('href="/dashboard"');
+    expect(nav).toContain('href="/tools/property-valuation"');
+    expect(nav).toContain('href="/tools/sold-house-prices"');
+    expect(nav).toContain('href="/guides/selling-property"');
+    expect(nav).toContain('ctaHref="/advertise/sell/developers"');
+  });
+
+  it('covers Insights desktop menu static routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('href="/insights/market-trends"');
+    expect(nav).toContain('href="/insights/property-insights"');
+    expect(nav).toContain('href="/guides/buying-property"');
+    expect(nav).toContain('href="/guides/selling-property"');
+    expect(nav).toContain('href="/insights/blog"');
+  });
+
+  it('covers Explore desktop menu static routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('href="/explore/home"');
+    expect(nav).toContain('href="/new-developments"');
+    expect(nav).toContain('href="/agents"');
+  });
+
+  it('covers Services desktop menu static routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('href="/services"');
+    expect(nav).toContain('href="/services/home-loans"');
+    expect(nav).toContain('href="/services/property-valuation"');
+    expect(nav).toContain('href="/services/home-insurance"');
+    expect(nav).toContain('href="/services/legal-services"');
+    expect(nav).toContain('href="/services/interior-design"');
+  });
+
+  it('covers global desktop action routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('href="/distribution-network"');
+    expect(nav).toContain('href="/advertise"');
+    expect(nav).toContain("'/favorites'");
+    expect(nav).toContain('href="/"');
+  });
+
+  it('has no stale /search paths in desktop nav', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).not.toContain("'/search'");
+    expect(nav).not.toContain('"/search"');
+  });
+
+  it('has no raw <a href tags in desktop nav', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).not.toMatch(/<a\s+href=/);
+  });
+
+  it('has no placeholder # hrefs in desktop nav', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).not.toContain('href="#"');
+    expect(nav).not.toContain("href: '#'");
+  });
+
+  it('covers new public SEO pages in the static sitemap', () => {
+    const sitemap = readRepoFile('server/routes/sitemap.ts');
+
+    expect(sitemap).toContain('/explore/home');
+    expect(sitemap).toContain('/agents');
+  });
 });
