@@ -32,6 +32,9 @@ import { LocationAutosuggest } from './LocationAutosuggest';
 import { trpc } from '@/lib/trpc';
 import { normalizeLocationKey, getProvinceForCity, isProvinceSearch } from '@/lib/locationUtils';
 import { LocationNode } from '@/types/location';
+import { VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED } from '@/const';
+import { getSearchDiscoverySuggestions } from '@/lib/searchDiscovery';
+import type { SearchDiscoverySuggestion } from '@/lib/searchDiscovery';
 
 // ... imports
 export interface EnhancedHeroProps {
@@ -105,6 +108,13 @@ export function EnhancedHero({
   // computed for backward compatibility in single-select logic
   const selectedLocation = selectedLocations.length === 1 ? selectedLocations[0] : null;
   const hasActiveSearchInput = searchQuery.trim().length > 0 || selectedLocations.length > 0;
+
+  // Search Discovery Engine — foundation mode
+  const isDiscoveryEnabled = VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED === '1';
+  const discoverySuggestions: SearchDiscoverySuggestion[] = useMemo(() => {
+    if (!isDiscoveryEnabled) return [];
+    return getSearchDiscoverySuggestions(searchQuery);
+  }, [isDiscoveryEnabled, searchQuery]);
 
   // Filter panel state
   const [showFilters, setShowFilters] = useState(false);
@@ -640,6 +650,10 @@ export function EnhancedHero({
                       }}
                       onSubmit={handleSearch}
                       maxLocations={5}
+                      discoverySuggestions={discoverySuggestions}
+                      onDiscoveryNavigate={(path: string) => {
+                        setLocation(path);
+                      }}
                     />
 
                     {/* Action Buttons (Voice/Location) */}
