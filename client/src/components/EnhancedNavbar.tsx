@@ -74,17 +74,15 @@ function CityDropdownContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredCity, setHoveredCity] = useState('Johannesburg');
 
+  // Static safety fallback only — not a ranking algorithm.
+  // Deduplicated by citySlug; slices to 9 to match the original dropdown coverage.
   const topCities = [
-    { name: 'Johannesburg', slug: 'johannesburg', provinceSlug: 'gauteng' },
-    { name: 'Cape Town', slug: 'cape-town', provinceSlug: 'western-cape' },
-    { name: 'Kimberley', slug: 'kimberley', provinceSlug: 'northern-cape' },
-    { name: 'Durban', slug: 'durban', provinceSlug: 'kwazulu-natal' },
-    { name: 'Gqeberha', slug: 'gqeberha', provinceSlug: 'eastern-cape' },
-    { name: 'Bloemfontein', slug: 'bloemfontein', provinceSlug: 'free-state' },
-    { name: 'Polokwane', slug: 'polokwane', provinceSlug: 'limpopo' },
-    { name: 'Mbombela', slug: 'mbombela', provinceSlug: 'mpumalanga' },
-    { name: 'Mahikeng', slug: 'mahikeng', provinceSlug: 'north-west' },
-  ];
+    ...new Map(
+      FALLBACK_CITY_LINKS
+        .filter(l => l.type === 'city' && l.citySlug)
+        .map(l => [l.citySlug, { name: l.label, slug: l.citySlug!, provinceSlug: l.provinceSlug }]),
+    ).values(),
+  ].slice(0, 9);
 
   // Suburbs for each city
   const citySuburbs: Record<string, string[]> = {
