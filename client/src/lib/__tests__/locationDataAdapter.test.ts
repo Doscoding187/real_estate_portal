@@ -31,6 +31,8 @@ describe('cityToNavLink', () => {
     const result = cityToNavLink(popularJohannesburg, { transactionType: 'rent' });
     expect(result).not.toBeNull();
     expect(result!.href).toBe('/property-to-rent/gauteng/johannesburg');
+    expect(result!.href).not.toContain('/property-for-sale');
+    expect(result!.href).toMatch(/^\/property-to-rent\//);
   });
 
   it('supports alternate field names: cityName, citySlug, propertyCount', () => {

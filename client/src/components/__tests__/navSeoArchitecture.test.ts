@@ -81,9 +81,32 @@ describe('nav SEO architecture guardrails', () => {
     const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
 
     expect(nav).toContain('href="/property-to-rent"');
-    expect(nav).toContain('href="/property-to-rent/gauteng/johannesburg"');
-    expect(nav).toContain('href="/property-to-rent/western-cape/cape-town"');
-    expect(nav).toContain('href="/property-to-rent/kwazulu-natal/durban"');
+    expect(nav).toContain('FALLBACK_CITY_LINKS');
+    expect(nav).toContain('cityToNavLink');
+    expect(nav).toContain('/property-to-rent');
+  });
+
+  it('nav rent fallback links use cityToNavLink adapter not string replacement', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(nav).toContain('cityToNavLink(');
+    expect(nav).toContain('FALLBACK_CITY_LINKS');
+    expect(nav).not.toContain(".replace('/property-for-sale'");
+    expect(nav).not.toContain('href="/property-to-rent/gauteng/johannesburg"');
+    expect(nav).not.toContain('href="/property-to-rent/western-cape/cape-town"');
+    expect(nav).not.toContain('href="/property-to-rent/kwazulu-natal/durban"');
+  });
+
+  it('fallback city links in the adapter use only canonical path-based hrefs', () => {
+    const adapter = readRepoFile('client/src/lib/locationDataAdapter.ts');
+
+    expect(adapter).toContain('/property-for-sale/gauteng/johannesburg');
+    expect(adapter).toContain('/property-for-sale/western-cape/cape-town');
+    expect(adapter).toContain('/property-for-sale/kwazulu-natal/durban');
+    expect(adapter).toContain('/property-to-rent/western-cape/cape-town');
+    expect(adapter).not.toContain('city=');
+    expect(adapter).not.toContain('locations=');
+    expect(adapter).not.toContain('suburb=');
   });
 
   it('covers Sellers desktop menu static routes', () => {
