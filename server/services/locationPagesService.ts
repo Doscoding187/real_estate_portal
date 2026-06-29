@@ -323,7 +323,7 @@ export const locationPagesService = {
         .from(developments)
         .where(
           and(
-            sql`(TRIM(LOWER(${developments.city})) = LOWER(${city.name}) OR TRIM(LOWER(${developments.suburb})) IN (SELECT LOWER(name) FROM suburbs WHERE city_id = ${city.id}))`,
+            sql`(TRIM(LOWER(${developments.city})) = LOWER(${city.name}) OR TRIM(LOWER(${developments.suburb})) IN (SELECT LOWER(name) FROM suburbs WHERE cityId = ${city.id}))`,
             eq(developments.isPublished, 1),
           ),
         )
@@ -491,11 +491,16 @@ export const locationPagesService = {
       .limit(12);
 
     // 4. Market Insights (Price Analytics)
-    const [analytics] = await db
-      .select()
-      .from(suburbPriceAnalytics)
-      .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
-      .limit(1);
+    let analytics: any = null;
+    try {
+      [analytics] = await db
+        .select()
+        .from(suburbPriceAnalytics)
+        .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
+        .limit(1);
+    } catch (error) {
+      console.warn('[LocationPages] suburbPriceAnalytics query failed, returning null', error);
+    }
 
     // 5. AI Insights & Reviews
     const { locationInsightsService } = await import('./locationInsightsService');
