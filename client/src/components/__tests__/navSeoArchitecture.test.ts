@@ -72,7 +72,7 @@ describe('nav SEO architecture guardrails', () => {
   it('covers Buyers desktop menu static routes', () => {
     const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
 
-    expect(nav).toContain('href="/property-for-sale"');
+    expect(nav).toContain('ctaHref="/property-for-sale"');
     expect(nav).toContain('href="/new-developments"');
     expect(nav).toContain('href="/insights/market-trends"');
   });
@@ -80,7 +80,7 @@ describe('nav SEO architecture guardrails', () => {
   it('covers Renters desktop menu static routes', () => {
     const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
 
-    expect(nav).toContain('href="/property-to-rent"');
+    expect(nav).toContain('ctaHref="/property-to-rent"');
     expect(nav).toContain('FALLBACK_CITY_LINKS');
     expect(nav).toContain('cityToNavLink');
     expect(nav).toContain('/property-to-rent');
@@ -169,12 +169,56 @@ describe('nav SEO architecture guardrails', () => {
     expect(nav).toContain('href="/insights/blog"');
   });
 
+  // Extract a section from the nav file delimited by start/end marker comments
+  function extractSection(nav: string, marker: string): string {
+    const startMatch = nav.match(new RegExp(`\\/\\* ${marker}.*?\\*\\/\\s*`));
+    if (!startMatch) return '';
+    const from = startMatch.index! + startMatch[0].length;
+    const endMatch = nav.slice(from).match(/(\n\s*\/\*|<\/NavigationMenuList>)/);
+    return nav.slice(from, from + (endMatch?.index ?? 0));
+  }
+
   it('covers Explore desktop menu static routes', () => {
     const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
 
     expect(nav).toContain('href="/explore/home"');
-    expect(nav).toContain('href="/new-developments"');
-    expect(nav).toContain('href="/agents"');
+    expect(nav).toContain('href="/explore/feed"');
+    expect(nav).toContain('href="/explore/map"');
+    expect(nav).toContain('href="/explore/upload"');
+    expect(nav).toContain('href="/explore/shorts"');
+  });
+
+  it('Explore section does not contain listing-search routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+    const section = extractSection(nav, 'Explore engine');
+
+    expect(section).not.toContain('/property-for-sale');
+    expect(section).not.toContain('/property-to-rent');
+    expect(section).not.toContain('/new-developments');
+    expect(section).not.toContain('Buy Property');
+    expect(section).not.toContain('Rent Property');
+    expect(section).not.toContain('Buy a Home');
+    expect(section).not.toContain('Rent a Home');
+  });
+
+  it('Explore section contains only Explore-engine routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+    const section = extractSection(nav, 'Explore engine');
+
+    expect(section).toContain('/explore/home');
+    expect(section).toContain('/explore/feed');
+    expect(section).toContain('/explore/map');
+    expect(section).toContain('/explore/upload');
+    expect(section).toContain('/explore/shorts');
+  });
+
+  it('Services section does not contain listing-search routes', () => {
+    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+    const section = extractSection(nav, 'Services engine');
+
+    expect(section).not.toContain('/property-for-sale');
+    expect(section).not.toContain('/property-to-rent');
+    expect(section).not.toContain('/new-developments');
   });
 
   it('covers Services desktop menu static routes', () => {

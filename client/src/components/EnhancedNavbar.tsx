@@ -837,7 +837,7 @@ export function EnhancedNavbar() {
                   </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Explore Mega Menu */}
+              {/* Explore engine — only Explore-engine routes; no listing/search CTAs */}
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
                   Explore
@@ -850,24 +850,25 @@ export function EnhancedNavbar() {
                       <MegaMenuFeatureCard icon={Home} title="Discover What's Next" description="Trending properties, hot spots, and expert guidance all in one place." ctaLabel="Start exploring" ctaHref="/explore/home" />
                       <div className="flex-1 p-7 grid grid-cols-2 gap-6">
                         <div className="space-y-5">
-                          <MegaMenuSection title="Property Discovery">
-                            <MegaMenuLinkCard label="Buy Property" href="/property-for-sale" />
-                            <MegaMenuLinkCard label="Rent Property" href="/property-to-rent" />
-                            <MegaMenuLinkCard label="New Developments" href="/new-developments" />
+                          <MegaMenuSection title="Discover">
+                            <MegaMenuLinkCard label="Explore Home" href="/explore/home" />
+                            <MegaMenuLinkCard label="Feed" href="/explore/feed" />
+                            <MegaMenuLinkCard label="Map" href="/explore/map" />
                           </MegaMenuSection>
                         </div>
                         <div className="space-y-5">
-                          <MegaMenuSection title="Guides & People">
-                            <MegaMenuLinkCard label="Explore Home" href="/explore/home" />
-                            <MegaMenuLinkCard label="Find Agents" href="/agents" />
+                          <MegaMenuSection title="Create">
+                            <MegaMenuLinkCard label="Upload Content" href="/explore/upload" />
+                            <MegaMenuLinkCard label="Short Videos" href="/explore/shorts" />
                           </MegaMenuSection>
                         </div>
                       </div>
-                      <MegaMenuCtaPanel icon={TrendingUp} title="Discover & Explore" description="Find trending properties, new developments, and agents near you." ctaLabel="Explore Now" ctaHref="/explore/home" />
+                      <MegaMenuCtaPanel icon={TrendingUp} title="Discover & Explore" description="Discover property stories, neighbourhood videos, market moments, and creator-led insights." ctaLabel="Explore Now" ctaHref="/explore/home" />
                     </MegaMenuShell>
                   </NavigationMenuContent>
               </NavigationMenuItem>
 
+              {/* Services engine — service topics only; no listing routes */}
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-700 data-[state=open]:bg-blue-100 data-[state=open]:text-blue-700 font-semibold transition-all">
                   Services
