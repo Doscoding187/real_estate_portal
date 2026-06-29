@@ -7,6 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { HomeLayout } from '@/layouts/HomeLayout';
 
+const parseSpecializations = (specialization?: string | null): string[] => {
+  if (!specialization) return [];
+
+  try {
+    const parsed = JSON.parse(specialization);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
 export default function Agents() {
   const { data: agents, isLoading } = trpc.agent.list.useQuery();
 
@@ -47,8 +58,8 @@ export default function Agents() {
                       {/* Agent Image */}
                       <div className="flex items-start gap-4 mb-4">
                         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0F4C75] to-[#3282B8] flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                          {agent.firstName.charAt(0)}
-                          {agent.lastName.charAt(0)}
+                          {agent.firstName?.charAt(0) || '?'}
+                          {agent.lastName?.charAt(0) || '?'}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-lg mb-1 truncate">
@@ -56,7 +67,7 @@ export default function Agents() {
                           </h3>
                           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
                             <Building2 className="h-4 w-4" />
-                            <span className="capitalize">{agent.role.replace('_', ' ')}</span>
+                            <span className="capitalize">{(agent.role || '').replace(/_/g, ' ')}</span>
                           </div>
                         </div>
                       </div>
@@ -69,17 +80,19 @@ export default function Agents() {
                       )}
 
                       {/* Specialization */}
-                      {agent.specialization && (
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {JSON.parse(agent.specialization)
-                            .slice(0, 3)
-                            .map((spec: string, idx: number) => (
+                      {(() => {
+                        const specializations = parseSpecializations(agent.specialization);
+                        if (specializations.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {specializations.slice(0, 3).map((spec: string, idx: number) => (
                               <Badge key={idx} variant="secondary" className="text-xs">
                                 {spec}
                               </Badge>
                             ))}
-                        </div>
-                      )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Stats */}
                       <div className="grid grid-cols-2 gap-4 mb-4 pt-4 border-t">
