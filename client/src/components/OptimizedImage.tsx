@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ImageUrls {
@@ -28,6 +28,20 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setError(false);
+  }, [images.medium]);
+
+  useEffect(() => {
+    if (!isLoading || error) return;
+    const timer = window.setTimeout(() => {
+      setError(true);
+      setIsLoading(false);
+    }, 12000);
+    return () => window.clearTimeout(timer);
+  }, [error, isLoading]);
 
   // Use srcset for responsive images
   const srcSet = `

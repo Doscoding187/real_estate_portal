@@ -44,6 +44,59 @@ import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
 import { calculateListingReadiness } from '@/lib/readiness';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+const hasContractValue = (value: unknown) =>
+  value !== undefined &&
+  value !== null &&
+  (typeof value !== 'number' || Number.isFinite(value)) &&
+  !(typeof value === 'string' && value.trim() === '');
+
+const fillMissing = (target: Record<string, any>, key: string, value: unknown) => {
+  if (hasContractValue(target[key]) || !hasContractValue(value)) return;
+  target[key] = value;
+};
+
+const normalizeListingPropertyDetailsForPublicContract = (
+  propertyDetails: Record<string, any>,
+  pricing: Record<string, any>,
+) => {
+  const normalized = { ...propertyDetails };
+
+  fillMissing(normalized, 'levies', pricing.levies ?? normalized.leviesHoaOperatingCosts);
+  fillMissing(normalized, 'leviesHoaOperatingCosts', normalized.levies ?? pricing.levies);
+
+  const ratesValue = pricing.ratesAndTaxes ?? normalized.ratesAndTaxes ?? normalized.ratesTaxes;
+  fillMissing(normalized, 'ratesAndTaxes', ratesValue);
+  fillMissing(normalized, 'ratesTaxes', ratesValue);
+
+  const parkingValue = normalized.parkingCount ?? normalized.parkingBays;
+  fillMissing(normalized, 'parkingCount', parkingValue);
+  fillMissing(normalized, 'parkingBays', parkingValue);
+
+  const securityValue = normalized.security ?? normalized.securityLevel;
+  fillMissing(normalized, 'security', securityValue);
+  fillMissing(normalized, 'securityLevel', securityValue);
+
+  const flooringValue = normalized.flooring ?? normalized.flooringType;
+  fillMissing(normalized, 'flooring', flooringValue);
+  fillMissing(normalized, 'flooringType', flooringValue);
+
+  if (
+    !hasContractValue(normalized.prepaidElectricity) &&
+    String(normalized.electricitySupply || '').toLowerCase() === 'prepaid'
+  ) {
+    normalized.prepaidElectricity = true;
+  }
+
+  if (
+    !hasContractValue(normalized.fibreReady) &&
+    String(normalized.internetAccess || '').toLowerCase() === 'fibre'
+  ) {
+    normalized.fibreReady = true;
+  }
+
+  return normalized;
+};
+
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
   const [location, setLocation] = useLocation();
@@ -316,28 +369,34 @@ const ListingWizard: React.FC = () => {
     setValidationErrors(null);
 
     try {
+      const pricing = {
+        ...store.pricing!,
+        // Ensure transferCostEstimate is either a number or undefined (not null)
+        // Only include for sell listings which have this field
+        ...('transferCostEstimate' in store.pricing!
+          ? store.pricing!.transferCostEstimate !== null &&
+            store.pricing!.transferCostEstimate !== undefined &&
+            !isNaN(Number(store.pricing!.transferCostEstimate))
+            ? { transferCostEstimate: Number(store.pricing!.transferCostEstimate) }
+            : {}
+          : {}),
+      };
+      const propertyDetails = normalizeListingPropertyDetailsForPublicContract(
+        {
+          ...(store.propertyDetails || {}),
+          ...(store.additionalInfo || {}),
+        },
+        pricing,
+      );
+
       // Prepare listing data with proper type handling (using string IDs)
       const listingData = {
         action: store.action!,
         propertyType: store.propertyType!,
         title: store.title,
         description: store.description,
-        pricing: {
-          ...store.pricing!,
-          // Ensure transferCostEstimate is either a number or undefined (not null)
-          // Only include for sell listings which have this field
-          ...('transferCostEstimate' in store.pricing!
-            ? store.pricing!.transferCostEstimate !== null &&
-              store.pricing!.transferCostEstimate !== undefined &&
-              !isNaN(Number(store.pricing!.transferCostEstimate))
-              ? { transferCostEstimate: Number(store.pricing!.transferCostEstimate) }
-              : {}
-            : {}),
-        },
-        propertyDetails: {
-          ...(store.propertyDetails || {}),
-          ...(store.additionalInfo || {}),
-        },
+        pricing,
+        propertyDetails,
         location: store.location!,
         // Send media IDs as strings (no numeric conversion)
         mediaIds: store.media.map((m: any) => m.id?.toString() || ''),

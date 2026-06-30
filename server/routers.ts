@@ -737,181 +737,50 @@ export const appRouter = router({
 
         const drizzleDb = await getDb();
 
-        // Try listings table first (new)
-        const listing = await db.getListingById(input.id);
-        if (listing) {
-          const rawImages = await db.getListingMedia(input.id);
-
-          const bucketName = process.env.S3_BUCKET_NAME || 'listify-properties-sa';
-          const awsRegion = process.env.AWS_REGION || 'af-south-1';
-          const cdnUrl =
-            process.env.CLOUDFRONT_URL || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
-
-          const images = rawImages.map(img => {
-            const imageUrl = img.originalUrl.startsWith('http')
-              ? img.originalUrl
-              : `${cdnUrl}/${img.originalUrl}`;
-            return {
-              id: img.id,
-              imageUrl,
-              isPrimary: img.isPrimary,
-              displayOrder: img.displayOrder,
-            };
-          });
-
-          const propertyDetails = (listing.propertyDetails as any) || {};
-          const resolvedDevelopmentId = Number(
-            propertyDetails.developmentId || (listing as any).developmentId || 0,
-          );
-          const resolvedAgentId = Number((listing as any).agentId || 0);
-
-          let development: any = null;
-          let developerBrand: any = null;
-          let agent: any = null;
-
-          if (drizzleDb) {
-            agent = await getPropertyContactAgent(drizzleDb, {
-              agentId: resolvedAgentId,
-              ownerUserId: Number((listing as any).ownerId || 0),
-            });
-          }
-
-          if (drizzleDb && Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
-            const [dev] = await drizzleDb
-              .select({
-                id: developments.id,
-                name: developments.name,
-                slug: developments.slug,
-                developerId: developments.developerId,
-                developerBrandProfileId: developments.developerBrandProfileId,
-                developerName: developers.name,
-              })
-              .from(developments)
-              .leftJoin(developers, eq(developments.developerId, developers.id))
-              .where(eq(developments.id, resolvedDevelopmentId))
-              .limit(1);
-
-            if (dev) {
-              development = {
-                id: Number(dev.id),
-                name: dev.name,
-                slug: dev.slug || null,
-                developerId: dev.developerId ?? null,
-                developerName: dev.developerName ?? null,
-              };
-
-              const resolvedBrandProfileId = Number(
-                propertyDetails.developerBrandProfileId || dev.developerBrandProfileId || 0,
-              );
-
-              if (Number.isFinite(resolvedBrandProfileId) && resolvedBrandProfileId > 0) {
-                const [brand] = await drizzleDb
-                  .select({
-                    id: developerBrandProfiles.id,
-                    brandName: developerBrandProfiles.brandName,
-                    slug: developerBrandProfiles.slug,
-                    logoUrl: developerBrandProfiles.logoUrl,
-                    about: developerBrandProfiles.about,
-                    headOfficeLocation: developerBrandProfiles.headOfficeLocation,
-                    websiteUrl: developerBrandProfiles.websiteUrl,
-                    publicContactEmail: developerBrandProfiles.publicContactEmail,
-                    brandTier: developerBrandProfiles.brandTier,
-                    propertyFocus: developerBrandProfiles.propertyFocus,
-                  })
-                  .from(developerBrandProfiles)
-                  .where(eq(developerBrandProfiles.id, resolvedBrandProfileId))
-                  .limit(1);
-
-                if (brand) {
-                  developerBrand = brand as any;
-                }
-              }
-            }
-          } else if (drizzleDb) {
-            const resolvedBrandProfileId = Number(propertyDetails.developerBrandProfileId || 0);
-            if (Number.isFinite(resolvedBrandProfileId) && resolvedBrandProfileId > 0) {
-              const [brand] = await drizzleDb
-                .select({
-                  id: developerBrandProfiles.id,
-                  brandName: developerBrandProfiles.brandName,
-                  slug: developerBrandProfiles.slug,
-                  logoUrl: developerBrandProfiles.logoUrl,
-                  about: developerBrandProfiles.about,
-                  headOfficeLocation: developerBrandProfiles.headOfficeLocation,
-                  websiteUrl: developerBrandProfiles.websiteUrl,
-                  publicContactEmail: developerBrandProfiles.publicContactEmail,
-                  brandTier: developerBrandProfiles.brandTier,
-                  propertyFocus: developerBrandProfiles.propertyFocus,
-                })
-                .from(developerBrandProfiles)
-                .where(eq(developerBrandProfiles.id, resolvedBrandProfileId))
-                .limit(1);
-
-              if (brand) {
-                developerBrand = brand as any;
-              }
-            }
-          }
-
-          const transformedProperty = {
-            ...listing,
-            price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
-            listingType: listing.action,
-            transactionType: listing.action,
-            bedrooms: propertyDetails.bedrooms || 0,
-            bathrooms: propertyDetails.bathrooms || 0,
-            area:
-              propertyDetails.erfSizeM2 ||
-              propertyDetails.unitSizeM2 ||
-              propertyDetails.landSizeM2OrHa ||
-              propertyDetails.houseAreaM2 ||
-              0,
-            amenities:
-              propertyDetails.amenitiesFeatures || propertyDetails.propertyHighlights || [],
-            features: propertyDetails.propertyHighlights || propertyDetails.amenitiesFeatures || [],
-            propertySettings: {
-              ownershipType: propertyDetails.ownershipType,
-              powerBackup: propertyDetails.powerBackup,
-              security: propertyDetails.security || propertyDetails.securityLevel,
-              securityFeatures: propertyDetails.securityFeatures,
-              waterSupply: propertyDetails.waterSupply,
-              internetAccess: propertyDetails.internetAccess,
-              flooring: propertyDetails.flooring,
-              parkingType: propertyDetails.parkingType,
-              petFriendly: propertyDetails.petFriendly,
-              electricitySupply: propertyDetails.electricitySupply,
-              additionalRooms: propertyDetails.additionalRooms,
-              developmentName: propertyDetails.developmentName,
-            },
-            zipCode: listing.postalCode,
-            ownerId: listing.ownerId,
-            listingSource: 'manual',
-            listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
-            developmentId:
-              Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0
-                ? resolvedDevelopmentId
-                : undefined,
-            development: development || undefined,
-            developerBrand: developerBrand || undefined,
-            agent: agent || undefined,
-          };
-
-          return { property: transformedProperty, images };
-        }
-
-        // Fallback to properties table (old)
+        // Public property detail routes are keyed by properties.id. Listing data may enrich
+        // the mirror through sourceListingId, but listings.id must never hijack /property/:id.
         const property = await db.getPropertyById(input.id);
+        if (!property) {
+          return { property: null, images: [] };
+        }
         const rawImages = await db.getPropertyImages(input.id);
+
+        const linkedListingId = Number((property as any).sourceListingId || 0);
+        const linkedListing =
+          Number.isFinite(linkedListingId) && linkedListingId > 0
+            ? await db.getListingById(linkedListingId)
+            : null;
+        const linkedListingMedia = linkedListing ? await db.getListingMedia(linkedListingId) : [];
+        const linkedPropertyDetails = linkedListing
+          ? ((linkedListing.propertyDetails as any) || {})
+          : {};
 
         const bucketName = ENV.s3BucketName || 'listify-properties-sa';
         const awsRegion = ENV.awsRegion || 'eu-north-1';
         const cdnUrl = ENV.cloudFrontUrl || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
 
-        const images = rawImages.map(img => ({
-          ...img,
-          imageUrl: img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`,
-          url: img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`,
-        }));
+        const propertyImages = rawImages.map(img => {
+          const imageUrl = img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`;
+          return {
+            ...img,
+            imageUrl,
+            url: imageUrl,
+          };
+        });
+
+        const listingImages = linkedListingMedia.map(img => {
+          const rawUrl = (img as any).originalUrl || (img as any).url || '';
+          const imageUrl = rawUrl.startsWith('http') ? rawUrl : `${cdnUrl}/${rawUrl}`;
+          return {
+            id: img.id,
+            imageUrl,
+            url: imageUrl,
+            isPrimary: img.isPrimary,
+            displayOrder: img.displayOrder,
+          };
+        });
+
+        const images = listingImages.length > 0 ? listingImages : propertyImages;
 
         let amenities: string[] = [];
         try {
@@ -1030,10 +899,127 @@ export const appRouter = router({
           }
         }
 
+        const linkedPrice =
+          Number((linkedListing as any)?.askingPrice || 0) ||
+          Number((linkedListing as any)?.monthlyRent || 0) ||
+          Number((linkedListing as any)?.startingBid || 0) ||
+          0;
+
+        const resolvedPrice = Number((property as any).price || 0) || linkedPrice || 0;
+
+        const resolvedListingType =
+          (property as any).listingType ||
+          (property as any).transactionType ||
+          (linkedListing as any)?.action ||
+          'sale';
+
+        const resolvedBedrooms =
+          Number((property as any).bedrooms || 0) ||
+          Number(linkedPropertyDetails.bedrooms || 0) ||
+          0;
+
+        const resolvedBathrooms =
+          Number((property as any).bathrooms || 0) ||
+          Number(linkedPropertyDetails.bathrooms || 0) ||
+          0;
+
+        const resolvedArea =
+          Number((property as any).area || 0) ||
+          Number(linkedPropertyDetails.erfSizeM2 || 0) ||
+          Number(linkedPropertyDetails.unitSizeM2 || 0) ||
+          Number(linkedPropertyDetails.houseAreaM2 || 0) ||
+          Number(linkedPropertyDetails.landSizeM2OrHa || 0) ||
+          0;
+
+        const linkedAmenities =
+          linkedPropertyDetails.amenitiesFeatures ||
+          linkedPropertyDetails.amenities ||
+          linkedPropertyDetails.propertyHighlights ||
+          [];
+
+        const normalizedPropertySettings = {
+          ...(typeof (property as any).propertySettings === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse((property as any).propertySettings);
+                } catch {
+                  return {};
+                }
+              })()
+            : ((property as any).propertySettings || {})),
+          ownershipType: linkedPropertyDetails.ownershipType,
+          powerBackup: linkedPropertyDetails.powerBackup,
+          security: linkedPropertyDetails.security || linkedPropertyDetails.securityLevel,
+          securityFeatures: linkedPropertyDetails.securityFeatures,
+          waterSupply: linkedPropertyDetails.waterSupply,
+          internetAccess: linkedPropertyDetails.internetAccess,
+          flooring: linkedPropertyDetails.flooring,
+          parkingType: linkedPropertyDetails.parkingType,
+          petFriendly: linkedPropertyDetails.petFriendly,
+          electricitySupply: linkedPropertyDetails.electricitySupply,
+          additionalRooms: linkedPropertyDetails.additionalRooms,
+        };
+
+        const normalizedPropertyDetails = {
+          ...(typeof (property as any).propertyDetails === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse((property as any).propertyDetails);
+                } catch {
+                  return {};
+                }
+              })()
+            : ((property as any).propertyDetails || {})),
+          ...linkedPropertyDetails,
+          bedrooms: resolvedBedrooms,
+          bathrooms: resolvedBathrooms,
+          area: resolvedArea,
+        };
+
+        const resolvedMainImage =
+          images.find(img => Number(img.isPrimary) === 1)?.imageUrl ||
+          images[0]?.imageUrl ||
+          (property as any).mainImage ||
+          '';
+
         return {
           property: {
             ...property,
-            amenities: uniqueAmenities,
+            ...(linkedListing
+              ? {
+                  sourceListing: {
+                    id: linkedListing.id,
+                    slug: (linkedListing as any).slug,
+                    action: (linkedListing as any).action,
+                  },
+                }
+              : {}),
+            sourceType: linkedListing ? 'property_mirror_listing' : 'property',
+            sourceListingId: linkedListingId || (property as any).sourceListingId,
+            title: (property as any).title || (linkedListing as any)?.title,
+            description: (property as any).description || (linkedListing as any)?.description,
+            price: resolvedPrice,
+            displayPrice: resolvedPrice,
+            listingType: resolvedListingType,
+            transactionType: resolvedListingType,
+            propertyType: (property as any).propertyType || (linkedListing as any)?.propertyType,
+            bedrooms: resolvedBedrooms,
+            bathrooms: resolvedBathrooms,
+            area: resolvedArea,
+            unitSizeM2: linkedPropertyDetails.unitSizeM2,
+            erfSizeM2: linkedPropertyDetails.erfSizeM2,
+            suburb: (linkedListing as any)?.suburb || (property as any).suburb || undefined,
+            city: (linkedListing as any)?.city || (property as any).city || undefined,
+            province: (linkedListing as any)?.province || (property as any).province || undefined,
+            address: (linkedListing as any)?.address || (property as any).address || undefined,
+            zipCode: (linkedListing as any)?.postalCode || (property as any).zipCode || undefined,
+            latitude: (linkedListing as any)?.latitude || (property as any).latitude,
+            longitude: (linkedListing as any)?.longitude || (property as any).longitude,
+            amenities: uniqueAmenities.length > 0 ? uniqueAmenities : linkedAmenities,
+            features: linkedPropertyDetails.propertyHighlights || linkedAmenities,
+            propertySettings: normalizedPropertySettings,
+            propertyDetails: normalizedPropertyDetails,
+            mainImage: resolvedMainImage,
             listingSource: 'manual',
             listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
             development: development || undefined,

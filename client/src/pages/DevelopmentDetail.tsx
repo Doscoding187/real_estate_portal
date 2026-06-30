@@ -868,7 +868,7 @@ export default function DevelopmentDetail() {
   }
 
   // Format label helper
-  const formatLabel = (value?: string) => {
+  function formatLabel(value?: string) {
     if (!value) return '—';
     return value
       .replace(/-/g, ' ')
@@ -876,7 +876,7 @@ export default function DevelopmentDetail() {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-  };
+  }
 
   function getAmenityLabel(key: string) {
     const match = AMENITY_REGISTRY.find(item => item.key === key);

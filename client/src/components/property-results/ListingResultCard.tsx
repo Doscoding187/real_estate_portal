@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { MapPin, Bed, Bath, House, LandPlot, Mail, Building2, MessageCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { withApiBase } from '@/lib/mediaUtils';
+import { PROPERTY_IMAGE_FALLBACK, withApiBase } from '@/lib/mediaUtils';
 
 export interface ListingResultCardData {
   id: string;
@@ -101,7 +101,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const whatsappTarget = String(data.contactWhatsapp || data.contactPhone || '').trim();
   const emailTarget = String(data.contactEmail || '').trim();
   const resolvedImage =
-    withApiBase(data.image) || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+    withApiBase(data.image) || PROPERTY_IMAGE_FALLBACK;
   const resolvedAvatar = withApiBase(data.agentAvatarUrl);
   const modalTitle = isDevelopmentListing ? developmentName || data.title : data.title;
   const whatsappPrefill = `Hi, I'm interested in ${modalTitle}. Please share more details.`;
@@ -127,7 +127,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               onError={e => {
                 const target = e.target as HTMLImageElement;
                 target.onerror = null;
-                target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+                target.src = PROPERTY_IMAGE_FALLBACK;
               }}
             />
           </div>

@@ -783,4 +783,160 @@ export const locationRouter = router({
         };
       }
     }),
+
+  /**
+   * Search Discovery Engine — suggest locations by partial name match.
+   *
+   * Returns canonical path-based suggestions with listing counts.
+   * Foundation for future ranking/personalisation; no ranking yet.
+   */
+  searchDiscoverySuggestions: publicProcedure
+    .input(
+      z.object({
+        query: z.string(),
+        limit: z.number().min(1).max(20).default(8),
+      }),
+    )
+    .query(async ({ input }) => {
+      const q = input.query.trim();
+      if (q.length < 2) return [];
+
+      const searchPattern = `%${q.toLowerCase()}%`;
+      const limit = input.limit;
+
+      try {
+        const db = await getDb();
+        const publishedCount = sql<number>`COUNT(${properties.id})`;
+
+        // --- Provinces ---
+        const provinceRows = await db
+          .select({
+            name: provinces.name,
+            slug: provinces.slug,
+            listingCount: publishedCount,
+          })
+          .from(provinces)
+          .leftJoin(
+            properties,
+            and(eq(properties.provinceId, provinces.id), eq(properties.status, 'published')),
+          )
+          .where(
+            or(
+              like(sql`LOWER(${provinces.name})`, searchPattern),
+              like(sql`LOWER(${provinces.slug})`, searchPattern),
+            ),
+          )
+          .groupBy(provinces.id, provinces.name, provinces.slug)
+          .limit(limit);
+
+        // --- Cities ---
+        const cityRows = await db
+          .select({
+            name: cities.name,
+            slug: cities.slug,
+            provinceSlug: provinces.slug,
+            listingCount: publishedCount,
+          })
+          .from(cities)
+          .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+          .leftJoin(
+            properties,
+            and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
+          )
+          .where(
+            or(
+              like(sql`LOWER(${cities.name})`, searchPattern),
+              like(sql`LOWER(${cities.slug})`, searchPattern),
+            ),
+          )
+          .groupBy(cities.id, cities.name, cities.slug, provinces.slug)
+          .limit(limit);
+
+        // --- Suburbs ---
+        const suburbRows = await db
+          .select({
+            name: suburbs.name,
+            slug: suburbs.slug,
+            citySlug: cities.slug,
+            provinceSlug: provinces.slug,
+            listingCount: publishedCount,
+          })
+          .from(suburbs)
+          .innerJoin(cities, eq(suburbs.cityId, cities.id))
+          .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+          .leftJoin(
+            properties,
+            and(eq(properties.suburbId, suburbs.id), eq(properties.status, 'published')),
+          )
+          .where(
+            or(
+              like(sql`LOWER(${suburbs.name})`, searchPattern),
+              like(sql`LOWER(${suburbs.slug})`, searchPattern),
+            ),
+          )
+          .groupBy(suburbs.id, suburbs.name, suburbs.slug, cities.slug, provinces.slug)
+          .limit(limit);
+
+        // --- Build results ---
+        const results: Array<{
+          label: string;
+          type: 'province' | 'city' | 'suburb';
+          provinceSlug: string;
+          citySlug?: string;
+          suburbSlug?: string;
+          canonicalPath: string;
+          source: 'database';
+          listingCount?: number;
+        }> = [];
+
+        for (const r of provinceRows) {
+          results.push({
+            label: r.name,
+            type: 'province',
+            provinceSlug: r.slug,
+            canonicalPath: `/property-for-sale/${r.slug}`,
+            source: 'database',
+            listingCount: r.listingCount ?? undefined,
+          });
+        }
+
+        for (const r of cityRows) {
+          results.push({
+            label: r.name,
+            type: 'city',
+            provinceSlug: r.provinceSlug,
+            citySlug: r.slug,
+            canonicalPath: `/property-for-sale/${r.provinceSlug}/${r.slug}`,
+            source: 'database',
+            listingCount: r.listingCount ?? undefined,
+          });
+        }
+
+        for (const r of suburbRows) {
+          results.push({
+            label: r.name,
+            type: 'suburb',
+            provinceSlug: r.provinceSlug,
+            citySlug: r.citySlug,
+            suburbSlug: r.slug,
+            canonicalPath: `/property-for-sale/${r.provinceSlug}/${r.citySlug}/${r.slug}`,
+            source: 'database',
+            listingCount: r.listingCount ?? undefined,
+          });
+        }
+
+        // Sort: prefix matches first, then listing count descending
+        results.sort((a, b) => {
+          const aPrefix = a.label.toLowerCase().startsWith(q.toLowerCase()) ? 0 : 1;
+          const bPrefix = b.label.toLowerCase().startsWith(q.toLowerCase()) ? 0 : 1;
+          if (aPrefix !== bPrefix) return aPrefix - bPrefix;
+          return (b.listingCount ?? 0) - (a.listingCount ?? 0);
+        });
+
+        return results.slice(0, limit);
+      } catch (error) {
+        console.error('[searchDiscoverySuggestions] Query failed:', error);
+        return [];
+      }
+    }),
 });

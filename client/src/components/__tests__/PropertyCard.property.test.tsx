@@ -142,15 +142,18 @@ describe('PropertyCard - Property-Based Tests', () => {
       );
     });
 
-    it('should display bedrooms when provided', () => {
+    it('should display bedrooms when provided for residential property types', () => {
       fc.assert(
         fc.property(
-          propertyCardPropsArb.filter(p => p.bedrooms !== undefined),
+          propertyCardPropsArb.filter(
+            p =>
+              p.bedrooms !== undefined &&
+              ['House', 'Apartment', 'Townhouse'].includes(String(p.propertyType)),
+          ),
           props => {
             cleanup();
             render(<PropertyCard {...props} />);
 
-            // Bedrooms should be displayed with "Bed" text
             const bedroomText = screen.getByText(content => {
               return content.includes('Bed') && content.includes(String(props.bedrooms));
             });
@@ -163,15 +166,18 @@ describe('PropertyCard - Property-Based Tests', () => {
       );
     });
 
-    it('should display bathrooms when provided', () => {
+    it('should display bathrooms when provided for residential property types', () => {
       fc.assert(
         fc.property(
-          propertyCardPropsArb.filter(p => p.bathrooms !== undefined),
+          propertyCardPropsArb.filter(
+            p =>
+              p.bathrooms !== undefined &&
+              ['House', 'Apartment', 'Townhouse'].includes(String(p.propertyType)),
+          ),
           props => {
             cleanup();
             render(<PropertyCard {...props} />);
 
-            // Bathrooms should be displayed with "Bath" text
             const bathroomText = screen.getByText(content => {
               return content.includes('Bath') && content.includes(String(props.bathrooms));
             });
@@ -184,17 +190,21 @@ describe('PropertyCard - Property-Based Tests', () => {
       );
     });
 
-    it('should display area/size when provided', () => {
+    it('should display compact area value when provided', () => {
       fc.assert(
         fc.property(
-          propertyCardPropsArb.filter(p => p.area !== undefined),
+          propertyCardPropsArb.filter(
+            p =>
+              p.area !== undefined &&
+              ['House', 'Apartment', 'Townhouse', 'Commercial'].includes(String(p.propertyType)),
+          ),
           props => {
             cleanup();
             render(<PropertyCard {...props} />);
 
-            // Area should be displayed with "m²" text
+            const expectedArea = `${Number(props.area).toLocaleString('en-ZA')} m²`.replace(/\s+/g, ' ');
             const areaText = screen.getByText(content => {
-              return content.includes('m²') && content.includes('Size');
+              return content.replace(/\s+/g, ' ').includes(expectedArea);
             });
 
             expect(areaText).toBeDefined();

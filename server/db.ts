@@ -2622,7 +2622,7 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     ownerId: listing.ownerId,
     propertySettings: JSON.stringify(details),
     levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
-    ratesAndTaxes: Number(details.ratesTaxes) || null,
+    ratesAndTaxes: Number(details.ratesAndTaxes) || Number(details.ratesTaxes) || null,
     createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };

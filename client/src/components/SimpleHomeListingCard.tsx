@@ -1,9 +1,12 @@
-import type { ReactNode } from 'react';
 import { Link } from 'wouter';
-import { Bath, Bed, Building2, MapPin, Trees } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
-import { withApiBase } from '@/lib/mediaUtils';
-import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import { Building2, MapPin } from 'lucide-react';
+import {
+  getCompactPropertyFacts,
+  getPropertyCardImage,
+  getPropertyCardLocation,
+  getPropertyCardPrice,
+} from '@/lib/property';
+import { FallbackImage } from './FallbackImage';
 
 export interface SimpleHomeListingCardProps {
   id: string;
@@ -21,11 +24,6 @@ export interface SimpleHomeListingCardProps {
   badgeLabel?: string;
 }
 
-const formatMeasure = (value?: number | null) => {
-  if (!value || value <= 0) return null;
-  return `${value.toLocaleString()} m2`;
-};
-
 export function SimpleHomeListingCard({
   id,
   title,
@@ -38,40 +36,26 @@ export function SimpleHomeListingCard({
   bathrooms,
   area,
   yardSize,
+  propertyType,
   badgeLabel = 'Resale',
 }: SimpleHomeListingCardProps) {
-  const locationLabel = suburb ? `${suburb}, ${city}` : city;
-  const resolvedImage = withApiBase(image);
-  const specItems = [
-    formatMeasure(area)
-      ? {
-          key: 'area',
-          icon: <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400" />,
-          value: formatMeasure(area),
-        }
-      : null,
-    bedrooms
-      ? {
-          key: 'bedrooms',
-          icon: <Bed className="h-3.5 w-3.5 text-slate-400" />,
-          value: String(bedrooms),
-        }
-      : null,
-    bathrooms
-      ? {
-          key: 'bathrooms',
-          icon: <Bath className="h-3.5 w-3.5 text-slate-400" />,
-          value: String(bathrooms),
-        }
-      : null,
-    formatMeasure(yardSize)
-      ? {
-          key: 'yard-size',
-          icon: <Trees className="h-3.5 w-3.5 text-slate-400" />,
-          value: formatMeasure(yardSize),
-        }
-      : null,
-  ].filter(Boolean) as Array<{ key: string; icon: ReactNode; value: string }>;
+  const normalizedProperty = {
+    id,
+    title,
+    city,
+    suburb,
+    image,
+    price,
+    bedrooms,
+    bathrooms,
+    area,
+    yardSize,
+    propertyType,
+  };
+  const locationLabel = getPropertyCardLocation(normalizedProperty).label;
+  const resolvedImage = image ? getPropertyCardImage(normalizedProperty) : undefined;
+  const priceLabel = getPropertyCardPrice(normalizedProperty).label;
+  const specItems = getCompactPropertyFacts(normalizedProperty, 4);
 
   return (
     <Link
@@ -86,16 +70,11 @@ export function SimpleHomeListingCard({
         )}
 
         {resolvedImage && (
-          <img
+          <FallbackImage
             src={resolvedImage}
             alt={title}
             loading="lazy"
             className="absolute inset-0 z-10 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            onError={e => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.style.display = 'none';
-            }}
           />
         )}
 
@@ -108,7 +87,7 @@ export function SimpleHomeListingCard({
 
       <div className="p-4">
         <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">
-          {price > 0 ? formatCurrency(price) : 'Price on request'}
+          {priceLabel}
         </div>
 
         <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">
@@ -122,12 +101,15 @@ export function SimpleHomeListingCard({
 
         {specItems.length > 0 ? (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-2.5 text-xs text-slate-700">
-            {specItems.map(item => (
-              <div key={item.key} className="flex items-center gap-1.5 whitespace-nowrap">
-                {item.icon}
-                <span className="font-medium">{item.value}</span>
-              </div>
-            ))}
+            {specItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <div key={item.key} className="flex items-center gap-1.5 whitespace-nowrap">
+                  <Icon className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="font-medium">{item.shortValue}</span>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="mt-2.5 border-t border-slate-100 pt-2.5 text-xs text-slate-500">

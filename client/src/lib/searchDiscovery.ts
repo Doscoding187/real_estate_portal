@@ -17,12 +17,13 @@ import { FALLBACK_CITY_LINKS } from './locationDataAdapter';
  */
 export interface SearchDiscoverySuggestion {
   label: string;
-  type: 'city' | 'suburb';
+  type: 'province' | 'city' | 'suburb';
   provinceSlug: string;
   citySlug?: string;
   suburbSlug?: string;
   canonicalPath: string;
-  source: 'fallback';
+  source: 'database' | 'fallback';
+  listingCount?: number;
 }
 
 /**

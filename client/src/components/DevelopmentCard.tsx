@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { ResponsiveHighlights } from './ResponsiveHighlights';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 
 export interface DevelopmentCardProps {
   id: string;
@@ -71,7 +72,7 @@ export function DevelopmentCard({
           onError={e => {
             const target = e.target as HTMLImageElement;
             target.onerror = null;
-            target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+            target.src = PROPERTY_IMAGE_FALLBACK;
           }}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />

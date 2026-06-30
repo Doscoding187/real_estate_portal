@@ -66,6 +66,61 @@ async function normalizeLocationInput(inputLocation: { placeId?: string; locatio
   return { sanitizedPlaceId, resolvedLocationId };
 }
 
+const hasContractValue = (value: unknown) =>
+  value !== undefined &&
+  value !== null &&
+  (typeof value !== 'number' || Number.isFinite(value)) &&
+  !(typeof value === 'string' && value.trim() === '');
+
+const fillMissing = (target: Record<string, any>, key: string, value: unknown) => {
+  if (hasContractValue(target[key]) || !hasContractValue(value)) return;
+  target[key] = value;
+};
+
+function normalizePropertyDetailsForPublicContract(
+  propertyDetails: Record<string, any> | null | undefined,
+  pricing: Record<string, any> | null | undefined,
+) {
+  const normalized = { ...(propertyDetails || {}) };
+  const pricingData = pricing || {};
+
+  fillMissing(normalized, 'levies', pricingData.levies ?? normalized.leviesHoaOperatingCosts);
+  fillMissing(normalized, 'leviesHoaOperatingCosts', normalized.levies ?? pricingData.levies);
+
+  const ratesValue =
+    pricingData.ratesAndTaxes ?? normalized.ratesAndTaxes ?? normalized.ratesTaxes;
+  fillMissing(normalized, 'ratesAndTaxes', ratesValue);
+  fillMissing(normalized, 'ratesTaxes', ratesValue);
+
+  const parkingValue = normalized.parkingCount ?? normalized.parkingBays;
+  fillMissing(normalized, 'parkingCount', parkingValue);
+  fillMissing(normalized, 'parkingBays', parkingValue);
+
+  const securityValue = normalized.security ?? normalized.securityLevel;
+  fillMissing(normalized, 'security', securityValue);
+  fillMissing(normalized, 'securityLevel', securityValue);
+
+  const flooringValue = normalized.flooring ?? normalized.flooringType;
+  fillMissing(normalized, 'flooring', flooringValue);
+  fillMissing(normalized, 'flooringType', flooringValue);
+
+  if (
+    !hasContractValue(normalized.prepaidElectricity) &&
+    String(normalized.electricitySupply || '').toLowerCase() === 'prepaid'
+  ) {
+    normalized.prepaidElectricity = true;
+  }
+
+  if (
+    !hasContractValue(normalized.fibreReady) &&
+    String(normalized.internetAccess || '').toLowerCase() === 'fibre'
+  ) {
+    normalized.fibreReady = true;
+  }
+
+  return normalized;
+}
+
 // Validation schemas
 const listingActionSchema = z.enum(['sell', 'rent', 'auction']);
 const propertyTypeSchema = z.enum([
@@ -87,6 +142,8 @@ const createListingSchema = z.object({
     askingPrice: z.number().optional(),
     negotiable: z.boolean().optional(),
     transferCostEstimate: z.number().nullable().optional(),
+    levies: z.number().optional(),
+    ratesAndTaxes: z.number().optional(),
     // Rent fields
     monthlyRent: z.number().optional(),
     deposit: z.number().optional(),
@@ -226,6 +283,10 @@ export const listingRouter = router({
 
       // GUARD: Normalize placeId and validate location_id
       const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(input.location);
+      const propertyDetails = normalizePropertyDetailsForPublicContract(
+        input.propertyDetails,
+        input.pricing,
+      );
 
       // Create listing in database with auto-populated location IDs
       const listingId = await db.createListing({
@@ -235,7 +296,7 @@ export const listingRouter = router({
         title: input.title,
         description: input.description,
         pricing: input.pricing,
-        propertyDetails: input.propertyDetails,
+        propertyDetails,
         address: input.location.address,
         latitude: input.location.latitude,
         longitude: input.location.longitude,
@@ -331,6 +392,13 @@ export const listingRouter = router({
           ...input,
           updatedAt: new Date(),
         };
+
+        if (input.propertyDetails || input.pricing) {
+          updatePayload.propertyDetails = normalizePropertyDetailsForPublicContract(
+            input.propertyDetails || ((listing.propertyDetails as any) ?? {}),
+            input.pricing || null,
+          );
+        }
 
         if (input.location) {
           const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(
