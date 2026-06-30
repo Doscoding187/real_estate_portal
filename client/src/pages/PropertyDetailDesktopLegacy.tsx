@@ -54,6 +54,7 @@ import {
 } from '@/components/property/DeveloperBrandSection';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/seo/structuredData';
+import { getCompactPropertyFacts, getPropertyFeatureSpecs } from '@/lib/property';
 
 interface PropertyDetailProps {
   propertyId?: number;
@@ -480,7 +481,6 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
   const houseSizeM2 = parseStrictNumber(rawPropertyDetails.houseAreaM2);
   const erfSizeM2 = parseStrictNumber(rawPropertyDetails.erfSizeM2);
   const unitSizeM2 = parseStrictNumber(rawPropertyDetails.unitSizeM2);
-  const parkingLabel = formatLabel(specs.parkingType);
   const displayPrice = Number(property.price) || 0;
   const displayRepayment = displayPrice > 0 ? Math.round(displayPrice * 0.0095) : 0;
   const directPhone = '';
@@ -583,133 +583,9 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
           ? [`Operates in ${agentPrimaryArea}`]
           : []
       : [];
-  const propertyDetailItems = [
-    property.bedrooms
-      ? {
-          key: 'bedrooms',
-          label: 'Bedrooms',
-          value: `${property.bedrooms} Bedroom${property.bedrooms === 1 ? '' : 's'}`,
-          icon: Bed,
-        }
-      : null,
-    property.bathrooms
-      ? {
-          key: 'bathrooms',
-          label: 'Bathrooms',
-          value: `${property.bathrooms} Bathroom${property.bathrooms === 1 ? '' : 's'}`,
-          icon: Bath,
-        }
-      : null,
-    parkingLabel
-      ? {
-          key: 'parking',
-          label: 'Parking',
-          value: parkingLabel,
-          icon: Car,
-        }
-      : null,
-    houseSizeM2
-      ? {
-          key: 'house-size',
-          label: 'House Size',
-          value: `${houseSizeM2.toLocaleString()} m²`,
-          icon: Maximize,
-        }
-      : unitSizeM2
-        ? {
-            key: 'floor-size',
-            label: 'Floor Size',
-            value: `${unitSizeM2.toLocaleString()} m²`,
-            icon: Maximize,
-          }
-        : null,
-    erfSizeM2
-      ? {
-          key: 'erf-size',
-          label: 'Erf Size',
-          value: `${erfSizeM2.toLocaleString()} m²`,
-          icon: Home,
-        }
-      : null,
-    property.propertyType
-      ? {
-          key: 'property-type',
-          label: 'Property Type',
-          value: formatLabel(property.propertyType),
-          icon: Building2,
-        }
-      : null,
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: LucideIcon }>;
-  const featureSpecItems = [
-    specs.ownershipType
-      ? {
-          key: 'ownershipType',
-          label: 'Ownership Type',
-          value: formatLabel(specs.ownershipType),
-          icon: Home,
-        }
-      : null,
-    specs.powerBackup
-      ? {
-          key: 'powerBackup',
-          label: 'Power Backup',
-          value: formatLabel(specs.powerBackup),
-          icon: Zap,
-        }
-      : null,
-    specs.security
-      ? {
-          key: 'security',
-          label: 'Security',
-          value: formatLabel(specs.security),
-          icon: Shield,
-        }
-      : null,
-    specs.waterSupply
-      ? {
-          key: 'waterSupply',
-          label: 'Water Supply',
-          value: formatLabel(specs.waterSupply),
-          icon: Droplets,
-        }
-      : null,
-    specs.internetAccess
-      ? {
-          key: 'internetAccess',
-          label: 'Internet',
-          value: formatLabel(specs.internetAccess),
-          icon: Wifi,
-        }
-      : null,
-    specs.flooring
-      ? { key: 'flooring', label: 'Flooring', value: formatLabel(specs.flooring), icon: Building2 }
-      : null,
-    specs.parkingType
-      ? {
-          key: 'parkingType',
-          label: 'Parking Type',
-          value: formatLabel(specs.parkingType),
-          icon: Car,
-        }
-      : null,
-    specs.petFriendly
-      ? {
-          key: 'petFriendly',
-          label: 'Pet Friendly',
-          value: formatLabel(specs.petFriendly),
-          icon: CheckCircle2,
-        }
-      : null,
-    specs.electricitySupply
-      ? {
-          key: 'electricitySupply',
-          label: 'Electricity',
-          value: formatLabel(specs.electricitySupply),
-          icon: Zap,
-        }
-      : null,
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: LucideIcon }>;
-  const heroFeatureSpecItems = featureSpecItems.slice(0, 8);
+  const propertyDetailItems = getCompactPropertyFacts(property, 4);
+  const featureSpecItems = getPropertyFeatureSpecs(property);
+  const heroFeatureSpecItems = featureSpecItems;
   const openQualification = () => {
     setIsQualificationOpen(true);
   };

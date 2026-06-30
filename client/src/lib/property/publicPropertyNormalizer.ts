@@ -3,10 +3,17 @@ import {
   Bed,
   Building2,
   Car,
+  CheckCircle2,
+  Droplets,
+  Home,
   LandPlot,
   MapPin,
   Maximize,
   Ruler,
+  Shield,
+  Sparkles,
+  Zap,
+  Wifi,
   type LucideIcon,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -83,7 +90,24 @@ export type PublicPropertyCard = {
   sourceType?: string;
 };
 
-type PropertyLike = Record<string, any>;
+export type PropertyLike = Record<string, any>;
+
+export type PropertyFeatureSpecCategory =
+  | 'cost'
+  | 'utility'
+  | 'security'
+  | 'lifestyle'
+  | 'ownership'
+  | 'parking';
+
+export type PropertyFeatureSpecItem = {
+  key: string;
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  priority: number;
+  category: PropertyFeatureSpecCategory;
+};
 
 const parsePositiveNumber = (value: unknown): number | undefined => {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -319,7 +343,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     addFact(!!unitSize, {
       key: 'unit-size',
       label: 'Unit Size',
-      value: formatM2(unitSize!),
+      value: formatM2(unitSize ?? 0),
       icon: Ruler,
       priority: 10,
     });
@@ -328,7 +352,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     addFact(!!size, {
       key: 'house-size',
       label: isTownhouse ? 'Unit Size' : 'House Size',
-      value: formatM2(size!),
+      value: formatM2(size ?? 0),
       icon: Ruler,
       priority: 10,
     });
@@ -337,7 +361,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     addFact(!!size, {
       key: 'land-size',
       label: 'Land Size',
-      value: formatM2(size!),
+      value: formatM2(size ?? 0),
       icon: Maximize,
       priority: 10,
     });
@@ -346,7 +370,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     addFact(!!size, {
       key: 'floor-size',
       label: 'Floor Size',
-      value: formatM2(size!),
+      value: formatM2(size ?? 0),
       icon: Ruler,
       priority: 10,
     });
@@ -355,7 +379,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     addFact(!!size, {
       key: 'size',
       label: 'Size',
-      value: formatM2(size!),
+      value: formatM2(size ?? 0),
       icon: Ruler,
       priority: 10,
     });
@@ -380,7 +404,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
   addFact(!!erfSize && (isHouse || isTownhouse), {
     key: 'erf-size',
     label: 'Erf Size',
-    value: formatM2(erfSize!),
+    value: formatM2(erfSize ?? 0),
     icon: Maximize,
     priority: 40,
   });
@@ -477,6 +501,253 @@ export function getCompactPropertyFacts(property: PropertyLike, limit = 4): Prop
   }
 
   return facts.slice(0, limit);
+}
+
+const isBlankDisplayValue = (value: unknown) =>
+  value == null || (typeof value === 'string' && value.trim().length === 0);
+
+const parseBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (value === 1) return true;
+    if (value === 0) return false;
+  }
+  if (typeof value !== 'string') return undefined;
+
+  const normalized = value.trim().toLowerCase();
+  if (['true', 'yes', 'y', '1', 'allowed'].includes(normalized)) return true;
+  if (['false', 'no', 'n', '0', 'none', 'no_pets', 'not_allowed'].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
+};
+
+const formatFeatureValue = (value: unknown): string | undefined => {
+  if (isBlankDisplayValue(value)) return undefined;
+  if (Array.isArray(value)) {
+    const formatted = value
+      .map(item => formatFeatureValue(item))
+      .filter((item): item is string => Boolean(item));
+    return formatted.length > 0 ? formatted.join(', ') : undefined;
+  }
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return titleCase(value);
+};
+
+export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeatureSpecItem[] {
+  const details = getDetails(property);
+  const settings = getSettings(property);
+  const specs: PropertyFeatureSpecItem[] = [];
+  const seen = new Set<string>();
+
+  const valueFor = (...keys: string[]) => {
+    for (const source of [property, details, settings]) {
+      for (const key of keys) {
+        const value = source?.[key];
+        if (!isBlankDisplayValue(value)) return value;
+      }
+    }
+    return undefined;
+  };
+
+  const addSpec = ({
+    key,
+    label,
+    value,
+    icon,
+    priority,
+    category,
+  }: PropertyFeatureSpecItem) => {
+    if (seen.has(key) || isBlankDisplayValue(value)) return;
+    specs.push({ key, label, value, icon, priority, category });
+    seen.add(key);
+  };
+
+  const addFormattedSpec = ({
+    key,
+    label,
+    rawValue,
+    icon,
+    priority,
+    category,
+  }: {
+    key: string;
+    label: string;
+    rawValue: unknown;
+    icon: LucideIcon;
+    priority: number;
+    category: PropertyFeatureSpecCategory;
+  }) => {
+    const value = formatFeatureValue(rawValue);
+    if (!value) return;
+    addSpec({ key, label, value, icon, priority, category });
+  };
+
+  const levies = parsePositiveNumber(valueFor('levies', 'leviesHoaOperatingCosts'));
+  const ratesAndTaxes = parsePositiveNumber(valueFor('ratesAndTaxes', 'ratesTaxes'));
+  if (levies) {
+    addSpec({
+      key: 'levies',
+      label: 'Levies',
+      value: formatCurrency(levies),
+      icon: Building2,
+      priority: 10,
+      category: 'cost',
+    });
+  }
+  if (ratesAndTaxes) {
+    addSpec({
+      key: 'rates-and-taxes',
+      label: 'Rates & Taxes',
+      value: formatCurrency(ratesAndTaxes),
+      icon: Building2,
+      priority: 20,
+      category: 'cost',
+    });
+  }
+
+  const electricitySupply = valueFor('electricitySupply', 'electricitySource');
+  const prepaidElectricity = parseBoolean(valueFor('prepaidElectricity'));
+  const electricityValue =
+    prepaidElectricity === true
+      ? 'Prepaid'
+      : prepaidElectricity === false && electricitySupply
+        ? formatFeatureValue(electricitySupply)
+        : prepaidElectricity === false
+          ? 'Municipal Billing'
+        : formatFeatureValue(electricitySupply);
+  if (electricityValue) {
+    addSpec({
+      key: 'electricity',
+      label: 'Electricity',
+      value: electricityValue,
+      icon: Zap,
+      priority: 30,
+      category: 'utility',
+    });
+  }
+
+  addFormattedSpec({
+    key: 'water-supply',
+    label: 'Water',
+    rawValue: valueFor('waterSupply'),
+    icon: Droplets,
+    priority: 40,
+    category: 'utility',
+  });
+  addFormattedSpec({
+    key: 'power-backup',
+    label: 'Power Backup',
+    rawValue: valueFor('powerBackup'),
+    icon: Zap,
+    priority: 50,
+    category: 'utility',
+  });
+  addFormattedSpec({
+    key: 'water-backup',
+    label: 'Water Backup',
+    rawValue: valueFor('waterBackup'),
+    icon: Droplets,
+    priority: 60,
+    category: 'utility',
+  });
+
+  const internetAccess = valueFor('internetAccess', 'internetAvailability');
+  const fibreReady = parseBoolean(valueFor('fibreReady'));
+  const internetValue =
+    fibreReady === true
+      ? 'Fibre Ready'
+      : fibreReady === false
+        ? 'No'
+        : formatFeatureValue(internetAccess);
+  if (internetValue) {
+    addSpec({
+      key: 'internet-fibre',
+      label: 'Internet / Fibre',
+      value: internetValue,
+      icon: Wifi,
+      priority: 70,
+      category: 'utility',
+    });
+  }
+
+  addFormattedSpec({
+    key: 'security',
+    label: 'Security',
+    rawValue: valueFor('security', 'securityLevel'),
+    icon: Shield,
+    priority: 80,
+    category: 'security',
+  });
+  addFormattedSpec({
+    key: 'security-features',
+    label: 'Security Features',
+    rawValue: valueFor('securityFeatures'),
+    icon: Shield,
+    priority: 90,
+    category: 'security',
+  });
+
+  addFormattedSpec({
+    key: 'ownership-type',
+    label: 'Ownership Type',
+    rawValue: valueFor('ownershipType'),
+    icon: Home,
+    priority: 100,
+    category: 'ownership',
+  });
+  addFormattedSpec({
+    key: 'parking-type',
+    label: 'Parking Type',
+    rawValue: valueFor('parkingType', 'parking'),
+    icon: Car,
+    priority: 110,
+    category: 'parking',
+  });
+
+  const parkingCount = parsePositiveNumber(valueFor('parkingCount', 'parkingBays', 'garages'));
+  if (parkingCount) {
+    addSpec({
+      key: 'parking-count',
+      label: 'Parking Count',
+      value: String(parkingCount),
+      icon: Car,
+      priority: 120,
+      category: 'parking',
+    });
+  }
+
+  const petFriendly = parseBoolean(valueFor('petFriendly', 'petPolicy'));
+  if (petFriendly !== undefined) {
+    addSpec({
+      key: 'pet-friendly',
+      label: 'Pet Friendly',
+      value: petFriendly ? 'Yes' : 'No',
+      icon: CheckCircle2,
+      priority: 130,
+      category: 'lifestyle',
+    });
+  }
+
+  addFormattedSpec({
+    key: 'flooring',
+    label: 'Flooring',
+    rawValue: valueFor('flooring', 'flooringType'),
+    icon: Building2,
+    priority: 140,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'additional-rooms',
+    label: 'Additional Rooms',
+    rawValue: valueFor('additionalRooms'),
+    icon: Sparkles,
+    priority: 150,
+    category: 'lifestyle',
+  });
+
+  return specs.sort((left, right) => left.priority - right.priority);
 }
 
 export function normalizePublicPropertyCard(property: PropertyLike): PublicPropertyCard {
