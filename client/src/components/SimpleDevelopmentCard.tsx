@@ -2,6 +2,7 @@ import { formatPriceRangeCompact } from '@/lib/utils';
 import { Link } from 'wouter';
 import { withApiBase } from '@/lib/mediaUtils';
 import { Building2, MapPin } from 'lucide-react';
+import { FallbackImage } from './FallbackImage';
 
 export interface SimpleDevelopmentCardProps {
   id: string;
@@ -82,16 +83,12 @@ export function SimpleDevelopmentCard({
 
         {/* Image Layer - Hides on Error to reveal placeholder */}
         {image && (
-          <img
+          <FallbackImage
             src={withApiBase(image)}
             alt={title}
             loading="lazy"
+            timeoutMs={12000}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 z-10"
-            onError={e => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.style.display = 'none';
-            }}
           />
         )}
 

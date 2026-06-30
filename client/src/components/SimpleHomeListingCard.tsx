@@ -6,6 +6,7 @@ import {
   getPropertyCardLocation,
   getPropertyCardPrice,
 } from '@/lib/property';
+import { FallbackImage } from './FallbackImage';
 
 export interface SimpleHomeListingCardProps {
   id: string;
@@ -69,16 +70,11 @@ export function SimpleHomeListingCard({
         )}
 
         {resolvedImage && (
-          <img
+          <FallbackImage
             src={resolvedImage}
             alt={title}
             loading="lazy"
             className="absolute inset-0 z-10 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            onError={e => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.style.display = 'none';
-            }}
           />
         )}
 

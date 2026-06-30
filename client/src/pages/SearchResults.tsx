@@ -6,6 +6,7 @@ import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getPrimaryListingBadge } from '@/lib/listingBadges';
 import { searchCardResultToPropertyCardProps } from '@/lib/normalizers';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import { blendSearchResults } from '@/lib/searchBlend';
 import {
   DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
@@ -496,7 +497,7 @@ export default function SearchResults({
       if (firstImage) return firstImage;
     }
 
-    return 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+    return PROPERTY_IMAGE_FALLBACK;
   };
 
   return (

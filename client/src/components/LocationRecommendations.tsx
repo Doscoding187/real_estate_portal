@@ -16,6 +16,7 @@ import {
   Train,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 
 interface LocationData {
   id: string;
@@ -68,7 +69,7 @@ export function LocationRecommendations() {
       },
       description: 'Premier business district with luxury homes and excellent amenities',
       featured: true,
-      image: '/api/placeholder/400/250',
+      image: PROPERTY_IMAGE_FALLBACK,
       popularProperties: 89,
       averageRating: 4.6,
     },
@@ -88,7 +89,7 @@ export function LocationRecommendations() {
       },
       description: 'Coastal living with stunning ocean views and vibrant nightlife',
       featured: true,
-      image: '/api/placeholder/400/250',
+      image: PROPERTY_IMAGE_FALLBACK,
       popularProperties: 67,
       averageRating: 4.8,
     },
@@ -108,7 +109,7 @@ export function LocationRecommendations() {
       },
       description: 'Upscale coastal suburb with beautiful beaches and modern amenities',
       featured: true,
-      image: '/api/placeholder/400/250',
+      image: PROPERTY_IMAGE_FALLBACK,
       popularProperties: 54,
       averageRating: 4.5,
     },
@@ -127,7 +128,7 @@ export function LocationRecommendations() {
         restaurants: 67,
       },
       description: 'Family-friendly area with great schools and modern infrastructure',
-      image: '/api/placeholder/400/250',
+      image: PROPERTY_IMAGE_FALLBACK,
       popularProperties: 76,
       averageRating: 4.3,
     },
@@ -147,7 +148,7 @@ export function LocationRecommendations() {
       },
       description: 'Prestigious wine valley with luxury estates and rural charm',
       featured: true,
-      image: '/api/placeholder/400/250',
+      image: PROPERTY_IMAGE_FALLBACK,
       popularProperties: 34,
       averageRating: 4.9,
     },
@@ -166,7 +167,7 @@ export function LocationRecommendations() {
         restaurants: 92,
       },
       description: 'Trendy bohemian suburb popular with young professionals',
-      image: '/api/placeholder/400/250',
+      image: PROPERTY_IMAGE_FALLBACK,
       popularProperties: 41,
       averageRating: 4.4,
     },
@@ -261,7 +262,7 @@ export function LocationRecommendations() {
                 {/* Image Section */}
                 <div className="relative h-48 overflow-hidden">
                   <img
-                    src={location.image || '/api/placeholder/400/250'}
+                    src={location.image || PROPERTY_IMAGE_FALLBACK}
                     alt={location.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />

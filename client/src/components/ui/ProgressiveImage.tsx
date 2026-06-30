@@ -11,6 +11,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 
 interface ProgressiveImageProps {
   src: string;
@@ -55,7 +56,7 @@ export function ProgressiveImage({
   priority = false,
   onLoad,
   onError,
-  fallbackSrc = '/placeholder-property.jpg',
+  fallbackSrc = PROPERTY_IMAGE_FALLBACK,
 }: ProgressiveImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(priority);

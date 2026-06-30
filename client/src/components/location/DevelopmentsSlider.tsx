@@ -2,7 +2,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Building2 } from 'lucide-react';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
+import { getPrimaryDevelopmentImageUrl, PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import {
   Carousel,
   CarouselContent,
@@ -65,9 +65,7 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
                             min: dev.minPrice || dev.price || 0, // Handle both potential field names
                             max: 0,
                           }}
-                          image={
-                            mainImage || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image'
-                          }
+                          image={mainImage || PROPERTY_IMAGE_FALLBACK}
                           isHotSelling={!!dev.isHotSelling}
                           isHighDemand={!!dev.isHighDemand}
                           bedrooms={dev.bedrooms}

@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/carousel';
 import { ChevronLeft, ChevronRight, FileText, Phone, Star } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 
 type DevelopmentImage =
   | string
@@ -37,11 +38,10 @@ export interface DevelopmentResultCardProps {
 }
 
 function resolveDevelopmentImage(images?: DevelopmentImage[]) {
-  if (!images || images.length === 0)
-    return 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+  if (!images || images.length === 0) return PROPERTY_IMAGE_FALLBACK;
   const first = images[0];
   if (typeof first === 'string') return first;
-  return first.url || first.imageUrl || 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+  return first.url || first.imageUrl || PROPERTY_IMAGE_FALLBACK;
 }
 
 function getImageCount(images?: DevelopmentImage[]) {
@@ -140,7 +140,7 @@ export function DevelopmentResultCard({
             onError={e => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
-              target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
+              target.src = PROPERTY_IMAGE_FALLBACK;
             }}
             className="h-full w-full object-cover"
           />

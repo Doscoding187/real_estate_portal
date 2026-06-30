@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 
 interface PropertyCardProps {
   id: string;
@@ -121,7 +122,7 @@ export function PropertyCard({
         {/* Image Container */}
         <div className="relative h-48 lg:h-56 overflow-hidden">
           <img
-            src={image || '/api/placeholder/400/300'}
+            src={image || PROPERTY_IMAGE_FALLBACK}
             alt={title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
@@ -281,7 +282,7 @@ export function PropertyShowcase({
       bedrooms: 3,
       bathrooms: 2,
       size: 180,
-      image: '/api/placeholder/400/300',
+      image: PROPERTY_IMAGE_FALLBACK,
       featured: true,
       isNew: false,
       isHot: true,
@@ -303,7 +304,7 @@ export function PropertyShowcase({
       bedrooms: 2,
       bathrooms: 2,
       size: 95,
-      image: '/api/placeholder/400/300',
+      image: PROPERTY_IMAGE_FALLBACK,
       featured: false,
       isNew: true,
       isHot: false,
@@ -325,7 +326,7 @@ export function PropertyShowcase({
       bedrooms: 4,
       bathrooms: 3,
       size: 320,
-      image: '/api/placeholder/400/300',
+      image: PROPERTY_IMAGE_FALLBACK,
       featured: true,
       isNew: false,
       isHot: false,
@@ -347,7 +348,7 @@ export function PropertyShowcase({
       bedrooms: 1,
       bathrooms: 1,
       size: 65,
-      image: '/api/placeholder/400/300',
+      image: PROPERTY_IMAGE_FALLBACK,
       featured: false,
       isNew: true,
       isHot: false,
@@ -369,7 +370,7 @@ export function PropertyShowcase({
       bedrooms: 3,
       bathrooms: 2,
       size: 145,
-      image: '/api/placeholder/400/300',
+      image: PROPERTY_IMAGE_FALLBACK,
       featured: false,
       isNew: false,
       isHot: true,
@@ -391,7 +392,7 @@ export function PropertyShowcase({
       bedrooms: 5,
       bathrooms: 4,
       size: 450,
-      image: '/api/placeholder/400/300',
+      image: PROPERTY_IMAGE_FALLBACK,
       featured: true,
       isNew: false,
       isHot: false,

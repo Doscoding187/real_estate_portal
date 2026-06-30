@@ -16,6 +16,8 @@ import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { ResponsiveHighlights } from './ResponsiveHighlights';
 import { getCompactPropertyFacts } from '@/lib/property';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
+import { FallbackImage } from './FallbackImage';
 
 interface ImageUrls {
   thumbnail: string;
@@ -122,15 +124,11 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <img
+          <FallbackImage
             src={image as string}
             alt={title}
             loading="lazy"
-            onError={e => {
-              const target = e.target as HTMLImageElement;
-              target.onerror = null;
-              target.src = 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Image';
-            }}
+            fallbackSrc={PROPERTY_IMAGE_FALLBACK}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         )}

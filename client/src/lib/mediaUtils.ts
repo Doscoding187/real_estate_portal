@@ -2,11 +2,20 @@
  * Utility to resolve the backend API URL.
  * Prefixes relative paths with the API base.
  */
+export const PROPERTY_IMAGE_FALLBACK = '/placeholder-property.jpg';
+
+const PUBLIC_FALLBACK_PATHS = new Set([
+  PROPERTY_IMAGE_FALLBACK,
+  '/placeholder.jpg',
+  '/assets/placeholder-home.jpg',
+]);
+
 export const withApiBase = (url: string | null | undefined): string | undefined => {
   if (!url) return undefined;
   if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) {
     return url;
   }
+  if (PUBLIC_FALLBACK_PATHS.has(url)) return url;
 
   // Fallback to localhost:5000 if VITE_API_URL is missing (dev mode assumption)
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -28,6 +37,7 @@ export const resolveMediaUrl = (input?: string | null): string | null => {
   if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
     return trimmed;
   }
+  if (PUBLIC_FALLBACK_PATHS.has(trimmed)) return trimmed;
 
   const base = import.meta.env.VITE_CLOUDFRONT_URL || import.meta.env.VITE_ASSETS_BASE_URL || '';
 

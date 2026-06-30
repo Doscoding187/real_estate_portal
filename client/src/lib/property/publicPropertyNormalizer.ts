@@ -17,7 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { resolveMediaUrl } from '@/lib/mediaUtils';
+import { PROPERTY_IMAGE_FALLBACK, resolveMediaUrl } from '@/lib/mediaUtils';
 import type {
   ImageUrls,
   SearchCardDevelopmentRef,
@@ -208,7 +208,7 @@ export function getPropertyCardImage(property: PropertyLike): string {
     const resolved = resolveImageUrl(imageUrlFromItem(candidate));
     if (resolved) return resolved;
   }
-  return '/placeholder-property.jpg';
+  return PROPERTY_IMAGE_FALLBACK;
 }
 
 export function getPropertyCardPrice(property: PropertyLike): PropertyCardPrice {

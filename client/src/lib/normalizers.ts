@@ -1,5 +1,5 @@
 import type { PropertyCardProps } from '@/components/PropertyCard';
-import { resolveMediaUrl } from '@/lib/mediaUtils';
+import { PROPERTY_IMAGE_FALLBACK, resolveMediaUrl } from '@/lib/mediaUtils';
 import { normalizePublicPropertyCard } from '@/lib/property';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import type { SearchCardResult } from '@/../../shared/types';
@@ -217,7 +217,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
         firstImageUrl ||
         raw.media?.find((m: any) => m.isPrimary)?.url ||
         raw.media?.[0]?.url ||
-        '/placeholder.jpg';
+        PROPERTY_IMAGE_FALLBACK;
       if (typeof img === 'string') {
         const resolved = resolveMediaUrl(img);
         if (resolved) return resolved;
