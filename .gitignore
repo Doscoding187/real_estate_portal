@@ -129,3 +129,6 @@ rg-meta-output*.txt
 vitest.*.timestamp-*.mjs
 trpc-*.txt
 mcps/
+
+# Local development uploads
+local-uploads/
