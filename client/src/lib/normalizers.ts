@@ -1,5 +1,6 @@
 import type { PropertyCardProps } from '@/components/PropertyCard';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
+import { normalizePublicPropertyCard } from '@/lib/property';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import type { SearchCardResult } from '@/../../shared/types';
 
@@ -280,60 +281,80 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
 }
 
 export function searchCardResultToPropertyCardProps(card: SearchCardResult): PropertyCardProps {
+  const normalized = normalizePublicPropertyCard({
+    ...card,
+    image: card.image || card.images?.[0]?.url,
+    images: card.images,
+    propertyId: card.propertyId,
+    developmentId: card.developmentId,
+    development: card.development,
+    developerBrand: card.developerBrand,
+    agent:
+      card.contactRole !== 'developer' && card.identity.name
+        ? {
+            id: card.identity.agentId,
+            name: card.identity.name,
+            agencyId: card.identity.agencyId,
+            phone: card.identity.phone,
+            whatsapp: card.identity.whatsapp,
+            email: card.identity.email,
+            image: card.identity.avatarUrl,
+          }
+        : undefined,
+  });
+
   const developerBrand =
-    card.developerBrand &&
-    typeof card.developerBrand.id === 'number' &&
-    card.developerBrand.id > 0 &&
-    card.developerBrand.slug
+    normalized.developerBrand &&
+    typeof normalized.developerBrand.id === 'number' &&
+    normalized.developerBrand.id > 0 &&
+    normalized.developerBrand.slug
       ? {
-          id: card.developerBrand.id,
-          brandName: card.developerBrand.brandName,
-          slug: card.developerBrand.slug,
-          logoUrl: card.developerBrand.logoUrl ?? null,
-          publicContactEmail: card.developerBrand.publicContactEmail ?? null,
-          publicContactPhone: card.developerBrand.publicContactPhone ?? null,
+          id: normalized.developerBrand.id,
+          brandName: normalized.developerBrand.brandName,
+          slug: normalized.developerBrand.slug,
+          logoUrl: normalized.developerBrand.logoUrl ?? null,
+          publicContactEmail: normalized.developerBrand.publicContactEmail ?? null,
+          publicContactPhone: normalized.developerBrand.publicContactPhone ?? null,
         }
       : undefined;
 
   return {
-    id: card.id,
-    href: card.href,
-    title: card.title,
-    price: card.price,
-    location: card.location,
-    image: card.image || card.images?.[0]?.url || '/placeholder-property.jpg',
-    description: card.description,
-    bedrooms: card.bedrooms,
-    bathrooms: card.bathrooms,
-    area: card.area,
-    yardSize: card.yardSize,
-    propertyType: card.propertyType
-      ? card.propertyType.charAt(0).toUpperCase() + card.propertyType.slice(1).replace('_', ' ')
-      : undefined,
-    listingType: card.listingType,
-    listingSource: card.listingSource,
-    listerType: card.listerType,
+    id: normalized.id,
+    href: normalized.href,
+    title: normalized.title,
+    price: normalized.price,
+    location: normalized.location,
+    image: normalized.image,
+    description: normalized.description,
+    bedrooms: normalized.bedrooms,
+    bathrooms: normalized.bathrooms,
+    area: normalized.area,
+    yardSize: normalized.yardSize,
+    propertyType: normalized.propertyType,
+    listingType: normalized.listingType,
+    listingSource: normalized.listingSource,
+    listerType: normalized.listerType,
     status: undefined,
-    transactionType: card.transactionType,
+    transactionType: normalized.listingType || card.transactionType,
     agent:
-      card.contactRole !== 'developer' && card.identity.name
+      normalized.contactRole !== 'developer' && normalized.identity.name
         ? {
-            id: card.identity.agentId ? String(card.identity.agentId) : undefined,
-            name: card.identity.name,
-            agencyId: card.identity.agencyId ? String(card.identity.agencyId) : undefined,
+            id: normalized.identity.agentId ? String(normalized.identity.agentId) : undefined,
+            name: normalized.identity.name,
+            agencyId: normalized.identity.agencyId ? String(normalized.identity.agencyId) : undefined,
             agency: undefined,
-            phone: card.identity.phone || undefined,
-            whatsapp: card.identity.whatsapp || undefined,
-            email: card.identity.email || undefined,
-            image: card.identity.avatarUrl || undefined,
+            phone: normalized.identity.phone || undefined,
+            whatsapp: normalized.identity.whatsapp || undefined,
+            email: normalized.identity.email || undefined,
+            image: normalized.identity.avatarUrl || undefined,
           }
         : undefined,
     developerBrand,
-    development: card.development,
-    badges: card.badges,
-    imageCount: card.imageCount,
-    videoCount: card.videoCount,
-    highlights: card.highlights,
+    development: normalized.development,
+    badges: normalized.badges,
+    imageCount: card.imageCount ?? normalized.imageCount,
+    videoCount: card.videoCount ?? normalized.videoCount,
+    highlights: normalized.highlights,
     suppressBadges: true,
   };
 }

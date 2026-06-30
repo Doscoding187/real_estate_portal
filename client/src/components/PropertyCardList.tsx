@@ -3,10 +3,6 @@ import { Button } from './ui/button';
 import {
   Heart,
   MapPin,
-  Bed,
-  Bath,
-  Square,
-  Building2,
   Image as ImageIcon,
   PlayCircle,
   Plus,
@@ -19,6 +15,7 @@ import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { ResponsiveHighlights } from './ResponsiveHighlights';
+import { getCompactPropertyFacts } from '@/lib/property';
 
 interface ImageUrls {
   thumbnail: string;
@@ -85,6 +82,21 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
   const isMultiSizeImage = typeof image === 'object' && 'medium' in image;
   const propertyId = parseInt(id);
   const inComparison = isInComparison(propertyId);
+  const compactFacts = getCompactPropertyFacts(
+    {
+      id,
+      title,
+      price,
+      bedrooms,
+      bathrooms,
+      area,
+      yardSize,
+      propertyType,
+      listingType,
+      floor,
+    },
+    4,
+  );
 
   const handleComparisonToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -93,26 +105,6 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
     } else {
       addToComparison(propertyId);
     }
-  };
-
-  // Determine area label based on property type
-  const getAreaLabel = () => {
-    const type = propertyType?.toLowerCase();
-    if (type === 'commercial') return ' (Floor)';
-    return ''; // Default for apartments and houses - just show as Size
-  };
-
-  // Check if we should show yard/land size (for houses, plots, farms)
-  const showsYardSize = () => {
-    const type = propertyType?.toLowerCase();
-    return type === 'house' || type === 'plot' || type === 'farm';
-  };
-
-  // Get yard/land label based on property type
-  const getYardLabel = () => {
-    const type = propertyType?.toLowerCase();
-    if (type === 'plot' || type === 'farm') return 'Land';
-    return 'Yard'; // Houses
   };
 
   return (
@@ -234,36 +226,15 @@ const PropertyCardList: React.FC<PropertyCardListProps> = ({
 
           {/* Specs */}
           <div className="flex items-center gap-4 text-sm text-slate-700 mb-4 flex-wrap">
-            {/* Building/Floor Size (always show if available) */}
-            {area && (
-              <div className="flex items-center gap-1.5">
-                <Home className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">
-                  Size {area.toLocaleString()} m²{getAreaLabel()}
-                </span>
-              </div>
-            )}
-            {bedrooms && (
-              <div className="flex items-center gap-1.5">
-                <Bed className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">{bedrooms} Bed</span>
-              </div>
-            )}
-            {bathrooms && (
-              <div className="flex items-center gap-1.5">
-                <Bath className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">{bathrooms} Bath</span>
-              </div>
-            )}
-            {/* Yard/Land Size (only for houses, plots, farms) */}
-            {showsYardSize() && yardSize && (
-              <div className="flex items-center gap-1.5">
-                <Square className="h-4 w-4 text-slate-400" />
-                <span className="font-medium">
-                  {getYardLabel()} {yardSize.toLocaleString()} m²
-                </span>
-              </div>
-            )}
+            {compactFacts.map(fact => {
+              const Icon = fact.icon;
+              return (
+                <div key={fact.key} className="flex items-center gap-1.5">
+                  <Icon className="h-4 w-4 text-slate-400" />
+                  <span className="font-medium">{fact.shortValue}</span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Highlights */}

@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react';
 import { Link } from 'wouter';
-import { Bath, Bed, Building2, House, MapPin, Trees } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
-import { withApiBase } from '@/lib/mediaUtils';
-import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import { Building2, House, MapPin } from 'lucide-react';
+import {
+  getCompactPropertyFacts,
+  getPropertyCardImage,
+  getPropertyCardLocation,
+  getPropertyCardPrice,
+} from '@/lib/property';
 
 export interface SimplePropertyListingCardProps {
   id: string;
@@ -18,14 +20,10 @@ export interface SimplePropertyListingCardProps {
   bathrooms?: number | null;
   area?: number | null;
   yardSize?: number | null;
+  propertyType?: string | null;
   developmentName?: string | null;
   badges?: string[];
 }
-
-const formatMeasure = (value?: number | null) => {
-  if (!value || value <= 0) return null;
-  return `${value.toLocaleString()} m²`;
-};
 
 export function SimplePropertyListingCard({
   id,
@@ -40,53 +38,36 @@ export function SimplePropertyListingCard({
   bathrooms,
   area,
   yardSize,
+  propertyType,
   developmentName,
   badges,
 }: SimplePropertyListingCardProps) {
-  const locationLabel = suburb ? `${suburb}, ${city}` : city;
-  const resolvedImage = withApiBase(image);
+  const normalizedProperty = {
+    id,
+    title,
+    city,
+    suburb,
+    price,
+    listingType,
+    image,
+    bedrooms,
+    bathrooms,
+    area,
+    yardSize,
+    propertyType,
+    developmentName,
+    badges,
+  };
+  const locationLabel = getPropertyCardLocation(normalizedProperty).label;
+  const resolvedImage = image ? getPropertyCardImage(normalizedProperty) : undefined;
   const visibleBadges = badges?.filter(Boolean).slice(0, 2) ?? [];
   const listingBadgeLabel = listingType === 'rent' ? 'For Rent' : 'For Sale';
   const listingBadgeClass =
     listingType === 'rent'
       ? 'bg-emerald-600/95 text-white'
       : 'bg-[#1e1b4b]/95 text-white';
-  const priceLabel =
-    price > 0
-      ? listingType === 'rent'
-        ? `${formatCurrency(price)} / month`
-        : formatCurrency(price)
-      : 'Price on request';
-  const specItems = [
-    formatMeasure(area)
-      ? {
-          key: 'area',
-          icon: <HouseMeasureIcon className="h-3.5 w-3.5 text-slate-400" />,
-          value: formatMeasure(area),
-        }
-      : null,
-    bedrooms
-      ? {
-          key: 'bedrooms',
-          icon: <Bed className="h-3.5 w-3.5 text-slate-400" />,
-          value: String(bedrooms),
-        }
-      : null,
-    bathrooms
-      ? {
-          key: 'bathrooms',
-          icon: <Bath className="h-3.5 w-3.5 text-slate-400" />,
-          value: String(bathrooms),
-        }
-      : null,
-    formatMeasure(yardSize)
-      ? {
-          key: 'yard-size',
-          icon: <Trees className="h-3.5 w-3.5 text-slate-400" />,
-          value: formatMeasure(yardSize),
-        }
-      : null,
-  ].filter(Boolean) as Array<{ key: string; icon: ReactNode; value: string }>;
+  const priceLabel = getPropertyCardPrice(normalizedProperty).label;
+  const specItems = getCompactPropertyFacts(normalizedProperty, 4);
 
   return (
     <Link
@@ -158,12 +139,15 @@ export function SimplePropertyListingCard({
 
         {specItems.length > 0 ? (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-2.5 text-xs text-slate-700">
-            {specItems.map(item => (
-              <div key={item.key} className="flex items-center gap-1.5 whitespace-nowrap">
-                {item.icon}
-                <span className="font-medium">{item.value}</span>
-              </div>
-            ))}
+            {specItems.map(item => {
+              const Icon = item.icon;
+              return (
+                <div key={item.key} className="flex items-center gap-1.5 whitespace-nowrap">
+                  <Icon className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="font-medium">{item.shortValue}</span>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="mt-2.5 flex items-center gap-1.5 border-t border-slate-100 pt-2.5 text-xs text-slate-500">
