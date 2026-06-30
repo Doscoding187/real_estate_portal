@@ -24,6 +24,7 @@ type TrendingItem = {
   title: string;
   city: string;
   suburb: string;
+  address?: string | null;
   priceFrom: number;
   priceTo: number;
   image: string;
@@ -160,6 +161,7 @@ export function HomeTrendingSection({
                         title={item.title}
                         city={item.city}
                         suburb={item.suburb}
+                        address={item.address}
                         image={item.image || ''}
                         href={item.href}
                         price={item.priceFrom}
@@ -177,6 +179,7 @@ export function HomeTrendingSection({
                         developmentName={item.developmentName || 'Featured Development'}
                         city={item.city}
                         suburb={item.suburb}
+                        address={item.address}
                         image={item.image || ''}
                         href={item.href}
                         priceFrom={item.priceFrom}
@@ -185,7 +188,8 @@ export function HomeTrendingSection({
                         bathrooms={item.bathrooms}
                         unitSize={item.unitSize}
                         yardSize={item.yardSize}
-                        badgeLabel="New development"
+                        propertyType={item.propertyType}
+                        badgeLabel={activeHeroTab === 'developments' ? 'New development' : 'New Build'}
                       />
                     ) : (
                       <SimpleDevelopmentCard

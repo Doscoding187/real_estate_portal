@@ -1,3 +1,5 @@
+import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+
 import {
   Bath,
   Bed,
@@ -8,14 +10,12 @@ import {
   Home,
   LandPlot,
   MapPin,
-  Maximize,
-  Ruler,
   Shield,
   Sparkles,
   Zap,
   Wifi,
-  type LucideIcon,
 } from 'lucide-react';
+import type { ComponentType } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { PROPERTY_IMAGE_FALLBACK, resolveMediaUrl } from '@/lib/mediaUtils';
 import type {
@@ -30,7 +30,7 @@ export type PropertyFact = {
   label: string;
   value: string;
   shortValue: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
   priority: number;
 };
 
@@ -104,7 +104,7 @@ export type PropertyFeatureSpecItem = {
   key: string;
   label: string;
   value: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string }>;
   priority: number;
   category: PropertyFeatureSpecCategory;
 };
@@ -344,7 +344,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'unit-size',
       label: 'Unit Size',
       value: formatM2(unitSize ?? 0),
-      icon: Ruler,
+      icon: HouseMeasureIcon,
       priority: 10,
     });
   } else if (isHouse || isTownhouse) {
@@ -353,7 +353,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'house-size',
       label: isTownhouse ? 'Unit Size' : 'House Size',
       value: formatM2(size ?? 0),
-      icon: Ruler,
+      icon: HouseMeasureIcon,
       priority: 10,
     });
   } else if (isLand) {
@@ -362,7 +362,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'land-size',
       label: 'Land Size',
       value: formatM2(size ?? 0),
-      icon: Maximize,
+      icon: LandPlot,
       priority: 10,
     });
   } else if (isCommercial) {
@@ -371,7 +371,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'floor-size',
       label: 'Floor Size',
       value: formatM2(size ?? 0),
-      icon: Ruler,
+      icon: HouseMeasureIcon,
       priority: 10,
     });
   } else {
@@ -380,7 +380,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
       key: 'size',
       label: 'Size',
       value: formatM2(size ?? 0),
-      icon: Ruler,
+      icon: HouseMeasureIcon,
       priority: 10,
     });
   }
@@ -405,7 +405,7 @@ export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
     key: 'erf-size',
     label: 'Erf Size',
     value: formatM2(erfSize ?? 0),
-    icon: Maximize,
+    icon: LandPlot,
     priority: 40,
   });
 
@@ -575,7 +575,7 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
     key: string;
     label: string;
     rawValue: unknown;
-    icon: LucideIcon;
+    icon: ComponentType<{ className?: string }>;
     priority: number;
     category: PropertyFeatureSpecCategory;
   }) => {

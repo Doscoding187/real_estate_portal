@@ -917,6 +917,7 @@ export const developerRouter = router({
         title: string;
         city: string;
         suburb: string;
+        address?: string | null;
         priceFrom: number;
         priceTo: number;
         image: string;
@@ -1059,6 +1060,7 @@ export const developerRouter = router({
         title: buildListingTitle(prop),
         city: prop.city || '',
         suburb: prop.suburb || '',
+        address: String(prop.address || '').trim() || null,
         priceFrom: Number(prop.price || 0),
         priceTo: Number(prop.price || 0),
         image: normalizeListingImage(prop),
@@ -1068,6 +1070,7 @@ export const developerRouter = router({
         bathrooms: Number(prop.bathrooms || 0) || null,
         area: Number(prop.floorSize || prop.area || 0) || null,
         yardSize: Number(prop.erfSize || prop.yardSize || 0) || null,
+        propertyType: String(prop.propertyType || '').trim() || null,
         developmentName:
           String(prop.development?.name || prop.developmentName || '').trim() || null,
         badges: Array.isArray(prop.badges)
@@ -1081,6 +1084,7 @@ export const developerRouter = router({
         title: item.title,
         city: item.city || '',
         suburb: item.suburb || '',
+        address: String(item.address || item.development?.address || '').trim() || null,
         priceFrom: Number(item.price || 0),
         priceTo: Number(item.priceTo || item.price || 0),
         image: String(item.image || ''),
