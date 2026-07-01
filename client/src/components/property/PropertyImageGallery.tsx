@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Box, Camera, ChevronLeft, ChevronRight, Images, Maximize2, Play, Ruler, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface PropertyImage {
   id: number;
@@ -82,41 +82,51 @@ export function PropertyImageGallery({
     {
       id: 'photos' as const,
       label: 'Photos',
-      count: sortedImages.length,
+      icon: Images,
+      meta: String(sortedImages.length),
       enabled: true,
       action: () => setActiveMediaTab('photos'),
     },
     {
       id: 'videos' as const,
       label: 'Videos',
-      count: videoCount,
+      icon: Play,
+      meta: String(videoCount || 0),
       enabled: videoCount > 0 && Boolean(onOpenVideos),
       action: () => {
-        setActiveMediaTab('videos');
-        onOpenVideos?.();
+        if (videoCount > 0 && onOpenVideos) {
+          setActiveMediaTab('videos');
+          onOpenVideos();
+        }
       },
     },
     {
       id: 'virtual' as const,
-      label: 'Virtual Tour',
-      count: null,
+      label: '3D Tour',
+      icon: Box,
+      meta: hasVirtualTour ? '360°' : '0',
       enabled: hasVirtualTour && Boolean(onOpenVirtualTour),
       action: () => {
-        setActiveMediaTab('virtual');
-        onOpenVirtualTour?.();
+        if (hasVirtualTour && onOpenVirtualTour) {
+          setActiveMediaTab('virtual');
+          onOpenVirtualTour();
+        }
       },
     },
     {
       id: 'plan' as const,
       label: 'Floor Plan',
-      count: null,
+      icon: Ruler,
+      meta: hasFloorPlan ? '1' : '0',
       enabled: hasFloorPlan && Boolean(onOpenFloorPlan),
       action: () => {
-        setActiveMediaTab('plan');
-        onOpenFloorPlan?.();
+        if (hasFloorPlan && onOpenFloorPlan) {
+          setActiveMediaTab('plan');
+          onOpenFloorPlan();
+        }
       },
     },
-  ].filter(tab => tab.enabled);
+  ];
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -145,13 +155,13 @@ export function PropertyImageGallery({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full flex-col gap-3">
       {/* Main Image */}
-      <div className="relative group rounded-lg overflow-hidden">
+      <div className="relative group min-h-[520px] flex-1 overflow-hidden rounded-2xl bg-slate-100">
         <img
           src={sortedImages[selectedImageIndex].imageUrl}
           alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
-          className="w-full h-[280px] sm:h-[400px] lg:h-[500px] object-cover cursor-pointer transition-transform hover:scale-105"
+          className="h-full min-h-[520px] w-full object-cover cursor-pointer transition-transform hover:scale-[1.02]"
           onClick={() => setIsLightboxOpen(true)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -159,7 +169,8 @@ export function PropertyImageGallery({
         />
 
         {/* Desktop Image Counter */}
-        <div className="absolute top-4 right-4 hidden md:block bg-black/70 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+        <div className="absolute bottom-4 left-4 hidden items-center gap-1.5 rounded-full bg-slate-950/75 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur md:inline-flex">
+          <Camera className="h-3.5 w-3.5" />
           {selectedImageIndex + 1} / {sortedImages.length}
         </div>
 
@@ -185,94 +196,80 @@ export function PropertyImageGallery({
           </>
         )}
 
-        {/* Desktop Expand Buttons */}
-        <div className="absolute bottom-4 right-4 hidden md:flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="secondary" size="sm" onClick={() => setIsLightboxOpen(true)}>
-            <ZoomIn className="h-4 w-4 mr-2" />
-            View All Photos
+        {/* Desktop Expand Button */}
+        <div className="absolute bottom-4 right-4 hidden md:flex">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-full bg-white/90 text-slate-900 shadow-sm backdrop-blur hover:bg-white"
+            onClick={() => setIsLightboxOpen(true)}
+          >
+            <Maximize2 className="mr-2 h-4 w-4" />
+            View all photos
           </Button>
-          {videoCount > 0 && onOpenVideos && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white border-0"
-              onClick={onOpenVideos}
-            >
-              <ZoomIn className="h-4 w-4 mr-2" />
-              View All Videos
-            </Button>
-          )}
         </div>
       </div>
 
       {/* Media Tabs - Mobile */}
-      <div className="flex justify-center gap-2 overflow-x-auto pb-1 md:hidden">
-        {mediaTabs.map(tab => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={tab.action}
-            className={`whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-              activeMediaTab === tab.id
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            {tab.label}
-            {typeof tab.count === 'number' && tab.count > 0 ? ` (${tab.count})` : ''}
-          </button>
-        ))}
-      </div>
-
-      {/* Image Counter - Mobile */}
-      <div className="text-center space-y-2 md:hidden">
-        <span className="text-sm text-slate-500">
-          {selectedImageIndex + 1} / {sortedImages.length}
-        </span>
-        {sortedImages.length > 1 && (
-          <div className="flex items-center justify-center gap-1.5">
-            {sortedImages.slice(0, 8).map((image, index) => (
-              <button
-                key={image.id}
-                type="button"
-                aria-label={`Go to image ${index + 1}`}
-                className={`h-1.5 w-1.5 rounded-full transition-all ${
-                  selectedImageIndex === index ? 'bg-blue-600 w-4' : 'bg-slate-300'
-                }`}
-                onClick={() => setSelectedImageIndex(index)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Thumbnail Grid - Hidden on mobile */}
-      {sortedImages.length > 1 && (
-        <div className="hidden md:grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-          {sortedImages.slice(0, 8).map((image, index) => (
-            <div
-              key={image.id}
-              className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer transition-all ${
-                selectedImageIndex === index
-                  ? 'ring-2 ring-primary ring-offset-2'
-                  : 'hover:opacity-80'
-              }`}
-              onClick={() => setSelectedImageIndex(index)}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden">
+        {mediaTabs.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              disabled={!tab.enabled}
+              onClick={tab.action}
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                activeMediaTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              } ${!tab.enabled ? 'cursor-not-allowed opacity-45 hover:bg-slate-100' : ''}`}
             >
-              <img
-                src={image.imageUrl}
-                alt={`Thumbnail ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
-              {index === 7 && sortedImages.length > 8 && (
-                <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-semibold">
-                  +{sortedImages.length - 8}
-                </div>
-              )}
-            </div>
-          ))}
+              <Icon className="h-3.5 w-3.5" />
+              {tab.label}
+              <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                {tab.meta}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop Media Rail */}
+      <div className="hidden md:block">
+        <div className="grid grid-cols-4 gap-2">
+          {mediaTabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeMediaTab === tab.id;
+
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                disabled={!tab.enabled}
+                onClick={tab.action}
+                aria-pressed={isActive}
+                className={`flex min-w-0 items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                  isActive
+                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50/60'
+                } ${!tab.enabled ? 'cursor-not-allowed opacity-45 hover:border-slate-200 hover:bg-white' : ''}`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden truncate sm:inline">{tab.label}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    isActive ? 'bg-white text-blue-700' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {tab.meta}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Lightbox Modal */}
       <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
