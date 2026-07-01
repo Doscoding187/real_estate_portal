@@ -55,7 +55,12 @@ import {
 } from '@/components/property/DeveloperBrandSection';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/seo/structuredData';
-import { getCompactPropertyFacts, getPropertyBuyerChecklist, getPropertyRunningCostFacts } from '@/lib/property';
+import {
+  getCompactPropertyFacts,
+  getPropertyBuyerChecklist,
+  getPropertyFeatureChecklistItems,
+  getPropertyRunningCostFacts,
+} from '@/lib/property';
 
 interface PropertyDetailProps {
   propertyId?: number;
@@ -593,6 +598,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
       : [];
   const propertyDetailItems = getCompactPropertyFacts(property, 4);
   const featureSpecItems = getPropertyBuyerChecklist(property);
+  const propertyFeatureChecklistItems = getPropertyFeatureChecklistItems(property).slice(0, 18);
   const runningCostItems = getPropertyRunningCostFacts(property);
   const openQualification = () => {
     setIsQualificationOpen(true);
@@ -1242,8 +1248,40 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
               </Card>
             )}
 
+            {/* 2.3 Property Features & Specifications */}
+            {propertyFeatureChecklistItems.length > 0 && (
+              <Card
+                id={featureSpecItems.length === 0 ? 'features' : undefined}
+                className="border-slate-200 shadow-sm"
+              >
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                    Property Features & Specifications
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {propertyFeatureChecklistItems.map(item => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.key}
+                          className="flex min-h-[44px] items-center gap-3 rounded-lg bg-slate-50 px-3 py-2.5"
+                        >
+                          <Icon className="h-5 w-5 shrink-0 text-blue-600" />
+                          <span className="text-sm font-semibold leading-snug text-slate-900">
+                            {item.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* 2.3 Additional Rooms */}
-            {specs.additionalRooms && specs.additionalRooms.length > 0 && (
+            {propertyFeatureChecklistItems.length === 0 && specs.additionalRooms && specs.additionalRooms.length > 0 && (
               <Card
                 id={featureSpecItems.length === 0 ? 'features' : undefined}
                 className="border-slate-200 shadow-sm"
@@ -1270,7 +1308,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
             )}
 
             {/* 2.4 Amenities */}
-            {highlights.length > 0 && (
+            {propertyFeatureChecklistItems.length === 0 && highlights.length > 0 && (
               <Card
                 id={
                   featureSpecItems.length === 0 &&

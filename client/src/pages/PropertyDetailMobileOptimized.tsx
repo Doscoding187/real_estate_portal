@@ -54,7 +54,7 @@ import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/s
 import {
   getCompactPropertyFacts,
   getPropertyBuyerChecklist,
-  getPropertyFeatureSpecs,
+  getPropertyFeatureChecklistItems,
   getPropertyRunningCostFacts,
 } from '@/lib/property';
 
@@ -68,29 +68,6 @@ const amenityIcons: Record<string, any> = {
   electricity: Zap,
 };
 
-const PROPERTY_FEATURE_SPEC_EXCLUDED_KEYS = new Set([
-  'electricity',
-  'power-backup',
-  'water-supply',
-  'water-backup',
-  'internet-fibre',
-  'security',
-  'security-features',
-  'parking-type',
-  'parking-count',
-  'pet-friendly',
-  'levies',
-  'rates-and-taxes',
-  'ownership-type',
-]);
-
-const PROPERTY_FEATURE_SPEC_EXCLUDED_CATEGORIES = new Set([
-  'cost',
-  'utility',
-  'security',
-  'ownership',
-  'parking',
-]);
 
 const formatLabel = (value?: string | null) =>
   String(value || '')
@@ -517,13 +494,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const propertyDetailItems = getCompactPropertyFacts(property, 4);
   const mobilePropertySummaryItems = propertyDetailItems;
   const featureSpecItems = getPropertyBuyerChecklist(property);
-  const propertyFeatureSpecItems = getPropertyFeatureSpecs(property)
-    .filter(
-      item =>
-        !PROPERTY_FEATURE_SPEC_EXCLUDED_KEYS.has(item.key) &&
-        !PROPERTY_FEATURE_SPEC_EXCLUDED_CATEGORIES.has(item.category),
-    )
-    .slice(0, 12);
+  const propertyFeatureChecklistItems = getPropertyFeatureChecklistItems(property).slice(0, 15);
   const runningCostItems = getPropertyRunningCostFacts(property);
   const normalizedListingType = String(property.listingType || '')
     .trim()
@@ -1373,8 +1344,8 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               </Card>
             )}
 
-            {/* 2.2 Property Features / Specs Table (Dynamic) */}
-            {propertyFeatureSpecItems.length > 0 && (
+            {/* 2.2 Property Features / Specs Checklist (Dynamic) */}
+            {propertyFeatureChecklistItems.length > 0 && (
               <Card className="scroll-mt-32 border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
@@ -1382,21 +1353,18 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {propertyFeatureSpecItems.map(item => {
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {propertyFeatureChecklistItems.map(item => {
                       const Icon = item.icon;
                       return (
                         <div
                           key={item.key}
-                          className="flex items-start gap-2 p-2.5 bg-slate-50 rounded-lg"
+                          className="flex min-h-[40px] items-center gap-2 rounded-lg bg-slate-50 px-3 py-2"
                         >
-                          <Icon className="h-5 w-5 text-blue-600 mt-0.5" />
-                          <div>
-                            <p className="text-sm text-slate-500">{item.label}</p>
-                            <p className="font-semibold text-slate-900" title={item.value}>
-                              {item.value}
-                            </p>
-                          </div>
+                          <Icon className="h-4 w-4 shrink-0 text-blue-600" />
+                          <span className="text-sm font-semibold leading-snug text-slate-900">
+                            {item.label}
+                          </span>
                         </div>
                       );
                     })}

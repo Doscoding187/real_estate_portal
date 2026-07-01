@@ -6,6 +6,7 @@ import {
   Car,
   CheckCircle2,
   Droplets,
+  Dumbbell,
   Home,
   LandPlot,
   MapPin,
@@ -13,6 +14,7 @@ import {
   Ruler,
   Shield,
   Sparkles,
+  Trees,
   Waves,
   Zap,
   Wifi,
@@ -109,6 +111,13 @@ export type PropertyFeatureSpecItem = {
   icon: LucideIcon;
   priority: number;
   category: PropertyFeatureSpecCategory;
+};
+
+export type PropertyFeatureChecklistItem = {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  source: 'structured' | 'custom';
 };
 
 const parsePositiveNumber = (value: unknown): number | undefined => {
@@ -536,6 +545,177 @@ const formatFeatureValue = (value: unknown): string | undefined => {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return titleCase(value);
 };
+
+
+const PROPERTY_FEATURE_CHECKLIST_EXCLUDED_KEYS = new Set([
+  'electricity',
+  'power-backup',
+  'water-supply',
+  'water-backup',
+  'internet-fibre',
+  'security',
+  'security-features',
+  'parking-type',
+  'parking-count',
+  'pet-friendly',
+  'levies',
+  'rates-and-taxes',
+  'ownership-type',
+  'flooring',
+]);
+
+const PROPERTY_FEATURE_CHECKLIST_EXCLUDED_CATEGORIES = new Set<PropertyFeatureSpecCategory>([
+  'cost',
+  'utility',
+  'security',
+  'ownership',
+  'parking',
+]);
+
+const BUYER_CHECKLIST_FEATURE_FRAGMENTS = [
+  'backup power',
+  'fibre ready',
+  'fiber ready',
+  'fibre',
+  'fiber',
+  'parking',
+  'undercover parking',
+  'covered parking',
+  'security',
+  '24hr security',
+  '24 hour security',
+  'access control',
+  'cctv',
+  'electric fence',
+  'guard house',
+  'borehole',
+  'prepaid electricity',
+  'electricity',
+];
+
+const normalizeFeatureChecklistToken = (value: unknown) =>
+  String(value || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+const featureChecklistIconFor = (label: string, key?: string): LucideIcon => {
+  const token = normalizeFeatureChecklistToken(`${key || ''} ${label}`);
+
+  if (token.includes('pool') || token.includes('swimming')) return Waves;
+  if (token.includes('gym') || token.includes('fitness')) return Dumbbell;
+  if (token.includes('garden') || token.includes('landscap')) return Trees;
+  if (token.includes('balcony') || token.includes('patio') || token.includes('deck')) {
+    return Building2;
+  }
+  if (token.includes('braai') || token.includes('entertain')) return Sparkles;
+  if (token.includes('clubhouse') || token.includes('club house')) return Home;
+  if (token.includes('lift') || token.includes('elevator')) return Building2;
+  if (token.includes('kitchen')) return Home;
+  if (token.includes('air conditioning') || token.includes('aircon')) return Building2;
+  if (token.includes('water heating') || token.includes('geyser')) return Waves;
+  if (token.includes('staff quarter') || token.includes('room') || token.includes('study')) {
+    return Home;
+  }
+  if (token.includes('gautrain') || token.includes('near') || token.includes('close to')) {
+    return MapPin;
+  }
+
+  return CheckCircle2;
+};
+
+export function getPropertyFeatureChecklistItems(
+  property: PropertyLike,
+): PropertyFeatureChecklistItem[] {
+  const items = new Map<string, PropertyFeatureChecklistItem>();
+
+  const addItem = ({
+    key,
+    label,
+    icon,
+    source,
+  }: {
+    key: string;
+    label: string;
+    icon?: LucideIcon;
+    source: 'structured' | 'custom';
+  }) => {
+    const normalized = normalizeFeatureChecklistToken(label);
+    if (!normalized) return;
+
+    const duplicatesBuyerChecklist = BUYER_CHECKLIST_FEATURE_FRAGMENTS.some(fragment =>
+      normalized.includes(fragment),
+    );
+    if (duplicatesBuyerChecklist) return;
+
+    const dedupeKey =
+      normalized.includes('swimming pool') || normalized === 'pool'
+        ? 'pool'
+        : normalized.includes('gym')
+          ? 'gym'
+          : normalized;
+
+    if (items.has(dedupeKey)) return;
+
+    items.set(dedupeKey, {
+      key,
+      label: formatFeatureValue(label) || label,
+      icon: icon || featureChecklistIconFor(label, key),
+      source,
+    });
+  };
+
+  for (const spec of getPropertyFeatureSpecs(property)) {
+    if (
+      PROPERTY_FEATURE_CHECKLIST_EXCLUDED_KEYS.has(spec.key) ||
+      PROPERTY_FEATURE_CHECKLIST_EXCLUDED_CATEGORIES.has(spec.category)
+    ) {
+      continue;
+    }
+
+    const values = String(spec.value || '')
+      .split(',')
+      .map(value => value.trim())
+      .filter(Boolean);
+
+    if (
+      spec.key === 'lifestyle-amenities' ||
+      spec.key === 'additional-rooms' ||
+      spec.key === 'outdoor-features' ||
+      values.length > 1
+    ) {
+      for (const value of values) {
+        addItem({
+          key: `${spec.key}-${normalizeFeatureChecklistToken(value).replace(/\s+/g, '-')}`,
+          label: value,
+          source: spec.key === 'lifestyle-amenities' ? 'custom' : 'structured',
+        });
+      }
+      continue;
+    }
+
+    if (String(spec.value).toLowerCase() === 'yes') {
+      addItem({
+        key: spec.key,
+        label: spec.label,
+        icon: featureChecklistIconFor(spec.label, spec.key),
+        source: 'structured',
+      });
+      continue;
+    }
+
+    addItem({
+      key: spec.key,
+      label: `${spec.label}: ${spec.value}`,
+      icon: featureChecklistIconFor(`${spec.label}: ${spec.value}`, spec.key),
+      source: 'structured',
+    });
+  }
+
+  return Array.from(items.values()).slice(0, 18);
+}
+
 
 export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeatureSpecItem[] {
   const details = getDetails(property);
