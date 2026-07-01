@@ -174,13 +174,13 @@ export function PropertyImageGallery({
           {selectedImageIndex + 1} / {sortedImages.length}
         </div>
 
-        {/* Navigation Arrows - Always visible on mobile */}
+        {/* Navigation Arrows - Desktop hover only; mobile uses swipe */}
         {sortedImages.length > 1 && (
           <>
             <Button
               variant="secondary"
               size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-full"
+              className="absolute left-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity md:flex md:group-hover:opacity-100"
               onClick={handlePrevious}
             >
               <ChevronLeft className="h-6 w-6" />
@@ -188,7 +188,7 @@ export function PropertyImageGallery({
             <Button
               variant="secondary"
               size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-full"
+              className="absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity md:flex md:group-hover:opacity-100"
               onClick={handleNext}
             >
               <ChevronRight className="h-6 w-6" />
