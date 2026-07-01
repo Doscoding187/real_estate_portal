@@ -733,11 +733,43 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
   }
 
   addFormattedSpec({
+    key: 'furnishing',
+    label: 'Furnishing',
+    rawValue: valueFor('furnishing', 'furnishingStatus'),
+    icon: Home,
+    priority: 135,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
     key: 'flooring',
     label: 'Flooring',
     rawValue: valueFor('flooring', 'flooringType'),
     icon: Building2,
     priority: 140,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'kitchen-type',
+    label: 'Kitchen Type',
+    rawValue: valueFor('kitchenType'),
+    icon: Home,
+    priority: 145,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'air-conditioning',
+    label: 'Air Conditioning',
+    rawValue: valueFor('airConditioning'),
+    icon: Building2,
+    priority: 148,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'water-heating',
+    label: 'Water Heating',
+    rawValue: valueFor('waterHeating'),
+    icon: Waves,
+    priority: 149,
     category: 'lifestyle',
   });
   addFormattedSpec({
@@ -748,6 +780,93 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
     priority: 150,
     category: 'lifestyle',
   });
+
+  const outdoorFeatureValue = formatFeatureValue(valueFor('outdoorFeatures'));
+  if (outdoorFeatureValue) {
+    addSpec({
+      key: 'outdoor-features',
+      label: 'Outdoor Features',
+      value: outdoorFeatureValue,
+      icon: LandPlot,
+      priority: 155,
+      category: 'lifestyle',
+    });
+  }
+
+  const booleanLifestyleSpecs: Array<{
+    key: string;
+    label: string;
+    sourceKeys: string[];
+    icon: LucideIcon;
+    priority: number;
+  }> = [
+    { key: 'balcony', label: 'Balcony', sourceKeys: ['balcony'], icon: Building2, priority: 160 },
+    { key: 'garden', label: 'Garden', sourceKeys: ['garden'], icon: LandPlot, priority: 165 },
+    { key: 'pool', label: 'Pool', sourceKeys: ['pool'], icon: Waves, priority: 170 },
+    {
+      key: 'staff-quarters',
+      label: 'Staff Quarters',
+      sourceKeys: ['staffQuarters'],
+      icon: Home,
+      priority: 175,
+    },
+    {
+      key: 'boundary-walls',
+      label: 'Boundary Walls',
+      sourceKeys: ['boundaryWalls'],
+      icon: Shield,
+      priority: 180,
+    },
+  ];
+
+  for (const spec of booleanLifestyleSpecs) {
+    const value = parseBoolean(valueFor(...spec.sourceKeys));
+    if (value === true) {
+      addSpec({
+        key: spec.key,
+        label: spec.label,
+        value: 'Yes',
+        icon: spec.icon,
+        priority: spec.priority,
+        category: 'lifestyle',
+      });
+    }
+  }
+
+  const buyerChecklistAmenityTokens = new Set([
+    'backup_power',
+    'fibre_ready',
+    'fiber_ready',
+    'parking_bay',
+    'access_control',
+    'cctv',
+    'electric_fence',
+    'security_guard_house',
+    'security',
+    '24hr_security',
+    'borehole',
+  ]);
+
+  const lifestyleAmenities = [
+    ...((Array.isArray(valueFor('amenities')) ? valueFor('amenities') : []) as unknown[]),
+    ...((Array.isArray(valueFor('amenitiesFeatures')) ? valueFor('amenitiesFeatures') : []) as unknown[]),
+    ...((Array.isArray(valueFor('propertyHighlights')) ? valueFor('propertyHighlights') : []) as unknown[]),
+  ]
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+    .filter(item => !buyerChecklistAmenityTokens.has(item.toLowerCase()));
+
+  const uniqueLifestyleAmenities = Array.from(new Set(lifestyleAmenities));
+  if (uniqueLifestyleAmenities.length > 0) {
+    addSpec({
+      key: 'lifestyle-amenities',
+      label: 'Lifestyle Amenities',
+      value: formatFeatureValue(uniqueLifestyleAmenities) || uniqueLifestyleAmenities.join(', '),
+      icon: Sparkles,
+      priority: 185,
+      category: 'lifestyle',
+    });
+  }
 
   return specs.sort((left, right) => left.priority - right.priority);
 }

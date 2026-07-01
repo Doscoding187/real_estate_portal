@@ -54,6 +54,7 @@ import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/s
 import {
   getCompactPropertyFacts,
   getPropertyBuyerChecklist,
+  getPropertyFeatureSpecs,
   getPropertyRunningCostFacts,
 } from '@/lib/property';
 
@@ -66,6 +67,30 @@ const amenityIcons: Record<string, any> = {
   pool: Droplets,
   electricity: Zap,
 };
+
+const PROPERTY_FEATURE_SPEC_EXCLUDED_KEYS = new Set([
+  'electricity',
+  'power-backup',
+  'water-supply',
+  'water-backup',
+  'internet-fibre',
+  'security',
+  'security-features',
+  'parking-type',
+  'parking-count',
+  'pet-friendly',
+  'levies',
+  'rates-and-taxes',
+  'ownership-type',
+]);
+
+const PROPERTY_FEATURE_SPEC_EXCLUDED_CATEGORIES = new Set([
+  'cost',
+  'utility',
+  'security',
+  'ownership',
+  'parking',
+]);
 
 const formatLabel = (value?: string | null) =>
   String(value || '')
@@ -492,6 +517,13 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const propertyDetailItems = getCompactPropertyFacts(property, 4);
   const mobilePropertySummaryItems = propertyDetailItems;
   const featureSpecItems = getPropertyBuyerChecklist(property);
+  const propertyFeatureSpecItems = getPropertyFeatureSpecs(property)
+    .filter(
+      item =>
+        !PROPERTY_FEATURE_SPEC_EXCLUDED_KEYS.has(item.key) &&
+        !PROPERTY_FEATURE_SPEC_EXCLUDED_CATEGORIES.has(item.category),
+    )
+    .slice(0, 12);
   const runningCostItems = getPropertyRunningCostFacts(property);
   const normalizedListingType = String(property.listingType || '')
     .trim()
@@ -1049,28 +1081,33 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                     <h2 className="text-sm font-extrabold text-slate-950">Key buyer checks</h2>
                     <p className="text-xs font-medium text-slate-500">Utilities and security</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+                  <div className="grid grid-cols-3 gap-2">
                     {featureSpecItems.slice(0, 9).map(item => {
                       const Icon = item.icon;
                       const isMissing = item.status === 'missing';
                       return (
-                        <div key={item.key} className="grid min-h-[44px] min-w-0 grid-cols-[36px_minmax(0,1fr)] items-start gap-x-2.5">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
-                            <Icon className="h-4 w-4" />
+                        <div
+                          key={item.key}
+                          className={`min-w-0 rounded-xl border px-2 py-2 text-center ${
+                            isMissing
+                              ? 'border-slate-200 bg-slate-50/80'
+                              : 'border-slate-200 bg-white'
+                          }`}
+                        >
+                          <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+                            <Icon className="h-3.5 w-3.5" />
                           </span>
-                          <div className="min-w-0 pt-0.5 text-left">
-                            <p className="truncate text-[10px] font-bold uppercase text-slate-500">
-                              {item.label}
-                            </p>
-                            <p
-                              className={`mt-0.5 truncate text-sm font-bold leading-tight ${
-                                isMissing ? 'text-slate-600' : 'text-slate-950'
-                              }`}
-                              title={item.value}
-                            >
-                              {item.value}
-                            </p>
-                          </div>
+                          <p className="mt-1 truncate text-[9px] font-bold uppercase leading-tight text-slate-500">
+                            {item.label}
+                          </p>
+                          <p
+                            className={`mt-0.5 truncate text-[11px] font-extrabold leading-tight ${
+                              isMissing ? 'text-slate-600' : 'text-slate-950'
+                            }`}
+                            title={item.value}
+                          >
+                            {item.value}
+                          </p>
                         </div>
                       );
                     })}
@@ -1337,7 +1374,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             )}
 
             {/* 2.2 Property Features / Specs Table (Dynamic) */}
-            {featureSpecItems.length > 0 && (
+            {propertyFeatureSpecItems.length > 0 && (
               <Card className="scroll-mt-32 border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
@@ -1346,7 +1383,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {featureSpecItems.map(item => {
+                    {propertyFeatureSpecItems.map(item => {
                       const Icon = item.icon;
                       return (
                         <div
