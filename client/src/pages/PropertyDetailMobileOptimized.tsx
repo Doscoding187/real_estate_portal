@@ -12,6 +12,7 @@ import { useGuestActivity } from '@/contexts/GuestActivityContext';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
+import { formatFullPropertyLocation } from '@/lib/propertyLocationDisplay';
 import {
   MapPin,
   Bed,
@@ -24,6 +25,7 @@ import {
   ChevronRight,
   Building2,
   Car,
+  MessageCircle,
   Wifi,
   Dumbbell,
   Trees,
@@ -49,6 +51,11 @@ import {
 } from '@/components/property/DeveloperBrandSection';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { buildBreadcrumbStructuredData, buildPlaceStructuredData } from '@/lib/seo/structuredData';
+import {
+  getCompactPropertyFacts,
+  getPropertyBuyerChecklist,
+  getPropertyRunningCostFacts,
+} from '@/lib/property';
 
 const amenityIcons: Record<string, any> = {
   parking: Car,
@@ -102,6 +109,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isBondCalculatorOpen, setIsBondCalculatorOpen] = useState(false);
   const [contactInitialMessage, setContactInitialMessage] = useState('');
+  const [contactIntent, setContactIntent] = useState<'enquiry' | 'whatsapp'>('enquiry');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
 
@@ -472,166 +480,19 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const unitSizeM2 = parseStrictNumber(mergedDetailSpecs.unitSizeM2);
   const parkingLabel = formatLabel(specs.parkingType);
   const displayPrice = Number(property.price) || 0;
+  const displayLocationLabel = formatFullPropertyLocation({
+    address: property.address,
+    suburb: property.suburb,
+    city: property.city,
+    province: property.province,
+  });
   const displayRepayment = displayPrice > 0 ? Math.round(displayPrice * 0.0095) : 0;
   const whatsappNumber = String(contactIdentity?.whatsapp || contactIdentity?.phone || '').trim();
-  const hasPrimaryContactAction = Boolean(whatsappNumber || contactMode !== 'unknown');
-  const propertyDetailItems = [
-    property.bedrooms
-      ? {
-          key: 'bedrooms',
-          label: 'Bedrooms',
-          value: `${property.bedrooms} Bedroom${property.bedrooms === 1 ? '' : 's'}`,
-          icon: Bed,
-        }
-      : null,
-    property.bathrooms
-      ? {
-          key: 'bathrooms',
-          label: 'Bathrooms',
-          value: `${property.bathrooms} Bathroom${property.bathrooms === 1 ? '' : 's'}`,
-          icon: Bath,
-        }
-      : null,
-    parkingLabel
-      ? {
-          key: 'parking',
-          label: 'Parking',
-          value: parkingLabel,
-          icon: Car,
-        }
-      : null,
-    houseSizeM2
-      ? {
-          key: 'house-size',
-          label: 'House Size',
-          value: `${houseSizeM2.toLocaleString()} m²`,
-          icon: Maximize,
-        }
-      : unitSizeM2
-        ? {
-            key: 'floor-size',
-            label: 'Floor Size',
-            value: `${unitSizeM2.toLocaleString()} m²`,
-            icon: Maximize,
-          }
-        : null,
-    erfSizeM2
-      ? {
-          key: 'erf-size',
-          label: 'Erf Size',
-          value: `${erfSizeM2.toLocaleString()} m²`,
-          icon: Home,
-        }
-      : null,
-    property.propertyType
-      ? {
-          key: 'property-type',
-          label: 'Property Type',
-          value: formatLabel(property.propertyType),
-          icon: Building2,
-        }
-      : null,
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: any }>;
-  const propertySummarySizeValue = houseSizeM2 || unitSizeM2;
-  const mobilePropertySummaryItems = [
-    propertySummarySizeValue
-      ? {
-          key: 'size',
-          icon: Maximize,
-          value: `${propertySummarySizeValue.toLocaleString()}m²`,
-        }
-      : null,
-    property.bedrooms
-      ? {
-          key: 'bedrooms',
-          icon: Bed,
-          value: String(property.bedrooms),
-        }
-      : null,
-    property.bathrooms
-      ? {
-          key: 'bathrooms',
-          icon: Bath,
-          value: String(property.bathrooms),
-        }
-      : null,
-    erfSizeM2
-      ? {
-          key: 'erf-size',
-          icon: Home,
-          value: `${erfSizeM2.toLocaleString()}m²`,
-        }
-      : null,
-  ].filter(Boolean) as Array<{ key: string; icon: any; value: string }>;
-  const featureSpecItems = [
-    specs.ownershipType
-      ? {
-          key: 'ownershipType',
-          label: 'Ownership Type',
-          value: formatLabel(specs.ownershipType),
-          icon: Home,
-        }
-      : null,
-    specs.powerBackup
-      ? {
-          key: 'powerBackup',
-          label: 'Power Backup',
-          value: formatLabel(specs.powerBackup),
-          icon: Zap,
-        }
-      : null,
-    specs.security
-      ? {
-          key: 'security',
-          label: 'Security',
-          value: formatLabel(specs.security),
-          icon: Shield,
-        }
-      : null,
-    specs.waterSupply
-      ? {
-          key: 'waterSupply',
-          label: 'Water Supply',
-          value: formatLabel(specs.waterSupply),
-          icon: Droplets,
-        }
-      : null,
-    specs.internetAccess
-      ? {
-          key: 'internetAccess',
-          label: 'Internet',
-          value: formatLabel(specs.internetAccess),
-          icon: Wifi,
-        }
-      : null,
-    specs.flooring
-      ? { key: 'flooring', label: 'Flooring', value: formatLabel(specs.flooring), icon: Building2 }
-      : null,
-    specs.parkingType
-      ? {
-          key: 'parkingType',
-          label: 'Parking Type',
-          value: formatLabel(specs.parkingType),
-          icon: Car,
-        }
-      : null,
-    specs.petFriendly
-      ? {
-          key: 'petFriendly',
-          label: 'Pet Friendly',
-          value: formatLabel(specs.petFriendly),
-          icon: CheckCircle2,
-        }
-      : null,
-    specs.electricitySupply
-      ? {
-          key: 'electricitySupply',
-          label: 'Electricity',
-          value: formatLabel(specs.electricitySupply),
-          icon: Zap,
-        }
-      : null,
-  ].filter(Boolean) as Array<{ key: string; label: string; value: string; icon: any }>;
+  const hasPrimaryContactAction = Boolean(contactMode !== 'unknown');
+  const propertyDetailItems = getCompactPropertyFacts(property, 4);
+  const mobilePropertySummaryItems = propertyDetailItems;
+  const featureSpecItems = getPropertyBuyerChecklist(property);
+  const runningCostItems = getPropertyRunningCostFacts(property);
   const normalizedListingType = String(property.listingType || '')
     .trim()
     .toLowerCase();
@@ -820,7 +681,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     setLocation(`/properties?${params.toString()}`);
   };
   const handleWhatsAppLeadCapture = (message?: string) => {
-    if (!whatsappNumber) return;
+    setContactIntent('whatsapp');
     setContactInitialMessage(
       message || `Hi, I'm interested in ${property.title}. Please share more information.`,
     );
@@ -932,7 +793,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
               <div className="flex items-center gap-2 text-slate-500">
                 <MapPin className="h-4 w-4" />
                 <span className="text-base text-slate-500">
-                  {property.address}, {property.city}, {property.province}
+                  {displayLocationLabel}
                 </span>
               </div>
               {developmentName && (
@@ -961,7 +822,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 variant="outline"
                 size="icon"
                 onClick={handleFavoriteClick}
-                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
+                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500 focus-visible:ring-red-500/30"
               >
                 <Heart className="h-5 w-5" />
               </Button>
@@ -969,13 +830,13 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 variant="outline"
                 size="icon"
                 onClick={handleShare}
-                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600 focus-visible:ring-blue-500/30"
               >
                 <Share2 className="h-5 w-5" />
               </Button>
               <Button
                 variant="outline"
-                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
+                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6 focus-visible:ring-blue-500/30"
               >
                 Shortlist
               </Button>
@@ -1046,132 +907,218 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 </Button>
               </div>
             </div>
-            <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-white">
-              <PropertyImageGallery
-                images={images}
-                propertyTitle={property.title}
-                videoCount={mediaVideoCount}
-                hasVirtualTour={hasVirtualTour}
-                hasFloorPlan={hasFloorPlan}
-                onOpenVideos={handleOpenMediaVideos}
-                onOpenVirtualTour={handleOpenVirtualTour}
-                onOpenFloorPlan={handleOpenFloorPlan}
-              />
-            </div>
+            <PropertyImageGallery
+              images={images}
+              propertyTitle={property.title}
+              videoCount={mediaVideoCount}
+              hasVirtualTour={hasVirtualTour}
+              hasFloorPlan={hasFloorPlan}
+              onOpenVideos={handleOpenMediaVideos}
+              onOpenVirtualTour={handleOpenVirtualTour}
+              onOpenFloorPlan={handleOpenFloorPlan}
+            />
           </div>
 
-          {/* Mobile Title Section - Below Gallery */}
-          <div className="lg:hidden px-1 py-5">
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">{property.title}</h1>
-            <div className="flex items-center gap-2 text-slate-500 mb-4">
-              <MapPin className="h-4 w-4" />
-              <span className="text-base text-slate-500">
-                {property.address}, {property.city}, {property.province}
-              </span>
-            </div>
-
-            <div className="text-3xl font-bold text-blue-700 mb-2">
-              {formatCurrency(displayPrice, { compact: false })}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm mb-4">
-              <span className="text-slate-500 font-medium">Estimated Repayment:</span>
-              <span className="text-slate-900 font-bold">
-                {formatCurrency(displayRepayment, { compact: false })}/Pm
-              </span>
-              <button
-                type="button"
-                className="text-blue-500 hover:text-blue-600 font-medium hover:underline ml-1"
-                onClick={handleGetPreQualified}
-              >
-                Check Buyability
-              </button>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-3 mb-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                <span>Listing ID #{property.id}</span>
-                {listingUpdatedLabel ? <span>Updated {listingUpdatedLabel}</span> : null}
-              </div>
-              {decisionMetaItems.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
-                  {decisionMetaItems.map(item => (
-                    <div key={item.key} className="rounded-lg bg-slate-50 px-2 py-2">
-                      <p className="text-[10px] text-slate-500">{item.label}</p>
-                      <p className="text-xs font-semibold text-slate-900 truncate">{item.value}</p>
-                    </div>
+          {/* Mobile Buyer Decision Panel */}
+          <section
+            id="overview"
+            className="lg:hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+            aria-label="Property price, qualification and buyer checks"
+          >
+            <div className="space-y-5 p-4">
+              <div>
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  {property.featured === 1 && (
+                    <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
+                      Featured
+                    </Badge>
+                  )}
+                  {listingContextLabel ? (
+                    <Badge className="border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50">
+                      <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                      {listingContextLabel}
+                    </Badge>
+                  ) : null}
+                  {propertyBadges.slice(0, 2).map((badge: string) => (
+                    <Badge
+                      key={badge}
+                      variant="secondary"
+                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
+                    >
+                      {badge}
+                    </Badge>
                   ))}
+                </div>
+
+                <h1 className="text-2xl font-extrabold leading-tight text-slate-950">
+                  {property.title}
+                </h1>
+                <div className="mt-2 flex items-start gap-2 text-slate-500">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="text-sm leading-relaxed text-slate-500">
+                    {displayLocationLabel}
+                  </span>
+                </div>
+                {developmentName && (
+                  <div className="mt-2 flex items-center gap-2 text-slate-500">
+                    <Home className="h-4 w-4" />
+                    {developmentHref ? (
+                      <button
+                        type="button"
+                        className="truncate text-sm transition-colors hover:text-blue-600 hover:underline"
+                        onClick={() => setLocation(developmentHref)}
+                        title={developmentName}
+                      >
+                        Part of {developmentName}
+                      </button>
+                    ) : (
+                      <span className="truncate text-sm" title={developmentName}>
+                        Part of {developmentName}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                    Asking price
+                  </p>
+                  <div className="mt-1 text-3xl font-extrabold leading-none text-slate-950">
+                    {formatCurrency(displayPrice, { compact: false })}
+                  </div>
+                </div>
+                {listingUpdatedLabel ? (
+                  <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                    Updated {listingUpdatedLabel}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Est. monthly repayment
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">Est. over 20 years at 10.5%</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-extrabold leading-none text-slate-950">
+                      {formatCurrency(displayRepayment, { compact: false })}
+                      <span className="text-xs font-semibold text-slate-500">/mo</span>
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-2 text-xs font-bold text-blue-700 transition hover:text-blue-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                      onClick={handleGetPreQualified}
+                    >
+                      Get pre-qualified
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {mobilePropertySummaryItems.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {mobilePropertySummaryItems.map(item => {
+                    const Icon = item.icon;
+                    const displayValue = item.shortValue || item.value;
+                    return (
+                      <div
+                        key={item.key}
+                        className="min-w-0 rounded-xl border border-slate-200 bg-white px-2 py-3 text-center"
+                      >
+                        <Icon className="mx-auto mb-1.5 h-4 w-4 text-blue-600" />
+                        <p className="truncate text-sm font-extrabold leading-tight text-slate-950">
+                          {displayValue}
+                        </p>
+                        <p className="mt-1 truncate text-[10px] font-medium text-slate-500">
+                          {item.label}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {featureSpecItems.length > 0 && (
+                <div id="features" className="border-t border-slate-200 pt-5">
+                  <div className="mb-4 flex items-end justify-between gap-3">
+                    <h2 className="text-sm font-extrabold text-slate-950">Key buyer checks</h2>
+                    <p className="text-xs font-medium text-slate-500">Utilities and security</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+                    {featureSpecItems.slice(0, 9).map(item => {
+                      const Icon = item.icon;
+                      const isMissing = item.status === 'missing';
+                      return (
+                        <div key={item.key} className="grid min-h-[44px] min-w-0 grid-cols-[36px_minmax(0,1fr)] items-start gap-x-2.5">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0 pt-0.5 text-left">
+                            <p className="truncate text-[10px] font-bold uppercase text-slate-500">
+                              {item.label}
+                            </p>
+                            <p
+                              className={`mt-0.5 truncate text-sm font-bold leading-tight ${
+                                isMissing ? 'text-slate-600' : 'text-slate-950'
+                              }`}
+                              title={item.value}
+                            >
+                              {item.value}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
 
-            {developmentName && (
-              <div className="flex items-center gap-2 text-slate-500 mb-4">
-                <Home className="h-4 w-4" />
-                {developmentHref ? (
-                  <button
-                    type="button"
-                    className="text-sm hover:text-blue-600 hover:underline transition-colors truncate"
-                    onClick={() => setLocation(developmentHref)}
-                    title={developmentName}
+            {hasPrimaryContactAction && (
+              <div className="border-t border-slate-200 bg-white px-4 pb-4">
+                <Button
+                  className="mt-4 h-12 w-full bg-orange-500 text-base font-bold text-white hover:bg-orange-600 focus-visible:ring-orange-500/30"
+                  onClick={handleGetPreQualified}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Check if you qualify
+                </Button>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-11 border-slate-200 text-slate-800 hover:bg-slate-50 focus-visible:ring-blue-500/30"
+                    onClick={() => {
+                      setContactIntent('enquiry');
+                      setContactInitialMessage('');
+                      setIsContactModalOpen(true);
+                    }}
                   >
-                    Part of {developmentName}
-                  </button>
-                ) : (
-                  <span className="text-sm truncate" title={developmentName}>
-                    Part of {developmentName}
-                  </span>
-                )}
+                    Send enquiry
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-11 border-slate-200 text-slate-800 hover:bg-slate-50 focus-visible:ring-blue-500/30"
+                    onClick={() => handleWhatsAppLeadCapture()}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    WhatsApp
+                  </Button>
+                </div>
+                <p className="mt-3 text-center text-xs text-slate-500">
+                  {contactMode === 'private'
+                    ? 'Private seller · Listed directly by the owner'
+                    : contactMode === 'developer'
+                      ? 'Developer listing · Availability confirmed through Listify'
+                      : 'Listing agent · Enquiries routed through Listify'}
+                </p>
               </div>
             )}
-
-            {/* Property Details Icons - Mobile 4 icons */}
-            {mobilePropertySummaryItems.length > 0 && (
-              <div className="grid grid-cols-4 gap-2 mb-6">
-                {mobilePropertySummaryItems.map(item => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.key} className="flex min-w-0 flex-col items-center gap-1">
-                      <div className="bg-blue-50 p-2 rounded-md text-blue-600">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <span className="text-xs font-semibold text-slate-700 truncate">
-                        {item.value}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Badges */}
-            <div className="flex items-center gap-2">
-              {property.featured === 1 && (
-                <Badge className="bg-blue-500 hover:bg-blue-600 text-white border-0 rounded-md px-3 py-1 font-normal">
-                  FEATURED
-                </Badge>
-              )}
-              {listingContextLabel ? (
-                <Badge
-                  variant="secondary"
-                  className={
-                    isDeveloperListing
-                      ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md px-3 py-1 font-normal'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-1 font-normal'
-                  }
-                >
-                  {listingContextLabel}
-                </Badge>
-              ) : null}
-              {propertyBadges.slice(0, 2).map((badge: string) => (
-                <Badge
-                  key={badge}
-                  variant="secondary"
-                  className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-md px-3 py-1 font-normal"
-                >
-                  {badge}
-                </Badge>
-              ))}
-            </div>
-          </div>
+          </section>
 
           {/* Right Column - Property Info */}
           <div className="lg:col-span-5 space-y-6 lg:space-y-12">
@@ -1366,7 +1313,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           <div className="col-span-12 lg:col-span-8 space-y-4 sm:space-y-6">
             {/* 2.1 About This Property */}
             {description.trim() && (
-              <Card id="overview" className="scroll-mt-32 border-slate-200 shadow-sm">
+              <Card className="scroll-mt-32 border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
                     About This Property
@@ -1391,7 +1338,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
 
             {/* 2.2 Property Features / Specs Table (Dynamic) */}
             {featureSpecItems.length > 0 && (
-              <Card id="features" className="scroll-mt-32 border-slate-200 shadow-sm">
+              <Card className="scroll-mt-32 border-slate-200 shadow-sm">
                 <CardHeader className="bg-slate-50/50 border-b border-slate-100">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
                     Property Features & Specifications
@@ -1496,14 +1443,14 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                       {whatsappNumber && (
                         <Button
                           variant="outline"
-                          className="w-full h-12 rounded-lg border-green-200 text-green-700 hover:bg-green-50"
+                          className="w-full h-12 rounded-lg border-green-200 text-green-700 hover:bg-green-50 focus-visible:ring-green-500/30"
                           onClick={() => handleWhatsAppLeadCapture()}
                         >
                           WhatsApp Agent
                         </Button>
                       )}
                       <Button
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg shadow-sm"
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 rounded-lg shadow-sm focus-visible:ring-orange-500/30"
                         onClick={() => setIsContactModalOpen(true)}
                       >
                         Enquire Now
@@ -1652,11 +1599,12 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         price={formatCurrency(displayPrice, { compact: false })}
         repayment={`${formatCurrency(displayRepayment, { compact: false })}/Pm`}
         onEmail={() => {
+          setContactIntent('enquiry');
           setContactInitialMessage('');
           setIsContactModalOpen(true);
         }}
         onWhatsApp={() => handleWhatsAppLeadCapture()}
-        canWhatsApp={Boolean(whatsappNumber)}
+        canWhatsApp={true}
       />
 
       {/* Modals */}
@@ -1665,6 +1613,7 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         onClose={() => {
           setIsContactModalOpen(false);
           setContactInitialMessage('');
+          setContactIntent('enquiry');
         }}
         propertyId={propertyId}
         propertyTitle={property.title}
@@ -1672,6 +1621,22 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
         agentPhone={undefined}
         agentEmail={undefined}
         initialMessage={contactInitialMessage}
+        source={contactIntent === 'whatsapp' ? 'property_detail_whatsapp' : 'property_detail'}
+        submitLabel={contactIntent === 'whatsapp' ? 'Continue with WhatsApp' : 'Send enquiry'}
+        successMessage={
+          contactIntent === 'whatsapp'
+            ? 'Your WhatsApp lead has been captured.'
+            : 'Your enquiry has been sent successfully.'
+        }
+        successAction={
+          contactIntent === 'whatsapp' && whatsappNumber
+            ? {
+                type: 'whatsapp',
+                phone: whatsappNumber,
+                message: contactInitialMessage,
+              }
+            : undefined
+        }
         agentId={
           contactIdentity?.id
             ? Number(contactIdentity.id)
