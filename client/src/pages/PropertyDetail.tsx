@@ -1,6 +1,6 @@
 import React from 'react';
-import PropertyDetailDesktopLegacy from './PropertyDetailDesktopLegacy';
-import PropertyDetailMobileOptimized from './PropertyDetailMobileOptimized';
+import PropertyDetailDesktop from './PropertyDetailDesktop';
+import PropertyDetailMobile from './PropertyDetailMobile';
 
 interface PropertyDetailProps {
   propertyId?: number;
@@ -23,8 +23,8 @@ export default function PropertyDetail(props: PropertyDetailProps & Record<strin
   }, []);
 
   if (isDesktopViewport) {
-    return <PropertyDetailDesktopLegacy {...props} />;
+    return <PropertyDetailDesktop {...props} />;
   }
 
-  return <PropertyDetailMobileOptimized {...props} />;
+  return <PropertyDetailMobile {...props} />;
 }

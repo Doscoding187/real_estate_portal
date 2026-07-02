@@ -12,6 +12,8 @@ export const DEMO_PASSWORD = 'LocalDemo123!';
 export const DEMO_EMAILS = [
   'admin@listify.local',
   'developer@listify.local',
+  'agency.admin@listify.local',
+  'listing.agent@listify.local',
   'agent@listify.local',
   'referrer@listify.local',
   'buyer@listify.local',
@@ -146,6 +148,21 @@ async function execute(connection: mysql.Connection, sql: string, params: unknow
   return result as mysql.ResultSetHeader;
 }
 
+async function tableExists(connection: mysql.Connection, tableName: string) {
+  const rows = await queryRows<{ tableName: string }>(
+    connection,
+    `
+      SELECT TABLE_NAME AS tableName
+      FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+      LIMIT 1
+    `,
+    [tableName],
+  );
+  return rows.length > 0;
+}
+
 async function idsFor(
   connection: mysql.Connection,
   sql: string,
@@ -158,6 +175,16 @@ async function idsFor(
 async function deleteByIds(connection: mysql.Connection, table: string, column: string, ids: number[]) {
   if (!ids.length) return;
   await execute(connection, `DELETE FROM ${table} WHERE ${column} IN (${placeholders(ids)})`, ids);
+}
+
+async function updateColumnToNullByIds(
+  connection: mysql.Connection,
+  table: string,
+  column: string,
+  ids: number[],
+) {
+  if (!ids.length) return;
+  await execute(connection, `UPDATE ${table} SET ${column} = NULL WHERE ${column} IN (${placeholders(ids)})`, ids);
 }
 
 async function resetDemoData(connection: mysql.Connection) {
@@ -185,6 +212,39 @@ async function resetDemoData(connection: mysql.Connection) {
     connection,
     "SELECT id FROM agencies WHERE slug LIKE 'local-demo-%' OR email LIKE '%@listify.local'",
   );
+
+  const demoPropertyConditions = [
+    "title LIKE '[LOCAL PDP SHOWCASE]%'",
+    "placeId LIKE 'local-pdp-showcase-%'",
+  ];
+  const demoPropertyParams: unknown[] = [];
+  if (demoUserIds.length) {
+    demoPropertyConditions.push(`ownerId IN (${placeholders(demoUserIds)})`);
+    demoPropertyParams.push(...demoUserIds);
+  }
+  const demoPropertyIds = await idsFor(
+    connection,
+    `SELECT id FROM properties WHERE ${demoPropertyConditions.join(' OR ')}`,
+    demoPropertyParams,
+  );
+
+  await updateColumnToNullByIds(connection, 'commissions', 'propertyId', demoPropertyIds);
+  await updateColumnToNullByIds(connection, 'leads', 'propertyId', demoPropertyIds);
+  await updateColumnToNullByIds(connection, 'service_leads', 'property_id', demoPropertyIds);
+  await updateColumnToNullByIds(connection, 'showings', 'propertyId', demoPropertyIds);
+  await updateColumnToNullByIds(connection, 'user_behavior_events', 'propertyId', demoPropertyIds);
+  await updateColumnToNullByIds(connection, 'videos', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'favorites', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'offers', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'price_history', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'price_predictions', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'propertyImages', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'property_similarity_index', 'propertyId1', demoPropertyIds);
+  await deleteByIds(connection, 'property_similarity_index', 'propertyId2', demoPropertyIds);
+  await deleteByIds(connection, 'prospect_favorites', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'recently_viewed', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'scheduled_viewings', 'propertyId', demoPropertyIds);
+  await deleteByIds(connection, 'properties', 'id', demoPropertyIds);
 
   const dealConditions = ["external_ref LIKE 'LOCAL-DEMO-%'"];
   const dealParams: unknown[] = [];
@@ -222,6 +282,15 @@ async function resetDemoData(connection: mysql.Connection) {
   await deleteByIds(connection, 'developer_brand_profiles', 'id', demoBrandIds);
   await deleteByIds(connection, 'developers', 'id', demoDeveloperIds);
   await deleteByIds(connection, 'distribution_identities', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'agent_knowledge', 'created_by', demoUserIds);
+  await deleteByIds(connection, 'agent_memory', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'agent_tasks', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'billing_transactions', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'boost_credits', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'saved_searches', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'subscription_events', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'subscription_usage', 'user_id', demoUserIds);
+  await deleteByIds(connection, 'user_subscriptions', 'user_id', demoUserIds);
   await deleteByIds(connection, 'users', 'id', demoUserIds);
   await deleteByIds(connection, 'agencies', 'id', demoAgencyIds);
 }
@@ -259,6 +328,83 @@ async function insertUser(
     ],
   );
   return Number(result.insertId);
+}
+
+async function insertAgentProfile(
+  connection: mysql.Connection,
+  input: {
+    userId: number;
+    agencyId: number;
+    approvedBy: number;
+    firstName: string;
+    lastName: string;
+    displayName: string;
+    slug: string;
+    email: string;
+    phone: string;
+    whatsapp: string;
+    bio: string;
+    profileImage: string;
+    licenseNumber: string;
+    yearsExperience: number;
+    focus: 'sales' | 'rentals' | 'both';
+    specialization: string[];
+    propertyTypes: string[];
+    areasServed: string[];
+    languages: string[];
+  },
+) {
+  const result = await execute(
+    connection,
+    `
+      INSERT INTO agents
+        (userId, agencyId, firstName, lastName, displayName, slug, bio, profileImage, phone, email, whatsapp, specialization, focus, propertyTypes, socialLinks, role, licenseNumber, yearsExperience, areasServed, languages, profileCompletionScore, profileCompletionFlags, rating, reviewCount, totalSales, isVerified, isFeatured, status, approvedBy, approvedAt)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'agent', ?, ?, ?, ?, 100, ?, 5, 0, 0, 1, 1, 'approved', ?, NOW())
+    `,
+    [
+      input.userId,
+      input.agencyId,
+      input.firstName,
+      input.lastName,
+      input.displayName,
+      input.slug,
+      input.bio,
+      input.profileImage,
+      input.phone,
+      input.email,
+      input.whatsapp,
+      input.specialization.join(', '),
+      input.focus,
+      input.propertyTypes.join(', '),
+      json({
+        website: 'http://localhost:3009/agents/local-demo-listing-agent',
+        linkedin: 'https://www.linkedin.com/company/property-listify-local-demo',
+      }),
+      input.licenseNumber,
+      input.yearsExperience,
+      input.areasServed.join(', '),
+      input.languages.join(', '),
+      json([]),
+      input.approvedBy,
+    ],
+  );
+  const agentId = Number(result.insertId);
+
+  if (await tableExists(connection, 'agency_agent_memberships')) {
+    await execute(
+      connection,
+      `
+        INSERT INTO agency_agent_memberships
+          (agency_id, agent_id, status, governance_mode, role, effective_from, created_by, updated_by)
+        VALUES
+          (?, ?, 'active', 'managed', 'agent', NOW(), ?, ?)
+      `,
+      [input.agencyId, agentId, input.approvedBy, input.approvedBy],
+    );
+  }
+
+  return agentId;
 }
 
 async function insertDevelopment(
@@ -616,6 +762,18 @@ async function seedDemoData(connection: mysql.Connection) {
   );
   const agencyId = Number(agencyResult.insertId);
 
+  const listingAgencyResult = await execute(
+    connection,
+    `
+      INSERT INTO agencies
+        (name, slug, description, website, email, phone, address, city, province, subscriptionPlan, subscriptionStatus, isVerified)
+      VALUES
+        ('[LOCAL DEMO] Listing Agency', 'local-demo-listing-agency', ?, 'http://localhost:3009', 'agency.admin@listify.local', '+27000000000', 'Local demo only', 'Cape Town', 'Western Cape', 'professional', 'active', 1)
+    `,
+    [LOCAL_DEMO_DESCRIPTION],
+  );
+  const listingAgencyId = Number(listingAgencyResult.insertId);
+
   const adminId = await insertUser(connection, {
     email: 'admin@listify.local',
     name: '[LOCAL DEMO] Super Admin',
@@ -632,11 +790,52 @@ async function seedDemoData(connection: mysql.Connection) {
     role: 'property_developer',
     passwordHash,
   });
+  await insertUser(connection, {
+    email: 'agency.admin@listify.local',
+    name: '[LOCAL DEMO] Listing Agency Admin',
+    firstName: 'Local',
+    lastName: 'Agency Admin',
+    role: 'agency_admin',
+    passwordHash,
+    agencyId: listingAgencyId,
+  });
+  const listingAgentUserId = await insertUser(connection, {
+    email: 'listing.agent@listify.local',
+    name: '[LOCAL DEMO] Listing Agent',
+    firstName: 'Local',
+    lastName: 'Listing Agent',
+    role: 'agent',
+    passwordHash,
+    agencyId: listingAgencyId,
+  });
+  await insertAgentProfile(connection, {
+    userId: listingAgentUserId,
+    agencyId: listingAgencyId,
+    approvedBy: adminId,
+    firstName: 'Local',
+    lastName: 'Listing Agent',
+    displayName: '[LOCAL DEMO] Listing Agent',
+    slug: 'local-demo-listing-agent',
+    email: 'listing.agent@listify.local',
+    phone: '+27821234567',
+    whatsapp: '+27821234567',
+    bio:
+      'Local demo listing agent profile for testing the listing wizard, public PDP ownership, enquiries, WhatsApp lead capture, and agency-linked listing workflows.',
+    profileImage:
+      'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=600&q=80',
+    licenseNumber: 'LOCAL-DEMO-FFC-2026',
+    yearsExperience: 8,
+    focus: 'both',
+    specialization: ['Residential Sales', 'Rentals', 'Developments'],
+    propertyTypes: ['Apartments', 'Houses', 'Townhouses', 'New Developments'],
+    areasServed: ['Camps Bay', 'Sandton', 'Midrand', 'Pretoria East', 'Cape Town'],
+    languages: ['English', 'Afrikaans', 'isiZulu'],
+  });
   const agentId = await insertUser(connection, {
     email: 'agent@listify.local',
-    name: '[LOCAL DEMO] Agency Agent',
+    name: '[LOCAL DEMO] Referral Agent',
     firstName: 'Local',
-    lastName: 'Agent',
+    lastName: 'Referral Agent',
     role: 'agent',
     passwordHash,
     agencyId,

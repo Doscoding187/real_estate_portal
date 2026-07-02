@@ -40,46 +40,113 @@ export function AdditionalInformationStep() {
   const store = useListingWizardStore();
   const propertyType = store.propertyType;
   const additionalInfo = store.additionalInfo || {};
+  const basicInfo = (store as any).basicInfo || {};
+  const rawDevelopmentAssociation =
+    basicInfo.developmentAssociation ||
+    (basicInfo.selectedDevelopmentId || basicInfo.developmentName ? 'linked' : 'none');
+  const developmentAssociation =
+    rawDevelopmentAssociation === 'linked'
+      ? 'link_existing'
+      : rawDevelopmentAssociation === 'new'
+        ? 'add_new'
+        : rawDevelopmentAssociation === 'none'
+          ? 'no_link'
+          : rawDevelopmentAssociation;
+  const propertySetting = additionalInfo.propertySetting;
+  const shouldShowComplexEstateAmenities =
+    propertyType === 'apartment' ||
+    developmentAssociation !== 'no_link' ||
+    propertySetting === 'complex' ||
+    propertySetting === 'estate_living' ||
+    propertySetting === 'gated_community';
   const [tagInputs, setTagInputs] = React.useState<Record<string, string>>({});
 
   const updateAdditionalInfo = (field: string, value: any) => {
-    store.setAdditionalInfo({ ...additionalInfo, [field]: value });
+    const nextInfo: Record<string, any> = { [field]: value };
+
+    if (field === 'lifestyleHighlights') {
+      nextInfo.propertyHighlights = value;
+    }
+
+    store.setAdditionalInfo(nextInfo);
   };
 
-  const toggleArrayItem = (field: string, item: string) => {
-    const currentItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
-    const newItems = currentItems.includes(item)
-      ? currentItems.filter(i => i !== item)
-      : [...currentItems, item];
-    updateAdditionalInfo(field, newItems);
+  const getArrayField = (field: string): string[] => {
+    const directValue = additionalInfo[field as keyof typeof additionalInfo] as string[] | undefined;
+    if (field === 'lifestyleHighlights') {
+      if (Array.isArray(directValue) && directValue.length > 0) return directValue;
+      return (additionalInfo.propertyHighlights as string[] | undefined) ?? [];
+    }
+    return directValue || [];
   };
 
   const handleTagInputChange = (field: string, value: string) => {
     setTagInputs(prev => ({ ...prev, [field]: value }));
   };
 
-  const addTag = (field: string) => {
-    const value = tagInputs[field]?.trim();
-    if (!value) return;
+  const normalizeTag = (value: string) => value.trim().toLowerCase();
 
-    const currentItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
-    // Prevent duplicates (case-insensitive check could be added here if desired)
-    if (!currentItems.includes(value)) {
-      updateAdditionalInfo(field, [...currentItems, value]);
+  const getTagIdentityKeys = (
+    value: string,
+    options: { value: string; label: string; icon?: React.ElementType }[] = [],
+  ) => {
+    const normalizedValue = normalizeTag(value);
+    const keys = new Set([normalizedValue]);
+
+    options.forEach(option => {
+      const optionValue = normalizeTag(option.value);
+      const optionLabel = normalizeTag(option.label);
+      if (optionValue === normalizedValue || optionLabel === normalizedValue) {
+        keys.add(optionValue);
+        keys.add(optionLabel);
+      }
+    });
+
+    return keys;
+  };
+
+  const addTagValue = (
+    field: string,
+    value: string,
+    options: { value: string; label: string; icon?: React.ElementType }[] = [],
+  ) => {
+    const cleanedValue = value.trim();
+    if (!cleanedValue) return;
+
+    const currentItems = getArrayField(field);
+    const nextKeys = getTagIdentityKeys(cleanedValue, options);
+    const exists = currentItems.some(item => {
+      const itemKeys = getTagIdentityKeys(item, options);
+      return [...itemKeys].some(key => nextKeys.has(key));
+    });
+    if (!exists) {
+      updateAdditionalInfo(field, [...currentItems, cleanedValue]);
     }
     setTagInputs(prev => ({ ...prev, [field]: '' }));
   };
 
   const removeTag = (field: string, tagToRemove: string) => {
-    const currentItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
-    const newItems = currentItems.filter(item => item !== tagToRemove);
+    const currentItems = getArrayField(field);
+    const newItems = currentItems.filter(item => normalizeTag(item) !== normalizeTag(tagToRemove));
     updateAdditionalInfo(field, newItems);
   };
 
-  const handleKeyDown = (field: string, e: React.KeyboardEvent) => {
+  const handleKeyDown = (
+    field: string,
+    options: { value: string; label: string; icon?: React.ElementType }[],
+    e: React.KeyboardEvent,
+  ) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      addTag(field);
+      const value = tagInputs[field]?.trim();
+      if (!value) return;
+
+      const matchingOption = options.find(
+        option =>
+          normalizeTag(option.label) === normalizeTag(value) ||
+          normalizeTag(option.value) === normalizeTag(value),
+      );
+      addTagValue(field, matchingOption?.value || value, options);
     }
   };
 
@@ -116,72 +183,41 @@ export function AdditionalInformationStep() {
     </div>
   );
 
-  const renderMultiSelect = (
-    field: string,
-    label: string,
-    options: { value: string; label: string; icon?: React.ElementType }[],
-  ) => {
-    const selectedItems = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
-
-    return (
-      <div className="space-y-3 col-span-full">
-        <Label className="text-slate-700 font-medium text-base flex items-center gap-2">
-          {label}
-          <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-            Select all that apply
-          </span>
-        </Label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {options.map(opt => {
-            const isSelected = selectedItems.includes(opt.value);
-            const Icon = opt.icon;
-            return (
-              <div
-                key={opt.value}
-                onClick={() => toggleArrayItem(field, opt.value)}
-                className={cn(
-                  'cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden',
-                  isSelected
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
-                    : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600',
-                )}
-              >
-                {isSelected && (
-                  <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-r-[16px] border-t-emerald-500 border-r-transparent rotate-90" />
-                )}
-                {Icon && (
-                  <div
-                    className={cn(
-                      'p-2 rounded-lg transition-colors',
-                      isSelected
-                        ? 'bg-emerald-100 text-emerald-600'
-                        : 'bg-slate-100 text-slate-500 group-hover:text-emerald-500',
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                )}
-                <span className="font-medium text-sm">{opt.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const renderHybridInput = (
+  const renderSmartTagInput = (
     field: string,
     label: string,
     placeholder: string,
     icon: React.ElementType | undefined,
     options: { value: string; label: string; icon?: React.ElementType }[],
   ) => {
-    const currentTags = (additionalInfo[field as keyof typeof additionalInfo] as string[]) || [];
-
-    // Separate tags into "Predefined" (in options) and "Custom" (not in options)
-    const predefinedValues = options.map(o => o.value);
-    const customTags = currentTags.filter(tag => !predefinedValues.includes(tag));
+    const selectedItems = getArrayField(field);
+    const query = (tagInputs[field] || '').trim();
+    const selectedKeys = new Set(
+      selectedItems.flatMap(item => [...getTagIdentityKeys(item, options)]),
+    );
+    const optionLabelByValue = new Map(options.map(option => [option.value, option.label]));
+    const availableOptions = options.filter(option => !selectedKeys.has(normalizeTag(option.value)));
+    const suggestedOptions = (query
+      ? availableOptions.filter(
+          option =>
+            normalizeTag(option.label).includes(normalizeTag(query)) ||
+            normalizeTag(option.value).includes(normalizeTag(query)),
+        )
+      : availableOptions
+    ).slice(0, query ? 8 : 6);
+    const exactOptionMatch = options.some(
+      option =>
+        normalizeTag(option.label) === normalizeTag(query) ||
+        normalizeTag(option.value) === normalizeTag(query),
+    );
+    const canAddCustom =
+      query.length > 0 &&
+      !exactOptionMatch &&
+      !selectedItems.some(item => {
+        const itemKeys = getTagIdentityKeys(item, options);
+        const queryKeys = getTagIdentityKeys(query, options);
+        return [...itemKeys].some(key => queryKeys.has(key));
+      });
 
     return (
       <div className="space-y-4 col-span-full">
@@ -193,38 +229,19 @@ export function AdditionalInformationStep() {
           {label}
         </Label>
 
-        {/* Input for Custom Tags */}
-        <div className="flex gap-2">
-          <Input
-            id={field}
-            value={tagInputs[field] || ''}
-            onChange={e => handleTagInputChange(field, e.target.value)}
-            onKeyDown={e => handleKeyDown(field, e)}
-            placeholder={placeholder}
-            className="bg-white border-slate-200 focus:ring-emerald-500 rounded-xl"
-          />
-          <Button
-            type="button"
-            onClick={() => addTag(field)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4"
-          >
-            <Plus className="w-4 h-4 mr-1" /> Add
-          </Button>
-        </div>
-
-        {/* Display Custom Tags */}
-        {customTags.length > 0 && (
+        {selectedItems.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {customTags.map((tag, index) => (
+            {selectedItems.map((item, index) => (
               <div
-                key={`custom-${tag}-${index}`}
-                className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-full text-sm font-medium animate-in fade-in zoom-in duration-200"
+                key={`${field}-selected-${item}-${index}`}
+                className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-full text-sm font-medium"
               >
-                {tag}
+                {optionLabelByValue.get(item) || item}
                 <button
                   type="button"
-                  onClick={() => removeTag(field, tag)}
+                  onClick={() => removeTag(field, item)}
                   className="ml-1 p-0.5 hover:bg-emerald-200 rounded-full transition-colors"
+                  aria-label={`Remove ${optionLabelByValue.get(item) || item}`}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -233,45 +250,79 @@ export function AdditionalInformationStep() {
           </div>
         )}
 
-        {/* Predefined Options Grid */}
+        <div className="flex gap-2">
+          <Input
+            id={field}
+            value={tagInputs[field] || ''}
+            onChange={e => handleTagInputChange(field, e.target.value)}
+            onKeyDown={e => handleKeyDown(field, options, e)}
+            placeholder={placeholder}
+            className="bg-white border-slate-200 focus:ring-emerald-500 rounded-xl"
+          />
+          <Button
+            type="button"
+            onClick={() => {
+              const value = tagInputs[field]?.trim();
+              if (!value) return;
+              const matchingOption = options.find(
+                option =>
+                  normalizeTag(option.label) === normalizeTag(value) ||
+                  normalizeTag(option.value) === normalizeTag(value),
+              );
+              addTagValue(field, matchingOption?.value || value, options);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4"
+          >
+            <Plus className="w-4 h-4 mr-1" /> Add
+          </Button>
+        </div>
+
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Common Features
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {options.map(opt => {
-              const isSelected = currentTags.includes(opt.value);
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              {query ? 'Matching Suggestions' : 'Suggested'}
+            </p>
+            {!query && availableOptions.length > suggestedOptions.length && (
+              <p className="text-xs text-slate-500">
+                Type to search {availableOptions.length - suggestedOptions.length} more
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {suggestedOptions.map(opt => {
               const Icon = opt.icon;
               return (
-                <div
+                <button
+                  type="button"
                   key={opt.value}
-                  onClick={() => toggleArrayItem(field, opt.value)}
+                  onClick={() => addTagValue(field, opt.value, options)}
                   className={cn(
-                    'cursor-pointer rounded-xl border p-3 transition-all duration-200 flex items-center gap-3 group relative overflow-hidden',
-                    isSelected
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm'
-                      : 'bg-white border-slate-200 hover:border-emerald-300 hover:bg-slate-50 text-slate-600',
+                    'rounded-full border px-3 py-2 transition-all duration-200 flex items-center gap-2 text-sm font-medium',
+                    'bg-white border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-600',
                   )}
                 >
-                  {isSelected && (
-                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[16px] border-r-[16px] border-t-emerald-500 border-r-transparent rotate-90" />
-                  )}
                   {Icon && (
-                    <div
-                      className={cn(
-                        'p-2 rounded-lg transition-colors',
-                        isSelected
-                          ? 'bg-emerald-100 text-emerald-600'
-                          : 'bg-slate-100 text-slate-500 group-hover:text-emerald-500',
-                      )}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </div>
+                    <Icon className="w-4 h-4 text-emerald-600" />
                   )}
-                  <span className="font-medium text-sm">{opt.label}</span>
-                </div>
+                  {opt.label}
+                </button>
               );
             })}
+
+            {canAddCustom && (
+              <button
+                type="button"
+                onClick={() => addTagValue(field, query, options)}
+                className="rounded-full border border-dashed border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+              >
+                Add "{query}"
+              </button>
+            )}
+
+            {suggestedOptions.length === 0 && !canAddCustom && (
+              <span className="text-sm text-slate-500">No matching suggestions.</span>
+            )}
           </div>
         </div>
       </div>
@@ -313,53 +364,14 @@ export function AdditionalInformationStep() {
     <div className="py-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-slate-800">Property Details</h2>
+        <h2 className="text-2xl font-bold text-slate-800">Features, Finishes & Specifications</h2>
         <p className="text-slate-500 mt-2">
-          Add specific features and details to make your listing stand out.
+          Capture the finishes, lifestyle features, and amenities that make this listing easier to
+          understand.
         </p>
       </div>
 
-      {/* 1. Property Highlights */}
-      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        {renderHybridInput(
-          'propertyHighlights',
-          'Property Highlights',
-          'Add custom highlight...',
-          Maximize,
-          [
-            { value: 'High Ceilings', label: 'High Ceilings', icon: Maximize },
-            { value: 'Modern Finishes', label: 'Modern Finishes', icon: Check },
-            { value: 'Open Plan', label: 'Open Plan', icon: Maximize },
-            { value: 'Natural Light', label: 'Natural Light', icon: Trees },
-            { value: 'Newly Renovated', label: 'Newly Renovated', icon: Check },
-            { value: 'Pet Friendly', label: 'Pet Friendly', icon: Trees },
-            { value: 'Secure', label: 'Secure', icon: Shield },
-            { value: 'Scenic View', label: 'Scenic View', icon: Mountain },
-          ],
-        )}
-      </Card>
-
-      {/* 2. Additional Rooms */}
-      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        {renderHybridInput(
-          'additionalRooms',
-          'Additional Rooms & Specs',
-          'Add custom room...',
-          Sofa,
-          [
-            { value: 'Study / Office', label: 'Study / Office', icon: Sofa },
-            { value: 'Staff Quarters', label: 'Staff Quarters', icon: Home },
-            { value: 'Scullery', label: 'Scullery', icon: Droplets },
-            { value: 'Laundry Room', label: 'Laundry Room', icon: Droplets },
-            { value: 'Pantry', label: 'Pantry', icon: Warehouse },
-            { value: 'Storage Room', label: 'Storage Room', icon: Warehouse },
-            { value: 'Gym', label: 'Gym', icon: Maximize },
-            { value: 'Entertainment Area', label: 'Entertainment Area', icon: Sofa },
-          ],
-        )}
-      </Card>
-
-      {/* 3. Property Setting & Utilities */}
+      {/* 1. Setting & Utilities */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
           <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
@@ -478,27 +490,25 @@ export function AdditionalInformationStep() {
         </div>
       </Card>
 
-      {/* 5. Interior & Exterior Features */}
+      {/* 2. Interior Finishes */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
         <div className="flex items-center gap-3 border-b border-slate-100 pb-4 mb-4">
           <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
             <Home className="w-5 h-5" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">Interior & Exterior Features</h3>
+          <h3 className="text-lg font-semibold text-slate-800">Interior Finishes</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {renderSelect(
-            'ownershipType',
-            'Ownership Type',
+            'furnishingStatus',
+            'Furnishing',
             [
-              { value: 'freehold', label: 'Freehold' },
-              { value: 'sectional_title', label: 'Sectional Title' },
-              { value: 'leasehold', label: 'Leasehold' },
-              { value: 'fractional', label: 'Fractional Ownership' },
-              { value: 'share_block', label: 'Share Block' },
+              { value: 'unfurnished', label: 'Unfurnished' },
+              { value: 'semi_furnished', label: 'Semi-Furnished' },
+              { value: 'fully_furnished', label: 'Fully Furnished' },
             ],
-            'Select ownership',
+            'Select furnishing',
             Home,
           )}
 
@@ -518,48 +528,251 @@ export function AdditionalInformationStep() {
           )}
 
           {renderSelect(
-            'parkingType',
-            'Parking Type',
+            'kitchenType',
+            'Kitchen Style',
             [
-              { value: 'garage', label: 'Garage' },
-              { value: 'covered_carport', label: 'Covered Carport' },
-              { value: 'open_parking', label: 'Open Parking' },
-              { value: 'street', label: 'Street Parking' },
-              { value: 'none', label: 'None' },
+              { value: 'open_plan', label: 'Open Plan' },
+              { value: 'separate', label: 'Separate Kitchen' },
+              { value: 'modern_fitted', label: 'Modern Fitted' },
+              { value: 'galley', label: 'Galley Kitchen' },
+              { value: 'island', label: 'Kitchen Island' },
+              { value: 'shared', label: 'Shared Kitchen' },
             ],
-            'Select parking',
-            Car,
+            'Select kitchen style',
+            Home,
           )}
 
           {renderSelect(
-            'petFriendly',
-            'Pet Friendly',
+            'countertopMaterial',
+            'Countertops',
+            [
+              { value: 'granite', label: 'Granite' },
+              { value: 'quartz', label: 'Quartz' },
+              { value: 'caesarstone', label: 'Caesarstone' },
+              { value: 'marble', label: 'Marble' },
+              { value: 'laminate', label: 'Laminate' },
+              { value: 'concrete', label: 'Concrete' },
+              { value: 'wood', label: 'Wood' },
+            ],
+            'Select countertops',
+            Layers,
+          )}
+
+          {renderSelect(
+            'builtInCupboards',
+            'Built-in Cupboards',
             [
               { value: 'yes', label: 'Yes' },
+              { value: 'partial', label: 'Partial' },
               { value: 'no', label: 'No' },
-              { value: 'cats_only', label: 'Cats Only' },
-              { value: 'dogs_only', label: 'Dogs Only' },
-              { value: 'with_permission', label: 'With Permission' },
             ],
-            'Select policy',
-            CheckCircle2,
+            'Select cupboards',
+            Warehouse,
           )}
+
+          {renderSelect(
+            'airConditioning',
+            'Air Conditioning',
+            [
+              { value: 'none', label: 'None' },
+              { value: 'split_units', label: 'Split Units' },
+              { value: 'central', label: 'Central' },
+              { value: 'evaporative', label: 'Evaporative' },
+            ],
+            'Select air conditioning',
+            Lightbulb,
+          )}
+
+          {renderSelect(
+            'fireplace',
+            'Fireplace',
+            [
+              { value: 'none', label: 'None' },
+              { value: 'wood', label: 'Wood Fireplace' },
+              { value: 'gas', label: 'Gas Fireplace' },
+              { value: 'electric', label: 'Electric Fireplace' },
+            ],
+            'Select fireplace',
+            Flame,
+          )}
+
         </div>
       </Card>
 
-      {/* 6. Security */}
+      {/* 3. Additional Rooms & Specs */}
       <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
-        {renderMultiSelect('securityFeatures', 'Security Features', [
-          { value: 'alarm', label: 'Alarm System', icon: Shield },
-          { value: 'electric_fence', label: 'Electric Fence', icon: Zap },
-          { value: 'beams', label: 'Outdoor Beams', icon: Check },
-          { value: 'cctv', label: 'CCTV Cameras', icon: Check },
-          { value: '24hr_guard', label: '24hr Guard', icon: Shield },
-          { value: 'access_control', label: 'Access Control', icon: Check },
-          { value: 'intercom', label: 'Intercom', icon: Check },
-          { value: 'security_gates', label: 'Security Gates', icon: Shield },
-        ])}
+        {renderSmartTagInput(
+          'additionalRooms',
+          'Additional Rooms & Specs',
+          'Add custom room...',
+          Sofa,
+          [
+            { value: 'Study / Office', label: 'Study / Office', icon: Sofa },
+            { value: 'Staff Quarters', label: 'Staff Quarters', icon: Home },
+            { value: 'Scullery', label: 'Scullery', icon: Droplets },
+            { value: 'Laundry Room', label: 'Laundry Room', icon: Droplets },
+            { value: 'Pantry', label: 'Pantry', icon: Warehouse },
+            { value: 'Storage Room', label: 'Storage Room', icon: Warehouse },
+            { value: 'Walk-in Closet', label: 'Walk-in Closet', icon: Warehouse },
+            { value: 'Guest Toilet', label: 'Guest Toilet', icon: Droplets },
+          ],
+        )}
       </Card>
+
+      {/* 4. Outdoor Features */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderSmartTagInput(
+          'outdoorFeatures',
+          'Outdoor Features',
+          'Add outdoor feature...',
+          Trees,
+          [
+            { value: 'pool', label: 'Pool', icon: Droplets },
+            { value: 'garden', label: 'Garden', icon: Trees },
+            { value: 'braai_area', label: 'Braai Area', icon: Flame },
+            { value: 'patio', label: 'Patio', icon: Home },
+            { value: 'balcony', label: 'Balcony', icon: Building2 },
+            { value: 'deck', label: 'Deck', icon: Layers },
+            { value: 'entertainment_area', label: 'Entertainment Area', icon: Sofa },
+          ],
+        )}
+      </Card>
+
+      {/* 5. Appliances Included */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderSmartTagInput(
+          'appliancesIncluded',
+          'Appliances Included',
+          'Add appliance...',
+          Flame,
+          [
+            { value: 'stove', label: 'Stove', icon: Flame },
+            { value: 'oven', label: 'Oven', icon: Flame },
+            { value: 'hob', label: 'Hob', icon: Flame },
+            { value: 'extractor', label: 'Extractor Fan', icon: Lightbulb },
+            { value: 'dishwasher', label: 'Dishwasher', icon: Droplets },
+            { value: 'washing_machine', label: 'Washing Machine', icon: Droplets },
+            { value: 'fridge', label: 'Fridge', icon: Warehouse },
+            { value: 'microwave', label: 'Microwave', icon: Warehouse },
+          ],
+        )}
+      </Card>
+
+      {/* 6. Lifestyle Highlights */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderSmartTagInput(
+          'lifestyleHighlights',
+          'Lifestyle Highlights',
+          'Add custom highlight...',
+          Maximize,
+          [
+            { value: 'High Ceilings', label: 'High Ceilings', icon: Maximize },
+            { value: 'Modern Finishes', label: 'Modern Finishes', icon: Check },
+            { value: 'Open Plan', label: 'Open Plan', icon: Maximize },
+            { value: 'Natural Light', label: 'Natural Light', icon: Trees },
+            { value: 'Newly Renovated', label: 'Newly Renovated', icon: Check },
+            { value: 'Move-in Ready', label: 'Move-in Ready', icon: Check },
+            { value: 'Private', label: 'Private', icon: Home },
+          ],
+        )}
+      </Card>
+
+      {/* 7. View Highlights */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderSmartTagInput(
+          'viewHighlights',
+          'View Highlights',
+          'Add view highlight...',
+          Mountain,
+          [
+            { value: 'scenic_view', label: 'Scenic View', icon: Mountain },
+            { value: 'city_view', label: 'City View', icon: Building2 },
+            { value: 'mountain_view', label: 'Mountain View', icon: Mountain },
+            { value: 'sea_view', label: 'Sea View', icon: Droplets },
+            { value: 'garden_view', label: 'Garden View', icon: Trees },
+            { value: 'panoramic_view', label: 'Panoramic View', icon: Maximize },
+          ],
+        )}
+      </Card>
+
+      {/* 8. Location & Nearby Convenience */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderSmartTagInput(
+          'locationHighlights',
+          'Location & Nearby Convenience',
+          'Add nearby convenience...',
+          Car,
+          [
+            { value: 'near_top_schools', label: 'Near Top Schools', icon: CheckCircle2 },
+            { value: 'near_shopping_centres', label: 'Near Shopping Centres', icon: Building2 },
+            { value: 'easy_highway_access', label: 'Easy Highway Access', icon: Car },
+            { value: 'close_to_beach', label: 'Close To Beach', icon: Droplets },
+            { value: 'near_restaurants', label: 'Near Restaurants', icon: Home },
+            { value: 'close_to_gautrain', label: 'Close To Gautrain', icon: Car },
+            { value: 'near_public_transport', label: 'Near Public Transport', icon: Car },
+            { value: 'near_hospitals', label: 'Near Hospitals', icon: CheckCircle2 },
+            { value: 'near_parks', label: 'Near Parks', icon: Trees },
+          ],
+        )}
+      </Card>
+
+      {/* 9. Accessibility Features */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderSmartTagInput(
+          'accessibilityFeatures',
+          'Accessibility Features',
+          'Add accessibility feature...',
+          CheckCircle2,
+          [
+            { value: 'wheelchair_access', label: 'Wheelchair Access', icon: CheckCircle2 },
+            { value: 'step_free_access', label: 'Step-free Access', icon: CheckCircle2 },
+            { value: 'lift_access', label: 'Lift Access', icon: Building2 },
+            { value: 'wide_doorways', label: 'Wide Doorways', icon: Maximize },
+          ],
+        )}
+      </Card>
+
+      {/* 10. Security Features */}
+      <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+        {renderSmartTagInput(
+          'securityFeatures',
+          'Security Features',
+          'Add security feature...',
+          Shield,
+          [
+            { value: 'alarm', label: 'Alarm System', icon: Shield },
+            { value: 'electric_fence', label: 'Electric Fence', icon: Zap },
+            { value: 'beams', label: 'Outdoor Beams', icon: Check },
+            { value: 'cctv', label: 'CCTV Cameras', icon: Check },
+            { value: '24hr_guard', label: '24hr Guard', icon: Shield },
+            { value: 'access_control', label: 'Access Control', icon: Check },
+            { value: 'intercom', label: 'Intercom', icon: Check },
+            { value: 'security_gates', label: 'Security Gates', icon: Shield },
+          ],
+        )}
+      </Card>
+
+      {/* 11. Complex / Estate Amenities */}
+      {shouldShowComplexEstateAmenities && (
+        <Card className="p-6 bg-white/60 backdrop-blur-xl border-slate-200/60 shadow-sm rounded-2xl space-y-6">
+          {renderSmartTagInput(
+            'amenitiesFeatures',
+            'Complex / Estate Amenities',
+            'Add custom amenity...',
+            Building2,
+            [
+              { value: 'Gym', label: 'Gym', icon: Maximize },
+              { value: 'Clubhouse', label: 'Clubhouse', icon: Home },
+              { value: 'Lift / Elevator', label: 'Lift / Elevator', icon: Building2 },
+              { value: 'Kids Play Area', label: 'Kids Play Area', icon: Trees },
+              { value: 'Visitor Parking', label: 'Visitor Parking', icon: Car },
+              { value: 'Communal Garden', label: 'Communal Garden', icon: Trees },
+              { value: 'Concierge', label: 'Concierge', icon: Check },
+              { value: 'Rooftop Terrace', label: 'Rooftop Terrace', icon: Building2 },
+            ],
+          )}
+        </Card>
+      )}
     </div>
   );
 }

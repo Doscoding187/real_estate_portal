@@ -45,6 +45,10 @@ export type LeadRequestFlowProps = {
   defaultLocation?: string;
   submitting?: boolean;
   error?: string | null;
+  defaultIntentStage?: IntentStage;
+  defaultSourceSurface?: SourceSurface;
+  propertyId?: number;
+  reasonKey?: string;
   onSubmit: (payload: LeadWizardSubmit) => void;
 };
 
@@ -74,6 +78,10 @@ export function LeadRequestFlow({
   defaultLocation = '',
   submitting = false,
   error,
+  defaultIntentStage,
+  defaultSourceSurface,
+  propertyId,
+  reasonKey,
   onSubmit,
 }: LeadRequestFlowProps) {
   // Parse defaultLocation into suburb/city/province if provided
@@ -117,13 +125,13 @@ export function LeadRequestFlow({
   function handleSubmit() {
     onSubmit({
       category: state.category,
-      // Hardcoded — never exposed in UI (Requirements 4.4, 4.5)
-      intentStage: 'general',
-      sourceSurface: 'directory',
+      intentStage: defaultIntentStage || 'general',
+      sourceSurface: defaultSourceSurface || 'directory',
       notes: state.notes.trim(),
       suburb: state.suburb || undefined,
       city: state.city || undefined,
       province: state.province || undefined,
+      propertyId: propertyId || undefined,
     });
   }
 
@@ -138,6 +146,14 @@ export function LeadRequestFlow({
           totalSteps={TOTAL_STEPS}
           encouragingCopy={STEP_ENCOURAGING_COPY[state.step]}
         />
+
+        {reasonKey && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-xs font-semibold text-blue-700">
+              Recommended while viewing this property
+            </p>
+          </div>
+        )}
 
         {/* Step content — aria-live="polite" for accessibility */}
         <div aria-live="polite" className="rounded-[1.75rem] border border-slate-100 bg-[linear-gradient(180deg,_#ffffff,_#faf7f0)] p-5 md:p-6">

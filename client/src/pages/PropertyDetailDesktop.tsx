@@ -30,6 +30,7 @@ import {
   Shield,
   Zap,
   Droplets,
+  Sparkles,
   Square,
   Mail,
   MessageCircle,
@@ -42,6 +43,7 @@ import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { BondCalculator } from '@/components/BondCalculator';
+import { PropertyServiceActions } from '@/components/property/PropertyServiceActions';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
@@ -59,6 +61,7 @@ import {
   getCompactPropertyFacts,
   getPropertyBuyerChecklist,
   getPropertyFeatureChecklistItems,
+  getPropertyHighlightBuckets,
   getPropertyRunningCostFacts,
 } from '@/lib/property';
 
@@ -182,7 +185,7 @@ const parseStrictNumber = (value: unknown) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
-export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) {
+export default function PropertyDetailDesktop(props: PropertyDetailProps) {
   const { propertyId: propPropertyId } = props;
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
@@ -599,6 +602,37 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
   const propertyDetailItems = getCompactPropertyFacts(property, 4);
   const featureSpecItems = getPropertyBuyerChecklist(property);
   const propertyFeatureChecklistItems = getPropertyFeatureChecklistItems(property).slice(0, 18);
+  const highlightBuckets = getPropertyHighlightBuckets(property);
+  const explicitHighlightLabels = new Set(
+    [
+      ...highlightBuckets.lifestyleHighlights,
+      ...highlightBuckets.viewHighlights,
+      ...highlightBuckets.locationHighlights,
+    ].map(label => label.toLowerCase()),
+  );
+  const fallbackAmenityHighlights = highlights.filter(
+    highlight => !explicitHighlightLabels.has(String(highlight).toLowerCase()),
+  );
+  const separatedHighlightSections = [
+    {
+      key: 'lifestyle',
+      title: 'Lifestyle Highlights',
+      icon: Sparkles,
+      items: highlightBuckets.lifestyleHighlights,
+    },
+    {
+      key: 'views',
+      title: 'Views',
+      icon: Maximize,
+      items: highlightBuckets.viewHighlights,
+    },
+    {
+      key: 'location',
+      title: 'Location & Nearby Convenience',
+      icon: MapPin,
+      items: highlightBuckets.locationHighlights,
+    },
+  ].filter(section => section.items.length > 0);
   const runningCostItems = getPropertyRunningCostFacts(property);
   const openQualification = () => {
     setIsQualificationOpen(true);
@@ -645,7 +679,6 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     setIsQualificationOpen(false);
     handleWhatsAppContact(snapshot.summaryMessage);
   };
-  const showLegacyPropertyDetails = false;
   const propertyStructuredData = [
     buildBreadcrumbStructuredData([
       ...breadcrumbItems,
@@ -699,7 +732,11 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     {
       id: 'features',
       label: 'Features',
-      enabled: featureSpecItems.length > 0 || highlights.length > 0,
+      enabled:
+        featureSpecItems.length > 0 ||
+        propertyFeatureChecklistItems.length > 0 ||
+        separatedHighlightSections.length > 0 ||
+        fallbackAmenityHighlights.length > 0,
     },
     { id: 'contact', label: 'Contact', enabled: contactMode !== 'unknown' },
     { id: 'location', label: 'Location' },
@@ -1280,6 +1317,43 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
               </Card>
             )}
 
+            {separatedHighlightSections.map(section => {
+              const SectionIcon = section.icon;
+              return (
+                <Card
+                  key={section.key}
+                  id={
+                    featureSpecItems.length === 0 &&
+                    propertyFeatureChecklistItems.length === 0 &&
+                    section.key === separatedHighlightSections[0]?.key
+                      ? 'features'
+                      : undefined
+                  }
+                  className="border-slate-200 shadow-sm"
+                >
+                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                    <CardTitle className="flex items-center gap-2 text-fluid-h3 font-bold text-slate-900">
+                      <SectionIcon className="h-5 w-5 text-blue-600" />
+                      {section.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap gap-2">
+                      {section.items.map(item => (
+                        <Badge
+                          key={item}
+                          variant="secondary"
+                          className="rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-blue-50"
+                        >
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
             {/* 2.3 Additional Rooms */}
             {propertyFeatureChecklistItems.length === 0 && specs.additionalRooms && specs.additionalRooms.length > 0 && (
               <Card
@@ -1308,10 +1382,11 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
             )}
 
             {/* 2.4 Amenities */}
-            {propertyFeatureChecklistItems.length === 0 && highlights.length > 0 && (
+            {propertyFeatureChecklistItems.length === 0 && fallbackAmenityHighlights.length > 0 && (
               <Card
                 id={
                   featureSpecItems.length === 0 &&
+                  separatedHighlightSections.length === 0 &&
                   (!specs.additionalRooms || specs.additionalRooms.length === 0)
                     ? 'features'
                     : undefined
@@ -1326,10 +1401,10 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                 <CardContent className="p-4">
                   <div
                     className={`grid gap-y-3 gap-x-4 ${
-                      highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
+                      fallbackAmenityHighlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
                     }`}
                   >
-                    {highlights.map((amenity: string, index: number) => {
+                    {fallbackAmenityHighlights.map((amenity: string, index: number) => {
                       const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                       return (
                         <div key={index} className="flex items-center gap-3">
@@ -1681,6 +1756,15 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
             </div>
           </div>
         </div>
+
+        <PropertyServiceActions
+          listingType={property.listingType}
+          propertyId={property.id}
+          suburb={property.suburb}
+          city={property.city}
+          province={property.province}
+          isDevelopmentLinked={Boolean(property.developmentId)}
+        />
 
         {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties Carousel */}
         {similarProperties.length > 0 && (

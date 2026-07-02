@@ -264,7 +264,7 @@ function Router() {
           <Route path="/developer/:slug" component={DeveloperBrandProfilePage} />
 
           {/* ============================================================== */}
-          {/* 3. LEGACY / P24-STYLE ROUTES (Lower Priority)                  */}
+          {/* 3. PUBLIC PROPERTY ROUTES (Lower Priority Than Discovery)       */}
           {/* ============================================================== */}
 
           {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}

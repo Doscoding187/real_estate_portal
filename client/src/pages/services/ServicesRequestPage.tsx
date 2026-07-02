@@ -11,7 +11,9 @@ import {
   formatCategoryLabel,
   getCategoryMeta,
   serviceCategoryFromSlug,
+  type IntentStage,
   type ServiceCategory,
+  type SourceSurface,
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
 
@@ -34,6 +36,12 @@ export default function ServicesRequestPage() {
     .filter(Boolean)
     .join(', ');
   const providerId = query.get('providerId') || undefined;
+  const defaultIntentStage = (query.get('intentStage') as IntentStage) || undefined;
+  const defaultSourceSurface = (query.get('sourceSurface') as SourceSurface) || undefined;
+  const propertyIdParam = query.get('propertyId');
+  const propertyId = propertyIdParam ? Number(propertyIdParam) || undefined : undefined;
+  const reasonKey = query.get('reasonKey') || undefined;
+
   const latestSubmissionRef = useRef<{
     category: ServiceCategory;
     intentStage: string;
@@ -232,6 +240,10 @@ export default function ServicesRequestPage() {
             <LeadRequestFlow
               defaultCategory={category}
               defaultLocation={defaultLocation}
+              defaultIntentStage={defaultIntentStage}
+              defaultSourceSurface={defaultSourceSurface}
+              propertyId={propertyId}
+              reasonKey={reasonKey}
               submitting={createLead.isPending}
               error={createLead.error?.message ?? null}
               onSubmit={payload => {
@@ -244,6 +256,12 @@ export default function ServicesRequestPage() {
                   suburb: payload.suburb,
                   notes: payload.notes,
                 };
+                const baseContext: Record<string, unknown> = {};
+                if (reasonKey) baseContext.reasonKey = reasonKey;
+                if (defaultSourceSurface === 'journey_injection') {
+                  baseContext.sourceDetail = 'property_detail';
+                  baseContext.propertyLinked = true;
+                }
                 createLead.mutate({
                   providerId,
                   category: payload.category,
@@ -256,6 +274,7 @@ export default function ServicesRequestPage() {
                   city: payload.city,
                   suburb: payload.suburb,
                   notes: payload.notes,
+                  context: baseContext,
                 });
               }}
             />

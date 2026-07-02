@@ -332,6 +332,11 @@ export interface AdditionalInformation {
   // Residential (House / Apartment)
   furnishingStatus?: FurnishingStatus;
   flooring?: FlooringType;
+  kitchenType?: string;
+  countertopMaterial?: string;
+  builtInCupboards?: string;
+  appliancesIncluded?: string[];
+  fireplace?: string;
   petPolicy?: PetPolicy;
   roofType?: RoofType;
   wallType?: WallType;
@@ -339,6 +344,11 @@ export interface AdditionalInformation {
   security?: SecuritySetting;
   securityFeatures?: SecurityFeature[];
   outdoorFeatures?: OutdoorFeature[];
+  lifestyleHighlights?: string[];
+  propertyHighlights?: string[];
+  viewHighlights?: string[];
+  locationHighlights?: string[];
+  accessibilityFeatures?: string[];
 
   // Commercial / Industrial
   grade?: CommercialGrade;
@@ -667,7 +677,7 @@ export const BADGE_TEMPLATES: Record<
   }
 > = {
   ready_to_move: {
-    label: 'Ready to Move',
+    label: 'Ready to Occupy',
     description: 'Property is ready for immediate occupancy',
   },
   under_construction: {

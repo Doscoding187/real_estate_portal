@@ -108,4 +108,93 @@ describe('ServicesRequestPage integration', () => {
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
     expect(screen.getByRole('radiogroup')).toBeInTheDocument();
   });
+
+  it('passes intentStage and sourceSurface from query params to LeadRequestFlow', async () => {
+    // Set query params before render
+    const originalSearch = window.location.search;
+    Object.defineProperty(window, 'location', {
+      value: {
+        ...window.location,
+        search:
+          '?intentStage=buyer_offer_intent&sourceSurface=journey_injection&propertyId=42&reasonKey=bond_or_transfer',
+      },
+      writable: true,
+    });
+
+    render(<ServicesRequestPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'home_improvement',
+          intentStage: 'buyer_offer_intent',
+          sourceSurface: 'journey_injection',
+          propertyId: 42,
+          context: expect.objectContaining({
+            reasonKey: 'bond_or_transfer',
+            sourceDetail: 'property_detail',
+            propertyLinked: true,
+          }),
+        }),
+      );
+    });
+
+    // Restore
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, search: originalSearch },
+      writable: true,
+    });
+  });
+
+  it('preserves normal request flow when no query params are present', async () => {
+    const originalSearch = window.location.search;
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, search: '' },
+      writable: true,
+    });
+
+    render(<ServicesRequestPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          intentStage: 'general',
+          sourceSurface: 'directory',
+          propertyId: undefined,
+        }),
+      );
+    });
+
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, search: originalSearch },
+      writable: true,
+    });
+  });
+
+  it('shows reasonKey banner when provided', () => {
+    const originalSearch = window.location.search;
+    Object.defineProperty(window, 'location', {
+      value: {
+        ...window.location,
+        search: '?reasonKey=bond_or_transfer&sourceSurface=journey_injection',
+      },
+      writable: true,
+    });
+
+    render(<ServicesRequestPage />);
+    expect(screen.getByText('Recommended while viewing this property')).toBeInTheDocument();
+
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, search: originalSearch },
+      writable: true,
+    });
+  });
 });

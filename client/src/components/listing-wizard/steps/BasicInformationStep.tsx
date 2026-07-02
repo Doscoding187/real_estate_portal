@@ -84,6 +84,35 @@ const BasicInformationStep: React.FC = () => {
   const basicInfo = store.basicInfo || {};
   const pricing = store.pricing || {};
   const propertyDetails = store.propertyDetails || {};
+  const stockType =
+    basicInfo.stockType ||
+    (basicInfo.propertyCategory === 'new_development'
+      ? 'new_build'
+      : basicInfo.propertyCategory === 'existing' || basicInfo.propertyCategory === 'resale'
+        ? 'existing'
+        : undefined);
+  const rawDevelopmentAssociation =
+    basicInfo.developmentAssociation ||
+    (basicInfo.selectedDevelopmentId || basicInfo.developmentName ? 'linked' : 'none');
+  const developmentAssociation =
+    rawDevelopmentAssociation === 'linked'
+      ? 'link_existing'
+      : rawDevelopmentAssociation === 'new'
+        ? 'add_new'
+        : rawDevelopmentAssociation === 'none'
+          ? 'no_link'
+          : rawDevelopmentAssociation;
+  const shouldShowDevelopmentLink =
+    propertyType !== 'farm' && propertyType !== 'land' && propertyType !== 'commercial';
+  const shouldUseDevelopmentEstateFields =
+    shouldShowDevelopmentLink &&
+    (developmentAssociation === 'link_existing' || developmentAssociation === 'add_new');
+  const shouldShowBuilderWithoutLink =
+    shouldShowDevelopmentLink && stockType === 'new_build' && developmentAssociation === 'no_link';
+  const shouldShowDeveloperBuilderField =
+    shouldUseDevelopmentEstateFields || shouldShowBuilderWithoutLink;
+  const shouldShowDevelopmentNameField = shouldUseDevelopmentEstateFields;
+  const shouldShowUnitTypeNameField = shouldUseDevelopmentEstateFields;
 
   // Autocomplete state for developers
   const [developerSearchQuery, setDeveloperSearchQuery] = useState('');
@@ -139,11 +168,36 @@ const BasicInformationStep: React.FC = () => {
   // Update handlers
   const updateBasicInfo = (field: string, value: any) => {
     if (store.setBasicInfo) {
-      store.setBasicInfo({ ...basicInfo, [field]: value });
+      store.setBasicInfo({ [field]: value });
       return;
     }
     store.updatePropertyDetail?.(field, value);
   };
+
+  const updateBasicInfoMany = (updates: Record<string, any>) => {
+    if (store.setBasicInfo) {
+      store.setBasicInfo(updates);
+      return;
+    }
+
+    Object.entries(updates).forEach(([field, value]) => {
+      store.updatePropertyDetail?.(field, value);
+    });
+  };
+
+  const getNoDevelopmentLinkClears = (nextStockType = stockType) => ({
+    developmentName: '',
+    selectedDevelopmentId: undefined,
+    unitTypeName: '',
+    ...(nextStockType === 'existing'
+      ? {
+          developerName: '',
+          selectedDeveloperId: undefined,
+        }
+      : {
+          selectedDeveloperId: undefined,
+        }),
+  });
 
   const updateTitle = (value: string) => {
     store.setTitle(value);
@@ -509,79 +563,162 @@ const BasicInformationStep: React.FC = () => {
           </div>
         ) : (
           /* Standard categories for other properties */
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card
-              onClick={() => updateBasicInfo('propertyCategory', 'existing')}
-              className={`cursor-pointer transition-all p-4 ${
-                basicInfo.propertyCategory === 'existing'
-                  ? 'border-2 border-blue-500 bg-blue-50'
-                  : 'border-2 border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`p-2 rounded-lg ${
-                    basicInfo.propertyCategory === 'existing' ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}
-                >
-                  <Home
-                    className={`w-6 h-6 ${
-                      basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-600'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <h4
-                    className={`font-bold ${
-                      basicInfo.propertyCategory === 'existing' ? 'text-blue-600' : 'text-gray-900'
-                    }`}
-                  >
-                    Existing Property
-                  </h4>
-                  <p className="text-sm text-gray-600">Previously owned or occupied</p>
-                </div>
-              </div>
-            </Card>
+          <div className="space-y-5">
+            <div className="space-y-1">
+              <h4 className="text-sm font-semibold text-slate-800">Stock Type</h4>
+              <p className="text-sm text-slate-600">
+                This controls resale/new-build badges, transfer context, and how the listing is
+                grouped on the public property page.
+              </p>
+            </div>
 
-            <Card
-              onClick={() => updateBasicInfo('propertyCategory', 'new_development')}
-              className={`cursor-pointer transition-all p-4 ${
-                basicInfo.propertyCategory === 'new_development'
-                  ? 'border-2 border-blue-500 bg-blue-50'
-                  : 'border-2 border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`p-2 rounded-lg ${
-                    basicInfo.propertyCategory === 'new_development' ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}
-                >
-                  <Home
-                    className={`w-6 h-6 ${
-                      basicInfo.propertyCategory === 'new_development'
-                        ? 'text-blue-600'
-                        : 'text-gray-600'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <h4
-                    className={`font-bold ${
-                      basicInfo.propertyCategory === 'new_development'
-                        ? 'text-blue-600'
-                        : 'text-gray-900'
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card
+                onClick={() =>
+                  updateBasicInfoMany({
+                    stockType: 'existing',
+                    propertyCategory: 'existing',
+                    ...(developmentAssociation === 'no_link'
+                      ? getNoDevelopmentLinkClears('existing')
+                      : {}),
+                  })
+                }
+                className={`cursor-pointer transition-all p-4 ${
+                  stockType === 'existing'
+                    ? 'border-2 border-blue-500 bg-blue-50'
+                    : 'border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2 rounded-lg ${
+                      stockType === 'existing' ? 'bg-blue-100' : 'bg-gray-100'
                     }`}
                   >
-                    New Development
-                  </h4>
-                  <p className="text-sm text-gray-600">New construction or development</p>
+                    <Home
+                      className={`w-6 h-6 ${
+                        stockType === 'existing' ? 'text-blue-600' : 'text-gray-600'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <h4
+                      className={`font-bold ${
+                        stockType === 'existing' ? 'text-blue-600' : 'text-gray-900'
+                      }`}
+                    >
+                      Existing / Resale Property
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Previously owned, occupied, or transferred before.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+
+              <Card
+                onClick={() =>
+                  updateBasicInfoMany({
+                    stockType: 'new_build',
+                    propertyCategory: 'new_development',
+                  })
+                }
+                className={`cursor-pointer transition-all p-4 ${
+                  stockType === 'new_build'
+                    ? 'border-2 border-blue-500 bg-blue-50'
+                    : 'border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2 rounded-lg ${
+                      stockType === 'new_build' ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}
+                  >
+                    <Home
+                      className={`w-6 h-6 ${
+                        stockType === 'new_build' ? 'text-blue-600' : 'text-gray-600'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <h4
+                      className={`font-bold ${
+                        stockType === 'new_build' ? 'text-blue-600' : 'text-gray-900'
+                      }`}
+                    >
+                      New Build / Developer Stock
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Off-plan, under construction, first transfer, or newly completed stock.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         )}
       </Card>
+
+      {/* Development / Estate Link */}
+      {shouldShowDevelopmentLink && (
+        <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-bold text-slate-800">Development / Estate Link</h3>
+          </div>
+          <p className="text-sm text-slate-600 mb-4">
+            Link the listing to a named development, estate, complex, or scheme when buyers should
+            be able to discover related units or resale stock together.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                value: 'no_link',
+                label: 'No Link',
+                description: 'Standalone listing with no named project or estate.',
+              },
+              {
+                value: 'link_existing',
+                label: 'Link Existing',
+                description: 'Connect to a known development, estate, or complex.',
+              },
+              {
+                value: 'add_new',
+                label: 'Add New Name',
+                description: 'Capture a new development or estate name for later mapping.',
+              },
+            ].map(option => (
+              <Card
+                key={option.value}
+                onClick={() =>
+                  updateBasicInfoMany({
+                    developmentAssociation: option.value,
+                    ...(option.value === 'no_link'
+                      ? getNoDevelopmentLinkClears()
+                      : {}),
+                  })
+                }
+                className={`cursor-pointer transition-all p-4 ${
+                  developmentAssociation === option.value
+                    ? 'border-2 border-blue-500 bg-blue-50'
+                    : 'border-2 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <h4
+                  className={`font-bold ${
+                    developmentAssociation === option.value ? 'text-blue-600' : 'text-gray-900'
+                  }`}
+                >
+                  {option.label}
+                </h4>
+                <p className="text-sm text-gray-600 mt-1">{option.description}</p>
+              </Card>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Property Highlights (4 fields per type) */}
       {propertyType !== 'shared_living' && (
@@ -651,6 +788,22 @@ const BasicInformationStep: React.FC = () => {
                     className="mt-1"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="parkingCount" className="text-slate-700">
+                    Parking Spaces
+                  </Label>
+                  <Input
+                    id="parkingCount"
+                    type="number"
+                    min="0"
+                    value={propertyDetails.parkingCount || ''}
+                    onChange={e =>
+                      store.updatePropertyDetail('parkingCount', Number(e.target.value))
+                    }
+                    placeholder="e.g., 2"
+                    className="mt-1"
+                  />
+                </div>
               </>
             )}
 
@@ -708,6 +861,22 @@ const BasicInformationStep: React.FC = () => {
                     value={propertyDetails.erfSizeM2 || ''}
                     onChange={e => store.updatePropertyDetail('erfSizeM2', Number(e.target.value))}
                     placeholder="e.g., 500"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="parkingCount" className="text-slate-700">
+                    Parking Spaces
+                  </Label>
+                  <Input
+                    id="parkingCount"
+                    type="number"
+                    min="0"
+                    value={propertyDetails.parkingCount || ''}
+                    onChange={e =>
+                      store.updatePropertyDetail('parkingCount', Number(e.target.value))
+                    }
+                    placeholder="e.g., 2"
                     className="mt-1"
                   />
                 </div>
@@ -943,18 +1112,27 @@ const BasicInformationStep: React.FC = () => {
         </Card>
       )}
 
-      {/* Possession Status & Additional Details */}
-      {action === 'sell' && (propertyType === 'house' || propertyType === 'apartment') && (
+      {/* Possession Status & Development Details */}
+      {((action === 'sell' && (propertyType === 'house' || propertyType === 'apartment')) ||
+        shouldShowDeveloperBuilderField ||
+        shouldShowDevelopmentNameField) && (
         <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
             <div className="p-2 bg-purple-100 rounded-lg">
               <Home className="w-5 h-5 text-purple-600" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-800">Additional Information</h3>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800">Stock & Public Context</h3>
+              <p className="text-sm text-slate-600">
+                These fields power PDP trust context, search grouping, and buyer expectations.
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {basicInfo.propertyCategory === 'resale' && (
+            {action === 'sell' &&
+              (propertyType === 'house' || propertyType === 'apartment') &&
+              stockType === 'existing' && (
               <>
                 <div>
                   <Label htmlFor="possessionStatus" className="text-slate-700">
@@ -1036,13 +1214,13 @@ const BasicInformationStep: React.FC = () => {
               </>
             )}
 
-            {/* New Development Fields */}
-            {basicInfo.propertyCategory === 'new_development' && (
+            {/* Development / Estate Fields */}
+            {shouldShowDeveloperBuilderField && (
               <>
                 {/* Developer Name Autocomplete */}
                 <div>
                   <Label htmlFor="developerName" className="text-slate-700">
-                    Developer Name *
+                    Developer / Builder Name
                   </Label>
                   <Popover open={showDeveloperDropdown} onOpenChange={setShowDeveloperDropdown}>
                     <PopoverTrigger asChild>
@@ -1064,7 +1242,11 @@ const BasicInformationStep: React.FC = () => {
                             }
                           }}
                           onFocus={() => setShowDeveloperDropdown(true)}
-                          placeholder="Search for developer..."
+                          placeholder={
+                            shouldShowBuilderWithoutLink
+                              ? 'Enter developer or builder name'
+                              : 'Search for developer or builder...'
+                          }
                           className="mt-1"
                         />
                         {loadingDevelopers && (
@@ -1087,9 +1269,7 @@ const BasicInformationStep: React.FC = () => {
                                   value={dev.name}
                                   onSelect={() => {
                                     console.log('Selected developer:', dev.name);
-                                    // Combine all updates into a single state update to avoid race conditions with stale basicInfo closure
                                     store.setBasicInfo({
-                                      ...basicInfo,
                                       developerName: dev.name,
                                       selectedDeveloperId: dev.id,
                                       developmentName: '',
@@ -1130,14 +1310,22 @@ const BasicInformationStep: React.FC = () => {
                     </PopoverContent>
                   </Popover>
                   <p className="text-xs text-slate-500 mt-1">
-                    Search for registered developers or enter a custom name
+                    {shouldShowBuilderWithoutLink
+                      ? 'Optional, but recommended for new-build trust context.'
+                      : developmentAssociation === 'link_existing'
+                        ? 'Optional for now. This can be auto-filled from the selected development later.'
+                      : 'Optional for resale stock, but useful when the estate/development brand matters.'}
                   </p>
                 </div>
+              </>
+            )}
 
+            {shouldShowDevelopmentNameField && (
+              <>
                 {/* Development Name Autocomplete */}
                 <div>
                   <Label htmlFor="developmentName" className="text-slate-700">
-                    Development Name *
+                    Development / Estate Name *
                   </Label>
                   <Popover open={showDevelopmentDropdown} onOpenChange={setShowDevelopmentDropdown}>
                     <PopoverTrigger asChild>
@@ -1151,7 +1339,11 @@ const BasicInformationStep: React.FC = () => {
                             setShowDevelopmentDropdown(true);
                           }}
                           onFocus={() => setShowDevelopmentDropdown(true)}
-                          placeholder="Search for development..."
+                          placeholder={
+                            developmentAssociation === 'link_existing'
+                              ? 'Search existing development or estate'
+                              : 'Enter development or estate name'
+                          }
                           className="mt-1"
                         />
                         {loadingDevelopments && (
@@ -1181,7 +1373,6 @@ const BasicInformationStep: React.FC = () => {
                                   onSelect={() => {
                                     console.log('Selected development:', dev.name);
                                     store.setBasicInfo({
-                                      ...basicInfo,
                                       developmentName: dev.name,
                                       selectedDevelopmentId: dev.id,
                                     });
@@ -1225,9 +1416,31 @@ const BasicInformationStep: React.FC = () => {
                     </PopoverContent>
                   </Popover>
                   <p className="text-xs text-slate-500 mt-1">
-                    {basicInfo.selectedDeveloperId
-                      ? 'Filtered by selected developer'
-                      : 'Search for developments or enter a custom name'}
+                    {developmentAssociation === 'link_existing'
+                      ? basicInfo.selectedDeveloperId
+                        ? 'Required. Filtered by selected developer.'
+                        : 'Required. Search existing developments or estates.'
+                      : 'Required. This name can be mapped to a development or estate page later.'}
+                  </p>
+                </div>
+              </>
+            )}
+
+            {shouldShowUnitTypeNameField && (
+              <>
+                <div>
+                  <Label htmlFor="unitTypeName" className="text-slate-700">
+                    Unit Type / Layout Name
+                  </Label>
+                  <Input
+                    id="unitTypeName"
+                    value={basicInfo.unitTypeName || ''}
+                    onChange={e => updateBasicInfo('unitTypeName', e.target.value)}
+                    placeholder="e.g., Type B, 2-bed 1-bath, Unit 204"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Optional. Use this when the listing maps to a known unit type or scheme layout.
                   </p>
                 </div>
               </>
@@ -1236,15 +1449,15 @@ const BasicInformationStep: React.FC = () => {
         </Card>
       )}
 
-      {/* Listing Badges Section - Only for non-farm properties */}
-      {basicInfo.propertyCategory && propertyType !== 'farm' && (
+      {/* Listing Status Badge - Only for non-farm properties */}
+      {(stockType || basicInfo.propertyCategory) && propertyType !== 'farm' && (
         <Card className="bg-white/70 backdrop-blur-sm rounded-[1.5rem] border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)] p-6">
           <div className="flex items-center gap-2 mb-4">
             <Award className="w-5 h-5 text-purple-600" />
-            <h3 className="text-lg font-bold text-slate-800">Listing Badge</h3>
+            <h3 className="text-lg font-bold text-slate-800">Listing Status</h3>
           </div>
           <p className="text-sm text-slate-600 mb-4">
-            Select one badge to highlight a special feature of your property (optional).
+            Select the public status buyers should see on the PDP and search cards.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1264,10 +1477,13 @@ const BasicInformationStep: React.FC = () => {
                 ];
               }
               // For non-farm properties
-              else if (basicInfo.propertyCategory === 'existing') {
+              else if (stockType === 'existing' || basicInfo.propertyCategory === 'existing') {
                 availableBadges = ['ready_to_move', 'move_in_ready', 'fixer_upper', 'renovated'];
-              } else if (basicInfo.propertyCategory === 'new_development') {
-                availableBadges = ['under_construction', 'off_plan'];
+              } else if (
+                stockType === 'new_build' ||
+                basicInfo.propertyCategory === 'new_development'
+              ) {
+                availableBadges = ['off_plan', 'under_construction', 'ready_to_move'];
               }
 
               return availableBadges.map(badge => {

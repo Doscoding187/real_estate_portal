@@ -79,7 +79,8 @@
     "start:server:prodlike": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "start:prod": "cross-env NODE_ENV=production tsx server/_core/start.ts",
     "start:prod:with-migrations": "tsx scripts/start-production.ts",
-    "start:prod:core": "cross-env NODE_ENV=production tsx server/_core/start.ts"
+    "start:prod:core": "cross-env NODE_ENV=production tsx server/_core/start.ts",
+    "pdp:seed:showcase": "cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/seedLocalPdpShowcase.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

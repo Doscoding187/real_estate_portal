@@ -120,6 +120,12 @@ export type PropertyFeatureChecklistItem = {
   source: 'structured' | 'custom';
 };
 
+export type PropertyHighlightBuckets = {
+  lifestyleHighlights: string[];
+  viewHighlights: string[];
+  locationHighlights: string[];
+};
+
 const parsePositiveNumber = (value: unknown): number | undefined => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
@@ -160,6 +166,73 @@ const titleCase = (value?: unknown): string => {
     .replace(/\s+/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());
 };
+
+const HIGHLIGHT_LABEL_OVERRIDES: Record<string, string> = {
+  move_in_ready: 'Move-in Ready',
+  'move-in-ready': 'Move-in Ready',
+  'move-in ready': 'Move-in Ready',
+  'move in ready': 'Move-in Ready',
+  natural_light: 'Natural Light',
+  'natural-light': 'Natural Light',
+  modern_finishes: 'Modern Finishes',
+  'modern-finishes': 'Modern Finishes',
+  sea_view: 'Sea View',
+  'sea-view': 'Sea View',
+  mountain_view: 'Mountain View',
+  'mountain-view': 'Mountain View',
+  panoramic_view: 'Panoramic View',
+  'panoramic-view': 'Panoramic View',
+  close_to_beach: 'Close To Beach',
+  'close-to-beach': 'Close To Beach',
+  near_schools: 'Near Schools',
+  'near-schools': 'Near Schools',
+};
+
+const normalizeHighlightLabel = (value: unknown): string => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const key = raw
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  return HIGHLIGHT_LABEL_OVERRIDES[key] || titleCase(raw);
+};
+
+const uniqueHighlightLabels = (...values: unknown[]): string[] => {
+  const items = values.flatMap(value => parseArray(value));
+  const seen = new Set<string>();
+  const labels: string[] = [];
+
+  for (const item of items) {
+    const label = normalizeHighlightLabel(item);
+    if (!label) continue;
+    const dedupeKey = label.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    labels.push(label);
+  }
+
+  return labels;
+};
+
+export function getPropertyHighlightBuckets(property: PropertyLike): PropertyHighlightBuckets {
+  const details = getDetails(property);
+  const settings = getSettings(property);
+
+  return {
+    lifestyleHighlights: uniqueHighlightLabels(
+      settings.lifestyleHighlights,
+      details.lifestyleHighlights,
+      settings.propertyHighlights,
+      details.propertyHighlights,
+    ),
+    viewHighlights: uniqueHighlightLabels(settings.viewHighlights, details.viewHighlights),
+    locationHighlights: uniqueHighlightLabels(
+      settings.locationHighlights,
+      details.locationHighlights,
+    ),
+  };
+}
 
 const formatM2 = (value: number) => `${value.toLocaleString('en-ZA')} m²`;
 
@@ -593,6 +666,29 @@ const BUYER_CHECKLIST_FEATURE_FRAGMENTS = [
   'electricity',
 ];
 
+const MARKETING_LOCATION_FEATURE_FRAGMENTS = [
+  'gautrain',
+  'nearby',
+  'close to',
+  'walking distance',
+  'walk to',
+  'near ',
+  'sea view',
+  'sea views',
+  'city view',
+  'city views',
+  'mountain view',
+  'mountain views',
+  'garden view',
+  'garden views',
+  'panoramic view',
+  'panoramic views',
+  'scenic view',
+  'scenic views',
+  'views',
+  'view',
+];
+
 const normalizeFeatureChecklistToken = (value: unknown) =>
   String(value || '')
     .replace(/[_-]+/g, ' ')
@@ -644,10 +740,22 @@ export function getPropertyFeatureChecklistItems(
     const normalized = normalizeFeatureChecklistToken(label);
     if (!normalized) return;
 
+    const negativeValueTokens = ['none', 'no', 'n/a', 'not applicable', 'not included'];
+    const valuePart = normalized.includes(':')
+      ? normalized.split(':').slice(1).join(':').trim()
+      : normalized;
+
+    if (negativeValueTokens.includes(valuePart)) return;
+
     const duplicatesBuyerChecklist = BUYER_CHECKLIST_FEATURE_FRAGMENTS.some(fragment =>
       normalized.includes(fragment),
     );
     if (duplicatesBuyerChecklist) return;
+
+    const isMarketingOrLocationHighlight = MARKETING_LOCATION_FEATURE_FRAGMENTS.some(fragment =>
+      normalized.includes(fragment),
+    );
+    if (isMarketingOrLocationHighlight) return;
 
     const dedupeKey =
       normalized.includes('swimming pool') || normalized === 'pool'
@@ -937,11 +1045,51 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
     category: 'lifestyle',
   });
   addFormattedSpec({
+    key: 'countertops',
+    label: 'Countertops',
+    rawValue: valueFor('countertopMaterial', 'countertops'),
+    icon: Building2,
+    priority: 146,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'built-in-cupboards',
+    label: 'Built-in Cupboards',
+    rawValue: valueFor('builtInCupboards'),
+    icon: Home,
+    priority: 147,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
     key: 'air-conditioning',
     label: 'Air Conditioning',
     rawValue: valueFor('airConditioning'),
     icon: Building2,
     priority: 148,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'fireplace',
+    label: 'Fireplace',
+    rawValue: valueFor('fireplace'),
+    icon: Sparkles,
+    priority: 148.5,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'appliances-included',
+    label: 'Appliances Included',
+    rawValue: valueFor('appliancesIncluded', 'appliances'),
+    icon: Home,
+    priority: 148.7,
+    category: 'lifestyle',
+  });
+  addFormattedSpec({
+    key: 'accessibility',
+    label: 'Accessibility',
+    rawValue: valueFor('accessibilityFeatures', 'accessibility'),
+    icon: CheckCircle2,
+    priority: 148.9,
     category: 'lifestyle',
   });
   addFormattedSpec({
@@ -1030,7 +1178,6 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
   const lifestyleAmenities = [
     ...((Array.isArray(valueFor('amenities')) ? valueFor('amenities') : []) as unknown[]),
     ...((Array.isArray(valueFor('amenitiesFeatures')) ? valueFor('amenitiesFeatures') : []) as unknown[]),
-    ...((Array.isArray(valueFor('propertyHighlights')) ? valueFor('propertyHighlights') : []) as unknown[]),
   ]
     .map(item => String(item || '').trim())
     .filter(Boolean)
@@ -1422,6 +1569,7 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
       : undefined,
     highlights: [
       ...parseArray(property.highlights),
+      ...parseArray(getDetails(property).lifestyleHighlights),
       ...parseArray(getDetails(property).propertyHighlights),
       ...parseArray(getDetails(property).amenitiesFeatures),
     ]

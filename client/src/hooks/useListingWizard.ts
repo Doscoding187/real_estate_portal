@@ -156,12 +156,22 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       },
 
       setBasicInfo: basicInfo => {
-        set({ basicInfo });
+        set(state => ({
+          basicInfo: {
+            ...(state.basicInfo || {}),
+            ...basicInfo,
+          },
+        }));
       },
 
       // Additional Info
       setAdditionalInfo: additionalInfo => {
-        set({ additionalInfo });
+        set(state => ({
+          additionalInfo: {
+            ...(state.additionalInfo || {}),
+            ...additionalInfo,
+          },
+        }));
       },
 
       // Step 3: Pricing
@@ -171,7 +181,12 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Property Details
       setPropertyDetails: details => {
-        set({ propertyDetails: details });
+        set(state => ({
+          propertyDetails: {
+            ...(state.propertyDetails || {}),
+            ...details,
+          } as PropertyDetails,
+        }));
       },
 
       updatePropertyDetail: (key, value) => {

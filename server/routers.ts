@@ -39,6 +39,12 @@ function getUser(ctx: { user: { id: number; role?: string } | null }) {
   return requireUser(ctx);
 }
 
+const hasContractValue = (value: unknown) =>
+  value !== undefined &&
+  value !== null &&
+  (typeof value !== 'number' || Number.isFinite(value)) &&
+  !(typeof value === 'string' && value.trim() === '');
+
 function parseTextList(value?: string | null) {
   if (!value) return [];
   return value
@@ -937,6 +943,21 @@ export const appRouter = router({
           linkedPropertyDetails.propertyHighlights ||
           [];
 
+        const linkedPropFields = [
+          'ownershipType', 'powerBackup', 'security', 'securityFeatures',
+          'waterSupply', 'internetAccess', 'flooring', 'parkingType',
+          'petFriendly', 'electricitySupply', 'additionalRooms',
+        ] as const;
+        const resolvedLinkedPropDetails: Record<string, unknown> = {};
+        for (const key of linkedPropFields) {
+          const value = key === 'security'
+            ? (linkedPropertyDetails.security ?? linkedPropertyDetails.securityLevel)
+            : linkedPropertyDetails[key];
+          if (hasContractValue(value)) {
+            resolvedLinkedPropDetails[key] = value;
+          }
+        }
+
         const normalizedPropertySettings = {
           ...(typeof (property as any).propertySettings === 'string'
             ? (() => {
@@ -947,17 +968,7 @@ export const appRouter = router({
                 }
               })()
             : ((property as any).propertySettings || {})),
-          ownershipType: linkedPropertyDetails.ownershipType,
-          powerBackup: linkedPropertyDetails.powerBackup,
-          security: linkedPropertyDetails.security || linkedPropertyDetails.securityLevel,
-          securityFeatures: linkedPropertyDetails.securityFeatures,
-          waterSupply: linkedPropertyDetails.waterSupply,
-          internetAccess: linkedPropertyDetails.internetAccess,
-          flooring: linkedPropertyDetails.flooring,
-          parkingType: linkedPropertyDetails.parkingType,
-          petFriendly: linkedPropertyDetails.petFriendly,
-          electricitySupply: linkedPropertyDetails.electricitySupply,
-          additionalRooms: linkedPropertyDetails.additionalRooms,
+          ...resolvedLinkedPropDetails,
         };
 
         const normalizedPropertyDetails = {

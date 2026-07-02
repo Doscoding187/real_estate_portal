@@ -6,47 +6,15 @@
 
 import React from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import PropertyCardList from '@/components/PropertyCardList';
 import { useAuth } from '@/_core/hooks/useAuth';
-import {
-  MapPin,
-  Bed,
-  Bath,
-  Maximize,
-  Heart,
-  Share2,
-  Calendar,
-  Eye,
-  CheckCircle2,
-} from 'lucide-react';
-import { useLocation } from 'wouter';
-import { trpc } from '@/lib/trpc';
 import { calculateListingQualityScore } from '@/lib/quality';
 import { QualityScoreCard } from '@/components/dashboard/QualityScoreCard';
 
 const PreviewStep: React.FC = () => {
   const state = useListingWizardStore();
   const { user } = useAuth();
-
-  // Format currency
-  const formatCurrency = (amount: number | undefined) => {
-    if (!amount) return 'Not specified';
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  // Format date
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return 'Not specified';
-    return new Date(date).toLocaleDateString('en-ZA');
-  };
 
   // Get primary media
   const primaryMedia = state.media.find((m: any) => m.isPrimary) || state.media[0];
@@ -55,11 +23,95 @@ const PreviewStep: React.FC = () => {
   const imageCount = state.media.filter((m: any) => m.type === 'image').length;
   const videoCount = state.media.filter((m: any) => m.type === 'video').length;
 
-  // Get amenities list from additionalInfo (where they're actually stored)
-  const amenitiesList = [
-    ...(state.additionalInfo?.propertyHighlights || []),
-    ...(state.additionalInfo?.additionalRooms || []),
-    ...(state.additionalInfo?.securityFeatures || []),
+  const formatToken = (value: unknown) =>
+    String(value || '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, char => char.toUpperCase());
+
+  const addUnique = (items: string[], value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(item => addUnique(items, item));
+      return;
+    }
+
+    const formatted = formatToken(value);
+    if (!formatted) return;
+
+    const exists = items.some(item => item.toLowerCase() === formatted.toLowerCase());
+    if (!exists) items.push(formatted);
+  };
+
+  const physicalSpecItems: string[] = [];
+  [
+    state.additionalInfo?.additionalRooms,
+    state.additionalInfo?.outdoorFeatures,
+    state.additionalInfo?.appliancesIncluded,
+    state.additionalInfo?.accessibilityFeatures,
+    state.additionalInfo?.amenitiesFeatures,
+  ].forEach(value => addUnique(physicalSpecItems, value));
+
+  [
+    ['Kitchen', state.additionalInfo?.kitchenType],
+    ['Countertops', state.additionalInfo?.countertopMaterial],
+    ['Built-in Cupboards', state.additionalInfo?.builtInCupboards],
+    ['Furnishing', state.additionalInfo?.furnishingStatus],
+    ['Flooring', state.additionalInfo?.flooring],
+    ['Air Conditioning', state.additionalInfo?.airConditioning],
+    ['Fireplace', state.additionalInfo?.fireplace],
+    ['Water Heating', state.additionalInfo?.waterHeating],
+  ].forEach(([label, value]) => {
+    if (value) addUnique(physicalSpecItems, `${label}: ${formatToken(value)}`);
+  });
+
+  const lifestyleHighlightItems: string[] = [];
+  addUnique(
+    lifestyleHighlightItems,
+    state.additionalInfo?.lifestyleHighlights || state.additionalInfo?.propertyHighlights,
+  );
+
+  const viewHighlightItems: string[] = [];
+  addUnique(viewHighlightItems, state.additionalInfo?.viewHighlights);
+
+  const locationHighlightItems: string[] = [];
+  addUnique(locationHighlightItems, state.additionalInfo?.locationHighlights);
+
+  const previewFeatureLabels = [
+    ...physicalSpecItems,
+    ...lifestyleHighlightItems,
+    ...viewHighlightItems,
+    ...locationHighlightItems,
+  ];
+
+  const cardHighlightPreview = [
+    ...lifestyleHighlightItems,
+    ...viewHighlightItems,
+    ...locationHighlightItems,
+    ...physicalSpecItems,
+  ].slice(0, 8);
+
+  const previewSections = [
+    {
+      title: 'Property Features & Specifications',
+      emptyLabel: 'No physical specifications selected',
+      items: physicalSpecItems,
+    },
+    {
+      title: 'Lifestyle Highlights',
+      emptyLabel: 'No lifestyle highlights selected',
+      items: lifestyleHighlightItems,
+    },
+    {
+      title: 'Views',
+      emptyLabel: 'No view highlights selected',
+      items: viewHighlightItems,
+    },
+    {
+      title: 'Location & Nearby Convenience',
+      emptyLabel: 'No location conveniences selected',
+      items: locationHighlightItems,
+    },
   ];
 
   // Calculate house/building area (not yard/land)
@@ -104,7 +156,7 @@ const PreviewStep: React.FC = () => {
     ...state,
     images: state.media.filter((m: any) => m.type === 'image'),
     videos: state.media.filter((m: any) => m.type === 'video'),
-    features: amenitiesList,
+    features: previewFeatureLabels,
     // Map specific fields for simple readiness/quality object if needed,
     // usually the state is close enough or we spread it.
     // Let's ensure top level fields match what calculateListingQualityScore expects
@@ -150,7 +202,7 @@ const PreviewStep: React.FC = () => {
           badges={state.badges?.map(b => b.label)}
           imageCount={imageCount}
           videoCount={videoCount}
-          highlights={amenitiesList}
+          highlights={cardHighlightPreview}
         />
       </div>
 
@@ -168,22 +220,26 @@ const PreviewStep: React.FC = () => {
               {state.location?.postalCode}
             </p>
           </div>
-          <div>
-            <h4 className="font-medium text-slate-700 mb-2">Features</h4>
-            <div className="flex flex-wrap gap-2">
-              {amenitiesList.map((amenity: string, index: number) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="bg-emerald-100 text-emerald-800 border-emerald-200"
-                >
-                  {amenity}
-                </Badge>
-              ))}
-              {amenitiesList.length === 0 && (
-                <span className="text-slate-500 italic">No amenities selected</span>
-              )}
-            </div>
+          <div className="space-y-4">
+            {previewSections.map(section => (
+              <div key={section.title}>
+                <h4 className="font-medium text-slate-700 mb-2">{section.title}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {section.items.map((item: string, index: number) => (
+                    <Badge
+                      key={`${section.title}-${item}-${index}`}
+                      variant="secondary"
+                      className="bg-emerald-100 text-emerald-800 border-emerald-200"
+                    >
+                      {item}
+                    </Badge>
+                  ))}
+                  {section.items.length === 0 && (
+                    <span className="text-slate-500 italic">{section.emptyLabel}</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

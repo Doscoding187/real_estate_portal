@@ -23,11 +23,11 @@ import {
   CheckCircle2,
   Home,
   ChevronRight,
-  Building2,
   Car,
   MessageCircle,
   Wifi,
   Dumbbell,
+  Sparkles,
   Trees,
   Shield,
   Zap,
@@ -41,6 +41,7 @@ import { buildPropertyUrl, generateBreadcrumbs } from '@/lib/urlUtils';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { BondCalculator } from '@/components/BondCalculator';
+import { PropertyServiceActions } from '@/components/property/PropertyServiceActions';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
 import { SuburbInsights } from '@/components/property/SuburbInsights';
 import { LocalityGuide } from '@/components/property/LocalityGuide';
@@ -55,6 +56,7 @@ import {
   getCompactPropertyFacts,
   getPropertyBuyerChecklist,
   getPropertyFeatureChecklistItems,
+  getPropertyHighlightBuckets,
   getPropertyRunningCostFacts,
 } from '@/lib/property';
 
@@ -94,7 +96,7 @@ const formatDateLabel = (value: unknown) => {
   });
 };
 
-export default function PropertyDetail(props: { propertyId?: number } & any) {
+export default function PropertyDetailMobile(props: { propertyId?: number } & any) {
   const { propertyId: propPropertyId } = props;
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
@@ -495,6 +497,37 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   const mobilePropertySummaryItems = propertyDetailItems;
   const featureSpecItems = getPropertyBuyerChecklist(property);
   const propertyFeatureChecklistItems = getPropertyFeatureChecklistItems(property).slice(0, 15);
+  const highlightBuckets = getPropertyHighlightBuckets(property);
+  const explicitHighlightLabels = new Set(
+    [
+      ...highlightBuckets.lifestyleHighlights,
+      ...highlightBuckets.viewHighlights,
+      ...highlightBuckets.locationHighlights,
+    ].map(label => label.toLowerCase()),
+  );
+  const fallbackAmenityHighlights = highlights.filter(
+    highlight => !explicitHighlightLabels.has(String(highlight).toLowerCase()),
+  );
+  const separatedHighlightSections = [
+    {
+      key: 'lifestyle',
+      title: 'Lifestyle Highlights',
+      icon: Sparkles,
+      items: highlightBuckets.lifestyleHighlights,
+    },
+    {
+      key: 'views',
+      title: 'Views',
+      icon: Maximize,
+      items: highlightBuckets.viewHighlights,
+    },
+    {
+      key: 'location',
+      title: 'Location & Nearby Convenience',
+      icon: MapPin,
+      items: highlightBuckets.locationHighlights,
+    },
+  ].filter(section => section.items.length > 0);
   const runningCostItems = getPropertyRunningCostFacts(property);
   const normalizedListingType = String(property.listingType || '')
     .trim()
@@ -608,14 +641,22 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
   ].filter(Boolean) as Array<{ key: string; label: string; value: string }>;
   const mobileSectionTabs = [
     description.trim() ? { id: 'overview', label: 'Overview' } : null,
-    featureSpecItems.length > 0 ? { id: 'features', label: 'Features' } : null,
+    featureSpecItems.length > 0 ||
+    propertyFeatureChecklistItems.length > 0 ||
+    separatedHighlightSections.length > 0 ||
+    fallbackAmenityHighlights.length > 0
+      ? { id: 'features', label: 'Features' }
+      : null,
     contactMode !== 'unknown' ? { id: 'contact', label: 'Contact' } : null,
     { id: 'locality', label: 'Locality' },
     similarProperties.length > 0 ? { id: 'similar', label: 'Similar' } : null,
   ].filter(Boolean) as Array<{ id: string; label: string }>;
   const desktopSectionTabs = [
     description.trim() ? { id: 'overview', label: 'Overview' } : null,
-    featureSpecItems.length > 0 || highlights.length > 0
+    featureSpecItems.length > 0 ||
+    propertyFeatureChecklistItems.length > 0 ||
+    separatedHighlightSections.length > 0 ||
+    fallbackAmenityHighlights.length > 0
       ? { id: 'features', label: 'Features' }
       : null,
     contactMode !== 'unknown' ? { id: 'contact', label: 'Contact' } : null,
@@ -690,7 +731,6 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
     );
     setIsContactModalOpen(true);
   };
-  const showLegacyPropertyDetails = false;
   const propertyStructuredData = [
     buildBreadcrumbStructuredData([
       ...breadcrumbItems,
@@ -1187,41 +1227,6 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                       </div>
                     );
                   })}
-                  {showLegacyPropertyDetails && (
-                    <>
-                      <div className="flex items-start gap-3">
-                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
-                          <Maximize className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-400">House Size</p>
-                          <p className="font-semibold text-slate-900">
-                            {property.area.toLocaleString()} m²
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
-                          <Home className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-400">Erf Size</p>
-                          <p className="font-semibold text-slate-900">150 m²</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="bg-blue-50 p-2 rounded-md text-blue-600">
-                          <Building2 className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-400">Property Type</p>
-                          <p className="font-semibold text-slate-900 capitalize">
-                            {property.propertyType}
-                          </p>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
             )}
@@ -1266,17 +1271,17 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
             )}
 
             {/* Amenities */}
-            {highlights.length > 0 && (
+            {fallbackAmenityHighlights.length > 0 && (
               <div>
                 <h3 className="text-fluid-h3 font-bold text-slate-900 mb-4">
                   Amenities & Features
                 </h3>
                 <div
                   className={`grid gap-y-3 gap-x-4 ${
-                    highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
+                    fallbackAmenityHighlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
                   }`}
                 >
-                  {highlights.map((amenity: string, index: number) => {
+                  {fallbackAmenityHighlights.map((amenity: string, index: number) => {
                     const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                     return (
                       <div key={index} className="flex items-center gap-3">
@@ -1372,6 +1377,45 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
                 </CardContent>
               </Card>
             )}
+
+            {separatedHighlightSections.map(section => {
+              const SectionIcon = section.icon;
+              return (
+                <Card
+                  key={section.key}
+                  id={
+                    featureSpecItems.length === 0 &&
+                    propertyFeatureChecklistItems.length === 0 &&
+                    section.key === separatedHighlightSections[0]?.key
+                      ? 'features'
+                      : undefined
+                  }
+                  className="scroll-mt-32 border-slate-200 shadow-sm"
+                >
+                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                    <CardTitle className="flex items-center gap-2 text-fluid-h3 font-bold text-slate-900">
+                      <SectionIcon className="h-4 w-4 text-blue-600" />
+                      {section.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {section.items.map(item => (
+                        <div
+                          key={item}
+                          className="flex min-h-[40px] items-center gap-2 rounded-lg bg-blue-50 px-3 py-2"
+                        >
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-600" />
+                          <span className="text-sm font-semibold leading-snug text-slate-900">
+                            {item}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             {/* 2.3 Contact Overview */}
             {contactMode !== 'unknown' && (
@@ -1687,6 +1731,17 @@ export default function PropertyDetail(props: { propertyId?: number } & any) {
           />
         </DialogContent>
       </Dialog>
+
+      <div className="container px-4 md:px-6">
+        <PropertyServiceActions
+          listingType={property.listingType}
+          propertyId={property.id}
+          suburb={property.suburb}
+          city={property.city}
+          province={property.province}
+          isDevelopmentLinked={Boolean(property.developmentId)}
+        />
+      </div>
 
       <footer className="bg-slate-900 text-slate-300 py-6 sm:py-12 mt-8 sm:mt-12 lg:mt-20">
         <div className="container text-center">
