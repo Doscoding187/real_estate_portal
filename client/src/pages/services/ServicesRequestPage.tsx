@@ -11,12 +11,51 @@ import {
   formatCategoryLabel,
   getCategoryMeta,
   serviceCategoryFromSlug,
+  type IntentStage,
   type ServiceCategory,
+  type SourceSurface,
 } from '@/features/services/catalog';
 import { applySeo } from '@/lib/seo';
 
 function currentQuery() {
   return new URLSearchParams(window.location.search);
+}
+
+const INTENT_STAGES: IntentStage[] = [
+  'seller_valuation',
+  'seller_listing_prep',
+  'buyer_saved_property',
+  'buyer_offer_intent',
+  'buyer_move_ready',
+  'developer_listing_wizard',
+  'agent_dashboard',
+  'general',
+];
+
+const SOURCE_SURFACES: SourceSurface[] = [
+  'directory',
+  'explore',
+  'journey_injection',
+  'agent_dashboard',
+];
+
+function parsePositiveInteger(value: string | null) {
+  if (!value) return undefined;
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function parseIntentStage(value: string | null): IntentStage {
+  return INTENT_STAGES.includes(value as IntentStage)
+    ? (value as IntentStage)
+    : 'general';
+}
+
+function parseSourceSurface(value: string | null): SourceSurface {
+  return SOURCE_SURFACES.includes(value as SourceSurface)
+    ? (value as SourceSurface)
+    : 'directory';
 }
 
 export default function ServicesRequestPage() {
@@ -34,6 +73,10 @@ export default function ServicesRequestPage() {
     .filter(Boolean)
     .join(', ');
   const providerId = query.get('providerId') || undefined;
+  const propertyId = parsePositiveInteger(query.get('propertyId'));
+  const intentStage = parseIntentStage(query.get('intentStage'));
+  const sourceSurface = parseSourceSurface(query.get('sourceSurface'));
+  const reasonKey = query.get('reasonKey')?.trim() || undefined;
   const latestSubmissionRef = useRef<{
     category: ServiceCategory;
     intentStage: string;
@@ -42,6 +85,8 @@ export default function ServicesRequestPage() {
     city?: string;
     province?: string;
     notes?: string;
+    propertyId?: number;
+    reasonKey?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -64,6 +109,8 @@ export default function ServicesRequestPage() {
       const nextSuburb = latestSubmission?.suburb || '';
       const nextIntentStage = latestSubmission?.intentStage || 'general';
       const nextSourceSurface = latestSubmission?.sourceSurface || 'directory';
+      const nextPropertyId = latestSubmission?.propertyId;
+      const nextReasonKey = latestSubmission?.reasonKey;
 
       try {
         const leadContext = JSON.stringify({
@@ -76,6 +123,9 @@ export default function ServicesRequestPage() {
           suburb: nextSuburb,
           intentStage: nextIntentStage,
           sourceSurface: nextSourceSurface,
+          propertyId: nextPropertyId,
+          reasonKey: nextReasonKey,
+          propertyLinked: Boolean(nextPropertyId),
         });
         sessionStorage.setItem(`service-lead-context-${leadId}`, leadContext);
       } catch {
@@ -232,6 +282,10 @@ export default function ServicesRequestPage() {
             <LeadRequestFlow
               defaultCategory={category}
               defaultLocation={defaultLocation}
+              defaultIntentStage={intentStage}
+              defaultSourceSurface={sourceSurface}
+              propertyId={propertyId}
+              reasonKey={reasonKey}
               submitting={createLead.isPending}
               error={createLead.error?.message ?? null}
               onSubmit={payload => {
@@ -243,6 +297,8 @@ export default function ServicesRequestPage() {
                   city: payload.city,
                   suburb: payload.suburb,
                   notes: payload.notes,
+                  propertyId: payload.propertyId,
+                  reasonKey: payload.reasonKey,
                 };
                 createLead.mutate({
                   providerId,
@@ -256,6 +312,13 @@ export default function ServicesRequestPage() {
                   city: payload.city,
                   suburb: payload.suburb,
                   notes: payload.notes,
+                  context: payload.propertyId
+                    ? {
+                        sourceDetail: 'property_detail',
+                        reasonKey: payload.reasonKey,
+                        propertyLinked: true,
+                      }
+                    : undefined,
                 });
               }}
             />

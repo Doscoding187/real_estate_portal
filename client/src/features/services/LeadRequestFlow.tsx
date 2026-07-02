@@ -6,8 +6,7 @@
  * Step 2: Location inputs (Suburb, City, Province)
  * Step 3: Description textarea
  *
- * Internal fields `intentStage` and `sourceSurface` are hardcoded and never
- * exposed in the UI.
+ * Internal journey context is supplied through props and never exposed in the UI.
  *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 14.2
  */
@@ -38,11 +37,16 @@ export type LeadWizardSubmit = {
   propertyId?: number;
   listingId?: number;
   developmentId?: number;
+  reasonKey?: string;
 };
 
 export type LeadRequestFlowProps = {
   defaultCategory: ServiceCategory;
   defaultLocation?: string;
+  defaultIntentStage?: IntentStage;
+  defaultSourceSurface?: SourceSurface;
+  propertyId?: number;
+  reasonKey?: string;
   submitting?: boolean;
   error?: string | null;
   onSubmit: (payload: LeadWizardSubmit) => void;
@@ -67,11 +71,15 @@ const STEP_ENCOURAGING_COPY: Record<number, string> = {
 
 /**
  * Three-step lead request flow component.
- * Hardcodes intentStage: 'general' and sourceSurface: 'directory' — never exposed in UI.
+ * Defaults to the directory journey while allowing trusted callers to provide context.
  */
 export function LeadRequestFlow({
   defaultCategory,
   defaultLocation = '',
+  defaultIntentStage = 'general',
+  defaultSourceSurface = 'directory',
+  propertyId,
+  reasonKey,
   submitting = false,
   error,
   onSubmit,
@@ -117,9 +125,10 @@ export function LeadRequestFlow({
   function handleSubmit() {
     onSubmit({
       category: state.category,
-      // Hardcoded — never exposed in UI (Requirements 4.4, 4.5)
-      intentStage: 'general',
-      sourceSurface: 'directory',
+      intentStage: defaultIntentStage,
+      sourceSurface: defaultSourceSurface,
+      propertyId,
+      reasonKey,
       notes: state.notes.trim(),
       suburb: state.suburb || undefined,
       city: state.city || undefined,
