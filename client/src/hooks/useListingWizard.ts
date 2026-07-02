@@ -156,7 +156,12 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       },
 
       setBasicInfo: basicInfo => {
-        set({ basicInfo });
+        set(state => ({
+          basicInfo: {
+            ...(state.basicInfo || {}),
+            ...basicInfo,
+          },
+        }));
       },
 
       // Additional Info
