@@ -500,12 +500,40 @@ describe('listing lifecycle — canonical identity contract', () => {
     });
   });
 
+  it('approve returns missing listing errors as NOT_FOUND', async () => {
+    const caller = makeCaller(adminUser);
+    vi.mocked(mockDb.getListingById).mockResolvedValueOnce(null);
+
+    await withSilencedConsoleError(async () => {
+      await expect(caller.listing.approve({ listingId: 15005 })).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+        message: 'Listing not found',
+      });
+    });
+
+    expect(mockDb.approveListing).not.toHaveBeenCalled();
+  });
+
   it('approve keeps unrelated server errors internal', async () => {
     const caller = makeCaller(adminUser);
     vi.mocked(mockDb.approveListing).mockRejectedValueOnce(new Error('Database unavailable'));
 
     await withSilencedConsoleError(async () => {
       await expect(caller.listing.approve({ listingId: 15002 })).rejects.toMatchObject({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to approve listing',
+      });
+    });
+  });
+
+  it('approve keeps listing-prefixed unrelated server errors internal', async () => {
+    const caller = makeCaller(adminUser);
+    vi.mocked(mockDb.approveListing).mockRejectedValueOnce(
+      new Error('Listing database unavailable'),
+    );
+
+    await withSilencedConsoleError(async () => {
+      await expect(caller.listing.approve({ listingId: 15006 })).rejects.toMatchObject({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to approve listing',
       });
@@ -535,6 +563,20 @@ describe('listing lifecycle — canonical identity contract', () => {
       ).rejects.toMatchObject({
         code: 'BAD_REQUEST',
         message: 'Listing cannot be rejected from status "published"',
+      });
+    });
+  });
+
+  it('reject returns missing listing errors as NOT_FOUND', async () => {
+    const caller = makeCaller(adminUser);
+    vi.mocked(mockDb.rejectListing).mockRejectedValueOnce(new Error('Listing not found'));
+
+    await withSilencedConsoleError(async () => {
+      await expect(
+        caller.listing.reject({ listingId: 15005, reason: 'Missing record' }),
+      ).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+        message: 'Listing not found',
       });
     });
   });

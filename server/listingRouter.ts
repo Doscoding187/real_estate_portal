@@ -66,6 +66,30 @@ async function normalizeLocationInput(inputLocation: { placeId?: string; locatio
   return { sanitizedPlaceId, resolvedLocationId };
 }
 
+const LISTING_LIFECYCLE_ERROR_PATTERNS = [
+  /^Listing is already published$/,
+  /^Listing cannot be approved from status ".+"$/,
+  /^Listing cannot be rejected from status ".+"$/,
+];
+
+function mapListingLifecycleError(error: unknown, fallbackMessage: string): TRPCError {
+  if (error instanceof TRPCError) return error;
+
+  const message = error instanceof Error ? error.message : '';
+  if (message === 'Listing not found') {
+    return new TRPCError({ code: 'NOT_FOUND', message });
+  }
+
+  if (LISTING_LIFECYCLE_ERROR_PATTERNS.some(pattern => pattern.test(message))) {
+    return new TRPCError({ code: 'BAD_REQUEST', message });
+  }
+
+  return new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: fallbackMessage,
+  });
+}
+
 const hasContractValue = (value: unknown) =>
   value !== undefined &&
   value !== null &&
@@ -1111,6 +1135,9 @@ export const listingRouter = router({
 
       try {
         const listing = await db.getListingById(input.listingId);
+        if (!listing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not found' });
+        }
 
         // Update listing status to approved
         await db.approveListing(input.listingId, requireUser(ctx).id, input.notes);
@@ -1131,17 +1158,7 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error approving listing:', error);
-        const message = error instanceof Error ? error.message : '';
-        if (message.startsWith('Listing ')) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message,
-          });
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to approve listing',
-        });
+        throw mapListingLifecycleError(error, 'Failed to approve listing');
       }
     }),
 
@@ -1176,17 +1193,7 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error rejecting listing:', error);
-        const message = error instanceof Error ? error.message : '';
-        if (message.startsWith('Listing ')) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message,
-          });
-        }
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to reject listing',
-        });
+        throw mapListingLifecycleError(error, 'Failed to reject listing');
       }
     }),
 
