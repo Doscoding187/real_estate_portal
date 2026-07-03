@@ -1131,6 +1131,13 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error approving listing:', error);
+        const message = error instanceof Error ? error.message : '';
+        if (message.startsWith('Listing ')) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message,
+          });
+        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to approve listing',
@@ -1169,6 +1176,13 @@ export const listingRouter = router({
         return { success: true };
       } catch (error) {
         console.error('Error rejecting listing:', error);
+        const message = error instanceof Error ? error.message : '';
+        if (message.startsWith('Listing ')) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message,
+          });
+        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to reject listing',
