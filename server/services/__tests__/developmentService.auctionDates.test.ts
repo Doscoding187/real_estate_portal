@@ -1,7 +1,41 @@
 import { describe, expect, it } from 'vitest';
 
 import { computeAuctionRangeFromUnits } from '../developmentService';
+import { normalizeDateTimeForDb } from '../developmentDateUtils';
 import { normalizeForPublish } from '../publishNormalizer';
+
+describe('normalizeDateTimeForDb', () => {
+  it('accepts supported valid date and datetime inputs', () => {
+    expect(normalizeDateTimeForDb('2026-08-10')).toBe('2026-08-10 00:00:00');
+    expect(normalizeDateTimeForDb('2026-08-10T10:30')).toBe('2026-08-10 10:30:00');
+    expect(normalizeDateTimeForDb('2026-08-10 10:30:15')).toBe('2026-08-10 10:30:15');
+    expect(normalizeDateTimeForDb('2026-08-10T12:30:15+02:00')).toBe(
+      '2026-08-10 10:30:15',
+    );
+    expect(normalizeDateTimeForDb('2026-08-10T10:30:15Z')).toBe('2026-08-10 10:30:15');
+    expect(normalizeDateTimeForDb(new Date('2026-08-10T10:30:15Z'))).toBe(
+      '2026-08-10 10:30:15',
+    );
+  });
+
+  it('rejects malformed or impossible datetime inputs', () => {
+    expect(normalizeDateTimeForDb('2026-13-10T10:30')).toBeNull();
+    expect(normalizeDateTimeForDb('2026-02-30T10:30')).toBeNull();
+    expect(normalizeDateTimeForDb('2026-08-10T24:30')).toBeNull();
+    expect(normalizeDateTimeForDb('2026-08-10T10:60')).toBeNull();
+    expect(normalizeDateTimeForDb('2026-08-10T10:30:60')).toBeNull();
+    expect(normalizeDateTimeForDb('2026-08-10T10:30junk')).toBeNull();
+    expect(normalizeDateTimeForDb('2026-08-10T10')).toBeNull();
+    expect(normalizeDateTimeForDb('2026-08-10T10:30+0200')).toBeNull();
+  });
+
+  it('keeps blank and nullable inputs null', () => {
+    expect(normalizeDateTimeForDb('')).toBeNull();
+    expect(normalizeDateTimeForDb('   ')).toBeNull();
+    expect(normalizeDateTimeForDb(null)).toBeNull();
+    expect(normalizeDateTimeForDb(undefined)).toBeNull();
+  });
+});
 
 describe('developmentService auction date aggregation', () => {
   it('normalizes datetime-local auction dates before development-level DB writes', () => {
