@@ -77,7 +77,6 @@ class FakeDrizzle {
 
   /** Drizzle: db.select({...fields}).from(table).where(...).orderBy(...).limit(...) */
   select(_fields?: Record<string, unknown>) {
-    const self = this;
     let tableName = 'unknown';
     let whereCols: string[] = [];
     const chain: any = {
@@ -90,8 +89,8 @@ class FakeDrizzle {
         return chain;
       },
       limit: (n: number) => {
-        self.record({ type: 'select', table: tableName, whereCols });
-        return Promise.resolve(self.selectResults.shift() || []);
+        this.record({ type: 'select', table: tableName, whereCols });
+        return Promise.resolve(this.selectResults.shift() || []);
       },
       orderBy: (_order: any) => {
         // .orderBy() returns the query builder itself (chainable)
@@ -99,8 +98,8 @@ class FakeDrizzle {
       },
       then: (resolve: (v: any) => void) => {
         // If awaited directly (no .limit() called), resolve immediately
-        self.record({ type: 'select', table: tableName, whereCols });
-        resolve(self.selectResults.shift() || []);
+        this.record({ type: 'select', table: tableName, whereCols });
+        resolve(this.selectResults.shift() || []);
       },
     };
     return chain;
