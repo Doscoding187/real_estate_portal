@@ -14,6 +14,7 @@
  */
 
 import { z } from 'zod';
+import { normalizeDateTimeForDb } from './developmentDateUtils';
 
 // ============================================================================
 // TYPES
@@ -308,23 +309,8 @@ function computeAuctionRangeFromUnits(unitTypes?: any[]): {
     };
   }
 
-  const normalizeDateTimeString = (value: unknown): string | null => {
-    if (value === undefined || value === null || value === '') return null;
-    if (value instanceof Date) {
-      return value.toISOString().slice(0, 19).replace('T', ' ');
-    }
-    if (typeof value !== 'string') return null;
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    if (trimmed.includes('T')) return trimmed.replace('T', ' ').slice(0, 19);
-    if (trimmed.includes(' ')) return trimmed.slice(0, 19);
-    const parsed = new Date(trimmed);
-    if (Number.isNaN(parsed.getTime())) return null;
-    return parsed.toISOString().slice(0, 19).replace('T', ' ');
-  };
-
   const parseDateTime = (value: unknown) => {
-    const normalized = normalizeDateTimeString(value);
+    const normalized = normalizeDateTimeForDb(value);
     if (!normalized) return null;
     const parsed = new Date(normalized.replace(' ', 'T'));
     if (Number.isNaN(parsed.getTime())) return null;
@@ -500,12 +486,14 @@ export function normalizeForPublish(
     monthlyRentTo: coerceDecimal(wizardData.monthlyRentTo),
     auctionStartDate:
       transactionType === 'auction'
-        ? (auctionRange?.auctionStartDate ?? emptyToNull((wizardData as any).auctionStartDate))
-        : emptyToNull((wizardData as any).auctionStartDate),
+        ? (auctionRange?.auctionStartDate ??
+          normalizeDateTimeForDb((wizardData as any).auctionStartDate))
+        : normalizeDateTimeForDb((wizardData as any).auctionStartDate),
     auctionEndDate:
       transactionType === 'auction'
-        ? (auctionRange?.auctionEndDate ?? emptyToNull((wizardData as any).auctionEndDate))
-        : emptyToNull((wizardData as any).auctionEndDate),
+        ? (auctionRange?.auctionEndDate ??
+          normalizeDateTimeForDb((wizardData as any).auctionEndDate))
+        : normalizeDateTimeForDb((wizardData as any).auctionEndDate),
     startingBidFrom:
       transactionType === 'auction'
         ? (auctionRange?.startingBidFrom ?? coerceDecimal((wizardData as any).startingBidFrom))

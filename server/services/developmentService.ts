@@ -6,6 +6,7 @@ import { getDb } from '../db-connection';
 import { generateUniqueSlug } from '../_core/utils/slug';
 import { normalizeForPublish, validateNormalizedPayload } from './publishNormalizer';
 import type { NormalizedDevelopmentPayload, WizardData } from './publishNormalizer';
+import { normalizeDateTimeForDb } from './developmentDateUtils';
 
 import {
   developments,
@@ -257,7 +258,7 @@ function computeRentRangeFromUnits(unitTypes?: Array<Record<string, unknown>> | 
   return { monthlyRentFrom: minFrom, monthlyRentTo: maxTo };
 }
 
-function computeAuctionRangeFromUnits(unitTypes?: Array<Record<string, unknown>> | null): {
+export function computeAuctionRangeFromUnits(unitTypes?: Array<Record<string, unknown>> | null): {
   auctionStartDate: string | null;
   auctionEndDate: string | null;
   startingBidFrom: number | null;
@@ -280,8 +281,8 @@ function computeAuctionRangeFromUnits(unitTypes?: Array<Record<string, unknown>>
   for (const unit of unitTypes) {
     const startingBid = sanitizeDecimal((unit as any).startingBid);
     const reservePrice = sanitizeDecimal((unit as any).reservePrice);
-    const startDate = sanitizeDate((unit as any).auctionStartDate);
-    const endDate = sanitizeDate((unit as any).auctionEndDate);
+    const startDate = normalizeDateTimeForDb((unit as any).auctionStartDate);
+    const endDate = normalizeDateTimeForDb((unit as any).auctionEndDate);
 
     if (startingBid !== null) {
       minStartingBid =
@@ -1621,18 +1622,7 @@ const asDateOnlyOrNull = (v: unknown): string | null => {
 };
 
 const asDateTimeOrNull = (v: unknown): string | null => {
-  if (v === undefined || v === null || v === '') return null;
-  if (v instanceof Date && !Number.isNaN(v.getTime())) {
-    return v.toISOString().slice(0, 19).replace('T', ' ');
-  }
-  if (typeof v !== 'string') return null;
-  const s = v.trim();
-  if (!s) return null;
-  if (s.includes('T')) return s.replace('T', ' ').slice(0, 19);
-  if (s.includes(' ')) return s.slice(0, 19);
-  const parsed = new Date(s);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 19).replace('T', ' ');
+  return normalizeDateTimeForDb(v);
 };
 
 const normalizeParkingKind = (v: unknown): 'none' | 'carport' | 'garage' | '1' | '2' => {
