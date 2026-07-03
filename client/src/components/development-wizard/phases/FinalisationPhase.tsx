@@ -18,6 +18,7 @@ import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
+import { buildDevelopmentSubmitPayload } from '@/lib/developmentSubmitPayload';
 import {
   CheckCircle2,
   AlertCircle,
@@ -37,52 +38,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
-import type { OwnershipType } from '@/types/wizardTypes';
-
-type ParkingType = 'none' | 'open' | 'covered' | 'carport' | 'garage';
-
-type UnitTypeV2 = {
-  id?: string;
-  name: string;
-  description?: string;
-  bedrooms: number;
-  bathrooms: number;
-  unitSize?: number;
-  yardSize?: number;
-  basePriceFrom: number;
-  extras?: Array<{ price: number; [key: string]: any }>;
-  monthlyRentFrom?: number;
-  monthlyRentTo?: number;
-  leaseTerm?: string;
-  isFurnished?: boolean;
-  depositRequired?: number;
-  startingBid?: number;
-  reservePrice?: number;
-  auctionStartDate?: string;
-  auctionEndDate?: string;
-  auctionStatus?: 'scheduled' | 'active' | 'sold' | 'passed_in' | 'withdrawn';
-  features?: {
-    kitchen?: string[];
-    bathroom?: string[];
-    flooring?: string[];
-    storage?: string[];
-    climate?: string[];
-    security?: string[];
-    outdoor?: string[];
-    other?: string[];
-  };
-  parkingType: ParkingType;
-  parkingBays: number;
-  totalUnits?: number;
-  availableUnits?: number;
-  reservedUnits?: number;
-  isActive?: boolean;
-  structuralType?: string;
-  unitCategory?: 'house' | 'apartment';
-  unitSubType?: string;
-  specifications?: Record<string, any>;
-  baseMedia?: any;
-};
 
 interface FinalisationPhaseProps {
   onSaveDraft?: () => Promise<void> | void;
@@ -176,46 +131,6 @@ export function FinalisationPhase({
   const warnings: string[] = getCardFieldRecommendations().filter(message => !errors.includes(message));
   const canPublish = errors.length === 0;
 
-  // Extract images from canonical media state (Phase 2I - Phase 2G canonical shape)
-  const extractImages = (): { url: string; category?: string }[] => {
-    const images: { url: string; category?: string }[] = [];
-
-    // Hero image first (Phase 2G: heroImage is a string URL)
-    const heroUrl = wizardData.heroImage as string | undefined;
-    if (heroUrl) images.push({ url: heroUrl, category: 'hero' });
-
-    // Then photos from canonical media (skip hero duplicates)
-    const photos = (wizardData.media as any)?.photos ?? [];
-    photos.forEach((p: { url: string; category?: string }) => {
-      if (p?.url && p.url !== heroUrl) images.push({ url: p.url, category: p.category });
-    });
-
-    return images;
-  };
-
-  // Extract video URLs from canonical media
-  const extractVideoUrls = (): string[] => {
-    const videos = (wizardData.media as any)?.videos ?? [];
-    return videos
-      .map((v: string | { url: string }) => (typeof v === 'string' ? v : v.url))
-      .filter(Boolean) as string[];
-  };
-
-  // Extract document/brochure URLs from canonical media
-  const extractDocumentUrls = (): string[] => {
-    const documents = (wizardData.media as any)?.documents ?? [];
-    return documents
-      .map((d: string | { url: string }) => (typeof d === 'string' ? d : d.url))
-      .filter(Boolean) as string[];
-  };
-
-  // Helper to normalize strings for Zod (avoids null or empty string errors)
-  const asOptionalString = (v: unknown): string | undefined => {
-    if (typeof v !== 'string') return undefined;
-    const s = v.trim();
-    return s.length ? s : undefined;
-  };
-
   const formatDate = (value?: string | Date) => {
     if (!value) return 'TBD';
     if (value instanceof Date) return value.toLocaleDateString();
@@ -239,30 +154,6 @@ export function FinalisationPhase({
     return values.map(value => value.replace(/-/g, ' ')).join(', ');
   }, [wizardData]);
 
-  const normalizeOwnershipType = (value: unknown): OwnershipType | undefined => {
-    if (Array.isArray(value)) {
-      const first = value.find(v => typeof v === 'string' && v.trim().length > 0);
-      return first as OwnershipType | undefined;
-    }
-    if (typeof value === 'string' && value.trim().length > 0) return value as OwnershipType;
-    return undefined;
-  };
-
-  // ---------- V2 UNIT TYPES (KILL LEGACY FIELDS AT THE SOURCE) ----------
-  const normalizeParkingType = (raw: any): ParkingType => {
-    const s = String(raw ?? '')
-      .trim()
-      .toLowerCase();
-    const allowed: ParkingType[] = ['none', 'open', 'covered', 'carport', 'garage'];
-    if (allowed.includes(s as ParkingType)) return s as ParkingType;
-
-    // Legacy mappings we’ve seen in your project
-    if (s === '' || s === 'null' || s === 'undefined') return 'none';
-    if (s === '1' || s === '2') return 'open';
-    if (s === 'street') return 'open';
-    return 'none';
-  };
-
   const toInt = (v: any, fallback: number) => {
     const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
     if (!Number.isFinite(n)) return fallback;
@@ -273,13 +164,6 @@ export function FinalisationPhase({
     const n = typeof v === 'number' ? v : Number(String(v ?? '').trim());
     if (!Number.isFinite(n)) return fallback;
     return n;
-  };
-
-  const normalizeDateString = (value: any): string | undefined => {
-    if (!value) return undefined;
-    if (typeof value === 'string') return value;
-    if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
-    return undefined;
   };
 
   const computeExtrasTotal = (extras: any): number => {
@@ -307,149 +191,8 @@ export function FinalisationPhase({
     return rentTo > 0 ? rentTo : rentFrom;
   };
 
-  const normalizeUnitTypesV2 = (rawUnits: any[]): UnitTypeV2[] => {
-    if (!Array.isArray(rawUnits)) return [];
-
-    return rawUnits.map((u: any) => {
-      const basePriceFrom = toNumber(u?.basePriceFrom ?? u?.priceFrom, 0);
-      const monthlyRentFrom = toNumber(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0, 0);
-      const monthlyRentTo = toNumber(u?.monthlyRentTo ?? 0, 0);
-      const startingBid = toNumber(u?.startingBid ?? 0, 0);
-      const reservePrice = toNumber(u?.reservePrice ?? 0, 0);
-      const auctionStartDate = normalizeDateString(u?.auctionStartDate);
-      const auctionEndDate = normalizeDateString(u?.auctionEndDate);
-      const auctionStatus = typeof u?.auctionStatus === 'string' ? u.auctionStatus : undefined;
-
-      const parkingBays = Math.max(0, toInt(u?.parkingBays, 0));
-      const parkingType = normalizeParkingType(u?.parkingType);
-
-      const unitSizeSource = u?.unitSize ?? u?.floorSize ?? u?.unit_size ?? u?.size;
-      const unitSize = unitSizeSource != null ? toInt(unitSizeSource, 0) : undefined;
-      const yardSizeSource = u?.yardSize ?? u?.erfSize ?? u?.yard_size ?? u?.landSize;
-      const yardSize = yardSizeSource != null ? toInt(yardSizeSource, 0) : undefined;
-
-      const totalUnits = u?.totalUnits != null ? Math.max(0, toInt(u.totalUnits, 0)) : undefined;
-      const availableUnits =
-        u?.availableUnits != null ? Math.max(0, toInt(u.availableUnits, 0)) : undefined;
-      const reservedUnits =
-        u?.reservedUnits != null ? Math.max(0, toInt(u.reservedUnits, 0)) : undefined;
-      const specifications =
-        u?.specifications && typeof u.specifications === 'object' ? u.specifications : undefined;
-      const classification = specifications?.classification ?? {};
-      const unitCategory =
-        u?.unitCategory === 'house' || u?.unitCategory === 'apartment'
-          ? u.unitCategory
-          : classification?.category === 'house' || classification?.category === 'apartment'
-            ? classification.category
-            : undefined;
-      const unitSubType =
-        typeof u?.unitSubType === 'string' && u.unitSubType.trim().length > 0
-          ? u.unitSubType
-          : typeof classification?.subType === 'string' && classification.subType.trim().length > 0
-            ? classification.subType
-            : undefined;
-
-      const v2: UnitTypeV2 = {
-        id: typeof u?.id === 'string' ? u.id : undefined,
-        name: String(u?.name ?? '').trim() || 'Unnamed Unit',
-        description: typeof u?.description === 'string' ? u.description : undefined,
-        bedrooms: Math.max(0, toInt(u?.bedrooms, 0)),
-        bathrooms: Math.max(0, toNumber(u?.bathrooms, 0)),
-        unitSize: unitSize && unitSize > 0 ? unitSize : undefined,
-        yardSize: yardSize && yardSize > 0 ? yardSize : undefined,
-        basePriceFrom: basePriceFrom > 0 ? basePriceFrom : 0,
-        extras: Array.isArray(u?.extras) ? u.extras : undefined,
-        monthlyRentFrom: monthlyRentFrom > 0 ? monthlyRentFrom : undefined,
-        monthlyRentTo: monthlyRentTo > 0 ? monthlyRentTo : undefined,
-        leaseTerm: typeof u?.leaseTerm === 'string' ? u.leaseTerm : undefined,
-        isFurnished: typeof u?.isFurnished === 'boolean' ? u.isFurnished : undefined,
-        depositRequired: u?.depositRequired != null ? toNumber(u.depositRequired, 0) : undefined,
-        startingBid: startingBid > 0 ? startingBid : undefined,
-        reservePrice: reservePrice > 0 ? reservePrice : undefined,
-        auctionStartDate,
-        auctionEndDate,
-        auctionStatus,
-        features: typeof u?.features === 'object' && u?.features ? u.features : undefined,
-        parkingType,
-        parkingBays: parkingType === 'none' ? 0 : parkingBays,
-        totalUnits,
-        availableUnits,
-        reservedUnits,
-        isActive: typeof u?.isActive === 'boolean' ? u.isActive : undefined,
-        structuralType: u?.structuralType,
-        unitCategory,
-        unitSubType,
-        specifications,
-        baseMedia: u?.baseMedia,
-      };
-
-      return v2;
-    });
-  };
-
   const canonicalUnitTypesRaw = (wizardData.unitTypes ?? []) as any[];
   const isLand = wizardData.developmentType === 'land';
-
-  const canonicalUnitTypesV2: UnitTypeV2[] = useMemo(() => {
-    if (isLand) return [];
-    return normalizeUnitTypesV2(canonicalUnitTypesRaw);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLand, canonicalUnitTypesRaw]);
-
-  const computedInventory = useMemo(() => {
-    if (isLand || canonicalUnitTypesV2.length === 0) {
-      return { totalUnits: undefined as number | undefined, availableUnits: undefined as number | undefined };
-    }
-
-    const totalUnits = canonicalUnitTypesV2.reduce((sum, unit) => {
-      return sum + Math.max(0, Number(unit.totalUnits ?? 0));
-    }, 0);
-    const availableUnits = canonicalUnitTypesV2.reduce((sum, unit) => {
-      return sum + Math.max(0, Number(unit.availableUnits ?? 0));
-    }, 0);
-
-    return { totalUnits, availableUnits };
-  }, [isLand, canonicalUnitTypesV2]);
-
-  const computedDevPriceFromTo = useMemo(() => {
-    if (isLand)
-      return {
-        priceFrom: undefined as number | undefined,
-        priceTo: undefined as number | undefined,
-      };
-    const totals = canonicalUnitTypesRaw.map(computeUnitTotalFrom).filter(n => n > 0);
-    if (totals.length === 0) return { priceFrom: undefined, priceTo: undefined };
-    return { priceFrom: Math.min(...totals), priceTo: Math.max(...totals) };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLand, canonicalUnitTypesRaw]);
-
-  const computedDevRentFromTo = useMemo(() => {
-    if (isLand)
-      return {
-        monthlyRentFrom: undefined as number | undefined,
-        monthlyRentTo: undefined as number | undefined,
-      };
-    const rentRanges = canonicalUnitTypesRaw
-      .map(u => {
-        const from = getUnitRentFrom(u);
-        const to = getUnitRentTo(u);
-        const resolvedFrom = from > 0 ? from : to;
-        const resolvedTo = to > 0 ? to : from;
-        return { from: resolvedFrom, to: resolvedTo };
-      })
-      .filter(r => r.from > 0 || r.to > 0);
-
-    if (rentRanges.length === 0) return { monthlyRentFrom: undefined, monthlyRentTo: undefined };
-
-    const mins = rentRanges.map(r => r.from).filter(n => n > 0);
-    const maxs = rentRanges.map(r => r.to).filter(n => n > 0);
-
-    return {
-      monthlyRentFrom: mins.length ? Math.min(...mins) : undefined,
-      monthlyRentTo: maxs.length ? Math.max(...maxs) : undefined,
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLand, canonicalUnitTypesRaw]);
 
   const computedDevAuctionRange = useMemo(() => {
     if (isLand)
@@ -504,197 +247,16 @@ export function FinalisationPhase({
     setIsPublishing(true);
 
     try {
-      const images = extractImages();
-      const videos = extractVideoUrls();
-      const brochures = extractDocumentUrls();
-
-      // Build features array (includes config prefixes for hydration)
-      const features: string[] = [];
-      if (residentialConfig?.residentialType)
-        features.push(`cfg:res_type:${residentialConfig.residentialType}`);
-      residentialConfig?.communityTypes?.forEach(c => features.push(`cfg:comm_type:${c}`));
-
-      // Map security features to config string
-      (residentialConfig as { securityFeatures?: string[] })?.securityFeatures?.forEach(
-        (s: string) => features.push(`cfg:sec_feat:${s}`),
-      );
-
-      if (isAuction && (wizardData as any).auctionType) {
-        features.push(`cfg:auction_type:${(wizardData as any).auctionType}`);
-      }
-
-      if ((store as { landConfig?: { landType?: string } }).landConfig?.landType)
-        features.push(
-          `cfg:land_type:${(store as { landConfig: { landType: string } }).landConfig.landType}`,
-        );
-      (store as { landConfig?: { infrastructure?: string[] } }).landConfig?.infrastructure?.forEach(
-        i => features.push(`cfg:infra:${i}`),
-      );
-
-      if (
-        (store as { commercialConfig?: { commercialType?: string } }).commercialConfig
-          ?.commercialType
-      )
-        features.push(
-          `cfg:comm_use:${(store as { commercialConfig: { commercialType: string } }).commercialConfig.commercialType}`,
-        );
-      (store as { commercialConfig?: { features?: string[] } }).commercialConfig?.features?.forEach(
-        f => features.push(`cfg:comm_feat:${f}`),
-      );
-
-      // Governance features from canonical wizardData
-      if (wizardData.hasGoverningBody !== undefined) {
-        features.push(`cfg:hoa:${wizardData.hasGoverningBody}`);
-      }
-      if ((wizardData as any).governanceType) {
-        features.push(`cfg:governance_type:${(wizardData as any).governanceType}`);
-      }
-
-      // CONSTRUCT PAYLOAD (Canonical WizardData First)
-      const payload: any = {
-        // Identity
-        name: wizardData.name ?? 'Untitled Development',
-      };
-
-      // DEBUG LOG FOR USER
-      console.log('[EDIT SAVE] payload.unitTypes[0]:', canonicalUnitTypesV2?.[0]);
-
-      const ownershipSource =
-        Array.isArray((wizardData as any).ownershipTypes) &&
-        (wizardData as any).ownershipTypes.length > 0
-          ? (wizardData as any).ownershipTypes
-          : ((wizardData as any).ownershipType ?? (store as any).developmentData?.ownershipType);
-
-      Object.assign(payload, {
-        tagline: (wizardData as any).tagline ?? wizardData.subtitle,
-        subtitle: wizardData.subtitle ?? (wizardData as any).tagline,
-        description: wizardData.description,
-        developmentType: (wizardData.developmentType ?? 'residential') as any,
-        transactionType: wizardData.transactionType,
-        ownershipType: normalizeOwnershipType(ownershipSource),
-
-        // Location
-        address: wizardData.location?.address,
-        city: wizardData.location?.city || 'Unknown',
-        province: wizardData.location?.province || 'Unknown',
-        suburb: wizardData.location?.suburb,
-        postalCode: wizardData.location?.postalCode,
-        latitude: wizardData.location?.latitude,
-        longitude: wizardData.location?.longitude,
-
-        // Financials (🔥 FIX: compute from basePriceFrom + extras; stop using legacy priceFrom/priceTo)
-        priceFrom: isRent
-          ? undefined
-          : (computedDevPriceFromTo.priceFrom ?? (wizardData as any).priceFrom),
-        priceTo: isRent
-          ? undefined
-          : (computedDevPriceFromTo.priceTo ?? (wizardData as any).priceTo),
-        monthlyRentFrom: isRent
-          ? (computedDevRentFromTo.monthlyRentFrom ?? (wizardData as any).monthlyRentFrom)
-          : (wizardData as any).monthlyRentFrom,
-        monthlyRentTo: isRent
-          ? (computedDevRentFromTo.monthlyRentTo ?? (wizardData as any).monthlyRentTo)
-          : (wizardData as any).monthlyRentTo,
-        auctionStartDate: isAuction
-          ? (computedDevAuctionRange.auctionStartDate?.toISOString() ??
-            (wizardData as any).auctionStartDate)
-          : (wizardData as any).auctionStartDate,
-        auctionEndDate: isAuction
-          ? (computedDevAuctionRange.auctionEndDate?.toISOString() ??
-            (wizardData as any).auctionEndDate)
-          : (wizardData as any).auctionEndDate,
-        startingBidFrom: isAuction
-          ? (computedDevAuctionRange.startingBidFrom ?? (wizardData as any).startingBidFrom)
-          : (wizardData as any).startingBidFrom,
-        reservePriceFrom: isAuction
-          ? (computedDevAuctionRange.reservePriceFrom ?? (wizardData as any).reservePriceFrom)
-          : (wizardData as any).reservePriceFrom,
-        monthlyLevyFrom: (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min,
-        monthlyLevyTo: (wizardData as any).monthlyLevyTo ?? (wizardData as any).levyRange?.max,
-        ratesFrom: (wizardData as any).ratesFrom ?? (wizardData as any).rightsAndTaxes?.min,
-        ratesTo: (wizardData as any).ratesTo ?? (wizardData as any).rightsAndTaxes?.max,
-
-        // Dates & Status
-        completionDate: asOptionalString((wizardData as any).completionDate),
-        launchDate: asOptionalString((wizardData as any).launchDate),
-        status: wizardData.status as any,
-
-        // Metrics
-        totalUnits: computedInventory.totalUnits ?? (wizardData as any).totalUnits,
-        availableUnits: computedInventory.availableUnits ?? (wizardData as any).availableUnits,
-        totalDevelopmentArea: (wizardData as any).totalDevelopmentArea,
-
-        // Stand/Floor Sizes (left as-is; backend can ignore)
-        erfSizeFrom: (wizardData as any).erfSizeFrom,
-        erfSizeTo: (wizardData as any).erfSizeTo,
-        floorSizeFrom: (wizardData as any).floorSizeFrom,
-        floorSizeTo: (wizardData as any).floorSizeTo,
-        bedroomsFrom: (wizardData as any).bedroomsFrom,
-        bedroomsTo: (wizardData as any).bedroomsTo,
-        bathroomsFrom: (wizardData as any).bathroomsFrom,
-        bathroomsTo: (wizardData as any).bathroomsTo,
-
-        // Features (Booleans)
-        petsAllowed: (wizardData as any).petsAllowed,
-        fibreReady: (wizardData as any).fibreReady,
-        solarReady: (wizardData as any).solarReady,
-        waterBackup: (wizardData as any).waterBackup,
-        backupPower: (wizardData as any).backupPower,
-        gatedCommunity: (wizardData as any).gatedCommunity,
-        featured: (wizardData as any).featured,
-        isPhasedDevelopment: (wizardData as any).isPhasedDevelopment,
-
-        // Collections
+      const payload = buildDevelopmentSubmitPayload({
+        wizardData: wizardData as any,
         amenities: amenitiesPayload,
-        features,
-        highlights: wizardData.highlights ?? [],
-
-        // ✅ FIX: Send ONLY V2 unit types to server (kills legacy leaks)
-        unitTypes: canonicalUnitTypesV2,
-
-        // Config Objects (Preserved as JSON)
-        estateSpecs:
-          (wizardData as any).hasGoverningBody !== undefined || (wizardData as any).governanceType
-            ? {
-                hasHOA: (wizardData as any).hasGoverningBody,
-                governanceType: (wizardData as any).governanceType,
-                architecturalGuidelines: (wizardData as any).architecturalGuidelines,
-                guidelinesSummary: (wizardData as any).guidelinesSummary,
-                levyRange: {
-                  min:
-                    (wizardData as any).monthlyLevyFrom ?? (wizardData as any).levyRange?.min ?? 0,
-                  max: (wizardData as any).monthlyLevyTo ?? (wizardData as any).levyRange?.max ?? 0,
-                },
-                rightsAndTaxes: {
-                  min:
-                    (wizardData as any).ratesFrom ?? (wizardData as any).rightsAndTaxes?.min ?? 0,
-                  max: (wizardData as any).ratesTo ?? (wizardData as any).rightsAndTaxes?.max ?? 0,
-                },
-              }
-            : undefined,
         residentialConfig: residentialConfig as any,
         landConfig: (store as any).landConfig,
         commercialConfig: (store as any).commercialConfig,
         mixedUseConfig: (store as any).mixedUseConfig,
         specifications: (store as any).specifications,
-
-        // Media
-        images: images as any,
-        videos,
-        brochures,
-        media: {
-          photos: images,
-          videos: videos.map(url => ({ url })),
-          brochures: brochures.map(url => ({ url })),
-        } as any,
-
-        // SEO
-        metaTitle: (wizardData as any).overview?.metaTitle,
-        metaDescription: (wizardData as any).overview?.metaDescription,
-        keywords: (wizardData as any).overview?.keywords,
+        fallbackOwnershipType: (store as any).developmentData?.ownershipType,
       });
-
-      console.log('[FinalisationPhase] Payload Preview:', payload);
 
       let developmentId: number;
       const publisherBrandProfileId = publisherContext?.brandProfileId ?? null;
@@ -702,7 +264,6 @@ export function FinalisationPhase({
         isSuperAdmin && typeof publisherBrandProfileId === 'number';
 
       if (editingId && shouldUseSuperAdminFlow) {
-        console.log('[FinalisationPhase] Executing SUPER ADMIN UPDATE for ID:', editingId);
         await updatePublisherDevelopment.mutateAsync({
           brandProfileId: publisherBrandProfileId,
           developmentId: editingId,
@@ -717,7 +278,6 @@ export function FinalisationPhase({
         toast.success('Development saved successfully!');
       } else if (editingId) {
         // UPDATE OPERATION
-        console.log('[FinalisationPhase] Executing UPDATE for ID:', editingId);
         await updateDevelopment.mutateAsync({
           id: editingId,
           data: payload,
@@ -726,15 +286,8 @@ export function FinalisationPhase({
         toast.success('Development saved successfully!');
       } else {
         // CREATE OPERATION
-        console.log('[FinalisationPhase] Executing CREATE');
-
         if (shouldUseSuperAdminFlow) {
           // SUPER ADMIN WITH PUBLISHER CONTEXT: route through publisher endpoints
-          console.log(
-            '[FinalisationPhase] Using Super Admin flow with publisher context:',
-            publisherBrandProfileId,
-          );
-
           const superAdminPayload = {
             ...payload,
             // Ensure brandProfileId is set from publisher context
@@ -747,8 +300,6 @@ export function FinalisationPhase({
           developmentId = result.development.id;
         } else {
           // REGULAR FLOW: use existing developer endpoint
-          console.log('[FinalisationPhase] Using regular developer endpoint');
-
           // Identity & Branding logic
           const isBrandDevelopment =
             listingIdentity?.identityType === 'brand' ||
@@ -773,7 +324,6 @@ export function FinalisationPhase({
       }
 
       // Now publish (submit for review)
-      console.log('[FinalisationPhase] Publishing development:', developmentId);
       if (shouldUseSuperAdminFlow) {
         await publishPublisherDevelopment.mutateAsync({
           brandProfileId: publisherBrandProfileId,
