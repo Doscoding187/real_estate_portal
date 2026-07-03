@@ -103,6 +103,70 @@ describe('ServicesRequestPage integration', () => {
     );
   });
 
+  it('forwards valid property journey context into lead creation', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/services/request/home_improvement?propertyId=42&intentStage=buyer_offer_intent&sourceSurface=journey_injection&reasonKey=buyer_inspection&suburb=Sandton&city=Johannesburg&province=Gauteng',
+    );
+
+    render(<ServicesRequestPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          propertyId: 42,
+          intentStage: 'buyer_offer_intent',
+          sourceSurface: 'journey_injection',
+          suburb: 'Sandton',
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          context: {
+            sourceDetail: 'property_detail',
+            reasonKey: 'buyer_inspection',
+            propertyLinked: true,
+          },
+        }),
+      );
+    });
+
+    expect(sessionStorage.getItem('service-lead-context-99')).toContain(
+      'buyer_inspection',
+    );
+    expect(sessionStorage.getItem('service-lead-context-99')).toContain(
+      '"propertyLinked":true',
+    );
+  });
+
+  it('falls back safely for invalid journey query values', async () => {
+    window.history.pushState(
+      {},
+      '',
+      '/services/request/home_improvement?propertyId=-12&intentStage=invalid&sourceSurface=invalid&reasonKey=',
+    );
+
+    render(<ServicesRequestPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit request/i }));
+
+    await waitFor(() => {
+      expect(mockMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          intentStage: 'general',
+          sourceSurface: 'directory',
+          propertyId: undefined,
+          context: undefined,
+        }),
+      );
+    });
+  });
+
   it('renders the LeadRequestFlow with step 1 visible', () => {
     render(<ServicesRequestPage />);
     expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
