@@ -2426,44 +2426,76 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
   const mappedListingType =
     listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction';
 
-  const basePropertyMatch = [
-    eq(properties.ownerId, Number(listing.ownerId || 0)),
-    eq(properties.listingType, mappedListingType as any),
-  ] as SQL[];
-
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  const bridgeHasSourceListingId = inventoryBridgeCapabilities.propertiesSourceListingIdColumn;
   let mirroredProperty: { id: number } | undefined;
 
-  const normalizedPlaceId = String(listing.placeId || '').trim();
-  if (normalizedPlaceId) {
-    const [byPlaceId] = await db
+  if (bridgeHasSourceListingId) {
+    const [bySourceListingId] = await db
       .select({ id: properties.id })
       .from(properties)
-      .where(and(...basePropertyMatch, eq(properties.placeId, normalizedPlaceId)))
-      .orderBy(desc(properties.createdAt))
+      .where(and(eq(properties.sourceListingId, listingId), isNotNull(properties.sourceListingId)))
       .limit(1);
-    mirroredProperty = byPlaceId;
+    mirroredProperty = bySourceListingId;
   }
 
   if (!mirroredProperty) {
-    const [byIdentity] = await db
-      .select({ id: properties.id })
-      .from(properties)
-      .where(
-        and(
-          ...basePropertyMatch,
-          eq(properties.title, listing.title),
-          eq(properties.address, listing.address),
-          eq(properties.city, listing.city),
-          eq(properties.province, listing.province),
-        ),
-      )
-      .orderBy(desc(properties.createdAt))
-      .limit(1);
-    mirroredProperty = byIdentity;
+    const legacyPropertyMatch = [
+      eq(properties.ownerId, Number(listing.ownerId || 0)),
+      eq(properties.listingType, mappedListingType as any),
+    ] as SQL[];
+
+    if (bridgeHasSourceListingId) {
+      legacyPropertyMatch.push(isNull(properties.sourceListingId));
+    }
+
+    const normalizedPlaceId = String(listing.placeId || '').trim();
+    if (normalizedPlaceId) {
+      const [byPlaceId] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(and(...legacyPropertyMatch, eq(properties.placeId, normalizedPlaceId)))
+        .orderBy(desc(properties.createdAt))
+        .limit(1);
+      mirroredProperty = byPlaceId;
+    }
+
+    if (!mirroredProperty) {
+      const [byIdentity] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(
+          and(
+            ...legacyPropertyMatch,
+            eq(properties.title, listing.title),
+            eq(properties.address, listing.address),
+            eq(properties.city, listing.city),
+            eq(properties.province, listing.province),
+          ),
+        )
+        .orderBy(desc(properties.createdAt))
+        .limit(1);
+      mirroredProperty = byIdentity;
+    }
   }
 
   if (!mirroredProperty) {
     return { synced: false, reason: 'property_mirror_not_found' as const };
+  }
+
+  if (bridgeHasSourceListingId) {
+    const [matchedProperty] = await db
+      .select({ sourceListingId: properties.sourceListingId })
+      .from(properties)
+      .where(eq(properties.id, mirroredProperty.id))
+      .limit(1);
+
+    if (matchedProperty && !matchedProperty.sourceListingId) {
+      await db
+        .update(properties)
+        .set({ sourceListingId: listingId })
+        .where(eq(properties.id, mirroredProperty.id));
+    }
   }
 
   const mediaItems = await getListingMedia(listingId);
@@ -2543,6 +2575,14 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   const listing = await getListingById(listingId);
   if (!listing) throw new Error('Listing not found');
 
+  if (listing.status === 'published' || listing.status === 'approved') {
+    throw new Error('Listing is already published');
+  }
+
+  if (listing.status === 'archived' || listing.status === 'rejected') {
+    throw new Error(`Listing cannot be approved from status "${listing.status}"`);
+  }
+
   // 2. Prepare property data
   // Parse pricing JSON if it's a string
   let pricingData: any = {};
@@ -2588,16 +2628,17 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   ];
   const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
 
-  // 3. Insert into properties table
+  // 3. Upsert the public property projection
 
   const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  const bridgeHasSourceListingId = inventoryBridgeCapabilities.propertiesSourceListingIdColumn;
 
-  const propertyInsertValues: any = {
+  const propertyValues: any = {
     title: listing.title,
     description: listing.description,
     propertyType: listing.propertyType,
     listingType:
-      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction', // Map 'sell' to 'sale'
+      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     transactionType:
       listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     price: price,
@@ -2610,61 +2651,72 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     zipCode: listing.postalCode,
     latitude: String(listing.latitude),
     longitude: String(listing.longitude),
-    // IDs for relations (would need lookup logic for IDs, skipping for now or using defaults)
     locationText: `${listing.city}, ${listing.province}`,
     placeId: listing.placeId,
     amenities: amenitiesString,
-    status: 'available' as any, // Make it live immediately
+    status: 'available' as any,
     featured: listing.featured || 0,
-    views: 0,
-    enquiries: 0,
     agentId: listing.agentId,
     ownerId: listing.ownerId,
     propertySettings: JSON.stringify(details),
     levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
     ratesAndTaxes: Number(details.ratesAndTaxes) || Number(details.ratesTaxes) || null,
-    createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
-  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
-    propertyInsertValues.sourceListingId = listingId;
+  let newPropertyId: number;
+
+  if (bridgeHasSourceListingId) {
+    propertyValues.sourceListingId = listingId;
+
+    const existingProperty = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(and(eq(properties.sourceListingId, listingId), isNotNull(properties.sourceListingId)))
+      .limit(1);
+
+    if (existingProperty.length > 0) {
+      newPropertyId = existingProperty[0].id;
+      await db.update(properties).set(propertyValues).where(eq(properties.id, newPropertyId));
+    } else {
+      const [propertyResult] = await db.insert(properties).values({
+        ...propertyValues,
+        views: 0,
+        enquiries: 0,
+        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
+      newPropertyId = Number(propertyResult.insertId);
+    }
+  } else {
+    const [propertyResult] = await db.insert(properties).values({
+      ...propertyValues,
+      views: 0,
+      enquiries: 0,
+      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    });
+    newPropertyId = Number(propertyResult.insertId);
   }
-
-  const [propertyResult] = await db.insert(properties).values(propertyInsertValues);
-
-  const newPropertyId = Number(propertyResult.insertId);
 
   // 4. Sync Media
   const mediaItems = await getListingMedia(listingId);
+  const imageItems = mediaItems.filter(item => item.mediaType === 'image');
+  const mainMedia = imageItems.find(item => item.isPrimary) || imageItems[0] || null;
 
-  if (mediaItems && mediaItems.length > 0) {
-    // Find main image to update property record
-    const mainMedia =
-      mediaItems.find(m => m.isPrimary && m.mediaType === 'image') ||
-      mediaItems.find(m => m.mediaType === 'image');
+  await db
+    .update(properties)
+    .set({ mainImage: mainMedia ? mainMedia.processedUrl || mainMedia.originalUrl : null })
+    .where(eq(properties.id, newPropertyId));
 
-    if (mainMedia) {
-      await db
-        .update(properties)
-        .set({ mainImage: mainMedia.processedUrl || mainMedia.originalUrl })
-        .where(eq(properties.id, newPropertyId));
-    }
+  await db.delete(propertyImages).where(eq(propertyImages.propertyId, newPropertyId));
 
-    // Insert all images into propertyImages table
-    for (const item of mediaItems) {
-      if (item.mediaType === 'image') {
-        await db.insert(propertyImages).values({
-          propertyId: newPropertyId,
-          imageUrl: item.processedUrl || item.originalUrl,
-          isPrimary: item.isPrimary ? 1 : 0,
-          displayOrder: item.displayOrder,
-          createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        });
-      }
-      // Note: Videos are stored in properties.videoUrl or separate table depending on schema
-      // For now we only sync images to propertyImages as per schema
-    }
+  for (const item of imageItems) {
+    await db.insert(propertyImages).values({
+      propertyId: newPropertyId,
+      imageUrl: item.processedUrl || item.originalUrl,
+      isPrimary: item.isPrimary ? 1 : 0,
+      displayOrder: item.displayOrder,
+      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    });
   }
 
   // 5. Update listing status
@@ -2702,6 +2754,12 @@ export async function rejectListing(
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+
+  const listing = await getListingById(listingId);
+  if (!listing) throw new Error('Listing not found');
+  if (listing.status !== 'pending_review') {
+    throw new Error(`Listing cannot be rejected from status "${listing.status}"`);
+  }
 
   // Update listing status
   await db
@@ -2757,6 +2815,17 @@ export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
+    await db
+      .update(properties)
+      .set({
+        status: 'archived' as any,
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      })
+      .where(and(eq(properties.sourceListingId, id), isNotNull(properties.sourceListingId)));
+  }
+
   // Delete related media first to avoid foreign key constraint errors
   await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
 
@@ -2789,6 +2858,17 @@ export async function archiveListing(id: number) {
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(listings.id, id));
+
+  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
+  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
+    await db
+      .update(properties)
+      .set({
+        status: 'archived' as any,
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      })
+      .where(and(eq(properties.sourceListingId, id), isNotNull(properties.sourceListingId)));
+  }
 }
 
 /**
