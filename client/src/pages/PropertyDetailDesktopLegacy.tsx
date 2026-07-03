@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
+import { PropertyServiceActions } from '@/components/property/PropertyServiceActions';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
@@ -1681,6 +1682,16 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
             </div>
           </div>
         </div>
+
+        <PropertyServiceActions
+          propertyId={property.id}
+          listingType={property.listingType}
+          propertyType={property.propertyType}
+          suburb={property.suburb}
+          city={property.city}
+          province={property.province}
+          developmentId={property.developmentId}
+        />
 
         {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties Carousel */}
         {similarProperties.length > 0 && (
