@@ -410,6 +410,8 @@ export const listingRouter = router({
             message: 'Not authorized to update this listing',
           });
         }
+        const requiresReviewBeforePublicUpdate =
+          listing.status === 'published' || listing.status === 'approved';
 
         // GUARD: Normalize placeId and validate location_id (if location is being updated)
         const updatePayload: any = {
@@ -437,14 +439,18 @@ export const listingRouter = router({
         // Update listing
         await db.updateListing(input.id, updatePayload);
 
-        // Keep published listing media mirrored for search cards.
-        try {
-          await db.syncPublishedListingMediaToPropertyMirror(input.id);
-        } catch (syncError) {
-          console.warn('[listing.update] Property media mirror sync skipped:', {
-            listingId: input.id,
-            message: syncError instanceof Error ? syncError.message : String(syncError),
-          });
+        if (requiresReviewBeforePublicUpdate) {
+          await db.submitListingForReview(input.id);
+        } else {
+          // Keep already-public mirror media in sync only for edits that do not need review.
+          try {
+            await db.syncPublishedListingMediaToPropertyMirror(input.id);
+          } catch (syncError) {
+            console.warn('[listing.update] Property media mirror sync skipped:', {
+              listingId: input.id,
+              message: syncError instanceof Error ? syncError.message : String(syncError),
+            });
+          }
         }
 
         // Recalculate readiness and quality
@@ -462,7 +468,10 @@ export const listingRouter = router({
           qualityBreakdown: quality.breakdown,
         });
 
-        return { success: true };
+        return {
+          success: true,
+          status: requiresReviewBeforePublicUpdate ? 'pending_review' : undefined,
+        };
       } catch (error) {
         console.error('Error updating listing:', error);
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update listing' });
@@ -470,66 +479,87 @@ export const listingRouter = router({
     }),
 
   /**
-   * Get listing by ID
-   * Returns data compatible with PropertyDetail page
+   * Get listing by ID for private authoring/review workflows.
+   * Public property detail reads must go through properties.getById.
    */
-  getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-    try {
-      console.log('[listing.getById] Fetching listing ID:', input.id);
-      // Fetch listing
-      const listing = await db.getListingById(input.id);
-      console.log('[listing.getById] Result:', listing ? `Found: ${listing.title}` : 'NOT FOUND');
-      if (!listing) {
-        return null; // Return null instead of throwing for consistency with properties.getById
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        console.log('[listing.getById] Fetching listing ID:', input.id);
+        // Fetch listing
+        const listing = await db.getListingById(input.id);
+        console.log(
+          '[listing.getById] Result:',
+          listing ? `Found: ${listing.title}` : 'NOT FOUND',
+        );
+        if (!listing) {
+          return null; // Return null instead of throwing for consistency with properties.getById
+        }
+
+        const user = requireUser(ctx);
+        const isOwner =
+          Number((listing as any).userId || 0) === user.id ||
+          Number((listing as any).ownerId || 0) === user.id;
+        const isSuperAdmin = user.role === 'super_admin';
+
+        if (!isOwner && !isSuperAdmin) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not authorized to view this listing',
+          });
+        }
+
+        // Fetch media
+        const rawMedia = await db.getListingMedia(input.id);
+
+        // Transform media to include full URLs
+        // Frontend expects 'url' field, but database has 'originalUrl'
+        const cdnBaseUrl =
+          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+        const media = rawMedia.map(m => ({
+          ...m,
+          url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
+          thumbnail: m.thumbnailUrl
+            ? m.thumbnailUrl.startsWith('http')
+              ? m.thumbnailUrl
+              : `${cdnBaseUrl}/${m.thumbnailUrl}`
+            : null,
+        }));
+
+        // Fetch agent if assigned
+        let agent = null;
+        if (listing.agentId) {
+          agent = await db.getAgentById(listing.agentId);
+        }
+
+        // Normalize price field for PropertyDetail compatibility
+        // PropertyDetail expects a single 'price' field
+        const price = listing.askingPrice || listing.monthlyRent || listing.startingBid || 0;
+
+        // Map listing fields to property-compatible format
+        const propertyCompatibleListing = {
+          ...listing,
+          price, // Add normalized price field
+          listingType: listing.action, // Map action → listingType for compatibility
+          mainImage: media[0]?.url || null, // Add mainImage for cards/previews
+          area: listing.propertyDetails?.size || listing.propertyDetails?.area || 0, // Fallback area
+        };
+
+        return {
+          property: propertyCompatibleListing,
+          images: media,
+          agent,
+        };
+      } catch (error) {
+        console.error('Error fetching listing:', error);
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch listing',
+        });
       }
-
-      // Fetch media
-      const rawMedia = await db.getListingMedia(input.id);
-
-      // Transform media to include full URLs
-      // Frontend expects 'url' field, but database has 'originalUrl'
-      const cdnBaseUrl =
-        ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-      const media = rawMedia.map(m => ({
-        ...m,
-        url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
-        thumbnail: m.thumbnailUrl
-          ? m.thumbnailUrl.startsWith('http')
-            ? m.thumbnailUrl
-            : `${cdnBaseUrl}/${m.thumbnailUrl}`
-          : null,
-      }));
-
-      // Fetch agent if assigned
-      let agent = null;
-      if (listing.agentId) {
-        agent = await db.getAgentById(listing.agentId);
-      }
-
-      // Normalize price field for PropertyDetail compatibility
-      // PropertyDetail expects a single 'price' field
-      const price = listing.askingPrice || listing.monthlyRent || listing.startingBid || 0;
-
-      // Map listing fields to property-compatible format
-      const propertyCompatibleListing = {
-        ...listing,
-        price, // Add normalized price field
-        listingType: listing.action, // Map action → listingType for compatibility
-        mainImage: media[0]?.url || null, // Add mainImage for cards/previews
-        area: listing.propertyDetails?.size || listing.propertyDetails?.area || 0, // Fallback area
-      };
-
-      return {
-        property: propertyCompatibleListing,
-        images: media,
-        agent,
-      };
-    } catch (error) {
-      console.error('Error fetching listing:', error);
-      if (error instanceof TRPCError) throw error;
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch listing' });
-    }
-  }),
+    }),
 
   /**
    * Get user's listings

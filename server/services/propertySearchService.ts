@@ -498,7 +498,14 @@ export class PropertySearchService {
               displayOrder: listingMedia.displayOrder,
             })
             .from(listingMedia)
-            .where(and(inArray(listingMedia.listingId, sourceListingIds), eq(listingMedia.mediaType, 'image')))
+            .innerJoin(listings, eq(listingMedia.listingId, listings.id))
+            .where(
+              and(
+                inArray(listingMedia.listingId, sourceListingIds),
+                eq(listingMedia.mediaType, 'image'),
+                inArray(listings.status, ['published', 'approved']),
+              ),
+            )
             .orderBy(desc(listingMedia.isPrimary), asc(listingMedia.displayOrder))
         : [];
 
