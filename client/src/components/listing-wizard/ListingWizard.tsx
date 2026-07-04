@@ -127,47 +127,50 @@ const ListingWizard: React.FC = () => {
     if (existingListing && isEditMode) {
       console.log('Populating wizard with existing listing:', existingListing);
 
+      const listing = (existingListing as any).property || existingListing;
+      const listingMedia = (existingListing as any).images || (listing as any).media || [];
+
       // Reset store first to clear any drafts
       store.reset();
 
       // Set basic fields
-      store.setAction(existingListing.action as any);
-      store.setPropertyType(existingListing.propertyType as any);
-      store.setTitle(existingListing.title);
-      store.setDescription(existingListing.description);
+      store.setAction(listing.action as any);
+      store.setPropertyType(listing.propertyType as any);
+      store.setTitle(listing.title);
+      store.setDescription(listing.description);
 
       // Set pricing
       const pricing: any = {};
-      if (existingListing.askingPrice) pricing.askingPrice = Number(existingListing.askingPrice);
-      if (existingListing.monthlyRent) pricing.monthlyRent = Number(existingListing.monthlyRent);
-      if (existingListing.deposit) pricing.deposit = Number(existingListing.deposit);
-      if (existingListing.transferCostEstimate)
-        pricing.transferCostEstimate = Number(existingListing.transferCostEstimate);
-      if (existingListing.startingBid) pricing.startingBid = Number(existingListing.startingBid);
-      if (existingListing.reservePrice) pricing.reservePrice = Number(existingListing.reservePrice);
-      if (existingListing.leaseTerms) pricing.leaseTerms = existingListing.leaseTerms;
-      if (existingListing.availableFrom)
-        pricing.availableFrom = new Date(existingListing.availableFrom);
-      if (existingListing.utilitiesIncluded)
-        pricing.utilitiesIncluded = Boolean(existingListing.utilitiesIncluded);
-      if (existingListing.auctionDateTime)
-        pricing.auctionDateTime = new Date(existingListing.auctionDateTime);
-      if (existingListing.auctionTermsDocumentUrl)
-        pricing.auctionTermsDocumentUrl = existingListing.auctionTermsDocumentUrl;
-      if (existingListing.negotiable) pricing.negotiable = Boolean(existingListing.negotiable);
+      if (listing.askingPrice) pricing.askingPrice = Number(listing.askingPrice);
+      if (listing.monthlyRent) pricing.monthlyRent = Number(listing.monthlyRent);
+      if (listing.deposit) pricing.deposit = Number(listing.deposit);
+      if (listing.transferCostEstimate)
+        pricing.transferCostEstimate = Number(listing.transferCostEstimate);
+      if (listing.startingBid) pricing.startingBid = Number(listing.startingBid);
+      if (listing.reservePrice) pricing.reservePrice = Number(listing.reservePrice);
+      if (listing.leaseTerms) pricing.leaseTerms = listing.leaseTerms;
+      if (listing.availableFrom)
+        pricing.availableFrom = new Date(listing.availableFrom);
+      if (listing.utilitiesIncluded)
+        pricing.utilitiesIncluded = Boolean(listing.utilitiesIncluded);
+      if (listing.auctionDateTime)
+        pricing.auctionDateTime = new Date(listing.auctionDateTime);
+      if (listing.auctionTermsDocumentUrl)
+        pricing.auctionTermsDocumentUrl = listing.auctionTermsDocumentUrl;
+      if (listing.negotiable) pricing.negotiable = Boolean(listing.negotiable);
 
       store.setPricing(pricing);
 
       // Set property details
-      if (existingListing.propertyDetails) {
-        store.setPropertyDetails(existingListing.propertyDetails as any);
+      if (listing.propertyDetails) {
+        store.setPropertyDetails(listing.propertyDetails as any);
         // Also map to basicInfo/additionalInfo if needed, or just rely on propertyDetails
         // The wizard seems to split these, so we might need to map them back if they are stored separately in the store
         // But setPropertyDetails should handle the main ones.
         // Check if we need to populate additionalInfo for features
-        if ((existingListing.propertyDetails as any).features) {
+        if ((listing.propertyDetails as any).features) {
           store.setAdditionalInfo({
-            propertyHighlights: (existingListing.propertyDetails as any).features || [],
+            propertyHighlights: (listing.propertyDetails as any).features || [],
             // Map other fields if necessary
           });
         }
@@ -175,29 +178,29 @@ const ListingWizard: React.FC = () => {
 
       // Set location
       store.setLocation({
-        address: existingListing.address,
-        latitude: Number(existingListing.latitude),
-        longitude: Number(existingListing.longitude),
-        city: existingListing.city,
-        suburb: existingListing.suburb || '',
-        province: existingListing.province,
-        postalCode: existingListing.postalCode || '',
-        placeId: existingListing.placeId || '',
+        address: listing.address,
+        latitude: Number(listing.latitude),
+        longitude: Number(listing.longitude),
+        city: listing.city,
+        suburb: listing.suburb || '',
+        province: listing.province,
+        postalCode: listing.postalCode || '',
+        placeId: listing.placeId || '',
       });
 
       // Set media
-      if (existingListing.media && existingListing.media.length > 0) {
+      if (listingMedia.length > 0) {
         // Clear existing media first (reset did this, but just to be sure)
         // store.media is [] after reset
 
         // We need to map DB media to store MediaFile
         // This might be tricky if store expects File objects for new uploads
         // But for existing ones, it should handle URL-based media
-        existingListing.media.forEach((m: any) => {
+        listingMedia.forEach((m: any) => {
           store.addMedia({
             id: m.id,
             file: null as any, // No file object for existing media
-            preview: m.originalUrl,
+            preview: m.url || m.originalUrl || m.imageUrl,
             type: m.mediaType,
             progress: 100,
             displayOrder: m.displayOrder,
@@ -323,11 +326,16 @@ const ListingWizard: React.FC = () => {
 
       // Submit to API
       let result;
+      let shouldSubmitForReview = true;
       if (isEditMode && editId) {
-        await updateListingMutation.mutateAsync({
+        const currentListing = (existingListing as any)?.property || existingListing;
+        const wasAlreadyPendingReview = currentListing?.status === 'pending_review';
+        const updateResult = await updateListingMutation.mutateAsync({
           id: Number(editId),
           ...listingData,
         });
+        shouldSubmitForReview =
+          updateResult?.status !== 'pending_review' && !wasAlreadyPendingReview;
         result = { id: Number(editId) };
         console.log('Listing updated:', result);
       } else {
@@ -337,8 +345,12 @@ const ListingWizard: React.FC = () => {
 
       // Submit for review
       try {
-        await submitForReviewMutation.mutateAsync({ listingId: result.id });
-        console.log('Listing submitted for review');
+        if (shouldSubmitForReview) {
+          await submitForReviewMutation.mutateAsync({ listingId: result.id });
+          console.log('Listing submitted for review');
+        } else {
+          console.log('Listing is already pending review');
+        }
 
         // Show success message
         toast.success('Listing submitted for review successfully!');

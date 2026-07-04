@@ -47,6 +47,14 @@ function parseTextList(value?: string | null) {
     .filter(Boolean);
 }
 
+function isPublicPropertyStatus(status: unknown): boolean {
+  return status === 'available' || status === 'published';
+}
+
+function isPublicListingStatus(status: unknown): boolean {
+  return status === 'published' || status === 'approved';
+}
+
 async function getPropertyContactAgent(
   drizzleDb: Awaited<ReturnType<typeof getDb>>,
   {
@@ -733,16 +741,17 @@ export const appRouter = router({
         }),
       )
       .query(async ({ input }) => {
-        await db.incrementPropertyViews(input.id);
-
         const drizzleDb = await getDb();
 
         // Public property detail routes are keyed by properties.id. Listing data may enrich
         // the mirror through sourceListingId, but listings.id must never hijack /property/:id.
         const property = await db.getPropertyById(input.id);
-        if (!property) {
+        if (!property || !isPublicPropertyStatus((property as any).status)) {
           return { property: null, images: [] };
         }
+
+        await db.incrementPropertyViews(input.id);
+
         const rawImages = await db.getPropertyImages(input.id);
 
         const linkedListingId = Number((property as any).sourceListingId || 0);
@@ -750,9 +759,15 @@ export const appRouter = router({
           Number.isFinite(linkedListingId) && linkedListingId > 0
             ? await db.getListingById(linkedListingId)
             : null;
-        const linkedListingMedia = linkedListing ? await db.getListingMedia(linkedListingId) : [];
-        const linkedPropertyDetails = linkedListing
-          ? ((linkedListing.propertyDetails as any) || {})
+        const publicLinkedListing =
+          linkedListing && isPublicListingStatus((linkedListing as any).status)
+            ? linkedListing
+            : null;
+        const linkedListingMedia = publicLinkedListing
+          ? await db.getListingMedia(linkedListingId)
+          : [];
+        const linkedPropertyDetails = publicLinkedListing
+          ? ((publicLinkedListing.propertyDetails as any) || {})
           : {};
 
         const bucketName = ENV.s3BucketName || 'listify-properties-sa';
@@ -900,9 +915,9 @@ export const appRouter = router({
         }
 
         const linkedPrice =
-          Number((linkedListing as any)?.askingPrice || 0) ||
-          Number((linkedListing as any)?.monthlyRent || 0) ||
-          Number((linkedListing as any)?.startingBid || 0) ||
+          Number((publicLinkedListing as any)?.askingPrice || 0) ||
+          Number((publicLinkedListing as any)?.monthlyRent || 0) ||
+          Number((publicLinkedListing as any)?.startingBid || 0) ||
           0;
 
         const resolvedPrice = Number((property as any).price || 0) || linkedPrice || 0;
@@ -910,7 +925,7 @@ export const appRouter = router({
         const resolvedListingType =
           (property as any).listingType ||
           (property as any).transactionType ||
-          (linkedListing as any)?.action ||
+          (publicLinkedListing as any)?.action ||
           'sale';
 
         const resolvedBedrooms =
@@ -985,36 +1000,36 @@ export const appRouter = router({
         return {
           property: {
             ...property,
-            ...(linkedListing
+            ...(publicLinkedListing
               ? {
                   sourceListing: {
-                    id: linkedListing.id,
-                    slug: (linkedListing as any).slug,
-                    action: (linkedListing as any).action,
+                    id: publicLinkedListing.id,
+                    slug: (publicLinkedListing as any).slug,
+                    action: (publicLinkedListing as any).action,
                   },
                 }
               : {}),
-            sourceType: linkedListing ? 'property_mirror_listing' : 'property',
+            sourceType: publicLinkedListing ? 'property_mirror_listing' : 'property',
             sourceListingId: linkedListingId || (property as any).sourceListingId,
-            title: (property as any).title || (linkedListing as any)?.title,
-            description: (property as any).description || (linkedListing as any)?.description,
+            title: (property as any).title || (publicLinkedListing as any)?.title,
+            description: (property as any).description || (publicLinkedListing as any)?.description,
             price: resolvedPrice,
             displayPrice: resolvedPrice,
             listingType: resolvedListingType,
             transactionType: resolvedListingType,
-            propertyType: (property as any).propertyType || (linkedListing as any)?.propertyType,
+            propertyType: (property as any).propertyType || (publicLinkedListing as any)?.propertyType,
             bedrooms: resolvedBedrooms,
             bathrooms: resolvedBathrooms,
             area: resolvedArea,
             unitSizeM2: linkedPropertyDetails.unitSizeM2,
             erfSizeM2: linkedPropertyDetails.erfSizeM2,
-            suburb: (linkedListing as any)?.suburb || (property as any).suburb || undefined,
-            city: (linkedListing as any)?.city || (property as any).city || undefined,
-            province: (linkedListing as any)?.province || (property as any).province || undefined,
-            address: (linkedListing as any)?.address || (property as any).address || undefined,
-            zipCode: (linkedListing as any)?.postalCode || (property as any).zipCode || undefined,
-            latitude: (linkedListing as any)?.latitude || (property as any).latitude,
-            longitude: (linkedListing as any)?.longitude || (property as any).longitude,
+            suburb: (publicLinkedListing as any)?.suburb || (property as any).suburb || undefined,
+            city: (publicLinkedListing as any)?.city || (property as any).city || undefined,
+            province: (publicLinkedListing as any)?.province || (property as any).province || undefined,
+            address: (publicLinkedListing as any)?.address || (property as any).address || undefined,
+            zipCode: (publicLinkedListing as any)?.postalCode || (property as any).zipCode || undefined,
+            latitude: (publicLinkedListing as any)?.latitude || (property as any).latitude,
+            longitude: (publicLinkedListing as any)?.longitude || (property as any).longitude,
             amenities: uniqueAmenities.length > 0 ? uniqueAmenities : linkedAmenities,
             features: linkedPropertyDetails.propertyHighlights || linkedAmenities,
             propertySettings: normalizedPropertySettings,

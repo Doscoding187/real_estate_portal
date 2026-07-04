@@ -27,6 +27,7 @@ const { mockDb } = vi.hoisted(() => ({
     getListingMedia: vi.fn(),
     getUserListings: vi.fn(),
     getListingAnalytics: vi.fn(),
+    getAgentById: vi.fn(),
     getAgentByUserId: vi.fn(),
     getUserById: vi.fn(),
     getApprovalQueue: vi.fn(),
@@ -165,6 +166,7 @@ describe('listing lifecycle — canonical identity contract', () => {
     vi.mocked(mockDb.deleteListing).mockResolvedValue(undefined);
     vi.mocked(mockDb.getUserListings).mockResolvedValue([]);
     vi.mocked(mockDb.getListingAnalytics).mockResolvedValue(null);
+    vi.mocked(mockDb.getAgentById).mockResolvedValue(null);
     vi.mocked(mockDb.getApprovalQueue).mockResolvedValue([]);
     vi.mocked(mockDb.syncPublishedListingMediaToPropertyMirror).mockResolvedValue({
       synced: true,
@@ -218,6 +220,55 @@ describe('listing lifecycle — canonical identity contract', () => {
       },
     };
     vi.mocked(mockDb.getDb).mockResolvedValue(mockDbInstance as any);
+  });
+
+  // -----------------------------------------------------------------------
+  // 3.0 Private Listing Detail Visibility
+  // -----------------------------------------------------------------------
+  it('requires authentication before reading private listing detail', async () => {
+    const caller = makeCaller(null);
+
+    await expect(caller.listing.getById({ id: 1001 })).rejects.toThrow();
+    expect(mockDb.getListingById).not.toHaveBeenCalled();
+  });
+
+  it('allows the owner to read a draft listing for editing', async () => {
+    const caller = makeCaller(ownerUser);
+
+    const result = await caller.listing.getById({ id: 1001 });
+
+    expect(result?.property).toMatchObject({
+      id: 1001,
+      status: 'draft',
+      title: 'Modern Family Home',
+    });
+    expect(mockDb.getListingMedia).toHaveBeenCalledWith(1001);
+  });
+
+  it('allows a super admin to read a pending listing for review', async () => {
+    const caller = makeCaller(adminUser);
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ id: 1002, ownerId: 999, userId: 999, status: 'pending_review' }),
+    );
+
+    const result = await caller.listing.getById({ id: 1002 });
+
+    expect(result?.property).toMatchObject({
+      id: 1002,
+      status: 'pending_review',
+    });
+  });
+
+  it('rejects non-owners from reading draft listing detail', async () => {
+    const caller = makeCaller({ id: 999, email: 'other@test.com', role: 'agent' });
+
+    await withSilencedConsoleError(async () => {
+      await expect(caller.listing.getById({ id: 1001 })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Not authorized to view this listing',
+      });
+    });
+    expect(mockDb.getListingMedia).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
@@ -359,9 +410,9 @@ describe('listing lifecycle — canonical identity contract', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 3.7 Published Media Update
+  // 3.7 Published Listing Edits
   // -----------------------------------------------------------------------
-  it('updating published listing media dispatches property mirror sync', async () => {
+  it('updating a published listing sends changes back to review without syncing the public mirror', async () => {
     const caller = makeCaller(ownerUser);
     const LISTING_ID = 8001;
 
@@ -369,12 +420,14 @@ describe('listing lifecycle — canonical identity contract', () => {
       mockListing({ id: LISTING_ID, status: 'published' }),
     );
 
-    await caller.listing.update({
+    const result = await caller.listing.update({
       id: LISTING_ID,
       title: 'Still Modern Family Home',
     });
 
-    expect(mockDb.syncPublishedListingMediaToPropertyMirror).toHaveBeenCalledWith(LISTING_ID);
+    expect(result).toMatchObject({ success: true, status: 'pending_review' });
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
@@ -431,12 +484,12 @@ describe('listing lifecycle — canonical identity contract', () => {
   // -----------------------------------------------------------------------
   // 3.11 Legacy Identity Matching - sourceListingId primary lookup at db layer
   // -----------------------------------------------------------------------
-  it('sync is dispatched by published listing updates', async () => {
+  it('approved listing edits require review before public sync', async () => {
     const caller = makeCaller(ownerUser);
     const LISTING_ID = 11002;
 
     vi.mocked(mockDb.getListingById).mockResolvedValue(
-      mockListing({ id: LISTING_ID, status: 'published' }),
+      mockListing({ id: LISTING_ID, status: 'approved' }),
     );
 
     await caller.listing.update({
@@ -444,7 +497,8 @@ describe('listing lifecycle — canonical identity contract', () => {
       title: 'Updated Title',
     });
 
-    expect(mockDb.syncPublishedListingMediaToPropertyMirror).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------

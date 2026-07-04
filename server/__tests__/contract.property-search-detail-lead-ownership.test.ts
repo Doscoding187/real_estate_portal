@@ -290,4 +290,131 @@ describe('single-property search-detail-lead ownership contract', () => {
       }),
     );
   });
+
+  it.each(['pending', 'rejected', 'archived', 'sold', 'rented', 'draft'])(
+    'keeps %s property projections private on public detail',
+    async status => {
+      const trpc = caller();
+
+      mockGetPropertyById.mockResolvedValueOnce({
+        id: 777,
+        title: 'Non Public Property',
+        status,
+        sourceListingId: 123,
+      });
+
+      const detail = await trpc.properties.getById({ id: 777 });
+
+      expect(detail).toEqual({ property: null, images: [] });
+      expect(mockIncrementPropertyViews).not.toHaveBeenCalled();
+      expect(mockGetPropertyImages).not.toHaveBeenCalled();
+      expect(mockGetListingById).not.toHaveBeenCalled();
+      expect(mockGetListingMedia).not.toHaveBeenCalled();
+      expect(mockDetailSelect).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps published property projections public on detail', async () => {
+    const trpc = caller();
+
+    mockGetPropertyById.mockResolvedValueOnce({
+      id: 502,
+      title: 'Published Agent Home',
+      description: 'A public property projection created from an approved listing.',
+      propertyType: 'house',
+      listingType: 'sale',
+      transactionType: 'sale',
+      price: 2750000,
+      bedrooms: 4,
+      bathrooms: 3,
+      area: 220,
+      address: '2 Published Street',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'published',
+      featured: 0,
+      views: 1,
+      enquiries: 0,
+      agentId: 33,
+      ownerId: 100,
+      developmentId: null,
+      developerBrandProfileId: null,
+      sourceListingId: null,
+      amenities: 'Garden',
+      propertySettings: '{}',
+      mainImage: 'https://cdn.example.com/published.jpg',
+    });
+
+    const detail = await trpc.properties.getById({ id: 502 });
+
+    expect(detail.property).toMatchObject({
+      id: 502,
+      status: 'published',
+      agent: {
+        id: '33',
+        name: 'Jane Agent',
+        agency: 'Canonical Realty',
+        agencyId: 44,
+      },
+    });
+    expect(mockIncrementPropertyViews).toHaveBeenCalledWith(502);
+  });
+
+  it('does not expose pending source-listing edits through public detail', async () => {
+    const trpc = caller();
+
+    mockGetPropertyById.mockResolvedValueOnce({
+      id: 503,
+      title: 'Approved Public Title',
+      description: 'Approved public description.',
+      propertyType: 'house',
+      listingType: 'sale',
+      transactionType: 'sale',
+      price: 1900000,
+      bedrooms: 2,
+      bathrooms: 1,
+      area: 140,
+      address: '3 Approved Street',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'available',
+      featured: 0,
+      views: 1,
+      enquiries: 0,
+      agentId: 33,
+      ownerId: 100,
+      developmentId: null,
+      developerBrandProfileId: null,
+      sourceListingId: 9003,
+      amenities: 'Patio',
+      propertySettings: '{}',
+      mainImage: 'https://cdn.example.com/approved.jpg',
+    });
+    mockGetListingById.mockResolvedValueOnce({
+      id: 9003,
+      status: 'pending_review',
+      title: 'Unreviewed Edited Title',
+      description: 'Unreviewed edited description.',
+      action: 'sell',
+      propertyDetails: { bedrooms: 99, bathrooms: 99, propertyHighlights: ['Unreviewed'] },
+    });
+
+    const detail = await trpc.properties.getById({ id: 503 });
+
+    expect(detail.property).toMatchObject({
+      id: 503,
+      title: 'Approved Public Title',
+      description: 'Approved public description.',
+      bedrooms: 2,
+      bathrooms: 1,
+      sourceType: 'property',
+    });
+    expect(detail.property.sourceListing).toBeUndefined();
+    expect(detail.property.propertyDetails).toMatchObject({
+      bedrooms: 2,
+      bathrooms: 1,
+    });
+    expect(mockGetListingById).toHaveBeenCalledWith(9003);
+    expect(mockGetListingMedia).not.toHaveBeenCalled();
+  });
 });

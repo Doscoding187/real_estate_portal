@@ -13,8 +13,132 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, MessageSquare, ArrowLeft, AlertTriangle } from 'lucide-react';
-import PropertyDetail from '@/pages/PropertyDetail';
+import {
+  Bath,
+  BedDouble,
+  CheckCircle,
+  Home,
+  ImageOff,
+  MapPin,
+  Ruler,
+  XCircle,
+  ArrowLeft,
+} from 'lucide-react';
+
+function formatCurrency(value: unknown, action?: string) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return 'Price not set';
+
+  const suffix = action === 'rent' ? ' / month' : '';
+  return `R ${amount.toLocaleString('en-ZA')}${suffix}`;
+}
+
+function AdminListingPreview({ data }: { data: any }) {
+  const listing = data?.property;
+  const images = Array.isArray(data?.images) ? data.images : [];
+  const details = listing?.propertyDetails || {};
+  const primaryImage = images[0]?.url || images[0]?.originalUrl || listing?.mainImage;
+  const location = [listing?.suburb, listing?.city, listing?.province].filter(Boolean).join(', ');
+  const stats = [
+    { icon: BedDouble, label: 'Bedrooms', value: details.bedrooms ?? listing?.bedrooms },
+    { icon: Bath, label: 'Bathrooms', value: details.bathrooms ?? listing?.bathrooms },
+    {
+      icon: Ruler,
+      label: 'Size',
+      value:
+        details.unitSizeM2 ||
+        details.houseAreaM2 ||
+        details.floorAreaM2 ||
+        details.erfSizeM2 ||
+        listing?.area,
+      suffix: 'm²',
+    },
+  ].filter(item => item.value !== undefined && item.value !== null && item.value !== '');
+
+  if (!listing) {
+    return (
+      <div className="mx-auto max-w-4xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <Home className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+        <h2 className="text-lg font-semibold text-slate-900">Listing not available</h2>
+        <p className="mt-2 text-sm text-slate-500">
+          This private review record could not be loaded.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <article className="mx-auto max-w-6xl overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+        <div className="relative min-h-[320px] bg-slate-100 lg:min-h-[560px]">
+          {primaryImage ? (
+            <img
+              src={primaryImage}
+              alt={listing.title}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full min-h-[320px] items-center justify-center text-slate-400">
+              <ImageOff className="h-10 w-10" />
+            </div>
+          )}
+          <span className="absolute left-4 top-4 rounded bg-slate-950/85 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+            {listing.status}
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-6 p-6 lg:p-8">
+          <div>
+            <p className="text-sm font-semibold uppercase text-slate-500">
+              {listing.action || listing.listingType}
+            </p>
+            <h1 className="mt-2 text-2xl font-bold leading-tight text-slate-950 lg:text-3xl">
+              {listing.title}
+            </h1>
+            {location && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span>{location}</span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className="text-3xl font-bold text-slate-950">
+              {formatCurrency(listing.price, listing.action)}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">{listing.address}</p>
+          </div>
+
+          {stats.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 border-y border-slate-200 py-4">
+              {stats.map(item => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="min-w-0">
+                    <Icon className="mb-2 h-4 w-4 text-slate-500" />
+                    <p className="text-sm font-semibold text-slate-950">
+                      {item.value}
+                      {item.suffix || ''}
+                    </p>
+                    <p className="text-xs text-slate-500">{item.label}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div>
+            <h2 className="text-sm font-semibold uppercase text-slate-500">Description</h2>
+            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-700">
+              {listing.description || 'No description provided.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export default function AdminPropertyReview() {
   const [, params] = useRoute('/admin/review/:id');
@@ -26,7 +150,7 @@ export default function AdminPropertyReview() {
   const [feedback, setFeedback] = useState('');
 
   // Fetch listing status to show current state
-  const { data: propertyData, refetch } = trpc.listing.getById.useQuery(
+  const { data: propertyData, isLoading, refetch } = trpc.listing.getById.useQuery(
     { id: propertyId },
     { enabled: propertyId > 0 },
   );
@@ -102,14 +226,15 @@ export default function AdminPropertyReview() {
         <div className="text-sm text-slate-400">Viewing as Super Admin</div>
       </div>
 
-      {/* Main Property Content */}
-      <div className="pointer-events-none opacity-100">
-        {/* We wrap PropertyDetail in a div that disables interaction with user buttons if needed, 
-            or we just let them be clickable but they won't do much for admin */}
-        <div className="pointer-events-auto">
-          <PropertyDetail propertyId={propertyId} />
-        </div>
-      </div>
+      <main className="min-h-[calc(100vh-9rem)] bg-slate-50 px-4 py-6 lg:px-8">
+        {isLoading ? (
+          <div className="mx-auto max-w-4xl rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
+            Loading listing preview...
+          </div>
+        ) : (
+          <AdminListingPreview data={propertyData} />
+        )}
+      </main>
 
       {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-lg z-50 flex items-center justify-between px-8">
