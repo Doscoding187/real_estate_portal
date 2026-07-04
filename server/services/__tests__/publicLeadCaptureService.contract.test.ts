@@ -80,7 +80,11 @@ describe('publicLeadCaptureService contract', () => {
       maxAffordable: 1400000,
       calculatedAt: '2026-07-04T10:00:00.000Z',
     };
-    mockLimit.mockResolvedValueOnce([{ id: 77, developerBrandProfileId: 13 }]);
+    mockLimit
+      .mockResolvedValueOnce([
+        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
+      ])
+      .mockResolvedValueOnce([{ id: 'unit-1', developmentId: 77, isActive: 1 }]);
 
     const result = await capturePublicLead({
       developmentId: 77,
@@ -142,7 +146,11 @@ describe('publicLeadCaptureService contract', () => {
       maxAffordable: 980000,
       calculatedAt: '2026-07-04T10:00:00.000Z',
     };
-    mockLimit.mockResolvedValueOnce([{ id: 77, developerBrandProfileId: null }]);
+    mockLimit
+      .mockResolvedValueOnce([
+        { id: 77, developerBrandProfileId: null, isPublished: 1, approvalStatus: 'approved' },
+      ])
+      .mockResolvedValueOnce([{ id: 'unit-basic', developmentId: 77, isActive: 1 }]);
 
     const result = await capturePublicLead({
       developmentId: 77,
@@ -219,6 +227,162 @@ describe('publicLeadCaptureService contract', () => {
         leadSource: 'property_detail',
         affordabilityData: null,
         funnelStage: 'interest',
+      }),
+    );
+  });
+
+  it('uses the canonical development brand when the client submits a spoofed brand id', async () => {
+    mockLimit.mockResolvedValueOnce([
+      { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
+    ]);
+
+    const result = await capturePublicLead({
+      developmentId: 77,
+      developerBrandProfileId: 999,
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      phone: '0820000000',
+      leadSource: 'development_detail_info',
+      sourceSurface: 'unit_floor_plan_dialog_unit-a_info',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 321,
+      route: 'brand',
+    });
+    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developmentId: 77,
+        developerBrandProfileId: 13,
+        leadSource: 'development_detail_info',
+        sourceSurface: 'unit_floor_plan_dialog_unit-a_info',
+      }),
+    );
+    expect(mockCaptureBrandLead).not.toHaveBeenCalledWith(
+      expect.objectContaining({ developerBrandProfileId: 999 }),
+    );
+  });
+
+  it('rejects public development leads for inventory that is not approved and published', async () => {
+    mockLimit.mockResolvedValueOnce([
+      { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'pending' },
+    ]);
+
+    await expect(
+      capturePublicLead({
+        developmentId: 77,
+        developerBrandProfileId: 13,
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Development not available for public enquiries.',
+    });
+
+    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
+    expect(mockValues).not.toHaveBeenCalled();
+  });
+
+  it('rejects unit context that does not belong to the canonical development', async () => {
+    mockLimit
+      .mockResolvedValueOnce([
+        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
+      ])
+      .mockResolvedValueOnce([{ id: 'unit-from-other-dev', developmentId: 88, isActive: 1 }]);
+
+    await expect(
+      capturePublicLead({
+        developmentId: 77,
+        developerBrandProfileId: 13,
+        unitId: 'unit-from-other-dev',
+        unitName: 'Wrong Unit',
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Unit does not belong to this public development.',
+    });
+
+    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
+    expect(mockValues).not.toHaveBeenCalled();
+  });
+
+  it('rejects inactive unit context for a public development lead', async () => {
+    mockLimit
+      .mockResolvedValueOnce([
+        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
+      ])
+      .mockResolvedValueOnce([{ id: 'unit-inactive', developmentId: 77, isActive: 0 }]);
+
+    await expect(
+      capturePublicLead({
+        developmentId: 77,
+        unitId: 'unit-inactive',
+        unitName: 'Inactive Unit',
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+      }),
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: 'Unit does not belong to this public development.',
+    });
+
+    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
+    expect(mockValues).not.toHaveBeenCalled();
+  });
+
+  it('preserves brand-only public lead capture when no development id is present', async () => {
+    const result = await capturePublicLead({
+      developerBrandProfileId: 55,
+      name: 'Brand Lead',
+      email: 'brand@example.com',
+      leadSource: 'brand_profile',
+      sourceSurface: 'brand_profile_page',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 321,
+      route: 'brand',
+    });
+    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developerBrandProfileId: 55,
+        developmentId: undefined,
+        leadSource: 'brand_profile',
+        sourceSurface: 'brand_profile_page',
+      }),
+    );
+  });
+
+  it('preserves agent lead capture when no development id is present', async () => {
+    mockLimit.mockResolvedValueOnce([{ id: 33, agencyId: 44 }]);
+
+    const result = await capturePublicLead({
+      agentId: 33,
+      name: 'Agent Lead',
+      email: 'agent@example.com',
+      leadSource: 'agent_profile',
+      sourceSurface: 'agent_profile_form',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 456,
+      route: 'direct',
+    });
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: null,
+        developmentId: null,
+        developerBrandProfileId: null,
+        agentId: 33,
+        agencyId: 44,
+        source: 'agent_profile_form',
+        leadSource: 'agent_profile',
       }),
     );
   });
