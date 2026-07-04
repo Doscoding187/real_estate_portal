@@ -54,14 +54,14 @@ function resolveOwner(input: {
   agencyId?: number;
   agentId?: number;
 }): { ownerType: LeadOwnerType; ownerId: number | null } {
-  if (input.developerBrandProfileId) {
-    return { ownerType: 'brand_profile', ownerId: input.developerBrandProfileId };
+  if (input.propertyId) {
+    return { ownerType: 'property', ownerId: input.propertyId };
   }
   if (input.developmentId) {
     return { ownerType: 'development', ownerId: input.developmentId };
   }
-  if (input.propertyId) {
-    return { ownerType: 'property', ownerId: input.propertyId };
+  if (input.developerBrandProfileId) {
+    return { ownerType: 'brand_profile', ownerId: input.developerBrandProfileId };
   }
   if (input.agencyId) {
     return { ownerType: 'agency', ownerId: input.agencyId };

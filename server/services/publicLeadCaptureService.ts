@@ -100,6 +100,10 @@ function coerceLeadType(input?: string): LeadType {
   return 'inquiry';
 }
 
+function isPublicPropertyStatus(status: unknown): boolean {
+  return status === 'available' || status === 'published';
+}
+
 async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<ResolvedLeadOwnership> {
   const db = await getDb();
   const hasExplicitDevelopmentId = Number.isFinite(Number(input.developmentId)) && Number(input.developmentId) > 0;
@@ -124,6 +128,8 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
   if (resolved.propertyId) {
     const [property] = await db
       .select({
+        id: properties.id,
+        status: properties.status,
         developmentId: properties.developmentId,
         developerBrandProfileId: properties.developerBrandProfileId,
         agentId: properties.agentId,
@@ -132,14 +138,18 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
       .where(eq(properties.id, resolved.propertyId))
       .limit(1);
 
-    if (property) {
-      resolved.developmentId = resolved.developmentId || property.developmentId || undefined;
-      resolved.developerBrandProfileId =
-        resolved.developerBrandProfileId || property.developerBrandProfileId || undefined;
-      resolved.agentId = resolved.agentId || property.agentId || undefined;
-    } else {
-      resolved.propertyId = undefined;
+    if (!property || !isPublicPropertyStatus(property.status)) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Property not available for public enquiries.',
+      });
     }
+
+    resolved.propertyId = property.id;
+    resolved.developmentId = property.developmentId || undefined;
+    resolved.developerBrandProfileId = property.developerBrandProfileId || undefined;
+    resolved.agentId = property.agentId || undefined;
+    resolved.agencyId = undefined;
   }
 
   if (hasExplicitDevelopmentId && resolved.developmentId) {
