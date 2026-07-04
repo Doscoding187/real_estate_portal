@@ -200,7 +200,13 @@ describe('publicLeadCaptureService contract', () => {
 
   it('preserves legacy single-property source semantics when sourceSurface is omitted', async () => {
     mockLimit.mockResolvedValueOnce([
-      { developmentId: null, developerBrandProfileId: null, agentId: null },
+      {
+        id: 501,
+        status: 'available',
+        developmentId: null,
+        developerBrandProfileId: null,
+        agentId: null,
+      },
     ]);
 
     const result = await capturePublicLead({
@@ -229,6 +235,135 @@ describe('publicLeadCaptureService contract', () => {
         funnelStage: 'interest',
       }),
     );
+  });
+
+  it('uses canonical property agent ownership when client submits competing owner ids', async () => {
+    mockLimit
+      .mockResolvedValueOnce([
+        {
+          id: 501,
+          status: 'available',
+          developmentId: null,
+          developerBrandProfileId: null,
+          agentId: 33,
+        },
+      ])
+      .mockResolvedValueOnce([{ id: 33, agencyId: 44 }]);
+
+    const result = await capturePublicLead({
+      propertyId: 501,
+      developerBrandProfileId: 999,
+      agentId: 999,
+      agencyId: 999,
+      name: 'Pat Buyer',
+      email: 'pat@example.com',
+      phone: '0840000000',
+      leadSource: 'property_detail',
+      sourceSurface: 'property_detail_contact_modal',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 456,
+      route: 'direct',
+    });
+    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 501,
+        developmentId: null,
+        developerBrandProfileId: null,
+        agentId: 33,
+        agencyId: 44,
+        source: 'property_detail_contact_modal',
+        leadSource: 'property_detail',
+      }),
+    );
+  });
+
+  it('uses canonical property brand ownership when client submits a spoofed property brand id', async () => {
+    mockLimit.mockResolvedValueOnce([
+      {
+        id: 501,
+        status: 'available',
+        developmentId: null,
+        developerBrandProfileId: 13,
+        agentId: null,
+      },
+    ]);
+
+    const result = await capturePublicLead({
+      propertyId: 501,
+      developerBrandProfileId: 999,
+      name: 'Pat Buyer',
+      email: 'pat@example.com',
+      phone: '0840000000',
+      leadSource: 'property_detail',
+      sourceSurface: 'property_detail_contact_modal',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 321,
+      route: 'brand',
+    });
+    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 501,
+        developerBrandProfileId: 13,
+        leadSource: 'property_detail',
+        sourceSurface: 'property_detail_contact_modal',
+      }),
+    );
+    expect(mockCaptureBrandLead).not.toHaveBeenCalledWith(
+      expect.objectContaining({ developerBrandProfileId: 999 }),
+    );
+  });
+
+  it('rejects single-property public leads for unavailable property inventory', async () => {
+    mockLimit.mockResolvedValueOnce([
+      {
+        id: 501,
+        status: 'draft',
+        developmentId: null,
+        developerBrandProfileId: null,
+        agentId: 33,
+      },
+    ]);
+
+    await expect(
+      capturePublicLead({
+        propertyId: 501,
+        name: 'Pat Buyer',
+        email: 'pat@example.com',
+        leadSource: 'property_detail',
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Property not available for public enquiries.',
+    });
+
+    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
+    expect(mockValues).not.toHaveBeenCalled();
+  });
+
+  it('rejects single-property public leads when the property id cannot be resolved', async () => {
+    mockLimit.mockResolvedValueOnce([]);
+
+    await expect(
+      capturePublicLead({
+        propertyId: 501,
+        name: 'Pat Buyer',
+        email: 'pat@example.com',
+        leadSource: 'property_detail',
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Property not available for public enquiries.',
+    });
+
+    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
+    expect(mockValues).not.toHaveBeenCalled();
   });
 
   it('uses the canonical development brand when the client submits a spoofed brand id', async () => {
