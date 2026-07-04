@@ -22,6 +22,15 @@ import { EmailService } from '../_core/emailService';
 // Types
 // ============================================================================
 
+interface AffordabilityData {
+  monthlyIncome?: number;
+  monthlyExpenses?: number;
+  monthlyDebts?: number;
+  availableDeposit?: number;
+  maxAffordable?: number;
+  calculatedAt?: string;
+}
+
 export interface CaptureBrandLeadInput {
   developerBrandProfileId: number;
   developmentId?: number;
@@ -36,10 +45,12 @@ export interface CaptureBrandLeadInput {
   phone?: string;
   message?: string;
   leadSource?: string;
+  sourceSurface?: string;
   referrerUrl?: string;
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
+  affordabilityData?: AffordabilityData;
 }
 
 export interface LeadRoutingResult {
@@ -106,15 +117,16 @@ async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRouti
     message: input.message || null,
     leadType: 'inquiry',
     status: 'new',
-    source: input.leadSource || 'property_listify',
-    leadSource: input.leadSource || 'property_listify',
+    source: input.sourceSurface || input.leadSource || 'property_listify',
+    leadSource: input.leadSource || input.sourceSurface || 'property_listify',
     referrerUrl: input.referrerUrl || null,
     utmSource: input.utmSource || null,
     utmMedium: input.utmMedium || null,
     utmCampaign: input.utmCampaign || null,
+    affordabilityData: input.affordabilityData ? (input.affordabilityData as any) : null,
     brandLeadStatus,
     leadDeliveryMethod: deliveryMethod,
-    funnelStage: 'interest',
+    funnelStage: input.affordabilityData ? 'affordability' : 'interest',
     qualificationStatus: 'pending',
   });
 

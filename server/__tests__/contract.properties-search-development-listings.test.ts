@@ -34,6 +34,8 @@ describe('properties.searchDevelopmentListings contract', () => {
           listingSource: 'development',
           bedrooms: 2,
           bathrooms: 2,
+          availableUnits: 4,
+          totalUnits: 8,
           images: [],
           badges: ['Off-plan'],
           listedDate: new Date('2026-03-20T00:00:00.000Z'),
@@ -89,6 +91,9 @@ describe('properties.searchDevelopmentListings contract', () => {
           badges: ['Off-plan'],
           listedDate: new Date('2026-03-20T00:00:00.000Z'),
           developmentId: 10,
+          unitTypeId: 'unit-a',
+          availableUnits: 4,
+          totalUnits: 8,
         },
       ],
       total: 1,
@@ -135,6 +140,10 @@ describe('properties.searchDevelopmentListings contract', () => {
       contactRole: 'developer',
       identity: { name: 'Demo Builder' },
       href: '/development/demo-development/unit/unit-a',
+      developmentId: 10,
+      unitTypeId: 'unit-a',
+      availableUnits: 4,
+      totalUnits: 8,
     });
   });
 

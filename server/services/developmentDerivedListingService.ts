@@ -543,6 +543,9 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
     latitude: item.latitude,
     longitude: item.longitude,
     developmentId: item.developmentId,
+    unitTypeId: item.unitTypeId,
+    availableUnits: item.availableUnits,
+    totalUnits: item.totalUnits,
   };
 }
 
@@ -750,6 +753,7 @@ export class DevelopmentDerivedListingService {
           images: mediaSignals.image ? [{ url: mediaSignals.image, thumbnailUrl: mediaSignals.image }] : [],
           badges: [stageBadge].filter(Boolean) as string[],
           availableUnits,
+          totalUnits: toNumberOrNull(row.totalUnits) ?? undefined,
           completionDate: row.completionDate || null,
           listedDate,
           latitude: toNumberOrNull(row.latitude) ?? undefined,

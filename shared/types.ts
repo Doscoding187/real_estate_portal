@@ -917,6 +917,7 @@ export interface DevelopmentDerivedListing {
   images?: ImageUrls[];
   badges?: string[];
   availableUnits?: number;
+  totalUnits?: number;
   completionDate?: string | null;
   listedDate: Date;
   latitude?: number;
@@ -1009,6 +1010,9 @@ export interface SearchCardResult {
   longitude?: number;
   propertyId?: number;
   developmentId?: number;
+  unitTypeId?: string;
+  availableUnits?: number;
+  totalUnits?: number;
 }
 
 // Saved search

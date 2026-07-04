@@ -204,6 +204,9 @@ export function DevelopmentLeadDialog({
   const handleSubmit = () => {
     if (!validate()) return;
 
+    const urlParams =
+      typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+
     createLead.mutate({
       developmentId: development.id,
       developerBrandProfileId: development.developerBrandProfileId ?? undefined,
@@ -217,7 +220,11 @@ export function DevelopmentLeadDialog({
       phone: form.phone.trim(),
       message: form.message.trim() || generatedMessage,
       leadSource: copy.leadSource,
+      sourceSurface: ctaLocation || 'development_detail',
       referrerUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+      utmSource: urlParams?.get('utm_source') || undefined,
+      utmMedium: urlParams?.get('utm_medium') || undefined,
+      utmCampaign: urlParams?.get('utm_campaign') || undefined,
       affordabilityData:
         affordabilityData &&
         (affordabilityData.monthlyIncome ||

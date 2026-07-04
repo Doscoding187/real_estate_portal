@@ -26,6 +26,30 @@ vi.mock('../../db-connection', () => ({
 
 import { developmentDerivedListingService } from '../developmentDerivedListingService';
 
+function collectSqlParts(
+  value: unknown,
+  parts: { columns: string[]; params: unknown[] } = { columns: [], params: [] },
+) {
+  if (!value || typeof value !== 'object') return parts;
+
+  const chunk = value as any;
+  if (chunk.constructor?.name === 'Param') {
+    parts.params.push(chunk.value);
+    return parts;
+  }
+
+  if (typeof chunk.name === 'string' && typeof chunk.columnType === 'string') {
+    parts.columns.push(chunk.name);
+    return parts;
+  }
+
+  if (Array.isArray(chunk.queryChunks)) {
+    chunk.queryChunks.forEach((child: unknown) => collectSqlParts(child, parts));
+  }
+
+  return parts;
+}
+
 describe('DevelopmentDerivedListingService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -121,6 +145,7 @@ describe('DevelopmentDerivedListingService', () => {
       bathrooms: 2,
       floorSize: 74,
       availableUnits: 7,
+      totalUnits: 12,
       development: {
         id: 42,
         name: 'The Junction',
@@ -140,6 +165,10 @@ describe('DevelopmentDerivedListingService', () => {
     expect(result.cards?.[0]).toMatchObject({
       kind: 'development',
       href: '/development/the-junction/unit/unit-2-bed',
+      developmentId: 42,
+      unitTypeId: 'unit-2-bed',
+      availableUnits: 7,
+      totalUnits: 12,
       contactRole: 'developer',
       identity: {
         name: 'Builder Group',
@@ -147,6 +176,27 @@ describe('DevelopmentDerivedListingService', () => {
       },
       image: 'https://example.com/unit-primary.jpg',
     });
+  });
+
+  it('only queries approved published developments with active unit inventory', async () => {
+    await developmentDerivedListingService.searchListings(
+      {
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        listingType: 'sale',
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    const whereClause = mockWhere.mock.calls[0]?.[0];
+    const parts = collectSqlParts(whereClause);
+
+    expect(parts.columns).toEqual(
+      expect.arrayContaining(['isPublished', 'approval_status', 'is_active', 'transaction_type']),
+    );
+    expect(parts.params).toEqual(expect.arrayContaining([1, 'approved', 1, 'for_sale']));
   });
 
   it('prefers richer unit content when applying organic date-desc ranking', async () => {
@@ -254,6 +304,11 @@ describe('DevelopmentDerivedListingService', () => {
     expect(result.items).toHaveLength(2);
     expect(result.items[0].unitTypeId).toBe('unit-premium');
     expect(result.items[0].rankingScore).toBeGreaterThan(result.items[1].rankingScore || 0);
+    expect(result.items[1]).toMatchObject({
+      unitTypeId: 'unit-basic',
+      availableUnits: 0,
+      totalUnits: 3,
+    });
   });
 
   it('filters development-derived listings by text location slugs when provided', async () => {

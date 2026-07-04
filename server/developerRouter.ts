@@ -1377,6 +1377,7 @@ export const developerRouter = router({
         utmSource: z.string().optional(),
         utmMedium: z.string().optional(),
         utmCampaign: z.string().optional(),
+        sourceSurface: z.string().optional(),
         leadSource: z.string().optional(),
       }),
     )
@@ -1394,7 +1395,8 @@ export const developerRouter = router({
         phone: input.phone,
         message: input.message,
         leadType: 'inquiry',
-        source: input.leadSource || 'development_detail',
+        source: input.sourceSurface || 'development_detail',
+        sourceSurface: input.sourceSurface || 'development_detail',
         leadSource: input.leadSource || 'development_detail',
         referrerUrl: input.referrerUrl,
         utmSource: input.utmSource,

@@ -227,6 +227,57 @@ function createError(message: string, code: string, meta?: Record<string, unknow
   });
 }
 
+function toPositiveInteger(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = typeof value === 'number' ? value : Number(String(value).trim());
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.trunc(parsed);
+}
+
+async function resolveWritableDeveloperBrandProfileId(
+  db: any,
+  input: {
+    developerProfileId: number;
+    userId: number;
+    explicitBrandProfileId?: unknown;
+  },
+): Promise<number | null> {
+  const explicitBrandProfileId = toPositiveInteger(input.explicitBrandProfileId);
+
+  if (explicitBrandProfileId) {
+    const brand = await db.query.developerBrandProfiles.findFirst({
+      where: eq(developerBrandProfiles.id, explicitBrandProfileId),
+      columns: { id: true, linkedDeveloperAccountId: true, ownerType: true, createdBy: true },
+    });
+
+    if (!brand) {
+      throw createError(`Brand Profile with ID ${explicitBrandProfileId} not found`, 'NOT_FOUND', {
+        brandProfileId: explicitBrandProfileId,
+      });
+    }
+
+    const linkedToDeveloper = Number(brand.linkedDeveloperAccountId || 0) === input.developerProfileId;
+    const createdByDeveloper =
+      brand.ownerType === 'developer' && Number(brand.createdBy || 0) === input.userId;
+
+    if (!linkedToDeveloper && !createdByDeveloper) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Brand profile does not belong to this developer account.',
+      });
+    }
+
+    return Number(brand.id);
+  }
+
+  const linkedBrand = await db.query.developerBrandProfiles.findFirst({
+    where: eq(developerBrandProfiles.linkedDeveloperAccountId, input.developerProfileId),
+    columns: { id: true },
+  });
+
+  return linkedBrand?.id ? Number(linkedBrand.id) : null;
+}
+
 function handleDatabaseError(error: unknown, context?: Record<string, unknown>): never {
   const message =
     error instanceof Error ? error.message : typeof error === 'string' ? error : 'Database error';
@@ -399,11 +450,20 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
   const { isId, value } = parseSlugOrId(slugOrId);
 
   const whereClause = isId
-    ? and(eq(developments.id, value as number), eq(developments.isPublished, 1))
-    : and(eq(developments.slug, value as string), eq(developments.isPublished, 1));
+    ? and(
+        eq(developments.id, value as number),
+        eq(developments.isPublished, 1),
+        eq(developments.approvalStatus, 'approved'),
+      )
+    : and(
+        eq(developments.slug, value as string),
+        eq(developments.isPublished, 1),
+        eq(developments.approvalStatus, 'approved'),
+      );
 
   const results = await db
     .select({
+      developerId: developments.developerId,
       id: developments.id,
       name: developments.name,
       slug: developments.slug,
@@ -424,9 +484,13 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       estateSpecs: developments.estateSpecs,
       floorPlans: developments.floorPlans,
       brochures: developments.brochures,
+      locationId: developments.locationId,
+      isPublished: developments.isPublished,
+      publishedAt: developments.publishedAt,
       developerBrandProfileId: developments.developerBrandProfileId,
 
       // ✅ chips + status row + availability bar
+      approvalStatus: developments.approvalStatus,
       status: developments.status,
       developmentType: developments.developmentType,
       ownershipType: developments.ownershipType,
@@ -808,7 +872,7 @@ export async function createDevelopment(
     // Regular developer mode - require developer profile
     const devProfile = await db.query.developers.findFirst({
       where: eq(developers.userId, userId),
-      columns: { id: true, brandProfileId: true },
+      columns: { id: true },
     });
 
     if (!devProfile) {
@@ -819,8 +883,16 @@ export async function createDevelopment(
       );
     }
 
+    const explicitBrandProfileId =
+      (developmentData as any).developerBrandProfileId ??
+      (developmentData as any).brandProfileId ??
+      brandProfileId;
     developerProfileId = devProfile.id;
-    resolvedBrandProfileId = devProfile.brandProfileId || brandProfileId || null;
+    resolvedBrandProfileId = await resolveWritableDeveloperBrandProfileId(db, {
+      developerProfileId: devProfile.id,
+      userId,
+      explicitBrandProfileId,
+    });
     effectiveOwnerType = 'developer';
 
     console.log('[createDevelopment] Developer mode:', {
@@ -1504,8 +1576,32 @@ export async function updateDevelopment(
   // ---------------------------------------------------------------------------
   // Branding / agent
   // ---------------------------------------------------------------------------
-  if (developmentData.brandProfileId !== undefined) {
-    updatePayload.developerBrandProfileId = developmentData.brandProfileId;
+  const requestedDeveloperBrandProfileId =
+    (developmentData as any).developerBrandProfileId ?? (developmentData as any).brandProfileId;
+  if (requestedDeveloperBrandProfileId !== undefined) {
+    if (requestedDeveloperBrandProfileId === null) {
+      updatePayload.developerBrandProfileId = null;
+    } else {
+      const normalizedBrandProfileId = toPositiveInteger(requestedDeveloperBrandProfileId);
+      if (!normalizedBrandProfileId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid developer brand profile id' });
+      }
+      if (superAdminBrandProfileId !== null) {
+        if (normalizedBrandProfileId !== superAdminBrandProfileId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Development brand does not match active publisher context.',
+          });
+        }
+        updatePayload.developerBrandProfileId = normalizedBrandProfileId;
+      } else {
+        updatePayload.developerBrandProfileId = await resolveWritableDeveloperBrandProfileId(db, {
+          developerProfileId: developerProfileId!,
+          userId,
+          explicitBrandProfileId: normalizedBrandProfileId,
+        });
+      }
+    }
   }
   if (developmentData.agentId !== undefined) updatePayload.agentId = developmentData.agentId;
 
