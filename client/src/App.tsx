@@ -51,6 +51,7 @@ const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSuppo
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
+const AgencyLeads = lazy(() => import('./pages/agency/AgencyLeads'));
 const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
 const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
@@ -622,6 +623,11 @@ function Router() {
           <Route path="/agency/agents">
             <RequireRole role="agency_admin">
               <AgentManagement />
+            </RequireRole>
+          </Route>
+          <Route path="/agency/leads">
+            <RequireRole role="agency_admin">
+              <AgencyLeads />
             </RequireRole>
           </Route>
 

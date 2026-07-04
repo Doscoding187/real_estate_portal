@@ -6,7 +6,18 @@ import {
   publicProcedure,
   protectedProcedure,
 } from './_core/trpc';
-import { agencies, users, plans, agencyBranding, invitations } from '../drizzle/schema';
+import { TRPCError } from '@trpc/server';
+import {
+  agencies,
+  agents,
+  leadActivities,
+  leads,
+  plans,
+  properties,
+  users,
+  agencyBranding,
+  invitations,
+} from '../drizzle/schema';
 import { eq, like, or, desc, and } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import {
@@ -22,6 +33,7 @@ import {
 } from './db';
 import { logAudit } from './_core/auditLog';
 import { requireUser } from './_core/requireUser';
+import { nowAsDbTimestamp } from './utils/dbTypeUtils';
 
 /**
  * Agency Router - Manages real estate agencies
@@ -58,6 +70,17 @@ const agencyFiltersSchema = z.object({
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
 });
+
+const leadStatusSchema = z.enum([
+  'new',
+  'contacted',
+  'qualified',
+  'converted',
+  'closed',
+  'viewing_scheduled',
+  'offer_sent',
+  'lost',
+]);
 
 export const agencyRouter = router({
   getOnboardingStatus: agencyAdminProcedure.query(async ({ ctx }) => {
@@ -642,6 +665,157 @@ export const agencyRouter = router({
         throw new Error('You must be part of an agency');
       }
       return await getAgencyRecentLeads(user.agencyId, input?.limit || 5);
+    }),
+
+  /**
+   * Get agency-owned leads for operational follow-up.
+   */
+  getLeads: agencyAdminProcedure
+    .input(
+      z
+        .object({
+          status: z.union([leadStatusSchema, z.literal('all')]).default('all'),
+          agentId: z.number().int().positive().optional(),
+          limit: z.number().int().min(1).max(200).default(50),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      if (!user.agencyId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You must be part of an agency',
+        });
+      }
+
+      const filters = input || { status: 'all' as const, limit: 50 };
+      const conditions: SQL[] = [eq(leads.agencyId, user.agencyId)];
+
+      if (filters.status && filters.status !== 'all') {
+        conditions.push(eq(leads.status, filters.status));
+      }
+
+      if (filters.agentId) {
+        conditions.push(eq(leads.agentId, filters.agentId));
+      }
+
+      const rows = await db
+        .select({
+          lead: leads,
+          property: properties,
+          agent: agents,
+        })
+        .from(leads)
+        .leftJoin(properties, eq(leads.propertyId, properties.id))
+        .leftJoin(agents, eq(leads.agentId, agents.id))
+        .where(and(...conditions))
+        .orderBy(desc(leads.createdAt))
+        .limit(filters.limit);
+
+      return rows.map(({ lead, property, agent }) => ({
+        ...lead,
+        agent: agent
+          ? {
+              id: agent.id,
+              userId: agent.userId,
+              name:
+                agent.displayName ||
+                [agent.firstName, agent.lastName].filter(Boolean).join(' ').trim() ||
+                'Assigned agent',
+              email: agent.email,
+              phone: agent.phone,
+            }
+          : null,
+        property: property
+          ? {
+              id: property.id,
+              title: property.title,
+              city: property.city,
+              province: property.province,
+              price: Number(property.price || 0),
+              status: property.status,
+            }
+          : null,
+      }));
+    }),
+
+  /**
+   * Update agency-owned lead status.
+   */
+  updateLeadStatus: agencyAdminProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        status: leadStatusSchema,
+        notes: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      if (!user.agencyId) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You must be part of an agency',
+        });
+      }
+
+      const [lead] = await db
+        .select()
+        .from(leads)
+        .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, user.agencyId)))
+        .limit(1);
+
+      if (!lead) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Lead not found',
+        });
+      }
+
+      await db
+        .update(leads)
+        .set({
+          status: input.status,
+          updatedAt: nowAsDbTimestamp(),
+          lastContactedAt:
+            input.status === 'contacted' || input.status === 'qualified'
+              ? nowAsDbTimestamp()
+              : lead.lastContactedAt,
+        })
+        .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, user.agencyId)));
+
+      await db.insert(leadActivities).values({
+        leadId: input.leadId,
+        userId: user.id,
+        type: 'status_change',
+        description: input.notes || `Agency status changed to ${input.status}`,
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.lead_status_update',
+        targetType: 'lead',
+        targetId: input.leadId,
+        metadata: {
+          agencyId: user.agencyId,
+          previousStatus: lead.status,
+          nextStatus: input.status,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true };
     }),
 
   /**
