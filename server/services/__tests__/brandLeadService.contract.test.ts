@@ -97,4 +97,111 @@ describe('brandLeadService capture contract', () => {
       }),
     );
   });
+
+  it('captures unclaimed platform brand leads for manual Property Listify operations', async () => {
+    mockGetBrandProfileById.mockResolvedValueOnce({
+      id: 13,
+      brandName: 'Seeded Developer',
+      ownerType: 'platform',
+      linkedDeveloperAccountId: null,
+      isSubscriber: 0,
+      publicContactEmail: 'public-sales@example.com',
+      isContactVerified: 1,
+    });
+
+    const result = await brandLeadService.captureBrandLead({
+      developerBrandProfileId: 13,
+      developmentId: 77,
+      unitId: 'unit-1',
+      unitName: 'Type A',
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      leadSource: 'development_detail_info',
+      sourceSurface: 'unit_floor_plan_dialog_unit-1_info',
+    });
+
+    expect(result).toMatchObject({
+      leadId: 987,
+      delivered: false,
+      deliveryMethod: 'manual',
+      brandLeadStatus: 'captured',
+    });
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developerBrandProfileId: 13,
+        developmentId: 77,
+        unitId: 'unit-1',
+        unitName: 'Type A',
+        source: 'unit_floor_plan_dialog_unit-1_info',
+        leadSource: 'development_detail_info',
+        brandLeadStatus: 'captured',
+        leadDeliveryMethod: 'manual',
+      }),
+    );
+  });
+
+  it('uses subscriber routing for claimed developer-managed brands', async () => {
+    const affordabilityData = {
+      monthlyIncome: 65000,
+      monthlyExpenses: 12000,
+      monthlyDebts: 3000,
+      availableDeposit: 150000,
+      maxAffordable: 1400000,
+      calculatedAt: '2026-07-04T10:00:00.000Z',
+    };
+    mockGetBrandProfileById.mockResolvedValueOnce({
+      id: 13,
+      brandName: 'Claimed Developer',
+      ownerType: 'developer',
+      linkedDeveloperAccountId: 7,
+      isSubscriber: 1,
+      publicContactEmail: 'sales@example.com',
+      isContactVerified: 1,
+    });
+
+    const result = await brandLeadService.captureBrandLead({
+      developerBrandProfileId: 13,
+      developmentId: 77,
+      unitId: 'unit-1',
+      unitName: 'Type A',
+      unitPriceFrom: 1299000,
+      unitBedrooms: 3,
+      unitBathrooms: 2,
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      leadSource: 'development_full_qualification',
+      sourceSurface: 'development_qualification_page',
+      utmSource: 'google',
+      utmMedium: 'cpc',
+      utmCampaign: 'launch',
+      affordabilityData,
+    });
+
+    expect(result).toMatchObject({
+      leadId: 987,
+      delivered: true,
+      deliveryMethod: 'crm_export',
+      brandLeadStatus: 'delivered_subscriber',
+    });
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developerBrandProfileId: 13,
+        developmentId: 77,
+        unitId: 'unit-1',
+        unitName: 'Type A',
+        unitPriceFrom: 1299000,
+        unitBedrooms: 3,
+        unitBathrooms: 2,
+        source: 'development_qualification_page',
+        leadSource: 'development_full_qualification',
+        utmSource: 'google',
+        utmMedium: 'cpc',
+        utmCampaign: 'launch',
+        affordabilityData,
+        brandLeadStatus: 'delivered_subscriber',
+        leadDeliveryMethod: 'crm_export',
+        funnelStage: 'affordability',
+      }),
+    );
+  });
 });

@@ -4,12 +4,30 @@ const {
   mockSearchDevelopmentListings,
   mockGetPublicDevelopmentBySlug,
   mockListPublicDevelopments,
-  mockCapturePublicLead,
+  mockGetDb,
+  mockSelect,
+  mockFrom,
+  mockWhere,
+  mockLimit,
+  mockUpdate,
+  mockSet,
+  mockUpdateWhere,
+  mockCaptureBrandLead,
+  mockRecordAgentOsEventForAgentId,
 } = vi.hoisted(() => ({
   mockSearchDevelopmentListings: vi.fn(),
   mockGetPublicDevelopmentBySlug: vi.fn(),
   mockListPublicDevelopments: vi.fn(),
-  mockCapturePublicLead: vi.fn(),
+  mockGetDb: vi.fn(),
+  mockSelect: vi.fn(),
+  mockFrom: vi.fn(),
+  mockWhere: vi.fn(),
+  mockLimit: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockSet: vi.fn(),
+  mockUpdateWhere: vi.fn(),
+  mockCaptureBrandLead: vi.fn(),
+  mockRecordAgentOsEventForAgentId: vi.fn(),
 }));
 
 vi.mock('../services/developmentDerivedListingService', () => ({
@@ -25,8 +43,18 @@ vi.mock('../services/developmentService', () => ({
   },
 }));
 
-vi.mock('../services/publicLeadCaptureService', () => ({
-  capturePublicLead: mockCapturePublicLead,
+vi.mock('../db', () => ({
+  getDb: mockGetDb,
+}));
+
+vi.mock('../services/brandLeadService', () => ({
+  brandLeadService: {
+    captureBrandLead: mockCaptureBrandLead,
+  },
+}));
+
+vi.mock('../services/agentOsEventService', () => ({
+  recordAgentOsEventForAgentId: mockRecordAgentOsEventForAgentId,
 }));
 
 import { appRouter } from '../routers';
@@ -141,13 +169,23 @@ describe('development search-detail-lead public journey contract', () => {
       hasMore: false,
     });
     mockGetPublicDevelopmentBySlug.mockResolvedValue(approvedDevelopmentDetail);
-    mockCapturePublicLead.mockResolvedValue({
-      success: true,
+    mockSelect.mockReturnValue({ from: mockFrom });
+    mockFrom.mockReturnValue({ where: mockWhere });
+    mockWhere.mockReturnValue({ limit: mockLimit });
+    mockUpdate.mockReturnValue({ set: mockSet });
+    mockSet.mockReturnValue({ where: mockUpdateWhere });
+    mockUpdateWhere.mockResolvedValue(undefined);
+    mockCaptureBrandLead.mockResolvedValue({
       leadId: 909,
-      route: 'brand',
       delivered: true,
+      deliveryMethod: 'crm_export',
       brandLeadStatus: 'delivered_subscriber',
       message: 'Lead captured',
+    });
+    mockRecordAgentOsEventForAgentId.mockResolvedValue(undefined);
+    mockGetDb.mockResolvedValue({
+      select: mockSelect,
+      update: mockUpdate,
     });
   });
 
@@ -210,10 +248,15 @@ describe('development search-detail-lead public journey contract', () => {
       maxAffordable: 1400000,
       calculatedAt: '2026-07-04T10:00:00.000Z',
     };
+    mockLimit
+      .mockResolvedValueOnce([
+        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
+      ])
+      .mockResolvedValueOnce([{ id: 'unit-a', developmentId: 77, isActive: 1 }]);
 
     const lead = await caller.developer.createLead({
       developmentId: card.developmentId,
-      developerBrandProfileId: (detail as any).developerBrandProfileId,
+      developerBrandProfileId: 999,
       unitId: unit.id,
       unitName: unit.name,
       unitPriceFrom: unit.basePriceFrom,
@@ -238,7 +281,7 @@ describe('development search-detail-lead public journey contract', () => {
       leadId: 909,
       route: 'brand',
     });
-    expect(mockCapturePublicLead).toHaveBeenCalledWith(
+    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
       expect.objectContaining({
         developmentId: 77,
         developerBrandProfileId: 13,
@@ -247,7 +290,6 @@ describe('development search-detail-lead public journey contract', () => {
         unitPriceFrom: 1299000,
         unitBedrooms: 3,
         unitBathrooms: 2,
-        source: 'unit_floor_plan_dialog_unit-a_info',
         sourceSurface: 'unit_floor_plan_dialog_unit-a_info',
         leadSource: 'development_detail_info',
         utmSource: 'google',
@@ -255,6 +297,9 @@ describe('development search-detail-lead public journey contract', () => {
         utmCampaign: 'launch',
         affordabilityData,
       }),
+    );
+    expect(mockCaptureBrandLead).not.toHaveBeenCalledWith(
+      expect.objectContaining({ developerBrandProfileId: 999 }),
     );
   });
 

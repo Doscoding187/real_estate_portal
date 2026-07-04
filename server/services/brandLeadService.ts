@@ -83,7 +83,13 @@ async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRouti
   let brandLeadStatus: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber' | 'claimed';
   let deliveryMethod: 'email' | 'crm_export' | 'manual' | 'none' = 'none';
 
-  if (brandProfile.isSubscriber) {
+  const isUnclaimedPlatformBrand =
+    brandProfile.ownerType === 'platform' && !brandProfile.linkedDeveloperAccountId;
+
+  if (isUnclaimedPlatformBrand) {
+    brandLeadStatus = 'captured';
+    deliveryMethod = 'manual';
+  } else if (brandProfile.isSubscriber) {
     // Subscriber gets direct access
     brandLeadStatus = 'delivered_subscriber';
     deliveryMethod = 'crm_export'; // Will appear in their dashboard
@@ -149,7 +155,7 @@ async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRouti
 
   return {
     leadId,
-    delivered: deliveryMethod !== 'none',
+    delivered: deliveryMethod === 'email' || deliveryMethod === 'crm_export',
     deliveryMethod,
     brandLeadStatus,
     message: getLeadCaptureMessage(brandLeadStatus),

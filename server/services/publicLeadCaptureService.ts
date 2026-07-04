@@ -1,6 +1,7 @@
+import { TRPCError } from '@trpc/server';
 import { eq, sql } from 'drizzle-orm';
 import { getDb } from '../db';
-import { agents, developments, leads, properties } from '../../drizzle/schema';
+import { agents, developments, leads, properties, unitTypes } from '../../drizzle/schema';
 import { brandLeadService } from './brandLeadService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
 
@@ -101,6 +102,7 @@ function coerceLeadType(input?: string): LeadType {
 
 async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<ResolvedLeadOwnership> {
   const db = await getDb();
+  const hasExplicitDevelopmentId = Number.isFinite(Number(input.developmentId)) && Number(input.developmentId) > 0;
   if (!db) {
     return {
       propertyId: input.propertyId,
@@ -140,7 +142,69 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
     }
   }
 
-  if (resolved.developmentId && !resolved.developerBrandProfileId) {
+  if (hasExplicitDevelopmentId && resolved.developmentId) {
+    const [development] = await db
+      .select({
+        id: developments.id,
+        developerBrandProfileId: developments.developerBrandProfileId,
+        isPublished: developments.isPublished,
+        approvalStatus: developments.approvalStatus,
+      })
+      .from(developments)
+      .where(eq(developments.id, resolved.developmentId))
+      .limit(1);
+
+    if (!development) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not found.',
+      });
+    }
+
+    if (Number(development.isPublished || 0) !== 1 || development.approvalStatus !== 'approved') {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not available for public enquiries.',
+      });
+    }
+
+    if (
+      input.developerBrandProfileId &&
+      development.developerBrandProfileId &&
+      Number(input.developerBrandProfileId) !== Number(development.developerBrandProfileId)
+    ) {
+      console.warn('[capturePublicLead] Ignoring mismatched client developerBrandProfileId', {
+        developmentId: resolved.developmentId,
+        clientDeveloperBrandProfileId: input.developerBrandProfileId,
+        canonicalDeveloperBrandProfileId: development.developerBrandProfileId,
+      });
+    }
+
+    resolved.developerBrandProfileId = development.developerBrandProfileId || undefined;
+
+    if (input.unitId) {
+      const [unit] = await db
+        .select({
+          id: unitTypes.id,
+          developmentId: unitTypes.developmentId,
+          isActive: unitTypes.isActive,
+        })
+        .from(unitTypes)
+        .where(eq(unitTypes.id, input.unitId))
+        .limit(1);
+
+      if (
+        !unit ||
+        Number(unit.developmentId) !== Number(resolved.developmentId) ||
+        Number(unit.isActive || 0) !== 1
+      ) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Unit does not belong to this public development.',
+        });
+      }
+    }
+  } else if (resolved.developmentId && !resolved.developerBrandProfileId) {
     const [development] = await db
       .select({
         id: developments.id,
