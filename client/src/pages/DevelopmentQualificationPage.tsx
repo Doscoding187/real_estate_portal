@@ -233,15 +233,27 @@ export default function DevelopmentQualificationPage() {
       .filter(Boolean)
       .join('\n');
 
+    const urlParams =
+      typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+
     createLead.mutate({
       developmentId: dev.id,
       developerBrandProfileId: (dev as any).developerBrandProfileId ?? undefined,
+      unitId: selectedUnit ? toUnitRouteKey(selectedUnit) : undefined,
+      unitName: selectedUnit?.name || undefined,
+      unitPriceFrom: selectedUnit?.basePriceFrom != null ? Number(selectedUnit.basePriceFrom) : undefined,
+      unitBedrooms: selectedUnit?.bedrooms != null ? Number(selectedUnit.bedrooms) : undefined,
+      unitBathrooms: selectedUnit?.bathrooms != null ? Number(selectedUnit.bathrooms) : undefined,
       name: contact.name.trim(),
       email: contact.email.trim(),
       phone: contact.phone.trim(),
       message: qualificationSummary,
       leadSource: 'development_full_qualification',
       referrerUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+      sourceSurface: 'development_qualification_page',
+      utmSource: urlParams?.get('utm_source') || undefined,
+      utmMedium: urlParams?.get('utm_medium') || undefined,
+      utmCampaign: urlParams?.get('utm_campaign') || undefined,
       affordabilityData: {
         monthlyIncome: totalIncome,
         monthlyExpenses,

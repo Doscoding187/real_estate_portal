@@ -32,6 +32,7 @@ vi.mock('@/lib/trpc', () => ({
 describe('DevelopmentLeadDialog', () => {
   beforeEach(() => {
     mutateMock.mockReset();
+    window.history.pushState({}, '', '/');
   });
 
   it('submits unit context with info requests', () => {
@@ -66,6 +67,12 @@ describe('DevelopmentLeadDialog', () => {
       target: { value: '0820000000' },
     });
 
+    window.history.pushState(
+      {},
+      '',
+      '/development/cosmopolitan?utm_source=google&utm_medium=cpc&utm_campaign=launch',
+    );
+
     fireEvent.click(screen.getByRole('button', { name: /request information/i }));
 
     expect(screen.getAllByText('Unit: Type A').length).toBeGreaterThan(0);
@@ -79,6 +86,10 @@ describe('DevelopmentLeadDialog', () => {
         unitBedrooms: 3,
         unitBathrooms: 2,
         leadSource: 'development_detail_info',
+        sourceSurface: 'unit_floor_plan_dialog_unit-1_info',
+        utmSource: 'google',
+        utmMedium: 'cpc',
+        utmCampaign: 'launch',
       }),
     );
   });

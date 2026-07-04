@@ -71,15 +71,31 @@ const captureBrandLeadSchema = z.object({
   developerBrandProfileId: z.number().int(),
   developmentId: z.number().int().optional(),
   propertyId: z.number().int().optional(),
+  unitId: z.string().trim().max(36).optional(),
+  unitName: z.string().trim().max(255).optional(),
+  unitPriceFrom: z.number().nonnegative().optional(),
+  unitBedrooms: z.number().int().nonnegative().optional(),
+  unitBathrooms: z.number().nonnegative().optional(),
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Valid email is required'),
   phone: z.string().optional(),
   message: z.string().optional(),
+  sourceSurface: z.string().optional(),
   leadSource: z.string().optional(),
   referrerUrl: z.string().optional(),
   utmSource: z.string().optional(),
   utmMedium: z.string().optional(),
   utmCampaign: z.string().optional(),
+  affordabilityData: z
+    .object({
+      monthlyIncome: z.number().optional(),
+      monthlyExpenses: z.number().optional(),
+      monthlyDebts: z.number().optional(),
+      availableDeposit: z.number().optional(),
+      maxAffordable: z.number().optional(),
+      calculatedAt: z.string().optional(),
+    })
+    .optional(),
 });
 
 // ============================================================================

@@ -33,6 +33,7 @@ export interface PublicLeadCaptureInput {
   message?: string;
   leadType?: LeadType;
   source?: string;
+  sourceSurface?: string;
   leadSource?: string;
   referrerUrl?: string;
   utmSource?: string;
@@ -183,8 +184,8 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
   }
 
   const resolved = await resolveLeadOwnership(input);
-  const source = normalizeLeadSource(input.source || input.leadSource);
-  const leadSource = normalizeLeadSource(input.leadSource || input.source);
+  const source = normalizeLeadSource(input.sourceSurface || input.source || input.leadSource);
+  const leadSource = normalizeLeadSource(input.leadSource || input.source || input.sourceSurface);
   const leadType = coerceLeadType(input.leadType);
 
   if (resolved.developerBrandProfileId) {
@@ -202,10 +203,12 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
       phone: input.phone,
       message: input.message,
       leadSource,
+      sourceSurface: source,
       referrerUrl: input.referrerUrl,
       utmSource: input.utmSource,
       utmMedium: input.utmMedium,
       utmCampaign: input.utmCampaign,
+      affordabilityData: input.affordabilityData,
     });
 
     const leadPatch: Partial<LeadInsert> = {};
