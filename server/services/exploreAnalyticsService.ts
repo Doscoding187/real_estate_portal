@@ -79,6 +79,73 @@ type SessionRow = {
   userId: number | null;
 };
 
+type AggregatedMetricsPeriod = 'day' | 'week' | 'month' | 'all';
+
+interface AggregatedMetrics {
+  totalViews: number;
+  totalUniqueViewers: number;
+  totalWatchTime: number;
+  totalSessions: number;
+  averageSessionDuration: number;
+  averageCompletionRate: number;
+  engagementRate: number;
+}
+
+type AggregatedEngagementRow = {
+  interactionType: string;
+  metadata?: any;
+  userId: number | null;
+  sessionId: string | null;
+  contentId: number;
+};
+
+function emptyAggregatedMetrics(): AggregatedMetrics {
+  return {
+    totalViews: 0,
+    totalUniqueViewers: 0,
+    totalWatchTime: 0,
+    totalSessions: 0,
+    averageSessionDuration: 0,
+    averageCompletionRate: 0,
+    engagementRate: 0,
+  };
+}
+
+function getPeriodStart(period: AggregatedMetricsPeriod): Date | undefined {
+  const now = new Date();
+
+  if (period === 'day') {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  if (period === 'week') {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 7);
+    return start;
+  }
+
+  if (period === 'month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  return undefined;
+}
+
+function isMissingExploreAnalyticsSchema(error: unknown) {
+  const err = error as {
+    code?: string;
+    message?: string;
+    cause?: { code?: string; message?: string };
+  };
+  const message = `${err.message || ''} ${err.cause?.message || ''}`;
+  const code = err.code || err.cause?.code;
+
+  return (
+    code === 'ER_NO_SUCH_TABLE' ||
+    (message.includes('explore_engagements') && message.includes("doesn't exist"))
+  );
+}
+
 export class ExploreAnalyticsService {
   /** Get analytics for a specific video */
   async getVideoAnalytics(
@@ -413,8 +480,81 @@ export class ExploreAnalyticsService {
     );
   }
 
-  async getAggregatedMetrics(..._args: any[]): Promise<Record<string, any>> {
-    return {};
+  async getAggregatedMetrics(
+    period: AggregatedMetricsPeriod = 'all',
+    creatorId?: number,
+  ): Promise<AggregatedMetrics> {
+    const startDate = getPeriodStart(period);
+    const filters: any[] = [];
+
+    if (startDate) filters.push(gte(exploreEngagements.createdAt, startDate));
+    if (creatorId) filters.push(eq(exploreContent.creatorId, creatorId));
+
+    const baseQuery = db
+      .select({
+        interactionType: exploreEngagements.interactionType,
+        metadata: exploreEngagements.metadata,
+        userId: exploreEngagements.userId,
+        sessionId: exploreEngagements.sessionId,
+        contentId: exploreEngagements.contentId,
+      })
+      .from(exploreEngagements)
+      .innerJoin(exploreContent, eq(exploreContent.id, exploreEngagements.contentId));
+
+    let rows: AggregatedEngagementRow[] | Array<{ explore_engagements: AggregatedEngagementRow }>;
+    try {
+      rows = (await (filters.length ? baseQuery.where(and(...filters)) : baseQuery)) as
+        | AggregatedEngagementRow[]
+        | Array<{ explore_engagements: AggregatedEngagementRow }>;
+    } catch (error) {
+      if (isMissingExploreAnalyticsSchema(error)) {
+        console.warn('[Analytics] Explore analytics schema missing; returning empty metrics.');
+        return emptyAggregatedMetrics();
+      }
+      throw error;
+    }
+    const engagements = rows.map(row =>
+      'explore_engagements' in row ? row.explore_engagements : row,
+    );
+
+    const views = engagements.filter(e => e.interactionType === 'view');
+    const totalViews = views.length;
+    const totalCompletions = engagements.filter(e => e.interactionType === 'complete').length;
+    const totalSaves = engagements.filter(e => e.interactionType === 'save').length;
+    const totalShares = engagements.filter(e => e.interactionType === 'share').length;
+    const totalClicks = engagements.filter(e =>
+      ['click_cta', 'contact', 'whatsapp', 'book_viewing'].includes(e.interactionType),
+    ).length;
+
+    const uniqueViewerKeys = new Set(
+      views.map(e => {
+        if (e.userId) return `user:${e.userId}`;
+        if (e.sessionId) return `session:${e.sessionId}`;
+        return `anonymous:${e.contentId}`;
+      }),
+    );
+    const sessionKeys = new Set(engagements.map(e => e.sessionId).filter(Boolean));
+    const totalWatchTime = engagements.reduce((sum, e) => {
+      const metadata = e.metadata || {};
+      const watchTime =
+        typeof metadata.watchTime === 'number'
+          ? metadata.watchTime
+          : typeof metadata.duration === 'number'
+            ? metadata.duration
+            : 0;
+      return sum + watchTime;
+    }, 0);
+    const totalSessions = sessionKeys.size;
+
+    return {
+      totalViews,
+      totalUniqueViewers: uniqueViewerKeys.size,
+      totalWatchTime,
+      totalSessions,
+      averageSessionDuration: totalSessions ? totalWatchTime / totalSessions : 0,
+      averageCompletionRate: totalViews ? (totalCompletions / totalViews) * 100 : 0,
+      engagementRate: totalViews ? ((totalSaves + totalShares + totalClicks) / totalViews) * 100 : 0,
+    };
   }
 }
 

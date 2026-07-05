@@ -10,6 +10,11 @@ import { trpc } from '@/lib/trpc';
 import { Eye, Video, TrendingUp, Users, ArrowRight } from 'lucide-react';
 import { useLocation } from 'wouter';
 
+function metricNumber(value: unknown) {
+  const numeric = typeof value === 'number' ? value : Number(value ?? 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
 export function AgencyExploreOverview() {
   const [, setLocation] = useLocation();
 
@@ -54,6 +59,10 @@ export function AgencyExploreOverview() {
   }
 
   const data = metrics.data;
+  const totalViews = metricNumber(data.totalViews);
+  const totalUniqueViewers = metricNumber(data.totalUniqueViewers);
+  const averageCompletionRate = metricNumber(data.averageCompletionRate);
+  const engagementRate = metricNumber(data.engagementRate);
 
   return (
     <Card>
@@ -74,22 +83,22 @@ export function AgencyExploreOverview() {
           <MetricCard
             icon={<Eye className="h-5 w-5 text-blue-500" />}
             label="Total Views"
-            value={data.totalViews.toLocaleString()}
+            value={totalViews.toLocaleString()}
           />
           <MetricCard
             icon={<Users className="h-5 w-5 text-green-500" />}
             label="Unique Viewers"
-            value={data.totalUniqueViewers.toLocaleString()}
+            value={totalUniqueViewers.toLocaleString()}
           />
           <MetricCard
             icon={<Video className="h-5 w-5 text-purple-500" />}
             label="Completion Rate"
-            value={`${data.averageCompletionRate.toFixed(1)}%`}
+            value={`${averageCompletionRate.toFixed(1)}%`}
           />
           <MetricCard
             icon={<TrendingUp className="h-5 w-5 text-orange-500" />}
             label="Engagement Rate"
-            value={`${data.engagementRate.toFixed(1)}%`}
+            value={`${engagementRate.toFixed(1)}%`}
           />
         </div>
       </CardContent>
