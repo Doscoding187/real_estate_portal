@@ -1,0 +1,29 @@
+services:
+  mysql-local:
+    image: mysql:8.0
+    container_name: listify-mysql-local
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: listify_root_password
+      MYSQL_DATABASE: listify_local
+      MYSQL_USER: listify_app
+      MYSQL_PASSWORD: listify_app_password
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - listify_mysql_3307_data:/var/lib/mysql
+      - ./docker/mysql-local/init:/docker-entrypoint-initdb.d:ro
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -ulistify_app -plistify_app_password --silent",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+volumes:
+  listify_mysql_3307_data:

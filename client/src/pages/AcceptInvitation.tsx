@@ -31,9 +31,9 @@ export default function AcceptInvitation() {
 
       // Small delay to ensure database transaction completes
       setTimeout(() => {
-        // Hard redirect to appropriate dashboard based on role
+        // Hard redirect to ensure the refreshed session picks up the accepted membership.
         const redirectPath =
-          invitation?.role === 'agency_admin' ? '/agency/dashboard' : '/agent/dashboard';
+          invitation?.role === 'agency_admin' ? '/agency/overview' : '/agent/dashboard';
 
         // Use hard redirect to ensure auth state is updated
         window.location.href = redirectPath;
@@ -148,9 +148,11 @@ export default function AcceptInvitation() {
                 <Badge>{invitation.role}</Badge>
               </div>
               <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Agency ID:</span>
-                <span className="font-semibold">{invitation.agencyId}</span>
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Agency:</span>
+                <span className="font-semibold">
+                  {invitation.agency?.name || `Agency #${invitation.agencyId}`}
+                </span>
               </div>
             </div>
 

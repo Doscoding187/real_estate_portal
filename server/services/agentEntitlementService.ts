@@ -178,77 +178,15 @@ function normalizeTrialStatus(user: typeof users.$inferSelect | null): 'active' 
 function buildFallbackPlanAccess(user: typeof users.$inferSelect): PlanAccessProjection {
   const ownerType = user.role === 'agency_admin' && user.agencyId ? 'agency' : 'agent';
   const ownerId = ownerType === 'agency' ? Number(user.agencyId) : Number(user.id);
-  const trialStatus = normalizeTrialStatus(user);
-  const trialEndsAt = user.trialEndsAt || null;
-  const selectedTier = normalizeAgentTier(user.subscriptionTier);
-  const hasFallbackAccess =
-    user.plan === 'paid' ||
-    trialStatus === 'active' ||
-    user.subscriptionStatus === 'active' ||
-    user.subscriptionStatus === 'trial';
-
-  let fallbackEntitlements: EntitlementMap = {
-    ...DEFAULT_FEATURE_ENTITLEMENTS,
-  };
-
-  if (hasFallbackAccess) {
-    switch (selectedTier) {
-      case 'elite':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: 999,
-          has_ai_insights: true,
-          has_area_intelligence: true,
-          has_commission_tracking: true,
-          has_revenue_dashboard: true,
-          has_priority_exposure: true,
-          has_benchmarking: true,
-        };
-        break;
-      case 'professional':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: 40,
-          has_ai_insights: true,
-          has_commission_tracking: true,
-          has_revenue_dashboard: true,
-          has_priority_exposure: true,
-        };
-        break;
-      case 'starter':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: 20,
-        };
-        break;
-      case 'free':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-        };
-        break;
-      default: {
-        const hasPaidPlan = user.plan === 'paid';
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: hasPaidPlan || trialStatus === 'active' ? 25 : 0,
-          has_ai_insights: hasPaidPlan,
-          has_area_intelligence: hasPaidPlan,
-          has_commission_tracking: hasPaidPlan || trialStatus === 'active',
-          has_revenue_dashboard: hasPaidPlan,
-          has_priority_exposure: hasPaidPlan,
-        };
-      }
-    }
-  }
 
   return {
     ownerType,
     ownerId,
     currentPlan: null,
     subscription: null,
-    entitlements: fallbackEntitlements,
-    trialStatus,
-    trialEndsAt,
+    entitlements: { ...DEFAULT_FEATURE_ENTITLEMENTS },
+    trialStatus: 'none',
+    trialEndsAt: null,
     trialDaysRemaining: null,
   };
 }

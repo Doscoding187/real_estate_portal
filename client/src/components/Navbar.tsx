@@ -85,9 +85,20 @@ export function Navbar() {
     { href: '/services', label: 'Services' },
     { href: '/distribution-network', label: 'Referrals', icon: Briefcase },
     { href: '/agents', label: 'Agents' },
-    { href: '/listing-template', label: 'Listing Template' },
-    { href: '/dashboard', label: 'My Properties', protected: true },
-    { href: '/favorites', label: 'Favorites', icon: Heart, protected: true },
+    { href: '/listing-template', label: 'Listing Template', desktopClassName: 'hidden 2xl:flex' },
+    {
+      href: '/dashboard',
+      label: 'My Properties',
+      protected: true,
+      desktopClassName: 'hidden 2xl:flex',
+    },
+    {
+      href: '/favorites',
+      label: 'Favorites',
+      icon: Heart,
+      protected: true,
+      desktopClassName: 'hidden 2xl:flex',
+    },
   ];
 
   return (
@@ -104,14 +115,14 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden min-w-0 items-center gap-4 md:flex">
             {navLinks.map(link => {
               if (link.protected && !isAuthenticated) return null;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2 hover:text-blue-200 transition-colors font-medium ${
+                  className={`items-center gap-2 whitespace-nowrap hover:text-blue-200 transition-colors font-medium ${link.desktopClassName || 'flex'} ${
                     location === link.href
                       ? 'text-blue-200 font-semibold border-b-2 border-blue-200 pb-1'
                       : 'text-white'
@@ -125,12 +136,12 @@ export function Navbar() {
           </div>
 
           {/* Desktop Auth Section */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden min-w-0 shrink-0 items-center gap-3 md:flex">
             {isAuthenticated && (
               <Button
                 variant="secondary"
                 onClick={() => setLocation('/listings/create')}
-                className="font-semibold"
+                className="shrink-0 font-semibold"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 List Property
@@ -141,10 +152,10 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 text-primary-foreground hover:text-secondary hover:bg-primary/80"
+                    className="flex max-w-[11rem] items-center gap-2 text-primary-foreground hover:text-secondary hover:bg-primary/80"
                   >
-                    <User className="h-5 w-5" />
-                    <span>{user?.name || 'Account'}</span>
+                    <User className="h-5 w-5 shrink-0" />
+                    <span className="min-w-0 truncate">{user?.name || 'Account'}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -169,7 +180,10 @@ export function Navbar() {
                   </DropdownMenuItem>
                   {hasReferrerAccess && (
                     <DropdownMenuItem asChild>
-                      <Link href="/distribution/partner/overview" className="flex items-center gap-2 w-full">
+                      <Link
+                        href="/distribution/partner/overview"
+                        className="flex items-center gap-2 w-full"
+                      >
                         <Briefcase className="h-4 w-4" />
                         Referrer Dashboard
                       </Link>

@@ -122,24 +122,36 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ## Recommended Local Database
 
-Prefer a disposable local MySQL 8 database on port `3307` so it does not collide with other MySQL installs.
+Prefer the repository-managed MySQL 8 workflow on port `3307` so it does not collide with other MySQL installs.
 
 Start local MySQL:
 
-```powershell
-docker run --name listify-mysql-local `
-  -e MYSQL_ROOT_PASSWORD=listify_root_password `
-  -e MYSQL_DATABASE=listify_local `
-  -e MYSQL_USER=listify_app `
-  -e MYSQL_PASSWORD=listify_app_password `
-  -p 3307:3306 `
-  -d mysql:8.0
+```bash
+pnpm db:local:start
+pnpm db:local:wait
 ```
 
-Create the isolated test database:
+The local DB wrapper uses `docker-compose.local-db.yml` when Docker Compose is available. That path creates:
 
-```powershell
-docker exec listify-mysql-local mysql -uroot -plistify_root_password -e "CREATE DATABASE IF NOT EXISTS listify_test; CREATE USER IF NOT EXISTS 'listify_test'@'%' IDENTIFIED BY 'listify_test_password'; GRANT ALL PRIVILEGES ON listify_test.* TO 'listify_test'@'%'; FLUSH PRIVILEGES;"
+- `listify_local`
+- `listify_test`
+- `listify_app`
+- `listify_test`
+
+Docker Compose stores data in the named volume `listify_mysql_3307_data`, which is the preferred persistent local-development option. It does not store important working data under `/tmp`.
+
+If Docker is not available, `scripts/local-db.sh` can fall back to a native `mysqld` process with `LISTIFY_LOCAL_DB_MODE=native`. The native fallback defaults to `/tmp/listify-mysql-3307` and is disposable. Do not keep important local work in that fallback directory.
+
+Stop local MySQL:
+
+```bash
+pnpm db:local:stop
+```
+
+Optionally destroy the local database:
+
+```bash
+pnpm db:local:destroy
 ```
 
 Use these URLs:
@@ -152,43 +164,65 @@ DATABASE_URL=mysql://listify_app:listify_app_password@127.0.0.1:3307/listify_loc
 DATABASE_URL=mysql://listify_test:listify_test_password@127.0.0.1:3307/listify_test
 ```
 
-If Docker is not available, install MySQL 8 locally and create the same two databases/users manually. A non-production TiDB development database can work as a fallback, but keep database names isolated and never reuse production credentials.
+A non-production TiDB development database can work as a fallback for some development tasks, but keep database names isolated and never reuse production credentials. Do not point browser tests at production or shared data.
 
 ## Migrations And Seed Data
 
-Run local development migrations with the local-safe script:
+For a fresh local database, run both Drizzle migrations and SQL reconciliation migrations:
 
-```powershell
+```bash
+pnpm db:migrate:fresh:local
+```
+
+For an existing local database that already has the Drizzle baseline, run only the SQL migration path:
+
+```bash
 pnpm db:migrate:local
 ```
 
 Run test migrations:
 
-```powershell
+```bash
 pnpm db:migrate:test
 ```
 
 Seed local-only demo data for visual testing:
 
-```powershell
+```bash
+LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:seed:local
+LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:verify:local-demo
+```
+
+Full local bootstrap, when `LOCAL_DEMO_AGENCY_PASSWORD` is already present in `.env.local`:
+
+```bash
+pnpm db:local:start
+pnpm db:local:wait
+pnpm db:migrate:fresh:local
 pnpm db:seed:local
 pnpm db:verify:local-demo
 ```
 
 Reset only local demo data:
 
-```powershell
+```bash
 pnpm db:reset:local
 ```
 
 Seed the disposable test database:
 
-```powershell
+```bash
 pnpm db:seed:test
 pnpm db:verify:test-demo
 ```
 
-The verify commands are read-only preflights for browser and integration work. They confirm the demo accounts, referrer identities, developments, referral deals, and approved reward entry exist before you try authenticated `/distribution/partner/*` routes.
+The verify commands are read-only preflights for browser and integration work. They confirm the demo accounts, referrer identities, developments, referral deals, approved reward entry, and agency workspace fixtures exist before authenticated browser routes are exercised.
+
+Run the agency browser smoke against local app servers and the local DB:
+
+```bash
+LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm test:agency-browser-smoke
+```
 
 The local demo seed is idempotent. It first removes only records it owns:
 
@@ -209,16 +243,17 @@ Do not run production seed/reset scripts locally unless you have reviewed the ta
 
 ## Local Demo Login Details
 
-All local demo accounts use:
+Local demo credentials are supplied through development-only environment configuration:
 
 ```text
-Password: LocalDemo123!
+LOCAL_DEMO_AGENCY_PASSWORD=...
 ```
 
 Accounts:
 
 ```text
 admin@listify.local      Super Admin
+agency@listify.local     Agency Principal / workspace smoke account
 developer@listify.local  Developer / Development Manager
 agent@listify.local      Agency / Agent referrer
 referrer@listify.local   Open Referrer / Workclass-style referrer
@@ -242,19 +277,30 @@ LOCAL-DEMO-PAYOUT-PROGRESS   Reward approved and payout in progress
 LOCAL-DEMO-AGENT-SUBMITTED   Agency-agent submitted referral
 ```
 
+Seeded agency workspace checks:
+
+```text
+[LOCAL DEMO] New Buyer                    Assignment, status, follow-up, reload persistence
+[LOCAL DEMO] Missing Agent Detail Buyer   Detail view with an out-of-agency agent reference
+[LOCAL DEMO] Cross Agency Buyer           Isolation fixture that must not be visible to the main agency
+```
+
 ## Visual Testing Walkthrough
 
 1. Start the app:
 
-```powershell
-pnpm db:seed:local
-pnpm db:verify:local-demo
+```bash
+pnpm db:local:start
+pnpm db:local:wait
+pnpm db:migrate:fresh:local
+LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:seed:local
+LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:verify:local-demo
 pnpm dev
 ```
 
 2. Open `http://localhost:3009/login`.
 
-3. Log in as `referrer@listify.local` with `LocalDemo123!`.
+3. Log in as `referrer@listify.local` with your configured local demo password.
 
 4. Visit `http://localhost:3009/distribution/partner/overview`.
 
@@ -299,26 +345,32 @@ After frontend changes, visually inspect the relevant route in the browser befor
 
 Run backend/frontend tests:
 
-```powershell
+```bash
 pnpm test
 ```
 
 Run targeted frontend distribution tests:
 
-```powershell
+```bash
 pnpm vitest run client/src/pages/distribution/PartnerDashboardPage.test.tsx client/src/pages/distribution/PartnerSubmitReferralPage.test.tsx client/src/pages/distribution/PartnerReferralDetailPage.test.tsx
 ```
 
 Run TypeScript checks:
 
-```powershell
+```bash
 pnpm exec tsc -p tsconfig.check.json --noEmit
 ```
 
 Run visual tests when a browser flow changes:
 
-```powershell
+```bash
 pnpm test:visual
+```
+
+Run the local agency workspace smoke:
+
+```bash
+LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm test:agency-browser-smoke
 ```
 
 ## Distribution Referral Integration Test
@@ -349,8 +401,8 @@ If the test is skipped, `DATABASE_URL` is missing or `.env.test` was not loaded.
 
 ## Missing Scripts And Blockers
 
-- `pnpm db:migrate` still routes through `migration:sql`, which sets `NODE_ENV=production`. Use `pnpm db:migrate:local` for local development.
-- `docker-compose.yml` defines a MySQL database named `real_estate_portal` on port `3306`. It is useful for older workflows, but the recommended local setup above uses `listify_local` and `listify_test` on port `3307` to match current runtime guards and avoid collisions.
+- Use `pnpm db:migrate:fresh:local` for a fresh local database and `pnpm db:migrate:local` for existing local databases. Do not use production migration commands for local bootstrap.
+- `docker-compose.yml` defines a MySQL database named `real_estate_portal` on port `3306`. It is useful for older workflows, but the recommended local setup above uses `docker-compose.local-db.yml`, `listify_local`, and `listify_test` on port `3307` to match current runtime guards and avoid collisions.
 - `.env.vercel` is tracked in this repo and appears to contain concrete deployment-style values. Review whether any value is sensitive, rotate anything that has been exposed, and prefer platform-managed env vars over committed env files.
 - Durable local drafts/autosave may still use browser-local state unless a feature adds schema-backed drafts.
 
