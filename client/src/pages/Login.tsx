@@ -268,6 +268,14 @@ export default function Login() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const mode = searchParams.get('mode');
+    if (mode === 'signin' || mode === 'sign-in' || mode === 'login') {
+      closeRegister();
+      setSignInOpen(true);
+    }
+  }, [searchParams]);
+
   const closeRegister = () => {
     setSelectedRole(null);
     setShowRegisterPassword(false);
@@ -302,7 +310,7 @@ export default function Login() {
       if (!safeNextPath) {
         if (role === 'super_admin') redirectPath = '/admin/overview';
         else if (role === 'property_developer') redirectPath = '/developer/dashboard';
-        else if (role === 'agency_admin') redirectPath = '/agency/dashboard';
+        else if (role === 'agency_admin') redirectPath = '/agency/overview';
         else if (role === 'service_provider') redirectPath = '/service/dashboard';
         else if (result.user?.hasManagerIdentity) redirectPath = '/distribution/manager';
         else if (result.user?.hasReferrerIdentity) redirectPath = '/distribution/partner/overview';

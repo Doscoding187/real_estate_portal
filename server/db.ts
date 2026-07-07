@@ -1537,6 +1537,8 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
       price: properties.price,
       status: properties.status as any,
       city: properties.city,
+      views: properties.views,
+      enquiries: properties.enquiries,
       createdAt: properties.createdAt,
       ownerId: properties.ownerId,
     })

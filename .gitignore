@@ -132,3 +132,15 @@ mcps/
 
 # Local development uploads
 local-uploads/
+
+# Local database/runtime state
+.local/
+
+# Generated local agent/test artifacts
+.codex-artifacts/
+playwright-report-agency/
+test-results/
+
+# Local MySQL runtime data
+docker/mysql-local/data/
+docker/mysql-local/mysql-data/

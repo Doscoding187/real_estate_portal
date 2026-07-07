@@ -39,7 +39,7 @@ const CityPage = lazy(() => import('./pages/CityPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
 
-const AgencyDashboard = lazy(() => import('./pages/AgencyDashboard'));
+const AgencyDashboard = lazy(() => import('./pages/agency/AgencyDashboard'));
 const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
 const AgentListings = lazy(() => import('./pages/agent/AgentListings'));
 const AgentLeads = lazy(() => import('./pages/AgentLeads'));
@@ -51,9 +51,6 @@ const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSuppo
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
-const AgencyLeads = lazy(() => import('./pages/agency/AgencyLeads'));
-const InviteAgents = lazy(() => import('./pages/agency/InviteAgents'));
-const AgentManagement = lazy(() => import('./pages/agency/AgentManagement'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
@@ -62,7 +59,6 @@ const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
 const ExploreMap = lazy(() => import('./pages/ExploreMap'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
-const AgencySubscriptionPage = lazy(() => import('./pages/agency/SubscriptionPage'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const SetPassword = lazy(() => import('./pages/SetPassword'));
@@ -565,10 +561,11 @@ function Router() {
             </Suspense>
           </Route>
 
+          <Route path="/agency">
+            <Redirect to="/agency/overview" />
+          </Route>
           <Route path="/agency/dashboard">
-            <RequireRole role="agency_admin">
-              <AgencyDashboard />
-            </RequireRole>
+            <Redirect to="/agency/overview" />
           </Route>
           <Route path="/distribution/manager">
             <Redirect to="/distribution/manager/developments" />
@@ -607,28 +604,17 @@ function Router() {
             <Redirect to="/distribution-network/apply" />
           </Route>
           <Route path="/agency/subscription">
-            <RequireRole role="agency_admin">
-              <AgencySubscriptionPage />
-            </RequireRole>
+            <Redirect to="/agency/billing" />
           </Route>
           <Route path="/agency/onboarding">
             <Redirect to="/agency/setup" />
           </Route>
           <Route path="/agency/onboarding/success" component={OnboardingSuccess} />
           <Route path="/agency/invite">
-            <RequireRole role="agency_admin">
-              <InviteAgents />
-            </RequireRole>
+            <Redirect to="/agency/team/invitations" />
           </Route>
           <Route path="/agency/agents">
-            <RequireRole role="agency_admin">
-              <AgentManagement />
-            </RequireRole>
-          </Route>
-          <Route path="/agency/leads">
-            <RequireRole role="agency_admin">
-              <AgencyLeads />
-            </RequireRole>
+            <Redirect to="/agency/team" />
           </Route>
 
           {/* NOTE: Developer routes are defined in section 2A above */}

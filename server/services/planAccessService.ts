@@ -60,32 +60,10 @@ export type PlanAccessProjection = {
 type DbHandle = Awaited<ReturnType<typeof getDb>>;
 type SubscriptionRow = typeof subscriptions.$inferSelect;
 type UserRow = typeof users.$inferSelect;
-type AgentTier = 'free' | 'starter' | 'professional' | 'elite';
 
 const DEFAULT_AGENT_PLAN = 'agent_starter';
 const DEFAULT_AGENCY_PLAN = 'agency_growth';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function normalizeAgentTier(value: string | null | undefined): AgentTier | null {
-  const normalized = String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '')
-    .trim();
-
-  if (!normalized) return null;
-
-  if (normalized === 'free') return 'free';
-  if (normalized === 'starter') return 'starter';
-  if (normalized === 'professional') return 'professional';
-  if (normalized === 'elite') return 'elite';
-
-  if (normalized === 'growth') return 'professional';
-  if (normalized === 'pro') return 'professional';
-  if (normalized === 'launch') return 'starter';
-  if (normalized === 'dominance') return 'elite';
-
-  return null;
-}
 
 function isPricingGovernanceSchemaError(error: unknown): boolean {
   const code = String((error as any)?.code ?? '');
@@ -117,93 +95,25 @@ function isPricingGovernanceSchemaError(error: unknown): boolean {
   );
 }
 
-function buildLegacyProjectionForUser(user: UserRow): PlanAccessProjection {
+function isProductionRuntime() {
+  return (
+    String(process.env.NODE_ENV || '').toLowerCase() === 'production' ||
+    String(process.env.APP_ENV || '').toLowerCase() === 'production'
+  );
+}
+
+function buildBlockedProjectionForUser(user: UserRow): PlanAccessProjection {
   const { ownerType, ownerId } = getOwnerContextForUser(user);
-  const normalizedTrialEnd = user.trialEndsAt || null;
-  const trialStatus: 'active' | 'expired' | 'none' =
-    user.trialStatus === 'expired'
-      ? 'expired'
-      : normalizedTrialEnd && new Date(normalizedTrialEnd).getTime() <= Date.now()
-        ? 'expired'
-        : 'active';
-
-  const trialDaysRemaining =
-    normalizedTrialEnd && trialStatus === 'active'
-      ? Math.max(0, Math.ceil((new Date(normalizedTrialEnd).getTime() - Date.now()) / MS_PER_DAY))
-      : trialStatus === 'expired'
-        ? 0
-        : null;
-
-  const selectedTier = normalizeAgentTier(user.subscriptionTier);
-  const hasFallbackAccess =
-    user.plan === 'paid' ||
-    trialStatus === 'active' ||
-    user.subscriptionStatus === 'active' ||
-    user.subscriptionStatus === 'trial';
-
-  let fallbackEntitlements: EntitlementMap = {
-    ...DEFAULT_FEATURE_ENTITLEMENTS,
-  };
-
-  if (hasFallbackAccess) {
-    switch (selectedTier) {
-      case 'elite':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: 999,
-          has_ai_insights: true,
-          has_area_intelligence: true,
-          has_commission_tracking: true,
-          has_revenue_dashboard: true,
-          has_priority_exposure: true,
-          has_benchmarking: true,
-        };
-        break;
-      case 'professional':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: 40,
-          has_ai_insights: true,
-          has_commission_tracking: true,
-          has_revenue_dashboard: true,
-          has_priority_exposure: true,
-        };
-        break;
-      case 'starter':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: 20,
-        };
-        break;
-      case 'free':
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-        };
-        break;
-      default: {
-        const hasPaidPlan = user.plan === 'paid';
-        fallbackEntitlements = {
-          ...DEFAULT_FEATURE_ENTITLEMENTS,
-          max_active_listings: hasPaidPlan || trialStatus === 'active' ? 25 : 0,
-          has_ai_insights: hasPaidPlan,
-          has_area_intelligence: hasPaidPlan,
-          has_commission_tracking: hasPaidPlan || trialStatus === 'active',
-          has_revenue_dashboard: hasPaidPlan,
-          has_priority_exposure: hasPaidPlan,
-        };
-      }
-    }
-  }
 
   return {
     ownerType,
     ownerId,
     currentPlan: null,
     subscription: null,
-    entitlements: fallbackEntitlements,
-    trialStatus,
-    trialEndsAt: normalizedTrialEnd,
-    trialDaysRemaining,
+    entitlements: { ...DEFAULT_FEATURE_ENTITLEMENTS },
+    trialStatus: 'none',
+    trialEndsAt: null,
+    trialDaysRemaining: null,
   };
 }
 
@@ -575,16 +485,15 @@ export async function getPlanAccessProjectionForUserId(
       throw error;
     }
 
-    console.warn(
-      '[PlanAccess] Pricing governance schema missing or outdated. Falling back to legacy projection.',
-      {
+    if (!isProductionRuntime()) {
+      console.warn('[PlanAccess] Pricing governance unavailable; returning blocked projection.', {
         userId,
         code: (error as any)?.code,
         message: (error as any)?.message,
-      },
-    );
+      });
+    }
 
-    return buildLegacyProjectionForUser(user);
+    return buildBlockedProjectionForUser(user);
   }
 }
 
@@ -716,5 +625,3 @@ export function toSubscriptionTableStatus(
   }
   return 'active';
 }
-
-

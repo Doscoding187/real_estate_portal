@@ -24,6 +24,13 @@ import {
   Filter,
   ChevronDown,
   Plus,
+  ArrowRight,
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  Flame,
+  Lock,
+  MessageCircle,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
@@ -33,8 +40,10 @@ interface Lead {
   name: string;
   email: string;
   phone: string | null;
+  status: string;
   message: string | null;
   source: string | null;
+  notes?: string | null;
   createdAt: string;
   property?: {
     id: number;
@@ -59,6 +68,25 @@ const PIPELINE_STAGES = [
   { id: 'closed', title: 'Closed', color: 'bg-green-500' },
 ];
 
+type PipelineStageId = (typeof PIPELINE_STAGES)[number]['id'];
+type LeadReadiness = {
+  viewingCompleted: boolean;
+  feedbackLogged: boolean;
+  affordabilityConfirmed: boolean;
+};
+
+const DEFAULT_READINESS: LeadReadiness = {
+  viewingCompleted: false,
+  feedbackLogged: false,
+  affordabilityConfirmed: false,
+};
+
+const READINESS_ITEMS: Array<{ key: keyof LeadReadiness; label: string }> = [
+  { key: 'viewingCompleted', label: 'Viewing completed' },
+  { key: 'feedbackLogged', label: 'Feedback logged' },
+  { key: 'affordabilityConfirmed', label: 'Budget confirmed' },
+];
+
 const SOURCE_OPTIONS = [
   { value: '', label: 'All Sources' },
   { value: 'web', label: 'Web' },
@@ -79,6 +107,54 @@ const SOURCE_LABELS: Record<string, string> = {
   demand_engine: 'Demand Engine',
   referral: 'Referral',
 };
+
+function getLeadAgeDays(lead: Lead) {
+  const created = new Date(lead.createdAt);
+  if (Number.isNaN(created.getTime())) return 0;
+  return Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
+}
+
+function getLeadTemperature(lead: Lead) {
+  const ageDays = getLeadAgeDays(lead);
+  const highIntentSource = ['whatsapp', 'property_detail', 'agent_profile', 'referral'].includes(
+    lead.source || '',
+  );
+  const highIntentStage = ['viewing_scheduled', 'offer_sent', 'converted'].includes(lead.status);
+  const hasMessage = Boolean(lead.message?.trim());
+
+  if (highIntentStage || (highIntentSource && ageDays <= 3) || (hasMessage && ageDays <= 1)) {
+    return {
+      label: 'Hot',
+      className: 'border-rose-200 bg-rose-50 text-rose-700',
+      dotClassName: 'bg-rose-500',
+    };
+  }
+
+  if (ageDays <= 7 || lead.status === 'contacted' || lead.status === 'qualified') {
+    return {
+      label: 'Warm',
+      className: 'border-amber-200 bg-amber-50 text-amber-700',
+      dotClassName: 'bg-amber-500',
+    };
+  }
+
+  return {
+    label: 'Cold',
+    className: 'border-slate-200 bg-slate-50 text-slate-600',
+    dotClassName: 'bg-slate-400',
+  };
+}
+
+function getNextStage(stageId: PipelineStageId): PipelineStageId | null {
+  const index = PIPELINE_STAGES.findIndex(stage => stage.id === stageId);
+  if (index < 0 || index >= PIPELINE_STAGES.length - 1) return null;
+  return PIPELINE_STAGES[index + 1].id;
+}
+
+function isReadinessComplete(readiness?: LeadReadiness) {
+  const value = readiness || DEFAULT_READINESS;
+  return value.viewingCompleted && value.feedbackLogged && value.affordabilityConfirmed;
+}
 
 interface LeadPipelineProps {
   className?: string;
@@ -106,6 +182,7 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     durationMinutes: '30',
     notes: '',
   });
+  const [leadReadiness, setLeadReadiness] = useState<Record<number, LeadReadiness>>({});
 
   const utils = trpc.useUtils();
   const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
@@ -285,6 +362,83 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     setNewActivityNote('');
   };
 
+  const getReadinessForLead = (leadId: number) => leadReadiness[leadId] || DEFAULT_READINESS;
+
+  const toggleReadinessItem = (leadId: number, key: keyof LeadReadiness) => {
+    setLeadReadiness(prev => {
+      const current = prev[leadId] || DEFAULT_READINESS;
+      return {
+        ...prev,
+        [leadId]: {
+          ...current,
+          [key]: !current[key],
+        },
+      };
+    });
+  };
+
+  const canMoveLeadToStage = (lead: Lead, targetStage: PipelineStageId) => {
+    if (targetStage !== 'offer') return true;
+    if (['offer_sent', 'converted', 'closed'].includes(lead.status)) return true;
+    return isReadinessComplete(getReadinessForLead(lead.id));
+  };
+
+  const moveLeadToStage = (lead: Lead, targetStage: PipelineStageId) => {
+    if (!canMoveLeadToStage(lead, targetStage)) {
+      toast.error('Complete the viewing checklist before moving this lead to Offer.');
+      return;
+    }
+
+    updateLeadStatusMutation.mutate({
+      leadId: lead.id,
+      targetStage: targetStage as any,
+      notes:
+        targetStage === 'offer'
+          ? 'Moved to offer after viewing readiness checklist was completed'
+          : `Moved to ${targetStage}`,
+    });
+  };
+
+  const communicationTimeline = selectedLead
+    ? [
+        {
+          id: `created-${selectedLead.id}`,
+          type: 'lead captured',
+          description: selectedLead.message || 'Lead captured from listing enquiry.',
+          createdAt: selectedLead.createdAt,
+          tone: 'bg-slate-50 text-slate-700 border-slate-200',
+        },
+        selectedLead.email
+          ? {
+              id: `email-${selectedLead.id}`,
+              type: 'email',
+              description: `Email available: ${selectedLead.email}`,
+              createdAt: selectedLead.createdAt,
+              tone: 'bg-sky-50 text-sky-700 border-sky-200',
+            }
+          : null,
+        selectedLead.phone
+          ? {
+              id: `phone-${selectedLead.id}`,
+              type: selectedLead.source === 'whatsapp' ? 'whatsapp' : 'phone',
+              description: `Phone channel available: ${selectedLead.phone}`,
+              createdAt: selectedLead.createdAt,
+              tone:
+                selectedLead.source === 'whatsapp'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-violet-50 text-violet-700 border-violet-200',
+            }
+          : null,
+        ...leadActivities.map((activity: any) => ({
+          id: `activity-${activity.id}`,
+          type: activity.type,
+          description: activity.description,
+          createdAt: activity.createdAt,
+          tone: 'bg-white text-gray-700 border-gray-100',
+        })),
+      ].filter(Boolean)
+    : [];
+
   if (isLoading) {
     return (
       <div className={`space-y-4 ${className}`}>
@@ -378,8 +532,11 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                       <div key={lead.id}>
                         <LeadCard
                           lead={lead}
+                          stageId={stage.id as PipelineStageId}
+                          readiness={getReadinessForLead(lead.id)}
                           onScheduleShowing={() => openScheduleDialog(lead)}
                           onOpenDetail={() => openLeadDetail(lead)}
+                          onMoveLead={targetStage => moveLeadToStage(lead, targetStage)}
                         />
                       </div>
                     ))}
@@ -553,10 +710,19 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
 
           {selectedLead ? (
             <div className="space-y-6">
-              <div className="rounded-xl bg-gray-50 p-4">
+              <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
-                    <p className="text-lg font-semibold text-gray-900">{selectedLead.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-lg font-semibold text-gray-900">{selectedLead.name}</p>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${getLeadTemperature(selectedLead).className}`}
+                      >
+                        <Flame className="mr-1 h-3 w-3" />
+                        {getLeadTemperature(selectedLead).label}
+                      </Badge>
+                    </div>
                     <p className="text-sm text-gray-500">{selectedLead.email}</p>
                     {selectedLead.phone ? (
                       <p className="text-sm text-gray-500">{selectedLead.phone}</p>
@@ -585,34 +751,128 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                 ) : null}
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900">Activity Timeline</h3>
-                  <Button variant="outline" size="sm" onClick={() => openScheduleDialog(selectedLead)}>
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Schedule Showing
-                  </Button>
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">Unified Timeline</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openScheduleDialog(selectedLead)}
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Schedule Showing
+                    </Button>
+                  </div>
+
+                  {activitiesLoading ? (
+                    <p className="text-sm text-gray-500">Loading activity...</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {communicationTimeline.map((activity: any) => (
+                        <div
+                          key={activity.id}
+                          className="relative rounded-xl border border-gray-100 bg-white p-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <Badge variant="outline" className={activity.tone}>
+                              {activity.type === 'whatsapp' ? (
+                                <MessageCircle className="mr-1 h-3 w-3" />
+                              ) : activity.type === 'email' ? (
+                                <Mail className="mr-1 h-3 w-3" />
+                              ) : activity.type === 'phone' ? (
+                                <Phone className="mr-1 h-3 w-3" />
+                              ) : activity.type === 'status_change' ? (
+                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                              ) : (
+                                <Clock3 className="mr-1 h-3 w-3" />
+                              )}
+                              {String(activity.type).replace(/_/g, ' ')}
+                            </Badge>
+                            <span className="text-xs text-gray-500">
+                              {new Date(activity.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-gray-700">
+                            {activity.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {activitiesLoading ? (
-                  <p className="text-sm text-gray-500">Loading activity...</p>
-                ) : leadActivities.length === 0 ? (
-                  <p className="text-sm text-gray-500">No CRM activity has been logged yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {leadActivities.map((activity: any) => (
-                      <div key={activity.id} className="rounded-xl border border-gray-100 p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <Badge variant="outline">{activity.type}</Badge>
-                          <span className="text-xs text-gray-500">
-                            {new Date(activity.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-sm text-gray-700">{activity.description}</p>
+                <aside className="space-y-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-semibold text-gray-900">Offer Readiness</h3>
+                      {isReadinessComplete(getReadinessForLead(selectedLead.id)) ? (
+                        <Badge className="bg-emerald-100 text-emerald-700">Ready</Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-amber-200 text-amber-700">
+                          Locked
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {READINESS_ITEMS.map(item => {
+                        const checked = getReadinessForLead(selectedLead.id)[item.key];
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => toggleReadinessItem(selectedLead.id, item.key)}
+                            className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                              checked
+                                ? 'border-emerald-200 bg-white text-emerald-800'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-amber-200'
+                            }`}
+                          >
+                            <span>{item.label}</span>
+                            {checked ? (
+                              <CheckCircle2 className="h-4 w-4" />
+                            ) : (
+                              <span className="h-4 w-4 rounded-full border border-slate-300" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {!isReadinessComplete(getReadinessForLead(selectedLead.id)) ? (
+                      <div className="mt-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        Offer stage remains locked until every viewing prerequisite is done.
                       </div>
-                    ))}
+                    ) : null}
                   </div>
-                )}
+
+                  <div className="grid gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        addLeadActivityMutation.mutate({
+                          leadId: selectedLead.id,
+                          activityType: 'call',
+                          description: 'Follow-up call logged from CRM hub.',
+                        });
+                      }}
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      Log call
+                    </Button>
+                    <Button
+                      disabled={!canMoveLeadToStage(selectedLead, 'offer')}
+                      onClick={() => moveLeadToStage(selectedLead, 'offer')}
+                    >
+                      {!canMoveLeadToStage(selectedLead, 'offer') ? (
+                        <Lock className="h-4 w-4 mr-2" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                      )}
+                      Move to Offer
+                    </Button>
+                  </div>
+                </aside>
               </div>
 
               <div className="space-y-3">
@@ -648,28 +908,58 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
 
 function LeadCard({
   lead,
+  stageId,
+  readiness,
   onScheduleShowing,
   onOpenDetail,
+  onMoveLead,
 }: {
   lead: Lead;
+  stageId: PipelineStageId;
+  readiness: LeadReadiness;
   onScheduleShowing: () => void;
   onOpenDetail: () => void;
+  onMoveLead: (targetStage: PipelineStageId) => void;
 }) {
+  const temperature = getLeadTemperature(lead);
+  const nextStage = getNextStage(stageId);
+  const offerBlocked = nextStage === 'offer' && !isReadinessComplete(readiness);
+  const ageDays = getLeadAgeDays(lead);
+
   return (
     <Card
-      className="cursor-pointer hover:shadow-soft transition-all duration-200 border-gray-100"
+      className="cursor-pointer border-gray-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-soft"
       onClick={onOpenDetail}
     >
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Lead Name & Contact */}
           <div className="flex items-start justify-between">
-            <div>
+            <div className="min-w-0">
               <h4 className="font-semibold text-sm text-gray-900">{lead.name || 'Unnamed Lead'}</h4>
               <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                 <Calendar className="h-3 w-3" />
                 {new Date(lead.createdAt).toLocaleDateString()}
               </div>
+            </div>
+            <Badge variant="outline" className={`shrink-0 text-xs ${temperature.className}`}>
+              <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${temperature.dotClassName}`} />
+              {temperature.label}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 rounded-lg border border-gray-100 bg-gray-50 p-2 text-center text-[11px]">
+            <div>
+              <p className="font-semibold text-gray-900">{ageDays}d</p>
+              <p className="text-gray-500">age</p>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{lead.status.replace(/_/g, ' ')}</p>
+              <p className="text-gray-500">stage</p>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">{lead.source ? SOURCE_LABELS[lead.source] || lead.source : 'Web'}</p>
+              <p className="text-gray-500">source</p>
             </div>
           </div>
 
@@ -714,7 +1004,36 @@ function LeadCard({
             </Badge>
           )}
 
-          <div className="pt-1">
+          {nextStage === 'offer' ? (
+            <div
+              className={`rounded-lg border p-2.5 text-xs ${
+                offerBlocked
+                  ? 'border-amber-200 bg-amber-50 text-amber-800'
+                  : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              }`}
+            >
+              <div className="flex items-center gap-2 font-medium">
+                {offerBlocked ? <Lock className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                {offerBlocked ? 'Offer locked' : 'Offer ready'}
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                {READINESS_ITEMS.map(item => (
+                  <span
+                    key={item.key}
+                    className={`rounded border px-1.5 py-1 text-center ${
+                      readiness[item.key]
+                        ? 'border-emerald-200 bg-white text-emerald-700'
+                        : 'border-amber-200 bg-white/70 text-amber-700'
+                    }`}
+                  >
+                    {readiness[item.key] ? 'Done' : 'Open'}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
             <Button
               size="sm"
               variant="outline"
@@ -727,6 +1046,25 @@ function LeadCard({
               <Calendar className="h-4 w-4 mr-2" />
               Schedule Showing
             </Button>
+            {nextStage ? (
+              <Button
+                size="sm"
+                className="w-full"
+                variant={offerBlocked ? 'outline' : 'default'}
+                onClick={event => {
+                  event.stopPropagation();
+                  onMoveLead(nextStage);
+                }}
+              >
+                {offerBlocked ? <Lock className="h-4 w-4 mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
+                {PIPELINE_STAGES.find(stage => stage.id === nextStage)?.title || 'Next'}
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" className="w-full" disabled>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Complete
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

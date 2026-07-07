@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertLocalSeedSafety } from '../scripts/localDemoSeed';
+import { assertLocalSeedSafety, getLocalDemoCredentials } from '../scripts/localDemoSeed';
 
 const baseEnv = {
   NODE_ENV: 'development',
@@ -64,5 +64,34 @@ describe('local demo seed safety guard', () => {
         { target: 'test' },
       ),
     ).not.toThrow();
+  });
+
+  it('reads the local demo password from the development environment when supplied', () => {
+    expect(
+      getLocalDemoCredentials({
+        NODE_ENV: 'development',
+        LOCAL_DEMO_AGENCY_PASSWORD: 'ConfiguredOnly123!',
+      }),
+    ).toEqual({
+      password: 'ConfiguredOnly123!',
+      passwordSource: 'environment',
+    });
+  });
+
+  it('refuses to resolve local demo credentials without an environment-supplied password', () => {
+    expect(() =>
+      getLocalDemoCredentials({
+        NODE_ENV: 'development',
+      }),
+    ).toThrow(/LOCAL_DEMO_AGENCY_PASSWORD/i);
+  });
+
+  it('refuses to resolve local demo credentials in production', () => {
+    expect(() =>
+      getLocalDemoCredentials({
+        NODE_ENV: 'production',
+        LOCAL_DEMO_AGENCY_PASSWORD: 'ConfiguredOnly123!',
+      }),
+    ).toThrow(/production runtime/i);
   });
 });

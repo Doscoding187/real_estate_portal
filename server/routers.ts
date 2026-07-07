@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { getSessionCookieOptions } from './_core/cookies';
 import { COOKIE_NAME } from '../shared/const';
+import type { User } from './_core/context';
 import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from '../shared/db-enums';
 import { systemRouter } from './_core/systemRouter';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
@@ -37,6 +38,26 @@ function getUserId(ctx: { user: { id: number } | null }) {
 
 function getUser(ctx: { user: { id: number; role?: string } | null }) {
   return requireUser(ctx);
+}
+
+function toAuthMeUser(user: User) {
+  return {
+    id: user.id,
+    openId: user.openId,
+    email: user.email,
+    name: user.name,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone,
+    loginMethod: user.loginMethod,
+    emailVerified: user.emailVerified,
+    role: user.role,
+    agencyId: user.agencyId,
+    isSubaccount: user.isSubaccount,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    lastSignedIn: user.lastSignedIn,
+  };
 }
 
 function parseTextList(value?: string | null) {
@@ -329,7 +350,7 @@ export const appRouter = router({
         daysRemaining: null,
       };
       return {
-        ...user,
+        ...toAuthMeUser(user),
         entitlements,
         current_plan: currentPlan,
         trial_status: trialStatus,

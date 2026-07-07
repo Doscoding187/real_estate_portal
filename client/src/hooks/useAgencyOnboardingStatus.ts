@@ -15,6 +15,7 @@ export type AgencyOnboardingStatus = {
   recommendedNextStep: string;
   teamMembersCount: number;
   invitationsCount: number;
+  accessState: AgencyAccessState;
   agency: {
     id: number;
     name: string;
@@ -24,6 +25,28 @@ export type AgencyOnboardingStatus = {
     city: string | null;
     province: string | null;
   } | null;
+};
+
+export type AgencyAccessState = {
+  onboardingComplete: boolean;
+  billingStatus:
+    | 'not_started'
+    | 'pending'
+    | 'active'
+    | 'past_due'
+    | 'cancelled'
+    | 'unavailable';
+  planKey: string | null;
+  planAccessSource: string;
+  degraded: boolean;
+  fallbackReason: string | null;
+  actionableReason: string;
+  workspaceAccess: {
+    listings: boolean;
+    publishing: boolean;
+    teamManagement: boolean;
+    reporting: boolean;
+  };
 };
 
 type UseAgencyOnboardingStatusOptions = {

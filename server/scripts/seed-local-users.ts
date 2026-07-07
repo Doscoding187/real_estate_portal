@@ -24,8 +24,16 @@ async function seedLocalUsers() {
     database: 'listify_local_dev',
   });
 
-  const passwordHash = await bcrypt.hash('password123', 10);
-  const superAdminPasswordHash = await bcrypt.hash('Edmaritinados187#', 10);
+  const localUserPassword = process.env.LOCAL_SEED_USER_PASSWORD;
+  const superAdminPassword = process.env.LOCAL_SEED_SUPER_ADMIN_PASSWORD;
+  if (!localUserPassword || !superAdminPassword) {
+    throw new Error(
+      'LOCAL_SEED_USER_PASSWORD and LOCAL_SEED_SUPER_ADMIN_PASSWORD are required for local user seeding.',
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(localUserPassword, 10);
+  const superAdminPasswordHash = await bcrypt.hash(superAdminPassword, 10);
 
   try {
     // 1. Super Admin
@@ -120,7 +128,7 @@ async function seedLocalUsers() {
     );
 
     console.log('✅ Seed completed successfully!');
-    console.log('Default Password: password123');
+    console.log('Local seed passwords were supplied through development environment variables.');
   } catch (error) {
     console.error('❌ Error Seeding DB:', error);
   } finally {
