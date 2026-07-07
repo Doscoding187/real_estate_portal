@@ -154,7 +154,7 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
     capability => Boolean((access?.workspaceAccess as any)?.[capability.key]),
   );
   const blockedCapabilities = capabilityLabels.filter(
-    capability => !Boolean((access?.workspaceAccess as any)?.[capability.key]),
+    capability => !(access?.workspaceAccess as any)?.[capability.key],
   );
   const nextBillingAction =
     currentStatus === 'active'
