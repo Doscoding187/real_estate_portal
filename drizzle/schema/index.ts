@@ -12,6 +12,7 @@ export * from './distribution';
 export * from './views';
 export * from './analytics';
 export * from './leads';
+export * from './agencyDeals';
 export * from './servicesEngine';
 export * from './demand';
 export * from './referrals';

@@ -25,8 +25,16 @@ import {
   listings,
   listingApprovalQueue,
   listingMedia,
+  agencyDeals,
+  agencyDealOfferVersions,
+  agencyTransactions,
+  agencyTransactionMilestones,
+  agencyTransactionConditions,
+  agencyTransactionParties,
+  agencyTransactionDocuments,
+  agencyTransactionActivity,
 } from '../drizzle/schema';
-import { eq, like, or, desc, and, inArray, sql, isNull, isNotNull, ne, aliasedTable } from 'drizzle-orm';
+import { eq, like, or, desc, asc, and, inArray, sql, isNull, isNotNull, ne, aliasedTable } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import {
   getDb,
@@ -130,8 +138,217 @@ const viewingFeedbackInputSchema = z.object({
   notes: z.string().trim().max(3000).optional(),
 });
 
+const dealTransactionTypeSchema = z.enum(['sale', 'rental']);
+const dealInterestStatusSchema = z.enum([
+  'interested',
+  'maybe_nurture',
+  'not_interested',
+  'wants_offer',
+  'wants_another_viewing',
+  'needs_finance',
+  'needs_to_sell',
+]);
+const offerActorSchema = z.enum(['buyer', 'seller', 'landlord', 'tenant', 'agency']);
+const offerEventTypeSchema = z.enum([
+  'initial_offer',
+  'seller_counter',
+  'buyer_counter',
+  'landlord_counter',
+  'tenant_counter',
+  'acceptance_note',
+]);
+const offerStatusSchema = z.enum([
+  'draft',
+  'submitted',
+  'under_review',
+  'countered',
+  'accepted',
+  'rejected',
+  'withdrawn',
+  'expired',
+  'superseded',
+]);
+const transactionWorkItemStatusSchema = z.enum([
+  'pending',
+  'in_progress',
+  'completed',
+  'waived',
+  'cancelled',
+  'blocked',
+]);
+const transactionResponsiblePartySchema = z.enum([
+  'agency',
+  'buyer',
+  'seller',
+  'tenant',
+  'landlord',
+  'conveyancer',
+  'bond_originator',
+  'attorney',
+  'service_provider',
+  'other',
+]);
+const transactionPartyRoleSchema = z.enum([
+  'buyer',
+  'tenant',
+  'seller',
+  'landlord',
+  'listing_agent',
+  'buyer_agent',
+  'agency_manager',
+  'bond_originator',
+  'conveyancer',
+  'bond_attorney',
+  'cancellation_attorney',
+  'inspector',
+  'managing_agent',
+  'service_provider',
+  'other',
+]);
+const transactionDocumentTypeSchema = z.enum([
+  'signed_offer',
+  'id_document',
+  'proof_of_address',
+  'proof_of_funds',
+  'prequalification',
+  'bond_approval',
+  'fica',
+  'mandate',
+  'compliance_certificate',
+  'lease',
+  'inspection',
+  'other',
+]);
+const transferDutyVatTreatmentSchema = z.enum([
+  'unknown',
+  'transfer_duty',
+  'vat',
+  'exempt',
+  'not_applicable',
+]);
+const commissionBasisSchema = z.enum(['percentage', 'fixed']);
+const commissionVatTreatmentSchema = z.enum(['inclusive', 'exclusive', 'not_applicable']);
+const commissionStatusSchema = z.enum(['estimated', 'payable', 'paid', 'cancelled']);
+
+const moneyInputSchema = z.coerce.number().nonnegative().max(999_999_999_999);
+const nullableMoneyInputSchema = moneyInputSchema.optional().nullable();
+const dateInputSchema = z.string().trim().max(80).optional().nullable();
+
+const offerTermsInputSchema = z.object({
+  amount: moneyInputSchema,
+  depositAmount: nullableMoneyInputSchema,
+  financeRequired: z.boolean().optional(),
+  bondAmount: nullableMoneyInputSchema,
+  cashPortion: nullableMoneyInputSchema,
+  occupationDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  occupationalRent: nullableMoneyInputSchema,
+  monthlyRental: nullableMoneyInputSchema,
+  leaseDurationMonths: z.number().int().min(1).max(120).optional().nullable(),
+  rentalDeposit: nullableMoneyInputSchema,
+  offerExpiry: dateInputSchema,
+  conditionsSummary: z.string().trim().max(4000).optional().nullable(),
+  fixturesSummary: z.string().trim().max(4000).optional().nullable(),
+  specialConditions: z.string().trim().max(4000).optional().nullable(),
+});
+
+const createDealInputSchema = z.object({
+  leadId: z.number().int().positive(),
+  sourceViewingId: z.number().int().positive().optional().nullable(),
+  listingId: z.number().int().positive().optional().nullable(),
+  propertyId: z.number().int().positive().optional().nullable(),
+  responsibleAgentId: z.number().int().positive().optional().nullable(),
+  transactionType: dealTransactionTypeSchema.default('sale'),
+  interestStatus: dealInterestStatusSchema.default('wants_offer'),
+  notes: z.string().trim().max(2000).optional(),
+  terms: offerTermsInputSchema.optional(),
+});
+
+const createOfferVersionInputSchema = z.object({
+  dealId: z.number().int().positive(),
+  actor: offerActorSchema.default('buyer'),
+  eventType: offerEventTypeSchema.default('buyer_counter'),
+  status: offerStatusSchema.default('draft'),
+  parentOfferVersionId: z.number().int().positive().optional().nullable(),
+  terms: offerTermsInputSchema,
+  note: z.string().trim().max(2000).optional(),
+});
+
+const submitOfferInputSchema = z.object({
+  offerVersionId: z.number().int().positive(),
+  note: z.string().trim().max(2000).optional(),
+});
+
+const acceptOfferInputSchema = z.object({
+  offerVersionId: z.number().int().positive(),
+  commissionBasis: commissionBasisSchema.default('percentage'),
+  commissionPercentage: z.coerce.number().min(0).max(100).default(5),
+  commissionFixedAmount: nullableMoneyInputSchema,
+  commissionVatTreatment: commissionVatTreatmentSchema.default('exclusive'),
+  agencySharePercentage: z.coerce.number().min(0).max(100).default(50),
+  referralSplit: moneyInputSchema.default(0),
+  otherDeductions: moneyInputSchema.default(0),
+  expectedPaymentDate: dateInputSchema,
+  targetCompletionDate: dateInputSchema,
+  transferDutyVatTreatment: transferDutyVatTreatmentSchema.default('unknown'),
+  note: z.string().trim().max(2000).optional(),
+});
+
+const addTransactionConditionInputSchema = z.object({
+  transactionId: z.number().int().positive(),
+  title: z.string().trim().min(2).max(180),
+  description: z.string().trim().max(2000).optional(),
+  responsibleParty: transactionResponsiblePartySchema.default('agency'),
+  dueAt: dateInputSchema,
+  notes: z.string().trim().max(2000).optional(),
+});
+
+const updateTransactionWorkItemInputSchema = z.object({
+  transactionId: z.number().int().positive(),
+  itemType: z.enum(['milestone', 'condition']),
+  itemId: z.number().int().positive(),
+  status: transactionWorkItemStatusSchema,
+  notes: z.string().trim().max(2000).optional(),
+  waivedOrCancelledReason: z.string().trim().max(2000).optional(),
+});
+
+const addTransactionPartyInputSchema = z.object({
+  transactionId: z.number().int().positive(),
+  role: transactionPartyRoleSchema,
+  name: z.string().trim().min(2).max(200),
+  email: z.string().trim().email().optional().nullable(),
+  phone: z.string().trim().max(50).optional().nullable(),
+  organization: z.string().trim().max(200).optional().nullable(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+const addTransactionDocumentInputSchema = z.object({
+  transactionId: z.number().int().positive(),
+  conditionId: z.number().int().positive().optional().nullable(),
+  documentType: transactionDocumentTypeSchema,
+  fileName: z.string().trim().min(2).max(255),
+  storageKey: z.string().trim().min(6).max(500),
+  contentType: z.string().trim().max(120).optional().nullable(),
+  fileSize: z.number().int().positive().max(200_000_000).optional().nullable(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+const updateTransactionInputSchema = z.object({
+  transactionId: z.number().int().positive(),
+  stage: z.string().trim().min(2).max(80).optional(),
+  status: z.enum(['open', 'in_progress', 'completed', 'cancelled']).optional(),
+  riskStatus: z.enum(['on_track', 'watch', 'at_risk', 'blocked', 'complete', 'cancelled']).optional(),
+  nextAction: z.string().trim().max(255).optional().nullable(),
+  nextDeadline: dateInputSchema,
+  expectedPaymentDate: dateInputSchema,
+  commissionStatus: commissionStatusSchema.optional(),
+  note: z.string().trim().max(2000).optional(),
+});
+
 type LeadStatus = z.infer<typeof leadStatusSchema>;
 type ViewingStatus = z.infer<typeof viewingStatusSchema>;
+type DealTransactionType = z.infer<typeof dealTransactionTypeSchema>;
+type OfferStatus = z.infer<typeof offerStatusSchema>;
+type TransactionWorkItemStatus = z.infer<typeof transactionWorkItemStatusSchema>;
 type AgencyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 type ViewingRescheduleEntry = {
   previousScheduledAt: string | null;
@@ -1801,6 +2018,698 @@ async function requireAgencyListing(
 
   return row;
 }
+
+function insertResultId(result: any) {
+  return Number(result?.insertId || result?.[0]?.insertId || 0);
+}
+
+function toDecimalString(value?: number | null) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return null;
+  return Number(value).toFixed(2);
+}
+
+function toRequiredDecimalString(value: number) {
+  return Number(value || 0).toFixed(2);
+}
+
+function decimalToNumber(value: unknown) {
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function parseOptionalDbTimestamp(value?: string | null) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T09:00:00${AGENCY_WORKSPACE_UTC_OFFSET}`)
+    : new Date(raw);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Date value is invalid.' });
+  }
+
+  return toDbTimestampRequired(date);
+}
+
+function futureDbTimestamp(daysFromNow: number, hour = 9) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromNow);
+  date.setHours(hour, 0, 0, 0);
+  return toDbTimestampRequired(date);
+}
+
+function normalizeOfferTerms(input: z.infer<typeof offerTermsInputSchema>) {
+  return {
+    amount: Number(input.amount || 0),
+    depositAmount: input.depositAmount == null ? null : Number(input.depositAmount),
+    financeRequired: Boolean(input.financeRequired),
+    bondAmount: input.bondAmount == null ? null : Number(input.bondAmount),
+    cashPortion: input.cashPortion == null ? null : Number(input.cashPortion),
+    occupationDate: input.occupationDate || null,
+    occupationalRent: input.occupationalRent == null ? null : Number(input.occupationalRent),
+    monthlyRental: input.monthlyRental == null ? null : Number(input.monthlyRental),
+    leaseDurationMonths: input.leaseDurationMonths || null,
+    rentalDeposit: input.rentalDeposit == null ? null : Number(input.rentalDeposit),
+    offerExpiry: input.offerExpiry || null,
+    conditionsSummary: input.conditionsSummary || null,
+    fixturesSummary: input.fixturesSummary || null,
+    specialConditions: input.specialConditions || null,
+  };
+}
+
+function offerVersionInsertValues(input: {
+  agencyId: number;
+  dealId: number;
+  versionNumber: number;
+  parentOfferVersionId?: number | null;
+  actor: z.infer<typeof offerActorSchema>;
+  eventType: z.infer<typeof offerEventTypeSchema>;
+  status: OfferStatus;
+  terms: z.infer<typeof offerTermsInputSchema>;
+  userId: number;
+}) {
+  const terms = normalizeOfferTerms(input.terms);
+  const submittedAt =
+    input.status === 'submitted' || input.status === 'under_review'
+      ? nowAsDbTimestamp()
+      : null;
+
+  return {
+    agencyId: input.agencyId,
+    dealId: input.dealId,
+    parentOfferVersionId: input.parentOfferVersionId || null,
+    versionNumber: input.versionNumber,
+    actor: input.actor,
+    eventType: input.eventType,
+    status: input.status,
+    amount: toRequiredDecimalString(terms.amount),
+    depositAmount: toDecimalString(terms.depositAmount),
+    financeRequired: terms.financeRequired ? 1 : 0,
+    bondAmount: toDecimalString(terms.bondAmount),
+    cashPortion: toDecimalString(terms.cashPortion),
+    occupationDate: terms.occupationDate,
+    occupationalRent: toDecimalString(terms.occupationalRent),
+    monthlyRental: toDecimalString(terms.monthlyRental),
+    leaseDurationMonths: terms.leaseDurationMonths,
+    rentalDeposit: toDecimalString(terms.rentalDeposit),
+    offerExpiry: parseOptionalDbTimestamp(terms.offerExpiry),
+    conditionsSummary: terms.conditionsSummary,
+    fixturesSummary: terms.fixturesSummary,
+    specialConditions: terms.specialConditions,
+    termsSnapshot: terms,
+    submittedAt,
+    createdByUserId: input.userId,
+  } as const;
+}
+
+function calculateCommission(input: {
+  acceptedAmount: number;
+  basis: z.infer<typeof commissionBasisSchema>;
+  percentage: number;
+  fixedAmount?: number | null;
+  agencySharePercentage: number;
+  referralSplit: number;
+  otherDeductions: number;
+}) {
+  const gross =
+    input.basis === 'fixed'
+      ? Number(input.fixedAmount || 0)
+      : (input.acceptedAmount * Number(input.percentage || 0)) / 100;
+  const referralSplit = Number(input.referralSplit || 0);
+  const otherDeductions = Number(input.otherDeductions || 0);
+  const expected = Math.max(gross - referralSplit - otherDeductions, 0);
+  const agencyShare = expected * (Number(input.agencySharePercentage || 0) / 100);
+  const agentShare = Math.max(expected - agencyShare, 0);
+
+  return {
+    grossCommission: Number(gross.toFixed(2)),
+    agencyShare: Number(agencyShare.toFixed(2)),
+    agentShare: Number(agentShare.toFixed(2)),
+    referralSplit: Number(referralSplit.toFixed(2)),
+    otherDeductions: Number(otherDeductions.toFixed(2)),
+    expectedCommission: Number(expected.toFixed(2)),
+  };
+}
+
+function workflowTemplates(transactionType: DealTransactionType) {
+  if (transactionType === 'rental') {
+    return {
+      stage: 'application_submitted',
+      nextAction: 'Complete tenant screening',
+      milestones: [
+        ['application_submitted', 'Application submitted', 'agency', 0, 'completed'],
+        ['screening', 'Screening', 'agency', 2, 'pending'],
+        ['approved', 'Approval decision', 'landlord', 3, 'pending'],
+        ['deposit_due', 'Deposit and first payment due', 'tenant', 5, 'pending'],
+        ['lease_prepared', 'Lease prepared', 'agency', 6, 'pending'],
+        ['lease_signed', 'Lease signed', 'tenant', 7, 'pending'],
+        ['incoming_inspection', 'Incoming inspection', 'agency', 9, 'pending'],
+        ['occupation', 'Keys and occupation', 'tenant', 10, 'pending'],
+        ['complete', 'Complete', 'agency', 11, 'pending'],
+      ] as const,
+      conditions: [
+        ['Tenant screening', 'Screening must be completed before approval.', 'agency', 2],
+        ['Deposit and first payment', 'Deposit and first payment must be confirmed.', 'tenant', 5],
+        ['Lease signed', 'Signed lease must be stored privately on the transaction.', 'tenant', 7],
+        ['Incoming inspection', 'Inspection record must be completed before occupation.', 'agency', 9],
+      ] as const,
+    };
+  }
+
+  return {
+    stage: 'offer_accepted',
+    nextAction: 'Collect signed offer and deposit confirmation',
+    milestones: [
+      ['offer_accepted', 'Offer accepted', 'agency', 0, 'completed'],
+      ['deposit_due', 'Deposit due', 'buyer', 3, 'pending'],
+      ['bond_application', 'Bond application', 'buyer', 5, 'pending'],
+      ['bond_approval', 'Bond approval', 'bond_originator', 21, 'pending'],
+      ['suspensive_conditions', 'Suspensive conditions fulfilled', 'agency', 30, 'pending'],
+      ['conveyancer_instructed', 'Conveyancer instructed', 'seller', 5, 'pending'],
+      ['compliance_documents', 'Compliance and documents', 'seller', 35, 'pending'],
+      ['transfer_documents_signed', 'Transfer documents signed', 'conveyancer', 45, 'pending'],
+      ['lodgement', 'Lodgement', 'conveyancer', 75, 'pending'],
+      ['registration', 'Registration', 'conveyancer', 90, 'pending'],
+      ['commission_payable', 'Commission payable', 'agency', 91, 'pending'],
+    ] as const,
+    conditions: [
+      ['Signed offer document', 'Signed offer must be uploaded to the private transaction.', 'agency', 1],
+      ['Deposit payment', 'Deposit payment must be confirmed by the due date.', 'buyer', 3],
+      ['Bond approval', 'Bond approval must be recorded if finance is required.', 'buyer', 21],
+      ['FICA documents', 'Required FICA documents must be collected privately.', 'buyer', 7],
+    ] as const,
+  };
+}
+
+function mapDealLead(lead?: typeof leads.$inferSelect | null) {
+  return lead
+    ? {
+        id: lead.id,
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        status: lead.status,
+      }
+    : null;
+}
+
+function mapDealListing(listing?: Partial<typeof listings.$inferSelect> | null) {
+  return listing
+    ? {
+        id: listing.id,
+        title: listing.title,
+        action: listing.action,
+        city: listing.city,
+        province: listing.province,
+        askingPrice: decimalToNumber(listing.askingPrice),
+        monthlyRent: decimalToNumber(listing.monthlyRent),
+        status: listing.status,
+      }
+    : null;
+}
+
+function mapDealProperty(property?: Partial<typeof properties.$inferSelect> | null) {
+  return property
+    ? {
+        id: property.id,
+        title: property.title,
+        city: property.city,
+        province: property.province,
+        price: decimalToNumber(property.price),
+        status: property.status,
+      }
+    : null;
+}
+
+function mapDealAgent(agent?: Partial<typeof agents.$inferSelect> | null) {
+  return agent
+    ? {
+        id: agent.id,
+        userId: agent.userId,
+        name: getAgentDisplayName(agent) || 'Assigned agent',
+        email: agent.email,
+        phone: agent.phone,
+      }
+    : null;
+}
+
+function mapOfferVersion(offer: typeof agencyDealOfferVersions.$inferSelect) {
+  return {
+    ...offer,
+    amount: decimalToNumber(offer.amount),
+    depositAmount: offer.depositAmount == null ? null : decimalToNumber(offer.depositAmount),
+    bondAmount: offer.bondAmount == null ? null : decimalToNumber(offer.bondAmount),
+    cashPortion: offer.cashPortion == null ? null : decimalToNumber(offer.cashPortion),
+    occupationalRent:
+      offer.occupationalRent == null ? null : decimalToNumber(offer.occupationalRent),
+    monthlyRental: offer.monthlyRental == null ? null : decimalToNumber(offer.monthlyRental),
+    rentalDeposit: offer.rentalDeposit == null ? null : decimalToNumber(offer.rentalDeposit),
+    financeRequired: Boolean(offer.financeRequired),
+  };
+}
+
+function mapTransaction(transaction: typeof agencyTransactions.$inferSelect) {
+  return {
+    ...transaction,
+    acceptedAmount: decimalToNumber(transaction.acceptedAmount),
+    commissionPercentage: decimalToNumber(transaction.commissionPercentage),
+    commissionFixedAmount:
+      transaction.commissionFixedAmount == null
+        ? null
+        : decimalToNumber(transaction.commissionFixedAmount),
+    grossCommission: decimalToNumber(transaction.grossCommission),
+    agencyShare: decimalToNumber(transaction.agencyShare),
+    agentShare: decimalToNumber(transaction.agentShare),
+    referralSplit: decimalToNumber(transaction.referralSplit),
+    otherDeductions: decimalToNumber(transaction.otherDeductions),
+    expectedCommission: decimalToNumber(transaction.expectedCommission),
+  };
+}
+
+function mapWorkItem<T extends { dueAt?: string | null; status?: string | null }>(item: T) {
+  return {
+    ...item,
+    overdue:
+      item.dueAt && !['completed', 'waived', 'cancelled'].includes(String(item.status || ''))
+        ? new Date(item.dueAt).getTime() < Date.now()
+        : false,
+  };
+}
+
+async function requireAgencyDeal(db: AgencyDb, agencyId: number, dealId: number) {
+  const [deal] = await db
+    .select()
+    .from(agencyDeals)
+    .where(and(eq(agencyDeals.id, dealId), eq(agencyDeals.agencyId, agencyId)))
+    .limit(1);
+
+  if (!deal) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Deal not found' });
+  }
+
+  return deal;
+}
+
+async function requireAgencyOfferVersion(
+  db: AgencyDb,
+  agencyId: number,
+  offerVersionId: number,
+) {
+  const [row] = await db
+    .select({ offer: agencyDealOfferVersions, deal: agencyDeals })
+    .from(agencyDealOfferVersions)
+    .innerJoin(agencyDeals, eq(agencyDealOfferVersions.dealId, agencyDeals.id))
+    .where(
+      and(
+        eq(agencyDealOfferVersions.id, offerVersionId),
+        eq(agencyDealOfferVersions.agencyId, agencyId),
+        eq(agencyDeals.agencyId, agencyId),
+      ),
+    )
+    .limit(1);
+
+  if (!row?.offer || !row.deal) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Offer version not found' });
+  }
+
+  return row;
+}
+
+async function requireAgencyTransaction(
+  db: AgencyDb,
+  agencyId: number,
+  transactionId: number,
+) {
+  const [transaction] = await db
+    .select()
+    .from(agencyTransactions)
+    .where(and(eq(agencyTransactions.id, transactionId), eq(agencyTransactions.agencyId, agencyId)))
+    .limit(1);
+
+  if (!transaction) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Transaction not found' });
+  }
+
+  return transaction;
+}
+
+async function getExistingTransactionForDeal(db: AgencyDb, agencyId: number, dealId: number) {
+  const [transaction] = await db
+    .select()
+    .from(agencyTransactions)
+    .where(and(eq(agencyTransactions.dealId, dealId), eq(agencyTransactions.agencyId, agencyId)))
+    .limit(1);
+
+  return transaction || null;
+}
+
+async function getNextOfferVersionNumber(db: AgencyDb, agencyId: number, dealId: number) {
+  const [row] = await db
+    .select({ maxVersion: sql<number>`MAX(${agencyDealOfferVersions.versionNumber})` })
+    .from(agencyDealOfferVersions)
+    .where(
+      and(eq(agencyDealOfferVersions.dealId, dealId), eq(agencyDealOfferVersions.agencyId, agencyId)),
+    );
+
+  return Number(row?.maxVersion || 0) + 1;
+}
+
+async function resolveDealContext(input: {
+  db: AgencyDb;
+  agencyId: number;
+  user: ReturnType<typeof requireUser>;
+  leadId: number;
+  sourceViewingId?: number | null;
+  listingId?: number | null;
+  propertyId?: number | null;
+  responsibleAgentId?: number | null;
+}) {
+  const { db, agencyId, user } = input;
+  const lead = await requireAgencyLead(db, user, input.leadId);
+  let listingId = input.listingId || null;
+  let propertyId = input.propertyId || lead.propertyId || null;
+  let responsibleAgentId = input.responsibleAgentId || lead.agentId || null;
+  let sourceViewing: typeof showings.$inferSelect | null = null;
+
+  if (input.sourceViewingId) {
+    const viewing = await requireAgencyViewing(db, agencyId, input.sourceViewingId);
+    sourceViewing = viewing;
+    if (normalizeViewingStatus(viewing.status) !== 'completed') {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'A source viewing must be completed before it can start an offer.',
+      });
+    }
+    if (viewing.leadId && Number(viewing.leadId) !== input.leadId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Source viewing belongs to a different lead.',
+      });
+    }
+    listingId = listingId || viewing.listingId || null;
+    propertyId = propertyId || viewing.propertyId || null;
+    responsibleAgentId = responsibleAgentId || viewing.agentId || null;
+  }
+
+  if (listingId) await requireAgencyListing(db, agencyId, listingId);
+  if (propertyId) await requireAgencyProperty(db, agencyId, propertyId);
+  const responsibleAgent = responsibleAgentId
+    ? await requireAgencyAgent(db, agencyId, responsibleAgentId)
+    : lead.agentId
+      ? await requireAgencyAgent(db, agencyId, lead.agentId)
+      : null;
+
+  if (!responsibleAgent) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Assign a responsible agency agent before opening offer work.',
+    });
+  }
+
+  return {
+    lead,
+    sourceViewing,
+    listingId,
+    propertyId,
+    responsibleAgent,
+  };
+}
+
+async function createTransactionActivity(input: {
+  db: AgencyDb;
+  agencyId: number;
+  transactionId: number;
+  userId: number;
+  eventType: string;
+  description: string;
+  metadata?: Record<string, unknown>;
+}) {
+  await input.db.insert(agencyTransactionActivity).values({
+    agencyId: input.agencyId,
+    transactionId: input.transactionId,
+    actorUserId: input.userId,
+    eventType: input.eventType,
+    description: input.description,
+    metadata: input.metadata || null,
+  });
+}
+
+async function recomputeTransactionNextStep(db: AgencyDb, agencyId: number, transactionId: number) {
+  const [condition] = await db
+    .select()
+    .from(agencyTransactionConditions)
+    .where(
+      and(
+        eq(agencyTransactionConditions.agencyId, agencyId),
+        eq(agencyTransactionConditions.transactionId, transactionId),
+        inArray(agencyTransactionConditions.status, ['pending', 'in_progress', 'blocked'] as any),
+      ),
+    )
+    .orderBy(agencyTransactionConditions.dueAt)
+    .limit(1);
+
+  const [milestone] = await db
+    .select()
+    .from(agencyTransactionMilestones)
+    .where(
+      and(
+        eq(agencyTransactionMilestones.agencyId, agencyId),
+        eq(agencyTransactionMilestones.transactionId, transactionId),
+        inArray(agencyTransactionMilestones.status, ['pending', 'in_progress', 'blocked'] as any),
+      ),
+    )
+    .orderBy(agencyTransactionMilestones.dueAt)
+    .limit(1);
+
+  const candidates = [
+    condition
+      ? {
+          title: condition.title,
+          dueAt: condition.dueAt,
+          risk: condition.status === 'blocked' ? 'blocked' : 'watch',
+        }
+      : null,
+    milestone
+      ? {
+          title: milestone.title,
+          dueAt: milestone.dueAt,
+          risk: milestone.status === 'blocked' ? 'blocked' : 'watch',
+        }
+      : null,
+  ].filter(Boolean) as Array<{ title: string; dueAt?: string | null; risk: string }>;
+
+  candidates.sort((a, b) => {
+    const left = a.dueAt ? new Date(a.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
+    const right = b.dueAt ? new Date(b.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
+    return left - right;
+  });
+
+  const next = candidates[0] || null;
+  const overdue = next?.dueAt ? new Date(next.dueAt).getTime() < Date.now() : false;
+  const riskStatus = next ? (overdue ? 'at_risk' : next.risk) : 'on_track';
+
+  await db
+    .update(agencyTransactions)
+    .set({
+      nextAction: next?.title || 'Review transaction progress',
+      nextDeadline: next?.dueAt || null,
+      riskStatus: riskStatus as any,
+      updatedAt: nowAsDbTimestamp(),
+    })
+    .where(and(eq(agencyTransactions.id, transactionId), eq(agencyTransactions.agencyId, agencyId)));
+
+  const [updated] = await db
+    .select()
+    .from(agencyTransactions)
+    .where(and(eq(agencyTransactions.id, transactionId), eq(agencyTransactions.agencyId, agencyId)))
+    .limit(1);
+
+  return updated;
+}
+
+async function getDealWorkspaceRows(input: {
+  db: AgencyDb;
+  agencyId: number;
+  limit: number;
+  dealId?: number;
+}) {
+  const baseConditions = [eq(agencyDeals.agencyId, input.agencyId)];
+  if (input.dealId) baseConditions.push(eq(agencyDeals.id, input.dealId));
+
+  const rows = await input.db
+    .select({
+      deal: agencyDeals,
+      lead: leads,
+      listing: listings,
+      property: properties,
+      agent: agents,
+    })
+    .from(agencyDeals)
+    .leftJoin(leads, eq(agencyDeals.leadId, leads.id))
+    .leftJoin(listings, eq(agencyDeals.listingId, listings.id))
+    .leftJoin(properties, eq(agencyDeals.propertyId, properties.id))
+    .leftJoin(agents, eq(agencyDeals.responsibleAgentId, agents.id))
+    .where(and(...baseConditions))
+    .orderBy(desc(agencyDeals.updatedAt))
+    .limit(input.limit);
+
+  const dealIds = rows.map(row => row.deal.id);
+  if (!dealIds.length) return [];
+
+  const offerRows = await input.db
+    .select()
+    .from(agencyDealOfferVersions)
+    .where(
+      and(
+        eq(agencyDealOfferVersions.agencyId, input.agencyId),
+        inArray(agencyDealOfferVersions.dealId, dealIds),
+      ),
+    )
+    .orderBy(asc(agencyDealOfferVersions.versionNumber));
+
+  const transactionRows = await input.db
+    .select()
+    .from(agencyTransactions)
+    .where(
+      and(eq(agencyTransactions.agencyId, input.agencyId), inArray(agencyTransactions.dealId, dealIds)),
+    );
+  const transactionIds = transactionRows.map(transaction => transaction.id);
+
+  const [milestoneRows, conditionRows, partyRows, documentRows, activityRows] = transactionIds.length
+    ? await Promise.all([
+        input.db
+          .select()
+          .from(agencyTransactionMilestones)
+          .where(
+            and(
+              eq(agencyTransactionMilestones.agencyId, input.agencyId),
+              inArray(agencyTransactionMilestones.transactionId, transactionIds),
+            ),
+          )
+          .orderBy(asc(agencyTransactionMilestones.sequence)),
+        input.db
+          .select()
+          .from(agencyTransactionConditions)
+          .where(
+            and(
+              eq(agencyTransactionConditions.agencyId, input.agencyId),
+              inArray(agencyTransactionConditions.transactionId, transactionIds),
+            ),
+          )
+          .orderBy(asc(agencyTransactionConditions.dueAt)),
+        input.db
+          .select()
+          .from(agencyTransactionParties)
+          .where(
+            and(
+              eq(agencyTransactionParties.agencyId, input.agencyId),
+              inArray(agencyTransactionParties.transactionId, transactionIds),
+            ),
+          ),
+        input.db
+          .select()
+          .from(agencyTransactionDocuments)
+          .where(
+            and(
+              eq(agencyTransactionDocuments.agencyId, input.agencyId),
+              inArray(agencyTransactionDocuments.transactionId, transactionIds),
+            ),
+          )
+          .orderBy(desc(agencyTransactionDocuments.uploadedAt)),
+        input.db
+          .select()
+          .from(agencyTransactionActivity)
+          .where(
+            and(
+              eq(agencyTransactionActivity.agencyId, input.agencyId),
+              inArray(agencyTransactionActivity.transactionId, transactionIds),
+            ),
+          )
+          .orderBy(desc(agencyTransactionActivity.createdAt)),
+      ])
+    : [[], [], [], [], []];
+
+  const offersByDeal = new Map<number, typeof offerRows>();
+  offerRows.forEach(offer => {
+    offersByDeal.set(offer.dealId, [...(offersByDeal.get(offer.dealId) || []), offer]);
+  });
+
+  const transactionByDeal = new Map<number, typeof agencyTransactions.$inferSelect>();
+  transactionRows.forEach(transaction => {
+    transactionByDeal.set(transaction.dealId, transaction);
+  });
+  const milestonesByTransaction = new Map<number, typeof milestoneRows>();
+  milestoneRows.forEach(milestone => {
+    milestonesByTransaction.set(milestone.transactionId, [
+      ...(milestonesByTransaction.get(milestone.transactionId) || []),
+      milestone,
+    ]);
+  });
+  const conditionsByTransaction = new Map<number, typeof conditionRows>();
+  conditionRows.forEach(condition => {
+    conditionsByTransaction.set(condition.transactionId, [
+      ...(conditionsByTransaction.get(condition.transactionId) || []),
+      condition,
+    ]);
+  });
+  const partiesByTransaction = new Map<number, typeof partyRows>();
+  partyRows.forEach(party => {
+    partiesByTransaction.set(party.transactionId, [
+      ...(partiesByTransaction.get(party.transactionId) || []),
+      party,
+    ]);
+  });
+  const documentsByTransaction = new Map<number, typeof documentRows>();
+  documentRows.forEach(document => {
+    documentsByTransaction.set(document.transactionId, [
+      ...(documentsByTransaction.get(document.transactionId) || []),
+      document,
+    ]);
+  });
+  const activityByTransaction = new Map<number, typeof activityRows>();
+  activityRows.forEach(activity => {
+    activityByTransaction.set(activity.transactionId, [
+      ...(activityByTransaction.get(activity.transactionId) || []),
+      activity,
+    ]);
+  });
+
+  return rows.map(row => {
+    const offersForDeal = offersByDeal.get(row.deal.id) || [];
+    const latestOffer = offersForDeal[offersForDeal.length - 1] || null;
+    const transaction = transactionByDeal.get(row.deal.id) || null;
+    const transactionId = transaction?.id || 0;
+
+    return {
+      ...row.deal,
+      acceptedAmount:
+        row.deal.acceptedAmount == null ? null : decimalToNumber(row.deal.acceptedAmount),
+      lead: mapDealLead(row.lead),
+      listing: mapDealListing(row.listing),
+      property: mapDealProperty(row.property),
+      agent: mapDealAgent(row.agent),
+      offers: offersForDeal.map(mapOfferVersion),
+      latestOffer: latestOffer ? mapOfferVersion(latestOffer) : null,
+      transaction: transaction
+        ? {
+            ...mapTransaction(transaction),
+            milestones: (milestonesByTransaction.get(transactionId) || []).map(mapWorkItem),
+            conditions: (conditionsByTransaction.get(transactionId) || []).map(mapWorkItem),
+            parties: partiesByTransaction.get(transactionId) || [],
+            documents: documentsByTransaction.get(transactionId) || [],
+            activity: activityByTransaction.get(transactionId) || [],
+          }
+        : null,
+    };
+  });
+}
+
+export const __agencyDealEngineTestHooks = {
+  calculateCommission,
+  normalizeOfferTerms,
+  workflowTemplates,
+};
 
 async function getAgencyListingSummary(db: AgencyDb, agencyId: number) {
   const scopedRows = await db
@@ -4145,6 +5054,830 @@ export const agencyRouter = router({
       return { success: true };
     }),
 
+  getDealWorkspace: agentProcedure
+    .input(
+      z
+        .object({
+          dealId: z.number().int().positive().optional(),
+          limit: z.number().int().min(1).max(100).default(50),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      return await getDealWorkspaceRows({
+        db,
+        agencyId,
+        limit: input?.limit || 50,
+        dealId: input?.dealId,
+      });
+    }),
+
+  createDeal: agentProcedure
+    .input(createDealInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const context = await resolveDealContext({
+        db,
+        agencyId,
+        user,
+        leadId: input.leadId,
+        sourceViewingId: input.sourceViewingId,
+        listingId: input.listingId,
+        propertyId: input.propertyId,
+        responsibleAgentId: input.responsibleAgentId,
+      });
+
+      if (['lost', 'closed'].includes(String(context.lead.status || ''))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Closed or lost leads cannot start new offer work.',
+        });
+      }
+
+      const now = nowAsDbTimestamp();
+      let dealId = 0;
+      let offerVersionId: number | null = null;
+      const stage = input.terms ? 'draft_offer' : 'interest';
+      const nextAction = input.terms ? 'Submit offer to seller decision' : 'Draft offer terms';
+      const nextDeadline = input.terms?.offerExpiry
+        ? parseOptionalDbTimestamp(input.terms.offerExpiry)
+        : null;
+
+      await db.transaction(async tx => {
+        const [dealInsert] = await tx.insert(agencyDeals).values({
+          agencyId,
+          leadId: context.lead.id,
+          listingId: context.listingId,
+          propertyId: context.propertyId,
+          sourceViewingId: context.sourceViewing?.id || null,
+          responsibleAgentId: context.responsibleAgent.id,
+          transactionType: input.transactionType,
+          stage,
+          interestStatus: input.interestStatus,
+          riskStatus: input.interestStatus === 'not_interested' ? 'cancelled' : 'on_track',
+          nextAction,
+          nextDeadline,
+          createdByUserId: user.id,
+          updatedByUserId: user.id,
+        } as any);
+        dealId = insertResultId(dealInsert);
+
+        if (input.terms) {
+          const [offerInsert] = await tx.insert(agencyDealOfferVersions).values(
+            offerVersionInsertValues({
+              agencyId,
+              dealId,
+              versionNumber: 1,
+              actor: input.transactionType === 'rental' ? 'tenant' : 'buyer',
+              eventType: 'initial_offer',
+              status: 'draft',
+              terms: input.terms,
+              userId: user.id,
+            }) as any,
+          );
+          offerVersionId = insertResultId(offerInsert);
+        }
+
+        await tx
+          .update(leads)
+          .set({
+            status: 'offer_sent',
+            funnelStage: 'offer',
+            updatedAt: now,
+            lastContactedAt: context.lead.lastContactedAt || now,
+          } as any)
+          .where(and(eq(leads.id, context.lead.id), eq(leads.agencyId, agencyId)));
+
+        await tx.insert(leadActivities).values({
+          leadId: context.lead.id,
+          userId: user.id,
+          type: 'status_change',
+          description:
+            input.notes ||
+            `Deal opened from ${context.sourceViewing ? 'completed viewing' : 'agency lead'} with ${input.interestStatus.replace(/_/g, ' ')} interest.`,
+        });
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.deal_created',
+        targetType: 'agency_deal',
+        targetId: dealId,
+        metadata: {
+          agencyId,
+          leadId: context.lead.id,
+          sourceViewingId: context.sourceViewing?.id || null,
+          offerVersionId,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true, dealId, offerVersionId };
+    }),
+
+  createOfferVersion: agentProcedure
+    .input(createOfferVersionInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const deal = await requireAgencyDeal(db, agencyId, input.dealId);
+      const existingTransaction = await getExistingTransactionForDeal(db, agencyId, deal.id);
+      if (existingTransaction) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This deal already has an accepted transaction. Add transaction updates instead.',
+        });
+      }
+
+      const versionNumber = await getNextOfferVersionNumber(db, agencyId, deal.id);
+      const nextDeadline = input.terms.offerExpiry
+        ? parseOptionalDbTimestamp(input.terms.offerExpiry)
+        : deal.nextDeadline;
+      let offerVersionId = 0;
+
+      await db.transaction(async tx => {
+        if (versionNumber > 1 && input.eventType.includes('counter')) {
+          await tx
+            .update(agencyDealOfferVersions)
+            .set({ status: 'countered', updatedAt: nowAsDbTimestamp() } as any)
+            .where(
+              and(
+                eq(agencyDealOfferVersions.agencyId, agencyId),
+                eq(agencyDealOfferVersions.dealId, deal.id),
+                inArray(agencyDealOfferVersions.status, ['submitted', 'under_review'] as any),
+              ),
+            );
+        }
+
+        const [offerInsert] = await tx.insert(agencyDealOfferVersions).values(
+          offerVersionInsertValues({
+            agencyId,
+            dealId: deal.id,
+            versionNumber,
+            parentOfferVersionId: input.parentOfferVersionId,
+            actor: input.actor,
+            eventType: input.eventType,
+            status: input.status,
+            terms: input.terms,
+            userId: user.id,
+          }) as any,
+        );
+        offerVersionId = insertResultId(offerInsert);
+
+        await tx
+          .update(agencyDeals)
+          .set({
+            stage: input.status === 'draft' ? 'draft_offer' : 'negotiation',
+            nextAction: input.status === 'draft' ? 'Submit offer version' : 'Review negotiation response',
+            nextDeadline,
+            updatedByUserId: user.id,
+            updatedAt: nowAsDbTimestamp(),
+          } as any)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)));
+
+        if (deal.leadId) {
+          await tx.insert(leadActivities).values({
+            leadId: deal.leadId,
+            userId: user.id,
+            type: 'note',
+            description:
+              input.note ||
+              `Offer V${versionNumber} recorded: ${input.eventType.replace(/_/g, ' ')}.`,
+          });
+        }
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.offer_version_created',
+        targetType: 'agency_deal_offer_version',
+        targetId: offerVersionId,
+        metadata: { agencyId, dealId: deal.id, versionNumber, eventType: input.eventType },
+        req: ctx.req,
+      });
+
+      return { success: true, offerVersionId, versionNumber };
+    }),
+
+  submitOfferVersion: agentProcedure
+    .input(submitOfferInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const { offer, deal } = await requireAgencyOfferVersion(db, agencyId, input.offerVersionId);
+      if (!['draft', 'countered'].includes(String(offer.status || ''))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only draft or countered offer versions can be submitted.',
+        });
+      }
+
+      const now = nowAsDbTimestamp();
+      await db.transaction(async tx => {
+        await tx
+          .update(agencyDealOfferVersions)
+          .set({ status: 'submitted', submittedAt: now, updatedAt: now } as any)
+          .where(
+            and(
+              eq(agencyDealOfferVersions.id, offer.id),
+              eq(agencyDealOfferVersions.agencyId, agencyId),
+            ),
+          );
+        await tx
+          .update(agencyDeals)
+          .set({
+            stage: 'submitted',
+            nextAction: 'Record seller decision or counter-offer',
+            nextDeadline: offer.offerExpiry,
+            updatedByUserId: user.id,
+            updatedAt: now,
+          } as any)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)));
+        if (deal.leadId) {
+          await tx.insert(leadActivities).values({
+            leadId: deal.leadId,
+            userId: user.id,
+            type: 'status_change',
+            description: input.note || `Offer V${offer.versionNumber} submitted for decision.`,
+          });
+        }
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.offer_submitted',
+        targetType: 'agency_deal_offer_version',
+        targetId: offer.id,
+        metadata: { agencyId, dealId: deal.id, offerExpiry: offer.offerExpiry || null },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  acceptOfferVersion: agentProcedure
+    .input(acceptOfferInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const { offer, deal } = await requireAgencyOfferVersion(db, agencyId, input.offerVersionId);
+      const existingTransaction = await getExistingTransactionForDeal(db, agencyId, deal.id);
+      if (existingTransaction) {
+        return {
+          success: true,
+          idempotent: true,
+          transactionId: existingTransaction.id,
+          dealId: deal.id,
+        };
+      }
+
+      if (['rejected', 'withdrawn', 'expired'].includes(String(offer.status || ''))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Rejected, withdrawn, or expired offer versions cannot be accepted.',
+        });
+      }
+
+      const acceptedAmount = decimalToNumber(offer.amount);
+      const commission = calculateCommission({
+        acceptedAmount,
+        basis: input.commissionBasis,
+        percentage: input.commissionPercentage,
+        fixedAmount: input.commissionFixedAmount,
+        agencySharePercentage: input.agencySharePercentage,
+        referralSplit: input.referralSplit,
+        otherDeductions: input.otherDeductions,
+      });
+      const template = workflowTemplates(deal.transactionType as DealTransactionType);
+      const now = nowAsDbTimestamp();
+      let transactionId = 0;
+
+      await db.transaction(async tx => {
+        await tx
+          .update(agencyDealOfferVersions)
+          .set({ status: 'superseded', updatedAt: now } as any)
+          .where(
+            and(
+              eq(agencyDealOfferVersions.agencyId, agencyId),
+              eq(agencyDealOfferVersions.dealId, deal.id),
+              ne(agencyDealOfferVersions.id, offer.id),
+              inArray(
+                agencyDealOfferVersions.status,
+                ['draft', 'submitted', 'under_review', 'countered'] as any,
+              ),
+            ),
+          );
+        await tx
+          .update(agencyDealOfferVersions)
+          .set({ status: 'accepted', decidedAt: now, updatedAt: now } as any)
+          .where(
+            and(
+              eq(agencyDealOfferVersions.id, offer.id),
+              eq(agencyDealOfferVersions.agencyId, agencyId),
+            ),
+          );
+
+        const firstDeadline = template.milestones.find(milestone => milestone[4] !== 'completed');
+        const [transactionInsert] = await tx.insert(agencyTransactions).values({
+          agencyId,
+          dealId: deal.id,
+          leadId: deal.leadId,
+          listingId: deal.listingId,
+          propertyId: deal.propertyId,
+          responsibleAgentId: deal.responsibleAgentId,
+          acceptedOfferVersionId: offer.id,
+          transactionType: deal.transactionType,
+          status: 'open',
+          stage: template.stage,
+          riskStatus: 'watch',
+          acceptedAmount: toRequiredDecimalString(acceptedAmount),
+          acceptedTermsSnapshot: offer.termsSnapshot || {
+            amount: acceptedAmount,
+            conditionsSummary: offer.conditionsSummary,
+            specialConditions: offer.specialConditions,
+          },
+          targetCompletionDate: parseOptionalDbTimestamp(input.targetCompletionDate),
+          nextAction: template.nextAction,
+          nextDeadline: firstDeadline ? futureDbTimestamp(firstDeadline[3]) : null,
+          transferDutyVatTreatment: input.transferDutyVatTreatment,
+          commissionBasis: input.commissionBasis,
+          commissionPercentage: toRequiredDecimalString(input.commissionPercentage),
+          commissionFixedAmount: toDecimalString(input.commissionFixedAmount),
+          commissionVatTreatment: input.commissionVatTreatment,
+          grossCommission: toRequiredDecimalString(commission.grossCommission),
+          agencyShare: toRequiredDecimalString(commission.agencyShare),
+          agentShare: toRequiredDecimalString(commission.agentShare),
+          referralSplit: toRequiredDecimalString(commission.referralSplit),
+          otherDeductions: toRequiredDecimalString(commission.otherDeductions),
+          expectedCommission: toRequiredDecimalString(commission.expectedCommission),
+          commissionStatus: 'estimated',
+          expectedPaymentDate: parseOptionalDbTimestamp(input.expectedPaymentDate),
+          createdByUserId: user.id,
+          updatedByUserId: user.id,
+        } as any);
+        transactionId = insertResultId(transactionInsert);
+
+        await tx.insert(agencyTransactionMilestones).values(
+          template.milestones.map((milestone, index) => ({
+            agencyId,
+            transactionId,
+            sequence: index + 1,
+            milestoneKey: milestone[0],
+            title: milestone[1],
+            responsibleParty: milestone[2],
+            dueAt: futureDbTimestamp(milestone[3]),
+            status: milestone[4],
+            completedAt: milestone[4] === 'completed' ? now : null,
+          })) as any,
+        );
+
+        await tx.insert(agencyTransactionConditions).values(
+          template.conditions.map(condition => ({
+            agencyId,
+            transactionId,
+            title: condition[0],
+            description: condition[1],
+            responsibleParty: condition[2],
+            dueAt: futureDbTimestamp(condition[3]),
+            status: 'pending',
+            createdByUserId: user.id,
+          })) as any,
+        );
+
+        if (deal.leadId) {
+          const [lead] = await tx.select().from(leads).where(eq(leads.id, deal.leadId)).limit(1);
+          if (lead) {
+            await tx.insert(agencyTransactionParties).values({
+              agencyId,
+              transactionId,
+              role: deal.transactionType === 'rental' ? 'tenant' : 'buyer',
+              name: lead.name,
+              email: lead.email,
+              phone: lead.phone,
+            } as any);
+
+            await tx
+              .update(leads)
+              .set({
+                status: 'converted',
+                funnelStage: 'sale',
+                convertedAt: now,
+                updatedAt: now,
+              } as any)
+              .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)));
+
+            await tx.insert(leadActivities).values({
+              leadId: deal.leadId,
+              userId: user.id,
+              type: 'status_change',
+              description:
+                input.note ||
+                `Offer V${offer.versionNumber} accepted and transaction #${transactionId} opened.`,
+            });
+          }
+        }
+
+        if (deal.responsibleAgentId) {
+          const [agent] = await tx
+            .select()
+            .from(agents)
+            .where(eq(agents.id, deal.responsibleAgentId))
+            .limit(1);
+          if (agent) {
+            await tx.insert(agencyTransactionParties).values({
+              agencyId,
+              transactionId,
+              role: 'listing_agent',
+              name: getAgentDisplayName(agent) || `Agent #${agent.id}`,
+              email: agent.email,
+              phone: agent.phone,
+              agentId: agent.id,
+              userId: agent.userId,
+            } as any);
+          }
+        }
+
+        await tx
+          .update(agencyDeals)
+          .set({
+            stage: 'transaction_open',
+            riskStatus: 'watch',
+            acceptedOfferVersionId: offer.id,
+            acceptedAmount: toRequiredDecimalString(acceptedAmount),
+            acceptedAt: now,
+            nextAction: template.nextAction,
+            nextDeadline: firstDeadline ? futureDbTimestamp(firstDeadline[3]) : null,
+            updatedByUserId: user.id,
+            updatedAt: now,
+          } as any)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)));
+
+        await tx.insert(agencyTransactionActivity).values({
+          agencyId,
+          transactionId,
+          actorUserId: user.id,
+          eventType: 'transaction_opened',
+          description: `Accepted offer opened a ${deal.transactionType} transaction with expected commission R${commission.expectedCommission.toFixed(2)}.`,
+          metadata: { offerVersionId: offer.id, dealId: deal.id },
+        });
+      });
+
+      const refreshed = await recomputeTransactionNextStep(db, agencyId, transactionId);
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.offer_accepted_transaction_opened',
+        targetType: 'agency_transaction',
+        targetId: transactionId,
+        metadata: {
+          agencyId,
+          dealId: deal.id,
+          offerVersionId: offer.id,
+          expectedCommission: commission.expectedCommission,
+          nextDeadline: refreshed?.nextDeadline || null,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true, idempotent: false, transactionId, dealId: deal.id };
+    }),
+
+  addTransactionCondition: agentProcedure
+    .input(addTransactionConditionInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      await requireAgencyTransaction(db, agencyId, input.transactionId);
+
+      const [conditionInsert] = await db.insert(agencyTransactionConditions).values({
+        agencyId,
+        transactionId: input.transactionId,
+        title: input.title,
+        description: input.description || null,
+        responsibleParty: input.responsibleParty,
+        dueAt: parseOptionalDbTimestamp(input.dueAt),
+        status: 'pending',
+        notes: input.notes || null,
+        createdByUserId: user.id,
+      } as any);
+      const conditionId = insertResultId(conditionInsert);
+      await createTransactionActivity({
+        db,
+        agencyId,
+        transactionId: input.transactionId,
+        userId: user.id,
+        eventType: 'condition_added',
+        description: `Condition added: ${input.title}.`,
+      });
+      await recomputeTransactionNextStep(db, agencyId, input.transactionId);
+
+      return { success: true, conditionId };
+    }),
+
+  updateTransactionWorkItem: agentProcedure
+    .input(updateTransactionWorkItemInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      await requireAgencyTransaction(db, agencyId, input.transactionId);
+      const now = nowAsDbTimestamp();
+      const terminal = ['completed', 'waived', 'cancelled'].includes(input.status);
+
+      if (input.itemType === 'milestone') {
+        const [milestone] = await db
+          .select()
+          .from(agencyTransactionMilestones)
+          .where(
+            and(
+              eq(agencyTransactionMilestones.id, input.itemId),
+              eq(agencyTransactionMilestones.transactionId, input.transactionId),
+              eq(agencyTransactionMilestones.agencyId, agencyId),
+            ),
+          )
+          .limit(1);
+        if (!milestone) throw new TRPCError({ code: 'NOT_FOUND', message: 'Milestone not found' });
+        await db
+          .update(agencyTransactionMilestones)
+          .set({
+            status: input.status,
+            completedAt: terminal ? now : null,
+            notes: input.notes || milestone.notes,
+            updatedAt: now,
+          } as any)
+          .where(eq(agencyTransactionMilestones.id, input.itemId));
+      } else {
+        const [condition] = await db
+          .select()
+          .from(agencyTransactionConditions)
+          .where(
+            and(
+              eq(agencyTransactionConditions.id, input.itemId),
+              eq(agencyTransactionConditions.transactionId, input.transactionId),
+              eq(agencyTransactionConditions.agencyId, agencyId),
+            ),
+          )
+          .limit(1);
+        if (!condition) throw new TRPCError({ code: 'NOT_FOUND', message: 'Condition not found' });
+        await db
+          .update(agencyTransactionConditions)
+          .set({
+            status: input.status,
+            completedAt: terminal ? now : null,
+            waivedOrCancelledReason:
+              input.status === 'waived' || input.status === 'cancelled'
+                ? input.waivedOrCancelledReason || condition.waivedOrCancelledReason
+                : condition.waivedOrCancelledReason,
+            notes: input.notes || condition.notes,
+            updatedAt: now,
+          } as any)
+          .where(eq(agencyTransactionConditions.id, input.itemId));
+      }
+
+      await createTransactionActivity({
+        db,
+        agencyId,
+        transactionId: input.transactionId,
+        userId: user.id,
+        eventType: `${input.itemType}_${input.status}`,
+        description: `${input.itemType === 'milestone' ? 'Milestone' : 'Condition'} marked ${input.status}.`,
+      });
+      await recomputeTransactionNextStep(db, agencyId, input.transactionId);
+
+      return { success: true };
+    }),
+
+  addTransactionParty: agentProcedure
+    .input(addTransactionPartyInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      await requireAgencyTransaction(db, agencyId, input.transactionId);
+
+      const [partyInsert] = await db.insert(agencyTransactionParties).values({
+        agencyId,
+        transactionId: input.transactionId,
+        role: input.role,
+        name: input.name,
+        email: input.email || null,
+        phone: input.phone || null,
+        organization: input.organization || null,
+        notes: input.notes || null,
+      } as any);
+      const partyId = insertResultId(partyInsert);
+      await createTransactionActivity({
+        db,
+        agencyId,
+        transactionId: input.transactionId,
+        userId: user.id,
+        eventType: 'party_added',
+        description: `${input.role.replace(/_/g, ' ')} added: ${input.name}.`,
+      });
+
+      return { success: true, partyId };
+    }),
+
+  addTransactionDocument: agentProcedure
+    .input(addTransactionDocumentInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      await requireAgencyTransaction(db, agencyId, input.transactionId);
+
+      if (input.conditionId) {
+        const [condition] = await db
+          .select()
+          .from(agencyTransactionConditions)
+          .where(
+            and(
+              eq(agencyTransactionConditions.id, input.conditionId),
+              eq(agencyTransactionConditions.transactionId, input.transactionId),
+              eq(agencyTransactionConditions.agencyId, agencyId),
+            ),
+          )
+          .limit(1);
+        if (!condition) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Condition not found' });
+        }
+      }
+
+      const [documentInsert] = await db.insert(agencyTransactionDocuments).values({
+        agencyId,
+        transactionId: input.transactionId,
+        conditionId: input.conditionId || null,
+        documentType: input.documentType,
+        fileName: input.fileName,
+        storageKey: input.storageKey,
+        contentType: input.contentType || null,
+        fileSize: input.fileSize || null,
+        visibilityScope: 'agency_private',
+        uploadedByUserId: user.id,
+        notes: input.notes || null,
+      } as any);
+      const documentId = insertResultId(documentInsert);
+
+      if (input.conditionId) {
+        await db
+          .update(agencyTransactionConditions)
+          .set({ evidenceDocumentId: documentId, updatedAt: nowAsDbTimestamp() } as any)
+          .where(eq(agencyTransactionConditions.id, input.conditionId));
+      }
+
+      await createTransactionActivity({
+        db,
+        agencyId,
+        transactionId: input.transactionId,
+        userId: user.id,
+        eventType: 'document_added',
+        description: `${input.documentType.replace(/_/g, ' ')} uploaded privately: ${input.fileName}.`,
+        metadata: { documentId, conditionId: input.conditionId || null },
+      });
+
+      return { success: true, documentId };
+    }),
+
+  updateTransaction: agentProcedure
+    .input(updateTransactionInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const transaction = await requireAgencyTransaction(db, agencyId, input.transactionId);
+      const now = nowAsDbTimestamp();
+      const nextStatus = input.status || transaction.status;
+      const commissionStatus =
+        input.commissionStatus ||
+        (nextStatus === 'completed' && transaction.commissionStatus === 'estimated'
+          ? 'payable'
+          : transaction.commissionStatus);
+      const riskStatus =
+        input.riskStatus ||
+        (nextStatus === 'completed'
+          ? 'complete'
+          : nextStatus === 'cancelled'
+            ? 'cancelled'
+            : transaction.riskStatus);
+
+      await db.transaction(async tx => {
+        await tx
+          .update(agencyTransactions)
+          .set({
+            stage: input.stage || transaction.stage,
+            status: nextStatus,
+            riskStatus,
+            nextAction: input.nextAction === undefined ? transaction.nextAction : input.nextAction,
+            nextDeadline:
+              input.nextDeadline === undefined
+                ? transaction.nextDeadline
+                : parseOptionalDbTimestamp(input.nextDeadline),
+            expectedPaymentDate:
+              input.expectedPaymentDate === undefined
+                ? transaction.expectedPaymentDate
+                : parseOptionalDbTimestamp(input.expectedPaymentDate),
+            commissionStatus,
+            completedAt: nextStatus === 'completed' ? transaction.completedAt || now : transaction.completedAt,
+            cancelledAt: nextStatus === 'cancelled' ? transaction.cancelledAt || now : transaction.cancelledAt,
+            updatedByUserId: user.id,
+            updatedAt: now,
+          } as any)
+          .where(
+            and(
+              eq(agencyTransactions.id, transaction.id),
+              eq(agencyTransactions.agencyId, agencyId),
+            ),
+          );
+
+        await tx
+          .update(agencyDeals)
+          .set({
+            stage:
+              nextStatus === 'completed'
+                ? 'completed'
+                : nextStatus === 'cancelled'
+                  ? 'cancelled'
+                  : 'transaction_progression',
+            riskStatus,
+            nextAction:
+              input.nextAction === undefined ? transaction.nextAction : input.nextAction,
+            nextDeadline:
+              input.nextDeadline === undefined
+                ? transaction.nextDeadline
+                : parseOptionalDbTimestamp(input.nextDeadline),
+            updatedByUserId: user.id,
+            updatedAt: now,
+          } as any)
+          .where(and(eq(agencyDeals.id, transaction.dealId), eq(agencyDeals.agencyId, agencyId)));
+
+        await tx.insert(agencyTransactionActivity).values({
+          agencyId,
+          transactionId: transaction.id,
+          actorUserId: user.id,
+          eventType: 'transaction_updated',
+          description:
+            input.note ||
+            `Transaction updated${input.status ? ` to ${input.status}` : ''}.`,
+          metadata: {
+            previousStatus: transaction.status,
+            nextStatus,
+            commissionStatus,
+          },
+        });
+      });
+
+      return { success: true };
+    }),
+
   getMyDay: agentProcedure
     .input(
       z
@@ -4176,6 +5909,9 @@ export const agencyRouter = router({
         urgentLeads,
         upcomingViewings,
         listingRows,
+        offerDeadlineRows,
+        conditionDeadlineRows,
+        milestoneDeadlineRows,
       ] = await Promise.all([
         db
           .select({ lead: leads, property: properties, agent: agents })
@@ -4262,6 +5998,94 @@ export const agencyRouter = router({
           )
           .orderBy(desc(listings.updatedAt))
           .limit(limit),
+        db
+          .select({
+            offer: agencyDealOfferVersions,
+            deal: agencyDeals,
+            lead: leads,
+            listing: listings,
+            property: properties,
+          })
+          .from(agencyDealOfferVersions)
+          .innerJoin(agencyDeals, eq(agencyDealOfferVersions.dealId, agencyDeals.id))
+          .leftJoin(leads, eq(agencyDeals.leadId, leads.id))
+          .leftJoin(listings, eq(agencyDeals.listingId, listings.id))
+          .leftJoin(properties, eq(agencyDeals.propertyId, properties.id))
+          .where(
+            and(
+              eq(agencyDealOfferVersions.agencyId, agencyId),
+              eq(agencyDeals.agencyId, agencyId),
+              inArray(
+                agencyDealOfferVersions.status,
+                ['draft', 'submitted', 'under_review', 'countered'] as any,
+              ),
+              sql`${agencyDealOfferVersions.offerExpiry} IS NOT NULL AND ${agencyDealOfferVersions.offerExpiry} < ${bounds.endDb}`,
+            ),
+          )
+          .orderBy(agencyDealOfferVersions.offerExpiry)
+          .limit(limit),
+        db
+          .select({
+            condition: agencyTransactionConditions,
+            transaction: agencyTransactions,
+            deal: agencyDeals,
+            lead: leads,
+            listing: listings,
+            property: properties,
+          })
+          .from(agencyTransactionConditions)
+          .innerJoin(
+            agencyTransactions,
+            eq(agencyTransactionConditions.transactionId, agencyTransactions.id),
+          )
+          .innerJoin(agencyDeals, eq(agencyTransactions.dealId, agencyDeals.id))
+          .leftJoin(leads, eq(agencyTransactions.leadId, leads.id))
+          .leftJoin(listings, eq(agencyTransactions.listingId, listings.id))
+          .leftJoin(properties, eq(agencyTransactions.propertyId, properties.id))
+          .where(
+            and(
+              eq(agencyTransactionConditions.agencyId, agencyId),
+              eq(agencyTransactions.agencyId, agencyId),
+              inArray(
+                agencyTransactionConditions.status,
+                ['pending', 'in_progress', 'blocked'] as any,
+              ),
+              sql`${agencyTransactionConditions.dueAt} IS NOT NULL AND ${agencyTransactionConditions.dueAt} < ${bounds.endDb}`,
+            ),
+          )
+          .orderBy(agencyTransactionConditions.dueAt)
+          .limit(limit),
+        db
+          .select({
+            milestone: agencyTransactionMilestones,
+            transaction: agencyTransactions,
+            deal: agencyDeals,
+            lead: leads,
+            listing: listings,
+            property: properties,
+          })
+          .from(agencyTransactionMilestones)
+          .innerJoin(
+            agencyTransactions,
+            eq(agencyTransactionMilestones.transactionId, agencyTransactions.id),
+          )
+          .innerJoin(agencyDeals, eq(agencyTransactions.dealId, agencyDeals.id))
+          .leftJoin(leads, eq(agencyTransactions.leadId, leads.id))
+          .leftJoin(listings, eq(agencyTransactions.listingId, listings.id))
+          .leftJoin(properties, eq(agencyTransactions.propertyId, properties.id))
+          .where(
+            and(
+              eq(agencyTransactionMilestones.agencyId, agencyId),
+              eq(agencyTransactions.agencyId, agencyId),
+              inArray(
+                agencyTransactionMilestones.status,
+                ['pending', 'in_progress', 'blocked'] as any,
+              ),
+              sql`${agencyTransactionMilestones.dueAt} IS NOT NULL AND ${agencyTransactionMilestones.dueAt} < ${bounds.endDb}`,
+            ),
+          )
+          .orderBy(agencyTransactionMilestones.dueAt)
+          .limit(limit),
       ]);
 
       const mapLead = (row: { lead: typeof leads.$inferSelect; property: any; agent: any }) => ({
@@ -4290,6 +6114,52 @@ export const agencyRouter = router({
           : null,
       });
 
+      const mapDealDeadline = (row: any) => {
+        const offer = row.offer;
+        const condition = row.condition;
+        const milestone = row.milestone;
+        const transaction = row.transaction;
+        const deal = row.deal;
+        const dueAt = offer?.offerExpiry || condition?.dueAt || milestone?.dueAt || null;
+        const title = offer
+          ? `Offer V${offer.versionNumber} expires`
+          : condition
+            ? condition.title
+            : milestone?.title || 'Transaction deadline';
+        const type = offer ? 'offer_expiry' : condition ? 'condition' : 'milestone';
+        const amount = offer?.amount || transaction?.acceptedAmount || deal?.acceptedAmount || null;
+
+        return {
+          id: `${type}:${offer?.id || condition?.id || milestone?.id}`,
+          type,
+          title,
+          detail:
+            row.lead?.name ||
+            row.listing?.title ||
+            row.property?.title ||
+            `Deal #${deal?.id || transaction?.dealId}`,
+          dueAt,
+          overdue: dueAt ? new Date(dueAt).getTime() < bounds.start.getTime() : false,
+          dealId: deal?.id || transaction?.dealId || null,
+          transactionId: transaction?.id || null,
+          amount: amount == null ? null : decimalToNumber(amount),
+          status: offer?.status || condition?.status || milestone?.status || null,
+          listing: mapDealListing(row.listing),
+          property: mapDealProperty(row.property),
+          lead: mapDealLead(row.lead),
+        };
+      };
+
+      const transactionDeadlines = [
+        ...offerDeadlineRows.map(mapDealDeadline),
+        ...conditionDeadlineRows.map(mapDealDeadline),
+        ...milestoneDeadlineRows.map(mapDealDeadline),
+      ].sort((left, right) => {
+        const leftTime = left.dueAt ? new Date(left.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
+        const rightTime = right.dueAt ? new Date(right.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
+        return leftTime - rightTime;
+      });
+
       return {
         date: dayKey,
         overdueFollowUps: overdueFollowUps.map(mapLead),
@@ -4299,6 +6169,7 @@ export const agencyRouter = router({
         feedbackRequiredViewings,
         urgentLeads: urgentLeads.map(mapLead),
         listingTasks: listingRows.map(row => mapAgencyListingRow(row, agencyId)),
+        transactionDeadlines,
         upcomingWork: upcomingViewings,
         counts: {
           overdueFollowUps: overdueFollowUps.length,
@@ -4308,6 +6179,7 @@ export const agencyRouter = router({
           feedbackRequiredViewings: feedbackRequiredViewings.length,
           urgentLeads: urgentLeads.length,
           listingTasks: listingRows.length,
+          transactionDeadlines: transactionDeadlines.length,
           upcomingWork: upcomingViewings.length,
         },
       };

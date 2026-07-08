@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   ArrowRight,
+  BriefcaseBusiness,
   CalendarClock,
   CalendarDays,
   CheckCircle2,
   Clock3,
   Eye,
+  HandCoins,
   ListChecks,
   MessageSquare,
   Phone,
@@ -297,7 +299,7 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
             <QueueMetric label="Overdue follow-ups" value={data.counts?.overdueFollowUps} tone="rose" />
             <QueueMetric label="Today follow-ups" value={data.counts?.dueTodayFollowUps} tone="amber" />
             <QueueMetric label="Today viewings" value={data.counts?.todayViewings} tone="sky" />
-            <QueueMetric label="Feedback needed" value={data.counts?.feedbackRequiredViewings} tone="teal" />
+            <QueueMetric label="Deal deadlines" value={data.counts?.transactionDeadlines} tone="teal" />
           </div>
 
           <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -423,6 +425,15 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
               <ListingTaskQueue
                 tasks={data.listingTasks || []}
                 onOpen={listing => props.setLocation(`/agency/listings?listing=${listing.id}`)}
+              />
+
+              <TransactionDeadlineQueue
+                deadlines={data.transactionDeadlines || []}
+                onOpen={deadline =>
+                  deadline.dealId
+                    ? props.setLocation(`/agency/transactions?deal=${deadline.dealId}`)
+                    : props.onNavigate('transactions')
+                }
               />
 
               <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
@@ -955,6 +966,60 @@ function ListingTaskQueue({ tasks, onOpen }: { tasks: any[]; onOpen: (listing: a
           </button>
         ))}
         {!tasks.length ? <EmptyPanel icon={ListChecks} title="No listing tasks" text="Listing task queue is clear." /> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TransactionDeadlineQueue({
+  deadlines,
+  onOpen,
+}: {
+  deadlines: any[];
+  onOpen: (deadline: any) => void;
+}) {
+  return (
+    <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-2">
+        <SectionTitle
+          icon={BriefcaseBusiness}
+          title="Deal Deadlines"
+          eyebrow={`${numberLabel(deadlines.length)} due or overdue`}
+        />
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {deadlines.slice(0, 6).map(deadline => {
+          const tone = deadline.overdue ? 'rose' : deadline.type === 'offer_expiry' ? 'amber' : 'sky';
+          const classes = toneClasses(tone);
+          return (
+            <button
+              key={deadline.id}
+              type="button"
+              onClick={() => onOpen(deadline)}
+              className="w-full rounded-lg border border-slate-200 p-3 text-left transition hover:border-teal-300"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-950">{deadline.title}</p>
+                  <p className="mt-1 truncate text-xs text-slate-500">
+                    {deadline.detail || deadline.lead?.name || 'Transaction work'}
+                  </p>
+                </div>
+                <span className={cn('mt-1 h-2 w-2 shrink-0 rounded-full', classes.dot)} />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-2 text-xs text-slate-500">
+                <span>{compactWhen(deadline.dueAt)}</span>
+                <span className="inline-flex items-center gap-1 font-medium text-slate-700">
+                  <HandCoins className="h-3.5 w-3.5" />
+                  {deadline.amount ? `R${Number(deadline.amount).toLocaleString('en-ZA')}` : 'Deal'}
+                </span>
+              </div>
+            </button>
+          );
+        })}
+        {!deadlines.length ? (
+          <EmptyPanel icon={BriefcaseBusiness} title="No deal deadlines" text="Offer expiries and transaction conditions appear here." />
+        ) : null}
       </CardContent>
     </Card>
   );
