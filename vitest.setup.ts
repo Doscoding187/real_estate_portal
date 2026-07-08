@@ -72,6 +72,7 @@ beforeAll(async () => {
                     'leadId',
                     'agentId',
                     'visitorId',
+                    'createdByUserId',
                     'visitorName',
                     'scheduledAt',
                     'durationMinutes',
@@ -112,12 +113,13 @@ beforeAll(async () => {
               const statusType = String(readRowValue(statusRows[0], 'column_type') ?? '');
 
               return (
-                requiredColumnCount === 11 &&
+                requiredColumnCount === 12 &&
                 hasScheduledTime === 0 &&
                 hasAgentScheduledIndex > 0 &&
                 hasListingIndex > 0 &&
                 hasPropertyIndex > 0 &&
-                statusType.includes("'no_show'")
+                statusType.includes("'no_show'") &&
+                statusType.includes("'rescheduled'")
               );
             };
 

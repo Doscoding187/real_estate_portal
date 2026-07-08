@@ -3,6 +3,7 @@ import {
   router,
   superAdminProcedure,
   agencyAdminProcedure,
+  agentProcedure,
   publicProcedure,
   protectedProcedure,
 } from './_core/trpc';
@@ -18,13 +19,14 @@ import {
   subscriptions,
   properties,
   users,
+  notifications,
   agencyBranding,
   invitations,
   listings,
   listingApprovalQueue,
   listingMedia,
 } from '../drizzle/schema';
-import { eq, like, or, desc, and, inArray, sql, isNull, isNotNull, ne } from 'drizzle-orm';
+import { eq, like, or, desc, and, inArray, sql, isNull, isNotNull, ne, aliasedTable } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import {
   getDb,
@@ -90,8 +92,56 @@ const leadStatusSchema = z.enum([
   'lost',
 ]);
 
+const viewingStatusSchema = z.enum([
+  'requested',
+  'awaiting_confirmation',
+  'confirmed',
+  'completed',
+  'cancelled',
+  'no_show',
+  'rescheduled',
+]);
+
+const viewingFilterStatusSchema = z.enum([
+  'all',
+  'upcoming',
+  'awaiting_confirmation',
+  'unconfirmed',
+  'confirmed',
+  'completed',
+  'cancelled',
+  'no_show',
+  'feedback_required',
+  'rescheduled',
+]);
+
+const viewingFeedbackInputSchema = z.object({
+  attended: z.boolean().optional(),
+  interestLevel: z.enum(['high', 'medium', 'low', 'none']).optional(),
+  priceReaction: z.string().trim().max(1000).optional(),
+  propertyFit: z.string().trim().max(1000).optional(),
+  objections: z.string().trim().max(2000).optional(),
+  financingNotes: z.string().trim().max(2000).optional(),
+  sellerFeedback: z.string().trim().max(2000).optional(),
+  recommendedNextAction: z
+    .enum(['offer', 'nurture', 'follow_up', 'reschedule', 'close_lost', 'none'])
+    .optional(),
+  followUpDate: z.string().trim().optional(),
+  notes: z.string().trim().max(3000).optional(),
+});
+
 type LeadStatus = z.infer<typeof leadStatusSchema>;
+type ViewingStatus = z.infer<typeof viewingStatusSchema>;
 type AgencyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+type ViewingRescheduleEntry = {
+  previousScheduledAt: string | null;
+  nextScheduledAt: string;
+  previousStatus: ViewingStatus;
+  nextStatus: ViewingStatus;
+  rescheduledAt: string;
+  rescheduledByUserId: number;
+  note: string | null;
+};
 type AgencyBillingStatus =
   | 'not_started'
   | 'pending_payment'
@@ -114,6 +164,32 @@ const LEAD_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
   closed: [],
   lost: [],
 };
+
+const VIEWING_TRANSITIONS: Record<ViewingStatus, ViewingStatus[]> = {
+  requested: ['awaiting_confirmation', 'confirmed', 'cancelled', 'rescheduled'],
+  awaiting_confirmation: ['confirmed', 'cancelled', 'rescheduled'],
+  confirmed: ['completed', 'cancelled', 'no_show', 'rescheduled'],
+  completed: [],
+  cancelled: [],
+  no_show: ['rescheduled'],
+  rescheduled: ['awaiting_confirmation', 'confirmed', 'cancelled'],
+};
+
+const ACTIVE_VIEWING_STATUSES = [
+  'requested',
+  'awaiting_confirmation',
+  'confirmed',
+  'rescheduled',
+] as const;
+
+const AGENCY_WORKSPACE_TIME_ZONE = 'Africa/Johannesburg';
+const AGENCY_WORKSPACE_UTC_OFFSET = '+02:00';
+const AGENCY_DAY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: AGENCY_WORKSPACE_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
 const ACTIVE_BILLING_STATUSES = new Set(['active']);
 const PENDING_BILLING_STATUSES = new Set([
@@ -357,6 +433,676 @@ async function requireAgencyAgent(
   }
 
   return agent;
+}
+
+function requireAgencyManager(user: ReturnType<typeof requireUser>) {
+  if (user.role !== 'agency_admin' && user.role !== 'super_admin') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Agency manager privileges required',
+    });
+  }
+}
+
+function safeParseJsonObject(value?: string | null): Record<string, any> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeViewingRescheduleHistory(value: unknown): ViewingRescheduleEntry[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map(entry => {
+      if (!entry || typeof entry !== 'object') return null;
+      const candidate = entry as Partial<ViewingRescheduleEntry>;
+      const previousStatus = normalizeViewingStatus(candidate.previousStatus);
+      const nextStatus = normalizeViewingStatus(candidate.nextStatus);
+      const nextScheduledAt = String(candidate.nextScheduledAt || '').trim();
+      const rescheduledAt = String(candidate.rescheduledAt || '').trim();
+      const rescheduledByUserId = Number(candidate.rescheduledByUserId || 0);
+      if (!nextScheduledAt || !rescheduledAt || !rescheduledByUserId) return null;
+
+      return {
+        previousScheduledAt: candidate.previousScheduledAt
+          ? String(candidate.previousScheduledAt)
+          : null,
+        nextScheduledAt,
+        previousStatus,
+        nextStatus,
+        rescheduledAt,
+        rescheduledByUserId,
+        note: candidate.note ? String(candidate.note) : null,
+      };
+    })
+    .filter((entry): entry is ViewingRescheduleEntry => Boolean(entry));
+}
+
+function parseViewingNotes(value?: string | null) {
+  const parsed = safeParseJsonObject(value);
+  if (parsed) {
+    return {
+      summary: String(parsed.summary || parsed.notes || '').trim() || null,
+      location: String(parsed.location || '').trim() || null,
+      instructions: String(parsed.instructions || '').trim() || null,
+      nextAction: String(parsed.nextAction || '').trim() || null,
+      rescheduleHistory: normalizeViewingRescheduleHistory(parsed.rescheduleHistory),
+      legacy: false,
+    };
+  }
+
+  const summary = String(value || '').trim();
+  return {
+    summary: summary || null,
+    location: null,
+    instructions: null,
+    nextAction: null,
+    rescheduleHistory: [],
+    legacy: Boolean(summary),
+  };
+}
+
+function serializeViewingNotes(input: {
+  notes?: string | null;
+  location?: string | null;
+  instructions?: string | null;
+  nextAction?: string | null;
+  rescheduleHistory?: ViewingRescheduleEntry[];
+}) {
+  const payload = {
+    summary: String(input.notes || '').trim() || null,
+    location: String(input.location || '').trim() || null,
+    instructions: String(input.instructions || '').trim() || null,
+    nextAction: String(input.nextAction || '').trim() || null,
+    rescheduleHistory: input.rescheduleHistory?.length ? input.rescheduleHistory : undefined,
+  };
+
+  if (
+    !payload.summary &&
+    !payload.location &&
+    !payload.instructions &&
+    !payload.nextAction &&
+    !payload.rescheduleHistory
+  ) {
+    return null;
+  }
+
+  return JSON.stringify(payload);
+}
+
+function appendViewingRescheduleHistory(
+  currentNotes: string | null | undefined,
+  entry: ViewingRescheduleEntry,
+) {
+  const notes = parseViewingNotes(currentNotes);
+  return serializeViewingNotes({
+    notes: notes.summary,
+    location: notes.location,
+    instructions: notes.instructions,
+    nextAction: notes.nextAction,
+    rescheduleHistory: [...notes.rescheduleHistory, entry],
+  });
+}
+
+function parseViewingFeedback(value?: string | null) {
+  const parsed = safeParseJsonObject(value);
+  if (parsed) return parsed;
+
+  const summary = String(value || '').trim();
+  return summary ? { notes: summary, legacy: true } : null;
+}
+
+function hasViewingFeedback(value?: string | null) {
+  return Boolean(String(value || '').trim());
+}
+
+function serializeViewingFeedback(
+  input: z.infer<typeof viewingFeedbackInputSchema>,
+  actorUserId: number,
+) {
+  return JSON.stringify({
+    attended: input.attended,
+    interestLevel: input.interestLevel || null,
+    priceReaction: input.priceReaction || null,
+    propertyFit: input.propertyFit || null,
+    objections: input.objections || null,
+    financingNotes: input.financingNotes || null,
+    sellerFeedback: input.sellerFeedback || null,
+    recommendedNextAction: input.recommendedNextAction || null,
+    followUpDate: input.followUpDate || null,
+    notes: input.notes || null,
+    capturedByUserId: actorUserId,
+    capturedAt: nowAsDbTimestamp(),
+  });
+}
+
+function normalizeViewingStatus(status: unknown): ViewingStatus {
+  if (status === 'scheduled') return 'confirmed';
+  if (viewingStatusSchema.safeParse(status).success) return status as ViewingStatus;
+  return 'requested';
+}
+
+function assertViewingTransitionAllowed(
+  currentStatus: unknown,
+  targetStatus: ViewingStatus,
+) {
+  const current = normalizeViewingStatus(currentStatus);
+  if (current === targetStatus) return;
+
+  const allowed = VIEWING_TRANSITIONS[current] || [];
+  if (!allowed.includes(targetStatus)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Cannot move viewing from ${current} to ${targetStatus}.`,
+    });
+  }
+}
+
+function assertViewingDateAllowed(value: string) {
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Viewing date is invalid.',
+    });
+  }
+
+  if (parsedDate.getTime() < Date.now() - 5 * 60_000) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Viewing date must be in the future.',
+    });
+  }
+
+  return parsedDate;
+}
+
+function formatAgencyDateKey(date: Date) {
+  const parts = AGENCY_DAY_FORMATTER.formatToParts(date);
+  const year = parts.find(part => part.type === 'year')?.value;
+  const month = parts.find(part => part.type === 'month')?.value;
+  const day = parts.find(part => part.type === 'day')?.value;
+  if (!year || !month || !day) {
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Unable to format agency date.' });
+  }
+  return `${year}-${month}-${day}`;
+}
+
+function parseAgencyDateKey(dateInput?: string | null) {
+  if (!dateInput) return formatAgencyDateKey(new Date());
+
+  const dateKey = String(dateInput).trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Date filter is invalid.' });
+  }
+
+  const localMidnight = new Date(`${dateKey}T00:00:00${AGENCY_WORKSPACE_UTC_OFFSET}`);
+  if (Number.isNaN(localMidnight.getTime()) || formatAgencyDateKey(localMidnight) !== dateKey) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Date filter is invalid.' });
+  }
+
+  return dateKey;
+}
+
+function addAgencyDays(dateKey: string, days: number) {
+  const localMidnight = new Date(`${dateKey}T00:00:00${AGENCY_WORKSPACE_UTC_OFFSET}`);
+  localMidnight.setUTCDate(localMidnight.getUTCDate() + days);
+  return formatAgencyDateKey(localMidnight);
+}
+
+function getDayBounds(dateInput?: string | null) {
+  const dateKey = parseAgencyDateKey(dateInput);
+  const nextDateKey = addAgencyDays(dateKey, 1);
+  const start = new Date(`${dateKey}T00:00:00${AGENCY_WORKSPACE_UTC_OFFSET}`);
+  const end = new Date(`${nextDateKey}T00:00:00${AGENCY_WORKSPACE_UTC_OFFSET}`);
+
+  return {
+    dateKey,
+    timeZone: AGENCY_WORKSPACE_TIME_ZONE,
+    start,
+    end,
+    startDb: toDbTimestampRequired(start),
+    endDb: toDbTimestampRequired(end),
+  };
+}
+
+async function requireAgencyProperty(db: AgencyDb, agencyId: number, propertyId: number) {
+  const [property] = await db.select().from(properties).where(eq(properties.id, propertyId)).limit(1);
+  if (!property) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+  }
+
+  if (property.sourceListingId) {
+    try {
+      await requireAgencyListing(db, agencyId, property.sourceListingId);
+      return property;
+    } catch (error) {
+      if (!(error instanceof TRPCError) || error.code !== 'NOT_FOUND') throw error;
+    }
+  }
+
+  if (property.agentId) {
+    const [agent] = await db
+      .select({ id: agents.id })
+      .from(agents)
+      .where(and(eq(agents.id, property.agentId), eq(agents.agencyId, agencyId)))
+      .limit(1);
+    if (agent) return property;
+  }
+
+  const [owner] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.id, property.ownerId), eq(users.agencyId, agencyId)))
+    .limit(1);
+  if (owner) return property;
+
+  throw new TRPCError({ code: 'NOT_FOUND', message: 'Property not found' });
+}
+
+async function resolveViewingInventory(input: {
+  db: AgencyDb;
+  agencyId: number;
+  lead: typeof leads.$inferSelect;
+  listingId?: number | null;
+  propertyId?: number | null;
+}) {
+  const { db, agencyId, lead } = input;
+  let listingId = input.listingId || null;
+  let propertyId = input.propertyId || lead.propertyId || null;
+
+  if (listingId) {
+    await requireAgencyListing(db, agencyId, listingId);
+    const [publicProperty] = await db
+      .select({
+        id: properties.id,
+        sourceListingId: properties.sourceListingId,
+      })
+      .from(properties)
+      .where(eq(properties.sourceListingId, listingId))
+      .orderBy(desc(properties.updatedAt))
+      .limit(1);
+
+    if (lead.propertyId && publicProperty?.id && Number(lead.propertyId) !== Number(publicProperty.id)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Selected listing does not match the lead property.',
+      });
+    }
+
+    if (lead.propertyId && !publicProperty) {
+      const leadProperty = await requireAgencyProperty(db, agencyId, lead.propertyId);
+      if (leadProperty.sourceListingId && Number(leadProperty.sourceListingId) !== Number(listingId)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Selected listing does not match the lead property.',
+        });
+      }
+    }
+
+    propertyId = publicProperty?.id || propertyId;
+  }
+
+  if (propertyId) {
+    const property = await requireAgencyProperty(db, agencyId, propertyId);
+    if (!listingId && property.sourceListingId) {
+      const sourceListingId = Number(property.sourceListingId);
+      listingId = sourceListingId;
+      await requireAgencyListing(db, agencyId, sourceListingId);
+    }
+  }
+
+  return { listingId, propertyId };
+}
+
+async function requireAgencyViewing(db: AgencyDb, agencyId: number, viewingId: number) {
+  const viewingCreator = aliasedTable(users, 'viewing_creator_guard');
+  const [row] = await db
+    .select({
+      showing: showings,
+      agent: agents,
+      creatorAgencyId: viewingCreator.agencyId,
+    })
+    .from(showings)
+    .leftJoin(agents, eq(showings.agentId, agents.id))
+    .leftJoin(viewingCreator, eq(showings.createdByUserId, viewingCreator.id))
+    .where(eq(showings.id, viewingId))
+    .limit(1);
+
+  if (!row?.showing || !row.agent || Number(row.agent.agencyId || 0) !== agencyId) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Viewing not found' });
+  }
+
+  if (row.showing.createdByUserId && Number(row.creatorAgencyId || 0) !== agencyId) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Viewing not found' });
+  }
+
+  if (row.showing.leadId) {
+    const [lead] = await db
+      .select({ id: leads.id })
+      .from(leads)
+      .where(and(eq(leads.id, row.showing.leadId), eq(leads.agencyId, agencyId)))
+      .limit(1);
+    if (!lead) throw new TRPCError({ code: 'NOT_FOUND', message: 'Viewing not found' });
+  }
+
+  if (row.showing.listingId) {
+    await requireAgencyListing(db, agencyId, row.showing.listingId);
+  }
+
+  if (row.showing.propertyId) {
+    await requireAgencyProperty(db, agencyId, row.showing.propertyId);
+  }
+
+  return row.showing;
+}
+
+function getViewingQueueStatus(showing: typeof showings.$inferSelect) {
+  const status = normalizeViewingStatus(showing.status);
+  if (status === 'completed' && !hasViewingFeedback(showing.feedback)) return 'feedback_required';
+  if (status === 'requested') return 'awaiting_confirmation';
+  return status;
+}
+
+function mapViewingRow(row: any) {
+  const showing = row.showing;
+  const notes = parseViewingNotes(showing.notes);
+  const feedback = parseViewingFeedback(showing.feedback);
+  const status = normalizeViewingStatus(showing.status);
+  const scheduledAt = showing.scheduledAt;
+  const now = Date.now();
+  const scheduledTime = scheduledAt ? new Date(scheduledAt).getTime() : NaN;
+  const isUpcoming = Number.isFinite(scheduledTime) && scheduledTime >= now;
+
+  return {
+    id: Number(showing.id),
+    listingId: showing.listingId == null ? null : Number(showing.listingId),
+    propertyId: showing.propertyId == null ? null : Number(showing.propertyId),
+    leadId: showing.leadId == null ? null : Number(showing.leadId),
+    agentId: showing.agentId == null ? null : Number(showing.agentId),
+    createdByUserId: showing.createdByUserId == null ? null : Number(showing.createdByUserId),
+    scheduledAt,
+    durationMinutes: Number(showing.durationMinutes || 30),
+    status,
+    queueStatus: getViewingQueueStatus(showing),
+    isUpcoming,
+    isFeedbackRequired: status === 'completed' && !hasViewingFeedback(showing.feedback),
+    attendee: showing.visitorName || row.leadName || null,
+    notes: notes.summary,
+    location: notes.location,
+    instructions: notes.instructions,
+    nextAction: notes.nextAction,
+    rescheduleHistory: notes.rescheduleHistory,
+    feedback: showing.feedback,
+    feedbackStructured: feedback,
+    createdAt: showing.createdAt,
+    updatedAt: showing.updatedAt,
+    creator: row.creatorId
+      ? {
+          id: Number(row.creatorId),
+          name:
+            row.creatorName ||
+            [row.creatorFirstName, row.creatorLastName].filter(Boolean).join(' ').trim() ||
+            row.creatorEmail ||
+            'Creator',
+          email: row.creatorEmail,
+        }
+      : null,
+    agent: row.agentId
+      ? {
+          id: Number(row.agentId),
+          userId: row.agentUserId == null ? null : Number(row.agentUserId),
+          name:
+            row.agentDisplayName ||
+            [row.agentFirstName, row.agentLastName].filter(Boolean).join(' ').trim() ||
+            row.agentEmail ||
+            'Assigned agent',
+          email: row.agentEmail,
+          phone: row.agentPhone,
+        }
+      : null,
+    lead: row.leadId
+      ? {
+          id: Number(row.leadId),
+          name: row.leadName,
+          email: row.leadEmail,
+          phone: row.leadPhone,
+          status: row.leadStatus,
+          nextFollowUp: row.leadNextFollowUp,
+          qualificationScore: row.leadQualificationScore == null ? null : Number(row.leadQualificationScore),
+        }
+      : null,
+    listing: row.listingId
+      ? {
+          id: Number(row.listingId),
+          title: row.listingTitle,
+          address: row.listingAddress,
+          city: row.listingCity,
+          province: row.listingProvince,
+          status: row.listingStatus,
+        }
+      : null,
+    property: row.propertyId
+      ? {
+          id: Number(row.propertyId),
+          title: row.propertyTitle,
+          address: row.propertyAddress,
+          city: row.propertyCity,
+          province: row.propertyProvince,
+          price: row.propertyPrice == null ? null : Number(row.propertyPrice),
+          status: row.propertyStatus,
+        }
+      : null,
+  };
+}
+
+async function createViewingNotification(input: {
+  db: AgencyDb;
+  userId?: number | null;
+  event: string;
+  title: string;
+  content: string;
+  showingId: number;
+  agencyId: number;
+  dedupeKey?: string;
+}) {
+  if (!input.userId) return;
+  try {
+    if (input.dedupeKey) {
+      const [existing] = await input.db
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(
+          and(
+            eq(notifications.userId, input.userId),
+            eq(notifications.type, 'showing_scheduled'),
+            like(notifications.data, `%"dedupeKey":"${input.dedupeKey}"%`),
+          ),
+        )
+        .limit(1);
+
+      if (existing) return;
+    }
+
+    await input.db.insert(notifications).values({
+      userId: input.userId,
+      type: 'showing_scheduled',
+      title: input.title,
+      content: input.content,
+      data: JSON.stringify({
+        event: input.event,
+        showingId: input.showingId,
+        agencyId: input.agencyId,
+        dedupeKey: input.dedupeKey || null,
+      }),
+      isRead: 0,
+    });
+  } catch (error) {
+    console.warn('[agency.viewings] Notification insert skipped', error);
+  }
+}
+
+async function listAgencyViewings(input: {
+  db: AgencyDb;
+  agencyId: number;
+  status?: z.infer<typeof viewingFilterStatusSchema>;
+  agentId?: number | null;
+  listingId?: number | null;
+  propertyId?: number | null;
+  search?: string | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  viewingId?: number | null;
+  limit?: number;
+  offset?: number;
+}) {
+  const viewingAgent = aliasedTable(agents, 'viewing_agent');
+  const listingAgent = aliasedTable(agents, 'viewing_listing_agent');
+  const listingOwner = aliasedTable(users, 'viewing_listing_owner');
+  const propertyAgent = aliasedTable(agents, 'viewing_property_agent');
+  const propertyOwner = aliasedTable(users, 'viewing_property_owner');
+  const sourceListing = aliasedTable(listings, 'viewing_source_listing');
+  const sourceListingAgent = aliasedTable(agents, 'viewing_source_listing_agent');
+  const sourceListingOwner = aliasedTable(users, 'viewing_source_listing_owner');
+  const creatorUser = aliasedTable(users, 'viewing_creator');
+
+  const conditions: SQL[] = [
+    eq(viewingAgent.agencyId, input.agencyId),
+    or(isNull(showings.createdByUserId), eq(creatorUser.agencyId, input.agencyId))!,
+    or(isNull(showings.leadId), eq(leads.agencyId, input.agencyId))!,
+    or(
+      isNull(showings.listingId),
+      eq(listings.agencyId, input.agencyId),
+      eq(listingAgent.agencyId, input.agencyId),
+      eq(listingOwner.agencyId, input.agencyId),
+    )!,
+    or(
+      isNull(showings.propertyId),
+      eq(sourceListing.agencyId, input.agencyId),
+      eq(sourceListingAgent.agencyId, input.agencyId),
+      eq(sourceListingOwner.agencyId, input.agencyId),
+      eq(propertyAgent.agencyId, input.agencyId),
+      eq(propertyOwner.agencyId, input.agencyId),
+      eq(leads.agencyId, input.agencyId),
+    )!,
+  ];
+
+  if (input.agentId) conditions.push(eq(showings.agentId, input.agentId));
+  if (input.viewingId) conditions.push(eq(showings.id, input.viewingId));
+  if (input.listingId) conditions.push(eq(showings.listingId, input.listingId));
+  if (input.propertyId) conditions.push(eq(showings.propertyId, input.propertyId));
+
+  if (input.dateFrom) {
+    const from = getDayBounds(input.dateFrom).startDb;
+    conditions.push(sql`${showings.scheduledAt} >= ${from}`);
+  }
+
+  if (input.dateTo) {
+    const to = getDayBounds(input.dateTo).endDb;
+    conditions.push(sql`${showings.scheduledAt} < ${to}`);
+  }
+
+  const status = input.status || 'all';
+  switch (status) {
+    case 'upcoming':
+      conditions.push(inArray(showings.status, ACTIVE_VIEWING_STATUSES as any));
+      conditions.push(sql`${showings.scheduledAt} >= ${nowAsDbTimestamp()}`);
+      break;
+    case 'awaiting_confirmation':
+    case 'unconfirmed':
+      conditions.push(inArray(showings.status, ['requested', 'awaiting_confirmation'] as any));
+      break;
+    case 'feedback_required':
+      conditions.push(eq(showings.status, 'completed' as any));
+      conditions.push(sql`(${showings.feedback} IS NULL OR ${showings.feedback} = '')`);
+      break;
+    case 'confirmed':
+    case 'completed':
+    case 'cancelled':
+    case 'no_show':
+    case 'rescheduled':
+      conditions.push(eq(showings.status, status as any));
+      break;
+    case 'all':
+    default:
+      break;
+  }
+
+  const search = String(input.search || '').trim();
+  if (search) {
+    const pattern = `%${search}%`;
+    conditions.push(
+      or(
+        like(showings.visitorName, pattern),
+        like(leads.name, pattern),
+        like(leads.email, pattern),
+        like(leads.phone, pattern),
+        like(listings.title, pattern),
+        like(properties.title, pattern),
+      )!,
+    );
+  }
+
+  const rows = await input.db
+    .select({
+      showing: showings,
+      agentId: viewingAgent.id,
+      agentUserId: viewingAgent.userId,
+      agentFirstName: viewingAgent.firstName,
+      agentLastName: viewingAgent.lastName,
+      agentDisplayName: viewingAgent.displayName,
+      agentEmail: viewingAgent.email,
+      agentPhone: viewingAgent.phone,
+      creatorId: creatorUser.id,
+      creatorEmail: creatorUser.email,
+      creatorName: creatorUser.name,
+      creatorFirstName: creatorUser.firstName,
+      creatorLastName: creatorUser.lastName,
+      leadId: leads.id,
+      leadName: leads.name,
+      leadEmail: leads.email,
+      leadPhone: leads.phone,
+      leadStatus: leads.status,
+      leadNextFollowUp: leads.nextFollowUp,
+      leadQualificationScore: leads.qualificationScore,
+      listingId: listings.id,
+      listingTitle: listings.title,
+      listingAddress: listings.address,
+      listingCity: listings.city,
+      listingProvince: listings.province,
+      listingStatus: listings.status,
+      propertyId: properties.id,
+      propertyTitle: properties.title,
+      propertyAddress: properties.address,
+      propertyCity: properties.city,
+      propertyProvince: properties.province,
+      propertyPrice: properties.price,
+      propertyStatus: properties.status,
+    })
+    .from(showings)
+    .leftJoin(viewingAgent, eq(showings.agentId, viewingAgent.id))
+    .leftJoin(creatorUser, eq(showings.createdByUserId, creatorUser.id))
+    .leftJoin(leads, eq(showings.leadId, leads.id))
+    .leftJoin(listings, eq(showings.listingId, listings.id))
+    .leftJoin(listingAgent, eq(listings.agentId, listingAgent.id))
+    .leftJoin(listingOwner, eq(listings.ownerId, listingOwner.id))
+    .leftJoin(properties, eq(showings.propertyId, properties.id))
+    .leftJoin(propertyAgent, eq(properties.agentId, propertyAgent.id))
+    .leftJoin(propertyOwner, eq(properties.ownerId, propertyOwner.id))
+    .leftJoin(sourceListing, eq(properties.sourceListingId, sourceListing.id))
+    .leftJoin(sourceListingAgent, eq(sourceListing.agentId, sourceListingAgent.id))
+    .leftJoin(sourceListingOwner, eq(sourceListing.ownerId, sourceListingOwner.id))
+    .where(and(...conditions))
+    .orderBy(showings.scheduledAt)
+    .limit(input.limit || 50)
+    .offset(input.offset || 0);
+
+  return rows.map(mapViewingRow);
 }
 
 function getUserDisplayName(user: {
@@ -755,6 +1501,16 @@ function mapAgencyListingRow(row: any, agencyId: number) {
 export const __agencyListingInventoryTestHooks = {
   derivePublicationState,
   mapAgencyListingRow,
+};
+
+export const __agencyViewingWorkflowTestHooks = {
+  assertViewingTransitionAllowed,
+  getViewingQueueStatus,
+  mapViewingRow,
+  normalizeViewingStatus,
+  parseViewingFeedback,
+  parseViewingNotes,
+  serializeViewingNotes,
 };
 
 function agencyListingSelectFields() {
@@ -1307,7 +2063,7 @@ async function getAgencyMemberWorkload(input: {
             .where(
               and(
                 eq(showings.agentId, agentId),
-                inArray(showings.status, ['requested', 'confirmed'] as any),
+                inArray(showings.status, ACTIVE_VIEWING_STATUSES as any),
                 sql`${showings.scheduledAt} >= NOW()`,
               ),
             ),
@@ -2392,7 +3148,7 @@ export const agencyRouter = router({
           message: 'You must be part of an agency',
         });
       }
-
+      const agencyId = requireAgencyId(user);
       const lead = await requireAgencyLead(db, user, input.leadId);
       assertLeadTransitionAllowed(lead, input.status, { lostReason: input.lostReason });
       const now = nowAsDbTimestamp();
@@ -2543,6 +3299,7 @@ export const agencyRouter = router({
           message: 'You must be part of an agency',
         });
       }
+      const agencyId = requireAgencyId(user);
 
       const lead = await requireAgencyLead(db, user, input.leadId);
       const assignedAgent = input.agentId
@@ -2725,14 +3482,18 @@ export const agencyRouter = router({
       return { success: true };
     }),
 
-  scheduleLeadViewing: agencyAdminProcedure
+  scheduleLeadViewing: agentProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
         agentId: z.number().int().positive().optional(),
+        listingId: z.number().int().positive().optional(),
+        propertyId: z.number().int().positive().optional(),
         scheduledAt: z.string().min(1),
         durationMinutes: z.number().int().min(15).max(240).default(45),
-        status: z.enum(['requested', 'confirmed']).default('confirmed'),
+        status: z.enum(['requested', 'awaiting_confirmation', 'confirmed']).default('confirmed'),
+        location: z.string().trim().max(500).optional(),
+        instructions: z.string().trim().max(1000).optional(),
         notes: z.string().trim().max(1000).optional(),
       }),
     )
@@ -2749,15 +3510,10 @@ export const agencyRouter = router({
           message: 'You must be part of an agency',
         });
       }
+      const agencyId = requireAgencyId(user);
 
       const lead = await requireAgencyLead(db, user, input.leadId);
-      const showingDate = new Date(input.scheduledAt);
-      if (Number.isNaN(showingDate.getTime())) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Viewing date is invalid.',
-        });
-      }
+      const showingDate = assertViewingDateAllowed(input.scheduledAt);
 
       const showingAgentId = input.agentId || lead.agentId;
       if (!showingAgentId) {
@@ -2767,39 +3523,67 @@ export const agencyRouter = router({
         });
       }
 
-      const showingAgent = await requireAgencyAgent(db, user.agencyId, showingAgentId);
+      const showingAgent = await requireAgencyAgent(db, agencyId, showingAgentId);
+      const inventory = await resolveViewingInventory({
+        db,
+        agencyId,
+        lead,
+        listingId: input.listingId,
+        propertyId: input.propertyId,
+      });
       const scheduledAt = toDbTimestampRequired(showingDate);
       const now = nowAsDbTimestamp();
 
       assertLeadTransitionAllowed(lead, 'viewing_scheduled');
-      const [result] = await db.insert(showings).values({
-        propertyId: lead.propertyId,
-        leadId: lead.id,
-        agentId: showingAgent.id,
-        scheduledAt,
-        status: input.status,
-        visitorName: lead.name,
-        durationMinutes: input.durationMinutes,
-        notes: input.notes || null,
+      let showingId = 0;
+      await db.transaction(async tx => {
+        const [result] = await tx.insert(showings).values({
+          listingId: inventory.listingId,
+          propertyId: inventory.propertyId,
+          leadId: lead.id,
+          agentId: showingAgent.id,
+          scheduledAt,
+          status: input.status,
+          createdByUserId: user.id,
+          visitorName: lead.name,
+          durationMinutes: input.durationMinutes,
+          notes: serializeViewingNotes({
+            notes: input.notes,
+            location: input.location,
+            instructions: input.instructions,
+          }),
+        });
+        showingId = Number(result.insertId || 0);
+
+        await tx
+          .update(leads)
+          .set({
+            agentId: showingAgent.id,
+            assignedTo: showingAgent.userId || lead.assignedTo,
+            assignedAt: lead.assignedAt || now,
+            status: 'viewing_scheduled',
+            funnelStage: 'viewing',
+            updatedAt: now,
+          })
+          .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
+
+        await tx.insert(leadActivities).values({
+          leadId: input.leadId,
+          userId: user.id,
+          type: 'meeting',
+          description: `Viewing ${input.status} for ${scheduledAt}.`,
+        });
       });
 
-      await db
-        .update(leads)
-        .set({
-          agentId: showingAgent.id,
-          assignedTo: showingAgent.userId || lead.assignedTo,
-          assignedAt: lead.assignedAt || now,
-          status: 'viewing_scheduled',
-          funnelStage: 'viewing',
-          updatedAt: now,
-        })
-        .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, user.agencyId)));
-
-      await db.insert(leadActivities).values({
-        leadId: input.leadId,
-        userId: user.id,
-        type: 'meeting',
-        description: `Viewing ${input.status} for ${scheduledAt}.`,
+      await createViewingNotification({
+        db,
+        userId: showingAgent.userId,
+        event: 'viewing_booked',
+        title: input.status === 'confirmed' ? 'Viewing confirmed' : 'Viewing needs confirmation',
+        content: `${lead.name} is scheduled for ${scheduledAt}.`,
+        showingId,
+        agencyId,
+        dedupeKey: `viewing:${showingId}:created`,
       });
 
       await logAudit({
@@ -2808,15 +3592,725 @@ export const agencyRouter = router({
         targetType: 'lead',
         targetId: input.leadId,
         metadata: {
-          agencyId: user.agencyId,
-          showingId: Number(result.insertId || 0),
+          agencyId,
+          showingId,
           scheduledAt,
           agentId: showingAgent.id,
         },
         req: ctx.req,
       });
 
-      return { success: true, showingId: Number(result.insertId || 0) };
+      return { success: true, showingId };
+    }),
+
+  getViewings: agentProcedure
+    .input(
+      z
+        .object({
+          status: viewingFilterStatusSchema.default('upcoming'),
+          agentId: z.number().int().positive().optional(),
+          listingId: z.number().int().positive().optional(),
+          propertyId: z.number().int().positive().optional(),
+          search: z.string().trim().max(120).optional(),
+          dateFrom: z.string().trim().optional(),
+          dateTo: z.string().trim().optional(),
+          limit: z.number().int().min(1).max(200).default(50),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const filters = input || { status: 'upcoming' as const, limit: 50, offset: 0 };
+
+      if (filters.agentId) {
+        await requireAgencyAgent(db, agencyId, filters.agentId);
+      }
+      if (filters.listingId) {
+        await requireAgencyListing(db, agencyId, filters.listingId);
+      }
+      if (filters.propertyId) {
+        await requireAgencyProperty(db, agencyId, filters.propertyId);
+      }
+
+      const viewings = await listAgencyViewings({
+        db,
+        agencyId,
+        status: filters.status,
+        agentId: filters.agentId,
+        listingId: filters.listingId,
+        propertyId: filters.propertyId,
+        search: filters.search,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        limit: filters.limit,
+        offset: filters.offset,
+      });
+
+      return {
+        viewings,
+        limit: filters.limit,
+        offset: filters.offset,
+      };
+    }),
+
+  getViewingDetail: agentProcedure
+    .input(z.object({ viewingId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const showing = await requireAgencyViewing(db, agencyId, input.viewingId);
+      const [viewing] = await listAgencyViewings({
+        db,
+        agencyId,
+        viewingId: input.viewingId,
+        status: 'all',
+        limit: 1,
+      });
+
+      const activities = showing.leadId
+        ? await db
+            .select()
+            .from(leadActivities)
+            .where(eq(leadActivities.leadId, showing.leadId))
+            .orderBy(desc(leadActivities.createdAt))
+            .limit(30)
+        : [];
+
+      return {
+        ...viewing,
+        activities,
+        lifecycle: {
+          allowedNextStatuses: VIEWING_TRANSITIONS[normalizeViewingStatus(showing.status)] || [],
+        },
+      };
+    }),
+
+  createViewing: agentProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        listingId: z.number().int().positive().optional(),
+        propertyId: z.number().int().positive().optional(),
+        agentId: z.number().int().positive(),
+        scheduledAt: z.string().min(1),
+        durationMinutes: z.number().int().min(15).max(240).default(45),
+        status: z.enum(['requested', 'awaiting_confirmation', 'confirmed']).default('awaiting_confirmation'),
+        location: z.string().trim().max(500).optional(),
+        instructions: z.string().trim().max(1000).optional(),
+        notes: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const lead = await requireAgencyLead(db, user, input.leadId);
+      const showingAgent = await requireAgencyAgent(db, agencyId, input.agentId);
+      const showingDate = assertViewingDateAllowed(input.scheduledAt);
+      const scheduledAt = toDbTimestampRequired(showingDate);
+      const inventory = await resolveViewingInventory({
+        db,
+        agencyId,
+        lead,
+        listingId: input.listingId,
+        propertyId: input.propertyId,
+      });
+      const now = nowAsDbTimestamp();
+
+      assertLeadTransitionAllowed(lead, 'viewing_scheduled');
+      let viewingId = 0;
+      await db.transaction(async tx => {
+        const [result] = await tx.insert(showings).values({
+          listingId: inventory.listingId,
+          propertyId: inventory.propertyId,
+          leadId: lead.id,
+          agentId: showingAgent.id,
+          scheduledAt,
+          status: input.status,
+          createdByUserId: user.id,
+          visitorName: lead.name,
+          durationMinutes: input.durationMinutes,
+          notes: serializeViewingNotes({
+            notes: input.notes,
+            location: input.location,
+            instructions: input.instructions,
+          }),
+        });
+        viewingId = Number(result.insertId || 0);
+
+        await tx
+          .update(leads)
+          .set({
+            agentId: showingAgent.id,
+            assignedTo: showingAgent.userId || lead.assignedTo,
+            assignedAt: lead.assignedAt || now,
+            status: 'viewing_scheduled',
+            funnelStage: 'viewing',
+            updatedAt: now,
+          })
+          .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
+
+        await tx.insert(leadActivities).values({
+          leadId: input.leadId,
+          userId: user.id,
+          type: 'meeting',
+          description: `Viewing ${input.status} for ${scheduledAt}.`,
+        });
+      });
+
+      await createViewingNotification({
+        db,
+        userId: showingAgent.userId,
+        event: 'viewing_booked',
+        title: input.status === 'confirmed' ? 'Viewing confirmed' : 'Viewing needs confirmation',
+        content: `${lead.name} is scheduled for ${scheduledAt}.`,
+        showingId: viewingId,
+        agencyId,
+        dedupeKey: `viewing:${viewingId}:created`,
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.viewing_created',
+        targetType: 'showing',
+        targetId: viewingId,
+        metadata: {
+          agencyId,
+          leadId: lead.id,
+          listingId: inventory.listingId,
+          propertyId: inventory.propertyId,
+          agentId: showingAgent.id,
+          scheduledAt,
+          status: input.status,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true, viewingId };
+    }),
+
+  updateViewingStatus: agentProcedure
+    .input(
+      z.object({
+        viewingId: z.number().int().positive(),
+        status: viewingStatusSchema,
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
+      const currentStatus = normalizeViewingStatus(viewing.status);
+      if (currentStatus === input.status) {
+        return { success: true, idempotent: true };
+      }
+
+      assertViewingTransitionAllowed(viewing.status, input.status);
+      const now = nowAsDbTimestamp();
+
+      await db.transaction(async tx => {
+        await tx
+          .update(showings)
+          .set({
+            status: input.status,
+            updatedAt: now,
+          })
+          .where(eq(showings.id, input.viewingId));
+
+        if (viewing.leadId) {
+          await tx.insert(leadActivities).values({
+            leadId: viewing.leadId,
+            userId: user.id,
+            type: input.status === 'completed' ? 'meeting' : 'status_change',
+            description: input.note || `Viewing moved to ${input.status}.`,
+          });
+        }
+      });
+
+      await createViewingNotification({
+        db,
+        userId: viewing.agentId ? (await requireAgencyAgent(db, agencyId, viewing.agentId)).userId : null,
+        event: `viewing_${input.status}`,
+        title: `Viewing ${input.status.replace(/_/g, ' ')}`,
+        content: input.note || `Viewing #${input.viewingId} moved to ${input.status}.`,
+        showingId: input.viewingId,
+        agencyId,
+        dedupeKey: `viewing:${input.viewingId}:status:${input.status}`,
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.viewing_status_update',
+        targetType: 'showing',
+        targetId: input.viewingId,
+        metadata: {
+          agencyId,
+          previousStatus: currentStatus,
+          nextStatus: input.status,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  rescheduleViewing: agentProcedure
+    .input(
+      z.object({
+        viewingId: z.number().int().positive(),
+        scheduledAt: z.string().min(1),
+        durationMinutes: z.number().int().min(15).max(240).optional(),
+        status: z.enum(['rescheduled', 'awaiting_confirmation', 'confirmed']).default('rescheduled'),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
+      const currentStatus = normalizeViewingStatus(viewing.status);
+      const nextStatus = input.status;
+      assertViewingTransitionAllowed(viewing.status, 'rescheduled');
+      if (nextStatus !== 'rescheduled') {
+        assertViewingTransitionAllowed('rescheduled', nextStatus);
+      }
+      const scheduledAt = toDbTimestampRequired(assertViewingDateAllowed(input.scheduledAt));
+      const durationMinutes = input.durationMinutes || viewing.durationMinutes;
+      const now = nowAsDbTimestamp();
+      if (
+        viewing.scheduledAt === scheduledAt &&
+        Number(viewing.durationMinutes || 30) === Number(durationMinutes || 30) &&
+        currentStatus === nextStatus
+      ) {
+        return { success: true, idempotent: true };
+      }
+
+      const notes = appendViewingRescheduleHistory(viewing.notes, {
+        previousScheduledAt: viewing.scheduledAt || null,
+        nextScheduledAt: scheduledAt,
+        previousStatus: currentStatus,
+        nextStatus,
+        rescheduledAt: now,
+        rescheduledByUserId: user.id,
+        note: input.note || null,
+      });
+
+      await db.transaction(async tx => {
+        await tx
+          .update(showings)
+          .set({
+            scheduledAt,
+            durationMinutes,
+            status: nextStatus,
+            notes,
+            updatedAt: now,
+          })
+          .where(eq(showings.id, input.viewingId));
+
+        if (viewing.leadId) {
+          await tx.insert(leadActivities).values({
+            leadId: viewing.leadId,
+            userId: user.id,
+            type: 'meeting',
+            description:
+              input.note ||
+              `Viewing rescheduled from ${viewing.scheduledAt || 'unscheduled'} to ${scheduledAt}.`,
+          });
+        }
+      });
+
+      await createViewingNotification({
+        db,
+        userId: viewing.agentId ? (await requireAgencyAgent(db, agencyId, viewing.agentId)).userId : null,
+        event: 'viewing_rescheduled',
+        title: nextStatus === 'confirmed' ? 'Viewing rescheduled and confirmed' : 'Viewing rescheduled',
+        content: input.note || `Viewing moved to ${scheduledAt}.`,
+        showingId: input.viewingId,
+        agencyId,
+        dedupeKey: `viewing:${input.viewingId}:rescheduled:${scheduledAt}:${nextStatus}`,
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.viewing_rescheduled',
+        targetType: 'showing',
+        targetId: input.viewingId,
+        metadata: {
+          agencyId,
+          previousScheduledAt: viewing.scheduledAt,
+          nextScheduledAt: scheduledAt,
+          previousStatus: currentStatus,
+          nextStatus,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  reassignViewing: agentProcedure
+    .input(
+      z.object({
+        viewingId: z.number().int().positive(),
+        agentId: z.number().int().positive(),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      requireAgencyManager(user);
+      const agencyId = requireAgencyId(user);
+      const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
+      const assignedAgent = await requireAgencyAgent(db, agencyId, input.agentId);
+      const now = nowAsDbTimestamp();
+
+      if (['completed', 'cancelled'].includes(normalizeViewingStatus(viewing.status))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Completed or cancelled viewings cannot be reassigned.',
+        });
+      }
+
+      if (Number(viewing.agentId) === Number(assignedAgent.id)) {
+        return { success: true, idempotent: true };
+      }
+
+      await db.transaction(async tx => {
+        await tx
+          .update(showings)
+          .set({
+            agentId: assignedAgent.id,
+            updatedAt: now,
+          })
+          .where(eq(showings.id, input.viewingId));
+
+        if (viewing.leadId) {
+          await tx
+            .update(leads)
+            .set({
+              agentId: assignedAgent.id,
+              assignedTo: assignedAgent.userId || null,
+              assignedAt: now,
+              updatedAt: now,
+            })
+            .where(and(eq(leads.id, viewing.leadId), eq(leads.agencyId, agencyId)));
+
+          await tx.insert(leadActivities).values({
+            leadId: viewing.leadId,
+            userId: user.id,
+            type: 'note',
+            description: input.note || `Viewing reassigned to ${getAgentDisplayName(assignedAgent)}.`,
+          });
+        }
+      });
+
+      await createViewingNotification({
+        db,
+        userId: assignedAgent.userId,
+        event: 'viewing_reassigned',
+        title: 'Viewing reassigned',
+        content: input.note || `Viewing #${input.viewingId} has been assigned to you.`,
+        showingId: input.viewingId,
+        agencyId,
+        dedupeKey: `viewing:${input.viewingId}:reassigned:${assignedAgent.id}`,
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.viewing_reassigned',
+        targetType: 'showing',
+        targetId: input.viewingId,
+        metadata: {
+          agencyId,
+          previousAgentId: viewing.agentId,
+          nextAgentId: assignedAgent.id,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  submitViewingFeedback: agentProcedure
+    .input(
+      z.object({
+        viewingId: z.number().int().positive(),
+        feedback: viewingFeedbackInputSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const viewing = await requireAgencyViewing(db, agencyId, input.viewingId);
+      if (normalizeViewingStatus(viewing.status) !== 'completed') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Feedback can only be captured after a completed viewing.',
+        });
+      }
+
+      let followUp: string | null = null;
+      if (input.feedback.followUpDate) {
+        const followUpDate = new Date(input.feedback.followUpDate);
+        if (Number.isNaN(followUpDate.getTime())) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Follow-up date is invalid.' });
+        }
+        followUp = toDbTimestampRequired(followUpDate);
+      }
+
+      const feedback = serializeViewingFeedback(input.feedback, user.id);
+      const now = nowAsDbTimestamp();
+
+      await db.transaction(async tx => {
+        await tx
+          .update(showings)
+          .set({
+            feedback,
+            updatedAt: now,
+          })
+          .where(eq(showings.id, input.viewingId));
+
+        if (viewing.leadId) {
+          await tx.insert(leadActivities).values({
+            leadId: viewing.leadId,
+            userId: user.id,
+            type: 'note',
+            description: `Viewing feedback captured: ${
+              input.feedback.recommendedNextAction || 'review next action'
+            }.`,
+          });
+
+          if (followUp) {
+            await tx
+              .update(leads)
+              .set({
+                nextFollowUp: followUp,
+                updatedAt: now,
+              })
+              .where(and(eq(leads.id, viewing.leadId), eq(leads.agencyId, agencyId)));
+          }
+        }
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.viewing_feedback_saved',
+        targetType: 'showing',
+        targetId: input.viewingId,
+        metadata: {
+          agencyId,
+          recommendedNextAction: input.feedback.recommendedNextAction || null,
+          followUpDate: input.feedback.followUpDate || null,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true };
+    }),
+
+  getMyDay: agentProcedure
+    .input(
+      z
+        .object({
+          date: z.string().trim().optional(),
+          limit: z.number().int().min(1).max(50).default(12),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const bounds = getDayBounds(input?.date);
+      const dayKey = bounds.dateKey;
+      const nextDayKey = addAgencyDays(dayKey, 1);
+      const limit = input?.limit || 12;
+
+      const [
+        overdueFollowUps,
+        dueTodayFollowUps,
+        todayViewings,
+        unconfirmedViewings,
+        feedbackRequiredViewings,
+        urgentLeads,
+        upcomingViewings,
+        listingRows,
+      ] = await Promise.all([
+        db
+          .select({ lead: leads, property: properties, agent: agents })
+          .from(leads)
+          .leftJoin(properties, eq(leads.propertyId, properties.id))
+          .leftJoin(agents, eq(leads.agentId, agents.id))
+          .where(
+            and(
+              eq(leads.agencyId, agencyId),
+              inArray(leads.status, ACTIVE_WORK_LEAD_STATUSES as any),
+              sql`${leads.nextFollowUp} IS NOT NULL AND ${leads.nextFollowUp} < ${bounds.startDb}`,
+            ),
+          )
+          .orderBy(leads.nextFollowUp)
+          .limit(limit),
+        db
+          .select({ lead: leads, property: properties, agent: agents })
+          .from(leads)
+          .leftJoin(properties, eq(leads.propertyId, properties.id))
+          .leftJoin(agents, eq(leads.agentId, agents.id))
+          .where(
+            and(
+              eq(leads.agencyId, agencyId),
+              inArray(leads.status, ACTIVE_WORK_LEAD_STATUSES as any),
+              sql`${leads.nextFollowUp} >= ${bounds.startDb} AND ${leads.nextFollowUp} < ${bounds.endDb}`,
+            ),
+          )
+          .orderBy(leads.nextFollowUp)
+          .limit(limit),
+        listAgencyViewings({
+          db,
+          agencyId,
+          status: 'all',
+          dateFrom: dayKey,
+          dateTo: dayKey,
+          limit,
+        }),
+        listAgencyViewings({
+          db,
+          agencyId,
+          status: 'unconfirmed',
+          limit,
+        }),
+        listAgencyViewings({
+          db,
+          agencyId,
+          status: 'feedback_required',
+          limit,
+        }),
+        db
+          .select({ lead: leads, property: properties, agent: agents })
+          .from(leads)
+          .leftJoin(properties, eq(leads.propertyId, properties.id))
+          .leftJoin(agents, eq(leads.agentId, agents.id))
+          .where(
+            and(
+              eq(leads.agencyId, agencyId),
+              or(eq(leads.status, 'new'), isNull(leads.agentId))!,
+            ),
+          )
+          .orderBy(desc(leads.createdAt))
+          .limit(limit),
+        listAgencyViewings({
+          db,
+          agencyId,
+          status: 'upcoming',
+          dateFrom: nextDayKey,
+          limit,
+        }),
+        db
+          .select(agencyListingSelectFields())
+          .from(listings)
+          .leftJoin(agents, eq(listings.agentId, agents.id))
+          .leftJoin(users, eq(listings.ownerId, users.id))
+          .where(
+            and(
+              agencyListingScopeCondition(agencyId),
+              or(
+                isNull(listings.agentId),
+                inArray(listings.status, ['draft', 'pending_review', 'rejected'] as any),
+                sql`${listings.readinessScore} < 75`,
+              )!,
+            ),
+          )
+          .orderBy(desc(listings.updatedAt))
+          .limit(limit),
+      ]);
+
+      const mapLead = (row: { lead: typeof leads.$inferSelect; property: any; agent: any }) => ({
+        ...decorateLeadForWorkspace(row.lead),
+        property: row.property
+          ? {
+              id: row.property.id,
+              title: row.property.title,
+              city: row.property.city,
+              province: row.property.province,
+              price: Number(row.property.price || 0),
+              status: row.property.status,
+            }
+          : null,
+        agent: row.agent
+          ? {
+              id: row.agent.id,
+              userId: row.agent.userId,
+              name:
+                row.agent.displayName ||
+                [row.agent.firstName, row.agent.lastName].filter(Boolean).join(' ').trim() ||
+                'Assigned agent',
+              email: row.agent.email,
+              phone: row.agent.phone,
+            }
+          : null,
+      });
+
+      return {
+        date: dayKey,
+        overdueFollowUps: overdueFollowUps.map(mapLead),
+        dueTodayFollowUps: dueTodayFollowUps.map(mapLead),
+        todayViewings,
+        unconfirmedViewings,
+        feedbackRequiredViewings,
+        urgentLeads: urgentLeads.map(mapLead),
+        listingTasks: listingRows.map(row => mapAgencyListingRow(row, agencyId)),
+        upcomingWork: upcomingViewings,
+        counts: {
+          overdueFollowUps: overdueFollowUps.length,
+          dueTodayFollowUps: dueTodayFollowUps.length,
+          todayViewings: todayViewings.length,
+          unconfirmedViewings: unconfirmedViewings.length,
+          feedbackRequiredViewings: feedbackRequiredViewings.length,
+          urgentLeads: urgentLeads.length,
+          listingTasks: listingRows.length,
+          upcomingWork: upcomingViewings.length,
+        },
+      };
     }),
 
   /**

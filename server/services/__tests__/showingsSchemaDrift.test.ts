@@ -94,7 +94,7 @@ describe('showings schema drift guard', () => {
       );
 
       expect(rowValue(rows[0] ?? {}, 'column_type')).toBe(
-        "enum('requested','confirmed','completed','cancelled','no_show')",
+        "enum('requested','awaiting_confirmation','confirmed','completed','cancelled','no_show','rescheduled')",
       );
     });
 
