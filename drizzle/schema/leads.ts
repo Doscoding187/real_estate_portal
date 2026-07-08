@@ -176,10 +176,19 @@ export const showings = mysqlTable(
       .notNull()
       .references(() => agents.id, { onDelete: 'set null' }),
     scheduledAt: timestamp({ mode: 'string' }).notNull(),
-    status: mysqlEnum(['requested', 'confirmed', 'completed', 'cancelled', 'no_show'])
+    status: mysqlEnum([
+      'requested',
+      'awaiting_confirmation',
+      'confirmed',
+      'completed',
+      'cancelled',
+      'no_show',
+      'rescheduled',
+    ])
       .default('requested')
       .notNull(),
     visitorId: int().references(() => users.id, { onDelete: 'set null' }),
+    createdByUserId: int('createdByUserId').references(() => users.id, { onDelete: 'set null' }),
     visitorName: varchar({ length: 150 }),
     durationMinutes: int().default(30).notNull(),
     notes: text(),
@@ -191,6 +200,7 @@ export const showings = mysqlTable(
     index('idx_showings_agent_scheduled_at').on(table.agentId, table.scheduledAt),
     index('idx_showings_listing').on(table.listingId),
     index('idx_showings_property').on(table.propertyId),
+    index('idx_showings_creator').on(table.createdByUserId),
   ],
 );
 

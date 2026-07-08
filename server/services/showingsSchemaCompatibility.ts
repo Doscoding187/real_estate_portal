@@ -78,6 +78,8 @@ export function mapStorageShowingStatusToAgent(
       return 'cancelled';
     case 'no_show':
       return 'no_show';
+    case 'awaiting_confirmation':
+    case 'rescheduled':
     case 'requested':
     case 'confirmed':
     default:
