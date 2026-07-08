@@ -40,7 +40,7 @@ import {
 } from './db';
 import { logAudit } from './_core/auditLog';
 import { requireUser } from './_core/requireUser';
-import { setSubscriptionPlanForOwner } from './services/planAccessService';
+import { isPaidSubscriptionEntitled, setSubscriptionPlanForOwner } from './services/planAccessService';
 import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 
 /**
@@ -94,10 +94,14 @@ type LeadStatus = z.infer<typeof leadStatusSchema>;
 type AgencyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 type AgencyBillingStatus =
   | 'not_started'
-  | 'pending'
+  | 'pending_payment'
+  | 'payment_under_review'
   | 'active'
   | 'past_due'
+  | 'grace_period'
+  | 'suspended'
   | 'cancelled'
+  | 'expired'
   | 'unavailable';
 
 const LEAD_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
@@ -113,14 +117,15 @@ const LEAD_TRANSITIONS: Record<LeadStatus, LeadStatus[]> = {
 
 const ACTIVE_BILLING_STATUSES = new Set(['active']);
 const PENDING_BILLING_STATUSES = new Set([
-  'pending',
   'pending_payment',
+  'payment_under_review',
   'incomplete',
   'incomplete_expired',
   'trial',
   'trialing',
 ]);
-const PAST_DUE_BILLING_STATUSES = new Set(['past_due', 'unpaid', 'expired']);
+const PAST_DUE_BILLING_STATUSES = new Set(['past_due']);
+const SUSPENDED_BILLING_STATUSES = new Set(['suspended', 'unpaid']);
 const CANCELLED_BILLING_STATUSES = new Set(['cancelled', 'canceled']);
 const ACTIVE_MEMBER_ROLES = new Set(['agent', 'agency_admin']);
 const ACTIVE_WORK_LEAD_STATUSES = [
@@ -141,9 +146,14 @@ function normalizeBillingStatus(value: unknown): AgencyBillingStatus {
     .trim();
   if (!status) return 'not_started';
   if (ACTIVE_BILLING_STATUSES.has(status)) return 'active';
+  if (status === 'grace_period') return 'grace_period';
+  if (status === 'payment_under_review') return 'payment_under_review';
+  if (status === 'pending_payment') return 'pending_payment';
   if (PAST_DUE_BILLING_STATUSES.has(status)) return 'past_due';
+  if (SUSPENDED_BILLING_STATUSES.has(status)) return 'suspended';
   if (CANCELLED_BILLING_STATUSES.has(status)) return 'cancelled';
-  if (PENDING_BILLING_STATUSES.has(status)) return 'pending';
+  if (status === 'expired') return 'expired';
+  if (PENDING_BILLING_STATUSES.has(status)) return 'pending_payment';
   return 'unavailable';
 }
 
@@ -1523,7 +1533,7 @@ async function getAgencyAccessStateForUser(
     }
   }
 
-  const billingActive = base.billingStatus === 'active';
+  const billingActive = isPaidSubscriptionEntitled(base.billingStatus as any);
   base.workspaceAccess = {
     listings: input.profileConfigured,
     publishing: billingActive && input.profileConfigured && input.brandingConfigured,
@@ -1620,7 +1630,7 @@ export const agencyRouter = router({
       profileConfigured,
       brandingConfigured,
     });
-    const accessBillingActivated = accessState.billingStatus === 'active';
+    const accessBillingActivated = isPaidSubscriptionEntitled(accessState.billingStatus as any);
 
     let onboardingStep = 0;
     if (profileConfigured) onboardingStep = 1;
@@ -3005,6 +3015,42 @@ export const agencyRouter = router({
       const agencyId = requireAgencyId(user);
       const listing = await requireAgencyListing(db, agencyId, input.listingId);
       const status = String(listing.status || 'draft');
+
+      const [agency] = await db
+        .select()
+        .from(agencies)
+        .where(eq(agencies.id, agencyId))
+        .limit(1);
+
+      if (!agency) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency not found' });
+      }
+
+      const [branding] = await db
+        .select({
+          companyName: agencyBranding.companyName,
+          primaryColor: agencyBranding.primaryColor,
+          secondaryColor: agencyBranding.secondaryColor,
+        })
+        .from(agencyBranding)
+        .where(eq(agencyBranding.agencyId, agencyId))
+        .limit(1);
+
+      const accessState = await getAgencyAccessStateForUser(db, {
+        user,
+        agency,
+        profileConfigured: Boolean(agency.name && agency.email && agency.city && agency.province),
+        brandingConfigured: Boolean(
+          branding?.companyName && branding?.primaryColor && branding?.secondaryColor,
+        ),
+      });
+
+      if (!accessState.workspaceAccess.publishing) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: accessState.actionableReason || 'Publishing is not available for this agency.',
+        });
+      }
 
       if (!['draft', 'rejected'].includes(status)) {
         throw new TRPCError({

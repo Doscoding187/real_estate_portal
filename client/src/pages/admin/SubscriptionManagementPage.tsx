@@ -47,8 +47,9 @@ import {
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export default function SubscriptionManagementPage() {
-  const [activeTab, setActiveTab] = useState('subscriptions');
+export default function SubscriptionManagementPage({ initialTab = 'subscriptions' }: { initialTab?: string } = {}) {
+  const utils = trpc.useUtils();
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
@@ -70,7 +71,7 @@ export default function SubscriptionManagementPage() {
   );
 
   const { data: plansData, isLoading: isLoadingPlans } =
-    trpc.subscription.getAvailablePlans.useQuery(undefined, {
+    trpc.billing.plans.useQuery({ segment: 'agency' }, {
       enabled: activeTab === 'plans',
     });
 
@@ -78,11 +79,11 @@ export default function SubscriptionManagementPage() {
     data: proofsData,
     isLoading: isLoadingProofs,
     refetch: refetchProofs,
-  } = trpc.subscription.getPaymentProofs.useQuery(
+  } = trpc.billing.admin.financeQueue.useQuery(
     {
-      page,
+      offset: (page - 1) * 10,
       limit: 10,
-      status: 'pending',
+      status: 'under_review',
     },
     {
       enabled: activeTab === 'verification',
@@ -90,7 +91,7 @@ export default function SubscriptionManagementPage() {
   );
 
   // Mutations
-  const verifyPaymentMutation = trpc.subscription.verifyPayment.useMutation({
+  const verifyPaymentMutation = trpc.billing.admin.reviewManualPayment.useMutation({
     onSuccess: () => {
       toast.success('Payment verified successfully');
       refetchProofs();
@@ -100,11 +101,37 @@ export default function SubscriptionManagementPage() {
     },
   });
 
-  const handleVerifyPayment = (proofId: number, status: 'verified' | 'rejected') => {
+  const handleVerifyPayment = (paymentId: number, status: 'verified' | 'rejected') => {
     verifyPaymentMutation.mutate({
-      paymentProofId: proofId,
-      status,
+      paymentId,
+      decision: status === 'verified' ? 'approve' : 'reject',
     });
+  };
+
+  const handleRequestCorrection = (paymentId: number) => {
+    verifyPaymentMutation.mutate({
+      paymentId,
+      decision: 'request_correction',
+      note: 'Finance team requested a corrected proof of payment.',
+    });
+  };
+
+  const handleViewProof = async (documentId?: number | null) => {
+    if (!documentId) {
+      toast.error('No proof document attached');
+      return;
+    }
+    try {
+      const doc = await utils.billing.admin.proofDocument.fetch({ documentId });
+      const byteCharacters = atob(doc.contentBase64);
+      const byteNumbers = Array.from(byteCharacters).map(char => char.charCodeAt(0));
+      const blob = new Blob([new Uint8Array(byteNumbers)], { type: doc.mimeType });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error: any) {
+      toast.error(error?.message || 'Proof document could not be opened');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -145,6 +172,12 @@ export default function SubscriptionManagementPage() {
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  const subscriptions = Array.isArray(subscriptionsData)
+    ? subscriptionsData
+    : subscriptionsData?.subscriptions || [];
+  const plans = Array.isArray(plansData) ? plansData : plansData?.plans || [];
+  const financeRows = proofsData?.payments || [];
 
   return (
     <div className="space-y-6 p-6 pb-20">
@@ -189,9 +222,9 @@ export default function SubscriptionManagementPage() {
             className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
           >
             Payment Verification
-            {proofsData?.pagination?.total ? (
+            {proofsData?.pagination?.totalPending ? (
               <span className="ml-2 bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded-full font-medium">
-                {proofsData.pagination.total}
+                {proofsData.pagination.totalPending}
               </span>
             ) : null}
           </TabsTrigger>
@@ -253,14 +286,14 @@ export default function SubscriptionManagementPage() {
                         Loading subscriptions...
                       </TableCell>
                     </TableRow>
-                  ) : subscriptionsData?.subscriptions.length === 0 ? (
+                  ) : subscriptions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                         No subscriptions found matching your filters.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    subscriptionsData?.subscriptions.map(sub => (
+                    subscriptions.map(sub => (
                       <TableRow key={sub.id} className="hover:bg-slate-50/50 transition-colors">
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
@@ -305,7 +338,7 @@ export default function SubscriptionManagementPage() {
             {isLoadingPlans ? (
               <div className="col-span-3 text-center py-12 text-slate-500">Loading plans...</div>
             ) : (
-              plansData?.map(plan => (
+              plans.map(plan => (
                 <GlassCard
                   key={plan.id}
                   className="p-6 relative overflow-hidden group hover:shadow-xl transition-all duration-300"
@@ -398,7 +431,7 @@ export default function SubscriptionManagementPage() {
                         Loading payment proofs...
                       </TableCell>
                     </TableRow>
-                  ) : proofsData?.proofs.length === 0 ? (
+                  ) : financeRows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-12">
                         <div className="flex flex-col items-center justify-center">
@@ -409,48 +442,50 @@ export default function SubscriptionManagementPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    proofsData?.proofs.map(proof => (
-                      <TableRow key={proof.id} className="hover:bg-slate-50/50 transition-colors">
-                        <TableCell>{new Date(proof.paymentDate).toLocaleDateString()}</TableCell>
+                    financeRows.map(row => (
+                      <TableRow key={row.payment.id} className="hover:bg-slate-50/50 transition-colors">
+                        <TableCell>{new Date(row.payment.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {proof.agencyName || 'Unknown Agency'}
+                              {row.agency?.name || 'Unknown Agency'}
                             </span>
-                            <span className="text-xs text-slate-500">{proof.submittedBy}</span>
+                            <span className="text-xs text-slate-500">{row.agency?.email}</span>
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">
-                          {formatCurrency(proof.amount / 100)}
+                          {formatCurrency(row.payment.amount / 100)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {proof.referenceNumber}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="outline" className="w-fit font-mono text-xs">
+                              {row.payment.paymentReference}
+                            </Badge>
+                            <span className="text-xs text-slate-500">{row.invoice.invoiceNumber}</span>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          {proof.proofOfPaymentUrl ? (
-                            <a
-                              href={proof.proofOfPaymentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          {row.documentId ? (
+                            <button
+                              type="button"
+                              onClick={() => handleViewProof(row.documentId)}
                               className="flex items-center text-blue-600 hover:underline text-sm"
                             >
                               <FileText className="w-3 h-3 mr-1" />
                               View Proof
-                            </a>
+                            </button>
                           ) : (
                             <span className="text-slate-400 text-sm">No file</span>
                           )}
                         </TableCell>
-                        <TableCell>{getStatusBadge(proof.status)}</TableCell>
+                        <TableCell>{getStatusBadge(row.payment.state)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <Button
                               size="sm"
                               variant="outline"
                               className="text-green-600 hover:bg-green-50 border-green-200"
-                              onClick={() => handleVerifyPayment(proof.id, 'verified')}
+                              onClick={() => handleVerifyPayment(row.payment.id, 'verified')}
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />
                               Approve
@@ -458,8 +493,16 @@ export default function SubscriptionManagementPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="text-amber-600 hover:bg-amber-50 border-amber-200"
+                              onClick={() => handleRequestCorrection(row.payment.id)}
+                            >
+                              Correction
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="text-red-600 hover:bg-red-50 border-red-200"
-                              onClick={() => handleVerifyPayment(proof.id, 'rejected')}
+                              onClick={() => handleVerifyPayment(row.payment.id, 'rejected')}
                             >
                               <XCircle className="w-4 h-4" />
                             </Button>

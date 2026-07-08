@@ -31,10 +31,14 @@ export type AgencyAccessState = {
   onboardingComplete: boolean;
   billingStatus:
     | 'not_started'
-    | 'pending'
+    | 'pending_payment'
+    | 'payment_under_review'
     | 'active'
     | 'past_due'
+    | 'grace_period'
+    | 'suspended'
     | 'cancelled'
+    | 'expired'
     | 'unavailable';
   planKey: string | null;
   planAccessSource: string;

@@ -91,9 +91,13 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  const authRateLimitMax = Number(
+    process.env.AUTH_RATE_LIMIT_MAX || (ENV.isProduction ? 5 : 50),
+  );
+
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: Number.isFinite(authRateLimitMax) && authRateLimitMax > 0 ? authRateLimitMax : 5,
     message: 'Too many login attempts, please try again later',
     standardHeaders: true,
     legacyHeaders: false,

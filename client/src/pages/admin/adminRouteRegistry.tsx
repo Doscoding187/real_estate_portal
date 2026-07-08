@@ -94,6 +94,10 @@ const ROUTES = {
   properties: { path: '/admin/properties', render: () => <PropertiesPage /> },
   revenue: { path: '/admin/revenue', render: () => <RevenueCenterPage /> },
   monetization: { path: '/admin/monetization', render: () => <LocationMonetizationPage /> },
+  finance: {
+    path: '/admin/finance',
+    render: () => <SubscriptionManagementPage initialTab="verification" />,
+  },
   subscriptions: { path: '/admin/subscriptions', render: () => <SubscriptionManagementPage /> },
   subscriptionManagementAlias: {
     path: '/admin/subscription-management',
@@ -167,6 +171,7 @@ export const ADMIN_DASHBOARD_ROUTES: AdminDashboardRoute[] = [
   ROUTES.revenue,
   ROUTES.revenueCenterAlias,
   ROUTES.monetization,
+  ROUTES.finance,
   ROUTES.subscriptions,
   ROUTES.subscriptionManagementAlias,
   ROUTES.planEditor,
@@ -220,6 +225,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: TrendingUp,
     items: [
       { label: 'Revenue Center', path: ROUTES.revenue.path, icon: DollarSign },
+      { label: 'Finance', path: ROUTES.finance.path, icon: FileText },
       { label: 'Subscriptions', path: ROUTES.subscriptions.path, icon: CreditCard },
       { label: 'Featured Placements', path: ROUTES.marketing.path, icon: Star },
       { label: 'Location Monetization', path: ROUTES.monetization.path, icon: DollarSign },

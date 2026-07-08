@@ -6,6 +6,7 @@ import {
   getEntitlementBoolean,
   getEntitlementNumber,
   getPlanAccessProjectionForUserId,
+  isPaidSubscriptionEntitled,
   type EntitlementMap,
   type PlanAccessProjection,
   type PlanSnapshot,
@@ -293,10 +294,13 @@ export async function getAgentEntitlementsForUserId(
   }
 
   const emailVerified = user.emailVerified === 1;
+  const paidSubscriptionEntitled = isPaidSubscriptionEntitled(
+    effectivePlanAccess.subscription?.status,
+  );
   const hasActivePaidPlan =
     user.plan === 'paid' ||
-    effectivePlanAccess.subscription?.status === 'active' ||
-    effectivePlanAccess.ownerType === 'agency';
+    paidSubscriptionEntitled ||
+    (effectivePlanAccess.ownerType === 'agency' && paidSubscriptionEntitled);
   const trialExpired = !hasActivePaidPlan && trialStatus === 'expired';
   const profileCompletionScore = completion.score;
   const maxActiveListings = getEntitlementNumber(entitlementsWithTier, 'max_active_listings', 0);

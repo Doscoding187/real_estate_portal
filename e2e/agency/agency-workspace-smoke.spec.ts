@@ -12,13 +12,21 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: false
 const FRONTEND_URL = process.env.BASE_URL || 'http://localhost:3009';
 const API_URL = process.env.VITE_API_URL || process.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const AGENCY_EMAIL = 'agency@listify.local';
+const ADMIN_EMAIL = 'admin@listify.local';
 const TARGET_LEAD_STATUS = 'contacted';
 const TARGET_LEAD_STATUS_LABEL = 'Contacted';
+const BILLING_SMOKE_PLAN_NAME = 'browser_smoke_paid_agency';
+const BILLING_SMOKE_PLAN_PRICE_CENTS = 12345;
 
 type SmokeFixtures = {
   newBuyerLeadId: number;
   crossAgencyLeadId: number;
   missingAgentLeadId: number;
+};
+
+type BillingSmokePlan = {
+  id: number;
+  monthlyAmountCents: number;
 };
 
 function assertLocalUrl(rawUrl: string) {
@@ -47,7 +55,7 @@ async function queryOne<T extends Record<string, unknown>>(
   return first;
 }
 
-async function loadSmokeFixtures(): Promise<SmokeFixtures> {
+async function openLocalDatabaseConnection(): Promise<mysql.Connection> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is required for agency browser smoke.');
@@ -57,7 +65,11 @@ async function loadSmokeFixtures(): Promise<SmokeFixtures> {
   expect(parsed.hostname).toMatch(/^(localhost|127\.0\.0\.1)$/);
   expect(parsed.pathname.replace(/^\//, '')).toBe('listify_local');
 
-  const connection = await mysql.createConnection(databaseUrl);
+  return mysql.createConnection(databaseUrl);
+}
+
+async function loadSmokeFixtures(): Promise<SmokeFixtures> {
+  const connection = await openLocalDatabaseConnection();
   try {
     const newBuyer = await queryOne<{ id: number }>(
       connection,
@@ -86,12 +98,7 @@ async function loadSmokeFixtures(): Promise<SmokeFixtures> {
 }
 
 async function resetNewBuyerSmokeFixture(leadId: number) {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for agency browser smoke.');
-  }
-
-  const connection = await mysql.createConnection(databaseUrl);
+  const connection = await openLocalDatabaseConnection();
   try {
     await connection.execute('DELETE FROM lead_activities WHERE leadId = ?', [leadId]);
     await connection.execute(
@@ -117,12 +124,7 @@ async function resetNewBuyerSmokeFixture(leadId: number) {
 }
 
 async function createDisposableInvitee(email: string) {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for agency invitation smoke.');
-  }
-
-  const connection = await mysql.createConnection(databaseUrl);
+  const connection = await openLocalDatabaseConnection();
   try {
     const [sourceUsers] = await connection.execute(
       'SELECT passwordHash FROM users WHERE email = ? LIMIT 1',
@@ -148,12 +150,7 @@ async function createDisposableInvitee(email: string) {
 }
 
 async function getInvitationToken(email: string) {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for agency invitation smoke.');
-  }
-
-  const connection = await mysql.createConnection(databaseUrl);
+  const connection = await openLocalDatabaseConnection();
   try {
     const invitation = await queryOne<{ token: string }>(
       connection,
@@ -167,12 +164,7 @@ async function getInvitationToken(email: string) {
 }
 
 async function getAcceptedInviteeState(email: string) {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for agency invitation smoke.');
-  }
-
-  const connection = await mysql.createConnection(databaseUrl);
+  const connection = await openLocalDatabaseConnection();
   try {
     return await queryOne<{
       userId: number;
@@ -196,6 +188,130 @@ async function getAcceptedInviteeState(email: string) {
        LIMIT 1`,
       [email],
     );
+  } finally {
+    await connection.end();
+  }
+}
+
+async function ensureBillingSmokePlan(): Promise<BillingSmokePlan> {
+  const connection = await openLocalDatabaseConnection();
+  try {
+    const metadata = JSON.stringify({
+      source: 'browser_smoke_fixture',
+      locked_price_fixture: true,
+    });
+    const features = JSON.stringify([
+      'Listing workspace',
+      'Publication controls',
+      'Team management',
+      'Reporting',
+    ]);
+    const limits = JSON.stringify({ max_active_listings: 25 });
+
+    const [rows] = await connection.execute('SELECT id FROM plans WHERE name = ? LIMIT 1', [
+      BILLING_SMOKE_PLAN_NAME,
+    ]);
+    const existing = (rows as Array<{ id: number }>)[0];
+
+    if (existing?.id) {
+      await connection.execute(
+        `UPDATE plans
+         SET displayName = ?,
+           description = ?,
+           segment = 'agency',
+           price = ?,
+           price_monthly = ?,
+           currency = 'ZAR',
+           \`interval\` = 'month',
+           trial_days = 0,
+           metadata = ?,
+           features = ?,
+           limits = ?,
+           isActive = 1,
+           isPopular = 0,
+           sortOrder = -100,
+           updatedAt = NOW()
+         WHERE id = ?`,
+        [
+          '[LOCAL DEMO] Browser Smoke Paid Agency',
+          'Paid browser smoke plan for manual EFT acceptance validation.',
+          BILLING_SMOKE_PLAN_PRICE_CENTS,
+          BILLING_SMOKE_PLAN_PRICE_CENTS,
+          metadata,
+          features,
+          limits,
+          existing.id,
+        ],
+      );
+      return {
+        id: Number(existing.id),
+        monthlyAmountCents: BILLING_SMOKE_PLAN_PRICE_CENTS,
+      };
+    }
+
+    const [insertResult] = await connection.execute(
+      `INSERT INTO plans
+        (name, displayName, description, segment, price, price_monthly, currency, \`interval\`,
+         trial_days, metadata, stripePriceId, features, limits, isActive, isPopular, sortOrder)
+       VALUES (?, ?, ?, 'agency', ?, ?, 'ZAR', 'month', 0, ?, NULL, ?, ?, 1, 0, -100)`,
+      [
+        BILLING_SMOKE_PLAN_NAME,
+        '[LOCAL DEMO] Browser Smoke Paid Agency',
+        'Paid browser smoke plan for manual EFT acceptance validation.',
+        BILLING_SMOKE_PLAN_PRICE_CENTS,
+        BILLING_SMOKE_PLAN_PRICE_CENTS,
+        metadata,
+        features,
+        limits,
+      ],
+    );
+
+    return {
+      id: Number((insertResult as { insertId: number }).insertId),
+      monthlyAmountCents: BILLING_SMOKE_PLAN_PRICE_CENTS,
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
+async function resetBillingSmokeState() {
+  const connection = await openLocalDatabaseConnection();
+  try {
+    const agency = await queryOne<{ agencyId: number }>(
+      connection,
+      'SELECT agencyId FROM users WHERE email = ? LIMIT 1',
+      [AGENCY_EMAIL],
+    );
+    const agencyId = Number(agency.agencyId);
+
+    await connection.beginTransaction();
+    try {
+      await connection.execute(
+        'DELETE FROM billing_payment_documents WHERE owner_type = ? AND owner_id = ?',
+        ['agency', agencyId],
+      );
+      await connection.execute('DELETE FROM billing_payments WHERE owner_type = ? AND owner_id = ?', [
+        'agency',
+        agencyId,
+      ]);
+      await connection.execute(
+        'DELETE FROM billing_audit_events WHERE owner_type = ? AND owner_id = ?',
+        ['agency', agencyId],
+      );
+      await connection.execute('DELETE FROM billing_invoices WHERE owner_type = ? AND owner_id = ?', [
+        'agency',
+        agencyId,
+      ]);
+      await connection.execute('DELETE FROM subscriptions WHERE owner_type = ? AND owner_id = ?', [
+        'agency',
+        agencyId,
+      ]);
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    }
   } finally {
     await connection.end();
   }
@@ -356,5 +472,101 @@ test.describe.serial('local agency workspace browser smoke', () => {
 
     await expect(page).toHaveURL(/\/agency\/team$/);
     await expect(page.getByText(inviteEmail)).toBeVisible();
+  });
+
+  test('manual EFT billing route, proof upload, finance approval, reload, and mobile layout', async ({
+    page,
+    context,
+  }) => {
+    const smokePlan = await ensureBillingSmokePlan();
+    await resetBillingSmokeState();
+
+    await page.goto('/login?mode=signin&next=/agency/billing');
+    await signIn(page, AGENCY_EMAIL);
+
+    await expect(page).toHaveURL(/\/agency\/billing$/);
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Billing' })).toBeVisible();
+    await expect(page.getByText('EFT Details')).toBeVisible();
+
+    const agencyClient = await authedTrpcClient(context);
+    const workspace = await agencyClient.billing.workspace.query();
+    test.skip(!workspace?.bankDetails?.canIssueInvoices, 'Manual EFT bank details are not configured.');
+    test.skip(!workspace?.proofStorage?.configured, 'Private proof storage is not configured.');
+    test.skip(
+      !workspace?.plans?.some(plan => Number(plan.id) === smokePlan.id),
+      'Paid browser smoke billing plan is not available.',
+    );
+
+    const checkout = await agencyClient.billing.startManualEftCheckout.mutate({
+      planId: smokePlan.id,
+      billingCycle: 'monthly',
+    });
+    expect(checkout?.invoice?.id).toBeTruthy();
+    expect(Number(checkout.invoice.amountDue)).toBe(smokePlan.monthlyAmountCents);
+    await page.reload();
+    await expect(page.getByText(checkout.invoice.invoiceNumber).first()).toBeVisible();
+    await expect(page.getByText(checkout.invoice.paymentReference).first()).toBeVisible();
+
+    const proofBuffer = Buffer.from(`billing-browser-smoke-${Date.now()}`);
+    await page.locator('#payment-amount').fill(String(Number(checkout.invoice.amountDue || 0) / 100));
+    await page.locator('#bank-reference').fill(checkout.invoice.paymentReference);
+    await page.locator('#proof-file').setInputFiles({
+      name: 'billing-browser-smoke.pdf',
+      mimeType: 'application/pdf',
+      buffer: proofBuffer,
+    });
+    await page.getByRole('button', { name: /Submit proof/ }).click();
+    await expect(page.getByText(/under_review|submitted|Proof submitted/i).first()).toBeVisible();
+
+    const pendingAccess = await agencyClient.agency.getAccessState.query();
+    expect(pendingAccess.workspaceAccess.publishing).toBe(false);
+
+    const afterUpload = await agencyClient.billing.workspace.query();
+    const payment = (afterUpload.payments as any[]).find(
+      item => Number(item.invoiceId) === Number(checkout.invoice.id) && item.state === 'under_review',
+    );
+    expect(payment?.id).toBeTruthy();
+
+    await context.clearCookies();
+    await page.goto('/login?mode=signin&next=/admin/finance');
+    await signIn(page, ADMIN_EMAIL);
+    await expect(page).toHaveURL(/\/admin\/finance$/);
+
+    const adminClient = await authedTrpcClient(context);
+    const queue = await adminClient.billing.admin.financeQueue.query({ status: 'under_review' });
+    const queueRow = (queue.payments as any[]).find(row => Number(row.payment.id) === Number(payment.id));
+    expect(queueRow?.documentId).toBeTruthy();
+
+    const document = await adminClient.billing.admin.proofDocument.query({
+      documentId: Number(queueRow.documentId),
+    });
+    expect(Buffer.from(document.contentBase64, 'base64').toString()).toContain(
+      'billing-browser-smoke',
+    );
+
+    await adminClient.billing.admin.reviewManualPayment.mutate({
+      paymentId: Number(payment.id),
+      decision: 'approve',
+      verifiedAmount: Number(checkout.invoice.amountDue || 0),
+      note: 'Browser smoke approval.',
+    });
+
+    await context.clearCookies();
+    await page.goto('/login?mode=signin&next=/agency/billing');
+    await signIn(page, AGENCY_EMAIL);
+    await expect(page).toHaveURL(/\/agency\/billing$/);
+
+    const activeClient = await authedTrpcClient(context);
+    const activeAccess = await activeClient.agency.getAccessState.query();
+    expect(activeAccess.billingStatus).toBe('active');
+    expect(activeAccess.workspaceAccess.publishing).toBe(true);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/agency/billing');
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Billing' })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
   });
 });
