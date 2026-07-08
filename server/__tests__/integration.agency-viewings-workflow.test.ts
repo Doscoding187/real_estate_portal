@@ -77,7 +77,7 @@ async function countNotificationDedupe(userId: number, dedupeKey: string) {
       and(
         eq(notifications.userId, userId),
         eq(notifications.type, 'showing_scheduled'),
-        like(notifications.data, `%\"dedupeKey\":\"${dedupeKey}\"%`),
+        like(notifications.data, `%"dedupeKey":"${dedupeKey}"%`),
       ),
     );
   return Number(row?.count || 0);

@@ -921,7 +921,7 @@ async function createViewingNotification(input: {
           and(
             eq(notifications.userId, input.userId),
             eq(notifications.type, 'showing_scheduled'),
-            like(notifications.data, `%\"dedupeKey\":\"${input.dedupeKey}\"%`),
+            like(notifications.data, `%"dedupeKey":"${input.dedupeKey}"%`),
           ),
         )
         .limit(1);
