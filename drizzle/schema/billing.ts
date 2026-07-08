@@ -68,11 +68,28 @@ export const subscriptions = mysqlTable(
   'subscriptions',
   {
     id: int().autoincrement().primaryKey(),
-    ownerType: mysqlEnum('owner_type', ['agent', 'agency']).notNull(),
+    ownerType: mysqlEnum('owner_type', ['agent', 'agency', 'developer']).notNull(),
     ownerId: int('owner_id').notNull(),
     planId: int('plan_id').references(() => plans.id, { onDelete: 'set null' }),
-    status: mysqlEnum(['trial', 'active', 'expired', 'cancelled']).default('trial').notNull(),
+    status: mysqlEnum([
+      'trial',
+      'pending_payment',
+      'payment_under_review',
+      'active',
+      'past_due',
+      'grace_period',
+      'suspended',
+      'cancelled',
+      'expired',
+    ])
+      .default('trial')
+      .notNull(),
     trialEndsAt: timestamp('trial_ends_at', { mode: 'string' }),
+    currentPeriodStart: timestamp('current_period_start', { mode: 'string' }),
+    currentPeriodEnd: timestamp('current_period_end', { mode: 'string' }),
+    graceEndsAt: timestamp('grace_ends_at', { mode: 'string' }),
+    cancelAtPeriodEnd: tinyint('cancel_at_period_end').default(0).notNull(),
+    cancelledAt: timestamp('cancelled_at', { mode: 'string' }),
     billingCycleAnchor: timestamp('billing_cycle_anchor', { mode: 'string' }),
     metadata: json(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
@@ -84,6 +101,166 @@ export const subscriptions = mysqlTable(
     index('idx_subscriptions_owner').on(table.ownerType, table.ownerId),
     index('idx_subscriptions_status').on(table.status),
     unique('uq_subscriptions_owner').on(table.ownerType, table.ownerId),
+  ],
+);
+
+export const billingInvoices = mysqlTable(
+  'billing_invoices',
+  {
+    id: int().autoincrement().primaryKey(),
+    ownerType: varchar('owner_type', { length: 40 }).notNull(),
+    ownerId: int('owner_id').notNull(),
+    subscriptionId: int('subscription_id').references(() => subscriptions.id, {
+      onDelete: 'set null',
+    }),
+    planId: int('plan_id').references(() => plans.id, { onDelete: 'set null' }),
+    invoiceNumber: varchar('invoice_number', { length: 64 }).notNull(),
+    paymentReference: varchar('payment_reference', { length: 64 }).notNull(),
+    status: mysqlEnum('status', [
+      'draft',
+      'issued',
+      'submitted',
+      'paid',
+      'partially_paid',
+      'overdue',
+      'void',
+    ])
+      .default('issued')
+      .notNull(),
+    billingCycle: mysqlEnum('billing_cycle', ['monthly', 'annual']).default('monthly').notNull(),
+    amountDue: int('amount_due').notNull(),
+    amountPaid: int('amount_paid').default(0).notNull(),
+    discountAmount: int('discount_amount').default(0).notNull(),
+    currency: varchar({ length: 3 }).default('ZAR').notNull(),
+    issuedAt: timestamp('issued_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    dueAt: timestamp('due_at', { mode: 'string' }),
+    periodStart: timestamp('period_start', { mode: 'string' }),
+    periodEnd: timestamp('period_end', { mode: 'string' }),
+    paidAt: timestamp('paid_at', { mode: 'string' }),
+    voidedAt: timestamp('voided_at', { mode: 'string' }),
+    lineItems: json('line_items'),
+    metadata: json(),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_billing_invoices_invoice_number').on(table.invoiceNumber),
+    unique('uq_billing_invoices_payment_reference').on(table.paymentReference),
+    index('idx_billing_invoices_owner').on(table.ownerType, table.ownerId),
+    index('idx_billing_invoices_subscription').on(table.subscriptionId),
+    index('idx_billing_invoices_status').on(table.status),
+  ],
+);
+
+export const billingPayments = mysqlTable(
+  'billing_payments',
+  {
+    id: int().autoincrement().primaryKey(),
+    invoiceId: int('invoice_id')
+      .notNull()
+      .references(() => billingInvoices.id, { onDelete: 'cascade' }),
+    subscriptionId: int('subscription_id').references(() => subscriptions.id, {
+      onDelete: 'set null',
+    }),
+    ownerType: varchar('owner_type', { length: 40 }).notNull(),
+    ownerId: int('owner_id').notNull(),
+    paymentMethod: mysqlEnum('payment_method', ['manual_eft', 'manual_adjustment', 'other'])
+      .default('manual_eft')
+      .notNull(),
+    state: mysqlEnum('state', [
+      'submitted',
+      'under_review',
+      'verified',
+      'rejected',
+      'reversed',
+      'refunded',
+    ])
+      .default('submitted')
+      .notNull(),
+    amount: int().notNull(),
+    currency: varchar({ length: 3 }).default('ZAR').notNull(),
+    paymentReference: varchar('payment_reference', { length: 64 }).notNull(),
+    bankReference: varchar('bank_reference', { length: 120 }),
+    payerName: varchar('payer_name', { length: 160 }),
+    paymentDate: timestamp('payment_date', { mode: 'string' }),
+    submittedBy: int('submitted_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
+    rejectionReason: text('rejection_reason'),
+    reviewNote: text('review_note'),
+    idempotencyKey: varchar('idempotency_key', { length: 120 }).notNull(),
+    metadata: json(),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_billing_payments_idempotency').on(table.idempotencyKey),
+    index('idx_billing_payments_invoice').on(table.invoiceId),
+    index('idx_billing_payments_subscription').on(table.subscriptionId),
+    index('idx_billing_payments_owner').on(table.ownerType, table.ownerId),
+    index('idx_billing_payments_state').on(table.state),
+    index('idx_billing_payments_reference').on(table.paymentReference),
+  ],
+);
+
+export const billingPaymentDocuments = mysqlTable(
+  'billing_payment_documents',
+  {
+    id: int().autoincrement().primaryKey(),
+    paymentId: int('payment_id')
+      .notNull()
+      .references(() => billingPayments.id, { onDelete: 'cascade' }),
+    invoiceId: int('invoice_id')
+      .notNull()
+      .references(() => billingInvoices.id, { onDelete: 'cascade' }),
+    ownerType: varchar('owner_type', { length: 40 }).notNull(),
+    ownerId: int('owner_id').notNull(),
+    storageKey: varchar('storage_key', { length: 512 }).notNull(),
+    originalFileName: varchar('original_file_name', { length: 255 }).notNull(),
+    mimeType: varchar('mime_type', { length: 120 }).notNull(),
+    fileSizeBytes: int('file_size_bytes').notNull(),
+    sha256Hash: varchar('sha256_hash', { length: 64 }).notNull(),
+    visibility: mysqlEnum('visibility', ['private']).default('private').notNull(),
+    status: mysqlEnum('status', ['active', 'deleted']).default('active').notNull(),
+    uploadedBy: int('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    uploadedAt: timestamp('uploaded_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    metadata: json(),
+  },
+  table => [
+    unique('uq_billing_payment_documents_storage_key').on(table.storageKey),
+    index('idx_billing_payment_documents_payment').on(table.paymentId),
+    index('idx_billing_payment_documents_invoice').on(table.invoiceId),
+    index('idx_billing_payment_documents_owner').on(table.ownerType, table.ownerId),
+  ],
+);
+
+export const billingAuditEvents = mysqlTable(
+  'billing_audit_events',
+  {
+    id: int().autoincrement().primaryKey(),
+    ownerType: varchar('owner_type', { length: 40 }).notNull(),
+    ownerId: int('owner_id').notNull(),
+    subscriptionId: int('subscription_id').references(() => subscriptions.id, {
+      onDelete: 'set null',
+    }),
+    invoiceId: int('invoice_id').references(() => billingInvoices.id, { onDelete: 'set null' }),
+    paymentId: int('payment_id').references(() => billingPayments.id, { onDelete: 'set null' }),
+    actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    eventType: varchar('event_type', { length: 120 }).notNull(),
+    message: text(),
+    beforeData: json('before_data'),
+    afterData: json('after_data'),
+    metadata: json(),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_billing_audit_owner').on(table.ownerType, table.ownerId),
+    index('idx_billing_audit_subscription').on(table.subscriptionId),
+    index('idx_billing_audit_invoice').on(table.invoiceId),
+    index('idx_billing_audit_payment').on(table.paymentId),
+    index('idx_billing_audit_event').on(table.eventType),
   ],
 );
 

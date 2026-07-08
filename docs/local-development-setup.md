@@ -224,6 +224,20 @@ Run the agency browser smoke against local app servers and the local DB:
 LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm test:agency-browser-smoke
 ```
 
+The agency billing smoke uses manual EFT placeholders and private local proof storage. For local and test runs, keep values non-payable:
+
+```text
+BILLING_EFT_ACCOUNT_NAME=LOCAL TEST EFT ACCOUNT - NOT PAYABLE
+BILLING_EFT_BANK_NAME=Local Test Bank
+BILLING_EFT_BRANCH_CODE=000000
+BILLING_EFT_ACCOUNT_NUMBER=0000000000
+BILLING_EFT_ACCOUNT_TYPE=Local test account
+BILLING_PROOF_STORAGE_ADAPTER=local
+BILLING_PRIVATE_STORAGE_DIR=.private/billing-proofs
+```
+
+Production bank details must come from deployment configuration or a secrets manager. Production proof storage must be configured with the private S3 billing variables in `.env.example`; proof uploads must not persist public object URLs.
+
 The local demo seed is idempotent. It first removes only records it owns:
 
 - emails ending in `@listify.local`

@@ -3,8 +3,17 @@ import { agencies, plans, planEntitlements, subscriptions, users } from '../../d
 import { getDb } from '../db';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
-export type SubscriptionOwnerType = 'agent' | 'agency';
-export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'cancelled';
+export type SubscriptionOwnerType = 'agent' | 'agency' | 'developer';
+export type SubscriptionStatus =
+  | 'trial'
+  | 'pending_payment'
+  | 'payment_under_review'
+  | 'active'
+  | 'past_due'
+  | 'grace_period'
+  | 'suspended'
+  | 'cancelled'
+  | 'expired';
 export type EntitlementValue = boolean | number | string | null;
 export type EntitlementMap = Record<string, EntitlementValue>;
 
@@ -42,6 +51,11 @@ export type SubscriptionSnapshot = {
   ownerId: number;
   status: SubscriptionStatus;
   trialEndsAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  graceEndsAt: string | null;
+  cancelAtPeriodEnd: boolean;
+  cancelledAt: string | null;
   billingCycleAnchor: string | null;
   metadata: Record<string, unknown> | null;
 };
@@ -169,9 +183,22 @@ function toSubscriptionSnapshot(row: SubscriptionRow): SubscriptionSnapshot {
     ownerId: Number(row.ownerId),
     status: row.status as SubscriptionStatus,
     trialEndsAt: row.trialEndsAt || null,
+    currentPeriodStart: row.currentPeriodStart || null,
+    currentPeriodEnd: row.currentPeriodEnd || null,
+    graceEndsAt: row.graceEndsAt || null,
+    cancelAtPeriodEnd: Boolean(row.cancelAtPeriodEnd),
+    cancelledAt: row.cancelledAt || null,
     billingCycleAnchor: row.billingCycleAnchor || null,
     metadata: parseJsonRecord(row.metadata),
   };
+}
+
+export function isSubscriptionEntitled(status: SubscriptionStatus | null | undefined): boolean {
+  return status === 'trial' || status === 'active' || status === 'grace_period';
+}
+
+export function isPaidSubscriptionEntitled(status: SubscriptionStatus | null | undefined): boolean {
+  return status === 'active' || status === 'grace_period';
 }
 
 function deriveTrialState(
@@ -620,7 +647,17 @@ export function isTrialState(status: SubscriptionStatus | null | undefined): boo
 export function toSubscriptionTableStatus(
   status: SubscriptionStatus | null | undefined,
 ): SubscriptionStatus {
-  if (status === 'trial' || status === 'active' || status === 'expired' || status === 'cancelled') {
+  if (
+    status === 'trial' ||
+    status === 'pending_payment' ||
+    status === 'payment_under_review' ||
+    status === 'active' ||
+    status === 'past_due' ||
+    status === 'grace_period' ||
+    status === 'suspended' ||
+    status === 'cancelled' ||
+    status === 'expired'
+  ) {
     return status;
   }
   return 'active';

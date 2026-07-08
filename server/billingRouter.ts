@@ -1,27 +1,88 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { publicProcedure, agencyAdminProcedure, superAdminProcedure } from './_core/trpc';
+import { agencyAdminProcedure, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import { getDb } from './db';
-import { stripe } from './_core/stripe';
+import { billingInvoices, billingPayments, plans, subscriptions } from '../drizzle/schema';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import {
-  plans,
-  agencySubscriptions,
-  paymentMethods,
-  invoices,
-  agencies,
-  coupons,
-} from '../drizzle/schema';
-import { eq, and, sql, or, desc } from 'drizzle-orm';
+  getAdminFinanceQueue,
+  getAgencyBillingWorkspace,
+  getBillingDocumentForUser,
+  getManualEftBankDetails,
+  listBillingPlans,
+  requestAgencyCancellationAtPeriodEnd,
+  restoreAgencySubscription,
+  reviewManualPayment,
+  startAgencyManualCheckout,
+  submitAgencyPaymentProof,
+  updateSubscriptionLifecycle,
+  type BillingCycle,
+  type CanonicalSubscriptionStatus,
+  type PaymentState,
+} from './services/billingFoundationService';
+import { requireUser } from './_core/requireUser';
 
-// Input validation schemas
+const billingCycleSchema = z.enum(['monthly', 'annual']);
+
 const createCheckoutSessionSchema = z.object({
-  planId: z.number(),
-  successUrl: z.string().url(),
-  cancelUrl: z.string().url(),
+  planId: z.number().int().positive(),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+  billingCycle: billingCycleSchema.default('monthly'),
+  couponCode: z.string().optional(),
 });
 
-const createSetupIntentSchema = z.object({
-  paymentMethodType: z.enum(['card']).default('card'),
+const startManualCheckoutSchema = z.object({
+  planId: z.number().int().positive(),
+  billingCycle: billingCycleSchema.default('monthly'),
+  couponCode: z.string().optional(),
+});
+
+const submitPaymentProofSchema = z.object({
+  invoiceId: z.number().int().positive(),
+  amount: z.number().positive(),
+  bankReference: z.string().max(120).optional(),
+  payerName: z.string().max(160).optional(),
+  paymentDate: z.string().optional(),
+  notes: z.string().max(2000).optional(),
+  file: z.object({
+    filename: z.string().min(1).max(255),
+    mimeType: z.string().min(1).max(120),
+    sizeBytes: z.number().int().positive(),
+    contentBase64: z.string().min(1),
+  }),
+});
+
+const reviewPaymentSchema = z.object({
+  paymentId: z.number().int().positive(),
+  decision: z.enum([
+    'approve',
+    'reject',
+    'request_correction',
+    'partial_payment',
+    'duplicate',
+    'unmatched',
+  ]),
+  note: z.string().max(2000).optional(),
+  verifiedAmount: z.number().positive().optional(),
+});
+
+const lifecycleSchema = z.object({
+  subscriptionId: z.number().int().positive(),
+  status: z.enum([
+    'trial',
+    'pending_payment',
+    'payment_under_review',
+    'active',
+    'past_due',
+    'grace_period',
+    'suspended',
+    'cancelled',
+    'expired',
+  ]),
+  periodEnd: z.string().nullable().optional(),
+  graceEndsAt: z.string().nullable().optional(),
+  note: z.string().max(2000).optional(),
 });
 
 function requireAgencyId(ctx: { user?: { agencyId?: number | null } | null }): number {
@@ -29,619 +90,222 @@ function requireAgencyId(ctx: { user?: { agencyId?: number | null } | null }): n
   if (!agencyId) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'User must belong to an agency' });
   }
-  return agencyId;
+  return Number(agencyId);
 }
 
 export const billingRouter = {
-  // Public endpoints
-  plans: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db)
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  plans: publicProcedure
+    .input(z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional())
+    .query(async ({ input }) => listBillingPlans(input?.segment || 'agency')),
 
-    return await db.select().from(plans).where(eq(plans.isActive, 1)).orderBy(plans.sortOrder);
+  bankDetails: protectedProcedure.query(() => getManualEftBankDetails()),
+
+  workspace: agencyAdminProcedure.query(async ({ ctx }) => {
+    return getAgencyBillingWorkspace(requireUser(ctx));
   }),
 
+  startManualEftCheckout: agencyAdminProcedure
+    .input(startManualCheckoutSchema)
+    .mutation(async ({ ctx, input }) => {
+      return startAgencyManualCheckout({
+        user: requireUser(ctx),
+        planId: input.planId,
+        billingCycle: input.billingCycle as BillingCycle,
+        couponCode: input.couponCode,
+      });
+    }),
+
+  // Backwards-compatible name used by older agency onboarding/billing components.
   createCheckoutSession: agencyAdminProcedure
     .input(createCheckoutSessionSchema)
-    .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-      // Check if Stripe is configured
-      if (!stripe) {
-        throw new TRPCError({
-          code: 'SERVICE_UNAVAILABLE',
-          message: 'Payment system is not configured. Please contact support.',
-        });
-      }
-
-      try {
-        // Get the plan
-        const [plan] = await db.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
-        if (!plan) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Plan not found' });
-        }
-
-        if (!plan.stripePriceId) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Plan is not configured for Stripe billing',
-          });
-        }
-
-        const agencyId = requireAgencyId(ctx);
-
-        // Get agency info
-        const [agency] = await db
-          .select()
-          .from(agencies)
-          .where(eq(agencies.id, agencyId))
-          .limit(1);
-        if (!agency) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency not found' });
-        }
-
-        // Create or get Stripe customer
-        let customerId: string;
-        const existingSubscription = await db
-          .select()
-          .from(agencySubscriptions)
-          .where(eq(agencySubscriptions.agencyId, agencyId))
-          .limit(1);
-
-        if (existingSubscription.length > 0) {
-          customerId = existingSubscription[0].stripeCustomerId;
-        } else {
-          // Create new customer
-          const customer = await stripe.customers.create({
-            email: agency.email,
-            name: agency.name,
-            metadata: {
-              agencyId: agencyId.toString(),
-            },
-          });
-          customerId = customer.id;
-
-          // Create subscription record
-          await db.insert(agencySubscriptions).values({
-            agencyId,
-            planId: input.planId,
-            stripeCustomerId: customerId,
-            stripePriceId: plan.stripePriceId,
-            status: 'incomplete',
-          });
-        }
-
-        // Create checkout session
-        const session = await stripe.checkout.sessions.create({
-          customer: customerId,
-          payment_method_types: ['card'],
-          line_items: [
-            {
-              price: plan.stripePriceId,
-              quantity: 1,
-            },
-          ],
-          mode: 'subscription',
-          success_url: input.successUrl,
-          cancel_url: input.cancelUrl,
-          metadata: {
-            agencyId: agencyId.toString(),
-            planId: input.planId.toString(),
-          },
-        });
-
-        return { sessionId: session.id, url: session.url };
-      } catch (error) {
-        console.error('Error creating checkout session:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create checkout session',
-        });
-      }
-    }),
-
-  // Agency billing endpoints
-  subscription: agencyAdminProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db)
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-    const agencyId = requireAgencyId(ctx);
-
-    const [subscription] = await db
-      .select({
-        id: agencySubscriptions.id,
-        planId: agencySubscriptions.planId,
-        status: agencySubscriptions.status,
-        currentPeriodStart: agencySubscriptions.currentPeriodStart,
-        currentPeriodEnd: agencySubscriptions.currentPeriodEnd,
-        cancelAtPeriodEnd: agencySubscriptions.cancelAtPeriodEnd,
-        stripeSubscriptionId: agencySubscriptions.stripeSubscriptionId,
-        plan: plans,
-      })
-      .from(agencySubscriptions)
-      .leftJoin(plans, eq(agencySubscriptions.planId, plans.id))
-      .where(eq(agencySubscriptions.agencyId, agencyId))
-      .limit(1);
-
-    return subscription || null;
-  }),
-
-  paymentMethods: agencyAdminProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db)
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-    const agencyId = requireAgencyId(ctx);
-
-    return await db
-      .select()
-      .from(paymentMethods)
-      .where(eq(paymentMethods.agencyId, agencyId))
-      .orderBy(paymentMethods.isDefault);
-  }),
-
-  createSetupIntent: agencyAdminProcedure
-    .input(createSetupIntentSchema)
-    .mutation(async ({ ctx }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-      if (!stripe) {
-        throw new TRPCError({
-          code: 'SERVICE_UNAVAILABLE',
-          message: 'Payment system is not configured. Please contact support.',
-        });
-      }
-
-      try {
-        const agencyId = requireAgencyId(ctx);
-
-        // Get or create customer
-        const [subscription] = await db
-          .select()
-          .from(agencySubscriptions)
-          .where(eq(agencySubscriptions.agencyId, agencyId))
-          .limit(1);
-
-        if (!subscription) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'No subscription found for agency' });
-        }
-
-        const setupIntent = await stripe.setupIntents.create({
-          customer: subscription.stripeCustomerId,
-          payment_method_types: ['card'],
-          metadata: {
-            agencyId: agencyId.toString(),
-          },
-        });
-
-        return {
-          clientSecret: setupIntent.client_secret,
-          setupIntentId: setupIntent.id,
-        };
-      } catch (error) {
-        console.error('Error creating setup intent:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to create payment method setup',
-        });
-      }
-    }),
-
-  invoices: agencyAdminProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db)
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-    const agencyId = requireAgencyId(ctx);
-
-    return await db
-      .select()
-      .from(invoices)
-      .where(eq(invoices.agencyId, agencyId))
-      .orderBy(invoices.createdAt);
-  }),
-
-  cancelSubscription: agencyAdminProcedure.mutation(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db)
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-    if (!stripe) {
-      throw new TRPCError({
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Payment system is not configured. Please contact support.',
-      });
-    }
-
-    try {
-      const agencyId = requireAgencyId(ctx);
-
-      const [subscription] = await db
-        .select()
-        .from(agencySubscriptions)
-        .where(eq(agencySubscriptions.agencyId, agencyId))
-        .limit(1);
-
-      if (!subscription || !subscription.stripeSubscriptionId) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'No active subscription found' });
-      }
-
-      // Cancel at period end
-      await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
-        cancel_at_period_end: true,
+    .mutation(async ({ ctx, input }) => {
+      const result = await startAgencyManualCheckout({
+        user: requireUser(ctx),
+        planId: input.planId,
+        billingCycle: input.billingCycle as BillingCycle,
+        couponCode: input.couponCode,
       });
 
-      // Update local record
-      await db
-        .update(agencySubscriptions)
-        .set({
-          cancelAtPeriodEnd: 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(agencySubscriptions.id, subscription.id));
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error canceling subscription:', error);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to cancel subscription',
-      });
-    }
-  }),
-
-  reactivateSubscription: agencyAdminProcedure.mutation(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db)
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-    if (!stripe) {
-      throw new TRPCError({
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Payment system is not configured. Please contact support.',
-      });
-    }
-
-    try {
-      const agencyId = requireAgencyId(ctx);
-
-      const [subscription] = await db
-        .select()
-        .from(agencySubscriptions)
-        .where(eq(agencySubscriptions.agencyId, agencyId))
-        .limit(1);
-
-      if (!subscription || !subscription.stripeSubscriptionId) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'No subscription found' });
-      }
-
-      // Reactivate subscription
-      await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
-        cancel_at_period_end: false,
-      });
-
-      // Update local record
-      await db
-        .update(agencySubscriptions)
-        .set({
-          cancelAtPeriodEnd: 0,
-          updatedAt: new Date(),
-        })
-        .where(eq(agencySubscriptions.id, subscription.id));
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error reactivating subscription:', error);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Failed to reactivate subscription',
-      });
-    }
-  }),
-
-  // Admin-only endpoints
-  admin: {
-    plans: superAdminProcedure.query(async () => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-      return await db.select().from(plans).orderBy(plans.sortOrder);
-    }),
-
-    updatePlan: superAdminProcedure
-      .input(
-        z.object({
-          id: z.number(),
-          updates: z.object({
-            name: z.string().optional(),
-            displayName: z.string().optional(),
-            price: z.number().optional(),
-            stripePriceId: z.string().optional(),
-            isActive: z.number().optional(),
-            isPopular: z.number().optional(),
-          }),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db)
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-        await db.update(plans).set(input.updates).where(eq(plans.id, input.id));
-        return { success: true };
-      }),
-
-    billingOverview: superAdminProcedure.query(async () => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-      // Revenue metrics
-      const [totalRevenue] = await db
-        .select({ total: sql<number>`sum(${invoices.amount})` })
-        .from(invoices)
-        .where(eq(invoices.status, 'paid'));
-
-      const [monthlyRevenue] = await db
-        .select({ total: sql<number>`sum(${invoices.amount})` })
-        .from(invoices)
-        .where(
-          and(
-            eq(invoices.status, 'paid'),
-            sql`${invoices.createdAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
-          ),
-        );
-
-      // Subscription metrics
-      const [activeSubscriptions] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(agencySubscriptions)
-        .where(eq(agencySubscriptions.status, 'active'));
-
-      const [totalSubscriptions] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(agencySubscriptions);
-
-      const [trialSubscriptions] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(agencySubscriptions)
-        .where(eq(agencySubscriptions.status, 'trialing'));
-
-      const [churnedSubscriptions] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(agencySubscriptions)
-        .where(
-          or(eq(agencySubscriptions.status, 'canceled'), eq(agencySubscriptions.status, 'unpaid')),
-        );
-
-      // Agency metrics
-      const [totalAgencies] = await db.select({ count: sql<number>`count(*)` }).from(agencies);
-
-      const [paidAgencies] = await db
-        .select({ count: sql<number>`count(distinct ${agencies.id})` })
-        .from(agencies)
-        .innerJoin(agencySubscriptions, eq(agencies.id, agencySubscriptions.agencyId))
-        .where(eq(agencySubscriptions.status, 'active'));
-
-      // Plan distribution
-      const planDistribution = await db
-        .select({
-          planName: plans.name,
-          planDisplayName: plans.displayName,
-          count: sql<number>`count(*)`,
-        })
-        .from(agencySubscriptions)
-        .innerJoin(plans, eq(agencySubscriptions.planId, plans.id))
-        .where(eq(agencySubscriptions.status, 'active'))
-        .groupBy(plans.id, plans.name, plans.displayName);
-
-      // Recent transactions (last 30 days)
-      const recentTransactions = await db
-        .select({
-          id: invoices.id,
-          amount: invoices.amount,
-          currency: invoices.currency,
-          status: invoices.status,
-          createdAt: invoices.createdAt,
-          agencyName: agencies.name,
-        })
-        .from(invoices)
-        .innerJoin(agencySubscriptions, eq(invoices.subscriptionId, agencySubscriptions.id))
-        .innerJoin(agencies, eq(agencySubscriptions.agencyId, agencies.id))
-        .where(sql`${invoices.createdAt} >= DATE_SUB(NOW(), INTERVAL 30 DAY)`)
-        .orderBy(desc(invoices.createdAt))
-        .limit(10);
-
-      // Monthly recurring revenue (MRR)
-      const activeSubsWithPlans = await db
-        .select({
-          amount: plans.price,
-          interval: plans.interval,
-        })
-        .from(agencySubscriptions)
-        .innerJoin(plans, eq(agencySubscriptions.planId, plans.id))
-        .where(eq(agencySubscriptions.status, 'active'));
-
-      let mrr = 0;
-      for (const sub of activeSubsWithPlans) {
-        const monthlyAmount = sub.interval === 'year' ? sub.amount / 12 : sub.amount;
-        mrr += monthlyAmount;
-      }
+      const url = input.successUrl
+        ? `${input.successUrl}${input.successUrl.includes('?') ? '&' : '?'}invoiceId=${result.invoice.id}`
+        : `/agency/billing?invoiceId=${result.invoice.id}`;
 
       return {
-        revenue: {
-          total: Number(totalRevenue?.total || 0) / 100,
-          monthly: Number(monthlyRevenue?.total || 0) / 100,
-          mrr: mrr / 100,
-        },
-        subscriptions: {
-          active: Number(activeSubscriptions?.count || 0),
-          total: Number(totalSubscriptions?.count || 0),
-          trial: Number(trialSubscriptions?.count || 0),
-          churned: Number(churnedSubscriptions?.count || 0),
-        },
-        agencies: {
-          total: Number(totalAgencies?.count || 0),
-          paid: Number(paidAgencies?.count || 0),
-          free: Number(totalAgencies?.count || 0) - Number(paidAgencies?.count || 0),
-        },
-        planDistribution: planDistribution.map(p => ({
-          name: p.planName,
-          displayName: p.planDisplayName,
-          count: Number(p.count),
-        })),
-        recentTransactions: recentTransactions.map(t => ({
-          id: t.id,
-          amount: Number(t.amount) / 100,
-          currency: t.currency,
-          status: t.status,
-          createdAt: t.createdAt,
-          agencyName: t.agencyName,
-        })),
+        sessionId: `manual_eft:${result.invoice.id}`,
+        url,
+        invoice: result.invoice,
+        bankDetails: result.bankDetails,
       };
     }),
 
-    // Coupon management
-    coupons: superAdminProcedure.query(async () => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  submitPaymentProof: agencyAdminProcedure
+    .input(submitPaymentProofSchema)
+    .mutation(async ({ ctx, input }) =>
+      submitAgencyPaymentProof({
+        user: requireUser(ctx),
+        invoiceId: input.invoiceId,
+        amount: Math.round(input.amount),
+        bankReference: input.bankReference,
+        payerName: input.payerName,
+        paymentDate: input.paymentDate,
+        notes: input.notes,
+        file: input.file,
+      }),
+    ),
 
-      return await db.select().from(coupons).orderBy(coupons.createdAt);
+  getProofDocument: protectedProcedure
+    .input(z.object({ documentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) =>
+      getBillingDocumentForUser({ user: requireUser(ctx), documentId: input.documentId }),
+    ),
+
+  subscription: agencyAdminProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    const agencyId = requireAgencyId(ctx);
+    const [row] = await db
+      .select({ subscription: subscriptions, plan: plans })
+      .from(subscriptions)
+      .leftJoin(plans, eq(subscriptions.planId, plans.id))
+      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+      .limit(1);
+    return row
+      ? {
+          ...row.subscription,
+          plan: row.plan,
+        }
+      : null;
+  }),
+
+  invoices: agencyAdminProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    const agencyId = requireAgencyId(ctx);
+    return db
+      .select()
+      .from(billingInvoices)
+      .where(and(eq(billingInvoices.ownerType, 'agency'), eq(billingInvoices.ownerId, agencyId)))
+      .orderBy(desc(billingInvoices.createdAt));
+  }),
+
+  payments: agencyAdminProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    const agencyId = requireAgencyId(ctx);
+    return db
+      .select()
+      .from(billingPayments)
+      .where(and(eq(billingPayments.ownerType, 'agency'), eq(billingPayments.ownerId, agencyId)))
+      .orderBy(desc(billingPayments.createdAt));
+  }),
+
+  paymentMethods: agencyAdminProcedure.query(async () => {
+    return [
+      {
+        id: 'manual_eft',
+        type: 'manual_eft',
+        isDefault: true,
+        label: 'Manual EFT',
+        cardLast4: null,
+        cardBrand: 'eft',
+      },
+    ];
+  }),
+
+  cancelSubscription: agencyAdminProcedure.mutation(async ({ ctx }) =>
+    requestAgencyCancellationAtPeriodEnd(requireUser(ctx)),
+  ),
+
+  reactivateSubscription: agencyAdminProcedure.mutation(async ({ ctx }) =>
+    restoreAgencySubscription(requireUser(ctx)),
+  ),
+
+  admin: {
+    plans: superAdminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      return db.select().from(plans).orderBy(plans.sortOrder);
     }),
 
-    createCoupon: superAdminProcedure
+    financeQueue: superAdminProcedure
       .input(
-        z.object({
-          code: z.string().min(3).max(20).toUpperCase(),
-          name: z.string().min(1),
-          description: z.string().optional(),
-          discountType: z.enum(['amount', 'percent']),
-          discountAmount: z.number().positive(),
-          maxRedemptions: z.number().int().positive().optional(),
-          validFrom: z.date().optional(),
-          validUntil: z.date().optional(),
-          appliesToPlans: z.array(z.number()).optional(),
-        }),
+        z
+          .object({
+            status: z
+              .enum(['submitted', 'under_review', 'verified', 'rejected', 'reversed', 'refunded', 'all'])
+              .default('under_review'),
+            limit: z.number().int().positive().max(100).default(50),
+            offset: z.number().int().min(0).default(0),
+          })
+          .optional(),
       )
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db)
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-        // Check if code already exists
-        const [existing] = await db
-          .select()
-          .from(coupons)
-          .where(eq(coupons.code, input.code))
-          .limit(1);
-
-        if (existing) {
-          throw new TRPCError({ code: 'CONFLICT', message: 'Coupon code already exists' });
-        }
-
-        const couponData = {
-          ...input,
-          appliesToPlans: input.appliesToPlans ? JSON.stringify(input.appliesToPlans) : null,
-        };
-
-        await db.insert(coupons).values(couponData);
-
-        return { success: true };
-      }),
-
-    updateCoupon: superAdminProcedure
-      .input(
-        z.object({
-          id: z.number(),
-          updates: z.object({
-            name: z.string().optional(),
-            description: z.string().optional(),
-            discountAmount: z.number().optional(),
-            maxRedemptions: z.number().optional(),
-            validFrom: z.date().optional(),
-            validUntil: z.date().optional(),
-            isActive: z.number().optional(),
-          }),
+      .query(async ({ input }) =>
+        getAdminFinanceQueue({
+          status: (input?.status || 'under_review') as PaymentState | 'all',
+          limit: input?.limit,
+          offset: input?.offset,
         }),
-      )
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db)
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      ),
 
-        await db.update(coupons).set(input.updates).where(eq(coupons.id, input.id));
-        return { success: true };
-      }),
-
-    deleteCoupon: superAdminProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db)
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-        await db.delete(coupons).where(eq(coupons.id, input.id));
-        return { success: true };
-      }),
-
-    // Validate coupon for checkout
-    validateCoupon: publicProcedure
-      .input(
-        z.object({
-          code: z.string(),
-          planId: z.number(),
+    reviewManualPayment: superAdminProcedure
+      .input(reviewPaymentSchema)
+      .mutation(async ({ ctx, input }) =>
+        reviewManualPayment({
+          actorUser: requireUser(ctx),
+          paymentId: input.paymentId,
+          decision: input.decision,
+          note: input.note,
+          verifiedAmount: input.verifiedAmount,
         }),
-      )
-      .query(async ({ input }) => {
-        const db = await getDb();
-        if (!db)
-          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      ),
 
-        const [coupon] = await db
-          .select()
-          .from(coupons)
-          .where(eq(coupons.code, input.code.toUpperCase()))
-          .limit(1);
+    updateSubscriptionLifecycle: superAdminProcedure
+      .input(lifecycleSchema)
+      .mutation(async ({ ctx, input }) =>
+        updateSubscriptionLifecycle({
+          actorUser: requireUser(ctx),
+          subscriptionId: input.subscriptionId,
+          status: input.status as CanonicalSubscriptionStatus,
+          periodEnd: input.periodEnd,
+          graceEndsAt: input.graceEndsAt,
+          note: input.note,
+        }),
+      ),
 
-        if (!coupon || !coupon.isActive) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Invalid or expired coupon' });
-        }
+    proofDocument: superAdminProcedure
+      .input(z.object({ documentId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) =>
+        getBillingDocumentForUser({ user: requireUser(ctx), documentId: input.documentId }),
+      ),
 
-        // Check expiry
-        const now = new Date();
-        if (coupon.validFrom && now < coupon.validFrom) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon not yet valid' });
-        }
-        if (coupon.validUntil && now > coupon.validUntil) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon has expired' });
-        }
+    billingOverview: superAdminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
-        // Check max redemptions
-        if (coupon.maxRedemptions && coupon.redemptionsUsed >= coupon.maxRedemptions) {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon usage limit exceeded' });
-        }
+      const [revenue] = await db
+        .select({ total: sql<number>`COALESCE(SUM(${billingInvoices.amountPaid}), 0)` })
+        .from(billingInvoices)
+        .where(eq(billingInvoices.status, 'paid'));
+      const [pendingPayments] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(billingPayments)
+        .where(and(eq(billingPayments.paymentMethod, 'manual_eft'), eq(billingPayments.state, 'under_review')));
+      const [activeSubscriptions] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(subscriptions)
+        .where(eq(subscriptions.status, 'active'));
 
-        // Check if applies to this plan
-        if (coupon.appliesToPlans) {
-          const allowedPlans = JSON.parse(coupon.appliesToPlans);
-          if (!allowedPlans.includes(input.planId)) {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Coupon not valid for this plan' });
-          }
-        }
-
-        return {
-          id: coupon.id,
-          code: coupon.code,
-          name: coupon.name,
-          description: coupon.description,
-          discountType: coupon.discountType,
-          discountAmount: coupon.discountAmount,
-        };
-      }),
+      return {
+        revenue: {
+          total: Number(revenue?.total || 0) / 100,
+          monthly: 0,
+          mrr: 0,
+        },
+        subscriptions: {
+          active: Number(activeSubscriptions?.count || 0),
+          pendingManualEft: Number(pendingPayments?.count || 0),
+        },
+      };
+    }),
   },
 };

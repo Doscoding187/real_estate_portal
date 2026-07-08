@@ -132,6 +132,7 @@ mcps/
 
 # Local development uploads
 local-uploads/
+.private/
 
 # Local database/runtime state
 .local/
