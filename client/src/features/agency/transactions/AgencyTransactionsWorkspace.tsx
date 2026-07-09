@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CheckCircle2,
   CircleDollarSign,
+  Clock3,
   FileUp,
   HandCoins,
   ListChecks,
@@ -56,6 +57,8 @@ type WorkItem = {
   dueAt?: string | null;
   status?: string | null;
   overdue?: boolean;
+  completedAt?: string | null;
+  notes?: string | null;
 };
 
 type TransactionRecord = {
@@ -72,10 +75,19 @@ type TransactionRecord = {
   agentShare: number;
   commissionStatus?: string | null;
   expectedPaymentDate?: string | null;
+  openedAt?: string | null;
+  createdAt?: string | null;
   milestones?: WorkItem[];
   conditions?: WorkItem[];
   parties?: Array<{ id: number; role?: string | null; name: string; email?: string | null; phone?: string | null }>;
-  documents?: Array<{ id: number; documentType?: string | null; fileName: string; uploadedAt?: string | null }>;
+  documents?: Array<{
+    id: number;
+    documentType?: string | null;
+    fileName: string;
+    uploadedAt?: string | null;
+    status?: string | null;
+    visibilityScope?: string | null;
+  }>;
   activity?: Array<{ id: number; eventType: string; description: string; createdAt?: string | null }>;
 };
 
@@ -86,8 +98,10 @@ type DealRecord = {
   interestStatus?: string | null;
   riskStatus?: string | null;
   acceptedAmount?: number | null;
+  acceptedAt?: string | null;
   nextAction?: string | null;
   nextDeadline?: string | null;
+  createdAt?: string | null;
   lead?: { id: number; name?: string | null; email?: string | null; phone?: string | null } | null;
   listing?: { id: number; title?: string | null; action?: string | null; city?: string | null; askingPrice?: number | null; monthlyRent?: number | null } | null;
   property?: { id: number; title?: string | null; city?: string | null; price?: number | null } | null;
@@ -134,6 +148,13 @@ function when(value?: string | null) {
   if (!value) return 'No deadline';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'No deadline';
+  return shortDate.format(date);
+}
+
+function dateTime(value?: string | null) {
+  if (!value) return 'Not recorded';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not recorded';
   return shortDate.format(date);
 }
 
@@ -188,7 +209,6 @@ export function AgencyTransactionsWorkspace(props: WorkspaceContentProps) {
   const [counterOpen, setCounterOpen] = useState(false);
   const [conditionOpen, setConditionOpen] = useState(false);
   const [partyOpen, setPartyOpen] = useState(false);
-  const [documentOpen, setDocumentOpen] = useState(false);
   const refresh = useDealRefresh(selectedDealId);
 
   const dealsQuery = trpc.agency.getDealWorkspace.useQuery(
@@ -284,7 +304,6 @@ export function AgencyTransactionsWorkspace(props: WorkspaceContentProps) {
             onCounter={() => setCounterOpen(true)}
             onCondition={() => setConditionOpen(true)}
             onParty={() => setPartyOpen(true)}
-            onDocument={() => setDocumentOpen(true)}
           />
         ) : (
           <Card className="border-slate-200 bg-white shadow-sm">
@@ -337,15 +356,6 @@ export function AgencyTransactionsWorkspace(props: WorkspaceContentProps) {
         }}
       />
 
-      <DocumentDialog
-        open={documentOpen}
-        onOpenChange={setDocumentOpen}
-        transaction={selectedDeal?.transaction || null}
-        onSaved={async () => {
-          await refresh();
-          setDocumentOpen(false);
-        }}
-      />
     </section>
   );
 }
@@ -394,14 +404,12 @@ function DealDetail({
   onCounter,
   onCondition,
   onParty,
-  onDocument,
 }: {
   deal: DealRecord;
   refresh: () => Promise<void>;
   onCounter: () => void;
   onCondition: () => void;
   onParty: () => void;
-  onDocument: () => void;
 }) {
   const submitOffer = trpc.agency.submitOfferVersion.useMutation({
     onSuccess: async () => {
@@ -438,6 +446,8 @@ function DealDetail({
   const canAccept = latestOffer && !transaction && !['rejected', 'withdrawn', 'expired'].includes(String(latestOffer.status || ''));
   const activeConditions = activeWorkCount(transaction?.conditions);
   const activeMilestones = activeWorkCount(transaction?.milestones);
+  const listingContext = deal.listing?.title || deal.property?.title || 'No listing context';
+  const buyerName = deal.lead?.name || 'Buyer not recorded';
 
   return (
     <div className="min-w-0 space-y-5">
@@ -452,10 +462,10 @@ function DealDetail({
                 </Badge>
               </div>
               <h3 className="mt-3 text-xl font-semibold text-slate-950">
-                {deal.listing?.title || deal.property?.title || deal.lead?.name || `Deal #${deal.id}`}
+                {listingContext || buyerName || `Deal #${deal.id}`}
               </h3>
               <p className="mt-1 text-sm text-slate-500">
-                {deal.lead?.name || 'No lead'} - {deal.agent?.name || 'No responsible agent'}
+                {buyerName} - {deal.agent?.name || 'No responsible agent'}
               </p>
             </div>
             <div className="text-right">
@@ -464,12 +474,15 @@ function DealDetail({
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-5">
-            <HeaderFact label="Stage" value={label(transaction?.stage || deal.stage)} />
-            <HeaderFact label="Blocking" value={activeConditions ? `${activeConditions} conditions` : 'No blockers'} />
-            <HeaderFact label="Next actor" value={label(transaction?.milestones?.find(item => !['completed', 'waived', 'cancelled'].includes(String(item.status || '')))?.responsibleParty || 'agency')} />
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <HeaderFact label="Buyer" value={buyerName} />
+            <HeaderFact label="Seller/listing context" value={listingContext} />
+            <HeaderFact label="Accepted price" value={money(transaction?.acceptedAmount || deal.acceptedAmount || latestOffer?.amount || 0)} />
+            <HeaderFact label="Transaction status" value={label(transaction?.status || deal.stage)} />
+            <HeaderFact label="Commission snapshot" value={money(transaction?.expectedCommission || 0)} />
+            <HeaderFact label="Created" value={dateTime(transaction?.createdAt || deal.createdAt)} />
+            <HeaderFact label="Accepted" value={dateTime(deal.acceptedAt || transaction?.openedAt || transaction?.createdAt)} />
             <HeaderFact label="Next deadline" value={when(transaction?.nextDeadline || deal.nextDeadline)} />
-            <HeaderFact label="Accepted amount" value={money(transaction?.acceptedAmount || deal.acceptedAmount || latestOffer?.amount || 0)} />
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -518,10 +531,6 @@ function DealDetail({
                 <Button variant="outline" onClick={onParty}>
                   <UserRoundPlus className="h-4 w-4" />
                   Add party
-                </Button>
-                <Button variant="outline" onClick={onDocument}>
-                  <FileUp className="h-4 w-4" />
-                  Add document
                 </Button>
                 <Button
                   variant="outline"
@@ -640,17 +649,37 @@ function DealDetail({
 
               <Card className="border-slate-200 bg-white shadow-sm">
                 <CardHeader className="pb-2">
-                  <SectionTitle icon={FileUp} title="Documents" eyebrow={`${numberLabel(transaction.documents?.length || 0)} private`} />
+                  <SectionTitle icon={FileUp} title="Private Documents" eyebrow="Safe disabled" />
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    Private document storage not configured locally. Upload is disabled; only existing
+                    agency-private metadata can appear here.
+                  </div>
                   {(transaction.documents || []).slice(0, 6).map(document => (
                     <div key={document.id} className="rounded-lg border border-slate-200 p-3">
                       <p className="text-sm font-semibold text-slate-950">{document.fileName}</p>
-                      <p className="mt-1 text-xs text-slate-500">{label(document.documentType)} - {formatDate(document.uploadedAt)}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {label(document.documentType)} - {label(document.visibilityScope || 'agency_private')} - {formatDate(document.uploadedAt)}
+                      </p>
                     </div>
                   ))}
                   {!transaction.documents?.length ? (
-                    <EmptyPanel icon={FileUp} title="No documents" text="Private document metadata appears here." />
+                    <EmptyPanel icon={FileUp} title="No document metadata" text="Private document metadata remains agency-scoped when present." />
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200 bg-white shadow-sm">
+                <CardHeader className="pb-2">
+                  <SectionTitle icon={Clock3} title="Activity Timeline" eyebrow={`${numberLabel(transaction.activity?.length || 0)} events`} />
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {(transaction.activity || []).slice(0, 10).map(item => (
+                    <ActivityRow key={item.id} item={item} />
+                  ))}
+                  {!transaction.activity?.length ? (
+                    <EmptyPanel icon={Clock3} title="No transaction activity" text="Accepted offer and transaction updates appear here." />
                   ) : null}
                 </CardContent>
               </Card>
@@ -670,9 +699,9 @@ function DealDetail({
 
 function HeaderFact({ label: factLabel, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+    <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3">
       <p className="text-xs font-medium uppercase text-slate-500">{factLabel}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-950">{value}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-950">{value}</p>
     </div>
   );
 }
@@ -701,16 +730,35 @@ function WorkItemRow({ item, compact, onComplete }: { item: WorkItem; compact?: 
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-950">{item.title}</p>
           {!compact && item.description ? <p className="mt-1 text-sm text-slate-500">{item.description}</p> : null}
+          {item.notes ? <p className="mt-1 text-sm text-slate-500">{item.notes}</p> : null}
           <p className="mt-1 text-xs text-slate-500">{label(item.responsibleParty)} - {when(item.dueAt)}</p>
         </div>
         <Badge className={cn('shrink-0 border', badgeClass(done ? 'emerald' : item.overdue ? 'rose' : 'amber'))}>{label(item.status)}</Badge>
       </div>
       {!done ? (
-        <Button variant="outline" size="sm" className="mt-3" onClick={onComplete}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          aria-label={`Complete ${item.title}`}
+          onClick={onComplete}
+        >
           <CheckCircle2 className="h-4 w-4" />
           Complete
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+function ActivityRow({ item }: { item: { eventType: string; description: string; createdAt?: string | null } }) {
+  return (
+    <div className="rounded-lg border border-slate-200 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-semibold text-slate-950">{label(item.eventType)}</p>
+        <span className="shrink-0 text-xs text-slate-500">{formatDate(item.createdAt)}</span>
+      </div>
+      <p className="mt-1 text-sm text-slate-600">{item.description}</p>
     </div>
   );
 }
@@ -965,39 +1013,6 @@ function PartyDialog({ open, onOpenChange, transaction, onSaved }: { open: boole
       <Input placeholder="Email" value={email} onChange={event => setEmail(event.target.value)} />
       <Input placeholder="Phone" value={phone} onChange={event => setPhone(event.target.value)} />
       <DialogActions onCancel={() => onOpenChange(false)} onSave={() => transaction && addParty.mutate({ transactionId: transaction.id, role: role as any, name, email: email || undefined, phone: phone || undefined })} disabled={!transaction || !name || addParty.isPending} />
-    </SimpleTransactionDialog>
-  );
-}
-
-function DocumentDialog({ open, onOpenChange, transaction, onSaved }: { open: boolean; onOpenChange: (open: boolean) => void; transaction: TransactionRecord | null; onSaved: () => Promise<void> }) {
-  const [documentType, setDocumentType] = useState('signed_offer');
-  const [conditionId, setConditionId] = useState('');
-  const [fileName, setFileName] = useState('');
-  const [storageKey, setStorageKey] = useState('');
-  const addDocument = trpc.agency.addTransactionDocument.useMutation({
-    onSuccess: async () => {
-      toast.success('Document metadata saved');
-      await onSaved();
-    },
-    onError: error => toast.error(error.message || 'Document could not be saved'),
-  });
-
-  return (
-    <SimpleTransactionDialog open={open} onOpenChange={onOpenChange} title="Add Private Document" description="Store private document metadata for the agency transaction record.">
-      <select className="w-full rounded-md border border-slate-200 px-3 py-2" value={documentType} onChange={event => setDocumentType(event.target.value)}>
-        {['signed_offer', 'id_document', 'proof_of_address', 'proof_of_funds', 'prequalification', 'bond_approval', 'fica', 'mandate', 'compliance_certificate', 'lease', 'inspection', 'other'].map(value => (
-          <option key={value} value={value}>{label(value)}</option>
-        ))}
-      </select>
-      <select className="w-full rounded-md border border-slate-200 px-3 py-2" value={conditionId} onChange={event => setConditionId(event.target.value)}>
-        <option value="">No linked condition</option>
-        {(transaction?.conditions || []).map(condition => (
-          <option key={condition.id} value={condition.id}>{condition.title}</option>
-        ))}
-      </select>
-      <Input placeholder="File name" value={fileName} onChange={event => setFileName(event.target.value)} />
-      <Input placeholder="Private storage key or reference" value={storageKey} onChange={event => setStorageKey(event.target.value)} />
-      <DialogActions onCancel={() => onOpenChange(false)} onSave={() => transaction && addDocument.mutate({ transactionId: transaction.id, conditionId: conditionId ? Number(conditionId) : undefined, documentType: documentType as any, fileName, storageKey })} disabled={!transaction || !fileName || !storageKey || addDocument.isPending} />
     </SimpleTransactionDialog>
   );
 }

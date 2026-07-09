@@ -25,15 +25,26 @@ import {
   users,
 } from '../../drizzle/schema';
 
-const localAcceptanceDb = process.env.AGENCY_DEAL_ENGINE_LOCAL_ACCEPTANCE === '1';
-if (localAcceptanceDb) {
-  dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: false });
-  if (process.env.NODE_ENV === 'test') {
-    process.env.NODE_ENV = 'development';
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: false });
+
+function isLocalAcceptanceDatabase(databaseUrl?: string) {
+  if (!databaseUrl) return false;
+  try {
+    const parsed = new URL(databaseUrl);
+    return (
+      ['localhost', '127.0.0.1'].includes(parsed.hostname) &&
+      parsed.pathname.replace(/^\//, '') === 'listify_local'
+    );
+  } catch {
+    return false;
   }
 }
 
-const hasDb = Boolean(process.env.DATABASE_URL && localAcceptanceDb);
+if (process.env.NODE_ENV === 'test' && isLocalAcceptanceDatabase(process.env.DATABASE_URL)) {
+  process.env.NODE_ENV = 'development';
+}
+
+const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
   ? describe
   : (((name: string, fn: Parameters<typeof describe>[1]) =>
@@ -627,7 +638,9 @@ describeWithDb('agency deal engine persisted workflow', () => {
     expect(milestones.map(milestone => milestone.title)).toContain('Deposit due');
     expect(conditions.map(condition => condition.title)).toContain('Signed offer document');
     expect(parties.map(party => party.role).sort()).toEqual(['buyer', 'listing_agent']);
-    expect(activity.map(item => item.eventType)).toContain('transaction_opened');
+    expect(activity.map(item => item.eventType)).toEqual(
+      expect.arrayContaining(['offer_accepted', 'transaction_opened']),
+    );
 
     const targetDay = agencyDateKey(new Date(Date.now() + 4 * 24 * 60 * 60 * 1000));
     const customCondition = await caller.addTransactionCondition({
@@ -648,6 +661,14 @@ describeWithDb('agency deal engine persisted workflow', () => {
       notes: 'Local acceptance metadata only; private binary storage is not configured.',
     });
     expect(document.documentId).toBeGreaterThan(0);
+    await expect(
+      caller.addTransactionDocument({
+        transactionId: accepted.transactionId,
+        documentType: 'signed_offer',
+        fileName: 'public-url-rejected.pdf',
+        storageKey: 'https://public.example.invalid/signed-offer.pdf',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
     const [storedDocument] = await db
       .select()
@@ -658,13 +679,51 @@ describeWithDb('agency deal engine persisted workflow', () => {
     expect(storedDocument.storageKey).toMatch(/^private\/agency-/);
     expect(storedDocument.storageKey).toContain(`/transactions/${accepted.transactionId}/`);
 
-    const myDay = await caller.getMyDay({ date: targetDay, limit: 30 });
-    expect(myDay.transactionDeadlines.map((deadline: any) => deadline.title)).toContain(
+    const myDayBeforeConditionCompletion = await caller.getMyDay({ date: targetDay, limit: 30 });
+    expect(
+      myDayBeforeConditionCompletion.transactionDeadlines.map((deadline: any) => deadline.title),
+    ).toContain(
       'Acceptance proof deadline',
     );
-    expect(new Set(myDay.transactionDeadlines.map((deadline: any) => deadline.id)).size).toBe(
-      myDay.transactionDeadlines.length,
+    expect(
+      new Set(myDayBeforeConditionCompletion.transactionDeadlines.map((deadline: any) => deadline.id))
+        .size,
+    ).toBe(
+      myDayBeforeConditionCompletion.transactionDeadlines.length,
     );
+
+    const depositMilestone = milestones.find(milestone => milestone.title === 'Deposit due');
+    expect(depositMilestone?.id).toBeTruthy();
+    await caller.updateTransactionWorkItem({
+      transactionId: accepted.transactionId,
+      itemType: 'milestone',
+      itemId: Number(depositMilestone?.id),
+      status: 'completed',
+      notes: 'Deposit milestone completed for reload persistence proof.',
+    });
+    await caller.updateTransactionWorkItem({
+      transactionId: accepted.transactionId,
+      itemType: 'condition',
+      itemId: customCondition.conditionId,
+      status: 'completed',
+      notes: 'Acceptance proof condition completed for My Day proof.',
+    });
+
+    const myDayAfterConditionCompletion = await caller.getMyDay({ date: targetDay, limit: 30 });
+    expect(
+      myDayAfterConditionCompletion.transactionDeadlines.map((deadline: any) => deadline.title),
+    ).not.toContain('Acceptance proof deadline');
+    expect(
+      new Set(myDayAfterConditionCompletion.transactionDeadlines.map((deadline: any) => deadline.id))
+        .size,
+    ).toBe(myDayAfterConditionCompletion.transactionDeadlines.length);
+
+    await caller.updateTransaction({
+      transactionId: accepted.transactionId,
+      status: 'completed',
+      commissionStatus: 'payable',
+      note: 'Completion update should not alter expected commission snapshot.',
+    });
 
     const workspace = await caller.getDealWorkspace({ dealId: createdDeal.dealId, limit: 10 });
     expect(workspace).toHaveLength(1);
@@ -678,10 +737,34 @@ describeWithDb('agency deal engine persisted workflow', () => {
     expect(workspace[0].transaction?.documents?.map((item: any) => item.fileName)).toContain(
       'signed-offer-acceptance-proof.pdf',
     );
+    expect(
+      workspace[0].transaction?.milestones?.find((item: any) => item.id === depositMilestone?.id)
+        ?.status,
+    ).toBe('completed');
+    expect(
+      workspace[0].transaction?.conditions?.find(
+        (item: any) => item.id === customCondition.conditionId,
+      )?.status,
+    ).toBe('completed');
     expect(workspace[0].transaction?.activity?.map((item: any) => item.eventType)).toEqual(
-      expect.arrayContaining(['document_added', 'condition_added', 'transaction_opened']),
+      expect.arrayContaining([
+        'offer_accepted',
+        'transaction_opened',
+        'document_added',
+        'condition_added',
+        'milestone_completed',
+        'condition_completed',
+        'transaction_updated',
+      ]),
     );
     expect(Number(workspace[0].transaction?.expectedCommission || 0)).toBe(88_000);
+    expect(workspace[0].transaction?.commissionStatus).toBe('payable');
+
+    const reloadedWorkspace = await caller.getDealWorkspace({ dealId: createdDeal.dealId, limit: 10 });
+    expect(reloadedWorkspace[0].transaction?.activity?.map((item: any) => item.eventType)).toEqual(
+      workspace[0].transaction?.activity?.map((item: any) => item.eventType),
+    );
+    expect(Number(reloadedWorkspace[0].transaction?.expectedCommission || 0)).toBe(88_000);
 
     const invisibleFromOutsideAgency = await outsideCaller.getDealWorkspace({
       dealId: createdDeal.dealId,
@@ -689,11 +772,40 @@ describeWithDb('agency deal engine persisted workflow', () => {
     });
     expect(invisibleFromOutsideAgency).toEqual([]);
     await expect(
+      outsideCaller.updateTransactionWorkItem({
+        transactionId: accepted.transactionId,
+        itemType: 'milestone',
+        itemId: Number(depositMilestone?.id),
+        status: 'completed',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      outsideCaller.updateTransactionWorkItem({
+        transactionId: accepted.transactionId,
+        itemType: 'condition',
+        itemId: customCondition.conditionId,
+        status: 'completed',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      outsideCaller.addTransactionCondition({
+        transactionId: accepted.transactionId,
+        title: 'Cross-agency condition',
+        responsibleParty: 'agency',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
       outsideCaller.addTransactionDocument({
         transactionId: accepted.transactionId,
         documentType: 'signed_offer',
         fileName: 'cross-agency.pdf',
         storageKey: `private/agency-${seed.outsideAgencyId}/transactions/${accepted.transactionId}/cross.pdf`,
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      outsideCaller.updateTransaction({
+        transactionId: accepted.transactionId,
+        status: 'cancelled',
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 

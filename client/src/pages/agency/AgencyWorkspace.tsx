@@ -45,7 +45,7 @@ export default function AgencyWorkspace() {
 
   return (
     <AgencyLayout className="bg-[#f5f7f4]">
-      <div className="min-h-screen text-slate-950">
+      <div className="min-h-screen text-slate-950" data-testid="agency-shell">
         <AgencySidebar
           agencyName={agencyName}
           location={[status?.agency?.city, status?.agency?.province].filter(Boolean).join(', ')}
