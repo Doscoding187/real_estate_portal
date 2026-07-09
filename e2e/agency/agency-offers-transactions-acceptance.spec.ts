@@ -29,6 +29,7 @@ type PersistedDealState = {
   milestoneCount: number;
   conditionCount: number;
   documentCount: number;
+  activityCount: number;
 };
 
 const fixtureIds = {
@@ -214,7 +215,8 @@ async function loadPersistedDealState(leadId: number): Promise<PersistedDealStat
          (SELECT COUNT(*) FROM agency_deal_offer_versions ov WHERE ov.deal_id = d.id) AS offerCount,
          (SELECT COUNT(*) FROM agency_transaction_milestones m WHERE m.transaction_id = t.id) AS milestoneCount,
          (SELECT COUNT(*) FROM agency_transaction_conditions c WHERE c.transaction_id = t.id) AS conditionCount,
-         (SELECT COUNT(*) FROM agency_transaction_documents doc WHERE doc.transaction_id = t.id) AS documentCount
+         (SELECT COUNT(*) FROM agency_transaction_documents doc WHERE doc.transaction_id = t.id) AS documentCount,
+         (SELECT COUNT(*) FROM agency_transaction_activity a WHERE a.transaction_id = t.id) AS activityCount
        FROM agency_deals d
        LEFT JOIN agency_transactions t ON t.deal_id = d.id
        WHERE d.lead_id = ?
@@ -232,6 +234,7 @@ async function loadPersistedDealState(leadId: number): Promise<PersistedDealStat
       milestoneCount: Number(row.milestoneCount || 0),
       conditionCount: Number(row.conditionCount || 0),
       documentCount: Number(row.documentCount || 0),
+      activityCount: Number(row.activityCount || 0),
     };
   } finally {
     await connection.end();
@@ -368,7 +371,7 @@ async function authenticatedState(_context: BrowserContext) {
   return true;
 }
 
-test.describe.serial('offers and transactions browser acceptance', () => {
+test.describe.serial('transaction operations v1 browser acceptance', () => {
   let fixture: AcceptanceFixture;
 
   test.beforeAll(async () => {
@@ -442,7 +445,18 @@ test.describe.serial('offers and transactions browser acceptance', () => {
     await expect(page.getByRole('heading', { name: 'Conditions' })).toBeVisible();
     await expect(page.getByText('Signed offer document', { exact: true })).toBeVisible();
     await expect(page.getByText('Expected commission').first()).toBeVisible();
+    await expect(page.getByText('Seller/listing context')).toBeVisible();
+    await expect(page.getByText('Transaction status')).toBeVisible();
+    await expect(page.getByText('Accepted price')).toBeVisible();
+    await expect(page.getByText('Created')).toBeVisible();
+    await expect(page.locator('p').filter({ hasText: /^Accepted$/ }).first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Commission' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Activity Timeline' })).toBeVisible();
+    await expect(page.locator('p').filter({ hasText: /^Offer Accepted$/ }).first()).toBeVisible();
+    await expect(page.locator('p').filter({ hasText: /^Transaction Opened$/ }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Private Documents' })).toBeVisible();
+    await expect(page.getByText('Private document storage not configured locally')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Add document/i })).toHaveCount(0);
 
     const targetDate = inputDate(4);
     await page.getByRole('button', { name: /Add condition/i }).click();
@@ -454,7 +468,9 @@ test.describe.serial('offers and transactions browser acceptance', () => {
       .getByPlaceholder('Description or notes')
       .fill('Deadline visible in My Day acceptance proof.');
     await dialog.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByText('Browser acceptance deadline')).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('p').filter({ hasText: /^Browser acceptance deadline$/ }).first(),
+    ).toBeVisible({ timeout: 10_000 });
 
     await expect
       .poll(() => loadPersistedDealState(fixture.leadId), { timeout: 15_000 })
@@ -468,28 +484,36 @@ test.describe.serial('offers and transactions browser acceptance', () => {
     expect(dealState?.expectedCommission).toBe(95_000);
     expect(dealState?.milestoneCount).toBeGreaterThan(0);
     expect(dealState?.conditionCount).toBeGreaterThan(0);
-
-    await page.getByRole('button', { name: /Add document/i }).click();
-    dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('heading', { name: 'Add Private Document' })).toBeVisible();
-    await dialog.locator('select').nth(1).selectOption({ label: 'Browser acceptance deadline' });
-    await dialog.getByPlaceholder('File name').fill('signed-offer-browser-acceptance.pdf');
-    await dialog
-      .getByPlaceholder('Private storage key or reference')
-      .fill(
-        `private/agency-${fixture.agencyId}/transactions/${dealState?.transactionId}/signed-offer-browser-acceptance.pdf`,
-      );
-    await dialog.getByRole('button', { name: 'Save' }).click();
-    await expect(page.getByText('signed-offer-browser-acceptance.pdf')).toBeVisible({
-      timeout: 10_000,
-    });
+    expect(dealState?.documentCount).toBe(0);
+    expect(dealState?.activityCount).toBeGreaterThanOrEqual(3);
 
     await page.goto('/agency/my-day');
     await expect(page.getByRole('heading', { name: 'My Day' })).toBeVisible();
     await page.locator('input[type="date"]').fill(targetDate);
     await expect(page.getByRole('heading', { name: 'Deal Deadlines' })).toBeVisible();
-    await expect(page.getByText('Browser acceptance deadline')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /Browser acceptance deadline/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId('agency-shell')).toBeVisible();
     await expect(page.locator('aside').getByRole('button', { name: 'My Day' })).toBeVisible();
+
+    await page.goto(`/agency/transactions?deal=${dealState?.dealId}`);
+    await expect(page.getByText('Offers and Transactions')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Complete Deposit due' }).click();
+    await expect(
+      page.locator('p').filter({ hasText: /^Milestone "Deposit due" marked completed\.$/ }).first(),
+    ).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: 'Complete Browser acceptance deadline' }).click();
+    await expect(
+      page
+        .locator('p')
+        .filter({ hasText: /^Condition "Browser acceptance deadline" marked completed\.$/ })
+        .first(),
+    ).toBeVisible({ timeout: 10_000 });
+
+    await page.goto('/agency/my-day');
+    await page.locator('input[type="date"]').fill(targetDate);
+    await expect(page.getByRole('button', { name: /Browser acceptance deadline/ })).toHaveCount(0);
 
     await page.goto(`/agency/transactions?deal=${dealState?.dealId}`);
     await page.reload();
@@ -498,21 +522,40 @@ test.describe.serial('offers and transactions browser acceptance', () => {
     await expect(page.getByText(/^V2:/)).toBeVisible();
     await expect(page.getByText(/^V3:/)).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Milestone Timeline' })).toBeVisible();
-    await expect(page.getByText('Browser acceptance deadline')).toBeVisible();
-    await expect(page.getByText('signed-offer-browser-acceptance.pdf')).toBeVisible();
+    await expect(
+      page.locator('p').filter({ hasText: /^Browser acceptance deadline$/ }).first(),
+    ).toBeVisible();
+    await expect(page.getByText('Private document storage not configured locally')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Activity Timeline' })).toBeVisible();
+    await expect(
+      page.locator('p').filter({ hasText: /^Milestone "Deposit due" marked completed\.$/ }).first(),
+    ).toBeVisible();
+    await expect(
+      page
+        .locator('p')
+        .filter({ hasText: /^Condition "Browser acceptance deadline" marked completed\.$/ })
+        .first(),
+    ).toBeVisible();
+    await expect(page.getByTestId('agency-shell')).toBeVisible();
     await expect(page.locator('aside').getByRole('button', { name: 'Transactions' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`/agency/transactions?deal=${dealState?.dealId}`);
     await expect(page.getByText('Offers and Transactions')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Browser acceptance deadline')).toBeVisible();
+    await expect(
+      page.locator('p').filter({ hasText: /^Browser acceptance deadline$/ }).first(),
+    ).toBeVisible();
+    await expect(page.getByText('Private document storage not configured locally')).toBeVisible();
+    await expect(page.getByTestId('agency-shell')).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/agency/transactions?deal=${dealState?.dealId}`);
+    await expect(page.getByTestId('agency-shell')).toBeVisible();
     await expect(page.locator('aside').getByRole('button', { name: 'Transactions' })).toBeVisible();
     await expect(page.getByText('Expected commission').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Activity Timeline' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     const finalState = await loadPersistedDealState(fixture.leadId);
@@ -524,6 +567,7 @@ test.describe.serial('offers and transactions browser acceptance', () => {
         offerCount: 3,
       }),
     );
-    expect(finalState?.documentCount).toBeGreaterThanOrEqual(1);
+    expect(finalState?.documentCount).toBe(0);
+    expect(finalState?.activityCount).toBeGreaterThan(dealState?.activityCount || 0);
   });
 });

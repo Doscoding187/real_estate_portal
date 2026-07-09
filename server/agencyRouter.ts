@@ -5540,14 +5540,24 @@ export const agencyRouter = router({
           } as any)
           .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)));
 
-        await tx.insert(agencyTransactionActivity).values({
-          agencyId,
-          transactionId,
-          actorUserId: user.id,
-          eventType: 'transaction_opened',
-          description: `Accepted offer opened a ${deal.transactionType} transaction with expected commission R${commission.expectedCommission.toFixed(2)}.`,
-          metadata: { offerVersionId: offer.id, dealId: deal.id },
-        });
+        await tx.insert(agencyTransactionActivity).values([
+          {
+            agencyId,
+            transactionId,
+            actorUserId: user.id,
+            eventType: 'offer_accepted',
+            description: `Offer V${offer.versionNumber} accepted at R${acceptedAmount.toFixed(2)}.`,
+            metadata: { offerVersionId: offer.id, dealId: deal.id },
+          },
+          {
+            agencyId,
+            transactionId,
+            actorUserId: user.id,
+            eventType: 'transaction_opened',
+            description: `Accepted offer opened a ${deal.transactionType} transaction with expected commission R${commission.expectedCommission.toFixed(2)}.`,
+            metadata: { offerVersionId: offer.id, dealId: deal.id },
+          },
+        ] as any);
       });
 
       const refreshed = await recomputeTransactionNextStep(db, agencyId, transactionId);
@@ -5620,6 +5630,7 @@ export const agencyRouter = router({
       await requireAgencyTransaction(db, agencyId, input.transactionId);
       const now = nowAsDbTimestamp();
       const terminal = ['completed', 'waived', 'cancelled'].includes(input.status);
+      let workItemTitle = '';
 
       if (input.itemType === 'milestone') {
         const [milestone] = await db
@@ -5634,6 +5645,7 @@ export const agencyRouter = router({
           )
           .limit(1);
         if (!milestone) throw new TRPCError({ code: 'NOT_FOUND', message: 'Milestone not found' });
+        workItemTitle = milestone.title;
         await db
           .update(agencyTransactionMilestones)
           .set({
@@ -5656,6 +5668,7 @@ export const agencyRouter = router({
           )
           .limit(1);
         if (!condition) throw new TRPCError({ code: 'NOT_FOUND', message: 'Condition not found' });
+        workItemTitle = condition.title;
         await db
           .update(agencyTransactionConditions)
           .set({
@@ -5677,7 +5690,7 @@ export const agencyRouter = router({
         transactionId: input.transactionId,
         userId: user.id,
         eventType: `${input.itemType}_${input.status}`,
-        description: `${input.itemType === 'milestone' ? 'Milestone' : 'Condition'} marked ${input.status}.`,
+        description: `${input.itemType === 'milestone' ? 'Milestone' : 'Condition'} "${workItemTitle}" marked ${input.status}.`,
       });
       await recomputeTransactionNextStep(db, agencyId, input.transactionId);
 
@@ -5730,6 +5743,14 @@ export const agencyRouter = router({
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
       await requireAgencyTransaction(db, agencyId, input.transactionId);
+      const storageKey = input.storageKey.trim();
+      const expectedPrivatePrefix = `private/agency-${agencyId}/transactions/${input.transactionId}/`;
+      if (/^https?:\/\//i.test(storageKey) || !storageKey.startsWith(expectedPrivatePrefix)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Document metadata must use an agency-private transaction storage reference.',
+        });
+      }
 
       if (input.conditionId) {
         const [condition] = await db
@@ -5754,7 +5775,7 @@ export const agencyRouter = router({
         conditionId: input.conditionId || null,
         documentType: input.documentType,
         fileName: input.fileName,
-        storageKey: input.storageKey,
+        storageKey,
         contentType: input.contentType || null,
         fileSize: input.fileSize || null,
         visibilityScope: 'agency_private',
@@ -6150,7 +6171,7 @@ export const agencyRouter = router({
         };
       };
 
-      const transactionDeadlines = [
+      const transactionDeadlineCandidates = [
         ...offerDeadlineRows.map(mapDealDeadline),
         ...conditionDeadlineRows.map(mapDealDeadline),
         ...milestoneDeadlineRows.map(mapDealDeadline),
@@ -6159,6 +6180,9 @@ export const agencyRouter = router({
         const rightTime = right.dueAt ? new Date(right.dueAt).getTime() : Number.MAX_SAFE_INTEGER;
         return leftTime - rightTime;
       });
+      const transactionDeadlines = Array.from(
+        new Map(transactionDeadlineCandidates.map(deadline => [deadline.id, deadline])).values(),
+      );
 
       return {
         date: dayKey,

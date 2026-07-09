@@ -99,10 +99,28 @@ describe('agency deal engine contract', () => {
       'Accept and open transaction',
       'Add condition',
       'Add party',
-      'Add document',
       'Mark complete',
     ]) {
       expect(workspace).toContain(action);
     }
+
+    for (const workspaceText of [
+      'Seller/listing context',
+      'Transaction status',
+      'Activity Timeline',
+      'Private document storage not configured locally',
+      'No document metadata',
+    ]) {
+      expect(workspace).toContain(workspaceText);
+    }
+  });
+
+  it('keeps private document handling metadata-only and agency scoped', () => {
+    expect(router).toContain('visibilityScope:');
+    expect(router).toContain("'agency_private'");
+    expect(router).toContain('expectedPrivatePrefix');
+    expect(router).toContain('Document metadata must use an agency-private transaction storage reference.');
+    expect(workspace).not.toContain('Add Private Document');
+    expect(workspace).not.toContain('Private storage key or reference');
   });
 });
