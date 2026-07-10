@@ -25,6 +25,7 @@ const { mockDb } = vi.hoisted(() => ({
     archiveListing: vi.fn(),
     deleteListing: vi.fn(),
     getListingMedia: vi.fn(),
+    replaceListingMedia: vi.fn(),
     getUserListings: vi.fn(),
     getListingAnalytics: vi.fn(),
     getAgentById: vi.fn(),
@@ -157,6 +158,7 @@ describe('listing lifecycle — canonical identity contract', () => {
     // override this mock explicitly.
     vi.mocked(mockDb.getListingById).mockResolvedValue(mockListing());
     vi.mocked(mockDb.getListingMedia).mockResolvedValue([mockMediaItem()]);
+    vi.mocked(mockDb.replaceListingMedia).mockResolvedValue(undefined);
     vi.mocked(mockDb.createListing).mockResolvedValue(1001);
     vi.mocked(mockDb.updateListing).mockResolvedValue(undefined);
     vi.mocked(mockDb.submitListingForReview).mockResolvedValue(undefined);
@@ -428,6 +430,36 @@ describe('listing lifecycle — canonical identity contract', () => {
     expect(result).toMatchObject({ success: true, status: 'pending_review' });
     expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
     expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
+  });
+
+  it('replaces the canonical media manifest when an edit provides typed media', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 8101;
+    const media = [
+      {
+        id: 'uploads/listings/8101/walkthrough.mp4',
+        mediaType: 'video' as const,
+        fileName: 'walkthrough.mp4',
+        processingStatus: 'completed' as const,
+      },
+      {
+        id: 'existing:701',
+        mediaType: 'image' as const,
+      },
+    ];
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ id: LISTING_ID, status: 'draft' }),
+    );
+
+    await caller.listing.update({
+      id: LISTING_ID,
+      mediaIds: media.map(item => item.id),
+      mainMediaId: media[0].id,
+      media,
+    });
+
+    expect(mockDb.replaceListingMedia).toHaveBeenCalledWith(LISTING_ID, media, media[0].id);
   });
 
   // -----------------------------------------------------------------------

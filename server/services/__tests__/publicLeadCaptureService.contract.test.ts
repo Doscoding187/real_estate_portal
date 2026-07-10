@@ -281,6 +281,72 @@ describe('publicLeadCaptureService contract', () => {
     );
   });
 
+  it('routes an unassigned agency property lead through the canonical source listing', async () => {
+    mockLimit
+      .mockResolvedValueOnce([
+        {
+          id: 501,
+          status: 'available',
+          developmentId: null,
+          developerBrandProfileId: null,
+          agentId: null,
+          sourceListingId: 700,
+          ownerId: 81,
+        },
+      ])
+      .mockResolvedValueOnce([{ agencyId: 44 }]);
+
+    const result = await capturePublicLead({
+      propertyId: 501,
+      agencyId: 999,
+      name: 'Pat Buyer',
+      email: 'pat@example.com',
+      leadSource: 'property_detail',
+      sourceSurface: 'property_detail_contact_modal',
+    });
+
+    expect(result).toMatchObject({ success: true, leadId: 456, route: 'direct' });
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 501,
+        agentId: null,
+        agencyId: 44,
+      }),
+    );
+  });
+
+  it('uses owner agency membership for legacy unassigned property projections', async () => {
+    mockLimit
+      .mockResolvedValueOnce([
+        {
+          id: 501,
+          status: 'available',
+          developmentId: null,
+          developerBrandProfileId: null,
+          agentId: null,
+          sourceListingId: null,
+          ownerId: 81,
+        },
+      ])
+      .mockResolvedValueOnce([{ agencyId: 44 }]);
+
+    await capturePublicLead({
+      propertyId: 501,
+      agencyId: 999,
+      name: 'Pat Buyer',
+      email: 'pat@example.com',
+      leadSource: 'property_detail',
+    });
+
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 501,
+        agentId: null,
+        agencyId: 44,
+      }),
+    );
+  });
+
   it('uses canonical property brand ownership when client submits a spoofed property brand id', async () => {
     mockLimit.mockResolvedValueOnce([
       {

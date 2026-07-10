@@ -198,7 +198,7 @@ const ListingWizard: React.FC = () => {
         // But for existing ones, it should handle URL-based media
         listingMedia.forEach((m: any) => {
           store.addMedia({
-            id: m.id,
+            id: `existing:${m.id}`,
             file: null as any, // No file object for existing media
             preview: m.url || m.originalUrl || m.imageUrl,
             type: m.mediaType,
@@ -209,7 +209,7 @@ const ListingWizard: React.FC = () => {
           });
 
           if (m.isPrimary) {
-            store.setMainMedia(m.id);
+            store.setMainMedia(`existing:${m.id}`);
           }
         });
       }
@@ -357,6 +357,12 @@ const ListingWizard: React.FC = () => {
 
         // Reset wizard state for next listing
         store.reset();
+
+        // Agency inventory is the canonical return surface for agency-admin authoring.
+        if (user?.role === 'agency_admin') {
+          setLocation('/agency/listings');
+          return;
+        }
 
         // Redirect based on user role using the proper navigation strategy
         if (window.history.length > 1) {

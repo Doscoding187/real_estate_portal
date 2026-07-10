@@ -1,7 +1,15 @@
 import { TRPCError } from '@trpc/server';
 import { eq, sql } from 'drizzle-orm';
 import { getDb } from '../db';
-import { agents, developments, leads, properties, unitTypes } from '../../drizzle/schema';
+import {
+  agents,
+  developments,
+  leads,
+  listings,
+  properties,
+  unitTypes,
+  users,
+} from '../../drizzle/schema';
 import { brandLeadService } from './brandLeadService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
 
@@ -124,6 +132,8 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
     agencyId: input.agencyId,
     agentId: input.agentId,
   };
+  let canonicalSourceListingId: number | undefined;
+  let canonicalPropertyOwnerId: number | undefined;
 
   if (resolved.propertyId) {
     const [property] = await db
@@ -133,6 +143,8 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
         developmentId: properties.developmentId,
         developerBrandProfileId: properties.developerBrandProfileId,
         agentId: properties.agentId,
+        sourceListingId: properties.sourceListingId,
+        ownerId: properties.ownerId,
       })
       .from(properties)
       .where(eq(properties.id, resolved.propertyId))
@@ -150,6 +162,8 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
     resolved.developerBrandProfileId = property.developerBrandProfileId || undefined;
     resolved.agentId = property.agentId || undefined;
     resolved.agencyId = undefined;
+    canonicalSourceListingId = property.sourceListingId || undefined;
+    canonicalPropertyOwnerId = property.ownerId || undefined;
   }
 
   if (hasExplicitDevelopmentId && resolved.developmentId) {
@@ -231,6 +245,20 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
     }
   }
 
+  // A canonical listing's explicit agency wins. Older projections then fall
+  // back through the public agent and finally the owner's current membership.
+  if (canonicalSourceListingId) {
+    const [sourceListing] = await db
+      .select({ agencyId: listings.agencyId })
+      .from(listings)
+      .where(eq(listings.id, canonicalSourceListingId))
+      .limit(1);
+
+    if (sourceListing?.agencyId) {
+      resolved.agencyId = sourceListing.agencyId;
+    }
+  }
+
   if (resolved.agentId && !resolved.agencyId) {
     const [agent] = await db
       .select({
@@ -245,6 +273,18 @@ async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<Reso
       resolved.agentId = undefined;
     } else if (agent.agencyId) {
       resolved.agencyId = agent.agencyId;
+    }
+  }
+
+  if (canonicalPropertyOwnerId && !resolved.agencyId) {
+    const [owner] = await db
+      .select({ agencyId: users.agencyId })
+      .from(users)
+      .where(eq(users.id, canonicalPropertyOwnerId))
+      .limit(1);
+
+    if (owner?.agencyId) {
+      resolved.agencyId = owner.agencyId;
     }
   }
 

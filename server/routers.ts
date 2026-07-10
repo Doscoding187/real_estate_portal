@@ -1073,6 +1073,12 @@ export const appRouter = router({
         }),
       )
       .query(async ({ input }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || !isPublicPropertyStatus((property as any).status)) {
+          // Match public detail behavior and avoid using the media endpoint to
+          // enumerate unpublished inventory.
+          return [];
+        }
         return await db.getPropertyImages(input.propertyId);
       }),
 

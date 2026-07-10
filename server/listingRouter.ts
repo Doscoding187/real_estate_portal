@@ -156,6 +156,23 @@ const propertyTypeSchema = z.enum([
   'shared_living',
 ]);
 
+const listingMediaInputSchema = z.object({
+  // Existing media uses `existing:<listing_media.id>`; new uploads use their
+  // durable storage key. The prefix keeps an update from accepting a foreign
+  // listing-media record as though it were a new upload.
+  id: z.string().min(1),
+  mediaType: z.enum(['image', 'video', 'floorplan', 'pdf']),
+  fileName: z.string().max(255).optional().nullable(),
+  fileSize: z.number().int().nonnegative().optional().nullable(),
+  thumbnailUrl: z.string().optional().nullable(),
+  previewUrl: z.string().optional().nullable(),
+  width: z.number().int().positive().optional().nullable(),
+  height: z.number().int().positive().optional().nullable(),
+  duration: z.number().int().nonnegative().optional().nullable(),
+  orientation: z.enum(['vertical', 'horizontal', 'square']).optional().nullable(),
+  processingStatus: z.enum(['pending', 'processing', 'completed', 'failed']).optional().nullable(),
+});
+
 const createListingSchema = z.object({
   action: listingActionSchema,
   propertyType: propertyTypeSchema,
@@ -206,6 +223,9 @@ const createListingSchema = z.object({
   mediaIds: z.array(z.string()),
   // Use string ID or undefined
   mainMediaId: z.string().optional().nullable(),
+  // Optional during the transition from the legacy mediaIds-only contract.
+  // New wizard submissions use this typed canonical media manifest.
+  media: z.array(listingMediaInputSchema).optional(),
   status: z.enum(['draft', 'pending_review']).optional(),
 });
 
@@ -228,27 +248,41 @@ export const listingRouter = router({
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') + `-${timestamp}`;
 
-      // Prepare media array from mediaIds (which are S3 keys/URLs)
-      const media = input.mediaIds.map((id, index) => {
-        // All IDs are now strings
-        const stringId = id;
-        return {
-          id: stringId, // S3 key
-          url: stringId, // For now, use the ID as the URL (it's already the S3 key)
-          type: 'image' as const, // Default to image; adjust if you have type info
-          displayOrder: index,
-          isPrimary: input.mainMediaId ? stringId === input.mainMediaId : index === 0,
-          processingStatus: 'completed' as const,
-          // Initialize optional fields for db.createListing
-          thumbnailUrl: null,
-          fileName: null,
-          fileSize: null,
-          width: null,
-          height: null,
-          duration: null,
-          orientation: null,
-        };
-      });
+      // The typed manifest preserves video/floorplan/document semantics. Keep
+      // mediaIds as a compatibility fallback for older clients.
+      const media = input.media?.length
+        ? input.media.map((item, index) => ({
+            id: item.id,
+            url: item.id,
+            type: item.mediaType,
+            displayOrder: index,
+            isPrimary: input.mainMediaId ? item.id === input.mainMediaId : index === 0,
+            processingStatus: item.processingStatus || 'completed',
+            thumbnailUrl: item.thumbnailUrl || null,
+            previewUrl: item.previewUrl || null,
+            fileName: item.fileName || null,
+            fileSize: item.fileSize || null,
+            width: item.width || null,
+            height: item.height || null,
+            duration: item.duration || null,
+            orientation: item.orientation || null,
+          }))
+        : input.mediaIds.map((id, index) => ({
+            id,
+            url: id,
+            type: 'image' as const,
+            displayOrder: index,
+            isPrimary: input.mainMediaId ? id === input.mainMediaId : index === 0,
+            processingStatus: 'completed' as const,
+            thumbnailUrl: null,
+            previewUrl: null,
+            fileName: null,
+            fileSize: null,
+            width: null,
+            height: null,
+            duration: null,
+            orientation: null,
+          }));
 
       // Auto-create location hierarchy from Google Places data
       // This auto-populates cities and suburbs as agents add properties!
@@ -414,10 +448,14 @@ export const listingRouter = router({
           listing.status === 'published' || listing.status === 'approved';
 
         // GUARD: Normalize placeId and validate location_id (if location is being updated)
-        const updatePayload: any = {
-          ...input,
-          updatedAt: new Date(),
-        };
+        const {
+          id: _id,
+          media: mediaManifest,
+          mediaIds: _mediaIds,
+          mainMediaId,
+          ...listingInput
+        } = input;
+        const updatePayload: any = { ...listingInput, updatedAt: new Date() };
 
         if (input.propertyDetails || input.pricing) {
           updatePayload.propertyDetails = normalizePropertyDetailsForPublicContract(
@@ -438,6 +476,10 @@ export const listingRouter = router({
 
         // Update listing
         await db.updateListing(input.id, updatePayload);
+
+        if (mediaManifest !== undefined) {
+          await db.replaceListingMedia(input.id, mediaManifest, mainMediaId);
+        }
 
         if (requiresReviewBeforePublicUpdate) {
           await db.submitListingForReview(input.id);
@@ -474,6 +516,9 @@ export const listingRouter = router({
         };
       } catch (error) {
         console.error('Error updating listing:', error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update listing' });
       }
     }),

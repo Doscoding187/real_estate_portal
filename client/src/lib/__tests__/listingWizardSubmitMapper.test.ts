@@ -138,6 +138,23 @@ const buildPreviousInlinePayload = (state: ListingWizardSubmitState) => {
     mainMediaId:
       state.mainMediaId?.toString() ||
       (state.media.length > 0 ? state.media[0].id?.toString() : undefined),
+    media: state.media
+      .filter(media => Boolean(media.id))
+      .map(media => ({
+        id: media.id!.toString(),
+        mediaType: media.type,
+        ...(media.fileName !== undefined ? { fileName: media.fileName } : {}),
+        ...(media.fileSize !== undefined ? { fileSize: media.fileSize } : {}),
+        ...(media.thumbnailUrl !== undefined ? { thumbnailUrl: media.thumbnailUrl } : {}),
+        ...(media.previewUrl !== undefined ? { previewUrl: media.previewUrl } : {}),
+        ...(media.width !== undefined ? { width: media.width } : {}),
+        ...(media.height !== undefined ? { height: media.height } : {}),
+        ...(media.duration !== undefined ? { duration: media.duration } : {}),
+        ...(media.orientation !== undefined ? { orientation: media.orientation } : {}),
+        ...(media.processingStatus !== undefined
+          ? { processingStatus: media.processingStatus }
+          : {}),
+      })),
   };
 };
 
@@ -158,6 +175,10 @@ describe('buildListingWizardSubmitPayload', () => {
       location: baseState.location,
       mediaIds: ['uploads/listing/front.jpg', 'uploads/listing/kitchen.jpg'],
       mainMediaId: 'uploads/listing/kitchen.jpg',
+      media: [
+        { id: 'uploads/listing/front.jpg', mediaType: 'image' },
+        { id: 'uploads/listing/kitchen.jpg', mediaType: 'image' },
+      ],
     });
   });
 
@@ -222,6 +243,7 @@ describe('buildListingWizardSubmitPayload', () => {
     expect(payload.propertyDetails).toEqual({});
     expect(payload.mediaIds).toEqual([]);
     expect(payload.mainMediaId).toBeUndefined();
+    expect(payload.media).toEqual([]);
   });
 
   it('preserves sale, rental, and auction pricing behavior accepted by the active mutation contract', () => {

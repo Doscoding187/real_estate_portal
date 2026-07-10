@@ -314,6 +314,43 @@ describe('single-property search-detail-lead ownership contract', () => {
     },
   );
 
+  it('does not expose images for non-public property projections', async () => {
+    const trpc = caller();
+    mockGetPropertyById.mockResolvedValueOnce({
+      id: 778,
+      title: 'Private Property Images',
+      status: 'pending',
+    });
+
+    const images = await trpc.properties.getImages({ propertyId: 778 });
+
+    expect(images).toEqual([]);
+    expect(mockGetPropertyImages).not.toHaveBeenCalled();
+  });
+
+  it('returns images for public property projections', async () => {
+    const trpc = caller();
+    mockGetPropertyById.mockResolvedValueOnce({
+      id: 779,
+      title: 'Public Property Images',
+      status: 'available',
+    });
+    mockGetPropertyImages.mockResolvedValueOnce([
+      {
+        id: 11,
+        propertyId: 779,
+        imageUrl: 'https://cdn.example.com/public-image.jpg',
+        isPrimary: 1,
+        displayOrder: 0,
+      },
+    ]);
+
+    const images = await trpc.properties.getImages({ propertyId: 779 });
+
+    expect(images).toHaveLength(1);
+    expect(mockGetPropertyImages).toHaveBeenCalledWith(779);
+  });
+
   it('keeps published property projections public on detail', async () => {
     const trpc = caller();
 

@@ -2335,6 +2335,13 @@ export async function updateListing(listingId: number, updateData: any) {
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
+  // API-only fields are persisted through their own canonical paths.
+  delete updateFields.id;
+  delete updateFields.location;
+  delete updateFields.media;
+  delete updateFields.mediaIds;
+  delete updateFields.mainMediaId;
+
   // Map pricing fields if present
   if (updateData.pricing) {
     if (updateData.pricing.askingPrice !== undefined)
@@ -2451,6 +2458,112 @@ export async function getListingMedia(listingId: number) {
     .from(listingMedia)
     .where(eq(listingMedia.listingId, listingId))
     .orderBy(listingMedia.displayOrder);
+}
+
+export type ListingMediaReplacementInput = {
+  id: string;
+  mediaType: 'image' | 'video' | 'floorplan' | 'pdf';
+  fileName?: string | null;
+  fileSize?: number | null;
+  thumbnailUrl?: string | null;
+  previewUrl?: string | null;
+  width?: number | null;
+  height?: number | null;
+  duration?: number | null;
+  orientation?: 'vertical' | 'horizontal' | 'square' | null;
+  processingStatus?: 'pending' | 'processing' | 'completed' | 'failed' | null;
+};
+
+const EXISTING_LISTING_MEDIA_ID_PREFIX = 'existing:';
+
+function parseExistingListingMediaId(value: string) {
+  if (!value.startsWith(EXISTING_LISTING_MEDIA_ID_PREFIX)) return null;
+  const id = Number(value.slice(EXISTING_LISTING_MEDIA_ID_PREFIX.length));
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+/**
+ * Replaces the ordered canonical media manifest for one listing. Existing
+ * records are retained only by their explicit `existing:<id>` token; all
+ * other entries are newly uploaded storage keys. This preserves the listing
+ * media contract without trusting a client to reference another listing's row.
+ */
+export async function replaceListingMedia(
+  listingId: number,
+  media: ListingMediaReplacementInput[],
+  mainMediaId?: string | null,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const ids = media.map(item => item.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('Listing media manifest contains duplicate items');
+  }
+
+  const resolvedMainMediaId = mainMediaId || media[0]?.id || null;
+  if (resolvedMainMediaId && !ids.includes(resolvedMainMediaId)) {
+    throw new Error('Listing primary media must be included in the media manifest');
+  }
+
+  await db.transaction(async tx => {
+    const existing = await tx
+      .select({ id: listingMedia.id })
+      .from(listingMedia)
+      .where(eq(listingMedia.listingId, listingId));
+    const existingIds = new Set(existing.map(item => Number(item.id)));
+    const retainedExistingIds = new Set<number>();
+
+    for (const item of media) {
+      if (!item.id.startsWith(EXISTING_LISTING_MEDIA_ID_PREFIX)) continue;
+      const existingMediaId = parseExistingListingMediaId(item.id);
+      if (existingMediaId === null || !existingIds.has(existingMediaId)) {
+        throw new Error('Listing media does not belong to this listing');
+      }
+      retainedExistingIds.add(existingMediaId);
+    }
+
+    const staleExistingIds = existing
+      .map(item => Number(item.id))
+      .filter(id => !retainedExistingIds.has(id));
+    if (staleExistingIds.length) {
+      await tx
+        .delete(listingMedia)
+        .where(and(eq(listingMedia.listingId, listingId), inArray(listingMedia.id, staleExistingIds)));
+    }
+
+    for (const [displayOrder, item] of media.entries()) {
+      const existingMediaId = parseExistingListingMediaId(item.id);
+      const isPrimary = item.id === resolvedMainMediaId ? 1 : 0;
+
+      if (existingMediaId !== null) {
+        await tx
+          .update(listingMedia)
+          .set({ displayOrder, isPrimary })
+          .where(and(eq(listingMedia.id, existingMediaId), eq(listingMedia.listingId, listingId)));
+        continue;
+      }
+
+      await tx.insert(listingMedia).values({
+        listingId,
+        originalUrl: item.id,
+        thumbnailUrl: item.thumbnailUrl || null,
+        previewUrl: item.previewUrl || null,
+        mediaType: item.mediaType,
+        originalFileName: item.fileName || null,
+        originalFileSize: item.fileSize || null,
+        width: item.width || null,
+        height: item.height || null,
+        duration: item.duration || null,
+        orientation: item.orientation || null,
+        displayOrder,
+        isPrimary,
+        processingStatus: item.processingStatus || 'completed',
+        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
+    }
+  });
 }
 
 /**

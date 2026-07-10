@@ -481,6 +481,19 @@ export interface CreateListingRequest {
   location: LocationData;
   mediaIds: string[]; // IDs of uploaded media (S3 keys)
   mainMediaId?: string;
+  media?: Array<{
+    id: string;
+    mediaType: MediaType;
+    fileName?: string | null;
+    fileSize?: number | null;
+    thumbnailUrl?: string | null;
+    previewUrl?: string | null;
+    width?: number | null;
+    height?: number | null;
+    duration?: number | null;
+    orientation?: 'vertical' | 'horizontal' | 'square' | null;
+    processingStatus?: 'pending' | 'processing' | 'completed' | 'failed' | null;
+  }>;
   status?: 'draft' | 'pending_review';
 }
 
