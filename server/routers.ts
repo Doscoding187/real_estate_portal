@@ -30,7 +30,7 @@ import { enhancedLocationRouter } from './enhancedLocationRouter';
 import { googleMapsRouter } from './googleMapsRouter';
 import { priceInsightsRouter } from './priceInsightsRouter';
 import { devRouter } from './devRouter';
-import { requireUser } from './_core/requireUser'; // ⚠️ DEV ONLY - Remove before production
+import { requireUser } from './_core/requireUser';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -280,7 +280,7 @@ import { servicesEngineRouter } from './servicesEngineRouter';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { discoveryRouter } from './domains/discovery/router';
 
-export const appRouter = router({
+const appRouterConfig = {
   system: systemRouter,
   // ... other routers
   analytics: analyticsRouter,
@@ -303,7 +303,6 @@ export const appRouter = router({
   settings: settingsRouter,
   savedSearch: savedSearchRouter,
   guestMigration: guestMigrationRouter,
-  dev: devRouter, // ⚠️ DEV ONLY - Remove before production
   marketing: marketingRouter,
   subscription: subscriptionRouter,
   developer: developerRouter,
@@ -1257,7 +1256,16 @@ export const appRouter = router({
       return await db.getUserFavorites(getUserId(ctx));
     }),
   }),
-});
+} satisfies Parameters<typeof router>[0];
+
+const mutableAppRouterConfig = appRouterConfig as typeof appRouterConfig & {
+  dev?: typeof devRouter;
+};
+if (!ENV.isProduction) {
+  mutableAppRouterConfig.dev = devRouter;
+}
+
+export const appRouter = router(appRouterConfig);
 
 // Export type router type signature
 export type AppRouter = typeof appRouter;

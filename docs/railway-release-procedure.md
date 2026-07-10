@@ -17,15 +17,16 @@ pnpm release:predeploy:production
 
 This runs:
 
-1. `db:target`
-2. `migration:sql`
-3. `db:verify:distribution`
+1. `launch:preflight`
+2. `db:target`
+3. `migration:sql`
+4. `db:verify:distribution`
 
 If this fails, stop and fix before deploying.
 
 ## 3) Deploy to Railway
 
-- Keep Railway start command set to `pnpm start:prod`.
+- Keep Railway start command set to `pnpm start:prod:with-migrations`.
 - Trigger deploy after successful predeploy step.
 
 ## 4) Post-deploy smoke check
@@ -47,5 +48,5 @@ Then verify in browser/network logs:
 Immediate containment:
 
 1. Roll back to last known-good commit/deployment.
-2. Confirm Railway start command remains `pnpm start:prod`.
+2. Confirm Railway start command remains `pnpm start:prod:with-migrations`.
 3. Re-run predeploy on a fix branch and redeploy only after green.

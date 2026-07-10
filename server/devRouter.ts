@@ -7,18 +7,21 @@
  */
 
 import { z } from 'zod';
-import { router, publicProcedure } from './_core/trpc';
+import { TRPCError } from '@trpc/server';
+import { router, protectedProcedure } from './_core/trpc';
 import { getDb } from './db';
 import { agencies, invitations, users, plans } from '../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 import { MockEmailService } from './_core/email/mockEmailService';
+import { ENV } from './_core/env';
+import { requireUser } from './_core/requireUser';
 
 export const devRouter = router({
   /**
    * Manually trigger webhook for local testing
    * Simulates what Stripe webhook would do after successful payment
    */
-  triggerWebhookManual: publicProcedure
+  triggerWebhookManual: protectedProcedure
     .input(
       z.object({
         agencyId: z.number(),
@@ -26,8 +29,23 @@ export const devRouter = router({
         sessionId: z.string().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (ENV.isProduction) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development endpoint unavailable' });
+      }
+
       const { agencyId, planId } = input;
+      const user = requireUser(ctx);
+      const canTrigger =
+        user.role === 'super_admin' || Number(user.agencyId || 0) === Number(agencyId);
+
+      if (!canTrigger) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You can only trigger local activation for your own agency.',
+        });
+      }
+
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
@@ -83,7 +101,7 @@ export const devRouter = router({
 
         for (const invitation of teamInvitations) {
           try {
-            const inviteUrl = `${appUrl}/invite/accept?token=${invitation.token}`;
+            const inviteUrl = `${appUrl}/accept-invitation?token=${invitation.token}`;
             const inviterName =
               agency.ownerName ||
               agency.ownerFirstName ||
