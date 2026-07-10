@@ -18,6 +18,8 @@ import CreateDevelopment from '@/pages/CreateDevelopment';
 import DeveloperCampaignsPage from '@/pages/DeveloperCampaignsPage';
 import DeveloperPerformancePage from '@/pages/DeveloperPerformancePage';
 import DeveloperPlans from '@/pages/DeveloperPlans';
+import DeveloperBrandProfilePage from '@/pages/DeveloperBrandProfilePage';
+import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 
 // Placeholder components for missing pages
 function PlaceholderContent({ title }: { title: string }) {
@@ -57,6 +59,20 @@ function LoadingSpinner() {
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
   );
+}
+
+/**
+ * Keeps `/developer/<brand-slug>` public while reserving known workspace paths
+ * for the authenticated developer operating system.
+ */
+export function DeveloperRouteBoundary() {
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+
+  if (isPublicDeveloperProfilePath(pathname)) {
+    return <DeveloperBrandProfilePage />;
+  }
+
+  return <DeveloperRoutes />;
 }
 
 export default function DeveloperRoutes() {

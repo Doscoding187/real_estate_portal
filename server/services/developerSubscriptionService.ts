@@ -22,6 +22,16 @@ function toMysqlDateTime(value: Date): string {
 
 export class DeveloperSubscriptionService {
   /**
+   * Backfills the legacy developer subscription record exactly once for an
+   * onboarded developer. Paid plan activation remains a separate billing
+   * decision and must not be implied by this free-trial bootstrap.
+   */
+  async ensureSubscription(developerId: number): Promise<DeveloperSubscriptionWithDetails> {
+    const existing = await this.getSubscription(developerId);
+    return existing || this.createSubscription(developerId);
+  }
+
+  /**
    * Create a new developer subscription with free trial tier
    * Validates: Requirements 1.1, 1.2
    */

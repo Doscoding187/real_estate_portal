@@ -138,7 +138,14 @@ export const brandProfileRouter = router({
   getBrandDevelopments: publicProcedure
     .input(z.object({ brandProfileId: z.number().int() }))
     .query(async ({ input }) => {
-      return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
+      const profile = await developerBrandProfileService.getBrandProfileById(input.brandProfileId);
+      if (!profile || Number(profile.isVisible) !== 1) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer brand not found' });
+      }
+
+      return developmentService.listPublicDevelopments({
+        developerBrandProfileId: input.brandProfileId,
+      });
     }),
 
   /**

@@ -41,6 +41,7 @@ import {
   scheduledViewings,
   recentlyViewed,
   developers,
+  developerBrandProfiles,
   developments,
   commissions,
   platformSettings,
@@ -3627,6 +3628,14 @@ export async function approveDeveloper(id: number, approvedBy: number) {
     })
     .where(eq(developers.id, id));
 
+  await db
+    .update(developerBrandProfiles)
+    .set({
+      isVisible: 1,
+      isContactVerified: 1,
+    })
+    .where(eq(developerBrandProfiles.linkedDeveloperAccountId, id));
+
   return true;
 }
 
@@ -3647,6 +3656,11 @@ export async function rejectDeveloper(id: number, rejectedBy: number, reason: st
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(developers.id, id));
+
+  await db
+    .update(developerBrandProfiles)
+    .set({ isVisible: 0 })
+    .where(eq(developerBrandProfiles.linkedDeveloperAccountId, id));
 
   return true;
 }

@@ -680,13 +680,24 @@ export async function listPublicDevelopments(options: {
   province?: string;
   city?: string;
   suburb?: string;
+  developerId?: number;
+  developerBrandProfileId?: number;
   developmentType?: 'residential' | 'commercial' | 'mixed_use' | 'land';
   transactionType?: 'for_sale' | 'for_rent' | 'auction';
 }) {
   const db = await getDb();
   if (!db) return [];
 
-  const { limit = 20, province, city, suburb, developmentType, transactionType } = options;
+  const {
+    limit = 20,
+    province,
+    city,
+    suburb,
+    developerId,
+    developerBrandProfileId,
+    developmentType,
+    transactionType,
+  } = options;
 
   const conditions: any[] = [
     eq(developments.isPublished, 1),
@@ -695,6 +706,10 @@ export async function listPublicDevelopments(options: {
   if (province) conditions.push(eq(developments.province, province));
   if (city) conditions.push(eq(developments.city, city));
   if (suburb) conditions.push(eq(developments.suburb, suburb));
+  if (developerId) conditions.push(eq(developments.developerId, developerId));
+  if (developerBrandProfileId) {
+    conditions.push(eq(developments.developerBrandProfileId, developerBrandProfileId));
+  }
   if (developmentType) conditions.push(eq(developments.developmentType, developmentType as any));
   if (transactionType) conditions.push(eq(developments.transactionType, transactionType as any));
 
