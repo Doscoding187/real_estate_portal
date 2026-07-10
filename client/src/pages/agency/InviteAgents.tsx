@@ -48,8 +48,14 @@ export default function InviteAgents() {
   });
 
   const createMutation = trpc.invitation.create.useMutation({
-    onSuccess: () => {
-      toast.success('Invitation sent successfully!');
+    onSuccess: invitation => {
+      toast.success(
+        invitation.delivery?.deferred
+          ? 'Invitation saved and queued for activation'
+          : invitation.delivery?.sent
+            ? 'Invitation emailed'
+            : 'Invitation saved. Copy the link if email delivery needs attention.',
+      );
       setEmail('');
       setRole('agent');
       setIsDialogOpen(false);
@@ -71,8 +77,14 @@ export default function InviteAgents() {
   });
 
   const resendMutation = trpc.invitation.resend.useMutation({
-    onSuccess: () => {
-      toast.success('Invitation resent with new link');
+    onSuccess: invitation => {
+      toast.success(
+        invitation.delivery?.deferred
+          ? 'Invitation link renewed and queued for activation'
+          : invitation.delivery?.sent
+            ? 'Invitation resent'
+            : 'Invitation link renewed. Copy the link if email delivery needs attention.',
+      );
       refetch();
     },
     onError: error => {

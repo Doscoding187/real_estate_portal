@@ -1,6 +1,8 @@
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
 import superjson from 'superjson';
@@ -27,6 +29,13 @@ type SmokeFixtures = {
 type BillingSmokePlan = {
   id: number;
   monthlyAmountCents: number;
+};
+
+const revenueSignupState = {
+  ownerEmails: [] as string[],
+  inviteEmails: [] as string[],
+  adminEmails: [] as string[],
+  agencyIds: [] as number[],
 };
 
 function assertLocalUrl(rawUrl: string) {
@@ -126,14 +135,7 @@ async function resetNewBuyerSmokeFixture(leadId: number) {
 async function createDisposableInvitee(email: string) {
   const connection = await openLocalDatabaseConnection();
   try {
-    const [sourceUsers] = await connection.execute(
-      'SELECT passwordHash FROM users WHERE email = ? LIMIT 1',
-      [AGENCY_EMAIL],
-    );
-    const sourceUser = (sourceUsers as Array<{ passwordHash: string }>)[0];
-    if (!sourceUser?.passwordHash) {
-      throw new Error('Local agency user must exist before invitation smoke.');
-    }
+    const passwordHash = await bcrypt.hash(localDemoPassword(), 10);
 
     await connection.execute('DELETE FROM invitations WHERE email = ?', [email]);
     await connection.execute('DELETE FROM agents WHERE email = ?', [email]);
@@ -142,10 +144,189 @@ async function createDisposableInvitee(email: string) {
       `INSERT INTO users
         (email, passwordHash, name, firstName, lastName, role, emailVerified, isSubaccount, lastSignedIn, createdAt)
        VALUES (?, ?, ?, 'Invite', 'Smoke', 'visitor', 1, 0, NOW(), NOW())`,
-      [email, sourceUser.passwordHash, '[LOCAL DEMO] Invite Smoke'],
+      [email, passwordHash, '[LOCAL DEMO] Invite Smoke'],
     );
   } finally {
     await connection.end();
+  }
+}
+
+function rememberRevenueAgencyId(agencyId: number) {
+  if (Number.isFinite(agencyId) && agencyId > 0 && !revenueSignupState.agencyIds.includes(agencyId)) {
+    revenueSignupState.agencyIds.push(agencyId);
+  }
+}
+
+function placeholders(values: unknown[]) {
+  return values.map(() => '?').join(',');
+}
+
+async function createDisposableAgencyOwner(email: string) {
+  const connection = await openLocalDatabaseConnection();
+  try {
+    const passwordHash = await bcrypt.hash(localDemoPassword(), 10);
+
+    await connection.execute('DELETE FROM users WHERE email = ?', [email]);
+    const [insertResult] = await connection.execute(
+      `INSERT INTO users
+        (email, passwordHash, name, firstName, lastName, role, emailVerified, isSubaccount, lastSignedIn, createdAt)
+       VALUES (?, ?, ?, 'Revenue', 'Owner', 'agency_admin', 1, 0, NOW(), NOW())`,
+      [email, passwordHash, '[E2E] Revenue Path Owner'],
+    );
+    revenueSignupState.ownerEmails.push(email);
+    return Number((insertResult as mysql.ResultSetHeader).insertId);
+  } finally {
+    await connection.end();
+  }
+}
+
+async function createDisposableSuperAdmin(email: string) {
+  const connection = await openLocalDatabaseConnection();
+  try {
+    const passwordHash = await bcrypt.hash(localDemoPassword(), 10);
+
+    await connection.execute('DELETE FROM users WHERE email = ?', [email]);
+    await connection.execute(
+      `INSERT INTO users
+        (email, passwordHash, name, firstName, lastName, role, emailVerified, isSubaccount, lastSignedIn, createdAt)
+       VALUES (?, ?, ?, 'Revenue', 'Finance', 'super_admin', 1, 0, NOW(), NOW())`,
+      [email, passwordHash, '[E2E] Revenue Path Finance Admin'],
+    );
+    revenueSignupState.adminEmails.push(email);
+  } finally {
+    await connection.end();
+  }
+}
+
+async function loadOwnerAgencyId(email: string) {
+  const connection = await openLocalDatabaseConnection();
+  try {
+    const owner = await queryOne<{ agencyId: number }>(
+      connection,
+      'SELECT agencyId FROM users WHERE email = ? LIMIT 1',
+      [email],
+    );
+    const agencyId = Number(owner.agencyId);
+    rememberRevenueAgencyId(agencyId);
+    return agencyId;
+  } finally {
+    await connection.end();
+  }
+}
+
+async function cleanupRevenueSignupState() {
+  const ownerEmails = [...new Set(revenueSignupState.ownerEmails)];
+  const inviteEmails = [...new Set(revenueSignupState.inviteEmails)];
+  const adminEmails = [...new Set(revenueSignupState.adminEmails)];
+  const connection = await openLocalDatabaseConnection();
+  try {
+    const agencyIds = new Set(revenueSignupState.agencyIds.filter(Boolean));
+    const userIds = new Set<number>();
+    const directUserEmails = [...ownerEmails, ...adminEmails];
+
+    if (directUserEmails.length) {
+      const [rows] = await connection.query(
+        `SELECT id, agencyId FROM users WHERE email IN (${placeholders(directUserEmails)})`,
+        directUserEmails,
+      );
+      for (const row of rows as Array<{ id: number; agencyId: number | null }>) {
+        userIds.add(Number(row.id));
+        if (row.agencyId) agencyIds.add(Number(row.agencyId));
+      }
+    }
+
+    if (inviteEmails.length) {
+      const [rows] = await connection.query(
+        `SELECT id, agencyId FROM users WHERE email IN (${placeholders(inviteEmails)})`,
+        inviteEmails,
+      );
+      for (const row of rows as Array<{ id: number; agencyId: number | null }>) {
+        userIds.add(Number(row.id));
+        if (row.agencyId) agencyIds.add(Number(row.agencyId));
+      }
+    }
+
+    const agencyIdList = Array.from(agencyIds).filter(Boolean);
+    const userIdList = Array.from(userIds).filter(Boolean);
+
+    await connection.beginTransaction();
+    try {
+      if (agencyIdList.length) {
+        const agencyPlaceholders = placeholders(agencyIdList);
+        await connection.query(
+          `DELETE FROM billing_payment_documents WHERE owner_type = 'agency' AND owner_id IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM billing_payments WHERE owner_type = 'agency' AND owner_id IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM billing_audit_events WHERE owner_type = 'agency' AND owner_id IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM billing_invoices WHERE owner_type = 'agency' AND owner_id IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM subscriptions WHERE owner_type = 'agency' AND owner_id IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM agency_subscriptions WHERE agencyId IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM invitations WHERE agencyId IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM agency_branding WHERE agencyId IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+        await connection.query(
+          `DELETE FROM agents WHERE agencyId IN (${agencyPlaceholders})`,
+          agencyIdList,
+        );
+      }
+
+      if (inviteEmails.length) {
+        await connection.query(
+          `DELETE FROM invitations WHERE email IN (${placeholders(inviteEmails)})`,
+          inviteEmails,
+        );
+      }
+
+      if (userIdList.length) {
+        await connection.query(
+          `DELETE FROM notifications WHERE userId IN (${placeholders(userIdList)})`,
+          userIdList,
+        );
+        await connection.query(
+          `DELETE FROM users WHERE id IN (${placeholders(userIdList)})`,
+          userIdList,
+        );
+      }
+
+      if (agencyIdList.length) {
+        await connection.query(
+          `DELETE FROM agencies WHERE id IN (${placeholders(agencyIdList)})`,
+          agencyIdList,
+        );
+      }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    }
+  } finally {
+    await connection.end();
+    revenueSignupState.ownerEmails = [];
+    revenueSignupState.inviteEmails = [];
+    revenueSignupState.adminEmails = [];
+    revenueSignupState.agencyIds = [];
   }
 }
 
@@ -362,6 +543,17 @@ test.describe.serial('local agency workspace browser smoke', () => {
     assertLocalUrl(API_URL);
   });
 
+  test.afterEach(async () => {
+    if (
+      revenueSignupState.ownerEmails.length ||
+      revenueSignupState.inviteEmails.length ||
+      revenueSignupState.adminEmails.length ||
+      revenueSignupState.agencyIds.length
+    ) {
+      await cleanupRevenueSignupState();
+    }
+  });
+
   test('login, protected access, lead mutations, protection, and reload persistence', async ({
     page,
     context,
@@ -472,6 +664,170 @@ test.describe.serial('local agency workspace browser smoke', () => {
 
     await expect(page).toHaveURL(/\/agency\/team$/);
     await expect(page.getByText(inviteEmail)).toBeVisible();
+  });
+
+  test('agency setup revenue path issues invoice, queues proof, approves, and unlocks access', async ({
+    page,
+    context,
+  }) => {
+    const smokePlan = await ensureBillingSmokePlan();
+    const suffix = randomUUID().slice(0, 8);
+    const ownerEmail = `agency-revenue-${suffix}@listify.local`;
+    const financeAdminEmail = `agency-revenue-finance-${suffix}@listify.local`;
+    const inviteEmail = `agency-revenue-agent-${suffix}@listify.local`;
+    revenueSignupState.inviteEmails.push(inviteEmail);
+
+    await createDisposableAgencyOwner(ownerEmail);
+    await createDisposableSuperAdmin(financeAdminEmail);
+
+    await page.goto('/login?mode=signin&next=/agency/setup');
+    await signIn(page, ownerEmail);
+
+    await expect(page).toHaveURL(/\/agency\/setup$/);
+    await expect(page.getByRole('heading', { name: 'Agency Onboarding' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Basic Information' })).toBeVisible();
+
+    const agencyName = `[E2E] Revenue Path Agency ${suffix}`;
+    await page.locator('#name').fill(agencyName);
+    await page.locator('#email').fill(`revenue-agency-${suffix}@listify.local`);
+    await page.locator('#phone').fill('+27110000000');
+    await page.locator('#website').fill('https://example.com');
+    await page.locator('#address').fill('1 Revenue Path Avenue');
+    await page.locator('#city').fill('Johannesburg');
+    await page.locator('#province').fill('Gauteng');
+    await page
+      .locator('#description')
+      .fill('Browser rehearsal agency for the complete manual EFT revenue path.');
+    await page.getByRole('button', { name: 'Continue to Branding' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Agency Branding' })).toBeVisible();
+    await page.locator('#companyName').fill(agencyName);
+    await page.locator('#tagline').fill('Revenue path rehearsal');
+    await page.locator('#primaryColor').first().fill('#0f766e');
+    await page.locator('#secondaryColor').first().fill('#334155');
+    await page.getByRole('button', { name: 'Continue to Team Setup' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Team Setup' })).toBeVisible();
+    await page.locator('#inviteAgents').click();
+    await page.getByPlaceholder('agent@example.com').fill(inviteEmail);
+    await page.getByRole('button', { name: 'Add' }).click();
+    await expect(page.getByText(inviteEmail)).toBeVisible();
+    await page.getByRole('button', { name: 'Continue to Plan Selection' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Choose Your Plan' })).toBeVisible();
+    await page
+      .locator('label')
+      .filter({ hasText: '[LOCAL DEMO] Browser Smoke Paid Agency' })
+      .click();
+    await page.locator('#agreeToTerms').click();
+    await page.getByRole('button', { name: 'Continue to Payment' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Complete Setup' })).toBeVisible();
+    const issueInvoiceButton = page.getByRole('button', { name: /^Issue Invoice$/ });
+    await expect(issueInvoiceButton).toBeEnabled();
+    await issueInvoiceButton.click();
+
+    await expect(page).toHaveURL(/\/agency\/onboarding\/success.*invoiceId=/, {
+      timeout: 20_000,
+    });
+    await expect(page.getByRole('heading', { name: 'Invoice Issued' })).toBeVisible();
+    await expect(page.getByText('EFT invoice ready')).toBeVisible();
+
+    const successUrl = new URL(page.url());
+    const invoiceId = Number(successUrl.searchParams.get('invoiceId') || 0);
+    expect(invoiceId).toBeGreaterThan(0);
+    const agencyId = await loadOwnerAgencyId(ownerEmail);
+    expect(agencyId).toBeGreaterThan(0);
+
+    const agencyClient = await authedTrpcClient(context);
+    const issuedWorkspace = await agencyClient.billing.workspace.query();
+    const issuedInvoice = (issuedWorkspace.invoices as any[]).find(
+      invoice => Number(invoice.id) === invoiceId,
+    );
+    expect(issuedInvoice).toBeTruthy();
+    expect(Number(issuedInvoice.amountDue)).toBe(smokePlan.monthlyAmountCents);
+    expect(issuedInvoice.status).toBe('issued');
+    expect(issuedWorkspace.bankDetails?.canIssueInvoices).toBe(true);
+
+    await page.getByRole('button', { name: /Open Billing Workspace/ }).click();
+    await expect(page).toHaveURL(/\/agency\/billing.*invoiceId=/);
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Billing' })).toBeVisible();
+    await expect(page.getByText('EFT Details')).toBeVisible();
+    await expect(page.getByText(issuedInvoice.invoiceNumber).first()).toBeVisible();
+    await expect(page.getByText(issuedInvoice.paymentReference).first()).toBeVisible();
+
+    const proofBuffer = Buffer.from(`agency-signup-revenue-proof-${suffix}`);
+    await page.locator('#payment-amount').fill(String(Number(issuedInvoice.amountDue || 0) / 100));
+    await page.locator('#bank-reference').fill(issuedInvoice.paymentReference);
+    await page.locator('#payer-name').fill(agencyName);
+    await page.locator('#proof-file').setInputFiles({
+      name: 'agency-signup-revenue-proof.pdf',
+      mimeType: 'application/pdf',
+      buffer: proofBuffer,
+    });
+    await page.getByRole('button', { name: /Submit proof/ }).click();
+    await expect(page.getByText(/Proof submitted|submitted|under_review/i).first()).toBeVisible();
+
+    let paymentId = 0;
+    await expect
+      .poll(async () => {
+        const workspace = await agencyClient.billing.workspace.query();
+        const payment = (workspace.payments as any[]).find(
+          item => Number(item.invoiceId) === invoiceId && item.state === 'under_review',
+        );
+        paymentId = Number(payment?.id || 0);
+        return paymentId;
+      })
+      .toBeGreaterThan(0);
+
+    const pendingAccess = await agencyClient.agency.getAccessState.query();
+    expect(pendingAccess.billingStatus).toBe('payment_under_review');
+    expect(pendingAccess.workspaceAccess.publishing).toBe(false);
+
+    await context.clearCookies();
+    await page.goto('/login?mode=signin&next=/admin/finance');
+    await signIn(page, financeAdminEmail);
+    await expect(page).toHaveURL(/\/admin\/finance$/);
+    await expect(page.getByRole('tab', { name: 'Payment Verification' })).toBeVisible();
+
+    const financeRow = page.getByRole('row').filter({ hasText: issuedInvoice.invoiceNumber });
+    await expect(financeRow).toBeVisible();
+    await expect(financeRow.getByText(issuedInvoice.paymentReference)).toBeVisible();
+    await expect(financeRow.getByRole('button', { name: /Approve/ })).toBeVisible();
+    await financeRow.getByRole('button', { name: /Approve/ }).click();
+
+    const adminClient = await authedTrpcClient(context);
+    await expect
+      .poll(async () => {
+        const queue = await adminClient.billing.admin.financeQueue.query({ status: 'under_review' });
+        return (queue.payments as any[]).some(
+          row => Number(row.payment.id) === Number(paymentId),
+        );
+      })
+      .toBe(false);
+
+    await context.clearCookies();
+    await page.goto('/login?mode=signin&next=/agency/billing');
+    await signIn(page, ownerEmail);
+    await expect(page).toHaveURL(/\/agency\/billing$/);
+    await expect(
+      page.getByText('Access is active from the canonical subscription record.').first(),
+    ).toBeVisible();
+
+    const activeClient = await authedTrpcClient(context);
+    const activeAccess = await activeClient.agency.getAccessState.query();
+    expect(activeAccess.billingStatus).toBe('active');
+    expect(activeAccess.workspaceAccess.publishing).toBe(true);
+    expect(activeAccess.workspaceAccess.reporting).toBe(true);
+
+    const onboardingStatus = await activeClient.agency.getOnboardingStatus.query();
+    expect(onboardingStatus.billingActivated).toBe(true);
+    expect(onboardingStatus.fullFeaturesUnlocked).toBe(true);
+    expect(onboardingStatus.agency?.id).toBe(agencyId);
+
+    await page.goto('/agency/reporting');
+    await expect(page).toHaveURL(/\/agency\/reporting$/);
+    await expect(page.getByRole('heading', { name: 'Reporting', level: 1 })).toBeVisible();
   });
 
   test('manual EFT billing route, proof upload, finance approval, reload, and mobile layout', async ({

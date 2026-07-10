@@ -16,13 +16,37 @@ describe('provider-independent billing foundation contract', () => {
   const billingSchema = readRepoFile('drizzle/schema/billing.ts');
   const agencyRouter = readRepoFile('server/agencyRouter.ts');
   const agentEntitlements = readRepoFile('server/services/agentEntitlementService.ts');
+  const appRoutes = readRepoFile('client/src/App.tsx');
+  const agencyOnboardingPage = readRepoFile('client/src/pages/AgencyOnboarding.tsx');
+  const onboardingSuccessPage = readRepoFile('client/src/pages/OnboardingSuccess.tsx');
 
   it('keeps the billing router and foundation service independent from Stripe checkout', () => {
     expect(billingRouter).not.toMatch(/from ['"]stripe['"]/);
     expect(billingService).not.toMatch(/from ['"]stripe['"]/);
     expect(billingRouter).not.toContain('stripe.checkout.sessions.create');
     expect(billingRouter).toContain('startManualEftCheckout');
-    expect(billingRouter).toContain("sessionId: `manual_eft:${result.invoice.id}`");
+    expect(billingRouter).toContain('sessionId: `manual_eft:${result.invoice.id}`');
+  });
+
+  it('keeps agency onboarding aligned to manual EFT invoice activation', () => {
+    expect(agencyOnboardingPage).toContain('Issue Invoice');
+    expect(agencyOnboardingPage).toContain('EFT invoice');
+    expect(agencyOnboardingPage).toContain('Proof upload');
+    expect(agencyOnboardingPage).toContain('utils.auth.me.invalidate()');
+    expect(agencyOnboardingPage).toContain('utils.agency.getOnboardingStatus.invalidate()');
+    expect(agencyOnboardingPage).not.toContain("Stripe's secure checkout page");
+    expect(agencyOnboardingPage).not.toContain('Complete Setup & Pay Now');
+
+    expect(appRoutes).toContain(
+      "const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'))",
+    );
+    expect(appRoutes).toContain('<AgencyOnboarding />');
+    expect(appRoutes).not.toContain('AgencySetupWizard');
+
+    expect(onboardingSuccessPage).toContain('invoiceId');
+    expect(onboardingSuccessPage).toContain('isManualEftHandoff');
+    expect(onboardingSuccessPage).toContain('Open Billing Workspace');
+    expect(onboardingSuccessPage).not.toContain('Your payment has been processed by Stripe.');
   });
 
   it('models the canonical billing lifecycle and audit tables', () => {
@@ -75,7 +99,9 @@ describe('provider-independent billing foundation contract', () => {
     );
 
     expect(uploadPath).toContain("status: 'submitted'");
-    expect(uploadPath).toContain("let nextSubscriptionStatus: CanonicalSubscriptionStatus = 'payment_under_review'");
+    expect(uploadPath).toContain(
+      "let nextSubscriptionStatus: CanonicalSubscriptionStatus = 'payment_under_review'",
+    );
     expect(uploadPath).toContain("status: 'payment_under_review'");
     expect(uploadPath).not.toContain('activateSubscriptionForPaidInvoice');
     expect(uploadPath).not.toContain('payment_approved_subscription_activated');
@@ -87,13 +113,19 @@ describe('provider-independent billing foundation contract', () => {
       billingService.indexOf('export async function updateSubscriptionLifecycle'),
     );
 
-    expect(reviewPath).toContain("beforePayment.state === 'verified' && input.decision === 'approve'");
+    expect(reviewPath).toContain(
+      "beforePayment.state === 'verified' && input.decision === 'approve'",
+    );
     expect(reviewPath).toContain('idempotent: true');
-    expect(reviewPath).toContain("const invoicePaid = amountPaid >= invoice.amountDue && input.decision !== 'partial_payment'");
+    expect(reviewPath).toContain(
+      "const invoicePaid = amountPaid >= invoice.amountDue && input.decision !== 'partial_payment'",
+    );
     expect(reviewPath).toContain('overpaymentAmount');
     expect(reviewPath).toContain('partial_payment_does_not_activate');
     expect(reviewPath).toContain('activateSubscriptionForPaidInvoice');
-    expect(reviewPath).toContain("eventType: invoicePaid ? 'payment_approved_subscription_activated' : 'payment_partially_approved'");
+    expect(reviewPath).toContain(
+      "eventType: invoicePaid ? 'payment_approved_subscription_activated' : 'payment_partially_approved'",
+    );
   });
 
   it('preserves invoice price snapshots and deterministic renewal period policy', () => {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -88,7 +87,7 @@ const STEPS = [
 ];
 
 const AgencyOnboarding: React.FC = () => {
-  const [, navigate] = useLocation();
+  const utils = trpc.useUtils();
   const [currentStep, setCurrentStep] = useState(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -153,21 +152,29 @@ const AgencyOnboarding: React.FC = () => {
         planId: planSelection.selectedPlanId,
       });
 
-      // Step 2: Create Stripe checkout session with agency metadata
+      // Make the upgraded agency-admin identity visible to route guards and workspace queries.
+      await Promise.all([
+        utils.auth.me.invalidate(),
+        utils.agency.getOnboardingStatus.invalidate(),
+      ]).catch(error => {
+        console.warn('Agency session refresh failed after onboarding:', error);
+      });
+
+      // Step 2: Issue a manual EFT invoice and hand off to billing.
       const checkout = await createCheckoutMutation.mutateAsync({
         planId: planSelection.selectedPlanId,
         successUrl: `${window.location.origin}/agency/onboarding/success?agency_id=${agency.agencyId}`,
         cancelUrl: onboardingConfig.urls.cancel(4),
       });
 
-      // Clear draft after successful agency creation
+      // Clear draft after successful agency creation and invoice issue.
       clearDraft();
 
-      // Redirect to Stripe checkout
+      // Redirect to the invoice handoff.
       if (checkout.url) {
         window.location.href = checkout.url;
       } else {
-        throw new Error('No checkout URL received');
+        throw new Error('No billing handoff URL received');
       }
     } catch (error) {
       console.error('Agency setup error:', error);
@@ -250,7 +257,13 @@ const AgencyOnboarding: React.FC = () => {
           />
         );
       case 5:
-        return <PaymentStep onComplete={handleComplete} onPrev={prevStep} />;
+        return (
+          <PaymentStep
+            onComplete={handleComplete}
+            onPrev={prevStep}
+            isSubmitting={createAgencyMutation.isPending || createCheckoutMutation.isPending}
+          />
+        );
       default:
         return null;
     }
@@ -659,6 +672,21 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onNext, on
     return `R ${amount}/${interval}`;
   };
 
+  const parsePlanFeatures = (value?: string | string[] | null) => {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.map(String);
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {
+      return value
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+    return [];
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
@@ -707,9 +735,9 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onNext, on
                     <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
                   )}
 
-                  {plan.features && (
+                  {parsePlanFeatures(plan.features).length > 0 && (
                     <ul className="text-sm text-left space-y-1">
-                      {JSON.parse(plan.features).map((feature: string, index: number) => (
+                      {parsePlanFeatures(plan.features).map((feature: string, index: number) => (
                         <li key={index} className="flex items-center">
                           <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
                           {feature}
@@ -767,9 +795,10 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onNext, on
   );
 };
 
-const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void }> = ({
+const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void; isSubmitting?: boolean }> = ({
   onComplete,
   onPrev,
+  isSubmitting = false,
 }) => {
   return (
     <div className="space-y-6">
@@ -780,8 +809,8 @@ const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void }> = ({
 
       <Alert>
         <AlertDescription>
-          You're almost done! Click "Complete Setup" to proceed to secure payment and activate your
-          agency's premium features.
+          You're almost done. Click "Issue Invoice" to generate your EFT invoice and continue to the
+          billing workspace.
         </AlertDescription>
       </Alert>
 
@@ -791,26 +820,28 @@ const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void }> = ({
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Secure Payment:</strong> You'll be redirected to Stripe's secure checkout page
+              <strong>Invoice issued:</strong> Your EFT invoice and payment reference will be ready
+              immediately
             </div>
           </div>
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Instant Activation:</strong> Your premium features will be activated
-              immediately after payment
+              <strong>Proof upload:</strong> Pay by EFT, then upload proof in the billing workspace
             </div>
           </div>
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Team Invitations:</strong> Your invited team members will receive setup emails
+              <strong>Activation review:</strong> Premium features unlock after finance approves the
+              payment proof
             </div>
           </div>
           <div className="flex items-start space-x-3">
             <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
             <div>
-              <strong>Full Access:</strong> Complete access to all agency management features
+              <strong>Team Invitations:</strong> Your invited team members receive setup emails once
+              the agency is activated
             </div>
           </div>
         </div>
@@ -821,8 +852,8 @@ const PaymentStep: React.FC<{ onComplete: () => void; onPrev: () => void }> = ({
           <ChevronLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Button onClick={onComplete} size="lg">
-          Complete Setup & Pay Now
+        <Button onClick={onComplete} size="lg" disabled={isSubmitting}>
+          {isSubmitting ? 'Issuing Invoice...' : 'Issue Invoice'}
           <ChevronRight className="w-4 h-4 ml-2" />
         </Button>
       </div>

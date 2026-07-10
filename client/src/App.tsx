@@ -106,7 +106,7 @@ const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
 const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
 const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
-const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
+const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
 const DeveloperSetupWizardEnhanced = lazy(
   () => import('./components/developer/DeveloperSetupWizardEnhanced'),
 );
@@ -380,7 +380,7 @@ function Router() {
 
           <Route path="/agency/setup">
             <RequireRole role="agency_admin">
-              <AgencySetupWizard />
+              <AgencyOnboarding />
             </RequireRole>
           </Route>
           <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />

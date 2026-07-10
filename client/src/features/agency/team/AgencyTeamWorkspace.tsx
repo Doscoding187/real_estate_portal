@@ -148,11 +148,17 @@ export function AgencyTeamWorkspace(props: WorkspaceContentProps) {
   });
 
   const createInvite = trpc.invitation.create.useMutation({
-    onSuccess: async () => {
+    onSuccess: async invitation => {
       await refreshTeam();
       setInviteEmail('');
       setInviteRole('agent');
-      toast.success('Invitation created');
+      toast.success(
+        invitation.delivery?.deferred
+          ? 'Invitation saved and queued for activation'
+          : invitation.delivery?.sent
+            ? 'Invitation emailed'
+            : 'Invitation saved. Copy the link if email delivery needs attention.',
+      );
     },
     onError: error => toast.error(error.message || 'Could not create invitation'),
   });
@@ -166,9 +172,15 @@ export function AgencyTeamWorkspace(props: WorkspaceContentProps) {
   });
 
   const resendInvite = trpc.invitation.resend.useMutation({
-    onSuccess: async () => {
+    onSuccess: async invitation => {
       await refreshTeam();
-      toast.success('Invitation resent');
+      toast.success(
+        invitation.delivery?.deferred
+          ? 'Invitation link renewed and queued for activation'
+          : invitation.delivery?.sent
+            ? 'Invitation resent'
+            : 'Invitation link renewed. Copy the link if email delivery needs attention.',
+      );
     },
     onError: error => toast.error(error.message || 'Could not resend invitation'),
   });

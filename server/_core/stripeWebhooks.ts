@@ -339,7 +339,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
 
     for (const invitation of teamInvitations) {
       try {
-        const inviteUrl = `${appUrl}/invite/accept?token=${invitation.token}`;
+        const inviteUrl = `${appUrl}/accept-invitation?token=${invitation.token}`;
         const inviterName =
           agency.ownerName ||
           agency.ownerFirstName ||

@@ -11,7 +11,9 @@ export default function OnboardingSuccess() {
   const queryParams = new URLSearchParams(window.location.search);
 
   const agencyId = queryParams.get('agency_id');
+  const invoiceId = queryParams.get('invoiceId');
   const sessionId = queryParams.get('session_id');
+  const isManualEftHandoff = Boolean(invoiceId) || sessionId?.startsWith('manual_eft:');
 
   const [autoTriggerAttempted, setAutoTriggerAttempted] = useState(false);
   const [manualTriggerNeeded, setManualTriggerNeeded] = useState(false);
@@ -26,8 +28,8 @@ export default function OnboardingSuccess() {
         if (data?.subscriptionStatus === 'active') return false;
         // In dev, only poll if auto-trigger succeeded
         if (import.meta.env.DEV) return autoTriggerAttempted ? 2000 : false;
-        // In prod, poll for webhook (usually <5 seconds)
-        return 2000;
+        // Provider-hosted payment flows may still activate asynchronously.
+        return isManualEftHandoff ? false : 2000;
       },
     },
   );
@@ -39,7 +41,13 @@ export default function OnboardingSuccess() {
 
   // AUTO-TRIGGER in dev mode (simulate webhook)
   useEffect(() => {
-    if (import.meta.env.DEV && agencyId && !autoTriggerAttempted && !isActive) {
+    if (
+      import.meta.env.DEV &&
+      !isManualEftHandoff &&
+      agencyId &&
+      !autoTriggerAttempted &&
+      !isActive
+    ) {
       const autoTrigger = async () => {
         try {
           console.log('🔧 [DEV] Auto-triggering webhook...');
@@ -66,7 +74,7 @@ export default function OnboardingSuccess() {
       const timeout = setTimeout(autoTrigger, 1000);
       return () => clearTimeout(timeout);
     }
-  }, [agencyId, autoTriggerAttempted, isActive, triggerWebhook, refetch]);
+  }, [agencyId, autoTriggerAttempted, isActive, isManualEftHandoff, triggerWebhook, refetch]);
 
   // Manual trigger handler
   const handleManualTrigger = async () => {
@@ -89,6 +97,11 @@ export default function OnboardingSuccess() {
     }
   };
 
+  const billingUrl = invoiceId
+    ? `/agency/billing?invoiceId=${encodeURIComponent(invoiceId)}&onboarding=1`
+    : '/agency/billing?onboarding=1';
+  const canContinue = isActive || isManualEftHandoff;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
@@ -97,12 +110,38 @@ export default function OnboardingSuccess() {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-10 h-10 text-green-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h1>
-          <p className="text-gray-600">Your payment has been processed by Stripe.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {isActive
+              ? 'Agency Activated'
+              : isManualEftHandoff
+                ? 'Invoice Issued'
+                : 'Payment Received'}
+          </h1>
+          <p className="text-gray-600">
+            {isManualEftHandoff && !isActive
+              ? 'Your agency setup is saved. Complete the EFT payment and upload proof to activate access.'
+              : isActive
+                ? 'Your agency is active and ready to use.'
+                : 'We are confirming your payment and activating the agency.'}
+          </p>
         </div>
 
         {/* Activation Status */}
-        {!isActive ? (
+        {!isActive && isManualEftHandoff ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-blue-900 mb-1">EFT invoice ready</p>
+                <p className="text-sm text-blue-700">
+                  Open billing to view bank details, use your invoice reference, and upload proof of
+                  payment.
+                </p>
+                {invoiceId && <p className="text-xs text-blue-600 mt-2">Invoice ID: {invoiceId}</p>}
+              </div>
+            </div>
+          </div>
+        ) : !isActive ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start gap-3">
               <Loader2 className="w-5 h-5 animate-spin text-blue-600 mt-0.5" />
@@ -171,14 +210,19 @@ export default function OnboardingSuccess() {
 
         {/* Continue Button */}
         <Button
-          onClick={() => navigate('/agency/dashboard?welcome=true')}
-          disabled={!isActive}
+          onClick={() => navigate(isActive ? '/agency/dashboard?welcome=true' : billingUrl)}
+          disabled={!canContinue}
           className="w-full"
           size="lg"
         >
           {isActive ? (
             <>
               Continue to Dashboard
+              <span className="ml-2">→</span>
+            </>
+          ) : isManualEftHandoff ? (
+            <>
+              Open Billing Workspace
               <span className="ml-2">→</span>
             </>
           ) : (
@@ -198,6 +242,10 @@ export default function OnboardingSuccess() {
                 <div>
                   <dt className="font-medium text-gray-700">Agency ID:</dt>
                   <dd className="text-gray-600 font-mono">{agencyId || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="font-medium text-gray-700">Invoice ID:</dt>
+                  <dd className="text-gray-600 font-mono">{invoiceId || 'N/A'}</dd>
                 </div>
                 <div>
                   <dt className="font-medium text-gray-700">Session ID:</dt>
@@ -223,7 +271,9 @@ export default function OnboardingSuccess() {
         {/* Production Note */}
         {!import.meta.env.DEV && (
           <p className="text-xs text-gray-500 text-center mt-6">
-            If activation takes longer than 30 seconds, please contact support.
+            {isManualEftHandoff
+              ? 'Activation starts after finance approves your proof of payment.'
+              : 'If activation takes longer than 30 seconds, please contact support.'}
           </p>
         )}
       </div>
