@@ -2082,6 +2082,7 @@ export async function createListing(listingData: any) {
       const insertValues: any = {
         ownerId: listingData.userId,
         agentId: agentId,
+        agencyId,
         action: listingData.action,
         propertyType: listingData.propertyType,
         title: listingData.title,

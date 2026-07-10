@@ -16,7 +16,22 @@ import {
   notifications,
   analyticsEvents,
 } from '../drizzle/schema';
-import { eq, and, desc, gte, lte, sql, count, inArray, like, or } from 'drizzle-orm';
+import {
+  asc,
+  eq,
+  and,
+  desc,
+  gte,
+  lte,
+  sql,
+  count,
+  inArray,
+  isNotNull,
+  like,
+  notInArray,
+  or,
+} from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 import type { SQL } from 'drizzle-orm';
 import { EmailService } from './_core/emailService';
 import { ENV } from './_core/env';
@@ -58,6 +73,7 @@ const NOTIFICATION_TYPES = [
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 const LIVE_AGENT_LISTING_STATUSES = ['available', 'published'] as const;
+const TERMINAL_FOLLOW_UP_STATUSES = ['converted', 'closed', 'lost'] as const;
 
 function buildAgentPublicSlug(agent: {
   id: number;
@@ -714,6 +730,7 @@ export const agentRouter = router({
         status: string;
         source: string;
         notes: string | null;
+        nextFollowUp: string | Date | null;
         createdAt: string | Date;
         property: {
           id: number;
@@ -766,6 +783,7 @@ export const agentRouter = router({
           status: lead.status,
           source: lead.leadSource || lead.source || 'web',
           notes: lead.notes,
+          nextFollowUp: lead.nextFollowUp,
           createdAt: lead.createdAt || new Date(),
           property: property
             ? {
@@ -1359,6 +1377,235 @@ export const agentRouter = router({
             }
           : null,
       }));
+    }),
+
+  /**
+   * Returns the current agent's active follow-up queue. Follow-ups remain part
+   * of the canonical lead record so agency managers and agents see the same
+   * work instead of maintaining competing task lists.
+   */
+  getMyFollowUps: agentProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      const user = requireUser(ctx);
+      const [agentRecord] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(eq(agents.userId, user.id))
+        .limit(1);
+
+      if (!agentRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
+      }
+
+      const followUps = await db
+        .select({
+          lead: leads,
+          property: properties,
+        })
+        .from(leads)
+        .leftJoin(properties, eq(leads.propertyId, properties.id))
+        .where(
+          and(
+            eq(leads.agentId, agentRecord.id),
+            isNotNull(leads.nextFollowUp),
+            notInArray(leads.status, TERMINAL_FOLLOW_UP_STATUSES as any),
+          ),
+        )
+        .orderBy(asc(leads.nextFollowUp))
+        .limit(input.limit);
+
+      return followUps.map(({ lead, property }) => ({
+        id: lead.id,
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        status: lead.status,
+        source: lead.leadSource || lead.source || 'web',
+        nextFollowUp: lead.nextFollowUp,
+        property: property
+          ? {
+              id: property.id,
+              title: property.title,
+              city: property.city,
+              price: Number(property.price),
+            }
+          : null,
+      }));
+    }),
+
+  /**
+   * Schedule a follow-up on an assigned lead. This mirrors the agency lead
+   * operation while retaining the agent's narrower ownership boundary.
+   */
+  setLeadFollowUp: agentProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        nextFollowUp: z.string().min(1),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean; nextFollowUp: string }> => {
+      const db = await getDb();
+      const user = requireUser(ctx);
+      const [agentRecord] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(eq(agents.userId, user.id))
+        .limit(1);
+
+      if (!agentRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
+      }
+
+      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
+      }
+
+      if (TERMINAL_FOLLOW_UP_STATUSES.includes(lead.status as any)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Follow-ups cannot be scheduled for terminal leads',
+        });
+      }
+
+      const parsedDate = new Date(input.nextFollowUp);
+      if (Number.isNaN(parsedDate.getTime())) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Follow-up date is invalid' });
+      }
+
+      const nextFollowUp = toDbTimestampRequired(parsedDate);
+      const now = nowAsDbTimestamp();
+
+      await db.transaction(async tx => {
+        const result = await tx
+          .update(leads)
+          .set({
+            nextFollowUp,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(leads.id, lead.id),
+              eq(leads.agentId, agentRecord.id),
+              notInArray(leads.status, TERMINAL_FOLLOW_UP_STATUSES as any),
+            ),
+          );
+        const affectedRows = Number(
+          (result as any)?.affectedRows ?? (result as any)?.[0]?.affectedRows ?? 0,
+        );
+        if (affectedRows === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead is no longer available' });
+        }
+
+        await tx.insert(leadActivities).values({
+          leadId: lead.id,
+          userId: user.id,
+          type: 'note',
+          description: input.note
+            ? `Follow-up scheduled for ${nextFollowUp}. ${input.note}`
+            : `Follow-up scheduled for ${nextFollowUp}.`,
+        });
+      });
+
+      await recordAgentOsEvent({
+        userId: user.id,
+        eventType: 'agent_crm_action_logged',
+        eventData: {
+          leadId: lead.id,
+          activityType: 'follow_up_scheduled',
+          nextFollowUp,
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
+
+      return { success: true, nextFollowUp };
+    }),
+
+  /** Complete an assigned follow-up and retain the contact/audit trail. */
+  completeLeadFollowUp: agentProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
+      const db = await getDb();
+      const user = requireUser(ctx);
+      const [agentRecord] = await db
+        .select({ id: agents.id })
+        .from(agents)
+        .where(eq(agents.userId, user.id))
+        .limit(1);
+
+      if (!agentRecord) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent profile not found' });
+      }
+
+      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+      if (!lead || Number(lead.agentId) !== Number(agentRecord.id)) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found or unauthorized' });
+      }
+
+      if (TERMINAL_FOLLOW_UP_STATUSES.includes(lead.status as any)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Follow-ups cannot be completed for terminal leads',
+        });
+      }
+
+      const now = nowAsDbTimestamp();
+      await db.transaction(async tx => {
+        const result = await tx
+          .update(leads)
+          .set({
+            nextFollowUp: null,
+            lastContactedAt: now,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(leads.id, lead.id),
+              eq(leads.agentId, agentRecord.id),
+              notInArray(leads.status, TERMINAL_FOLLOW_UP_STATUSES as any),
+            ),
+          );
+        const affectedRows = Number(
+          (result as any)?.affectedRows ?? (result as any)?.[0]?.affectedRows ?? 0,
+        );
+        if (affectedRows === 0) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead is no longer available' });
+        }
+
+        await tx.insert(leadActivities).values({
+          leadId: lead.id,
+          userId: user.id,
+          type: 'note',
+          description: input.note ? `Follow-up completed. ${input.note}` : 'Follow-up completed.',
+        });
+      });
+
+      await recordAgentOsEvent({
+        userId: user.id,
+        eventType: 'agent_crm_action_logged',
+        eventData: {
+          leadId: lead.id,
+          activityType: 'follow_up_completed',
+        },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
+
+      return { success: true };
     }),
 
   /**

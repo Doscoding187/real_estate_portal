@@ -44,6 +44,7 @@ interface Lead {
   message: string | null;
   source: string | null;
   notes?: string | null;
+  nextFollowUp?: string | null;
   createdAt: string;
   property?: {
     id: number;
@@ -114,6 +115,22 @@ function getLeadAgeDays(lead: Lead) {
   return Math.max(0, Math.floor((Date.now() - created.getTime()) / 86_400_000));
 }
 
+function parseDatabaseTimestamp(value: string) {
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+  return /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized)
+    ? new Date(normalized)
+    : new Date(`${normalized}Z`);
+}
+
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return '';
+  const date = parseDatabaseTimestamp(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localTime.toISOString().slice(0, 16);
+}
+
 function getLeadTemperature(lead: Lead) {
   const ageDays = getLeadAgeDays(lead);
   const highIntentSource = ['whatsapp', 'property_detail', 'agent_profile', 'referral'].includes(
@@ -176,6 +193,7 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
   const [leadToSchedule, setLeadToSchedule] = useState<Lead | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [newActivityNote, setNewActivityNote] = useState('');
+  const [followUpForm, setFollowUpForm] = useState({ nextFollowUp: '', note: '' });
   const [bookingForm, setBookingForm] = useState({
     listingId: '',
     scheduledAt: '',
@@ -245,6 +263,33 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
     },
     onError: error => {
       toast.error(error.message || 'Failed to add CRM note');
+    },
+  });
+  const setLeadFollowUpMutation = trpc.agent.setLeadFollowUp.useMutation({
+    onSuccess: result => {
+      toast.success('Follow-up scheduled');
+      setSelectedLead(current =>
+        current ? { ...current, nextFollowUp: result.nextFollowUp } : current,
+      );
+      void utils.agent.getLeadsPipeline.invalidate();
+      void utils.agent.getMyFollowUps.invalidate();
+      void utils.agent.getActivationMilestones.invalidate();
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to schedule follow-up');
+    },
+  });
+  const completeLeadFollowUpMutation = trpc.agent.completeLeadFollowUp.useMutation({
+    onSuccess: () => {
+      toast.success('Follow-up completed');
+      setSelectedLead(current => (current ? { ...current, nextFollowUp: null } : current));
+      setFollowUpForm(current => ({ ...current, nextFollowUp: '' }));
+      void utils.agent.getLeadsPipeline.invalidate();
+      void utils.agent.getMyFollowUps.invalidate();
+      void utils.agent.getActivationMilestones.invalidate();
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to complete follow-up');
     },
   });
 
@@ -360,6 +405,7 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
   const openLeadDetail = (lead: Lead) => {
     setSelectedLead(lead);
     setNewActivityNote('');
+    setFollowUpForm({ nextFollowUp: toDateTimeLocal(lead.nextFollowUp), note: '' });
   };
 
   const getReadinessForLead = (leadId: number) => leadReadiness[leadId] || DEFAULT_READINESS;
@@ -696,6 +742,7 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
           if (!open) {
             setSelectedLead(null);
             setNewActivityNote('');
+            setFollowUpForm({ nextFollowUp: '', note: '' });
           }
         }}
       >
@@ -803,6 +850,84 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                 </div>
 
                 <aside className="space-y-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-semibold text-gray-900">Follow-up</h3>
+                      {selectedLead.nextFollowUp ? (
+                        <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+                          Scheduled
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-slate-200 bg-white text-slate-600">
+                          Not set
+                        </Badge>
+                      )}
+                    </div>
+                    {selectedLead.nextFollowUp ? (
+                      <p className="mt-2 text-xs leading-5 text-slate-600">
+                        Due {parseDatabaseTimestamp(selectedLead.nextFollowUp).toLocaleString()}
+                      </p>
+                    ) : null}
+                    <div className="mt-4 space-y-3">
+                      <Input
+                        type="datetime-local"
+                        value={followUpForm.nextFollowUp}
+                        onChange={event =>
+                          setFollowUpForm(current => ({
+                            ...current,
+                            nextFollowUp: event.target.value,
+                          }))
+                        }
+                      />
+                      <Textarea
+                        rows={2}
+                        value={followUpForm.note}
+                        onChange={event =>
+                          setFollowUpForm(current => ({ ...current, note: event.target.value }))
+                        }
+                        placeholder="Outcome or reminder context"
+                      />
+                      <Button
+                        className="w-full"
+                        disabled={
+                          setLeadFollowUpMutation.isPending || !followUpForm.nextFollowUp
+                        }
+                        onClick={() =>
+                          setLeadFollowUpMutation.mutate({
+                            leadId: selectedLead.id,
+                            nextFollowUp: new Date(followUpForm.nextFollowUp).toISOString(),
+                            note: followUpForm.note.trim() || undefined,
+                          })
+                        }
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        {setLeadFollowUpMutation.isPending
+                          ? 'Scheduling...'
+                          : selectedLead.nextFollowUp
+                            ? 'Reschedule Follow-up'
+                            : 'Schedule Follow-up'}
+                      </Button>
+                      {selectedLead.nextFollowUp ? (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          disabled={completeLeadFollowUpMutation.isPending}
+                          onClick={() =>
+                            completeLeadFollowUpMutation.mutate({
+                              leadId: selectedLead.id,
+                              note: followUpForm.note.trim() || undefined,
+                            })
+                          }
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          {completeLeadFollowUpMutation.isPending
+                            ? 'Completing...'
+                            : 'Complete Follow-up'}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-semibold text-gray-900">Offer Readiness</h3>
