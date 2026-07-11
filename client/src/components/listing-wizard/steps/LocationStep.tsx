@@ -19,7 +19,7 @@ type AddressPrediction = {
   description: string;
 };
 
-const LocationStep: React.FC = () => {
+const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   const { location, setLocation } = useListingWizardStore();
   const [manualOverride, setManualOverride] = useState(false);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
@@ -28,8 +28,8 @@ const LocationStep: React.FC = () => {
   const [isFetchingPredictions, setIsFetchingPredictions] = useState(false);
 
   useEffect(() => {
-    setAddressSearch(location?.address || '');
-  }, [location?.address]);
+    setAddressSearch(location?.address || addressHint || '');
+  }, [addressHint, location?.address]);
 
   const extractAddressParts = useCallback((addressComponents: google.maps.GeocoderAddressComponent[]) => {
     const getComponent = (type: string): string | undefined => {
@@ -225,7 +225,7 @@ const LocationStep: React.FC = () => {
           <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <p>
             Address fields are auto-populated when you select a location. You can edit them manually
-            if needed.
+            if needed. Seller-prospect address hints still require map confirmation before use.
           </p>
         </div>
 

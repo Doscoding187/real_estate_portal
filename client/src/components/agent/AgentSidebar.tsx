@@ -11,6 +11,7 @@ import {
   DollarSign,
   FileText,
   Home,
+  MapPinned,
   LogOut,
   Megaphone,
   Settings,
@@ -33,6 +34,7 @@ const OPERATE_LINKS = [
   { label: 'Overview', href: '/agent/dashboard', icon: Home },
   { label: 'Listings', href: '/agent/listings', icon: Building2 },
   { label: 'Leads & CRM', href: '/agent/leads', icon: Users },
+  { label: 'Canvassing', href: '/agent/canvassing', icon: MapPinned },
   { label: 'Calendar', href: '/agent/productivity', icon: CalendarDays },
 ] as const;
 

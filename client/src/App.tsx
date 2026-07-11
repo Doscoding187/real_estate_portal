@@ -43,6 +43,7 @@ const AgencyDashboard = lazy(() => import('./pages/agency/AgencyDashboard'));
 const AgentDashboard = lazy(() => import('./pages/AgentDashboard'));
 const AgentListings = lazy(() => import('./pages/agent/AgentListings'));
 const AgentLeads = lazy(() => import('./pages/AgentLeads'));
+const AgentCanvassing = lazy(() => import('./pages/agent/AgentCanvassing'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
@@ -290,6 +291,11 @@ function Router() {
           <Route path="/agent/leads">
             <RequireRole role="agent">
               <AgentLeads />
+            </RequireRole>
+          </Route>
+          <Route path="/agent/canvassing">
+            <RequireRole role="agent">
+              <AgentCanvassing />
             </RequireRole>
           </Route>
           <Route path="/agent/marketing">

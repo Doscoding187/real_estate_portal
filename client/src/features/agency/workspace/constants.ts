@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Home,
   LayoutDashboard,
+  MapPinned,
   MessageSquare,
   Settings,
   ShieldCheck,
@@ -58,6 +59,7 @@ export const WORKSPACE_TITLES: Record<
   'my-day': { title: 'My Day', eyebrow: 'Calendar and operations', icon: CalendarDays },
   leads: { title: 'Leads', eyebrow: 'Pipeline and CRM', icon: MessageSquare },
   listings: { title: 'Listings', eyebrow: 'Inventory readiness', icon: Home },
+  canvassing: { title: 'Canvassing', eyebrow: 'Seller acquisition', icon: MapPinned },
   viewings: { title: 'Viewings', eyebrow: 'Follow-through', icon: ClipboardCheck },
   transactions: { title: 'Transactions', eyebrow: 'Offers and deals', icon: BriefcaseBusiness },
   commission: { title: 'Commission', eyebrow: 'Commercial pipeline', icon: CircleDollarSign },
@@ -95,6 +97,7 @@ export const NAV_GROUPS: Array<{
     title: 'Inventory and Growth',
     items: [
       { id: 'listings', label: 'Listings', icon: Home },
+      { id: 'canvassing', label: 'Canvassing', icon: MapPinned },
       { id: 'growth', label: 'Growth', icon: Sparkles },
       { id: 'reporting', label: 'Reporting', icon: BarChart3 },
     ],

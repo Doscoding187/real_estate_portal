@@ -20,6 +20,7 @@ import { calculateListingQualityScore } from './lib/quality';
 import { requireUser } from './_core/requireUser';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { resolvePropertyForListing } from './services/inventoryLinkResolver';
+import { prepareSellerProspectListingConversion } from './services/sellerProspectAccessService';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -227,6 +228,7 @@ const createListingSchema = z.object({
   // New wizard submissions use this typed canonical media manifest.
   media: z.array(listingMediaInputSchema).optional(),
   status: z.enum(['draft', 'pending_review']).optional(),
+  sellerProspectId: z.number().int().positive().optional(),
 });
 
 export const listingRouter = router({
@@ -240,6 +242,20 @@ export const listingRouter = router({
     }
 
     try {
+      const sellerProspectId = input.sellerProspectId;
+      const sellerProspectConversion = sellerProspectId !== undefined
+        ? await (async () => {
+            const database = await db.getDb();
+            if (!database) {
+              throw new TRPCError({
+                code: 'INTERNAL_SERVER_ERROR',
+                message: 'Database not available',
+              });
+            }
+            return prepareSellerProspectListingConversion(database, requireUser(ctx), sellerProspectId);
+          })()
+        : undefined;
+
       // Generate slug from title
       const timestamp = Date.now().toString(36);
       const slug =
@@ -321,7 +337,7 @@ export const listingRouter = router({
       }
 
       // Fallback: Try legacy location resolution (for logging only)
-      if (!cityId) {
+      if (!cityId && !input.location.locationId) {
         try {
           const { locationPagesServiceEnhanced } =
             await import('./services/locationPagesServiceEnhanced');
@@ -369,6 +385,7 @@ export const listingRouter = router({
         suburbId, // New: Auto-populated suburb ID
         slug,
         media,
+        sellerProspectConversion,
       });
 
       // Calculate initial readiness
@@ -453,6 +470,7 @@ export const listingRouter = router({
           media: mediaManifest,
           mediaIds: _mediaIds,
           mainMediaId,
+          sellerProspectId: _sellerProspectId,
           ...listingInput
         } = input;
         const updatePayload: any = { ...listingInput, updatedAt: new Date() };
