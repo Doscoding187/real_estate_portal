@@ -36,6 +36,8 @@ import {
   listingApprovalQueue,
   listingLeads,
   listingViewings,
+  sellerProspectActivities,
+  sellerProspects,
   prospects,
   prospectFavorites,
   scheduledViewings,
@@ -2040,7 +2042,16 @@ export async function getSubscriptionStats() {
 /**
  * Create a new listing
  */
-export async function createListing(listingData: any) {
+export type SellerProspectConversionInput = {
+  sellerProspectId: number;
+  agencyId: number;
+  assignedAgentId: number | null;
+  actorUserId: number;
+};
+
+export async function createListing(
+  listingData: any & { sellerProspectConversion?: SellerProspectConversionInput },
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -2057,7 +2068,7 @@ export async function createListing(listingData: any) {
         .where(eq(agents.userId, listingData.userId))
         .limit(1);
       const [owner] = await tx
-        .select({ agencyId: users.agencyId })
+        .select({ agencyId: users.agencyId, role: users.role })
         .from(users)
         .where(eq(users.id, listingData.userId))
         .limit(1);
@@ -2071,10 +2082,70 @@ export async function createListing(listingData: any) {
 
       // Membership is canonical; agent affiliation only preserves legacy agent-owned records.
       const agencyId = ownerAgencyId || agentAgencyId || null;
+      const sellerProspectConversion = listingData.sellerProspectConversion;
+      const effectiveAgentId = sellerProspectConversion?.assignedAgentId ?? agentId;
+
+      if (sellerProspectConversion) {
+        if (!agencyId || agencyId !== sellerProspectConversion.agencyId) {
+          throw new Error('Seller prospect and listing owner belong to different agencies');
+        }
+
+        if (effectiveAgentId) {
+          const [assignedAgent] = await tx
+            .select({ id: agents.id })
+            .from(agents)
+            .where(
+              and(
+                eq(agents.id, effectiveAgentId),
+                eq(agents.agencyId, sellerProspectConversion.agencyId),
+                eq(agents.status, 'approved'),
+              ),
+            )
+            .limit(1);
+          if (!assignedAgent) {
+            throw new Error('Seller prospect assignment is no longer an approved agency agent');
+          }
+        }
+
+        const [sellerProspect] = await tx
+          .select({
+            id: sellerProspects.id,
+            stage: sellerProspects.stage,
+            convertedListingId: sellerProspects.convertedListingId,
+            assignedAgentId: sellerProspects.assignedAgentId,
+          })
+          .from(sellerProspects)
+          .where(
+            and(
+              eq(sellerProspects.id, sellerProspectConversion.sellerProspectId),
+              eq(sellerProspects.agencyId, sellerProspectConversion.agencyId),
+            ),
+          )
+          .limit(1);
+
+        if (!sellerProspect || sellerProspect.convertedListingId) {
+          throw new Error('Seller prospect is no longer available for listing conversion');
+        }
+        if (!['qualified', 'mandate_won'].includes(String(sellerProspect.stage))) {
+          throw new Error('Seller prospect must be qualified before listing conversion');
+        }
+
+        const currentAssignedAgentId = sellerProspect.assignedAgentId
+          ? Number(sellerProspect.assignedAgentId)
+          : null;
+        if (currentAssignedAgentId !== sellerProspectConversion.assignedAgentId) {
+          throw new Error('Seller prospect assignment changed before listing conversion');
+        }
+
+        const actorIsManager = owner?.role === 'agency_admin' || owner?.role === 'super_admin';
+        if (!actorIsManager && (owner?.role !== 'agent' || !agentId || currentAssignedAgentId !== agentId)) {
+          throw new Error('Seller prospect assignment no longer permits this listing conversion');
+        }
+      }
 
       console.log('[db.createListing] Inserting listing:', {
         ownerId: listingData.userId,
-        agentId,
+        agentId: effectiveAgentId,
         agencyId,
         slug: listingData.slug,
         coords: { lat: listingData.latitude, lng: listingData.longitude },
@@ -2190,6 +2261,44 @@ export async function createListing(listingData: any) {
             uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
           });
         }
+      }
+
+      if (sellerProspectConversion) {
+        const conversionTimestamp = toMysqlDateTime();
+        const conversionUpdate = await tx
+          .update(sellerProspects)
+          .set({
+            stage: 'converted_to_listing',
+            convertedListingId: newListingId,
+            convertedAt: conversionTimestamp,
+            nextFollowUp: null,
+            updatedAt: conversionTimestamp,
+          })
+          .where(
+            and(
+              eq(sellerProspects.id, sellerProspectConversion.sellerProspectId),
+              eq(sellerProspects.agencyId, sellerProspectConversion.agencyId),
+              isNull(sellerProspects.convertedListingId),
+            ),
+          );
+        const affectedRows = Number(
+          (conversionUpdate as any)?.affectedRows ??
+            (conversionUpdate as any)?.[0]?.affectedRows ??
+            0,
+        );
+        if (affectedRows === 0) {
+          throw new Error('Seller prospect is no longer available for listing conversion');
+        }
+
+        await tx.insert(sellerProspectActivities).values({
+          agencyId: sellerProspectConversion.agencyId,
+          sellerProspectId: sellerProspectConversion.sellerProspectId,
+          actorUserId: sellerProspectConversion.actorUserId,
+          activityType: 'conversion',
+          description: 'Canonical listing draft created from this seller prospect.',
+          metadata: { listingId: newListingId, assignedAgentId: effectiveAgentId || null },
+          createdAt: conversionTimestamp,
+        });
       }
 
       return newListingId;

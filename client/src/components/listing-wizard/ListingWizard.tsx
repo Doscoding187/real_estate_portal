@@ -4,7 +4,7 @@
  * Orchestrates the multi-step listing creation process
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
@@ -59,6 +59,7 @@ const ListingWizard: React.FC = () => {
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrorResult | null>(null);
   const [showPreflightModal, setShowPreflightModal] = useState(false);
+  const appliedSellerProspectId = useRef<number | null>(null);
 
   // Auto-save hook - saves draft to localStorage automatically
   const {
@@ -109,11 +110,18 @@ const ListingWizard: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const editId = searchParams.get('id');
   const isEditMode = searchParams.get('edit') === 'true';
+  const sellerProspectId = Number(searchParams.get('sellerProspectId') || 0);
+  const hasSellerProspectHandoff = Number.isInteger(sellerProspectId) && sellerProspectId > 0;
 
   // Fetch existing listing if in edit mode
   const { data: existingListing, isLoading: isLoadingExisting } = trpc.listing.getById.useQuery(
     { id: Number(editId) },
     { enabled: !!editId && isEditMode },
+  );
+
+  const { data: sellerProspectPrefill } = trpc.canvassing.getListingPrefill.useQuery(
+    { sellerProspectId },
+    { enabled: hasSellerProspectHandoff && !isEditMode, retry: false },
   );
 
   const { data: preflight, isLoading: isPreflightLoading } =
@@ -223,6 +231,25 @@ const ListingWizard: React.FC = () => {
     }
   }, [existingListing, isEditMode]);
 
+  useEffect(() => {
+    if (
+      isEditMode ||
+      !sellerProspectPrefill ||
+      appliedSellerProspectId.current === sellerProspectPrefill.sellerProspectId
+    ) {
+      return;
+    }
+
+    appliedSellerProspectId.current = sellerProspectPrefill.sellerProspectId;
+    store.reset();
+    store.setAction('sell');
+    if (sellerProspectPrefill.propertyType) {
+      store.setPropertyType(sellerProspectPrefill.propertyType as any);
+    }
+    setShowResumeDraftDialog(false);
+    setWizardKey(previous => previous + 1);
+  }, [isEditMode, sellerProspectPrefill, store]);
+
   // Check for session restoration after login
   useEffect(() => {
     if (wasSessionExpired()) {
@@ -321,6 +348,9 @@ const ListingWizard: React.FC = () => {
 
     try {
       const listingData = buildListingWizardSubmitPayload(store);
+      if (hasSellerProspectHandoff) {
+        (listingData as any).sellerProspectId = sellerProspectId;
+      }
 
       console.log('Submitting listing data:', listingData);
 
@@ -361,6 +391,11 @@ const ListingWizard: React.FC = () => {
         // Agency inventory is the canonical return surface for agency-admin authoring.
         if (user?.role === 'agency_admin') {
           setLocation('/agency/listings');
+          return;
+        }
+
+        if (user?.role === 'agent' && hasSellerProspectHandoff) {
+          setLocation('/agent/canvassing');
           return;
         }
 
@@ -478,7 +513,7 @@ const ListingWizard: React.FC = () => {
       case 5:
         return <PricingStep />;
       case 6:
-        return <LocationStep />;
+        return <LocationStep addressHint={sellerProspectPrefill?.propertyLocation?.address || ''} />;
       case 7:
         return <MediaUploadStep />;
       case 8:
@@ -663,6 +698,20 @@ const ListingWizard: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {sellerProspectPrefill ? (
+              <div
+                className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
+                data-testid="seller-prospect-listing-handoff"
+              >
+                <p className="font-semibold">Private seller-prospect handoff</p>
+                <p className="mt-1 leading-6">
+                  This listing is linked to a qualified seller opportunity. Verify the property
+                  address and complete public listing content yourself; owner contacts and private
+                  canvassing notes are never copied into the listing.
+                </p>
+              </div>
+            ) : null}
 
             {/* Step Indicator */}
             <div className="mb-8">

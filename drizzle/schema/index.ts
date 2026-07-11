@@ -16,6 +16,7 @@ export * from './agencyDeals';
 export * from './servicesEngine';
 export * from './demand';
 export * from './referrals';
+export * from './canvassing';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';
