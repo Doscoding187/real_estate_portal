@@ -146,6 +146,11 @@ function formatFollowUp(value?: string | Date | null) {
   });
 }
 
+function isOverdueFollowUp(value?: string | Date | null) {
+  const date = parseTimestamp(value);
+  return Boolean(date && date.getTime() < Date.now());
+}
+
 function formatLocalDateTimeInput(value?: string | Date | null) {
   const date = parseTimestamp(value);
   if (!date) return '';
@@ -494,7 +499,7 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
                       <span className="block text-xs font-medium uppercase tracking-wide text-slate-400">Owner</span>
                       {prospect.assignedAgent?.name || 'Unassigned'}
                     </div>
-                    <div className={cn('text-sm', prospect.nextFollowUp && parseTimestamp(prospect.nextFollowUp)?.getTime()! < Date.now() ? 'text-rose-700' : 'text-slate-600')}>
+                    <div className={cn('text-sm', isOverdueFollowUp(prospect.nextFollowUp) ? 'text-rose-700' : 'text-slate-600')}>
                       <span className="block text-xs font-medium uppercase tracking-wide text-slate-400">Follow-up</span>
                       {formatFollowUp(prospect.nextFollowUp)}
                     </div>
@@ -841,7 +846,7 @@ function ProspectDetailDialog({
                 <Card className="border-slate-200 shadow-none">
                   <CardContent className="space-y-4 p-4">
                     <div className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-slate-600" /><h4 className="font-semibold text-slate-900">Follow-up</h4></div>
-                    <p className={cn('text-sm', prospect.nextFollowUp && parseTimestamp(prospect.nextFollowUp)?.getTime()! < Date.now() ? 'text-rose-700' : 'text-slate-600')}>{formatFollowUp(prospect.nextFollowUp)}</p>
+                    <p className={cn('text-sm', isOverdueFollowUp(prospect.nextFollowUp) ? 'text-rose-700' : 'text-slate-600')}>{formatFollowUp(prospect.nextFollowUp)}</p>
                     {!terminal ? <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                       <Input type="datetime-local" value={followUpAt} onChange={event => setFollowUpAt(event.target.value)} />
                       <Button variant="outline" disabled={!followUpAt || pending.followUp} onClick={() => onSetFollowUp(prospect.id, new Date(followUpAt).toISOString(), followUpNote || undefined)}>{pending.followUp ? 'Saving…' : 'Schedule'}</Button>
