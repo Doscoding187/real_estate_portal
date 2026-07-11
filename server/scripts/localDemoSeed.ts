@@ -238,6 +238,14 @@ async function resetDemoData(connection: mysql.Connection) {
         demoUserIds,
       )
     : await idsFor(connection, "SELECT id FROM developers WHERE slug LIKE 'local-demo-%'");
+  const demoDeveloperSubscriptionIds =
+    demoDeveloperIds.length && (await tableExists(connection, 'developer_subscriptions'))
+      ? await idsFor(
+          connection,
+          `SELECT id FROM developer_subscriptions WHERE developer_id IN (${placeholders(demoDeveloperIds)})`,
+          demoDeveloperIds,
+        )
+      : [];
   const demoAgencyIds = await idsFor(
     connection,
     "SELECT id FROM agencies WHERE slug LIKE 'local-demo-%' OR email LIKE '%@listify.local'",
@@ -334,6 +342,29 @@ async function resetDemoData(connection: mysql.Connection) {
     demoBrandIds,
   );
   await deleteByIds(connection, 'developer_brand_profiles', 'id', demoBrandIds);
+  if (await tableExists(connection, 'developer_subscription_limits')) {
+    await deleteByIds(
+      connection,
+      'developer_subscription_limits',
+      'subscription_id',
+      demoDeveloperSubscriptionIds,
+    );
+  }
+  if (await tableExists(connection, 'developer_subscription_usage')) {
+    await deleteByIds(
+      connection,
+      'developer_subscription_usage',
+      'subscription_id',
+      demoDeveloperSubscriptionIds,
+    );
+  }
+  if (demoDeveloperIds.length && (await tableExists(connection, 'developer_subscriptions'))) {
+    await execute(
+      connection,
+      `DELETE FROM developer_subscriptions WHERE developer_id IN (${placeholders(demoDeveloperIds)})`,
+      demoDeveloperIds,
+    );
+  }
   await deleteByIds(connection, 'developers', 'id', demoDeveloperIds);
   await deleteByIds(connection, 'commissions', 'leadId', demoLeadIds);
   await deleteByIds(connection, 'commissions', 'propertyId', demoPropertyIds);
