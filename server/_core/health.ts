@@ -3,7 +3,7 @@ import { getDb } from '../db-connection';
 import { getCacheHealth } from './cache/redis';
 
 export interface ApiHealthResponse {
-  ok: true;
+  ok: boolean;
   env: string;
   build: {
     sha: string;
@@ -54,9 +54,9 @@ export function isS3Configured(env: NodeJS.ProcessEnv = process.env): boolean {
 
 async function checkDbOk(): Promise<boolean> {
   try {
-    await getDb();
-    return true;
-  } catch (_error) {
+    const db = await getDb();
+    return Boolean(db);
+  } catch {
     return false;
   }
 }
@@ -68,7 +68,7 @@ async function checkCacheStatus(): Promise<{ ok: boolean; mode: 'redis' | 'memor
       ok: cacheHealth.status !== 'unhealthy',
       mode: cacheHealth.metrics.fallback_mode ? 'memory' : 'redis',
     };
-  } catch (_error) {
+  } catch {
     return {
       ok: false,
       mode: 'memory',
@@ -78,9 +78,11 @@ async function checkCacheStatus(): Promise<{ ok: boolean; mode: 'redis' | 'memor
 
 export async function buildApiHealthResponse(): Promise<ApiHealthResponse> {
   const [dbOk, cacheStatus] = await Promise.all([checkDbOk(), checkCacheStatus()]);
+  const s3Ok = isS3Configured();
+  const productionCriticalsOk = process.env.NODE_ENV === 'production' ? s3Ok : true;
 
   return {
-    ok: true,
+    ok: dbOk && cacheStatus.ok && productionCriticalsOk,
     env: process.env.NODE_ENV || 'development',
     build: {
       sha: resolveBuildSha(),
@@ -88,7 +90,7 @@ export async function buildApiHealthResponse(): Promise<ApiHealthResponse> {
     },
     db: { ok: dbOk },
     cache: cacheStatus,
-    s3: { ok: isS3Configured() },
+    s3: { ok: s3Ok },
   };
 }
 
@@ -96,7 +98,13 @@ export function registerHealthEndpoint(app: express.Express): void {
   app.get('/api/health', async (_req, res) => {
     const payload = await buildApiHealthResponse();
     res.setHeader('x-build-sha', payload.build.sha);
-    res.json(payload);
+    res.status(payload.ok ? 200 : 503).json(payload);
+  });
+
+  app.get('/api/readiness', async (_req, res) => {
+    const payload = await buildApiHealthResponse();
+    res.setHeader('x-build-sha', payload.build.sha);
+    res.status(payload.ok ? 200 : 503).json(payload);
   });
 }
 

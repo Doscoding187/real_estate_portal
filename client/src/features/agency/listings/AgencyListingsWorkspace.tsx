@@ -31,6 +31,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrimitives';
 import type { WorkspaceContentProps } from '../workspace/types';
 import { compactCurrency, formatAge, numberLabel } from '../workspace/utils';
@@ -332,6 +333,7 @@ function ListingBadges({ listing }: { listing: any }) {
 function ListingActions({
   listing,
   busy,
+  canEdit,
   onOpen,
   onEdit,
   onSubmit,
@@ -340,6 +342,7 @@ function ListingActions({
 }: {
   listing: any;
   busy: boolean;
+  canEdit: boolean;
   onOpen: () => void;
   onEdit: () => void;
   onSubmit: () => void;
@@ -352,10 +355,12 @@ function ListingActions({
         <Eye className="h-4 w-4" />
         Detail
       </Button>
-      <Button variant="outline" size="sm" onClick={onEdit}>
-        <Pencil className="h-4 w-4" />
-        Edit
-      </Button>
+      {canEdit ? (
+        <Button variant="outline" size="sm" onClick={onEdit}>
+          <Pencil className="h-4 w-4" />
+          Edit
+        </Button>
+      ) : null}
       {listing.publicUrl ? (
         <Button variant="outline" size="sm" onClick={onPublic}>
           <ArrowUpRight className="h-4 w-4" />
@@ -389,6 +394,7 @@ function DetailBlock({ label, value }: { label: string; value: string | number }
 
 export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
   const utils = trpc.useUtils();
   const ownerUserId = useMemo(() => queryNumber(location, 'owner'), [location]);
   const selectedListingFromUrl = useMemo(() => queryNumber(location, 'listing'), [location]);
@@ -484,8 +490,15 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
     assignListing.mutate({ listingId, agentId });
   };
 
-  const openEditor = (listingId: number) => {
-    props.setLocation(`/listings/create?edit=true&id=${listingId}`);
+  const canEditListing = (listing: any) =>
+    Boolean(user?.id && Number(listing?.creator?.id) === Number(user.id));
+
+  const openEditor = (listing: any) => {
+    if (!canEditListing(listing)) {
+      toast.error('Only the listing author can edit this listing');
+      return;
+    }
+    props.setLocation(`/listings/create?edit=true&id=${listing.id}`);
   };
 
   const openDetail = (listingId: number) => {
@@ -700,8 +713,9 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                       <ListingActions
                         listing={listing}
                         busy={mutationBusy}
+                        canEdit={canEditListing(listing)}
                         onOpen={() => openDetail(listing.id)}
-                        onEdit={() => openEditor(listing.id)}
+                        onEdit={() => openEditor(listing)}
                         onSubmit={() => submitListing.mutate({ listingId: listing.id })}
                         onArchive={() => archiveListing.mutate({ listingId: listing.id })}
                         onPublic={() => openPublic(listing)}
@@ -740,8 +754,9 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                       <ListingActions
                         listing={listing}
                         busy={mutationBusy}
+                        canEdit={canEditListing(listing)}
                         onOpen={() => openDetail(listing.id)}
-                        onEdit={() => openEditor(listing.id)}
+                        onEdit={() => openEditor(listing)}
                         onSubmit={() => submitListing.mutate({ listingId: listing.id })}
                         onArchive={() => archiveListing.mutate({ listingId: listing.id })}
                         onPublic={() => openPublic(listing)}
@@ -914,10 +929,12 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                 ) : null}
 
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => openEditor(selectedListing.id)}>
-                    <Pencil className="h-4 w-4" />
-                    Continue editing
-                  </Button>
+                  {canEditListing(selectedListing) ? (
+                    <Button onClick={() => openEditor(selectedListing)}>
+                      <Pencil className="h-4 w-4" />
+                      Continue editing
+                    </Button>
+                  ) : null}
                   {selectedListing.publicUrl ? (
                     <Button variant="outline" onClick={() => openPublic(selectedListing)}>
                       <ArrowUpRight className="h-4 w-4" />

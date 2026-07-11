@@ -11,7 +11,7 @@ export const onboardingConfig = {
     cancel: (step?: number) =>
       `${import.meta.env.VITE_APP_URL || window.location.origin}/agency/setup${step ? `?step=${step}` : ''}`,
     inviteAccept: (token: string) =>
-      `${import.meta.env.VITE_APP_URL || window.location.origin}/invite/accept?token=${token}`,
+      `${import.meta.env.VITE_APP_URL || window.location.origin}/accept-invitation?token=${token}`,
   },
   draft: {
     expiryHours: parseInt(import.meta.env.VITE_ONBOARDING_DRAFT_EXPIRY_HOURS || '72'),

@@ -138,6 +138,8 @@ class FakeDrizzle {
   }
 
   delete = this.delete_;
+
+  transaction = async <T>(callback: (tx: this) => Promise<T>) => callback(this);
 }
 
 const fakeDb = new FakeDrizzle();
@@ -165,6 +167,7 @@ import {
   archiveListing,
   deleteListing,
   rejectListing,
+  replaceListingMedia,
   syncPublishedListingMediaToPropertyMirror,
 } from '../db';
 
@@ -363,6 +366,61 @@ describe('approveListing (lower-level)', () => {
       );
       expect(propSelects).toHaveLength(0);
     });
+  });
+});
+
+// ===========================================================================
+// replaceListingMedia — lower-level canonical manifest tests
+// ===========================================================================
+
+describe('replaceListingMedia (lower-level)', () => {
+  it('retains explicit existing media, removes omitted media, and preserves a new video type', async () => {
+    fakeDb.setNextSelectResult([{ id: 701 }, { id: 702 }]);
+
+    await replaceListingMedia(
+      5501,
+      [
+        {
+          id: 'uploads/listings/5501/walkthrough.mp4',
+          mediaType: 'video',
+          fileName: 'walkthrough.mp4',
+          processingStatus: 'completed',
+        },
+        {
+          id: 'existing:701',
+          mediaType: 'image',
+        },
+      ],
+      'uploads/listings/5501/walkthrough.mp4',
+    );
+
+    const deletes = fakeDb.calls.filter(c => c.type === 'delete' && c.table === 'listing_media');
+    const inserts = fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'listing_media');
+    const updates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'listing_media');
+
+    expect(deletes).toHaveLength(1);
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].values).toMatchObject({
+      listingId: 5501,
+      originalUrl: 'uploads/listings/5501/walkthrough.mp4',
+      mediaType: 'video',
+      displayOrder: 0,
+      isPrimary: 1,
+    });
+    expect(updates).toHaveLength(1);
+    expect(updates[0].set).toMatchObject({ displayOrder: 1, isPrimary: 0 });
+    expect(fakeDb.calls.indexOf(deletes[0])).toBeLessThan(fakeDb.calls.indexOf(inserts[0]));
+  });
+
+  it('rejects an existing-media token that belongs to another listing', async () => {
+    fakeDb.setNextSelectResult([{ id: 701 }]);
+
+    await expect(
+      replaceListingMedia(5502, [{ id: 'existing:999', mediaType: 'image' }], 'existing:999'),
+    ).rejects.toThrow('Listing media does not belong to this listing');
+
+    const writes = fakeDb.calls.filter(c => c.type !== 'select');
+    expect(writes).toHaveLength(0);
   });
 });
 

@@ -106,7 +106,7 @@ const DevelopmentsDemo = lazy(() => import('./pages/DevelopmentsDemo'));
 const DevelopmentDetail = lazy(() => import('./pages/DevelopmentDetail'));
 const DevelopmentUnitDetailPage = lazy(() => import('./pages/DevelopmentUnitDetailPage'));
 const DevelopmentQualificationPage = lazy(() => import('./pages/DevelopmentQualificationPage'));
-const AgencySetupWizard = lazy(() => import('./components/agency/AgencySetupWizard'));
+const AgencyOnboarding = lazy(() => import('./pages/AgencyOnboarding'));
 const DeveloperSetupWizardEnhanced = lazy(
   () => import('./components/developer/DeveloperSetupWizardEnhanced'),
 );
@@ -116,7 +116,11 @@ const MapPreviewDemo = lazy(() => import('./pages/MapPreviewDemo'));
 // Import Developer Dashboard Pages
 const SubscriptionPlans = lazy(() => import('./pages/SubscriptionPlans'));
 // Import Developer Layout directly for specific tab routing
-const DeveloperRoutes = lazy(() => import('./pages/DeveloperRoutes'));
+const DeveloperRouteBoundary = lazy(() =>
+  import('./pages/DeveloperRoutes').then(module => ({
+    default: module.DeveloperRouteBoundary,
+  })),
+);
 // Import MyDrafts removed to prevent circular dependency with DeveloperLayout's lazy load
 const DeveloperDirectoryPage = lazy(() => import('./pages/DeveloperDirectoryPage'));
 const DeveloperBrandProfilePage = lazy(() => import('./pages/DeveloperBrandProfilePage'));
@@ -252,8 +256,8 @@ function Router() {
             <Redirect to="/developer/dashboard?setup=complete" />
           </Route>
 
-          {/* We use a wildcard to let DeveloperRoutes handle sub-routing */}
-          <Route path="/developer/:rest*" component={DeveloperRoutes} />
+          {/* Resolve public brand slugs before entering the authenticated developer workspace. */}
+          <Route path="/developer/:rest*" component={DeveloperRouteBoundary} />
 
           {/* Developer Brand Directory (public) */}
           <Route path="/developers" component={DeveloperDirectoryPage} />
@@ -380,7 +384,7 @@ function Router() {
 
           <Route path="/agency/setup">
             <RequireRole role="agency_admin">
-              <AgencySetupWizard />
+              <AgencyOnboarding />
             </RequireRole>
           </Route>
           <Route path="/agency/success" component={() => <RegistrationSuccess role="agency" />} />

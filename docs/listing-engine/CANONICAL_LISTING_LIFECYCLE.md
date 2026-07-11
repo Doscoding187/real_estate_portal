@@ -138,11 +138,11 @@ Each assertion below is backed by a test in `server/__tests__/contract.listing-l
 
 ### 3.7 Published Media Update
 
-**Contract:** Updating media on a published listing MUST update the same properties projection (not create a new one).
+**Contract:** Editing media replaces the ordered canonical `listing_media` manifest. Existing media is retained only when explicitly included, new uploads preserve their declared media type, and re-approval updates the same properties projection rather than creating a new one.
 
-**Test:** `updating published listing media updates same property projection`
+**Tests:** `replaces the canonical media manifest when an edit provides typed media`, `replaceListingMedia (lower-level)`, and `listing media reconciliation`
 
-**Current behaviour:** `listing.update` calls `syncPublishedListingMediaToPropertyMirror(listingId)`. The sync path uses `sourceListingId` as the primary lookup when the bridge column is available, falling back to legacy matching only for records with no bridge. PASS.
+**Current behaviour:** `listing.update` reconciles the typed media manifest into `listing_media`. A published or approved listing is returned to review, so its existing public projection remains unchanged until approval. `approveListing()` then mirrors image media into the existing `properties.sourceListingId` projection. The mirror uses `sourceListingId` first, with legacy matching only for unbridged records. PASS.
 
 ### 3.8 Lead Traceability
 
@@ -213,6 +213,7 @@ Residual risks:
 |------|-------|
 | Router lifecycle contract | `server/__tests__/contract.listing-lifecycle.test.ts` |
 | DB bridge behavior | `server/__tests__/contract.listing-lifecycle-db.test.ts` |
+| Persisted media reconciliation | `server/__tests__/integration.listing-media-reconciliation.test.ts` |
 | Source document | `docs/listing-engine/CANONICAL_LISTING_LIFECYCLE.md` |
 
 ## 6. V2 Implementation Notes

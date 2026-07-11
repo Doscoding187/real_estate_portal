@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useLocation } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
@@ -11,6 +12,23 @@ import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Bell, CalendarDays, CheckCircle, Clock, MapPin } from 'lucide-react';
 import { ShowingsCalendar } from '@/components/agent/ShowingsCalendar';
+import { toast } from 'sonner';
+
+type FollowUpItem = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  status: string;
+  source: string;
+  nextFollowUp: string | Date;
+  property: {
+    id: number;
+    title: string;
+    city: string;
+    price: number;
+  } | null;
+};
 
 function sameDay(left: Date, right: Date) {
   return (
@@ -20,9 +38,17 @@ function sameDay(left: Date, right: Date) {
   );
 }
 
+function parseDatabaseTimestamp(value: string | Date) {
+  if (value instanceof Date) return value;
+  const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+  return /(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized)
+    ? new Date(normalized)
+    : new Date(`${normalized}Z`);
+}
+
 function formatDateTime(value: string | Date | null | undefined) {
   if (!value) return 'Scheduling pending';
-  const date = value instanceof Date ? value : new Date(value);
+  const date = parseDatabaseTimestamp(value);
   if (Number.isNaN(date.getTime())) return 'Scheduling pending';
 
   return date.toLocaleString('en-ZA', {
@@ -83,7 +109,17 @@ function getNotificationTone(type: string | null | undefined, isRead: boolean) {
   }
 }
 
+function getFollowUpTone(value: string | Date | null | undefined) {
+  if (!value) return 'bg-slate-100 text-slate-600';
+  const dueAt = parseDatabaseTimestamp(value);
+  if (Number.isNaN(dueAt.getTime())) return 'bg-slate-100 text-slate-600';
+  if (dueAt.getTime() < Date.now()) return 'bg-rose-100 text-rose-700';
+  if (sameDay(dueAt, new Date())) return 'bg-amber-100 text-amber-700';
+  return 'bg-blue-100 text-blue-700';
+}
+
 export default function AgentProductivity() {
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('tasks');
   const { isLoading: statusLoading } = useAgentOnboardingStatus({
     requireDashboardUnlocked: true,
@@ -131,6 +167,26 @@ export default function AgentProductivity() {
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const { data: followUps = [], isLoading: followUpsLoading } = trpc.agent.getMyFollowUps.useQuery(
+    { limit: 20 },
+    {
+      enabled: !statusLoading,
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  );
+  const utils = trpc.useUtils();
+  const completeFollowUpMutation = trpc.agent.completeLeadFollowUp.useMutation({
+    onSuccess: () => {
+      toast.success('Follow-up completed');
+      void utils.agent.getMyFollowUps.invalidate();
+      void utils.agent.getLeadsPipeline.invalidate();
+      void utils.agent.getActivationMilestones.invalidate();
+    },
+    onError: error => {
+      toast.error(error.message || 'Failed to complete follow-up');
+    },
+  });
 
   const upcomingShowings = useMemo(
     () =>
@@ -160,6 +216,16 @@ export default function AgentProductivity() {
     });
   }, [upcomingShowings]);
 
+  const dueFollowUps = useMemo(
+    () =>
+      (followUps as FollowUpItem[]).filter(item => {
+        const dueAt = parseDatabaseTimestamp(item.nextFollowUp);
+        return !Number.isNaN(dueAt.getTime()) && dueAt.getTime() <= Date.now();
+      }),
+    [followUps],
+  );
+  const nextFollowUp = (followUps as FollowUpItem[])[0] || null;
+
   const daysWithAppointments = useMemo(
     () =>
       new Set(
@@ -175,6 +241,19 @@ export default function AgentProductivity() {
   );
 
   const actionQueue = useMemo(() => {
+    const followUpActions = (followUps as FollowUpItem[]).slice(0, 4).map(followUp => ({
+      id: `follow-up-${followUp.id}`,
+      title: followUp.name,
+      description: followUp.property?.title || 'Lead follow-up is ready to work',
+      meta: formatDateTime(followUp.nextFollowUp),
+      tone: getFollowUpTone(followUp.nextFollowUp),
+      badge:
+        parseDatabaseTimestamp(followUp.nextFollowUp).getTime() < Date.now()
+          ? 'Overdue'
+          : 'Follow-up',
+      actionLabel: 'Open CRM',
+      onAction: () => setLocation('/agent/leads'),
+    }));
     const showingActions = upcomingShowings.slice(0, 4).map(showing => ({
       id: `showing-${showing.id}`,
       title: showing.property?.title || 'Scheduled showing',
@@ -203,8 +282,8 @@ export default function AgentProductivity() {
         onAction: () => setActiveTab('reminders'),
       }));
 
-    return [...showingActions, ...notificationActions].slice(0, 6);
-  }, [notificationsData, upcomingShowings]);
+    return [...followUpActions, ...showingActions, ...notificationActions].slice(0, 6);
+  }, [followUps, notificationsData, setLocation, upcomingShowings]);
 
   const nextShowing = upcomingShowings[0] || null;
   const unreadAlerts =
@@ -296,12 +375,14 @@ export default function AgentProductivity() {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className={agentPageStyles.statLabel}>Next Appointment</p>
+                      <p className={agentPageStyles.statLabel}>Follow-ups Due</p>
                       <p className={agentPageStyles.statValue}>
-                        {nextShowing ? formatDateTime(nextShowing.scheduledTime) : 'None'}
+                        {followUpsLoading ? '...' : dueFollowUps.length}
                       </p>
                       <p className={cn(agentPageStyles.statSub, 'text-emerald-600')}>
-                        {nextShowing?.property?.title || 'Calendar is clear for now'}
+                        {nextFollowUp
+                          ? `Next: ${formatDateTime(nextFollowUp.nextFollowUp)}`
+                          : 'No lead follow-ups scheduled'}
                       </p>
                     </div>
                     <div className="rounded-xl bg-emerald-50 p-3">
@@ -326,7 +407,7 @@ export default function AgentProductivity() {
                   Showings
                 </TabsTrigger>
                 <TabsTrigger value="reminders" className={agentPageStyles.tabTrigger}>
-                  Reminders
+                  Follow-ups
                 </TabsTrigger>
               </TabsList>
 
@@ -336,7 +417,7 @@ export default function AgentProductivity() {
                     <div>
                       <CardTitle>Action queue</CardTitle>
                       <p className="mt-1 text-sm text-slate-500">
-                        Live items from scheduled showings and unread notifications.
+                        Live follow-ups, scheduled showings, and unread notifications.
                       </p>
                     </div>
                     <Button
@@ -462,6 +543,75 @@ export default function AgentProductivity() {
               </TabsContent>
 
               <TabsContent value="reminders" className="space-y-4">
+                <Card className={agentPageStyles.panel}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bell className="h-5 w-5 text-amber-600" />
+                      Lead follow-ups
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {followUpsLoading ? (
+                      <p className="text-sm text-slate-500">Loading follow-ups...</p>
+                    ) : (followUps as FollowUpItem[]).length > 0 ? (
+                      (followUps as FollowUpItem[]).map(followUp => (
+                        <div
+                          key={followUp.id}
+                          className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50"
+                        >
+                          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-slate-900">{followUp.name}</p>
+                                <Badge className={getFollowUpTone(followUp.nextFollowUp)}>
+                                  {parseDatabaseTimestamp(followUp.nextFollowUp).getTime() < Date.now()
+                                    ? 'Overdue'
+                                    : 'Scheduled'}
+                                </Badge>
+                              </div>
+                              <p className="mt-1 text-sm text-slate-600">
+                                {followUp.property?.title || 'Lead follow-up'}
+                              </p>
+                              <p className="mt-2 text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+                                {formatDateTime(followUp.nextFollowUp)}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                className={agentPageStyles.ghostButton}
+                                onClick={() => setLocation('/agent/leads')}
+                              >
+                                Open CRM
+                              </Button>
+                              <Button
+                                disabled={completeFollowUpMutation.isPending}
+                                onClick={() => completeFollowUpMutation.mutate({ leadId: followUp.id })}
+                              >
+                                {completeFollowUpMutation.isPending ? 'Completing...' : 'Complete'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center">
+                        <h3 className="text-lg font-semibold text-slate-900">No follow-ups due</h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          Schedule follow-ups from a lead record to build your daily action queue.
+                        </p>
+                        <Button
+                          variant="outline"
+                          className="mt-4"
+                          onClick={() => setLocation('/agent/leads')}
+                        >
+                          Open leads
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <Card className={agentPageStyles.panel}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">

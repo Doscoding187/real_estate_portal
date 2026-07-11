@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import { agentRouter } from '../agentRouter';
 import { getDb } from '../db-connection';
-import { showings } from '../../drizzle/schema';
+import { leads, showings } from '../../drizzle/schema';
 
 const describeWithDb = process.env.DATABASE_URL
   ? describe
@@ -13,6 +13,8 @@ const describeWithDb = process.env.DATABASE_URL
 describeWithDb('agent dashboard showings smoke', () => {
   let createdUserId: number | null = null;
   let createdAgentId: number | null = null;
+  let createdOtherUserId: number | null = null;
+  let createdOtherAgentId: number | null = null;
   let createdPropertyId: number | null = null;
   let createdLeadId: number | null = null;
   let createdShowingId: number | null = null;
@@ -79,14 +81,24 @@ describeWithDb('agent dashboard showings smoke', () => {
       createdAgentId = null;
     }
 
+    if (createdOtherAgentId) {
+      await db.execute(sql`DELETE FROM agents WHERE id = ${createdOtherAgentId}`);
+      createdOtherAgentId = null;
+    }
+
     if (createdUserId) {
       await db.execute(sql`DELETE FROM users WHERE id = ${createdUserId}`);
       createdUserId = null;
     }
+
+    if (createdOtherUserId) {
+      await db.execute(sql`DELETE FROM users WHERE id = ${createdOtherUserId}`);
+      createdOtherUserId = null;
+    }
   }, 30_000);
 
   it(
-    'serves showings and dashboard stats against the migrated schema',
+    'serves agent dashboard, showings, and lead follow-ups against the migrated schema',
     async () => {
     const db = await getDb();
     expect(db).toBeTruthy();
@@ -131,6 +143,40 @@ describeWithDb('agent dashboard showings smoke', () => {
       )
     `);
     createdAgentId = Number((agentInsert as any).insertId);
+
+    const otherEmail = `agent-dashboard-other-${suffix}@example.com`;
+    const [otherUserInsert] = await db!.execute(sql`
+      INSERT INTO users (email, name, role, emailVerified)
+      VALUES (${otherEmail}, ${`Other Smoke Agent ${suffix}`}, ${'agent'}, ${1})
+    `);
+    createdOtherUserId = Number((otherUserInsert as any).insertId);
+
+    const [otherAgentInsert] = await db!.execute(sql`
+      INSERT INTO agents (
+        userId,
+        firstName,
+        lastName,
+        displayName,
+        email,
+        phone,
+        whatsapp,
+        isVerified,
+        isFeatured,
+        status
+      ) VALUES (
+        ${createdOtherUserId},
+        ${'Other'},
+        ${'Agent'},
+        ${`Other Smoke Agent ${suffix}`},
+        ${otherEmail},
+        ${'+27110002222'},
+        ${'+27110002222'},
+        ${1},
+        ${0},
+        ${'approved'}
+      )
+    `);
+    createdOtherAgentId = Number((otherAgentInsert as any).insertId);
 
     const [propertyInsert] = await db!.execute(sql`
       INSERT INTO properties (
@@ -279,6 +325,76 @@ describeWithDb('agent dashboard showings smoke', () => {
       res: {},
       requestId: `agent-dashboard-smoke-${suffix}`,
     } as any);
+    const otherCaller = agentRouter.createCaller({
+      user: {
+        id: createdOtherUserId,
+        role: 'agent',
+        email: otherEmail,
+      },
+      req: { headers: {} },
+      res: {},
+      requestId: `agent-dashboard-other-${suffix}`,
+    } as any);
+
+    const followUpAt = new Date(Date.now() + 60 * 60 * 1000);
+    const scheduledFollowUp = await caller.setLeadFollowUp({
+      leadId: createdLeadId,
+      nextFollowUp: followUpAt.toISOString(),
+      note: 'Call the buyer to confirm a viewing time.',
+    });
+
+    expect(scheduledFollowUp).toEqual({
+      success: true,
+      nextFollowUp: toDbTimestamp(followUpAt),
+    });
+
+    const followUps = await caller.getMyFollowUps({ limit: 10 });
+    expect(followUps).toEqual([
+      expect.objectContaining({
+        id: createdLeadId,
+        name: buyerName,
+        status: 'new',
+        nextFollowUp: toDbTimestamp(followUpAt),
+        property: expect.objectContaining({ id: createdPropertyId }),
+      }),
+    ]);
+
+    const [scheduledLead] = await db!
+      .select({ nextFollowUp: leads.nextFollowUp })
+      .from(leads)
+      .where(eq(leads.id, createdLeadId))
+      .limit(1);
+    expect(scheduledLead?.nextFollowUp).toBe(toDbTimestamp(followUpAt));
+
+    expect(await otherCaller.getMyFollowUps({ limit: 10 })).toEqual([]);
+    await expect(
+      otherCaller.setLeadFollowUp({
+        leadId: createdLeadId,
+        nextFollowUp: followUpAt.toISOString(),
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(otherCaller.completeLeadFollowUp({ leadId: createdLeadId })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+
+    await db!
+      .update(leads)
+      .set({ status: 'converted' })
+      .where(eq(leads.id, createdLeadId));
+    expect(await caller.getMyFollowUps({ limit: 10 })).toEqual([]);
+    await expect(
+      caller.setLeadFollowUp({
+        leadId: createdLeadId,
+        nextFollowUp: followUpAt.toISOString(),
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(caller.completeLeadFollowUp({ leadId: createdLeadId })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    await db!
+      .update(leads)
+      .set({ status: 'new' })
+      .where(eq(leads.id, createdLeadId));
 
     const showingsResult = await caller.getMyShowings({
       startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
@@ -320,6 +436,39 @@ describeWithDb('agent dashboard showings smoke', () => {
       .limit(1);
 
     expect(updatedShowing?.status).toBe('completed');
+
+    const completedFollowUp = await caller.completeLeadFollowUp({
+      leadId: createdLeadId,
+      note: 'Buyer called; viewing confirmed.',
+    });
+    expect(completedFollowUp).toEqual({ success: true });
+
+    expect(await caller.getMyFollowUps({ limit: 10 })).toEqual([]);
+
+    const [completedLead] = await db!
+      .select({
+        nextFollowUp: leads.nextFollowUp,
+        lastContactedAt: leads.lastContactedAt,
+      })
+      .from(leads)
+      .where(eq(leads.id, createdLeadId))
+      .limit(1);
+    expect(completedLead).toEqual(
+      expect.objectContaining({
+        nextFollowUp: null,
+        lastContactedAt: expect.any(String),
+      }),
+    );
+
+    const activities = await caller.getLeadActivities({ leadId: createdLeadId });
+    expect(activities.map(activity => activity.description)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Follow-up scheduled for'),
+        expect.stringContaining('Call the buyer to confirm a viewing time.'),
+        expect.stringContaining('Follow-up completed.'),
+        expect.stringContaining('Buyer called; viewing confirmed.'),
+      ]),
+    );
     },
     30_000,
   );

@@ -21,6 +21,7 @@ import {
   readBillingProofDocument,
   storeBillingProofDocument,
 } from './billingProofStorage';
+import { deliverPendingAgencyInvitations } from './agencyInvitationDeliveryService';
 
 export type BillingOwnerType = 'agent' | 'agency' | 'developer' | string;
 export type BillingCycle = 'monthly' | 'annual';
@@ -1143,7 +1144,8 @@ export async function reviewManualPayment(input: {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
   }
 
-  return db.transaction(async tx => {
+  let activatedAgencyId: number | null = null;
+  const result = await db.transaction(async tx => {
     const [row] = await tx
       .select({
         payment: billingPayments,
@@ -1351,6 +1353,9 @@ export async function reviewManualPayment(input: {
           : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
         data: { invoiceId: invoice.id, paymentId: beforePayment.id },
       });
+      if (invoicePaid) {
+        activatedAgencyId = invoice.ownerId;
+      }
     }
 
     return {
@@ -1360,6 +1365,20 @@ export async function reviewManualPayment(input: {
       subscriptionStatus: subscription?.status || 'payment_under_review',
     };
   });
+
+  if (activatedAgencyId) {
+    try {
+      await deliverPendingAgencyInvitations(activatedAgencyId);
+    } catch (error) {
+      // Finance approval must remain durable even when an email provider is unavailable.
+      console.error('[Billing] Agency activated but pending invitation delivery failed', {
+        agencyId: activatedAgencyId,
+        error,
+      });
+    }
+  }
+
+  return result;
 }
 
 export async function updateSubscriptionLifecycle(input: {

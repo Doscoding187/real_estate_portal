@@ -268,7 +268,7 @@ export default function DeveloperBrandProfilePage() {
         <Separator className="my-8" />
 
         {/* Claim CTA (only for unmanaged platform brands) */}
-        {profile.type === 'brand' && (
+        {profile.isClaimable && (
           <div className="bg-slate-100 rounded-xl p-6 mt-8 text-center max-w-2xl mx-auto">
             <p className="text-slate-600 mb-3">
               Are you part of the <strong>{profile.name}</strong> team?

@@ -390,6 +390,77 @@ const EMPTY_DEVELOPER_KPIS = {
     marketingPerformanceScore: 0,
   },
 };
+async function resolvePublicBrandProfile(profile: any) {
+  if (!profile || Number(profile.isVisible) !== 1) return null;
+
+  if (!profile.linkedDeveloperAccountId) {
+    return { brandProfile: profile, developer: null };
+  }
+
+  const dbConn = await db.getDb();
+  if (!dbConn) {
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+  }
+
+  const [linkedDeveloper] = await dbConn
+    .select()
+    .from(developers)
+    .where(eq(developers.id, profile.linkedDeveloperAccountId))
+    .limit(1);
+
+  // Subscriber brands are not public until the underlying developer is approved.
+  if (!linkedDeveloper || linkedDeveloper.status !== 'approved') return null;
+
+  return { brandProfile: profile, developer: linkedDeveloper };
+}
+
+function toPublicBrandProfileResponse(brandProfile: any, developer: any) {
+  const publicEmail = brandProfile.publicContactEmail || developer?.email || null;
+
+  return {
+    id: brandProfile.id,
+    type: 'brand' as const,
+    name: brandProfile.brandName,
+    slug: brandProfile.slug,
+    logo: brandProfile.logoUrl || developer?.logo || null,
+    description: brandProfile.about || developer?.description || null,
+    address: brandProfile.headOfficeLocation || developer?.address || null,
+    phones: developer?.phone ? [developer.phone] : [],
+    emails: publicEmail ? [publicEmail] : [],
+    website: brandProfile.websiteUrl || developer?.website || null,
+    isClaimable:
+      Number(brandProfile.isClaimable || 0) === 1 && brandProfile.ownerType === 'platform',
+    stats: {
+      isVerified: Number(brandProfile.isContactVerified || developer?.isVerified || 0) === 1,
+      isTrusted: Number(developer?.isTrusted || 0) === 1,
+      establishedYear: brandProfile.foundedYear || developer?.establishedYear || null,
+      totalProjects: Number(developer?.totalProjects || 0),
+    },
+  };
+}
+
+function toPublicDeveloperResponse(developer: any) {
+  return {
+    id: developer.id,
+    type: 'subscriber' as const,
+    name: developer.name,
+    slug: developer.slug,
+    logo: developer.logo || null,
+    description: developer.description || null,
+    address: developer.address || null,
+    phones: developer.phone ? [developer.phone] : [],
+    emails: developer.email ? [developer.email] : [],
+    website: developer.website || null,
+    isClaimable: false,
+    stats: {
+      isVerified: Number(developer.isVerified || 0) === 1,
+      isTrusted: Number(developer.isTrusted || 0) === 1,
+      establishedYear: developer.establishedYear || null,
+      totalProjects: Number(developer.totalProjects || 0),
+    },
+  };
+}
+
 // ===========================================================================
 // ROUTER DEFINITION
 // ===========================================================================
@@ -564,19 +635,63 @@ export const developerRouter = router({
     }),
   getPublicDeveloperBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
-    .query(async () => {
-      return null;
+    .query(async ({ input }) => {
+      const brandProfile = await developerBrandProfileService.getBrandProfileBySlug(input.slug);
+      const resolvedBrand = await resolvePublicBrandProfile(brandProfile);
+      if (resolvedBrand) {
+        return toPublicBrandProfileResponse(resolvedBrand.brandProfile, resolvedBrand.developer);
+      }
+
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+
+      const [developer] = await dbConn
+        .select()
+        .from(developers)
+        .where(and(eq(developers.slug, input.slug), eq(developers.status, 'approved')))
+        .limit(1);
+
+      return developer ? toPublicDeveloperResponse(developer) : null;
     }),
 
   getPublicDevelopmentsForProfile: publicProcedure
     .input(
       z.object({
-        profileType: z.string(),
-        profileId: z.number(),
+        profileType: z.enum(['brand', 'subscriber']),
+        profileId: z.number().int().positive(),
       }),
     )
-    .query(async () => {
-      return [] as any[];
+    .query(async ({ input }) => {
+      if (input.profileType === 'brand') {
+        const resolvedBrand = await resolvePublicBrandProfile(
+          await getBrandProfileById(input.profileId),
+        );
+        if (!resolvedBrand) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer brand not found' });
+        }
+
+        return developmentService.listPublicDevelopments({
+          developerBrandProfileId: resolvedBrand.brandProfile.id,
+        });
+      }
+
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+      const [developer] = await dbConn
+        .select()
+        .from(developers)
+        .where(and(eq(developers.id, input.profileId), eq(developers.status, 'approved')))
+        .limit(1);
+
+      if (!developer) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer not found' });
+      }
+
+      return developmentService.listPublicDevelopments({ developerId: developer.id });
     }),
 
   searchDevelopers: publicProcedure
@@ -677,7 +792,8 @@ export const developerRouter = router({
         websiteUrl: input.website || null,
         publicContactEmail: input.email || null,
         identityType: 'developer',
-        isVisible: true,
+        // Public discovery starts only after the developer account is approved.
+        isVisible: false,
         createdBy: requireUser(ctx).id,
       });
 
@@ -692,6 +808,8 @@ export const developerRouter = router({
       if (!profile) {
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Profile creation failed.' });
       }
+
+      await developerSubscriptionService.ensureSubscription(profile.id);
 
       return profile;
     }),
@@ -1678,7 +1796,7 @@ export const developerRouter = router({
 
   getSubscription: protectedProcedure.query(async ({ ctx }) => {
     const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-    return await developerSubscriptionService.getSubscription(profile.id);
+    return developerSubscriptionService.ensureSubscription(profile.id);
   }),
 
   getActivityFeed: protectedProcedure.query(async ({ ctx }) => {
@@ -1814,9 +1932,19 @@ export const developerRouter = router({
   }),
 
   upgradeSubscription: protectedProcedure
-    .input(z.object({ tier: z.string().optional() }).optional())
-    .mutation(async () => {
-      return { success: true };
+    .input(z.object({ tier: z.enum(['basic', 'premium']) }))
+    .mutation(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      const subscription = await developerSubscriptionService.ensureSubscription(profile.id);
+
+      return {
+        success: false,
+        status: 'sales_assisted' as const,
+        currentTier: subscription.tier,
+        requestedTier: input.tier,
+        message:
+          'Paid developer plan changes are sales-assisted until developer EFT billing is enabled. Your current entitlement has not changed.',
+      };
     }),
 
   getUnreadNotificationsCount: protectedProcedure.query(async () => {

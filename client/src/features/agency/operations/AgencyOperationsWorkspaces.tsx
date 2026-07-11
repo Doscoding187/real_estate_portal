@@ -15,7 +15,7 @@ import {
   UploadCloud,
   XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -115,8 +115,14 @@ export function AgencyComplianceWorkspace(props: WorkspaceContentProps) {
 
 export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
   const utils = trpc.useUtils();
+  const invoiceIdFromUrl =
+    typeof window !== 'undefined'
+      ? Number(new URLSearchParams(window.location.search).get('invoiceId') || 0)
+      : 0;
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
+    Number.isFinite(invoiceIdFromUrl) && invoiceIdFromUrl > 0 ? invoiceIdFromUrl : null,
+  );
   const [paymentAmount, setPaymentAmount] = useState('');
   const [bankReference, setBankReference] = useState('');
   const [payerName, setPayerName] = useState('');
@@ -176,6 +182,13 @@ export function AgencyBillingWorkspace(_props: WorkspaceContentProps) {
     workspace?.activeInvoice ||
     invoices.find((invoice: any) => ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) ||
     null;
+
+  useEffect(() => {
+    if (!activeInvoice) return;
+    if (!paymentAmount) {
+      setPaymentAmount(String(Number(activeInvoice.amountDue || 0) / 100));
+    }
+  }, [activeInvoice, paymentAmount]);
   const capabilityLabels = [
     { key: 'listings', label: 'Listing workspace' },
     { key: 'publishing', label: 'Publication controls' },

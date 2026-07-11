@@ -72,4 +72,29 @@ describe('GET /api/health smoke', () => {
       await once(server, 'close');
     }
   });
+
+  it('returns 503 when readiness-critical dependencies are unavailable', async () => {
+    mockGetDb.mockRejectedValueOnce(new Error('database unavailable'));
+
+    const app = express();
+    registerHealthEndpoint(app);
+
+    const server = app.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+
+    try {
+      const address = server.address() as AddressInfo;
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/readiness`);
+      const payload = await response.json();
+
+      expect(response.status).toBe(503);
+      expect(payload.ok).toBe(false);
+      expect(payload.db.ok).toBe(false);
+      expect(payload.cache.ok).toBe(true);
+      expect(response.headers.get('x-build-sha')).toBe('deadbeefcafebabe');
+    } finally {
+      server.close();
+      await once(server, 'close');
+    }
+  });
 });

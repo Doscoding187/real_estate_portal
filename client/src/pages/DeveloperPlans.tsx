@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { SUBSCRIPTION_TIER_LIMITS, type SubscriptionTier } from '@/shared/types';
+import { type SubscriptionTier } from '@/shared/types';
+import { toast } from 'sonner';
 
 // Developer-specific plan definitions with SA Rand pricing
 const DEVELOPER_PLANS = [
@@ -119,22 +120,8 @@ export default function DeveloperPlans() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Get current subscription to highlight current plan
-  const { data: subscriptionData, refetch } = trpc.developer.getSubscription.useQuery(undefined, {
+  const { data: subscriptionData } = trpc.developer.getSubscription.useQuery(undefined, {
     staleTime: 0,
-  });
-
-  // Upgrade mutation
-  const upgradeMutation = trpc.developer.upgradeSubscription.useMutation({
-    onSuccess: data => {
-      setShowConfirmDialog(false);
-      setSelectedPlan(null);
-      refetch();
-      // Show success - navigate back to dashboard with success message
-      setLocation('/developer/dashboard');
-    },
-    onError: error => {
-      alert(`Upgrade failed: ${error.message}`);
-    },
   });
 
   const currentTier = (subscriptionData as any)?.subscription?.tier ?? (subscriptionData as any)?.tier;
@@ -158,7 +145,15 @@ export default function DeveloperPlans() {
 
   const handleConfirmUpgrade = () => {
     if (!selectedPlan) return;
-    upgradeMutation.mutate({ tier: selectedPlan.tier });
+    const subject = encodeURIComponent(`Developer plan request: ${selectedPlan.name}`);
+    const body = encodeURIComponent(
+      `Please prepare a ${selectedPlan.name} developer plan invoice for my Property Listify account.`,
+    );
+
+    window.location.href = `mailto:developers@listify.co.za?subject=${subject}&body=${body}`;
+    toast.info('Your plan remains unchanged until payment is confirmed.');
+    setShowConfirmDialog(false);
+    setSelectedPlan(null);
   };
 
   return (
@@ -379,8 +374,10 @@ export default function DeveloperPlans() {
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Confirm Upgrade</DialogTitle>
-            <DialogDescription>You're about to upgrade your subscription.</DialogDescription>
+            <DialogTitle className="text-xl">Request a Paid Plan</DialogTitle>
+            <DialogDescription>
+              Paid developer plans are activated after an invoice and payment verification.
+            </DialogDescription>
           </DialogHeader>
 
           {selectedPlan && (
@@ -402,15 +399,15 @@ export default function DeveloperPlans() {
               </div>
 
               <div className="space-y-2 text-sm text-slate-600">
-                <p>✓ Your limits will be upgraded immediately</p>
+                <p>✓ Your current plan stays active until payment is confirmed</p>
                 <p>✓ All existing data will be preserved</p>
-                <p>✓ You can downgrade anytime</p>
+                <p>✓ A sales invoice request will open in your email client</p>
               </div>
 
               {!selectedPlan.isFree && (
                 <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                  <strong>Note:</strong> Payment integration coming soon. For now, upgrades are
-                  activated instantly for testing.
+                  <strong>Sales-assisted billing:</strong> A paid entitlement is never activated
+                  until the invoice has been paid and verified.
                 </div>
               )}
             </div>
@@ -420,16 +417,14 @@ export default function DeveloperPlans() {
             <Button
               variant="outline"
               onClick={() => setShowConfirmDialog(false)}
-              disabled={upgradeMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmUpgrade}
-              disabled={upgradeMutation.isPending}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
             >
-              {upgradeMutation.isPending ? 'Upgrading...' : 'Confirm Upgrade'}
+              Request Invoice
             </Button>
           </DialogFooter>
         </DialogContent>

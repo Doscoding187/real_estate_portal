@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2, X, Compass } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { CITY_PROVINCE_MAP, PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
 import { slugify } from '@/lib/urlUtils';
+import { trpc } from '@/lib/trpc';
 import { LocationNode } from '@/types/location';
 import type { SearchDiscoverySuggestion } from '@/lib/searchDiscovery';
 
@@ -15,6 +15,14 @@ interface PlacePrediction {
     secondary_text: string;
   };
   types: string[];
+}
+
+interface DatabaseLocationSuggestion {
+  id: number;
+  name: string;
+  type: 'province' | 'city' | 'suburb';
+  provinceName?: string;
+  cityName?: string;
 }
 
 interface LocationAutosuggestProps {
@@ -58,7 +66,25 @@ export function LocationAutosuggest({
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
 
-  const { isLoaded } = useGoogleMaps();
+  const { isLoaded, isLoading: isGoogleMapsLoading } = useGoogleMaps();
+  const normalizedQuery = query.trim();
+  const { data: databaseLocations, isLoading: isDatabaseSearchLoading } =
+    trpc.location.searchLocations.useQuery(
+      {
+        query: normalizedQuery,
+        type: 'all',
+        limit: 10,
+      },
+      {
+        // The catalog remains searchable when Places is not configured or
+        // temporarily unavailable. Google remains the preferred rich lookup.
+        enabled: !isLoaded && normalizedQuery.length >= 2,
+      },
+    );
+  const databaseSuggestions: DatabaseLocationSuggestion[] = !isLoaded
+    ? ((databaseLocations as DatabaseLocationSuggestion[] | undefined) || [])
+    : [];
+  const suggestionCount = predictions.length + databaseSuggestions.length;
 
   // Initialize autocomplete service
   useEffect(() => {
@@ -174,6 +200,51 @@ export function LocationAutosuggest({
     }
   };
 
+  const handleDatabaseLocationSelect = (location: DatabaseLocationSuggestion) => {
+    if (selectedLocations.length >= maxLocations) return;
+
+    setQuery('');
+    if (onChange) onChange('');
+    setShowSuggestions(false);
+    inputRef.current?.focus();
+
+    if (!onSelect) return;
+
+    const slug = slugify(location.name);
+    const provinceSlug =
+      location.type === 'province'
+        ? slug
+        : location.provinceName
+          ? slugify(location.provinceName)
+          : undefined;
+    const citySlug =
+      location.type === 'city'
+        ? slug
+        : location.cityName
+          ? slugify(location.cityName)
+          : undefined;
+
+    onSelect({
+      id: String(location.id),
+      name: location.name,
+      slug,
+      type: location.type,
+      provinceSlug,
+      citySlug,
+    });
+  };
+
+  const handleSuggestionSelect = (index: number) => {
+    if (index < predictions.length) {
+      handlePredictionSelect(predictions[index]);
+      return;
+    }
+
+    const databaseIndex = index - predictions.length;
+    const suggestion = databaseSuggestions[databaseIndex];
+    if (suggestion) handleDatabaseLocationSelect(suggestion);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Handle specific keys
     if (e.key === 'Backspace' && query === '' && selectedLocations.length > 0 && onRemove) {
@@ -184,8 +255,8 @@ export function LocationAutosuggest({
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (showSuggestions && predictions.length > 0 && selectedIndex >= 0) {
-        handlePredictionSelect(predictions[selectedIndex]);
+      if (showSuggestions && suggestionCount > 0 && selectedIndex >= 0) {
+        handleSuggestionSelect(selectedIndex);
       } else {
         setShowSuggestions(false);
         if (onSubmit) onSubmit();
@@ -198,11 +269,11 @@ export function LocationAutosuggest({
       return;
     }
 
-    if (!showSuggestions || predictions.length === 0) return;
+    if (!showSuggestions || suggestionCount === 0) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex(prev => (prev < predictions.length - 1 ? prev + 1 : prev));
+      setSelectedIndex(prev => (prev < suggestionCount - 1 ? prev + 1 : prev));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1));
@@ -220,19 +291,6 @@ export function LocationAutosuggest({
   const handleWrapperClick = () => {
     inputRef.current?.focus();
   };
-
-  if (!isLoaded) {
-    return (
-      <div className={`relative ${className}`}>
-        <Input
-          type="text"
-          placeholder={placeholder}
-          disabled
-          className={inputClassName || 'bg-gray-50'}
-        />
-      </div>
-    );
-  }
 
   const isLimitReached = selectedLocations.length >= maxLocations;
   const showPlaceholder = selectedLocations.length === 0;
@@ -288,7 +346,7 @@ export function LocationAutosuggest({
 
         {/* Right Icon */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-          {isLoading ? (
+          {isLoading || isDatabaseSearchLoading || isGoogleMapsLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : showIcon ? (
             <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -297,7 +355,11 @@ export function LocationAutosuggest({
       </div>
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && !isLimitReached && (predictions.length > 0 || (discoverySuggestions?.length ?? 0) > 0) && (
+      {showSuggestions &&
+        !isLimitReached &&
+        (predictions.length > 0 ||
+          databaseSuggestions.length > 0 ||
+          (discoverySuggestions?.length ?? 0) > 0) && (
         <div className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-200">
           {/* Search Discovery Engine — static/fallback suggestions */}
           {discoverySuggestions && discoverySuggestions.length > 0 && (
@@ -323,11 +385,39 @@ export function LocationAutosuggest({
                   </div>
                 </div>
               ))}
-              {predictions.length > 0 && (
+              {(predictions.length > 0 || databaseSuggestions.length > 0) && (
                 <div className="mx-3 my-1 border-t border-slate-100" />
               )}
             </>
           )}
+
+          {/* Database-backed catalog fallback when Google Places is unavailable. */}
+          {databaseSuggestions.map((location, index) => {
+            const suggestionIndex = predictions.length + index;
+            const context = [location.cityName, location.provinceName]
+              .filter(Boolean)
+              .join(', ');
+            return (
+              <div
+                key={`database-${location.type}-${location.id}`}
+                onClick={() => handleDatabaseLocationSelect(location)}
+                onMouseEnter={() => setSelectedIndex(suggestionIndex)}
+                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                  suggestionIndex === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-100">
+                  <MapPin className="h-4 w-4 text-emerald-700" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-gray-900 truncate">{location.name}</div>
+                  <div className="text-xs text-gray-500 truncate">
+                    {[location.type, context].filter(Boolean).join(' - ')}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
 
           {/* Google Places predictions */}
           {predictions.map((prediction, index) => {
@@ -370,7 +460,8 @@ export function LocationAutosuggest({
       {/* No results or limit message */}
       {showSuggestions &&
         !isLoading &&
-        (predictions.length === 0 && query.length >= 2 ? (
+        !isDatabaseSearchLoading &&
+        (predictions.length === 0 && databaseSuggestions.length === 0 && query.length >= 2 ? (
           <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
             <p className="text-sm text-gray-500 text-center">No locations found</p>
           </div>

@@ -9,6 +9,7 @@ import { authService } from './_core/auth';
 import { COOKIE_NAME } from '@shared/const';
 import { getSessionCookieOptions } from './_core/cookies';
 import { requireUser } from './_core/requireUser';
+import { deliverAgencyInvitations } from './services/agencyInvitationDeliveryService';
 
 /**
  * Invitation Router
@@ -237,7 +238,18 @@ export const invitationRouter = router({
       .from(invitations)
       .where(eq(invitations.id, Number(result.insertId)));
 
-    return toInvitationClient(invitation);
+    let delivery = { deferred: false, attempted: 0, sent: 0, failed: 0 };
+    try {
+      delivery = await deliverAgencyInvitations({
+        agencyId,
+        invitationIds: [invitation.id],
+      });
+    } catch (error) {
+      delivery = { deferred: false, attempted: 1, sent: 0, failed: 1 };
+      console.error('[invitation.create] Invitation saved but email delivery failed', error);
+    }
+
+    return { ...toInvitationClient(invitation), delivery };
   }),
 
   /**
@@ -529,7 +541,17 @@ export const invitationRouter = router({
         .from(invitations)
         .where(eq(invitations.id, input.invitationId));
 
-      return toInvitationClient(updated);
+      let delivery = { deferred: false, attempted: 0, sent: 0, failed: 0 };
+      try {
+        delivery = await deliverAgencyInvitations({
+          agencyId: invitation.agencyId,
+          invitationIds: [updated.id],
+        });
+      } catch (error) {
+        delivery = { deferred: false, attempted: 1, sent: 0, failed: 1 };
+        console.error('[invitation.resend] Invitation updated but email delivery failed', error);
+      }
+
+      return { ...toInvitationClient(updated), delivery };
     }),
 });
-

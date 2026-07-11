@@ -12,7 +12,8 @@ This server requires specific environment variables to function correctly.
 
 ### Production
 
-- **Secrets be placed in `.env.production`** (or your platform's secret manager).
+- **Secrets must be placed in `.env.production`** (or your platform's secret manager).
+- Run `pnpm launch:preflight` before production deploys. Railway startup also runs this gate through `pnpm start:prod:with-migrations`.
 
 ### Example `.env.local`
 

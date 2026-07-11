@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import { spawnSync } from 'child_process';
 import { assertDatabaseTargetMatchesRuntime } from '../server/_core/databaseTarget';
+import { assertLaunchPreflight, formatLaunchPreflight } from '../server/_core/launchPreflight';
 import { loadAppRuntimeEnv } from '../server/_core/runtimeBootstrap';
 
 function run(command: string, args: string[]) {
@@ -12,6 +13,7 @@ function run(command: string, args: string[]) {
     env: {
       ...process.env,
       NODE_ENV: 'production',
+      APP_ENV: 'production',
     },
   });
 
@@ -26,6 +28,7 @@ function run(command: string, args: string[]) {
 
 function main() {
   process.env.NODE_ENV = 'production';
+  process.env.APP_ENV = 'production';
   const { runtimeEnv, loadedFiles } = loadAppRuntimeEnv({ cwd: process.cwd() });
   const databaseUrl = process.env.DATABASE_URL;
 
@@ -37,6 +40,9 @@ function main() {
   console.log(
     `[Startup] Runtime env=${runtimeEnv}; env files=${loadedFiles.join(', ') || '(none)'}; target=${target.fingerprint}`,
   );
+
+  const preflight = assertLaunchPreflight({ runtimeEnv });
+  console.log(formatLaunchPreflight(preflight));
 
   run('pnpm', ['db:target']);
   run('pnpm', ['db:migrate']);

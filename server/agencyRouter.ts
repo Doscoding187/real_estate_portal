@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { randomBytes } from 'crypto';
 import {
   router,
   superAdminProcedure,
@@ -3583,11 +3584,13 @@ export const agencyRouter = router({
       });
 
       // 6. Update user to be agency_admin of this agency
+      const principalPhone = input.basicInfo.phone?.trim();
       await db
         .update(users)
         .set({
           agencyId,
           role: 'agency_admin',
+          ...(principalPhone ? { phone: principalPhone } : {}),
           updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
@@ -3612,7 +3615,7 @@ export const agencyRouter = router({
           email,
           invitedBy: user.id,
           role: 'agent',
-          token: `invite-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          token: randomBytes(32).toString('hex'),
           status: 'pending' as const,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
         }));

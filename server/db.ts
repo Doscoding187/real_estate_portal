@@ -41,6 +41,7 @@ import {
   scheduledViewings,
   recentlyViewed,
   developers,
+  developerBrandProfiles,
   developments,
   commissions,
   platformSettings,
@@ -1064,6 +1065,35 @@ export async function getLocationsByType(type: string) {
 
 // ==================== AGENCY DASHBOARD ANALYTICS ====================
 
+/**
+ * Canonical agency inventory is owned by listings. The owner/agent joins are
+ * compatibility fallbacks for records created before listings.agencyId existed.
+ */
+function agencyListingScopeCondition(agencyId: number) {
+  return or(
+    eq(listings.agencyId, agencyId),
+    and(
+      isNull(listings.agencyId),
+      or(
+        eq(users.agencyId, agencyId),
+        and(isNull(users.agencyId), eq(agents.agencyId, agencyId)),
+      ),
+    ),
+  )!;
+}
+
+async function getAgencyCanonicalListings(agencyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({ listing: listings })
+    .from(listings)
+    .leftJoin(users, eq(listings.ownerId, users.id))
+    .leftJoin(agents, eq(listings.agentId, agents.id))
+    .where(agencyListingScopeCondition(agencyId));
+}
+
 export async function getAgencyDashboardStats(agencyId: number) {
   const db = await getDb();
   if (!db) {
@@ -1079,18 +1109,11 @@ export async function getAgencyDashboardStats(agencyId: number) {
     };
   }
 
-  // tables already imported at top
-
-  // Get all properties owned by agency agents
-  const agencyProperties = await db
-    .select()
-    .from(properties)
-    .where(
-      sql`EXISTS (SELECT 1 FROM agents WHERE agents.id = properties.agentId AND agents.agencyId = ${agencyId})`,
-    );
-
-  // Get all leads for agency properties
-  const agencyLeads = await db.select().from(leads).where(eq(leads.agencyId, agencyId));
+  const [agencyListingRows, agencyLeads] = await Promise.all([
+    getAgencyCanonicalListings(agencyId),
+    db.select().from(leads).where(eq(leads.agencyId, agencyId)),
+  ]);
+  const agencyListings = agencyListingRows.map(row => row.listing);
 
   // Get agency agents count
   const agencyAgents = await db
@@ -1099,10 +1122,12 @@ export async function getAgencyDashboardStats(agencyId: number) {
     .where(and(eq(users.agencyId, agencyId), eq(users.isSubaccount, 1)));
 
   // Calculate stats
-  const totalListings = agencyProperties.length;
-  const activeListings = agencyProperties.filter((p: any) => p.status === 'available').length;
-  const pendingListings = agencyProperties.filter((p: any) => p.status === 'pending').length;
-  const totalSales = agencyProperties.filter((p: any) => p.status === 'sold').length;
+  const totalListings = agencyListings.length;
+  const activeListings = agencyListings.filter(listing => listing.status === 'published').length;
+  const pendingListings = agencyListings.filter(listing => listing.status === 'pending_review').length;
+  const totalSales = agencyListings.filter(
+    listing => listing.status === 'sold' || listing.status === 'rented',
+  ).length;
   const totalLeads = agencyLeads.length;
   const totalAgents = agencyAgents.length;
 
@@ -1113,8 +1138,10 @@ export async function getAgencyDashboardStats(agencyId: number) {
   const recentLeads = agencyLeads.filter(
     (lead: any) => new Date(lead.createdAt) > thirtyDaysAgo,
   ).length;
-  const recentSales = agencyProperties.filter(
-    (p: any) => p.status === 'sold' && new Date(p.updatedAt) > thirtyDaysAgo,
+  const recentSales = agencyListings.filter(
+    listing =>
+      (listing.status === 'sold' || listing.status === 'rented') &&
+      new Date(listing.updatedAt) > thirtyDaysAgo,
   ).length;
 
   return {
@@ -1472,15 +1499,16 @@ export async function getAgencyPerformanceData(agencyId: number, months: number 
     const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
     const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() - i + 1, 0);
 
-    // Properties listed this month
-    const monthProperties = await db
-      .select()
-      .from(properties)
+    const monthListings = await db
+      .select({ listing: listings })
+      .from(listings)
+      .leftJoin(users, eq(listings.ownerId, users.id))
+      .leftJoin(agents, eq(listings.agentId, agents.id))
       .where(
         and(
-          sql`EXISTS (SELECT 1 FROM agents WHERE agents.id = properties.agentId AND agents.agencyId = ${agencyId})`,
-          sql`${properties.createdAt} >= ${monthStart}`,
-          sql`${properties.createdAt} <= ${monthEnd}`,
+          agencyListingScopeCondition(agencyId),
+          sql`${listings.createdAt} >= ${monthStart}`,
+          sql`${listings.createdAt} <= ${monthEnd}`,
         ),
       );
 
@@ -1497,11 +1525,13 @@ export async function getAgencyPerformanceData(agencyId: number, months: number 
       );
 
     // Sales this month
-    const monthSales = monthProperties.filter((p: any) => p.status === 'sold').length;
+    const monthSales = monthListings.filter(
+      row => row.listing.status === 'sold' || row.listing.status === 'rented',
+    ).length;
 
     performanceData.push({
       month: monthStart.toLocaleString('default', { month: 'short', year: '2-digit' }),
-      listings: monthProperties.length,
+      listings: monthListings.length,
       leads: monthLeads.length,
       sales: monthSales,
     });
@@ -1528,26 +1558,26 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
   const db = await getDb();
   if (!db) return [];
 
-  // properties already imported at top
-
-  return await db
-    .select({
-      id: properties.id,
-      title: properties.title,
-      price: properties.price,
-      status: properties.status as any,
-      city: properties.city,
-      views: properties.views,
-      enquiries: properties.enquiries,
-      createdAt: properties.createdAt,
-      ownerId: properties.ownerId,
-    })
-    .from(properties)
-    .where(
-      sql`EXISTS (SELECT 1 FROM agents WHERE agents.id = properties.agentId AND agents.agencyId = ${agencyId})`,
-    )
-    .orderBy(desc(properties.createdAt))
+  const rows = await db
+    .select({ listing: listings })
+    .from(listings)
+    .leftJoin(users, eq(listings.ownerId, users.id))
+    .leftJoin(agents, eq(listings.agentId, agents.id))
+    .where(agencyListingScopeCondition(agencyId))
+    .orderBy(desc(listings.createdAt))
     .limit(limit);
+
+  return rows.map(({ listing }) => ({
+    id: listing.id,
+    title: listing.title,
+    price: Number(listing.askingPrice || listing.monthlyRent || listing.startingBid || 0) || null,
+    status: listing.status,
+    city: listing.city,
+    views: null,
+    enquiries: null,
+    createdAt: listing.createdAt,
+    ownerId: listing.ownerId,
+  }));
 }
 
 export async function getAgencyAgents(agencyId: number) {
@@ -2026,11 +2056,26 @@ export async function createListing(listingData: any) {
         .from(agents)
         .where(eq(agents.userId, listingData.userId))
         .limit(1);
+      const [owner] = await tx
+        .select({ agencyId: users.agencyId })
+        .from(users)
+        .where(eq(users.id, listingData.userId))
+        .limit(1);
       const agentId = agent ? agent.id : null;
+      const ownerAgencyId = owner?.agencyId || null;
+      const agentAgencyId = agent?.agencyId || null;
+
+      if (ownerAgencyId && agentAgencyId && ownerAgencyId !== agentAgencyId) {
+        throw new Error('Listing owner and agent belong to different agencies');
+      }
+
+      // Membership is canonical; agent affiliation only preserves legacy agent-owned records.
+      const agencyId = ownerAgencyId || agentAgencyId || null;
 
       console.log('[db.createListing] Inserting listing:', {
         ownerId: listingData.userId,
         agentId,
+        agencyId,
         slug: listingData.slug,
         coords: { lat: listingData.latitude, lng: listingData.longitude },
       });
@@ -2038,6 +2083,7 @@ export async function createListing(listingData: any) {
       const insertValues: any = {
         ownerId: listingData.userId,
         agentId: agentId,
+        agencyId,
         action: listingData.action,
         propertyType: listingData.propertyType,
         title: listingData.title,
@@ -2290,6 +2336,13 @@ export async function updateListing(listingId: number, updateData: any) {
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
+  // API-only fields are persisted through their own canonical paths.
+  delete updateFields.id;
+  delete updateFields.location;
+  delete updateFields.media;
+  delete updateFields.mediaIds;
+  delete updateFields.mainMediaId;
+
   // Map pricing fields if present
   if (updateData.pricing) {
     if (updateData.pricing.askingPrice !== undefined)
@@ -2406,6 +2459,112 @@ export async function getListingMedia(listingId: number) {
     .from(listingMedia)
     .where(eq(listingMedia.listingId, listingId))
     .orderBy(listingMedia.displayOrder);
+}
+
+export type ListingMediaReplacementInput = {
+  id: string;
+  mediaType: 'image' | 'video' | 'floorplan' | 'pdf';
+  fileName?: string | null;
+  fileSize?: number | null;
+  thumbnailUrl?: string | null;
+  previewUrl?: string | null;
+  width?: number | null;
+  height?: number | null;
+  duration?: number | null;
+  orientation?: 'vertical' | 'horizontal' | 'square' | null;
+  processingStatus?: 'pending' | 'processing' | 'completed' | 'failed' | null;
+};
+
+const EXISTING_LISTING_MEDIA_ID_PREFIX = 'existing:';
+
+function parseExistingListingMediaId(value: string) {
+  if (!value.startsWith(EXISTING_LISTING_MEDIA_ID_PREFIX)) return null;
+  const id = Number(value.slice(EXISTING_LISTING_MEDIA_ID_PREFIX.length));
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+/**
+ * Replaces the ordered canonical media manifest for one listing. Existing
+ * records are retained only by their explicit `existing:<id>` token; all
+ * other entries are newly uploaded storage keys. This preserves the listing
+ * media contract without trusting a client to reference another listing's row.
+ */
+export async function replaceListingMedia(
+  listingId: number,
+  media: ListingMediaReplacementInput[],
+  mainMediaId?: string | null,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const ids = media.map(item => item.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('Listing media manifest contains duplicate items');
+  }
+
+  const resolvedMainMediaId = mainMediaId || media[0]?.id || null;
+  if (resolvedMainMediaId && !ids.includes(resolvedMainMediaId)) {
+    throw new Error('Listing primary media must be included in the media manifest');
+  }
+
+  await db.transaction(async tx => {
+    const existing = await tx
+      .select({ id: listingMedia.id })
+      .from(listingMedia)
+      .where(eq(listingMedia.listingId, listingId));
+    const existingIds = new Set(existing.map(item => Number(item.id)));
+    const retainedExistingIds = new Set<number>();
+
+    for (const item of media) {
+      if (!item.id.startsWith(EXISTING_LISTING_MEDIA_ID_PREFIX)) continue;
+      const existingMediaId = parseExistingListingMediaId(item.id);
+      if (existingMediaId === null || !existingIds.has(existingMediaId)) {
+        throw new Error('Listing media does not belong to this listing');
+      }
+      retainedExistingIds.add(existingMediaId);
+    }
+
+    const staleExistingIds = existing
+      .map(item => Number(item.id))
+      .filter(id => !retainedExistingIds.has(id));
+    if (staleExistingIds.length) {
+      await tx
+        .delete(listingMedia)
+        .where(and(eq(listingMedia.listingId, listingId), inArray(listingMedia.id, staleExistingIds)));
+    }
+
+    for (const [displayOrder, item] of media.entries()) {
+      const existingMediaId = parseExistingListingMediaId(item.id);
+      const isPrimary = item.id === resolvedMainMediaId ? 1 : 0;
+
+      if (existingMediaId !== null) {
+        await tx
+          .update(listingMedia)
+          .set({ displayOrder, isPrimary })
+          .where(and(eq(listingMedia.id, existingMediaId), eq(listingMedia.listingId, listingId)));
+        continue;
+      }
+
+      await tx.insert(listingMedia).values({
+        listingId,
+        originalUrl: item.id,
+        thumbnailUrl: item.thumbnailUrl || null,
+        previewUrl: item.previewUrl || null,
+        mediaType: item.mediaType,
+        originalFileName: item.fileName || null,
+        originalFileSize: item.fileSize || null,
+        width: item.width || null,
+        height: item.height || null,
+        duration: item.duration || null,
+        orientation: item.orientation || null,
+        displayOrder,
+        isPrimary,
+        processingStatus: item.processingStatus || 'completed',
+        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
+    }
+  });
 }
 
 /**
@@ -3469,6 +3628,14 @@ export async function approveDeveloper(id: number, approvedBy: number) {
     })
     .where(eq(developers.id, id));
 
+  await db
+    .update(developerBrandProfiles)
+    .set({
+      isVisible: 1,
+      isContactVerified: 1,
+    })
+    .where(eq(developerBrandProfiles.linkedDeveloperAccountId, id));
+
   return true;
 }
 
@@ -3489,6 +3656,11 @@ export async function rejectDeveloper(id: number, rejectedBy: number, reason: st
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(developers.id, id));
+
+  await db
+    .update(developerBrandProfiles)
+    .set({ isVisible: 0 })
+    .where(eq(developerBrandProfiles.linkedDeveloperAccountId, id));
 
   return true;
 }

@@ -229,7 +229,8 @@ export function DevelopmentCard({
               if (onContactClick) {
                 onContactClick();
               } else {
-                setLocation(`/development/${id}/contact`);
+                // Development detail owns the canonical enquiry dialog and attribution context.
+                setLocation(`/development/${id}`);
               }
             }}
           >

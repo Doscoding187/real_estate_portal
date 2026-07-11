@@ -105,11 +105,38 @@ const buildSubmittedPropertyDetails = (
 
 const getMediaId = (media: ListingWizardSubmitState['media'][number]) => media.id?.toString() || '';
 
+type ListingMediaManifestItem = NonNullable<ListingWizardSubmitPayload['media']>[number];
+
+const buildTypedMediaManifest = (
+  media: ListingWizardSubmitState['media'],
+): ListingMediaManifestItem[] =>
+  media
+    .map(item => {
+      const manifestItem: ListingMediaManifestItem = {
+        id: getMediaId(item),
+        mediaType: item.type,
+      };
+
+      if (item.fileName !== undefined) manifestItem.fileName = item.fileName;
+      if (item.fileSize !== undefined) manifestItem.fileSize = item.fileSize;
+      if (item.thumbnailUrl !== undefined) manifestItem.thumbnailUrl = item.thumbnailUrl;
+      if (item.previewUrl !== undefined) manifestItem.previewUrl = item.previewUrl;
+      if (item.width !== undefined) manifestItem.width = item.width;
+      if (item.height !== undefined) manifestItem.height = item.height;
+      if (item.duration !== undefined) manifestItem.duration = item.duration;
+      if (item.orientation !== undefined) manifestItem.orientation = item.orientation;
+      if (item.processingStatus !== undefined) manifestItem.processingStatus = item.processingStatus;
+
+      return manifestItem;
+    })
+    .filter(item => Boolean(item.id));
+
 export const buildListingWizardSubmitPayload = (
   state: ListingWizardSubmitState,
 ): ListingWizardSubmitPayload => {
   const pricing = normalizePricingForSubmit(state.pricing);
   const mediaIds = state.media.map(getMediaId);
+  const media = buildTypedMediaManifest(state.media);
   const mainMediaId =
     state.mainMediaId?.toString() || (state.media.length > 0 ? getMediaId(state.media[0]) : undefined);
 
@@ -123,5 +150,6 @@ export const buildListingWizardSubmitPayload = (
     location: state.location!,
     mediaIds,
     mainMediaId,
+    media,
   };
 };
