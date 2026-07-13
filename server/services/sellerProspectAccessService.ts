@@ -1,8 +1,26 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
-import { agents, sellerProspects } from '../../drizzle/schema';
+import { agents, sellerMandateOperations, sellerProspects } from '../../drizzle/schema';
 
 export const SELLER_PROSPECT_LISTING_HANDOFF_STAGES = ['qualified', 'mandate_won'] as const;
+export const MANDATE_READINESS_REQUIREMENTS = [
+  'sellerIdentityRecorded', 'propertyAddressConfirmed', 'contactDetailsConfirmed',
+  'mandateTypeSelected', 'pricingDiscussionCompleted', 'agreedPriceRecorded',
+  'mandateDocumentRecorded', 'disclosureStatusRecorded', 'mediaPlanRecorded',
+  'accessArrangementsRecorded', 'responsibleAgentConfirmed', 'nextActionRecorded',
+] as const;
+
+export function getMandateReadiness(operation: any, prospect: any) {
+  const requirements = (operation?.requirements || {}) as Record<string, unknown>;
+  const missing: string[] = MANDATE_READINESS_REQUIREMENTS.filter(key => requirements[key] !== true);
+  if (!prospect?.mandateType) missing.push('mandateTypeSelected');
+  if (!operation?.pricingDiscussedAt) missing.push('pricingDiscussionCompleted');
+  if (!operation?.agreedListingPrice && !prospect?.agreedAskingPrice) missing.push('agreedPriceRecorded');
+  if (!['received', 'signed', 'not_applicable'].includes(String(operation?.documentStatus))) missing.push('mandateDocumentRecorded');
+  if (!prospect?.mandateSignedAt) missing.push('mandateSignedAt');
+  if (prospect?.mandateExpiresAt && new Date(prospect.mandateExpiresAt).getTime() <= Date.now()) missing.push('mandateNotExpired');
+  return { ready: missing.length === 0, missing: [...new Set(missing)] };
+}
 
 type AgencyUser = {
   id: number;
@@ -118,6 +136,19 @@ export async function prepareSellerProspectListingConversion(
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Qualify the seller prospect before creating a listing draft.',
+    });
+  }
+
+  const [operation] = await db
+    .select()
+    .from(sellerMandateOperations)
+    .where(and(eq(sellerMandateOperations.sellerProspectId, prospect.id), eq(sellerMandateOperations.agencyId, scope.agencyId)))
+    .limit(1);
+  const readiness = getMandateReadiness(operation, prospect);
+  if (!operation || operation.status !== 'listing_ready' || !readiness.ready) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `Complete mandate and seller onboarding before creating a listing draft${readiness.missing.length ? `: ${readiness.missing.join(', ')}` : '.'}`,
     });
   }
 

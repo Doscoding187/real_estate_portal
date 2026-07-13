@@ -1,4 +1,4 @@
-import { decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import { decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, unique, varchar } from 'drizzle-orm/mysql-core';
 import { agencies, agents } from './agencies';
 import { users } from './core';
 import { listings } from './listings';
@@ -89,6 +89,15 @@ export const SELLER_PROSPECT_MANDATE_TYPE_VALUES = [
   'dual',
   'auction',
   'other',
+] as const;
+
+export const SELLER_MANDATE_STATUS_VALUES = [
+  'not_started', 'pricing_discussion', 'preparing', 'awaiting_seller', 'recorded',
+  'onboarding', 'listing_ready', 'expired', 'withdrawn',
+] as const;
+
+export const SELLER_MANDATE_DOCUMENT_STATUS_VALUES = [
+  'pending', 'received', 'signed', 'expired', 'replaced', 'not_applicable',
 ] as const;
 
 export const sellerProspects = mysqlTable(
@@ -182,4 +191,56 @@ export const sellerProspectActivities = mysqlTable(
     index('idx_seller_prospect_activities_prospect').on(table.sellerProspectId, table.createdAt),
     index('idx_seller_prospect_activities_agency_created').on(table.agencyId, table.createdAt),
   ],
+);
+
+/** Private mandate operations data. It is intentionally separate from public listing content. */
+export const sellerMandateOperations = mysqlTable(
+  'seller_mandate_operations',
+  {
+    id: int().autoincrement().primaryKey(),
+    agencyId: int('agency_id').notNull().references(() => agencies.id, { onDelete: 'cascade' }),
+    sellerProspectId: int('seller_prospect_id').notNull().references(() => sellerProspects.id, { onDelete: 'cascade' }),
+    status: mysqlEnum('status', SELLER_MANDATE_STATUS_VALUES as unknown as [string, ...string[]]).default('not_started').notNull(),
+    sellerRequestedPrice: decimal('seller_requested_price', { precision: 15, scale: 2 }),
+    recommendedPriceMin: decimal('recommended_price_min', { precision: 15, scale: 2 }),
+    recommendedPriceMax: decimal('recommended_price_max', { precision: 15, scale: 2 }),
+    agreedListingPrice: decimal('agreed_listing_price', { precision: 15, scale: 2 }),
+    pricingRationale: text('pricing_rationale'),
+    pricingDiscussedAt: timestamp('pricing_discussed_at', { mode: 'string' }),
+    priceReviewAt: timestamp('price_review_at', { mode: 'string' }),
+    sellerObjections: text('seller_objections'),
+    mandateStartAt: timestamp('mandate_start_at', { mode: 'string' }),
+    documentStatus: mysqlEnum('document_status', SELLER_MANDATE_DOCUMENT_STATUS_VALUES as unknown as [string, ...string[]]).default('pending').notNull(),
+    documentName: varchar('document_name', { length: 255 }),
+    privateStorageReference: varchar('private_storage_reference', { length: 500 }),
+    documentDate: timestamp('document_date', { mode: 'string' }),
+    requirements: json('requirements'),
+    nextAction: varchar('next_action', { length: 255 }),
+    listingReadyAt: timestamp('listing_ready_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_seller_mandate_operations_prospect').on(table.sellerProspectId),
+    index('idx_seller_mandate_operations_agency_status').on(table.agencyId, table.status),
+    index('idx_seller_mandate_operations_agency_price_review').on(table.agencyId, table.priceReviewAt),
+  ],
+);
+
+/** Manually entered, private and explicitly unverified pricing evidence. */
+export const sellerMandateComparables = mysqlTable(
+  'seller_mandate_comparables',
+  {
+    id: int().autoincrement().primaryKey(),
+    agencyId: int('agency_id').notNull().references(() => agencies.id, { onDelete: 'cascade' }),
+    mandateOperationId: int('mandate_operation_id').notNull().references(() => sellerMandateOperations.id, { onDelete: 'cascade' }),
+    reference: varchar('reference', { length: 500 }).notNull(),
+    propertyType: varchar('property_type', { length: 100 }),
+    area: varchar('area', { length: 200 }),
+    price: decimal('price', { precision: 15, scale: 2 }),
+    priceKind: mysqlEnum('price_kind', ['asking', 'selling', 'other']).default('other').notNull(),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [index('idx_seller_mandate_comparables_operation').on(table.mandateOperationId)],
 );

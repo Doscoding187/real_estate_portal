@@ -35,6 +35,7 @@ import {
   agencyTransactionDocuments,
   agencyTransactionActivity,
   sellerProspects,
+  sellerMandateOperations,
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
 import { eq, like, or, desc, asc, and, inArray, notInArray, sql, isNull, isNotNull, ne, aliasedTable } from 'drizzle-orm';
@@ -6481,6 +6482,30 @@ export const agencyRouter = router({
           : null,
       });
 
+      // One mandate work item per prospect: the next blocking action, not every checklist row.
+      const mandateWorkRows = await db
+        .select({ operation: sellerMandateOperations, prospect: sellerProspects, agent: agents })
+        .from(sellerMandateOperations)
+        .innerJoin(sellerProspects, eq(sellerMandateOperations.sellerProspectId, sellerProspects.id))
+        .leftJoin(agents, eq(sellerProspects.assignedAgentId, agents.id))
+        .where(and(
+          eq(sellerMandateOperations.agencyId, agencyId),
+          user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
+          ne(sellerMandateOperations.status, 'withdrawn'),
+          notInArray(sellerProspects.stage, SELLER_PROSPECT_TERMINAL_STAGE_VALUES as any),
+        ))
+        .orderBy(asc(sellerProspects.mandateExpiresAt), desc(sellerMandateOperations.updatedAt))
+        .limit(limit);
+      const mandateWork = mandateWorkRows.map((row: any) => {
+        const expiry = row.prospect.mandateExpiresAt ? new Date(row.prospect.mandateExpiresAt) : null;
+        const expired = Boolean(expiry && expiry.getTime() < bounds.start.getTime());
+        const expiringSoon = Boolean(expiry && expiry.getTime() < bounds.start.getTime() + 14 * 86_400_000);
+        const requirements = (row.operation.requirements || {}) as Record<string, unknown>;
+        const incomplete = Object.values(requirements).some(value => value !== true);
+        const type = expired ? 'mandate_expired' : expiringSoon ? 'mandate_expiring_soon' : row.operation.documentStatus === 'pending' ? 'mandate_document_outstanding' : incomplete ? 'mandate_requirements_incomplete' : row.operation.status === 'awaiting_seller' ? 'mandate_awaiting_seller' : row.operation.status === 'onboarding' ? 'seller_onboarding_incomplete' : row.operation.status === 'listing_ready' ? 'listing_ready_not_started' : 'mandate_next_action';
+        return { id: `mandate:${row.operation.id}`, type, sellerProspectId: row.prospect.id, ownerName: row.prospect.ownerName, propertyAddress: row.prospect.propertyAddress, dueAt: expired || expiringSoon ? row.prospect.mandateExpiresAt : row.operation.priceReviewAt, nextAction: row.operation.nextAction || 'Complete mandate requirements', status: row.operation.status, expired, assignedAgent: mapSellerProspect(row).assignedAgent };
+      });
+
       return {
         date: dayKey,
         overdueFollowUps: overdueFollowUps.map(mapLead),
@@ -6496,6 +6521,7 @@ export const agencyRouter = router({
         transactionDeadlines,
         overdueSellerFollowUps: overdueSellerFollowUps.map(mapSellerProspect),
         dueTodaySellerFollowUps: dueTodaySellerFollowUps.map(mapSellerProspect),
+        mandateWork,
         upcomingWork: upcomingViewings,
         counts: {
           overdueFollowUps: overdueFollowUps.length,
@@ -6508,6 +6534,7 @@ export const agencyRouter = router({
           listingTasks: listingRows.length,
           transactionDeadlines: transactionDeadlines.length,
           overdueSellerFollowUps: overdueSellerFollowUps.length,
+          mandateWork: mandateWork.length,
           dueTodaySellerFollowUps: dueTodaySellerFollowUps.length,
           upcomingWork: upcomingViewings.length,
         },

@@ -20,6 +20,7 @@ import {
   PhoneCall,
   Plus,
   Search,
+  Trash2,
   UserRoundCheck,
   Users,
 } from 'lucide-react';
@@ -235,6 +236,10 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
     { sellerProspectId: selectedProspectId || 0 },
     { enabled: Boolean(selectedProspectId), retry: false },
   );
+  const mandateOperationsQuery = trpc.canvassing.getMandateOperations.useQuery(
+    { sellerProspectId: selectedProspectId || 0 },
+    { enabled: Boolean(selectedProspectId), retry: false },
+  );
 
   const refresh = async () => {
     await Promise.all([
@@ -242,6 +247,7 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
       utils.canvassing.list.invalidate(),
       utils.canvassing.getFollowUpQueue.invalidate(),
       utils.canvassing.getById.invalidate(),
+      utils.canvassing.getMandateOperations.invalidate(),
     ]);
   };
 
@@ -276,12 +282,20 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
     },
     onError: error => toast.error(error.message || 'Could not record seller contact'),
   });
-  const updateMandateMutation = trpc.canvassing.updateMandate.useMutation({
+  const updateMandateMutation = trpc.canvassing.saveMandateOperations.useMutation({
     onSuccess: async () => {
       toast.success('Mandate details recorded');
       await refresh();
     },
     onError: error => toast.error(error.message || 'Could not record mandate details'),
+  });
+  const addMandateComparableMutation = trpc.canvassing.addMandateComparable.useMutation({
+    onSuccess: async () => { toast.success('Private manual comparable recorded'); await refresh(); },
+    onError: error => toast.error(error.message || 'Save mandate operations before adding a comparable'),
+  });
+  const removeMandateComparableMutation = trpc.canvassing.removeMandateComparable.useMutation({
+    onSuccess: async () => { toast.success('Private manual comparable removed'); await refresh(); },
+    onError: error => toast.error(error.message || 'Could not remove private comparable'),
   });
   const setFollowUpMutation = trpc.canvassing.setFollowUp.useMutation({
     onSuccess: async () => {
@@ -593,6 +607,7 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
           if (!open) setSelectedProspectId(null);
         }}
         prospect={detailQuery.data as any}
+        mandateState={mandateOperationsQuery.data as any}
         loading={detailQuery.isLoading}
         isManager={isManager}
         agents={agents}
@@ -605,6 +620,8 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
         }
         onRecordContact={input => recordContactMutation.mutate(input as any)}
         onUpdateMandate={input => updateMandateMutation.mutate(input as any)}
+        onAddMandateComparable={input => addMandateComparableMutation.mutate(input as any)}
+        onRemoveMandateComparable={(sellerProspectId, comparableId) => removeMandateComparableMutation.mutate({ sellerProspectId, comparableId })}
         onSetFollowUp={(sellerProspectId, nextFollowUp, note) =>
           setFollowUpMutation.mutate({ sellerProspectId, nextFollowUp, note })
         }
@@ -617,7 +634,7 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
         pending={{
           stage: updateStageMutation.isPending,
           activity: addActivityMutation.isPending || recordContactMutation.isPending,
-          mandate: updateMandateMutation.isPending,
+          mandate: updateMandateMutation.isPending || addMandateComparableMutation.isPending || removeMandateComparableMutation.isPending,
           followUp: setFollowUpMutation.isPending || completeFollowUpMutation.isPending,
           assignment: assignMutation.isPending,
         }}
@@ -781,6 +798,7 @@ function ProspectDetailDialog({
   open,
   onOpenChange,
   prospect,
+  mandateState,
   loading,
   isManager,
   agents,
@@ -789,6 +807,8 @@ function ProspectDetailDialog({
   onAddActivity,
   onRecordContact,
   onUpdateMandate,
+  onAddMandateComparable,
+  onRemoveMandateComparable,
   onSetFollowUp,
   onCompleteFollowUp,
   onAssign,
@@ -797,6 +817,7 @@ function ProspectDetailDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   prospect: any;
+  mandateState: any;
   loading: boolean;
   isManager: boolean;
   agents: any[];
@@ -805,6 +826,8 @@ function ProspectDetailDialog({
   onAddActivity: (sellerProspectId: number, activityType: 'note' | 'call' | 'email' | 'meeting', description: string) => void;
   onRecordContact: (input: Record<string, unknown>) => void;
   onUpdateMandate: (input: Record<string, unknown>) => void;
+  onAddMandateComparable: (input: Record<string, unknown>) => void;
+  onRemoveMandateComparable: (sellerProspectId: number, comparableId: number) => void;
   onSetFollowUp: (sellerProspectId: number, nextFollowUp: string, note?: string) => void;
   onCompleteFollowUp: (sellerProspectId: number, note?: string) => void;
   onAssign: (sellerProspectId: number, agentId: number | null) => void;
@@ -823,16 +846,24 @@ function ProspectDetailDialog({
   const [contactNextAction, setContactNextAction] = useState('');
   const [contactFollowUpAt, setContactFollowUpAt] = useState('');
   const [mandateType, setMandateType] = useState('sole');
+  const [mandateStatus, setMandateStatus] = useState('preparing');
+  const [documentStatus, setDocumentStatus] = useState('pending');
+  const [sellerRequestedPrice, setSellerRequestedPrice] = useState('');
+  const [recommendedPriceMin, setRecommendedPriceMin] = useState('');
+  const [recommendedPriceMax, setRecommendedPriceMax] = useState('');
+  const [pricingRationale, setPricingRationale] = useState('');
+  const [pricingDiscussedAt, setPricingDiscussedAt] = useState('');
+  const [sellerObjections, setSellerObjections] = useState('');
+  const [documentName, setDocumentName] = useState('');
+  const [privateStorageReference, setPrivateStorageReference] = useState('');
+  const [comparableReference, setComparableReference] = useState('');
+  const [comparablePrice, setComparablePrice] = useState('');
+  const [comparableNotes, setComparableNotes] = useState('');
   const [mandateSignedAt, setMandateSignedAt] = useState('');
   const [mandateExpiresAt, setMandateExpiresAt] = useState('');
   const [agreedAskingPrice, setAgreedAskingPrice] = useState('');
   const [mandateNextAction, setMandateNextAction] = useState('Create and complete listing draft');
-  const [mandateChecklist, setMandateChecklist] = useState({
-    pricingAgreed: false,
-    sellerIdentityConfirmed: false,
-    propertyDetailsConfirmed: false,
-    mandateRecorded: false,
-  });
+  const [mandateChecklist, setMandateChecklist] = useState({ sellerIdentityRecorded: false, propertyAddressConfirmed: false, contactDetailsConfirmed: false, mandateTypeSelected: false, pricingDiscussionCompleted: false, agreedPriceRecorded: false, mandateDocumentRecorded: false, disclosureStatusRecorded: false, mediaPlanRecorded: false, accessArrangementsRecorded: false, responsibleAgentConfirmed: false, nextActionRecorded: false });
 
   useEffect(() => {
     if (!prospect) return;
@@ -848,18 +879,20 @@ function ProspectDetailDialog({
     setMandateSignedAt(formatLocalDateTimeInput(prospect.mandateSignedAt));
     setMandateExpiresAt(formatLocalDateTimeInput(prospect.mandateExpiresAt));
     setAgreedAskingPrice(prospect.agreedAskingPrice ? String(prospect.agreedAskingPrice) : '');
-    setMandateChecklist(
-      prospect.mandateChecklist || {
-        pricingAgreed: false,
-        sellerIdentityConfirmed: false,
-        propertyDetailsConfirmed: false,
-        mandateRecorded: false,
-      },
-    );
   }, [prospect]);
+  useEffect(() => {
+    const operation = mandateState?.operation;
+    if (!operation) return;
+    setMandateStatus(operation.status || 'preparing'); setDocumentStatus(operation.documentStatus || 'pending');
+    setSellerRequestedPrice(operation.sellerRequestedPrice ? String(operation.sellerRequestedPrice) : '');
+    setRecommendedPriceMin(operation.recommendedPriceMin ? String(operation.recommendedPriceMin) : '');
+    setRecommendedPriceMax(operation.recommendedPriceMax ? String(operation.recommendedPriceMax) : '');
+    setAgreedAskingPrice(operation.agreedListingPrice ? String(operation.agreedListingPrice) : (prospect?.agreedAskingPrice ? String(prospect.agreedAskingPrice) : ''));
+    setPricingRationale(operation.pricingRationale || ''); setPricingDiscussedAt(formatLocalDateTimeInput(operation.pricingDiscussedAt)); setSellerObjections(operation.sellerObjections || ''); setDocumentName(operation.documentName || ''); setPrivateStorageReference(operation.privateStorageReference || ''); setMandateChecklist(operation.requirements || mandateChecklist);
+  }, [mandateState, prospect]);
 
   const canStartListing = Boolean(
-    prospect && !prospect.convertedListingId && HANDOFF_STAGES.has(prospect.stage),
+    prospect && !prospect.convertedListingId && mandateState?.readiness?.ready && mandateState?.operation?.status === 'listing_ready',
   );
   const terminal = TERMINAL_STAGES.has(prospect?.stage || '');
   const mustProvideOutcome = nextStage === 'lost' || nextStage === 'not_interested';
@@ -967,15 +1000,24 @@ function ProspectDetailDialog({
                 {['qualified', 'mandate_won'].includes(prospect.stage) ? (
                   <Card className="border-emerald-200 shadow-none">
                     <CardContent className="space-y-4 p-4">
-                      <div className="flex items-center gap-2"><Handshake className="h-4 w-4 text-emerald-700" /><h4 className="font-semibold text-slate-900">Mandate conversion checklist</h4></div>
+                      <div className="flex items-center gap-2"><Handshake className="h-4 w-4 text-emerald-700" /><h4 className="font-semibold text-slate-900">Private mandate operations</h4></div>
+                      <p className="text-xs text-slate-600">Manual pricing evidence is not a verified valuation. Document fields store private metadata only; this does not provide upload or electronic signing.</p>
                       <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Mandate status"><Select value={mandateStatus} onValueChange={setMandateStatus}><SelectTrigger aria-label="Mandate status"><SelectValue /></SelectTrigger><SelectContent>{['pricing_discussion', 'preparing', 'awaiting_seller', 'recorded', 'onboarding', 'listing_ready', 'withdrawn'].map(item => <SelectItem key={item} value={item}>{titleCase(item)}</SelectItem>)}</SelectContent></Select></Field>
                         <Field label="Mandate type"><Select value={mandateType} onValueChange={setMandateType}><SelectTrigger aria-label="Mandate type"><SelectValue /></SelectTrigger><SelectContent>{['sole', 'open', 'dual', 'auction', 'other'].map(item => <SelectItem key={item} value={item}>{titleCase(item)}</SelectItem>)}</SelectContent></Select></Field>
+                        <Field label="Seller requested price"><Input aria-label="Seller requested price" type="number" min="1" value={sellerRequestedPrice} onChange={event => setSellerRequestedPrice(event.target.value)} /></Field>
+                        <Field label="Recommended range"><div className="flex gap-2"><Input aria-label="Recommended minimum" type="number" min="1" value={recommendedPriceMin} onChange={event => setRecommendedPriceMin(event.target.value)} /><Input aria-label="Recommended maximum" type="number" min="1" value={recommendedPriceMax} onChange={event => setRecommendedPriceMax(event.target.value)} /></div></Field>
                         <Field label="Agreed asking price"><Input aria-label="Agreed asking price" type="number" min="1" value={agreedAskingPrice} onChange={event => setAgreedAskingPrice(event.target.value)} /></Field>
+                        <Field label="Pricing discussed at"><Input aria-label="Pricing discussed at" type="datetime-local" value={pricingDiscussedAt} onChange={event => setPricingDiscussedAt(event.target.value)} /></Field>
                         <Field label="Signed at"><Input aria-label="Mandate signed at" type="datetime-local" value={mandateSignedAt} onChange={event => setMandateSignedAt(event.target.value)} /></Field>
                         <Field label="Expires at"><Input aria-label="Mandate expires at" type="datetime-local" value={mandateExpiresAt} onChange={event => setMandateExpiresAt(event.target.value)} /></Field>
                       </div>
+                      <Field label="Pricing rationale"><Textarea aria-label="Pricing rationale" value={pricingRationale} onChange={event => setPricingRationale(event.target.value)} placeholder="Private discussion rationale; no automated valuation is generated." /></Field>
+                      <div className="rounded-lg border border-slate-200 p-3"><p className="text-sm font-medium text-slate-900">Private manual comparable</p><p className="mt-1 text-xs text-slate-500">This is manual evidence only, not a verified deed or sales record.</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><Input aria-label="Comparable reference" value={comparableReference} onChange={event => setComparableReference(event.target.value)} placeholder="Reference or address" /><Input aria-label="Comparable price" type="number" min="1" value={comparablePrice} onChange={event => setComparablePrice(event.target.value)} placeholder="Known asking/selling price" /><Input aria-label="Comparable notes" value={comparableNotes} onChange={event => setComparableNotes(event.target.value)} placeholder="Private notes" /></div><Button className="mt-3" size="sm" variant="outline" disabled={pending.mandate || !comparableReference.trim()} onClick={() => { onAddMandateComparable({ sellerProspectId: prospect.id, reference: comparableReference.trim(), price: comparablePrice ? Number(comparablePrice) : undefined, notes: comparableNotes || undefined, priceKind: 'other' }); setComparableReference(''); setComparablePrice(''); setComparableNotes(''); }}>Add private comparable</Button>{mandateState?.comparables?.length ? <p className="mt-2 text-xs text-slate-600">{mandateState.comparables.length} private comparable reference(s) recorded.</p> : null}</div>
+                      <Field label="Seller concerns"><Textarea aria-label="Seller concerns" value={sellerObjections} onChange={event => setSellerObjections(event.target.value)} /></Field>
+                      <div className="grid gap-3 sm:grid-cols-3"><Field label="Document status"><Select value={documentStatus} onValueChange={setDocumentStatus}><SelectTrigger aria-label="Mandate document status"><SelectValue /></SelectTrigger><SelectContent>{['pending', 'received', 'signed', 'expired', 'replaced', 'not_applicable'].map(item => <SelectItem key={item} value={item}>{titleCase(item)}</SelectItem>)}</SelectContent></Select></Field><Field label="Document name"><Input aria-label="Mandate document name" value={documentName} onChange={event => setDocumentName(event.target.value)} /></Field><Field label="Private storage reference"><Input aria-label="Private storage reference" value={privateStorageReference} onChange={event => setPrivateStorageReference(event.target.value)} placeholder="private/agency-…/mandates/…" /></Field></div>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        {Object.entries({ pricingAgreed: 'Pricing agreed', sellerIdentityConfirmed: 'Seller identity confirmed', propertyDetailsConfirmed: 'Property details confirmed', mandateRecorded: 'Mandate evidence recorded' }).map(([key, label]) => (
+                        {Object.entries({ sellerIdentityRecorded: 'Seller identity / ownership recorded', propertyAddressConfirmed: 'Property address confirmed', contactDetailsConfirmed: 'Contact details confirmed', mandateTypeSelected: 'Mandate type selected', pricingDiscussionCompleted: 'Pricing discussion completed', agreedPriceRecorded: 'Agreed price recorded', mandateDocumentRecorded: 'Mandate document status recorded', disclosureStatusRecorded: 'Disclosure status recorded', mediaPlanRecorded: 'Listing-media plan recorded', accessArrangementsRecorded: 'Access arrangements recorded', responsibleAgentConfirmed: 'Responsible agent confirmed', nextActionRecorded: 'Next action recorded' }).map(([key, label]) => (
                           <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm">
                             <input type="checkbox" checked={Boolean((mandateChecklist as any)[key])} onChange={event => setMandateChecklist(current => ({ ...current, [key]: event.target.checked }))} />
                             {label}
@@ -985,9 +1027,10 @@ function ProspectDetailDialog({
                       <Field label="Next action"><Input aria-label="Mandate next action" value={mandateNextAction} onChange={event => setMandateNextAction(event.target.value)} /></Field>
                       <Button
                         className="bg-emerald-700 hover:bg-emerald-800"
-                        disabled={pending.mandate || !mandateSignedAt || !mandateNextAction.trim() || Object.values(mandateChecklist).some(complete => !complete)}
-                        onClick={() => onUpdateMandate({ sellerProspectId: prospect.id, mandateType, signedAt: new Date(mandateSignedAt).toISOString(), expiresAt: mandateExpiresAt ? new Date(mandateExpiresAt).toISOString() : undefined, agreedAskingPrice: agreedAskingPrice ? Number(agreedAskingPrice) : undefined, checklist: mandateChecklist, nextAction: mandateNextAction.trim() })}
-                      >{pending.mandate ? 'Saving…' : 'Record mandate won'}</Button>
+                        disabled={pending.mandate || !mandateNextAction.trim()}
+                        onClick={() => onUpdateMandate({ sellerProspectId: prospect.id, status: mandateStatus, mandateType, signedAt: mandateSignedAt ? new Date(mandateSignedAt).toISOString() : undefined, expiresAt: mandateExpiresAt ? new Date(mandateExpiresAt).toISOString() : undefined, sellerRequestedPrice: sellerRequestedPrice ? Number(sellerRequestedPrice) : undefined, recommendedPriceMin: recommendedPriceMin ? Number(recommendedPriceMin) : undefined, recommendedPriceMax: recommendedPriceMax ? Number(recommendedPriceMax) : undefined, agreedListingPrice: agreedAskingPrice ? Number(agreedAskingPrice) : undefined, pricingRationale, pricingDiscussedAt: pricingDiscussedAt ? new Date(pricingDiscussedAt).toISOString() : undefined, sellerObjections, documentStatus, documentName, privateStorageReference, requirements: mandateChecklist, nextAction: mandateNextAction.trim() })}
+                      >{pending.mandate ? 'Saving…' : 'Save mandate operations'}</Button>
+                      {!mandateState?.readiness?.ready ? <p className="text-xs text-amber-800">Not listing-ready: {(mandateState?.readiness?.missing || ['Save the mandate requirements to see the server readiness explanation.']).join(', ')}</p> : <p className="text-xs text-emerald-800">Server-confirmed listing readiness. Starting a draft never publishes it.</p>}
                     </CardContent>
                   </Card>
                 ) : null}

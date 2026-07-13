@@ -4,11 +4,15 @@ import { z } from 'zod';
 import {
   agents,
   sellerProspectActivities,
+  sellerMandateComparables,
+  sellerMandateOperations,
   sellerProspects,
   SELLER_PROSPECT_ACTIVITY_TYPE_VALUES,
   SELLER_PROSPECT_CONTACT_CHANNEL_VALUES,
   SELLER_PROSPECT_CONTACT_OUTCOME_VALUES,
   SELLER_PROSPECT_MANDATE_TYPE_VALUES,
+  SELLER_MANDATE_DOCUMENT_STATUS_VALUES,
+  SELLER_MANDATE_STATUS_VALUES,
   SELLER_PROSPECT_METHOD_VALUES,
   SELLER_PROSPECT_PRIORITY_VALUES,
   SELLER_PROSPECT_PROPERTY_TYPE_VALUES,
@@ -23,6 +27,7 @@ import { getDb } from './db';
 import {
   getSellerProspectActorScope,
   prepareSellerProspectListingConversion,
+  getMandateReadiness,
   requireAgencyAssignableAgent,
   requireSellerProspect,
 } from './services/sellerProspectAccessService';
@@ -47,6 +52,21 @@ const optionalEmail = z
   .optional()
   .nullable()
   .transform(value => (value === undefined ? undefined : value || null));
+
+const mandateRequirementsSchema = z.object({
+  sellerIdentityRecorded: z.boolean(), propertyAddressConfirmed: z.boolean(), contactDetailsConfirmed: z.boolean(),
+  mandateTypeSelected: z.boolean(), pricingDiscussionCompleted: z.boolean(), agreedPriceRecorded: z.boolean(),
+  mandateDocumentRecorded: z.boolean(), disclosureStatusRecorded: z.boolean(), mediaPlanRecorded: z.boolean(),
+  accessArrangementsRecorded: z.boolean(), responsibleAgentConfirmed: z.boolean(), nextActionRecorded: z.boolean(),
+});
+
+function isAgencyPrivateMandateStorageReference(reference: string, agencyId: number) {
+  const prefix = `private/agency-${agencyId}/mandates/`;
+  return reference.startsWith(prefix)
+    && !/^https?:\/\//i.test(reference)
+    && !reference.includes('\\')
+    && !reference.split('/').some(segment => segment === '.' || segment === '..');
+}
 
 const createSellerProspectSchema = z
   .object({
@@ -900,6 +920,83 @@ export const canvassingRouter = router({
         stage: nextStage,
         nextAction: terminalOutcome ? null : input.nextAction,
       };
+    }),
+
+  getMandateOperations: agentProcedure
+    .input(z.object({ sellerProspectId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const db = await requireDatabase();
+      const scope = await getSellerProspectActorScope(db, requireUser(ctx));
+      const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
+      const [operation] = await db.select().from(sellerMandateOperations)
+        .where(and(eq(sellerMandateOperations.sellerProspectId, prospect.id), eq(sellerMandateOperations.agencyId, scope.agencyId))).limit(1);
+      const comparables = operation ? await db.select().from(sellerMandateComparables)
+        .where(and(eq(sellerMandateComparables.mandateOperationId, operation.id), eq(sellerMandateComparables.agencyId, scope.agencyId))) : [];
+      return { operation: operation || null, comparables, readiness: getMandateReadiness(operation, prospect) };
+    }),
+
+  saveMandateOperations: agentProcedure
+    .input(z.object({
+      sellerProspectId: z.number().int().positive(),
+      status: z.enum(SELLER_MANDATE_STATUS_VALUES),
+      mandateType: z.enum(SELLER_PROSPECT_MANDATE_TYPE_VALUES).optional(),
+      signedAt: z.string().trim().min(1).optional().nullable(), expiresAt: z.string().trim().min(1).optional().nullable(),
+      sellerRequestedPrice: z.coerce.number().positive().optional().nullable(), recommendedPriceMin: z.coerce.number().positive().optional().nullable(), recommendedPriceMax: z.coerce.number().positive().optional().nullable(), agreedListingPrice: z.coerce.number().positive().optional().nullable(),
+      pricingRationale: optionalText(4000), pricingDiscussedAt: z.string().trim().min(1).optional().nullable(), priceReviewAt: z.string().trim().min(1).optional().nullable(), sellerObjections: optionalText(4000), mandateStartAt: z.string().trim().min(1).optional().nullable(),
+      documentStatus: z.enum(SELLER_MANDATE_DOCUMENT_STATUS_VALUES), documentName: optionalText(255), privateStorageReference: optionalText(500), documentDate: z.string().trim().min(1).optional().nullable(),
+      requirements: mandateRequirementsSchema, nextAction: z.string().trim().min(1).max(255),
+    }).superRefine((input, context) => {
+      if (input.recommendedPriceMin && input.recommendedPriceMax && input.recommendedPriceMin > input.recommendedPriceMax) context.addIssue({ code: z.ZodIssueCode.custom, path: ['recommendedPriceMax'], message: 'Recommended maximum must be at least the recommended minimum.' });
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDatabase(); const user = requireUser(ctx); const scope = await getSellerProspectActorScope(db, user);
+      const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
+      if (!['qualified', 'mandate_won'].includes(String(prospect.stage))) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Qualify the seller before starting mandate operations.' });
+      const signedAt = parseOptionalTimestamp(input.signedAt); const expiresAt = parseOptionalTimestamp(input.expiresAt);
+      if (expiresAt && signedAt && new Date(expiresAt).getTime() <= new Date(signedAt).getTime()) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mandate expiry must be after signing.' });
+      const storageReference = input.privateStorageReference || null;
+      if (storageReference && !isAgencyPrivateMandateStorageReference(storageReference, scope.agencyId)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mandate document reference must be an agency-private mandate storage reference.' });
+      const candidate = { status: input.status, requirements: input.requirements, pricingDiscussedAt: parseOptionalTimestamp(input.pricingDiscussedAt), agreedListingPrice: input.agreedListingPrice, documentStatus: input.documentStatus };
+      const readiness = getMandateReadiness(candidate, { ...prospect, mandateType: input.mandateType || prospect.mandateType, agreedAskingPrice: input.agreedListingPrice || prospect.agreedAskingPrice, mandateSignedAt: signedAt || prospect.mandateSignedAt, mandateExpiresAt: expiresAt || prospect.mandateExpiresAt });
+      if (input.status === 'listing_ready' && !readiness.ready) throw new TRPCError({ code: 'BAD_REQUEST', message: `Complete mandate requirements before declaring listing ready: ${readiness.missing.join(', ')}` });
+      const now = nowAsDbTimestamp();
+      await db.transaction(async (tx: any) => {
+        const values: any = { agencyId: scope.agencyId, sellerProspectId: prospect.id, status: input.status, sellerRequestedPrice: input.sellerRequestedPrice == null ? null : input.sellerRequestedPrice.toFixed(2), recommendedPriceMin: input.recommendedPriceMin == null ? null : input.recommendedPriceMin.toFixed(2), recommendedPriceMax: input.recommendedPriceMax == null ? null : input.recommendedPriceMax.toFixed(2), agreedListingPrice: input.agreedListingPrice == null ? null : input.agreedListingPrice.toFixed(2), pricingRationale: input.pricingRationale, pricingDiscussedAt: candidate.pricingDiscussedAt, priceReviewAt: parseOptionalTimestamp(input.priceReviewAt), sellerObjections: input.sellerObjections, mandateStartAt: parseOptionalTimestamp(input.mandateStartAt), documentStatus: input.documentStatus, documentName: input.documentName, privateStorageReference: storageReference, documentDate: parseOptionalTimestamp(input.documentDate), requirements: input.requirements, nextAction: input.nextAction, listingReadyAt: input.status === 'listing_ready' ? now : null, updatedAt: now };
+        await tx.insert(sellerMandateOperations).values(values).onDuplicateKeyUpdate({ set: values });
+        await tx.update(sellerProspects).set({ stage: input.status === 'listing_ready' ? 'mandate_won' : prospect.stage, mandateType: input.mandateType || prospect.mandateType, mandateSignedAt: signedAt || prospect.mandateSignedAt, mandateExpiresAt: expiresAt || prospect.mandateExpiresAt, agreedAskingPrice: input.agreedListingPrice == null ? prospect.agreedAskingPrice : input.agreedListingPrice.toFixed(2), nextAction: input.nextAction, updatedAt: now }).where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
+        await tx.insert(sellerProspectActivities).values({ agencyId: scope.agencyId, sellerProspectId: prospect.id, actorUserId: user.id, activityType: 'mandate_updated', description: `Mandate operations updated: ${input.status.replace(/_/g, ' ')}.`, metadata: { status: input.status, readiness }, createdAt: now });
+      });
+      await logCanvassingAudit({ ctx, userId: user.id, action: 'canvassing.seller_mandate_operations_updated', sellerProspectId: prospect.id, agencyId: scope.agencyId, metadata: { status: input.status } });
+      return { success: true, readiness };
+    }),
+
+  addMandateComparable: agentProcedure
+    .input(z.object({ sellerProspectId: z.number().int().positive(), reference: z.string().trim().min(1).max(500), propertyType: optionalText(100), area: optionalText(200), price: z.coerce.number().positive().optional().nullable(), priceKind: z.enum(['asking', 'selling', 'other']).default('other'), notes: optionalText(2000) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDatabase(); const scope = await getSellerProspectActorScope(db, requireUser(ctx)); const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
+      const [operation] = await db.select({ id: sellerMandateOperations.id }).from(sellerMandateOperations).where(and(eq(sellerMandateOperations.sellerProspectId, prospect.id), eq(sellerMandateOperations.agencyId, scope.agencyId))).limit(1);
+      if (!operation) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Save mandate operations before adding private comparable references.' });
+      const [result] = await db.insert(sellerMandateComparables).values({ agencyId: scope.agencyId, mandateOperationId: operation.id, reference: input.reference, propertyType: input.propertyType, area: input.area, price: input.price == null ? null : input.price.toFixed(2), priceKind: input.priceKind, notes: input.notes });
+      return { comparableId: Number(result.insertId) };
+    }),
+
+  removeMandateComparable: agentProcedure
+    .input(z.object({ sellerProspectId: z.number().int().positive(), comparableId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDatabase();
+      const scope = await getSellerProspectActorScope(db, requireUser(ctx));
+      const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
+      const [operation] = await db.select({ id: sellerMandateOperations.id }).from(sellerMandateOperations)
+        .where(and(eq(sellerMandateOperations.sellerProspectId, prospect.id), eq(sellerMandateOperations.agencyId, scope.agencyId))).limit(1);
+      if (!operation) throw new TRPCError({ code: 'NOT_FOUND', message: 'Mandate operations not found.' });
+      const [comparable] = await db.select({ id: sellerMandateComparables.id }).from(sellerMandateComparables).where(and(
+        eq(sellerMandateComparables.id, input.comparableId),
+        eq(sellerMandateComparables.mandateOperationId, operation.id),
+        eq(sellerMandateComparables.agencyId, scope.agencyId),
+      )).limit(1);
+      if (!comparable) throw new TRPCError({ code: 'NOT_FOUND', message: 'Private comparable not found.' });
+      await db.delete(sellerMandateComparables).where(eq(sellerMandateComparables.id, comparable.id));
+      return { success: true };
     }),
 
   updateMandate: agentProcedure
