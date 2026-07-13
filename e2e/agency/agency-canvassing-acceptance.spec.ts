@@ -131,6 +131,16 @@ async function cleanupCreatedProspects() {
     const values = [...ids];
     const placeholders = values.map(() => '?').join(', ');
     await connection.execute(
+      `DELETE comparable FROM seller_mandate_comparables AS comparable
+       INNER JOIN seller_mandate_operations AS operation ON operation.id = comparable.mandate_operation_id
+       WHERE operation.seller_prospect_id IN (${placeholders})`,
+      values,
+    );
+    await connection.execute(
+      `DELETE FROM seller_mandate_operations WHERE seller_prospect_id IN (${placeholders})`,
+      values,
+    );
+    await connection.execute(
       `DELETE FROM seller_prospect_activities WHERE seller_prospect_id IN (${placeholders})`,
       values,
     );
@@ -240,18 +250,54 @@ test.describe.serial('agency canvassing browser acceptance', () => {
     await dialog.getByRole('button', { name: 'Update stage', exact: true }).click();
     await expect(dialog.getByLabel('Pipeline stage')).toContainText('Qualified');
 
+    await dialog.getByRole('button', { name: 'Save mandate operations', exact: true }).click();
+    await expect(dialog.getByText(/Not listing-ready: .*sellerIdentityRecorded/)).toBeVisible();
+    await dialog.getByLabel('Comparable reference').fill('Private browser comparable');
+    await dialog.getByLabel('Comparable price').fill('2720000');
+    await dialog.getByLabel('Comparable notes').fill('Manual, unverified comparable evidence.');
+    await dialog.getByRole('button', { name: 'Add private comparable', exact: true }).click();
+    await expect(dialog.getByText('1 private comparable reference(s) recorded.')).toBeVisible();
+
+    await dialog.getByLabel('Seller requested price').fill('2900000');
+    await dialog.getByLabel('Recommended minimum').fill('2650000');
+    await dialog.getByLabel('Recommended maximum').fill('2800000');
     await dialog.getByLabel('Agreed asking price').fill('2750000');
+    await dialog.getByLabel('Pricing discussed at').fill(toLocalDateTimeInput(new Date()));
     await dialog.getByLabel('Mandate signed at').fill(toLocalDateTimeInput(new Date()));
     await dialog.getByLabel('Mandate expires at').fill(toLocalDateTimeInput(new Date(Date.now() + 90 * 86_400_000)));
+    await dialog.getByLabel('Pricing rationale').fill('Manual, unverified pricing discussion for browser acceptance.');
+    await dialog.getByLabel('Seller concerns').fill('Seller would like to review early activity.');
+    await dialog.getByRole('combobox', { name: 'Mandate document status' }).click();
+    await page.getByRole('option', { name: 'Signed', exact: true }).click();
+    await dialog.getByLabel('Mandate document name').fill('private-mandate.pdf');
+    await dialog.getByLabel('Private storage reference').fill(`private/agency-${createdProspect.agencyId}/mandates/${sellerProspectId}.pdf`);
     for (const label of [
-      'Pricing agreed',
-      'Seller identity confirmed',
-      'Property details confirmed',
-      'Mandate evidence recorded',
+      'Seller identity / ownership recorded',
+      'Property address confirmed',
+      'Contact details confirmed',
+      'Mandate type selected',
+      'Pricing discussion completed',
+      'Agreed price recorded',
+      'Mandate document status recorded',
+      'Disclosure status recorded',
+      'Listing-media plan recorded',
+      'Access arrangements recorded',
+      'Responsible agent confirmed',
+      'Next action recorded',
     ]) {
       await dialog.getByRole('checkbox', { name: label }).check();
     }
-    await dialog.getByRole('button', { name: 'Record mandate won', exact: true }).click();
+    await dialog.getByLabel('Mandate status').click();
+    await page.getByRole('option', { name: 'Listing Ready', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Save mandate operations', exact: true }).click();
+    await expect(dialog.getByRole('button', { name: 'Start listing', exact: true })).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.goto('/agency/my-day');
+    await expect(page.getByRole('heading', { name: 'Mandate Actions', exact: true })).toBeVisible();
+    await expect(page.getByText(ownerName, { exact: true })).toHaveCount(2);
+    await page.goto('/agency/canvassing');
+    await followUpQueue.getByText(ownerName, { exact: true }).click();
     await expect(dialog.getByRole('button', { name: 'Start listing', exact: true })).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Start listing', exact: true }).click();

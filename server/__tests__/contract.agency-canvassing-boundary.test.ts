@@ -9,10 +9,12 @@ import {
   SELLER_PROSPECT_MANDATE_TYPE_VALUES,
   SELLER_PROSPECT_STAGE_VALUES,
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
+  sellerMandateComparables,
+  sellerMandateOperations,
   sellerProspectActivities,
   sellerProspects,
 } from '../../drizzle/schema';
-import { SELLER_PROSPECT_LISTING_HANDOFF_STAGES } from '../services/sellerProspectAccessService';
+import { getMandateReadiness, SELLER_PROSPECT_LISTING_HANDOFF_STAGES } from '../services/sellerProspectAccessService';
 
 const repoRoot = process.cwd();
 const readRepoFile = (relativePath: string) =>
@@ -62,6 +64,7 @@ describe('agency canvassing boundary contract', () => {
       'client/src/features/agency/viewings/AgencyViewingsWorkspace.tsx',
     );
     const migration = readRepoFile('server/migrations/0067_close_seller_acquisition_loop.sql');
+    const mandateMigration = readRepoFile('server/migrations/0069_create_agency_mandate_operations_mvp.sql');
 
     expect(agencyRouter).toContain('overdueSellerFollowUps');
     expect(agencyRouter).toContain('dueTodaySellerFollowUps');
@@ -69,5 +72,18 @@ describe('agency canvassing boundary contract', () => {
     expect(workspace).toContain('Seller Follow-ups Due Today');
     expect(migration).toContain('first_contacted_at');
     expect(migration).toContain('mandate_checklist');
+    expect(getTableName(sellerMandateOperations)).toBe('seller_mandate_operations');
+    expect(getTableName(sellerMandateComparables)).toBe('seller_mandate_comparables');
+    expect(mandateMigration).toContain('private_storage_reference');
+    expect(agencyRouter).toContain('mandateWork');
+  });
+
+  it('does not permit listing readiness from incomplete private mandate evidence', () => {
+    const readiness = getMandateReadiness(
+      { requirements: {}, documentStatus: 'pending', status: 'preparing' },
+      { mandateType: 'sole', mandateSignedAt: null, mandateExpiresAt: null, agreedAskingPrice: null },
+    );
+    expect(readiness.ready).toBe(false);
+    expect(readiness.missing).toEqual(expect.arrayContaining(['mandateDocumentRecorded', 'agreedPriceRecorded']));
   });
 });
