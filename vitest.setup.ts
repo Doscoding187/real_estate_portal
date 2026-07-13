@@ -123,6 +123,17 @@ beforeAll(async () => {
               );
             };
 
+            const hasCommissionSettlementSchema = async () =>
+              (await queryCount(`
+                SELECT COUNT(*) AS c
+                FROM information_schema.tables
+                WHERE table_schema = DATABASE()
+                  AND table_name IN (
+                    'agency_commission_settlements',
+                    'agency_commission_settlement_payments'
+                  )
+              `)) === 2;
+
             try {
               const [lockRows] = await connection.query(
                 `SELECT GET_LOCK('${lockName}', 180) AS lock_acquired`,
@@ -133,7 +144,8 @@ beforeAll(async () => {
                 throw new Error('Could not acquire migration lock for test DB setup');
               }
 
-              const readyBefore = await hasCanonicalShowingsSchema();
+              const readyBefore =
+                (await hasCanonicalShowingsSchema()) && (await hasCommissionSettlementSchema());
               if (!readyBefore) {
                 const { runSqlMigrations } = await import('./server/migrations/runSqlMigrations');
                 await runSqlMigrations({
@@ -142,9 +154,9 @@ beforeAll(async () => {
               }
 
               const readyAfter = await hasCanonicalShowingsSchema();
-              if (!readyAfter) {
+              if (!readyAfter || !(await hasCommissionSettlementSchema())) {
                 throw new Error(
-                  'Canonical showings schema is still missing after running SQL migrations',
+                  'Required agency workflow schema is still missing after running SQL migrations',
                 );
               }
 
