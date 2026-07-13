@@ -138,6 +138,16 @@ export const AGENCY_COMMISSION_VAT_TREATMENT_VALUES = [
   'not_applicable',
 ] as const;
 export const AGENCY_COMMISSION_STATUS_VALUES = ['estimated', 'payable', 'paid', 'cancelled'] as const;
+export const AGENCY_COMMISSION_SETTLEMENT_STATUS_VALUES = [
+  'forecast',
+  'awaiting_completion',
+  'awaiting_payment',
+  'partially_received',
+  'received',
+  'reconciliation_required',
+  'disputed',
+  'cancelled',
+] as const;
 
 export const agencyDeals = mysqlTable(
   'agency_deals',
@@ -353,6 +363,69 @@ export const agencyTransactions = mysqlTable(
     index('idx_agency_transactions_agency_status').on(table.agencyId, table.status),
     index('idx_agency_transactions_deadline').on(table.agencyId, table.nextDeadline),
     index('idx_agency_transactions_commission').on(table.agencyId, table.commissionStatus),
+  ],
+);
+
+// A transaction owns the commercial snapshot; this record owns its settlement lifecycle.
+// The snapshot is deliberately copied when an offer is accepted so later configuration changes
+// cannot rewrite a historical commission position.
+export const agencyCommissionSettlements = mysqlTable(
+  'agency_commission_settlements',
+  {
+    id: int().autoincrement().primaryKey(),
+    agencyId: int('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'cascade' }),
+    transactionId: int('transaction_id')
+      .notNull()
+      .references(() => agencyTransactions.id, { onDelete: 'cascade' }),
+    responsibleAgentId: int('responsible_agent_id').references(() => agents.id, {
+      onDelete: 'set null',
+    }),
+    expectedCommission: decimal('expected_commission', { precision: 15, scale: 2 }).notNull(),
+    agentShare: decimal('agent_share', { precision: 15, scale: 2 }).notNull(),
+    agencyShare: decimal('agency_share', { precision: 15, scale: 2 }).notNull(),
+    expectedPaymentDate: timestamp('expected_payment_date', { mode: 'string' }),
+    status: mysqlEnum(
+      'status',
+      AGENCY_COMMISSION_SETTLEMENT_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('forecast')
+      .notNull(),
+    varianceReason: text('variance_reason'),
+    approvedByUserId: int('approved_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    approvedAt: timestamp('approved_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_agency_commission_settlement_transaction').on(table.transactionId),
+    index('idx_agency_commission_settlement_status').on(table.agencyId, table.status),
+    index('idx_agency_commission_settlement_agent').on(table.agencyId, table.responsibleAgentId),
+    index('idx_agency_commission_settlement_expected_date').on(table.agencyId, table.expectedPaymentDate),
+  ],
+);
+
+export const agencyCommissionSettlementPayments = mysqlTable(
+  'agency_commission_settlement_payments',
+  {
+    id: int().autoincrement().primaryKey(),
+    agencyId: int('agency_id')
+      .notNull()
+      .references(() => agencies.id, { onDelete: 'cascade' }),
+    settlementId: int('settlement_id')
+      .notNull()
+      .references(() => agencyCommissionSettlements.id, { onDelete: 'cascade' }),
+    amountReceived: decimal('amount_received', { precision: 15, scale: 2 }).notNull(),
+    receivedAt: timestamp('received_at', { mode: 'string' }).notNull(),
+    reference: varchar('reference', { length: 160 }),
+    note: text('note'),
+    recordedByUserId: int('recorded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    index('idx_agency_commission_payment_settlement').on(table.agencyId, table.settlementId),
+    index('idx_agency_commission_payment_received_at').on(table.agencyId, table.receivedAt),
   ],
 );
 

@@ -15,6 +15,7 @@ describe('agency deal engine contract', () => {
   const router = readRepoFile('server/agencyRouter.ts');
   const workspace = readRepoFile('client/src/features/agency/transactions/AgencyTransactionsWorkspace.tsx');
   const myDay = readRepoFile('client/src/features/agency/viewings/AgencyViewingsWorkspace.tsx');
+  const commissionWorkspace = readRepoFile('client/src/features/agency/commission/AgencyCommissionWorkspace.tsx');
 
   it('stores deals as one connected commercial record with versioned offers', () => {
     for (const tableName of [
@@ -80,6 +81,25 @@ describe('agency deal engine contract', () => {
       agencyShare: 52_800,
       agentShare: 35_200,
     });
+  });
+
+  it('keeps partial receipt and variance states deterministic from the immutable forecast', () => {
+    const { settlementStatusFromPayments } = __agencyDealEngineTestHooks;
+    expect(settlementStatusFromPayments(88_000, 0)).toBe('awaiting_payment');
+    expect(settlementStatusFromPayments(88_000, 20_000)).toBe('partially_received');
+    expect(settlementStatusFromPayments(88_000, 88_000)).toBe('received');
+    expect(settlementStatusFromPayments(88_000, 88_001)).toBe('reconciliation_required');
+  });
+
+  it('uses canonical settlements for the operational commission workspace and statement', () => {
+    expect(router).toContain('getCommissionSettlements: agentProcedure');
+    expect(router).toContain('recordCommissionPayment: agencyAdminProcedure');
+    expect(router).toContain('resolveCommissionSettlementDispute: agencyAdminProcedure');
+    expect(commissionWorkspace).toContain('getCommissionSettlements.useQuery');
+    expect(commissionWorkspace).toContain('recordCommissionPayment.useMutation');
+    expect(commissionWorkspace).toContain('Operational commission statement');
+    expect(commissionWorkspace).toContain('My commission position');
+    expect(commissionWorkspace).toContain('Protected finance actions');
   });
 
   it('surfaces deal deadlines in My Day and the Transactions workspace', () => {

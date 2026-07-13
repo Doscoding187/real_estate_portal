@@ -29,6 +29,8 @@ import {
   agencyDeals,
   agencyDealOfferVersions,
   agencyTransactions,
+  agencyCommissionSettlements,
+  agencyCommissionSettlementPayments,
   agencyTransactionMilestones,
   agencyTransactionConditions,
   agencyTransactionParties,
@@ -358,6 +360,28 @@ const updateTransactionInputSchema = z.object({
   expectedPaymentDate: dateInputSchema,
   commissionStatus: commissionStatusSchema.optional(),
   note: z.string().trim().max(2000).optional(),
+});
+
+const recordCommissionPaymentInputSchema = z.object({
+  settlementId: z.number().int().positive(),
+  amountReceived: moneyInputSchema.refine(value => value > 0, 'Payment amount must be greater than zero'),
+  receivedAt: z.string().trim().min(10).max(80),
+  reference: z.string().trim().max(160).optional().nullable(),
+  note: z.string().trim().max(2000).optional().nullable(),
+  varianceReason: z.string().trim().max(2000).optional().nullable(),
+});
+
+const updateCommissionSettlementStatusInputSchema = z.object({
+  settlementId: z.number().int().positive(),
+  // Receipt-derived statuses are deliberately not writable: they are computed from the
+  // append-only receipt history. Finance can only raise or cancel an exception.
+  status: z.enum(['disputed', 'cancelled']),
+  varianceReason: z.string().trim().min(2).max(2000).optional(),
+});
+
+const resolveCommissionDisputeInputSchema = z.object({
+  settlementId: z.number().int().positive(),
+  resolutionNote: z.string().trim().min(2).max(2000),
 });
 
 type LeadStatus = z.infer<typeof leadStatusSchema>;
@@ -2250,6 +2274,13 @@ function calculateCommission(input: {
   };
 }
 
+function settlementStatusFromPayments(expectedCommission: number, amountReceived: number) {
+  if (amountReceived <= 0) return 'awaiting_payment' as const;
+  if (amountReceived < expectedCommission) return 'partially_received' as const;
+  if (amountReceived === expectedCommission) return 'received' as const;
+  return 'reconciliation_required' as const;
+}
+
 function workflowTemplates(transactionType: DealTransactionType) {
   if (transactionType === 'rental') {
     return {
@@ -2805,6 +2836,7 @@ async function getDealWorkspaceRows(input: {
 
 export const __agencyDealEngineTestHooks = {
   calculateCommission,
+  settlementStatusFromPayments,
   normalizeOfferTerms,
   workflowTemplates,
 };
@@ -5676,6 +5708,17 @@ export const agencyRouter = router({
         } as any);
         transactionId = insertResultId(transactionInsert);
 
+        await tx.insert(agencyCommissionSettlements).values({
+          agencyId,
+          transactionId,
+          responsibleAgentId: deal.responsibleAgentId,
+          expectedCommission: toRequiredDecimalString(commission.expectedCommission),
+          agentShare: toRequiredDecimalString(commission.agentShare),
+          agencyShare: toRequiredDecimalString(commission.agencyShare),
+          expectedPaymentDate: parseOptionalDbTimestamp(input.expectedPaymentDate),
+          status: 'forecast',
+        } as any);
+
         await tx.insert(agencyTransactionMilestones).values(
           template.milestones.map((milestone, index) => ({
             agencyId,
@@ -6090,6 +6133,22 @@ export const agencyRouter = router({
             ),
           );
 
+        if (input.status === 'completed' || input.status === 'cancelled') {
+          await tx
+            .update(agencyCommissionSettlements)
+            .set({
+              status: input.status === 'completed' ? 'awaiting_payment' : 'cancelled',
+              updatedAt: now,
+            } as any)
+            .where(
+              and(
+                eq(agencyCommissionSettlements.agencyId, agencyId),
+                eq(agencyCommissionSettlements.transactionId, transaction.id),
+                inArray(agencyCommissionSettlements.status, ['forecast', 'awaiting_completion'] as any),
+              ),
+            );
+        }
+
         await tx
           .update(agencyDeals)
           .set({
@@ -6128,6 +6187,273 @@ export const agencyRouter = router({
       });
 
       return { success: true };
+    }),
+
+  getCommissionSettlements: agentProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+    const user = requireUser(ctx);
+    const agencyId = requireAgencyId(user);
+    const ownAgent = user.role === 'agent'
+      ? await getApprovedAgentProfileForUser(db, agencyId, user.id)
+      : null;
+    if (user.role === 'agent' && !ownAgent) return [];
+
+    const rows = await db
+      .select({
+        settlement: agencyCommissionSettlements,
+        transaction: agencyTransactions,
+        deal: agencyDeals,
+        listing: listings,
+        property: properties,
+        agent: agents,
+      })
+      .from(agencyCommissionSettlements)
+      .innerJoin(agencyTransactions, eq(agencyCommissionSettlements.transactionId, agencyTransactions.id))
+      .innerJoin(agencyDeals, eq(agencyTransactions.dealId, agencyDeals.id))
+      .leftJoin(listings, eq(agencyDeals.listingId, listings.id))
+      .leftJoin(properties, eq(agencyDeals.propertyId, properties.id))
+      .leftJoin(agents, eq(agencyCommissionSettlements.responsibleAgentId, agents.id))
+      .where(
+        and(
+          eq(agencyCommissionSettlements.agencyId, agencyId),
+          user.role === 'agent'
+            ? eq(agencyCommissionSettlements.responsibleAgentId, ownAgent!.id)
+            : undefined,
+        ),
+      )
+      .orderBy(asc(agencyCommissionSettlements.expectedPaymentDate), desc(agencyCommissionSettlements.createdAt));
+    if (!rows.length) return [];
+
+    const settlementIds = rows.map(row => row.settlement.id);
+    const payments = await db
+      .select()
+      .from(agencyCommissionSettlementPayments)
+      .where(
+        and(
+          eq(agencyCommissionSettlementPayments.agencyId, agencyId),
+          inArray(agencyCommissionSettlementPayments.settlementId, settlementIds),
+        ),
+      )
+      .orderBy(asc(agencyCommissionSettlementPayments.receivedAt));
+    const paymentsBySettlement = new Map<number, typeof payments>();
+    payments.forEach(payment => {
+      paymentsBySettlement.set(payment.settlementId, [
+        ...(paymentsBySettlement.get(payment.settlementId) || []),
+        payment,
+      ]);
+    });
+
+    return rows.map(({ settlement, transaction, deal, listing, property, agent }) => {
+      const settlementPayments = paymentsBySettlement.get(settlement.id) || [];
+      const amountReceived = settlementPayments.reduce(
+        (total, payment) => total + decimalToNumber(payment.amountReceived),
+        0,
+      );
+      const expectedCommission = decimalToNumber(settlement.expectedCommission);
+      return {
+        ...settlement,
+        expectedCommission,
+        agentShare: decimalToNumber(settlement.agentShare),
+        agencyShare: decimalToNumber(settlement.agencyShare),
+        amountReceived: Number(amountReceived.toFixed(2)),
+        variance: Number((amountReceived - expectedCommission).toFixed(2)),
+        overdue:
+          Boolean(settlement.expectedPaymentDate) &&
+          ['awaiting_payment', 'partially_received'].includes(String(settlement.status)) &&
+          new Date(String(settlement.expectedPaymentDate)).getTime() < Date.now(),
+        transaction: mapTransaction(transaction),
+        deal: { id: deal.id, transactionType: deal.transactionType },
+        listing: mapDealListing(listing),
+        property: mapDealProperty(property),
+        agent: mapDealAgent(agent),
+        payments: settlementPayments.map(payment => ({
+          ...payment,
+          amountReceived: decimalToNumber(payment.amountReceived),
+        })),
+      };
+    });
+  }),
+
+  recordCommissionPayment: agencyAdminProcedure
+    .input(recordCommissionPaymentInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const [settlement] = await db
+        .select()
+        .from(agencyCommissionSettlements)
+        .where(and(eq(agencyCommissionSettlements.id, input.settlementId), eq(agencyCommissionSettlements.agencyId, agencyId)))
+        .limit(1);
+      if (!settlement) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
+      if (['cancelled', 'disputed'].includes(String(settlement.status))) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Resolve the settlement status before recording a payment.' });
+      }
+
+      const receivedAt = parseOptionalDbTimestamp(input.receivedAt);
+      if (!receivedAt) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A valid received date is required.' });
+      const transaction = await requireAgencyTransaction(db, agencyId, settlement.transactionId);
+      let nextStatus: ReturnType<typeof settlementStatusFromPayments> = 'awaiting_payment';
+      let amountReceived = 0;
+      await db.transaction(async tx => {
+        await tx.insert(agencyCommissionSettlementPayments).values({
+          agencyId,
+          settlementId: settlement.id,
+          amountReceived: toRequiredDecimalString(input.amountReceived),
+          receivedAt,
+          reference: input.reference || null,
+          note: input.note || null,
+          recordedByUserId: user.id,
+        } as any);
+        const payments = await tx
+          .select({ amount: agencyCommissionSettlementPayments.amountReceived })
+          .from(agencyCommissionSettlementPayments)
+          .where(and(eq(agencyCommissionSettlementPayments.agencyId, agencyId), eq(agencyCommissionSettlementPayments.settlementId, settlement.id)));
+        amountReceived = payments.reduce((total, payment) => total + decimalToNumber(payment.amount), 0);
+        nextStatus = settlementStatusFromPayments(decimalToNumber(settlement.expectedCommission), amountReceived);
+        if (nextStatus === 'reconciliation_required' && !input.varianceReason && !settlement.varianceReason) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'A variance reason is required when received commission exceeds the forecast.' });
+        }
+        const now = nowAsDbTimestamp();
+        await tx.update(agencyCommissionSettlements).set({
+          status: nextStatus,
+          varianceReason: input.varianceReason === undefined ? settlement.varianceReason : input.varianceReason,
+          approvedByUserId: user.id,
+          approvedAt: now,
+          updatedAt: now,
+        } as any).where(and(eq(agencyCommissionSettlements.id, settlement.id), eq(agencyCommissionSettlements.agencyId, agencyId)));
+        await tx.update(agencyTransactions).set({
+          commissionStatus: nextStatus === 'received' ? 'paid' : transaction.commissionStatus,
+          paidDate: nextStatus === 'received' ? receivedAt : transaction.paidDate,
+          updatedByUserId: user.id,
+          updatedAt: now,
+        } as any).where(and(eq(agencyTransactions.id, transaction.id), eq(agencyTransactions.agencyId, agencyId)));
+        await createTransactionActivity({
+          db: tx as AgencyDb,
+          agencyId,
+          transactionId: transaction.id,
+          userId: user.id,
+          eventType: 'commission_payment_recorded',
+          description: `Commission receipt of ${input.amountReceived.toFixed(2)} recorded; settlement is ${nextStatus.replace(/_/g, ' ')}.`,
+          metadata: { settlementId: settlement.id, amountReceived, expectedCommission: decimalToNumber(settlement.expectedCommission), nextStatus },
+        });
+      });
+      return { success: true, amountReceived: Number(amountReceived.toFixed(2)), status: nextStatus };
+    }),
+
+  updateCommissionSettlementStatus: agencyAdminProcedure
+    .input(updateCommissionSettlementStatusInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const [settlement] = await db
+        .select()
+        .from(agencyCommissionSettlements)
+        .where(and(eq(agencyCommissionSettlements.id, input.settlementId), eq(agencyCommissionSettlements.agencyId, agencyId)))
+        .limit(1);
+      if (!settlement) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
+      if (String(settlement.status) === 'received') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A received settlement cannot be changed without a reconciliation workflow.' });
+      }
+      if (input.status === 'disputed' && !input.varianceReason) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'A dispute reason is required.' });
+      }
+
+      await db.transaction(async tx => {
+        if (input.status === 'cancelled') {
+          const [paymentCount] = await tx
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(agencyCommissionSettlementPayments)
+            .where(and(
+              eq(agencyCommissionSettlementPayments.agencyId, agencyId),
+              eq(agencyCommissionSettlementPayments.settlementId, settlement.id),
+            ));
+          if (Number(paymentCount?.count || 0) > 0) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: 'A settlement with receipts cannot be cancelled.' });
+          }
+        }
+        const now = nowAsDbTimestamp();
+        await tx.update(agencyCommissionSettlements).set({
+          status: input.status,
+          varianceReason: input.status === 'disputed' ? input.varianceReason : settlement.varianceReason,
+          approvedByUserId: user.id,
+          approvedAt: now,
+          updatedAt: now,
+        } as any).where(and(eq(agencyCommissionSettlements.id, settlement.id), eq(agencyCommissionSettlements.agencyId, agencyId)));
+        if (input.status === 'cancelled') {
+          await tx.update(agencyTransactions).set({
+            commissionStatus: 'cancelled',
+            updatedByUserId: user.id,
+            updatedAt: now,
+          } as any).where(and(eq(agencyTransactions.id, settlement.transactionId), eq(agencyTransactions.agencyId, agencyId)));
+        }
+        await createTransactionActivity({
+          db: tx as AgencyDb,
+          agencyId,
+          transactionId: settlement.transactionId,
+          userId: user.id,
+          eventType: `commission_settlement_${input.status}`,
+          description: `Commission settlement marked ${input.status.replace(/_/g, ' ')}.${input.varianceReason ? ` Reason: ${input.varianceReason}` : ''}`,
+          metadata: { settlementId: settlement.id, status: input.status, varianceReason: input.varianceReason || null },
+        });
+      });
+      return { success: true, status: input.status };
+    }),
+
+  resolveCommissionSettlementDispute: agencyAdminProcedure
+    .input(resolveCommissionDisputeInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const [settlement] = await db
+        .select()
+        .from(agencyCommissionSettlements)
+        .where(and(eq(agencyCommissionSettlements.id, input.settlementId), eq(agencyCommissionSettlements.agencyId, agencyId)))
+        .limit(1);
+      if (!settlement) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission settlement not found' });
+      if (String(settlement.status) !== 'disputed') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Only disputed settlements can be resolved.' });
+      }
+
+      const payments = await db
+        .select({ amount: agencyCommissionSettlementPayments.amountReceived })
+        .from(agencyCommissionSettlementPayments)
+        .where(and(
+          eq(agencyCommissionSettlementPayments.agencyId, agencyId),
+          eq(agencyCommissionSettlementPayments.settlementId, settlement.id),
+        ));
+      const amountReceived = payments.reduce((total, payment) => total + decimalToNumber(payment.amount), 0);
+      const nextStatus = settlementStatusFromPayments(decimalToNumber(settlement.expectedCommission), amountReceived);
+      const now = nowAsDbTimestamp();
+      await db.transaction(async tx => {
+        await tx.update(agencyCommissionSettlements).set({
+          status: nextStatus,
+          varianceReason: input.resolutionNote,
+          approvedByUserId: user.id,
+          approvedAt: now,
+          updatedAt: now,
+        } as any).where(and(eq(agencyCommissionSettlements.id, settlement.id), eq(agencyCommissionSettlements.agencyId, agencyId)));
+        await createTransactionActivity({
+          db: tx as AgencyDb,
+          agencyId,
+          transactionId: settlement.transactionId,
+          userId: user.id,
+          eventType: 'commission_dispute_resolved',
+          description: `Commission dispute resolved; settlement returned to ${nextStatus.replace(/_/g, ' ')}. ${input.resolutionNote}`,
+          metadata: { settlementId: settlement.id, amountReceived, nextStatus, resolutionNote: input.resolutionNote },
+        });
+      });
+      return { success: true, status: nextStatus };
     }),
 
   getMyDay: agentProcedure

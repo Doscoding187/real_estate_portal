@@ -16,6 +16,7 @@ import {
   agencyTransactionMilestones,
   agencyTransactionParties,
   agencyTransactions,
+  agencyCommissionSettlements,
   agents,
   leadActivities,
   leads,
@@ -360,6 +361,7 @@ async function seedAgencyFixture(label: string) {
     agencyId,
     outsideAgencyId,
     adminUserId: admin.userId,
+    agentUserId: agentUser.userId,
     outsideAdminUserId: outsideAdmin.userId,
     agentId,
     outsideAgentId,
@@ -608,6 +610,21 @@ describeWithDb('agency deal engine persisted workflow', () => {
     expect(Number(transaction.agentShare)).toBe(35_200);
     expect(transaction.commissionStatus).toBe('estimated');
 
+    const [settlement] = await db
+      .select()
+      .from(agencyCommissionSettlements)
+      .where(eq(agencyCommissionSettlements.transactionId, accepted.transactionId))
+      .limit(1);
+    expect(settlement).toMatchObject({
+      agencyId: seed.agencyId,
+      transactionId: accepted.transactionId,
+      responsibleAgentId: seed.agentId,
+      status: 'forecast',
+    });
+    expect(Number(settlement.expectedCommission)).toBe(88_000);
+    expect(Number(settlement.agentShare)).toBe(35_200);
+    expect(Number(settlement.agencyShare)).toBe(52_800);
+
     expect(
       await countRows(
         agencyTransactions,
@@ -725,6 +742,95 @@ describeWithDb('agency deal engine persisted workflow', () => {
       note: 'Completion update should not alter expected commission snapshot.',
     });
 
+    const [payableSettlement] = await db
+      .select()
+      .from(agencyCommissionSettlements)
+      .where(eq(agencyCommissionSettlements.transactionId, accepted.transactionId))
+      .limit(1);
+    expect(payableSettlement.status).toBe('awaiting_payment');
+
+    const agentCaller = createCaller({
+      id: seed.agentUserId,
+      role: 'agent',
+      agencyId: seed.agencyId,
+    });
+    expect(await agentCaller.getCommissionSettlements()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: payableSettlement.id,
+          expectedCommission: 88_000,
+          amountReceived: 0,
+          variance: -88_000,
+          status: 'awaiting_payment',
+        }),
+      ]),
+    );
+    await expect(
+      agentCaller.recordCommissionPayment({
+        settlementId: payableSettlement.id,
+        amountReceived: 20_000,
+        receivedAt: futureIso(1),
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(
+      outsideCaller.recordCommissionPayment({
+        settlementId: payableSettlement.id,
+        amountReceived: 20_000,
+        receivedAt: futureIso(1),
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(
+      caller.recordCommissionPayment({
+        settlementId: payableSettlement.id,
+        amountReceived: 20_000,
+        receivedAt: futureIso(1),
+        reference: 'FIRST-RECEIPT',
+      }),
+    ).resolves.toMatchObject({ status: 'partially_received', amountReceived: 20_000 });
+    await expect(
+      caller.updateCommissionSettlementStatus({
+        settlementId: payableSettlement.id,
+        status: 'disputed',
+        varianceReason: 'Conveyancer receipt confirmation is incomplete.',
+      }),
+    ).resolves.toMatchObject({ status: 'disputed' });
+    await expect(
+      caller.recordCommissionPayment({
+        settlementId: payableSettlement.id,
+        amountReceived: 68_000,
+        receivedAt: futureIso(2),
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      caller.resolveCommissionSettlementDispute({
+        settlementId: payableSettlement.id,
+        resolutionNote: 'Conveyancer confirmed the outstanding balance is due.',
+      }),
+    ).resolves.toMatchObject({ status: 'partially_received' });
+    await expect(
+      caller.recordCommissionPayment({
+        settlementId: payableSettlement.id,
+        amountReceived: 68_000,
+        receivedAt: futureIso(2),
+        reference: 'FINAL-RECEIPT',
+      }),
+    ).resolves.toMatchObject({ status: 'received', amountReceived: 88_000 });
+    expect(await agentCaller.getCommissionSettlements()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: payableSettlement.id,
+          amountReceived: 88_000,
+          variance: 0,
+          status: 'received',
+          payments: expect.arrayContaining([
+            expect.objectContaining({ amountReceived: 20_000, reference: 'FIRST-RECEIPT' }),
+            expect.objectContaining({ amountReceived: 68_000, reference: 'FINAL-RECEIPT' }),
+          ]),
+        }),
+      ]),
+    );
+
     const workspace = await caller.getDealWorkspace({ dealId: createdDeal.dealId, limit: 10 });
     expect(workspace).toHaveLength(1);
     expect(workspace[0].offers).toHaveLength(3);
@@ -755,10 +861,13 @@ describeWithDb('agency deal engine persisted workflow', () => {
         'milestone_completed',
         'condition_completed',
         'transaction_updated',
+        'commission_payment_recorded',
+        'commission_settlement_disputed',
+        'commission_dispute_resolved',
       ]),
     );
     expect(Number(workspace[0].transaction?.expectedCommission || 0)).toBe(88_000);
-    expect(workspace[0].transaction?.commissionStatus).toBe('payable');
+    expect(workspace[0].transaction?.commissionStatus).toBe('paid');
 
     const reloadedWorkspace = await caller.getDealWorkspace({ dealId: createdDeal.dealId, limit: 10 });
     expect(reloadedWorkspace[0].transaction?.activity?.map((item: any) => item.eventType)).toEqual(
