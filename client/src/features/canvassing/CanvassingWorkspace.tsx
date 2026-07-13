@@ -67,7 +67,9 @@ const STAGES = [
   'archived',
 ] as const;
 
-const EDITABLE_STAGES = STAGES.filter(stage => stage !== 'converted_to_listing');
+const EDITABLE_STAGES = STAGES.filter(
+  stage => stage !== 'converted_to_listing' && stage !== 'mandate_won',
+);
 const TERMINAL_STAGES = new Set(['converted_to_listing', 'not_interested', 'lost', 'archived']);
 const HANDOFF_STAGES = new Set(['qualified', 'mandate_won']);
 const METHODS = [
@@ -267,6 +269,20 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
     },
     onError: error => toast.error(error.message || 'Could not record activity'),
   });
+  const recordContactMutation = trpc.canvassing.recordContactAttempt.useMutation({
+    onSuccess: async () => {
+      toast.success('Seller contact attempt recorded');
+      await refresh();
+    },
+    onError: error => toast.error(error.message || 'Could not record seller contact'),
+  });
+  const updateMandateMutation = trpc.canvassing.updateMandate.useMutation({
+    onSuccess: async () => {
+      toast.success('Mandate details recorded');
+      await refresh();
+    },
+    onError: error => toast.error(error.message || 'Could not record mandate details'),
+  });
   const setFollowUpMutation = trpc.canvassing.setFollowUp.useMutation({
     onSuccess: async () => {
       toast.success('Follow-up scheduled');
@@ -368,6 +384,13 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
           value={dashboard?.scheduledFollowUps}
           detail="Active non-terminal reminders"
           tone="amber"
+        />
+        <MetricCard
+          icon={PhoneCall}
+          label="First contact"
+          value={dashboard?.contactedProspects}
+          detail={dashboard?.averageFirstContactMinutes == null ? 'No first-contact baseline yet' : `${dashboard.averageFirstContactMinutes} min average response`}
+          tone="sky"
         />
         <MetricCard
           icon={Handshake}
@@ -494,6 +517,9 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
                         <MapPin className="h-3.5 w-3.5 shrink-0" />
                         {locationLabel(prospect) || 'Location still to be recorded'}
                       </p>
+                      <p className="mt-1 truncate text-sm font-medium text-slate-700">
+                        Next: {prospect.nextAction || 'Record the next seller action'}
+                      </p>
                     </div>
                     <div className="text-sm text-slate-600">
                       <span className="block text-xs font-medium uppercase tracking-wide text-slate-400">Owner</span>
@@ -577,6 +603,8 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
         onAddActivity={(sellerProspectId, activityType, description) =>
           addActivityMutation.mutate({ sellerProspectId, activityType, description })
         }
+        onRecordContact={input => recordContactMutation.mutate(input as any)}
+        onUpdateMandate={input => updateMandateMutation.mutate(input as any)}
         onSetFollowUp={(sellerProspectId, nextFollowUp, note) =>
           setFollowUpMutation.mutate({ sellerProspectId, nextFollowUp, note })
         }
@@ -588,7 +616,8 @@ export function CanvassingWorkspace({ mode, onNavigate }: CanvassingWorkspacePro
         }
         pending={{
           stage: updateStageMutation.isPending,
-          activity: addActivityMutation.isPending,
+          activity: addActivityMutation.isPending || recordContactMutation.isPending,
+          mandate: updateMandateMutation.isPending,
           followUp: setFollowUpMutation.isPending || completeFollowUpMutation.isPending,
           assignment: assignMutation.isPending,
         }}
@@ -758,6 +787,8 @@ function ProspectDetailDialog({
   onNavigate,
   onStageChange,
   onAddActivity,
+  onRecordContact,
+  onUpdateMandate,
   onSetFollowUp,
   onCompleteFollowUp,
   onAssign,
@@ -772,10 +803,12 @@ function ProspectDetailDialog({
   onNavigate: (path: string) => void;
   onStageChange: (sellerProspectId: number, stage: string, outcome?: string) => void;
   onAddActivity: (sellerProspectId: number, activityType: 'note' | 'call' | 'email' | 'meeting', description: string) => void;
+  onRecordContact: (input: Record<string, unknown>) => void;
+  onUpdateMandate: (input: Record<string, unknown>) => void;
   onSetFollowUp: (sellerProspectId: number, nextFollowUp: string, note?: string) => void;
   onCompleteFollowUp: (sellerProspectId: number, note?: string) => void;
   onAssign: (sellerProspectId: number, agentId: number | null) => void;
-  pending: { stage: boolean; activity: boolean; followUp: boolean; assignment: boolean };
+  pending: { stage: boolean; activity: boolean; mandate: boolean; followUp: boolean; assignment: boolean };
 }) {
   const [nextStage, setNextStage] = useState('new');
   const [outcome, setOutcome] = useState('');
@@ -784,6 +817,22 @@ function ProspectDetailDialog({
   const [followUpAt, setFollowUpAt] = useState('');
   const [followUpNote, setFollowUpNote] = useState('');
   const [assignedAgentId, setAssignedAgentId] = useState('unassigned');
+  const [contactChannel, setContactChannel] = useState('call');
+  const [contactOutcome, setContactOutcome] = useState('reached');
+  const [contactSummary, setContactSummary] = useState('');
+  const [contactNextAction, setContactNextAction] = useState('');
+  const [contactFollowUpAt, setContactFollowUpAt] = useState('');
+  const [mandateType, setMandateType] = useState('sole');
+  const [mandateSignedAt, setMandateSignedAt] = useState('');
+  const [mandateExpiresAt, setMandateExpiresAt] = useState('');
+  const [agreedAskingPrice, setAgreedAskingPrice] = useState('');
+  const [mandateNextAction, setMandateNextAction] = useState('Create and complete listing draft');
+  const [mandateChecklist, setMandateChecklist] = useState({
+    pricingAgreed: false,
+    sellerIdentityConfirmed: false,
+    propertyDetailsConfirmed: false,
+    mandateRecorded: false,
+  });
 
   useEffect(() => {
     if (!prospect) return;
@@ -793,6 +842,20 @@ function ProspectDetailDialog({
     setFollowUpNote('');
     setActivityDescription('');
     setAssignedAgentId(prospect.assignedAgentId ? String(prospect.assignedAgentId) : 'unassigned');
+    setContactNextAction(prospect.nextAction || 'Continue seller conversation');
+    setContactFollowUpAt(formatLocalDateTimeInput(prospect.nextFollowUp));
+    setMandateType(prospect.mandateType || 'sole');
+    setMandateSignedAt(formatLocalDateTimeInput(prospect.mandateSignedAt));
+    setMandateExpiresAt(formatLocalDateTimeInput(prospect.mandateExpiresAt));
+    setAgreedAskingPrice(prospect.agreedAskingPrice ? String(prospect.agreedAskingPrice) : '');
+    setMandateChecklist(
+      prospect.mandateChecklist || {
+        pricingAgreed: false,
+        sellerIdentityConfirmed: false,
+        propertyDetailsConfirmed: false,
+        mandateRecorded: false,
+      },
+    );
   }, [prospect]);
 
   const canStartListing = Boolean(
@@ -848,13 +911,86 @@ function ProspectDetailDialog({
                     <div className="flex items-center gap-2"><CalendarClock className="h-4 w-4 text-slate-600" /><h4 className="font-semibold text-slate-900">Follow-up</h4></div>
                     <p className={cn('text-sm', isOverdueFollowUp(prospect.nextFollowUp) ? 'text-rose-700' : 'text-slate-600')}>{formatFollowUp(prospect.nextFollowUp)}</p>
                     {!terminal ? <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                      <Input type="datetime-local" value={followUpAt} onChange={event => setFollowUpAt(event.target.value)} />
+                      <Input aria-label="Seller follow-up at" type="datetime-local" value={followUpAt} onChange={event => setFollowUpAt(event.target.value)} />
                       <Button variant="outline" disabled={!followUpAt || pending.followUp} onClick={() => onSetFollowUp(prospect.id, new Date(followUpAt).toISOString(), followUpNote || undefined)}>{pending.followUp ? 'Saving…' : 'Schedule'}</Button>
                     </div> : null}
                     {!terminal ? <Input value={followUpNote} onChange={event => setFollowUpNote(event.target.value)} placeholder="Optional follow-up context" /> : null}
                     {!terminal && prospect.nextFollowUp ? <Button variant="secondary" className="gap-2" disabled={pending.followUp} onClick={() => onCompleteFollowUp(prospect.id, followUpNote || undefined)}><CheckCircle2 className="h-4 w-4" />Complete follow-up</Button> : null}
                   </CardContent>
                 </Card>
+
+                <Card className="border-slate-200 shadow-none">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-center gap-2"><PhoneCall className="h-4 w-4 text-slate-600" /><h4 className="font-semibold text-slate-900">Record contact attempt</h4></div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Channel">
+                        <Select value={contactChannel} onValueChange={setContactChannel} disabled={terminal}>
+                          <SelectTrigger aria-label="Contact channel"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {['call', 'whatsapp', 'email', 'door_knock', 'meeting', 'other'].map(item => <SelectItem key={item} value={item}>{titleCase(item)}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="Outcome">
+                        <Select value={contactOutcome} onValueChange={setContactOutcome} disabled={terminal}>
+                          <SelectTrigger aria-label="Contact outcome"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {['reached', 'replied', 'no_answer', 'voicemail', 'appointment_booked', 'follow_up_required', 'not_interested', 'invalid_contact', 'other'].map(item => <SelectItem key={item} value={item}>{titleCase(item)}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+                    <Field label="What happened?"><Textarea aria-label="Contact summary" value={contactSummary} onChange={event => setContactSummary(event.target.value)} disabled={terminal} placeholder="Record the contact result and useful context" /></Field>
+                    {!['not_interested', 'invalid_contact'].includes(contactOutcome) ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Required next action"><Input aria-label="Contact next action" value={contactNextAction} onChange={event => setContactNextAction(event.target.value)} disabled={terminal} /></Field>
+                        <Field label="Next follow-up"><Input aria-label="Contact next follow-up" type="datetime-local" value={contactFollowUpAt} onChange={event => setContactFollowUpAt(event.target.value)} disabled={terminal} /></Field>
+                      </div>
+                    ) : null}
+                    <Button
+                      disabled={terminal || pending.activity || !contactSummary.trim() || (!['not_interested', 'invalid_contact'].includes(contactOutcome) && !contactNextAction.trim()) || (contactOutcome === 'follow_up_required' && !contactFollowUpAt)}
+                      onClick={() => {
+                        onRecordContact({
+                          sellerProspectId: prospect.id,
+                          channel: contactChannel,
+                          outcome: contactOutcome,
+                          summary: contactSummary.trim(),
+                          nextAction: ['not_interested', 'invalid_contact'].includes(contactOutcome) ? undefined : contactNextAction.trim(),
+                          nextFollowUp: contactFollowUpAt ? new Date(contactFollowUpAt).toISOString() : undefined,
+                        });
+                        setContactSummary('');
+                      }}
+                    >{pending.activity ? 'Recording…' : 'Record contact and next action'}</Button>
+                  </CardContent>
+                </Card>
+
+                {['qualified', 'mandate_won'].includes(prospect.stage) ? (
+                  <Card className="border-emerald-200 shadow-none">
+                    <CardContent className="space-y-4 p-4">
+                      <div className="flex items-center gap-2"><Handshake className="h-4 w-4 text-emerald-700" /><h4 className="font-semibold text-slate-900">Mandate conversion checklist</h4></div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Field label="Mandate type"><Select value={mandateType} onValueChange={setMandateType}><SelectTrigger aria-label="Mandate type"><SelectValue /></SelectTrigger><SelectContent>{['sole', 'open', 'dual', 'auction', 'other'].map(item => <SelectItem key={item} value={item}>{titleCase(item)}</SelectItem>)}</SelectContent></Select></Field>
+                        <Field label="Agreed asking price"><Input aria-label="Agreed asking price" type="number" min="1" value={agreedAskingPrice} onChange={event => setAgreedAskingPrice(event.target.value)} /></Field>
+                        <Field label="Signed at"><Input aria-label="Mandate signed at" type="datetime-local" value={mandateSignedAt} onChange={event => setMandateSignedAt(event.target.value)} /></Field>
+                        <Field label="Expires at"><Input aria-label="Mandate expires at" type="datetime-local" value={mandateExpiresAt} onChange={event => setMandateExpiresAt(event.target.value)} /></Field>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {Object.entries({ pricingAgreed: 'Pricing agreed', sellerIdentityConfirmed: 'Seller identity confirmed', propertyDetailsConfirmed: 'Property details confirmed', mandateRecorded: 'Mandate evidence recorded' }).map(([key, label]) => (
+                          <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm">
+                            <input type="checkbox" checked={Boolean((mandateChecklist as any)[key])} onChange={event => setMandateChecklist(current => ({ ...current, [key]: event.target.checked }))} />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                      <Field label="Next action"><Input aria-label="Mandate next action" value={mandateNextAction} onChange={event => setMandateNextAction(event.target.value)} /></Field>
+                      <Button
+                        className="bg-emerald-700 hover:bg-emerald-800"
+                        disabled={pending.mandate || !mandateSignedAt || !mandateNextAction.trim() || Object.values(mandateChecklist).some(complete => !complete)}
+                        onClick={() => onUpdateMandate({ sellerProspectId: prospect.id, mandateType, signedAt: new Date(mandateSignedAt).toISOString(), expiresAt: mandateExpiresAt ? new Date(mandateExpiresAt).toISOString() : undefined, agreedAskingPrice: agreedAskingPrice ? Number(agreedAskingPrice) : undefined, checklist: mandateChecklist, nextAction: mandateNextAction.trim() })}
+                      >{pending.mandate ? 'Saving…' : 'Record mandate won'}</Button>
+                    </CardContent>
+                  </Card>
+                ) : null}
 
                 <Card className="border-slate-200 shadow-none">
                   <CardContent className="space-y-4 p-4">
@@ -874,7 +1010,7 @@ function ProspectDetailDialog({
 
               <div className="space-y-4">
                 <Card className="border-slate-200 shadow-none"><CardContent className="space-y-3 p-4"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Private contact</p><p className="font-medium text-slate-900">{prospect.ownerName || 'Name not recorded'}</p><p className="text-sm text-slate-600">{prospect.phone || 'No phone recorded'}</p><p className="text-sm text-slate-600">{prospect.email || 'No email recorded'}</p><p className="pt-2 text-xs leading-5 text-slate-500">This data is visible only inside the agency workspace and is not a marketing-consent record.</p></CardContent></Card>
-                <Card className="border-slate-200 shadow-none"><CardContent className="space-y-3 p-4"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Acquisition context</p><DetailRow label="Source" value={prospect.source || 'Not recorded'} /><DetailRow label="Method" value={titleCase(prospect.canvassingMethod)} /><DetailRow label="Property" value={titleCase(prospect.propertyType) || 'Not known'} /><DetailRow label="Priority" value={titleCase(prospect.priority)} /></CardContent></Card>
+                <Card className="border-slate-200 shadow-none"><CardContent className="space-y-3 p-4"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Acquisition context</p><DetailRow label="Source" value={prospect.source || 'Not recorded'} /><DetailRow label="Method" value={titleCase(prospect.canvassingMethod)} /><DetailRow label="Property" value={titleCase(prospect.propertyType) || 'Not known'} /><DetailRow label="Priority" value={titleCase(prospect.priority)} /><DetailRow label="Next action" value={prospect.nextAction || 'Missing'} /><DetailRow label="First contact" value={formatFollowUp(prospect.firstContactedAt)} /></CardContent></Card>
                 {isManager ? <Card className="border-slate-200 shadow-none"><CardContent className="space-y-3 p-4"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Agency assignment</p><Select value={assignedAgentId} onValueChange={setAssignedAgentId}><SelectTrigger className="w-full" aria-label="Assigned agent"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="unassigned">Unassigned</SelectItem>{agents.map(agent => <SelectItem key={agent.id} value={String(agent.id)}>{agent.name}</SelectItem>)}</SelectContent></Select><Button variant="outline" className="w-full" disabled={pending.assignment} onClick={() => onAssign(prospect.id, assignedAgentId === 'unassigned' ? null : Number(assignedAgentId))}>{pending.assignment ? 'Saving…' : 'Save assignment'}</Button></CardContent></Card> : null}
               </div>
             </div>

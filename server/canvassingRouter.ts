@@ -6,6 +6,9 @@ import {
   sellerProspectActivities,
   sellerProspects,
   SELLER_PROSPECT_ACTIVITY_TYPE_VALUES,
+  SELLER_PROSPECT_CONTACT_CHANNEL_VALUES,
+  SELLER_PROSPECT_CONTACT_OUTCOME_VALUES,
+  SELLER_PROSPECT_MANDATE_TYPE_VALUES,
   SELLER_PROSPECT_METHOD_VALUES,
   SELLER_PROSPECT_PRIORITY_VALUES,
   SELLER_PROSPECT_PROPERTY_TYPE_VALUES,
@@ -28,6 +31,8 @@ import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 const terminalStages = SELLER_PROSPECT_TERMINAL_STAGE_VALUES as unknown as [string, ...string[]];
 
 const stageSchema = z.enum(SELLER_PROSPECT_STAGE_VALUES);
+const contactChannelSchema = z.enum(SELLER_PROSPECT_CONTACT_CHANNEL_VALUES);
+const contactOutcomeSchema = z.enum(SELLER_PROSPECT_CONTACT_OUTCOME_VALUES);
 const optionalText = (maxLength: number) =>
   z
     .string()
@@ -58,6 +63,7 @@ const createSellerProspectSchema = z
     priority: z.enum(SELLER_PROSPECT_PRIORITY_VALUES).default('normal'),
     assignedAgentId: z.number().int().positive().optional().nullable(),
     nextFollowUp: z.string().trim().min(1).optional(),
+    nextAction: optionalText(255),
     initialNote: optionalText(2000),
   })
   .superRefine((input, context) => {
@@ -163,6 +169,10 @@ function parseFollowUp(value: string) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'Follow-up date is invalid.' });
   }
   return toDbTimestampRequired(parsed);
+}
+
+function parseOptionalTimestamp(value?: string | null) {
+  return value ? parseFollowUp(value) : null;
 }
 
 function parseDatabaseTimestamp(value: string | Date | null | undefined) {
@@ -388,10 +398,22 @@ export const canvassingRouter = router({
     let overdueFollowUps = 0;
     let scheduledFollowUps = 0;
     let unassigned = 0;
+    let missingNextAction = 0;
+    let contactedProspects = 0;
+    let totalFirstContactMinutes = 0;
 
     prospects.forEach((prospect: any) => {
       stageCounts[prospect.stage] = (stageCounts[prospect.stage] || 0) + 1;
       if (!prospect.assignedAgentId) unassigned += 1;
+      if (!isTerminalStage(prospect.stage) && !String(prospect.nextAction || '').trim()) {
+        missingNextAction += 1;
+      }
+      const createdAt = parseDatabaseTimestamp(prospect.createdAt);
+      const firstContactedAt = parseDatabaseTimestamp(prospect.firstContactedAt);
+      if (createdAt && firstContactedAt && firstContactedAt >= createdAt) {
+        contactedProspects += 1;
+        totalFirstContactMinutes += (firstContactedAt.getTime() - createdAt.getTime()) / 60_000;
+      }
       if (!prospect.nextFollowUp || isTerminalStage(prospect.stage)) return;
       scheduledFollowUps += 1;
       const dueAt = parseDatabaseTimestamp(prospect.nextFollowUp);
@@ -408,6 +430,11 @@ export const canvassingRouter = router({
       overdueFollowUps,
       scheduledFollowUps,
       unassigned: scope.isManager ? unassigned : 0,
+      missingNextAction,
+      contactedProspects,
+      averageFirstContactMinutes: contactedProspects
+        ? Math.round(totalFirstContactMinutes / contactedProspects)
+        : null,
       stageCounts,
       scope: scope.isManager ? 'agency' : 'assigned_agent',
     };
@@ -515,6 +542,9 @@ export const canvassingRouter = router({
         priority: input.priority,
         stage: nextFollowUp ? 'follow_up_required' : 'new',
         nextFollowUp,
+        nextAction:
+          input.nextAction ||
+          (nextFollowUp ? 'Complete scheduled seller follow-up' : 'Make first seller contact'),
         createdAt: now,
         updatedAt: now,
       });
@@ -657,6 +687,12 @@ export const canvassingRouter = router({
           message: 'Create the canonical listing to complete conversion.',
         });
       }
+      if (input.stage === 'mandate_won') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Complete the mandate checklist to record a won mandate.',
+        });
+      }
       if (currentStage !== input.stage && !stageTransitions[currentStage]?.includes(input.stage)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -682,7 +718,14 @@ export const canvassingRouter = router({
             stage: input.stage,
             outcome: input.outcome === undefined ? prospect.outcome : input.outcome,
             nextFollowUp,
+            nextAction: isTerminalStage(input.stage)
+              ? null
+              : prospect.nextAction || 'Record the next seller action',
             lastContactedAt,
+            firstContactedAt:
+              ['contact_attempted', 'contacted'].includes(input.stage) && !prospect.firstContactedAt
+                ? now
+                : prospect.firstContactedAt,
             updatedAt: now,
           })
           .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
@@ -751,6 +794,206 @@ export const canvassingRouter = router({
       return { success: true };
     }),
 
+  recordContactAttempt: agentProcedure
+    .input(
+      z
+        .object({
+          sellerProspectId: z.number().int().positive(),
+          channel: contactChannelSchema,
+          outcome: contactOutcomeSchema,
+          summary: z.string().trim().min(1).max(2000),
+          nextAction: optionalText(255),
+          nextFollowUp: z.string().trim().min(1).optional().nullable(),
+        })
+        .superRefine((input, context) => {
+          const terminalOutcome = ['not_interested', 'invalid_contact'].includes(input.outcome);
+          if (!terminalOutcome && !input.nextAction) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['nextAction'],
+              message: 'Record the next action for every active seller prospect.',
+            });
+          }
+          if (input.outcome === 'follow_up_required' && !input.nextFollowUp) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['nextFollowUp'],
+              message: 'Schedule the required follow-up.',
+            });
+          }
+        }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDatabase();
+      const user = requireUser(ctx);
+      const scope = await getSellerProspectActorScope(db, user);
+      const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
+      if (isTerminalStage(prospect.stage)) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Contact cannot be recorded for a closed seller prospect.',
+        });
+      }
+
+      const now = nowAsDbTimestamp();
+      const nextFollowUp = parseOptionalTimestamp(input.nextFollowUp);
+      const terminalOutcome = ['not_interested', 'invalid_contact'].includes(input.outcome);
+      const reached = ['reached', 'replied', 'appointment_booked'].includes(input.outcome);
+      const nextStage = terminalOutcome
+        ? input.outcome === 'not_interested'
+          ? 'not_interested'
+          : 'lost'
+        : input.outcome === 'appointment_booked'
+          ? 'appointment_scheduled'
+          : nextFollowUp || input.outcome === 'follow_up_required'
+            ? 'follow_up_required'
+            : reached
+              ? 'contacted'
+              : 'contact_attempted';
+
+      await db.transaction(async (tx: any) => {
+        await tx
+          .update(sellerProspects)
+          .set({
+            stage: nextStage,
+            firstContactedAt: prospect.firstContactedAt || now,
+            lastContactedAt: now,
+            nextFollowUp: terminalOutcome ? null : nextFollowUp,
+            nextAction: terminalOutcome ? null : input.nextAction,
+            outcome: terminalOutcome ? input.summary : prospect.outcome,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(sellerProspects.id, prospect.id),
+              eq(sellerProspects.agencyId, scope.agencyId),
+            ),
+          );
+        await tx.insert(sellerProspectActivities).values({
+          agencyId: scope.agencyId,
+          sellerProspectId: prospect.id,
+          actorUserId: user.id,
+          activityType: 'contact_attempt',
+          description: input.summary,
+          metadata: {
+            channel: input.channel,
+            outcome: input.outcome,
+            previousStage: prospect.stage,
+            nextStage,
+            nextAction: terminalOutcome ? null : input.nextAction,
+            nextFollowUp,
+          },
+          createdAt: now,
+        });
+      });
+
+      await logCanvassingAudit({
+        ctx,
+        userId: user.id,
+        action: 'canvassing.seller_contact_attempt_recorded',
+        sellerProspectId: prospect.id,
+        agencyId: scope.agencyId,
+        metadata: { channel: input.channel, outcome: input.outcome, nextStage },
+      });
+      return {
+        success: true,
+        stage: nextStage,
+        nextAction: terminalOutcome ? null : input.nextAction,
+      };
+    }),
+
+  updateMandate: agentProcedure
+    .input(
+      z.object({
+        sellerProspectId: z.number().int().positive(),
+        mandateType: z.enum(SELLER_PROSPECT_MANDATE_TYPE_VALUES),
+        signedAt: z.string().trim().min(1),
+        expiresAt: z.string().trim().min(1).optional().nullable(),
+        agreedAskingPrice: z.coerce.number().positive().optional().nullable(),
+        checklist: z.object({
+          pricingAgreed: z.boolean(),
+          sellerIdentityConfirmed: z.boolean(),
+          propertyDetailsConfirmed: z.boolean(),
+          mandateRecorded: z.boolean(),
+        }),
+        nextAction: z.string().trim().min(1).max(255),
+      }).superRefine((input, context) => {
+        const missing = Object.entries(input.checklist).filter(([, complete]) => !complete);
+        if (missing.length) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['checklist'],
+            message: 'Complete every mandate checkpoint before recording a won mandate.',
+          });
+        }
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDatabase();
+      const user = requireUser(ctx);
+      const scope = await getSellerProspectActorScope(db, user);
+      const prospect = await requireSellerProspect(db, scope, input.sellerProspectId);
+      if (!['qualified', 'mandate_won'].includes(String(prospect.stage))) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Qualify the seller before recording mandate details.',
+        });
+      }
+      const signedAt = parseFollowUp(input.signedAt);
+      const expiresAt = parseOptionalTimestamp(input.expiresAt);
+      if (expiresAt && new Date(expiresAt).getTime() <= new Date(signedAt).getTime()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Mandate expiry must be after the signed date.',
+        });
+      }
+      const now = nowAsDbTimestamp();
+      await db.transaction(async (tx: any) => {
+        await tx
+          .update(sellerProspects)
+          .set({
+            stage: 'mandate_won',
+            mandateType: input.mandateType,
+            mandateSignedAt: signedAt,
+            mandateExpiresAt: expiresAt,
+            agreedAskingPrice:
+              input.agreedAskingPrice == null ? null : input.agreedAskingPrice.toFixed(2),
+            mandateChecklist: input.checklist,
+            nextAction: input.nextAction,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(sellerProspects.id, prospect.id),
+              eq(sellerProspects.agencyId, scope.agencyId),
+            ),
+          );
+        await tx.insert(sellerProspectActivities).values({
+          agencyId: scope.agencyId,
+          sellerProspectId: prospect.id,
+          actorUserId: user.id,
+          activityType: 'mandate_updated',
+          description: `${input.mandateType.replace(/_/g, ' ')} mandate recorded.`,
+          metadata: {
+            signedAt,
+            expiresAt,
+            agreedAskingPrice: input.agreedAskingPrice,
+            checklist: input.checklist,
+          },
+          createdAt: now,
+        });
+      });
+      await logCanvassingAudit({
+        ctx,
+        userId: user.id,
+        action: 'canvassing.seller_mandate_recorded',
+        sellerProspectId: prospect.id,
+        agencyId: scope.agencyId,
+        metadata: { mandateType: input.mandateType },
+      });
+      return { success: true, stage: 'mandate_won' as const };
+    }),
+
   setFollowUp: agentProcedure
     .input(
       z.object({
@@ -778,7 +1021,12 @@ export const canvassingRouter = router({
       await db.transaction(async (tx: any) => {
         await tx
           .update(sellerProspects)
-          .set({ stage, nextFollowUp, updatedAt: now })
+          .set({
+            stage,
+            nextFollowUp,
+            nextAction: input.note || 'Complete scheduled seller follow-up',
+            updatedAt: now,
+          })
           .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
         await tx.insert(sellerProspectActivities).values({
           agencyId: scope.agencyId,
@@ -826,7 +1074,14 @@ export const canvassingRouter = router({
       await db.transaction(async (tx: any) => {
         await tx
           .update(sellerProspects)
-          .set({ stage, nextFollowUp: null, lastContactedAt: now, updatedAt: now })
+          .set({
+            stage,
+            nextFollowUp: null,
+            nextAction: 'Record the seller outcome and schedule the next action',
+            firstContactedAt: prospect.firstContactedAt || now,
+            lastContactedAt: now,
+            updatedAt: now,
+          })
           .where(and(eq(sellerProspects.id, prospect.id), eq(sellerProspects.agencyId, scope.agencyId)));
         await tx.insert(sellerProspectActivities).values({
           agencyId: scope.agencyId,

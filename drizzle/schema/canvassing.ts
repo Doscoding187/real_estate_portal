@@ -1,4 +1,4 @@
-import { index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import { decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from 'drizzle-orm/mysql-core';
 import { agencies, agents } from './agencies';
 import { users } from './core';
 import { listings } from './listings';
@@ -58,6 +58,37 @@ export const SELLER_PROSPECT_ACTIVITY_TYPE_VALUES = [
   'follow_up_scheduled',
   'follow_up_completed',
   'conversion',
+  'contact_attempt',
+  'mandate_updated',
+] as const;
+
+export const SELLER_PROSPECT_CONTACT_CHANNEL_VALUES = [
+  'call',
+  'whatsapp',
+  'email',
+  'door_knock',
+  'meeting',
+  'other',
+] as const;
+
+export const SELLER_PROSPECT_CONTACT_OUTCOME_VALUES = [
+  'reached',
+  'replied',
+  'no_answer',
+  'voicemail',
+  'appointment_booked',
+  'follow_up_required',
+  'not_interested',
+  'invalid_contact',
+  'other',
+] as const;
+
+export const SELLER_PROSPECT_MANDATE_TYPE_VALUES = [
+  'sole',
+  'open',
+  'dual',
+  'auction',
+  'other',
 ] as const;
 
 export const sellerProspects = mysqlTable(
@@ -100,8 +131,18 @@ export const sellerProspects = mysqlTable(
       .default('normal')
       .notNull(),
     nextFollowUp: timestamp('next_follow_up', { mode: 'string' }),
+    nextAction: varchar('next_action', { length: 255 }),
+    firstContactedAt: timestamp('first_contacted_at', { mode: 'string' }),
     lastContactedAt: timestamp('last_contacted_at', { mode: 'string' }),
     outcome: text('outcome'),
+    mandateType: mysqlEnum(
+      'mandate_type',
+      SELLER_PROSPECT_MANDATE_TYPE_VALUES as unknown as [string, ...string[]],
+    ),
+    mandateSignedAt: timestamp('mandate_signed_at', { mode: 'string' }),
+    mandateExpiresAt: timestamp('mandate_expires_at', { mode: 'string' }),
+    agreedAskingPrice: decimal('agreed_asking_price', { precision: 15, scale: 2 }),
+    mandateChecklist: json('mandate_checklist'),
     convertedListingId: int('converted_listing_id').references(() => listings.id, {
       onDelete: 'set null',
     }),

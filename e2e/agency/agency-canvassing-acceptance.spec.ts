@@ -215,14 +215,20 @@ test.describe.serial('agency canvassing browser acceptance', () => {
     expect(assignedProspect.assignedAgentId).toBeTruthy();
     expect(assignedProspect.assignedAgentAgencyId).toBe(assignedProspect.agencyId);
 
-    await dialog.getByPlaceholder('What happened?').fill(activityNote);
-    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+    await dialog.getByLabel('Contact summary').fill(activityNote);
+    await dialog.getByLabel('Contact next action').fill('Confirm valuation appointment');
+    await dialog.getByRole('button', { name: 'Record contact and next action', exact: true }).click();
     await expect(dialog.getByText(activityNote, { exact: true })).toBeVisible();
 
-    await dialog.locator('input[type="datetime-local"]').fill(toLocalDateTimeInput(new Date(Date.now() + 86_400_000)));
+    await dialog.getByLabel('Seller follow-up at').fill(toLocalDateTimeInput(new Date(Date.now() + 3_600_000)));
     await dialog.getByPlaceholder('Optional follow-up context').fill(followUpNote);
     await dialog.getByRole('button', { name: 'Schedule', exact: true }).click();
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+
+    await page.goto('/agency/my-day');
+    await expect(page.getByRole('heading', { name: 'Seller Follow-ups Due Today', exact: true })).toBeVisible();
+    await expect(page.getByText(ownerName, { exact: true })).toBeVisible();
+    await page.goto('/agency/canvassing');
 
     const followUpQueue = page.getByTestId('seller-follow-up-queue');
     await expect(followUpQueue).toContainText(ownerName);
@@ -234,9 +240,18 @@ test.describe.serial('agency canvassing browser acceptance', () => {
     await dialog.getByRole('button', { name: 'Update stage', exact: true }).click();
     await expect(dialog.getByLabel('Pipeline stage')).toContainText('Qualified');
 
-    await dialog.getByLabel('Pipeline stage').click();
-    await page.getByRole('option', { name: 'Mandate Won', exact: true }).click();
-    await dialog.getByRole('button', { name: 'Update stage', exact: true }).click();
+    await dialog.getByLabel('Agreed asking price').fill('2750000');
+    await dialog.getByLabel('Mandate signed at').fill(toLocalDateTimeInput(new Date()));
+    await dialog.getByLabel('Mandate expires at').fill(toLocalDateTimeInput(new Date(Date.now() + 90 * 86_400_000)));
+    for (const label of [
+      'Pricing agreed',
+      'Seller identity confirmed',
+      'Property details confirmed',
+      'Mandate evidence recorded',
+    ]) {
+      await dialog.getByRole('checkbox', { name: label }).check();
+    }
+    await dialog.getByRole('button', { name: 'Record mandate won', exact: true }).click();
     await expect(dialog.getByRole('button', { name: 'Start listing', exact: true })).toBeVisible();
 
     await dialog.getByRole('button', { name: 'Start listing', exact: true }).click();

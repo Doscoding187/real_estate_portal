@@ -58,6 +58,8 @@ export const leads = mysqlTable('leads', {
   createdAt: timestamp('createdAt', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   nextFollowUp: timestamp('nextFollowUp', { mode: 'string' }),
+  nextAction: varchar('nextAction', { length: 255 }),
+  firstRespondedAt: timestamp('firstRespondedAt', { mode: 'string' }),
   lastContactedAt: timestamp('lastContactedAt', { mode: 'string' }),
   notes: text(),
   affordabilityData: json('affordability_data'),
@@ -110,8 +112,9 @@ export const leadActivities = mysqlTable('lead_activities', {
     .notNull()
     .references(() => leads.id, { onDelete: 'cascade' }),
   userId: int().references(() => users.id, { onDelete: 'set null' }),
-  type: mysqlEnum(['note', 'call', 'email', 'meeting', 'status_change']).notNull(),
+  type: mysqlEnum(['note', 'call', 'email', 'meeting', 'status_change', 'contact_attempt']).notNull(),
   description: text(),
+  metadata: text(),
   createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 

@@ -119,6 +119,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
       if (!lastTouch || Number.isNaN(lastTouch.getTime())) return false;
       return (Date.now() - lastTouch.getTime()) / 86_400_000 >= 3;
     }).length;
+    const firstResponseOverdueCount = source.filter(lead => lead.firstResponseOverdue).length;
     const viewingCount = source.filter(lead =>
       ['viewing_scheduled', 'viewing'].includes(String(lead.status || '')),
     ).length;
@@ -126,7 +127,14 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
       ['offer_sent', 'converted', 'closed'].includes(String(lead.status || '')),
     ).length;
 
-    return { newLeadCount, unassignedCount, contactedFollowUpCount, viewingCount, offerCount };
+    return {
+      newLeadCount,
+      unassignedCount,
+      contactedFollowUpCount,
+      firstResponseOverdueCount,
+      viewingCount,
+      offerCount,
+    };
   }, [leads, recentLeads]);
 
   const listingHealth = useMemo(() => {
@@ -185,6 +193,17 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
         icon: MessageSquare,
         route: 'leads',
         action: 'Work leads',
+      });
+    }
+    if (leadSignals.firstResponseOverdueCount > 0) {
+      items.push({
+        title: 'Buyer enquiries have missed first-response SLA',
+        detail: 'These active leads have not received a recorded first response within 15 minutes.',
+        value: String(leadSignals.firstResponseOverdueCount),
+        tone: 'rose',
+        icon: Clock3,
+        route: 'leads',
+        action: 'Respond now',
       });
     }
     if (leadSignals.unassignedCount > 0) {

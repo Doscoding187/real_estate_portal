@@ -558,4 +558,111 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     expect(ids).not.toContain(nextDay.viewingId);
     expect(new Set(ids).size).toBe(ids.length);
   }, 30_000);
+
+  it('escalates an ignored buyer lead then records a structured first response', async () => {
+    const seed = await seedAgencyFixture('buyer-response');
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const agentCaller = createCaller({
+      id: seed.agentUserId,
+      role: 'agent',
+      agencyId: seed.agencyId,
+    });
+    const outsideCaller = createCaller({
+      id: seed.outsideAdminUserId,
+      role: 'agency_admin',
+      agencyId: seed.outsideAgencyId,
+    });
+
+    await db
+      .update(leads)
+      .set({ createdAt: sql`DATE_SUB(NOW(), INTERVAL 20 MINUTE)` } as any)
+      .where(eq(leads.id, seed.leadId));
+
+    const [ignoredLead] = await db
+      .select({
+        id: leads.id,
+        status: leads.status,
+        agentId: leads.agentId,
+        createdAt: leads.createdAt,
+        firstRespondedAt: leads.firstRespondedAt,
+      })
+      .from(leads)
+      .where(eq(leads.id, seed.leadId));
+    expect(ignoredLead).toMatchObject({
+      id: seed.leadId,
+      status: 'new',
+      agentId: seed.agentId,
+      firstRespondedAt: null,
+    });
+
+    const [matchingEscalation] = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(leads)
+      .leftJoin(agents, eq(leads.agentId, agents.id))
+      .where(
+        and(
+          eq(leads.agencyId, seed.agencyId),
+          eq(agents.userId, seed.agentUserId),
+          inArray(leads.status, ['new', 'contacted', 'qualified', 'viewing_scheduled', 'offer_sent']),
+          sql`${leads.firstRespondedAt} IS NULL`,
+          sql`${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)`,
+        ),
+      );
+    expect(Number(matchingEscalation.count)).toBe(1);
+
+    const beforeResponse = await agentCaller.getMyDay({ limit: 20 });
+    expect(beforeResponse.counts.firstResponseOverdueLeads).toBeGreaterThanOrEqual(1);
+    expect(beforeResponse.firstResponseOverdueLeads.map(lead => lead.id)).toContain(seed.leadId);
+    expect(beforeResponse.firstResponseOverdueLeads.find(lead => lead.id === seed.leadId)).toMatchObject({
+      firstResponseOverdue: true,
+      nextAction: 'Make first buyer contact',
+    });
+
+    await agentCaller.recordLeadContactAttempt({
+      leadId: seed.leadId,
+      channel: 'whatsapp',
+      outcome: 'follow_up_required',
+      summary: 'Buyer replied and requested a call after work.',
+      nextAction: 'Call buyer at 17:30',
+      nextFollowUp: futureIso(2),
+    });
+
+    const detail = await agentCaller.getLeadDetail({ leadId: seed.leadId });
+    expect(detail).toMatchObject({
+      status: 'contacted',
+      nextAction: 'Call buyer at 17:30',
+      firstResponseOverdue: false,
+    });
+    expect(detail.firstRespondedAt).toBeTruthy();
+    const [recordedResponseTiming] = await db
+      .select({
+        elapsedSeconds: sql<number>`TIMESTAMPDIFF(SECOND, ${leads.createdAt}, ${leads.firstRespondedAt})`,
+      })
+      .from(leads)
+      .where(eq(leads.id, seed.leadId));
+    expect(Number(recordedResponseTiming.elapsedSeconds)).toBeGreaterThanOrEqual(0);
+    expect(detail.activities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'contact_attempt',
+          description: 'Buyer replied and requested a call after work.',
+          metadata: expect.objectContaining({ channel: 'whatsapp', outcome: 'follow_up_required' }),
+        }),
+      ]),
+    );
+
+    const afterResponse = await agentCaller.getMyDay({ limit: 20 });
+    expect(afterResponse.firstResponseOverdueLeads.map(lead => lead.id)).not.toContain(seed.leadId);
+
+    await expect(
+      outsideCaller.recordLeadContactAttempt({
+        leadId: seed.leadId,
+        channel: 'call',
+        outcome: 'reached',
+        summary: 'Cross-agency attempt',
+        nextAction: 'Never allowed',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  }, 30_000);
 });

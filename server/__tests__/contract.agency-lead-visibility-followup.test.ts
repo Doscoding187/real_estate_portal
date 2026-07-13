@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockGetDb, mockLogAudit } = vi.hoisted(() => ({
@@ -202,5 +204,25 @@ describe('agency lead visibility and follow-up contract', () => {
     expect(update).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
     expect(mockLogAudit).not.toHaveBeenCalled();
+  });
+
+  it('keeps buyer contact outcomes, SLA escalation, and My Day work in the canonical lead model', () => {
+    const root = process.cwd();
+    const router = readFileSync(path.resolve(root, 'server/agencyRouter.ts'), 'utf8');
+    const schema = readFileSync(path.resolve(root, 'drizzle/schema/leads.ts'), 'utf8');
+    const migration = readFileSync(
+      path.resolve(root, 'server/migrations/0068_close_buyer_lead_loop.sql'),
+      'utf8',
+    );
+
+    expect(schema).toContain("nextAction: varchar('nextAction'");
+    expect(schema).toContain("firstRespondedAt: timestamp('firstRespondedAt'");
+    expect(schema).toContain("'contact_attempt'");
+    expect(router).toContain('recordLeadContactAttempt');
+    expect(router).toContain('Record the next action for every active buyer lead.');
+    expect(router).toContain('firstResponseOverdueLeads');
+    expect(router).toContain('FIRST_RESPONSE_SLA_MINUTES = 15');
+    expect(migration).toContain('firstRespondedAt');
+    expect(migration).toContain("'contact_attempt'");
   });
 });

@@ -211,6 +211,8 @@ function useViewingRefresh(selectedViewingId?: number | null) {
       utils.agency.getRecentLeads.invalidate(),
       utils.agency.getDashboardStats.invalidate(),
       utils.agency.getAgentLeaderboard.invalidate(),
+      utils.canvassing.getDashboard.invalidate(),
+      utils.canvassing.getFollowUpQueue.invalidate(),
     ]);
   };
 }
@@ -243,12 +245,33 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
     },
     onError: error => toast.error(error.message || 'Follow-up could not be scheduled'),
   });
+  const recordLeadContact = trpc.agency.recordLeadContactAttempt.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success('Buyer response recorded');
+    },
+    onError: error => toast.error(error.message || 'Buyer response could not be recorded'),
+  });
   const updateViewingStatus = trpc.agency.updateViewingStatus.useMutation({
     onSuccess: async () => {
       await refresh();
       toast.success('Viewing updated');
     },
     onError: error => toast.error(error.message || 'Viewing could not be updated'),
+  });
+  const completeSellerFollowUp = trpc.canvassing.completeFollowUp.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success('Seller follow-up completed');
+    },
+    onError: error => toast.error(error.message || 'Seller follow-up could not be completed'),
+  });
+  const setSellerFollowUp = trpc.canvassing.setFollowUp.useMutation({
+    onSuccess: async () => {
+      await refresh();
+      toast.success('Seller follow-up scheduled');
+    },
+    onError: error => toast.error(error.message || 'Seller follow-up could not be scheduled'),
   });
 
   const data = myDayQuery.data as any;
@@ -295,15 +318,92 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
 
       {data ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
             <QueueMetric label="Overdue follow-ups" value={data.counts?.overdueFollowUps} tone="rose" />
             <QueueMetric label="Today follow-ups" value={data.counts?.dueTodayFollowUps} tone="amber" />
+            <QueueMetric label="First response overdue" value={data.counts?.firstResponseOverdueLeads} tone="rose" />
+            <QueueMetric
+              label="Seller follow-ups"
+              value={(data.counts?.overdueSellerFollowUps || 0) + (data.counts?.dueTodaySellerFollowUps || 0)}
+              tone="rose"
+            />
             <QueueMetric label="Today viewings" value={data.counts?.todayViewings} tone="sky" />
             <QueueMetric label="Deal deadlines" value={data.counts?.transactionDeadlines} tone="teal" />
           </div>
 
           <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
             <div className="min-w-0 space-y-5">
+              <LeadQueue
+                title="Buyer First Responses Overdue"
+                eyebrow={`${numberLabel(data.firstResponseOverdueLeads?.length || 0)} need a recorded response`}
+                leads={data.firstResponseOverdueLeads || []}
+                empty="No buyer first responses are overdue"
+                completeLabel="Respond"
+                onOpenLead={() => props.onNavigate('leads')}
+                onCall={lead => window.open(`tel:${normalizePhone(lead.phone)}`, '_self')}
+                onWhatsApp={lead => {
+                  const href = whatsappHref(lead.phone);
+                  if (href) window.open(href, '_blank', 'noopener,noreferrer');
+                }}
+                onComplete={lead =>
+                  recordLeadContact.mutate({
+                    leadId: lead.id,
+                    channel: 'call',
+                    outcome: 'reached',
+                    summary: 'First buyer response recorded from My Day.',
+                    nextAction: 'Schedule buyer follow-up',
+                  })
+                }
+                onBook={lead => setBookingLeadId(lead.id)}
+                onNextFollowUp={lead =>
+                  setFollowUp.mutate({
+                    leadId: lead.id,
+                    nextFollowUp: tomorrowMorningInput(),
+                    note: 'Buyer follow-up scheduled from My Day.',
+                  })
+                }
+              />
+
+              <SellerFollowUpQueue
+                title="Overdue Seller Follow-ups"
+                prospects={data.overdueSellerFollowUps || []}
+                empty="No overdue seller follow-ups"
+                onOpen={() => props.setLocation('/agency/canvassing')}
+                onComplete={prospect =>
+                  completeSellerFollowUp.mutate({
+                    sellerProspectId: prospect.id,
+                    note: 'Seller follow-up completed from My Day.',
+                  })
+                }
+                onTomorrow={prospect =>
+                  setSellerFollowUp.mutate({
+                    sellerProspectId: prospect.id,
+                    nextFollowUp: tomorrowMorningInput(),
+                    note: prospect.nextAction || 'Continue seller follow-up from My Day.',
+                  })
+                }
+              />
+
+              <SellerFollowUpQueue
+                title="Seller Follow-ups Due Today"
+                prospects={data.dueTodaySellerFollowUps || []}
+                empty="No seller follow-ups due today"
+                onOpen={() => props.setLocation('/agency/canvassing')}
+                onComplete={prospect =>
+                  completeSellerFollowUp.mutate({
+                    sellerProspectId: prospect.id,
+                    note: 'Seller follow-up completed from My Day.',
+                  })
+                }
+                onTomorrow={prospect =>
+                  setSellerFollowUp.mutate({
+                    sellerProspectId: prospect.id,
+                    nextFollowUp: tomorrowMorningInput(),
+                    note: prospect.nextAction || 'Continue seller follow-up from My Day.',
+                  })
+                }
+              />
+
               <LeadQueue
                 title="Overdue Lead Follow-ups"
                 eyebrow={`${numberLabel(data.overdueFollowUps?.length || 0)} behind schedule`}
@@ -740,6 +840,79 @@ function QueueMetric({ label, value, tone }: { label: string; value?: number; to
   );
 }
 
+function SellerFollowUpQueue({
+  title,
+  prospects,
+  empty,
+  onOpen,
+  onComplete,
+  onTomorrow,
+}: {
+  title: string;
+  prospects: any[];
+  empty: string;
+  onOpen: (prospect: any) => void;
+  onComplete: (prospect: any) => void;
+  onTomorrow: (prospect: any) => void;
+}) {
+  return (
+    <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-2">
+        <SectionTitle
+          icon={Clock3}
+          title={title}
+          eyebrow={`${numberLabel(prospects.length)} seller opportunities`}
+        />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {prospects.map(prospect => (
+          <div key={prospect.id} className="rounded-lg border border-slate-200 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-950">
+                  {prospect.ownerName || 'Unnamed seller opportunity'}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {[prospect.propertyAddress, prospect.suburb, prospect.city].filter(Boolean).join(', ') ||
+                    'Location not recorded'}
+                </p>
+                <p className="mt-2 text-sm font-medium text-slate-700">
+                  Next: {prospect.nextAction || 'Record the next seller action'}
+                </p>
+              </div>
+              <Badge variant="outline">{statusLabel(prospect.stage || 'new')}</Badge>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => onOpen(prospect)}>
+                <ArrowRight className="h-4 w-4" />
+                Open
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!prospect.phone}
+                onClick={() => window.open(`tel:${normalizePhone(prospect.phone)}`, '_self')}
+              >
+                <Phone className="h-4 w-4" />
+                Call
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => onComplete(prospect)}>
+                <CheckCircle2 className="h-4 w-4" />
+                Complete
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => onTomorrow(prospect)}>
+                <Clock3 className="h-4 w-4" />
+                Tomorrow
+              </Button>
+            </div>
+          </div>
+        ))}
+        {!prospects.length ? <EmptyPanel icon={Clock3} title={empty} text="This queue is clear." /> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function LeadQueue({
   title,
   eyebrow,
@@ -751,6 +924,7 @@ function LeadQueue({
   onComplete,
   onBook,
   onNextFollowUp,
+  completeLabel = 'Complete',
 }: {
   title: string;
   eyebrow: string;
@@ -762,6 +936,7 @@ function LeadQueue({
   onComplete: (lead: AgencyLead) => void;
   onBook: (lead: AgencyLead) => void;
   onNextFollowUp: (lead: AgencyLead) => void;
+  completeLabel?: string;
 }) {
   return (
     <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
@@ -786,7 +961,7 @@ function LeadQueue({
               </Button>
               <Button variant="outline" size="sm" onClick={() => onComplete(lead)}>
                 <CheckCircle2 className="h-4 w-4" />
-                Complete
+                {completeLabel}
               </Button>
               <Button variant="outline" size="sm" onClick={() => onBook(lead)}>
                 <CalendarClock className="h-4 w-4" />
