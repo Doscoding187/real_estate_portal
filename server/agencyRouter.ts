@@ -34,8 +34,10 @@ import {
   agencyTransactionParties,
   agencyTransactionDocuments,
   agencyTransactionActivity,
+  sellerProspects,
+  SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
-import { eq, like, or, desc, asc, and, inArray, sql, isNull, isNotNull, ne, aliasedTable } from 'drizzle-orm';
+import { eq, like, or, desc, asc, and, inArray, notInArray, sql, isNull, isNotNull, ne, aliasedTable } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import {
   getDb,
@@ -99,6 +101,18 @@ const leadStatusSchema = z.enum([
   'viewing_scheduled',
   'offer_sent',
   'lost',
+]);
+const leadContactChannelSchema = z.enum(['call', 'whatsapp', 'email', 'sms', 'other']);
+const leadContactOutcomeSchema = z.enum([
+  'reached',
+  'replied',
+  'no_answer',
+  'voicemail',
+  'viewing_booked',
+  'follow_up_required',
+  'not_interested',
+  'invalid_contact',
+  'other',
 ]);
 
 const viewingStatusSchema = z.enum([
@@ -429,10 +443,21 @@ const ACTIVE_WORK_LEAD_STATUSES = [
   'viewing_scheduled',
   'offer_sent',
 ] as const;
+const FIRST_RESPONSE_SLA_MINUTES = 15;
 const ACTIVE_WORK_LISTING_STATUSES = ['available', 'published'] as const;
 const PENDING_WORK_LISTING_STATUSES = ['pending', 'draft'] as const;
 const ACTIVE_CANONICAL_LISTING_STATUSES = ['approved', 'published'] as const;
 const PENDING_CANONICAL_LISTING_STATUSES = ['draft', 'pending_review', 'rejected'] as const;
+
+function firstResponseOverdueSql() {
+  return sql<number>`CASE
+    WHEN ${leads.status} IN ('new', 'contacted', 'qualified', 'viewing_scheduled', 'offer_sent')
+      AND ${leads.firstRespondedAt} IS NULL
+      AND ${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL ${FIRST_RESPONSE_SLA_MINUTES} MINUTE)
+    THEN 1
+    ELSE 0
+  END`;
+}
 
 function normalizeBillingStatus(value: unknown): AgencyBillingStatus {
   const status = String(value || '')
@@ -568,18 +593,62 @@ function mapStatusToFunnelStage(status: LeadStatus, fallback: string | null | un
 }
 
 function getNextLeadAction(lead: typeof leads.$inferSelect) {
+  if (String(lead.nextAction || '').trim()) return String(lead.nextAction).trim();
   if (!lead.agentId && !lead.assignedTo) return 'Assign owner';
   if (lead.nextFollowUp) {
     const followUpTime = new Date(lead.nextFollowUp).getTime();
     if (Number.isFinite(followUpTime) && followUpTime < Date.now()) return 'Follow-up overdue';
     return 'Follow-up scheduled';
   }
-  if (lead.status === 'new') return 'First response';
+  if (lead.status === 'new') return 'Make first buyer contact';
   if (lead.status === 'contacted') return 'Qualify buyer';
   if (lead.status === 'qualified') return 'Schedule viewing';
   if (lead.status === 'viewing_scheduled') return 'Capture viewing outcome';
   if (lead.status === 'offer_sent') return 'Track offer';
   return 'Review activity';
+}
+
+function getLeadFirstResponseState(lead: typeof leads.$inferSelect) {
+  const createdAt = lead.createdAt ? new Date(lead.createdAt) : null;
+  const firstRespondedAt = lead.firstRespondedAt || lead.lastContactedAt;
+  const respondedAt = firstRespondedAt ? new Date(firstRespondedAt) : null;
+  const createdTime = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt.getTime() : null;
+  const respondedTime = respondedAt && !Number.isNaN(respondedAt.getTime()) ? respondedAt.getTime() : null;
+  const active = ACTIVE_WORK_LEAD_STATUSES.includes(lead.status as any);
+  const ageMinutes = createdTime == null ? null : Math.max(0, Math.floor((Date.now() - createdTime) / 60_000));
+
+  return {
+    slaMinutes: FIRST_RESPONSE_SLA_MINUTES,
+    firstRespondedAt: respondedTime == null ? null : respondedAt!.toISOString(),
+    firstResponseMinutes:
+      createdTime == null || respondedTime == null ? null : Math.max(0, Math.round((respondedTime - createdTime) / 60_000)),
+    firstResponseOverdue: Boolean(
+      active && respondedTime == null && ageMinutes != null && ageMinutes >= FIRST_RESPONSE_SLA_MINUTES,
+    ),
+    firstResponseDueAt:
+      createdTime == null ? null : new Date(createdTime + FIRST_RESPONSE_SLA_MINUTES * 60_000).toISOString(),
+  };
+}
+
+function parseLeadActivityMetadata(value: unknown): Record<string, unknown> | null {
+  if (value == null || value === '') return null;
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+
+  try {
+    const parsed = JSON.parse(String(value));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function decorateLeadActivity(activity: typeof leadActivities.$inferSelect) {
+  return {
+    ...activity,
+    metadata: parseLeadActivityMetadata(activity.metadata),
+  };
 }
 
 function isLeadOverdue(lead: typeof leads.$inferSelect) {
@@ -588,13 +657,18 @@ function isLeadOverdue(lead: typeof leads.$inferSelect) {
   return Number.isFinite(followUpTime) && followUpTime < Date.now();
 }
 
-function decorateLeadForWorkspace(lead: typeof leads.$inferSelect) {
+function decorateLeadForWorkspace(
+  lead: typeof leads.$inferSelect,
+  firstResponseState?: Partial<ReturnType<typeof getLeadFirstResponseState>>,
+) {
   return {
     ...lead,
     temperature: toLeadTemperature(lead.qualificationScore),
     readiness: deriveLeadReadiness(lead),
     nextAction: getNextLeadAction(lead),
     overdueFollowUp: isLeadOverdue(lead),
+    ...getLeadFirstResponseState(lead),
+    ...firstResponseState,
   };
 }
 
@@ -627,6 +701,28 @@ async function requireAgencyLead(
       code: 'NOT_FOUND',
       message: 'Lead not found',
     });
+  }
+
+  if (user.role === 'agent') {
+    const [assignedAgent] = lead.agentId
+      ? await db
+          .select({ id: agents.id })
+          .from(agents)
+          .where(
+            and(
+              eq(agents.id, lead.agentId),
+              eq(agents.agencyId, agencyId),
+              eq(agents.userId, user.id),
+            ),
+          )
+          .limit(1)
+      : [];
+    if (!assignedAgent) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'You can only work leads assigned to you.',
+      });
+    }
   }
 
   return lead;
@@ -3960,7 +4056,7 @@ export const agencyRouter = router({
   /**
    * Get agency-owned leads for operational follow-up.
    */
-  getLeads: agencyAdminProcedure
+  getLeads: agentProcedure
     .input(
       z
         .object({
@@ -3987,6 +4083,10 @@ export const agencyRouter = router({
       const filters = input || { status: 'all' as const, limit: 50 };
       const conditions: SQL[] = [eq(leads.agencyId, user.agencyId)];
 
+      if (user.role === 'agent') {
+        conditions.push(eq(agents.userId, user.id));
+      }
+
       if (filters.status && filters.status !== 'all') {
         conditions.push(eq(leads.status, filters.status));
       }
@@ -4000,6 +4100,7 @@ export const agencyRouter = router({
           lead: leads,
           property: properties,
           agent: agents,
+          firstResponseOverdue: firstResponseOverdueSql(),
         })
         .from(leads)
         .leftJoin(properties, eq(leads.propertyId, properties.id))
@@ -4008,8 +4109,8 @@ export const agencyRouter = router({
         .orderBy(desc(leads.createdAt))
         .limit(filters.limit);
 
-      return rows.map(({ lead, property, agent }) => ({
-        ...decorateLeadForWorkspace(lead),
+      return rows.map(({ lead, property, agent, firstResponseOverdue }) => ({
+        ...decorateLeadForWorkspace(lead, { firstResponseOverdue: Boolean(firstResponseOverdue) }),
         agent: agent
           ? {
               id: agent.id,
@@ -4038,7 +4139,7 @@ export const agencyRouter = router({
   /**
    * Update agency-owned lead status.
    */
-  updateLeadStatus: agencyAdminProcedure
+  updateLeadStatus: agentProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -4070,10 +4171,18 @@ export const agencyRouter = router({
         .set({
           status: input.status,
           updatedAt: now,
+          nextAction:
+            input.status === 'lost' || input.status === 'converted' || input.status === 'closed'
+              ? null
+              : lead.nextAction || getNextLeadAction({ ...lead, status: input.status, nextAction: null } as any),
           lastContactedAt:
             input.status === 'contacted' || input.status === 'qualified'
               ? now
               : lead.lastContactedAt,
+          firstRespondedAt:
+            (input.status === 'contacted' || input.status === 'qualified') && !lead.firstRespondedAt
+              ? now
+              : lead.firstRespondedAt,
           convertedAt:
             input.status === 'converted' || input.status === 'closed' ? now : lead.convertedAt,
           lostReason:
@@ -4109,7 +4218,7 @@ export const agencyRouter = router({
       return { success: true };
     }),
 
-  getLeadDetail: agencyAdminProcedure
+  getLeadDetail: agentProcedure
     .input(z.object({ leadId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
@@ -4132,6 +4241,12 @@ export const agencyRouter = router({
             .limit(1)
         : [];
 
+      const [firstResponseState] = await db
+        .select({ firstResponseOverdue: firstResponseOverdueSql() })
+        .from(leads)
+        .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)))
+        .limit(1);
+
       const activities = await db
         .select()
         .from(leadActivities)
@@ -4151,7 +4266,9 @@ export const agencyRouter = router({
         .limit(20);
 
       return {
-        ...decorateLeadForWorkspace(lead),
+        ...decorateLeadForWorkspace(lead, {
+          firstResponseOverdue: Boolean(firstResponseState?.firstResponseOverdue),
+        }),
         property: property
           ? {
               id: property.id,
@@ -4174,7 +4291,7 @@ export const agencyRouter = router({
               phone: agent.phone,
             }
           : null,
-        activities,
+        activities: activities.map(decorateLeadActivity),
         viewings: viewingRows.map(row => ({
           ...row.showing,
           agent: row.agent
@@ -4259,7 +4376,7 @@ export const agencyRouter = router({
       return { success: true };
     }),
 
-  addLeadNote: agencyAdminProcedure
+  addLeadNote: agentProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -4297,7 +4414,114 @@ export const agencyRouter = router({
       return { success: true };
     }),
 
-  setLeadFollowUp: agencyAdminProcedure
+  recordLeadContactAttempt: agentProcedure
+    .input(
+      z
+        .object({
+          leadId: z.number().int().positive(),
+          channel: leadContactChannelSchema,
+          outcome: leadContactOutcomeSchema,
+          summary: z.string().trim().min(1).max(2000),
+          nextAction: z.string().trim().max(255).optional(),
+          nextFollowUp: z.string().trim().min(1).optional().nullable(),
+        })
+        .superRefine((input, context) => {
+          const terminalOutcome = ['not_interested', 'invalid_contact'].includes(input.outcome);
+          if (!terminalOutcome && !input.nextAction) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['nextAction'],
+              message: 'Record the next action for every active buyer lead.',
+            });
+          }
+          if (input.outcome === 'follow_up_required' && !input.nextFollowUp) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['nextFollowUp'],
+              message: 'Schedule the required follow-up.',
+            });
+          }
+        }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      }
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const lead = await requireAgencyLead(db, user, input.leadId);
+      const parsedFollowUp = input.nextFollowUp ? new Date(input.nextFollowUp) : null;
+      if (parsedFollowUp && Number.isNaN(parsedFollowUp.getTime())) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Follow-up date is invalid.' });
+      }
+      const nextFollowUp = parsedFollowUp ? toDbTimestampRequired(parsedFollowUp) : null;
+      const terminalOutcome = ['not_interested', 'invalid_contact'].includes(input.outcome);
+      const reached = ['reached', 'replied', 'viewing_booked'].includes(input.outcome);
+      const recordedAt = sql`NOW()`;
+      const nextStatus: LeadStatus = terminalOutcome
+        ? 'lost'
+        : input.outcome === 'viewing_booked'
+          ? 'viewing_scheduled'
+          : reached || input.outcome === 'follow_up_required' || input.outcome === 'no_answer' || input.outcome === 'voicemail'
+            ? 'contacted'
+            : (lead.status as LeadStatus);
+      const nextAction = terminalOutcome ? null : input.nextAction || null;
+
+      await db.transaction(async (tx: any) => {
+        await tx
+          .update(leads)
+          .set({
+            status: nextStatus,
+            nextFollowUp: terminalOutcome ? null : nextFollowUp,
+            nextAction,
+            firstRespondedAt: lead.firstRespondedAt || recordedAt,
+            lastContactedAt: recordedAt,
+            lostReason:
+              terminalOutcome
+                ? input.outcome === 'not_interested'
+                  ? 'Buyer not interested'
+                  : 'Invalid buyer contact details'
+                : lead.lostReason,
+            updatedAt: recordedAt,
+            funnelStage: mapStatusToFunnelStage(nextStatus, lead.funnelStage) as any,
+          })
+          .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)));
+        await tx.insert(leadActivities).values({
+          leadId: lead.id,
+          userId: user.id,
+          type: 'contact_attempt',
+          description: input.summary,
+          metadata: JSON.stringify({
+            channel: input.channel,
+            outcome: input.outcome,
+            previousStatus: lead.status,
+            nextStatus,
+            nextAction,
+            nextFollowUp: terminalOutcome ? null : nextFollowUp,
+          }),
+        });
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agency.lead_contact_attempt_recorded',
+        targetType: 'lead',
+        targetId: lead.id,
+        metadata: {
+          agencyId,
+          channel: input.channel,
+          outcome: input.outcome,
+          previousStatus: lead.status,
+          nextStatus,
+        },
+        req: ctx.req,
+      });
+
+      return { success: true, status: nextStatus, nextAction };
+    }),
+
+  setLeadFollowUp: agentProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -4330,6 +4554,7 @@ export const agencyRouter = router({
         .update(leads)
         .set({
           nextFollowUp: followUp,
+          nextAction: input.note || 'Complete scheduled buyer follow-up',
           updatedAt: now,
         })
         .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
@@ -4357,7 +4582,7 @@ export const agencyRouter = router({
       return { success: true };
     }),
 
-  completeLeadFollowUp: agencyAdminProcedure
+  completeLeadFollowUp: agentProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
@@ -4372,13 +4597,15 @@ export const agencyRouter = router({
 
       const user = requireUser(ctx);
       const agencyId = requireAgencyId(user);
-      await requireAgencyLead(db, user, input.leadId);
+      const lead = await requireAgencyLead(db, user, input.leadId);
       const now = nowAsDbTimestamp();
 
       await db
         .update(leads)
         .set({
           nextFollowUp: null,
+          nextAction: 'Record buyer outcome and schedule the next action',
+          firstRespondedAt: lead.firstRespondedAt || now,
           lastContactedAt: now,
           updatedAt: now,
         })
@@ -4602,7 +4829,7 @@ export const agencyRouter = router({
 
       return {
         ...viewing,
-        activities,
+        activities: activities.map(decorateLeadActivity),
         lifecycle: {
           allowedNextStatuses: VIEWING_TRANSITIONS[normalizeViewingStatus(showing.status)] || [],
         },
@@ -5931,11 +6158,14 @@ export const agencyRouter = router({
         unconfirmedViewings,
         feedbackRequiredViewings,
         urgentLeads,
+        firstResponseOverdueLeads,
         upcomingViewings,
         listingRows,
         offerDeadlineRows,
         conditionDeadlineRows,
         milestoneDeadlineRows,
+        overdueSellerFollowUps,
+        dueTodaySellerFollowUps,
       ] = await Promise.all([
         db
           .select({ lead: leads, property: properties, agent: agents })
@@ -5945,6 +6175,7 @@ export const agencyRouter = router({
           .where(
             and(
               eq(leads.agencyId, agencyId),
+              user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
               inArray(leads.status, ACTIVE_WORK_LEAD_STATUSES as any),
               sql`${leads.nextFollowUp} IS NOT NULL AND ${leads.nextFollowUp} < ${bounds.startDb}`,
             ),
@@ -5959,6 +6190,7 @@ export const agencyRouter = router({
           .where(
             and(
               eq(leads.agencyId, agencyId),
+              user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
               inArray(leads.status, ACTIVE_WORK_LEAD_STATUSES as any),
               sql`${leads.nextFollowUp} >= ${bounds.startDb} AND ${leads.nextFollowUp} < ${bounds.endDb}`,
             ),
@@ -5993,10 +6225,27 @@ export const agencyRouter = router({
           .where(
             and(
               eq(leads.agencyId, agencyId),
+              user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
               or(eq(leads.status, 'new'), isNull(leads.agentId))!,
             ),
           )
           .orderBy(desc(leads.createdAt))
+          .limit(limit),
+        db
+          .select({ lead: leads, property: properties, agent: agents })
+          .from(leads)
+          .leftJoin(properties, eq(leads.propertyId, properties.id))
+          .leftJoin(agents, eq(leads.agentId, agents.id))
+          .where(
+            and(
+              eq(leads.agencyId, agencyId),
+              user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
+              inArray(leads.status, ACTIVE_WORK_LEAD_STATUSES as any),
+              isNull(leads.firstRespondedAt),
+              sql`${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL ${FIRST_RESPONSE_SLA_MINUTES} MINUTE)`,
+            ),
+          )
+          .orderBy(leads.createdAt)
           .limit(limit),
         listAgencyViewings({
           db,
@@ -6110,10 +6359,41 @@ export const agencyRouter = router({
           )
           .orderBy(agencyTransactionMilestones.dueAt)
           .limit(limit),
+        db
+          .select({ prospect: sellerProspects, agent: agents })
+          .from(sellerProspects)
+          .leftJoin(agents, eq(sellerProspects.assignedAgentId, agents.id))
+          .where(
+            and(
+              eq(sellerProspects.agencyId, agencyId),
+              user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
+              notInArray(sellerProspects.stage, SELLER_PROSPECT_TERMINAL_STAGE_VALUES as any),
+              sql`${sellerProspects.nextFollowUp} IS NOT NULL AND ${sellerProspects.nextFollowUp} < ${bounds.startDb}`,
+            ),
+          )
+          .orderBy(sellerProspects.nextFollowUp)
+          .limit(limit),
+        db
+          .select({ prospect: sellerProspects, agent: agents })
+          .from(sellerProspects)
+          .leftJoin(agents, eq(sellerProspects.assignedAgentId, agents.id))
+          .where(
+            and(
+              eq(sellerProspects.agencyId, agencyId),
+              user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
+              notInArray(sellerProspects.stage, SELLER_PROSPECT_TERMINAL_STAGE_VALUES as any),
+              sql`${sellerProspects.nextFollowUp} >= ${bounds.startDb} AND ${sellerProspects.nextFollowUp} < ${bounds.endDb}`,
+            ),
+          )
+          .orderBy(sellerProspects.nextFollowUp)
+          .limit(limit),
       ]);
 
-      const mapLead = (row: { lead: typeof leads.$inferSelect; property: any; agent: any }) => ({
-        ...decorateLeadForWorkspace(row.lead),
+      const mapLead = (
+        row: { lead: typeof leads.$inferSelect; property: any; agent: any },
+        firstResponseState?: Partial<ReturnType<typeof getLeadFirstResponseState>>,
+      ) => ({
+        ...decorateLeadForWorkspace(row.lead, firstResponseState),
         property: row.property
           ? {
               id: row.property.id,
@@ -6187,6 +6467,20 @@ export const agencyRouter = router({
         new Map(transactionDeadlineCandidates.map(deadline => [deadline.id, deadline])).values(),
       );
 
+      const mapSellerProspect = (row: any) => ({
+        ...row.prospect,
+        assignedAgent: row.agent
+          ? {
+              id: row.agent.id,
+              name:
+                row.agent.displayName ||
+                [row.agent.firstName, row.agent.lastName].filter(Boolean).join(' ').trim() ||
+                'Assigned agent',
+              phone: row.agent.phone,
+            }
+          : null,
+      });
+
       return {
         date: dayKey,
         overdueFollowUps: overdueFollowUps.map(mapLead),
@@ -6195,8 +6489,13 @@ export const agencyRouter = router({
         unconfirmedViewings,
         feedbackRequiredViewings,
         urgentLeads: urgentLeads.map(mapLead),
+        firstResponseOverdueLeads: firstResponseOverdueLeads.map(row =>
+          mapLead(row, { firstResponseOverdue: true }),
+        ),
         listingTasks: listingRows.map(row => mapAgencyListingRow(row, agencyId)),
         transactionDeadlines,
+        overdueSellerFollowUps: overdueSellerFollowUps.map(mapSellerProspect),
+        dueTodaySellerFollowUps: dueTodaySellerFollowUps.map(mapSellerProspect),
         upcomingWork: upcomingViewings,
         counts: {
           overdueFollowUps: overdueFollowUps.length,
@@ -6205,8 +6504,11 @@ export const agencyRouter = router({
           unconfirmedViewings: unconfirmedViewings.length,
           feedbackRequiredViewings: feedbackRequiredViewings.length,
           urgentLeads: urgentLeads.length,
+          firstResponseOverdueLeads: firstResponseOverdueLeads.length,
           listingTasks: listingRows.length,
           transactionDeadlines: transactionDeadlines.length,
+          overdueSellerFollowUps: overdueSellerFollowUps.length,
+          dueTodaySellerFollowUps: dueTodaySellerFollowUps.length,
           upcomingWork: upcomingViewings.length,
         },
       };

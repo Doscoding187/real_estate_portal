@@ -43,6 +43,10 @@ export type AgencyLead = {
   funnelStage?: string | null;
   assignedTo?: number | null;
   lastContactedAt?: string | Date | null;
+  firstRespondedAt?: string | Date | null;
+  firstResponseMinutes?: number | null;
+  firstResponseOverdue?: boolean;
+  firstResponseDueAt?: string | Date | null;
   nextFollowUp?: string | Date | null;
   createdAt?: string | Date | null;
   agentId?: number | null;
@@ -74,8 +78,9 @@ export type AgencyLead = {
     id: number;
     leadId: number;
     userId?: number | null;
-    type: 'note' | 'call' | 'email' | 'meeting' | 'status_change';
+    type: 'note' | 'call' | 'email' | 'meeting' | 'status_change' | 'contact_attempt';
     description?: string | null;
+    metadata?: Record<string, unknown> | null;
     createdAt?: string | Date | null;
   }>;
   viewings?: Array<{
@@ -140,6 +145,7 @@ export type LeadSignals = {
   newLeadCount: number;
   unassignedCount: number;
   contactedFollowUpCount: number;
+  firstResponseOverdueCount: number;
   viewingCount: number;
   offerCount: number;
 };

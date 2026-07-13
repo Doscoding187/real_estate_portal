@@ -117,6 +117,8 @@ async function resetNewBuyerSmokeFixture(leadId: number) {
          assigned_to = NULL,
          assigned_at = NULL,
          nextFollowUp = NULL,
+         nextAction = NULL,
+         firstRespondedAt = NULL,
          lastContactedAt = NULL,
          converted_at = NULL,
          lost_reason = NULL,
@@ -581,15 +583,15 @@ test.describe.serial('local agency workspace browser smoke', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('[LOCAL DEMO] New Buyer')).toBeVisible();
 
-    await dialog.locator('select').nth(0).selectOption({ label: '[LOCAL DEMO] Agency Agent' });
+    await dialog.getByLabel('Lead assignee').selectOption({ label: '[LOCAL DEMO] Agency Agent' });
     await expect(notifications.getByText('Lead assignment updated')).toBeVisible();
 
-    await dialog.locator('select').nth(1).selectOption(TARGET_LEAD_STATUS);
-    await dialog.getByPlaceholder('Stage note').fill('Agency browser smoke status persistence.');
-    await dialog.getByRole('button', { name: /Update stage/ }).click();
-    await expect(notifications.getByText('Lead stage updated')).toBeVisible();
+    await dialog.getByLabel('Buyer contact summary').fill('Agency browser smoke first response.');
+    await dialog.getByLabel('Buyer contact next action').fill('Schedule buyer follow-up.');
+    await dialog.getByRole('button', { name: 'Record contact and next action' }).click();
+    await expect(notifications.getByText('Buyer contact attempt recorded')).toBeVisible();
 
-    await dialog.locator('input[type="datetime-local"]').first().fill('2026-07-20T09:30');
+    await dialog.getByLabel('Lead follow-up at').fill('2026-07-20T09:30');
     await dialog.getByPlaceholder('Follow-up note').fill('Agency browser smoke follow-up.');
     await dialog.getByRole('button', { name: 'Schedule', exact: true }).click();
     await expect(notifications.getByText('Follow-up scheduled')).toBeVisible();
@@ -598,6 +600,16 @@ test.describe.serial('local agency workspace browser smoke', () => {
     expect(persisted.status).toBe(TARGET_LEAD_STATUS);
     expect(persisted.agent?.name).toBe('[LOCAL DEMO] Agency Agent');
     expect(String(persisted.nextFollowUp || '')).toContain('2026-07-20');
+    expect(persisted.firstRespondedAt).toBeTruthy();
+    expect(persisted.activities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'contact_attempt',
+          description: 'Agency browser smoke first response.',
+          metadata: expect.objectContaining({ channel: 'call', outcome: 'reached' }),
+        }),
+      ]),
+    );
 
     await expect(
       client.agency.getLeadDetail.query({ leadId: fixtures.crossAgencyLeadId }),

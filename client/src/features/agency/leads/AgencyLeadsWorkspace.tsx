@@ -66,6 +66,11 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
   const [statusNote, setStatusNote] = useState('');
   const [lostReason, setLostReason] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [contactChannel, setContactChannel] = useState('call');
+  const [contactOutcome, setContactOutcome] = useState('reached');
+  const [contactSummary, setContactSummary] = useState('');
+  const [contactNextAction, setContactNextAction] = useState('');
+  const [contactFollowUpAt, setContactFollowUpAt] = useState('');
   const [followUpAt, setFollowUpAt] = useState('');
   const [followUpNote, setFollowUpNote] = useState('');
   const [viewingAt, setViewingAt] = useState('');
@@ -94,6 +99,11 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
     setStatusNote('');
     setLostReason('');
     setNoteText('');
+    setContactChannel('call');
+    setContactOutcome('reached');
+    setContactSummary('');
+    setContactNextAction(selectedLead.nextAction || 'Continue buyer conversation');
+    setContactFollowUpAt(toInputDateTime(selectedLead.nextFollowUp));
     setFollowUpAt(toInputDateTime(selectedLead.nextFollowUp));
     setFollowUpNote('');
     setViewingAt('');
@@ -138,6 +148,14 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
     },
     onError: error => toast.error(error.message || 'Note could not be saved'),
   });
+  const recordContact = trpc.agency.recordLeadContactAttempt.useMutation({
+    onSuccess: async () => {
+      await invalidateLeads();
+      setContactSummary('');
+      toast.success('Buyer contact attempt recorded');
+    },
+    onError: error => toast.error(error.message || 'Buyer contact could not be recorded'),
+  });
 
   const setFollowUp = trpc.agency.setLeadFollowUp.useMutation({
     onSuccess: async () => {
@@ -170,6 +188,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
     assignLead.isPending ||
     updateLeadStatus.isPending ||
     addNote.isPending ||
+    recordContact.isPending ||
     setFollowUp.isPending ||
     completeFollowUp.isPending ||
     scheduleViewing.isPending;
@@ -326,6 +345,81 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
 
                 <Card className="border-slate-200">
                   <CardHeader className="pb-2">
+                    <SectionTitle icon={Phone} title="Record buyer contact" eyebrow="Keep the next action explicit" />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <select
+                        aria-label="Buyer contact channel"
+                        value={contactChannel}
+                        onChange={event => setContactChannel(event.target.value)}
+                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      >
+                        {['call', 'whatsapp', 'email', 'sms', 'other'].map(channel => (
+                          <option key={channel} value={channel}>{channel.replace(/_/g, ' ')}</option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Buyer contact outcome"
+                        value={contactOutcome}
+                        onChange={event => setContactOutcome(event.target.value)}
+                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      >
+                        {['reached', 'replied', 'no_answer', 'voicemail', 'viewing_booked', 'follow_up_required', 'not_interested', 'invalid_contact', 'other'].map(outcome => (
+                          <option key={outcome} value={outcome}>{outcome.replace(/_/g, ' ')}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <Textarea
+                      aria-label="Buyer contact summary"
+                      value={contactSummary}
+                      onChange={event => setContactSummary(event.target.value)}
+                      placeholder="What happened?"
+                    />
+                    {!['not_interested', 'invalid_contact'].includes(contactOutcome) ? (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Input
+                          aria-label="Buyer contact next action"
+                          value={contactNextAction}
+                          onChange={event => setContactNextAction(event.target.value)}
+                          placeholder="Required next action"
+                        />
+                        <Input
+                          aria-label="Buyer contact next follow-up"
+                          type="datetime-local"
+                          value={contactFollowUpAt}
+                          onChange={event => setContactFollowUpAt(event.target.value)}
+                        />
+                      </div>
+                    ) : null}
+                    <Button
+                      disabled={
+                        busy ||
+                        !contactSummary.trim() ||
+                        (!['not_interested', 'invalid_contact'].includes(contactOutcome) && !contactNextAction.trim()) ||
+                        (contactOutcome === 'follow_up_required' && !contactFollowUpAt)
+                      }
+                      onClick={() =>
+                        recordContact.mutate({
+                          leadId: selectedLead.id,
+                          channel: contactChannel as any,
+                          outcome: contactOutcome as any,
+                          summary: contactSummary.trim(),
+                          nextAction: ['not_interested', 'invalid_contact'].includes(contactOutcome)
+                            ? undefined
+                            : contactNextAction.trim(),
+                          nextFollowUp: contactFollowUpAt || undefined,
+                        })
+                      }
+                    >
+                      <Phone className="h-4 w-4" />
+                      Record contact and next action
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200">
+                  <CardHeader className="pb-2">
                     <SectionTitle icon={MessageSquare} title="Notes" eyebrow="Persisted context" />
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -386,6 +480,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <select
+                      aria-label="Lead assignee"
                       value={selectedAgentId}
                       disabled={busy || assignableAgentsQuery.isLoading}
                       onChange={event =>
@@ -416,6 +511,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <select
+                      aria-label="Lead stage"
                       value={draftStatus}
                       onChange={event => setDraftStatus(event.target.value)}
                       className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -434,6 +530,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       />
                     ) : null}
                     <Textarea
+                      aria-label="Lead stage note"
                       value={statusNote}
                       onChange={event => setStatusNote(event.target.value)}
                       placeholder="Stage note"
@@ -466,6 +563,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <Input
+                      aria-label="Lead follow-up at"
                       type="datetime-local"
                       value={followUpAt}
                       onChange={event => setFollowUpAt(event.target.value)}
