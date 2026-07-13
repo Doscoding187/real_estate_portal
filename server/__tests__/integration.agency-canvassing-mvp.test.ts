@@ -260,12 +260,15 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       assignedAgentId,
       stage: 'new',
       propertyAddress: '18 Mandate Avenue',
+      nextAction: 'Make first seller contact',
     });
 
-    await agent.canvassing.addActivity({
+    await agent.canvassing.recordContactAttempt({
       sellerProspectId: createdProspect.sellerProspectId,
-      activityType: 'call',
-      description: 'Made first contact and agreed on a follow-up window.',
+      channel: 'call',
+      outcome: 'reached',
+      summary: 'Made first contact and agreed on a follow-up window.',
+      nextAction: 'Confirm valuation appointment time',
     });
     const followUpAt = new Date(Date.now() + 86_400_000).toISOString();
     await agent.canvassing.setFollowUp({
@@ -294,10 +297,39 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       sellerProspectId: createdProspect.sellerProspectId,
       stage: 'qualified',
     });
-    await manager.canvassing.updateStage({
+    const signedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 90 * 86_400_000).toISOString();
+    await manager.canvassing.updateMandate({
       sellerProspectId: createdProspect.sellerProspectId,
-      stage: 'mandate_won',
+      mandateType: 'sole',
+      signedAt,
+      expiresAt,
+      agreedAskingPrice: 2_750_000,
+      checklist: {
+        pricingAgreed: true,
+        sellerIdentityConfirmed: true,
+        propertyDetailsConfirmed: true,
+        mandateRecorded: true,
+      },
+      nextAction: 'Create and complete listing draft',
     });
+
+    const mandateProspect = await agent.canvassing.getById({
+      sellerProspectId: createdProspect.sellerProspectId,
+    });
+    expect(mandateProspect).toMatchObject({
+      stage: 'mandate_won',
+      mandateType: 'sole',
+      nextAction: 'Create and complete listing draft',
+      mandateChecklist: { mandateRecorded: true },
+    });
+    expect(mandateProspect.firstContactedAt).toBeTruthy();
+    expect(mandateProspect.activities).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ activityType: 'contact_attempt' }),
+        expect.objectContaining({ activityType: 'mandate_updated' }),
+      ]),
+    );
 
     const prefill = await agent.canvassing.getListingPrefill({
       sellerProspectId: createdProspect.sellerProspectId,
