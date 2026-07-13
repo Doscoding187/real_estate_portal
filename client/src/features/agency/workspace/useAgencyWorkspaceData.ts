@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock3,
+  CircleDollarSign,
   CreditCard,
   MessageSquare,
   UserPlus,
@@ -58,6 +59,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const needsPerformance = ['overview', 'growth', 'reporting'].includes(workspace);
   const needsConversion = ['overview', 'leads', 'reporting'].includes(workspace);
   const needsCommission = ['overview', 'transactions', 'commission'].includes(workspace);
+  const needsSettlementWork = ['commission', 'attention'].includes(workspace);
   const needsTeam = ['overview', 'team'].includes(workspace);
 
   const statsQuery = trpc.agency.getDashboardStats.useQuery(undefined, { enabled: dashboardReady });
@@ -83,8 +85,11 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   );
   const commissionQuery = trpc.agency.getCommissionStats.useQuery(
     { months: 6 },
-    { enabled: dashboardReady && needsCommission },
+    { enabled: dashboardReady && needsCommission && user?.role !== 'agent' },
   );
+  const settlementQuery = trpc.agency.getCommissionSettlements.useQuery(undefined, {
+    enabled: dashboardReady && needsSettlementWork,
+  });
   const leaderboardQuery = trpc.agency.getAgentLeaderboard.useQuery(
     { months: 3 },
     { enabled: dashboardReady && needsTeam },
@@ -98,6 +103,14 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const performance = (performanceQuery.data || []) as PerformanceDatum[];
   const conversion = (conversionQuery.data || EMPTY_CONVERSION) as ConversionStats;
   const commission = (commissionQuery.data || EMPTY_COMMISSION) as CommissionStats;
+  const settlements = (settlementQuery.data || []) as Array<{
+    id: number;
+    status?: string | null;
+    expectedCommission?: number | null;
+    amountReceived?: number | null;
+    expectedPaymentDate?: string | null;
+    overdue?: boolean;
+  }>;
   const leaderboard = (leaderboardQuery.data || []) as AgentLeaderboardRow[];
 
   const agencyName = status?.agency?.name || 'Agency';
@@ -239,6 +252,24 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
         action: 'Review listings',
       });
     }
+    const financialExceptions = settlements.filter(item =>
+      Boolean(item.overdue) || ['disputed', 'reconciliation_required'].includes(String(item.status || '')),
+    );
+    if (financialExceptions.length) {
+      const amount = financialExceptions.reduce(
+        (sum, item) => sum + Math.max(0, Number(item.expectedCommission || 0) - Number(item.amountReceived || 0)),
+        0,
+      );
+      items.push({
+        title: 'Commission receipts need attention',
+        detail: 'Only overdue, disputed, or reconciliation-required settlements are surfaced here.',
+        value: `${financialExceptions.length} · R${amount.toLocaleString('en-ZA')}`,
+        tone: 'rose',
+        icon: CircleDollarSign,
+        route: 'commission',
+        action: 'Reconcile',
+      });
+    }
     if (!items.length) {
       items.push({
         title: 'No urgent exceptions right now',
@@ -256,6 +287,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     leadSignals,
     stats.pendingListings,
     stats.totalAgents,
+    settlements,
     status?.teamMembersCount,
     teamNeedsAttention,
   ]);
