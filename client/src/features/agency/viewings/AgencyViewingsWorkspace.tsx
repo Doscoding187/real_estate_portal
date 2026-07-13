@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock3,
   Eye,
+  Handshake,
   HandCoins,
   ListChecks,
   MessageSquare,
@@ -327,6 +328,7 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
               value={(data.counts?.overdueSellerFollowUps || 0) + (data.counts?.dueTodaySellerFollowUps || 0)}
               tone="rose"
             />
+            <QueueMetric label="Mandate actions" value={data.counts?.mandateWork} tone="amber" />
             <QueueMetric label="Today viewings" value={data.counts?.todayViewings} tone="sky" />
             <QueueMetric label="Deal deadlines" value={data.counts?.transactionDeadlines} tone="teal" />
           </div>
@@ -402,6 +404,11 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
                     note: prospect.nextAction || 'Continue seller follow-up from My Day.',
                   })
                 }
+              />
+
+              <MandateWorkQueue
+                work={data.mandateWork || []}
+                onOpen={() => props.setLocation('/agency/canvassing')}
               />
 
               <LeadQueue
@@ -908,6 +915,39 @@ function SellerFollowUpQueue({
           </div>
         ))}
         {!prospects.length ? <EmptyPanel icon={Clock3} title={empty} text="This queue is clear." /> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MandateWorkQueue({ work, onOpen }: { work: any[]; onOpen: (item: any) => void }) {
+  return (
+    <Card className="min-w-0 border-amber-200 bg-amber-50/40 shadow-sm">
+      <CardHeader className="pb-2">
+        <SectionTitle
+          icon={Handshake}
+          title="Mandate Actions"
+          eyebrow={`${numberLabel(work.length)} blocking seller actions`}
+        />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {work.map(item => (
+          <div key={item.id} className="rounded-lg border border-amber-100 bg-white p-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-950">{item.ownerName || 'Seller opportunity'}</p>
+                <p className="mt-1 text-sm text-slate-500">{item.propertyAddress || 'Location to be completed'}</p>
+                <p className="mt-2 text-sm font-medium text-slate-700">Next: {item.nextAction}</p>
+              </div>
+              <Badge variant="outline">{statusLabel(item.type || item.status)}</Badge>
+            </div>
+            <Button className="mt-3" variant="outline" size="sm" onClick={() => onOpen(item)}>
+              <ArrowRight className="h-4 w-4" />
+              Open mandate
+            </Button>
+          </div>
+        ))}
+        {!work.length ? <EmptyPanel icon={Handshake} title="No mandate actions" text="Current mandate requirements are complete." /> : null}
       </CardContent>
     </Card>
   );
