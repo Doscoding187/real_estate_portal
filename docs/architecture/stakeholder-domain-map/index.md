@@ -17,6 +17,16 @@ The pack now has three connected architecture layers:
 - Strategic Capability Architecture: where established, emerging, fragmented, planned, and conceptual capabilities belong.
 - Launch and Implementation Architecture: what should be protected first, what supports launch, what follows feedback, and what should be deferred.
 
+The Prospect Engine architecture pack adds a fourth, consumer-journey layer. It is documentation-only and deliberately reuses the existing public discovery, lead, showing, referral and services engines rather than proposing a parallel CRM:
+
+- [Prospect Engine Current-State Audit](./prospect-engine-current-state-audit.md) distinguishes working prospect capabilities from legacy, stubbed and disconnected paths.
+- [Prospect Identity And Ownership Model](./prospect-identity-and-ownership-model.md) defines one identity across anonymous and authenticated use while preserving agency/private ownership.
+- [Prospect Journey Architecture](./prospect-journey-architecture.md) designs Discover → Organise → Understand buyability → Engage → Track → Continue.
+- [Prospect Buyability Foundation](./prospect-buyability-foundation.md) defines a minimal, non-credit-decision affordability slice and its controls.
+- [Prospect–Agency Integration Map](./prospect-agency-integration-map.md) maps canonical events into leads, showings, deals, referrals, services and analytics.
+- [Prospect Privacy And Status Contract](./prospect-privacy-and-status-contract.md) defines safe state translation, attribution, consent and retention rules.
+- [Prospect Engine MVP Recommendation](./prospect-engine-mvp-recommendation.md) compares three first slices and recommends the prospect action tracker.
+
 The main conclusion is that Property Listify is already a multi-stakeholder property marketplace with two mature listing engines, several emerging domain engines, and a set of shared capabilities that are partly duplicated across verticals.
 
 ## How To Read This Pack
