@@ -91,7 +91,7 @@ describe('agency viewings operating workflow contract', () => {
     expect(feedbackPath).toContain('await db.transaction(async tx =>');
     expect(feedbackPath).toContain('nextFollowUp: followUp');
     expect(feedbackPath).toContain('agency.viewing_feedback_saved');
-    expect(feedbackPath).not.toContain('AI');
+    expect(feedbackPath).not.toMatch(/\b(?:AI|artificial intelligence|machine learning)\b/i);
   });
 
   it('pins My Day to the agency operating timezone and avoids notification duplicates', () => {

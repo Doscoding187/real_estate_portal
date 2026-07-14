@@ -12,6 +12,7 @@ import {
   runSqlMigrations,
   schemaWitnesses,
   sortMigrationFiles,
+  verifyTargetBaselineProfile,
 } from '../runSqlMigrations';
 
 describe('buildMysqlMigrationConnectionConfig', () => {
@@ -124,6 +125,23 @@ class MigrationConnection {
   }
 }
 
+function cumulativeProfileConnection(contactDate: { exists: boolean; type?: string; nullable?: string }) {
+  return {
+    async execute(statement: string) {
+      if (statement.includes("table_name = 'lead_activities'")) return [[{ column_type: "enum('note','call','email','meeting','status_change','contact_attempt')" }]];
+      if (statement.includes('FROM `lead_activities`')) return [[{ count_value: 0 }]];
+      if (statement.includes("table_name = 'showings'")) return [[{ column_type: "enum('requested','awaiting_confirmation','confirmed','completed','cancelled','no_show','rescheduled')" }]];
+      if (statement.includes('FROM `showings`')) return [[{ count_value: 0 }]];
+      if (statement.includes('FROM information_schema.tables') && statement.includes("agency_listing_performance_reviews")) return [[{ count_value: 1 }]];
+      if (statement.includes("table_name = 'agency_listing_performance_reviews'") && statement.includes("column_name = 'contact_date'")) {
+        if (statement.includes('SELECT column_type, is_nullable')) return [[{ column_type: contactDate.type ?? 'timestamp', is_nullable: contactDate.nullable ?? 'YES' }]];
+        return [[{ count_value: contactDate.exists ? 1 : 0 }]];
+      }
+      return {};
+    },
+  };
+}
+
 function tempMigrations(files: Record<string, string>) {
   const directory = mkdtempSync(join(tmpdir(), 'sql-migrations-'));
   for (const [name, contents] of Object.entries(files)) writeFileSync(join(directory, name), contents);
@@ -131,6 +149,19 @@ function tempMigrations(files: Record<string, string>) {
 }
 
 describe('custom SQL migration history', () => {
+  it('keeps the listing-performance baseline profile exact at 0071 and 0072', async () => {
+    const filesThrough0071 = [
+      '0063_extend_showings_lifecycle.sql',
+      '0068_close_buyer_lead_loop.sql',
+      '0071_create_agency_listing_performance_mvp.sql',
+    ];
+    await expect(verifyTargetBaselineProfile(cumulativeProfileConnection({ exists: true }) as any, 71, filesThrough0071)).rejects.toThrow('rejected contact_date');
+
+    const filesThrough0072 = [...filesThrough0071, '0072_add_listing_performance_contact_date.sql'];
+    await expect(verifyTargetBaselineProfile(cumulativeProfileConnection({ exists: true }) as any, 72, filesThrough0072)).resolves.toBeUndefined();
+    await expect(verifyTargetBaselineProfile(cumulativeProfileConnection({ exists: true, type: 'datetime', nullable: 'NO' }) as any, 72, filesThrough0072)).rejects.toThrow('requires nullable timestamp');
+  });
+
   it('refuses historical replay when a database has custom schema effects but no ledger', async () => {
     const directory = tempMigrations({ '0061_reconcile.sql': 'ALTER TABLE plans ADD COLUMN segment varchar(20);' });
     const connection = new MigrationConnection();

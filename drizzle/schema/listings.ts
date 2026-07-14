@@ -98,10 +98,13 @@ export const listings = mysqlTable(
     publishedAt: timestamp({ mode: 'string' }),
     archivedAt: timestamp({ mode: 'string' }),
     locationId: int('location_id'),
+    /** A private canonical draft which revises a published listing. */
+    revisionOfListingId: int('revision_of_listing_id'),
   },
   table => [
     index('idx_listings_place_id').on(table.placeId),
     index('idx_listings_location_id').on(table.locationId),
+    index('idx_listings_revision_of').on(table.revisionOfListingId),
   ],
 );
 

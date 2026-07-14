@@ -3,6 +3,7 @@ import { AgencyCanvassingWorkspace } from '../canvassing/AgencyCanvassingWorkspa
 import { AgencyGrowthWorkspace } from '../growth/GrowthPanels';
 import { AgencyLeadsWorkspace } from '../leads/AgencyLeadsWorkspace';
 import { AgencyListingsWorkspace } from '../listings/AgencyListingsWorkspace';
+import { AgencyListingPerformanceWorkspace } from '../performance/AgencyListingPerformanceWorkspace';
 import {
   AgencyAttentionWorkspace,
   AgencyBillingWorkspace,
@@ -26,6 +27,8 @@ export function WorkspaceContent(props: WorkspaceContentProps) {
       return <AgencyLeadsWorkspace {...props} />;
     case 'listings':
       return <AgencyListingsWorkspace {...props} />;
+    case 'performance':
+      return <AgencyListingPerformanceWorkspace {...props} />;
     case 'canvassing':
       return <AgencyCanvassingWorkspace {...props} />;
     case 'viewings':

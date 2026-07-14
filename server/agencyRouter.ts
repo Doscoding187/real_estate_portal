@@ -26,6 +26,10 @@ import {
   listings,
   listingApprovalQueue,
   listingMedia,
+  listingAnalytics,
+  listingLeads,
+  agencyListingPerformanceReviews,
+  agencyListingPerformanceActivity,
   agencyDeals,
   agencyDealOfferVersions,
   agencyTransactions,
@@ -382,6 +386,24 @@ const updateCommissionSettlementStatusInputSchema = z.object({
 const resolveCommissionDisputeInputSchema = z.object({
   settlementId: z.number().int().positive(),
   resolutionNote: z.string().trim().min(2).max(2000),
+});
+
+const performanceRecommendationSchema = z.enum(['keep_unchanged', 'improve_media', 'improve_description', 'correct_information', 'change_price', 'adjust_viewing_availability', 'increase_marketing', 'pause_listing', 'withdraw_listing', 'review_later']);
+const sellerDecisionSchema = z.enum(['pending', 'accepted', 'partially_accepted', 'rejected', 'deferred', 'unable_to_contact', 'unavailable']);
+const performanceReviewInputSchema = z.object({
+  listingId: z.number().int().positive(),
+  contactChannel: z.enum(['call', 'whatsapp', 'email', 'meeting', 'other']).optional(),
+  agentAssessment: z.string().trim().max(4000).optional().nullable(),
+  buyerFeedbackThemes: z.string().trim().max(4000).optional().nullable(),
+  recommendation: performanceRecommendationSchema.default('review_later'),
+  recommendationReason: z.string().trim().max(4000).optional().nullable(),
+  sellerFeedback: z.string().trim().max(4000).optional().nullable(),
+  sellerDecision: sellerDecisionSchema.default('pending'),
+  contactDate: z.string().trim().max(80).optional().nullable(),
+  followUpNote: z.string().trim().max(2000).optional().nullable(),
+  proposedPrice: nullableMoneyInputSchema,
+  effectiveDate: dateInputSchema,
+  nextReviewAt: dateInputSchema,
 });
 
 type LeadStatus = z.infer<typeof leadStatusSchema>;
@@ -2124,6 +2146,10 @@ async function requireAgencyListing(
       agentId: listings.agentId,
       agencyId: listings.agencyId,
       readinessScore: listings.readinessScore,
+      publishedAt: listings.publishedAt,
+      askingPrice: listings.askingPrice,
+      monthlyRent: listings.monthlyRent,
+      startingBid: listings.startingBid,
     })
     .from(listings)
     .leftJoin(agents, eq(listings.agentId, agents.id))
@@ -2139,6 +2165,46 @@ async function requireAgencyListing(
   }
 
   return row;
+}
+
+async function requirePerformanceListingAccess(
+  db: AgencyDb,
+  user: ReturnType<typeof requireUser>,
+  listingId: number,
+) {
+  const agencyId = requireAgencyId(user);
+  const listing = await requireAgencyListing(db, agencyId, listingId);
+  if (user.role === 'agent') {
+    const [agent] = await db.select({ id: agents.id }).from(agents).where(and(
+      eq(agents.userId, user.id), eq(agents.agencyId, agencyId), eq(agents.status, 'approved'),
+    )).limit(1);
+    if (!agent || (Number(listing.agentId || 0) !== agent.id && Number(listing.ownerId || 0) !== user.id)) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'You can only review listings assigned to you.' });
+    }
+  }
+  return listing;
+}
+
+async function createListingPerformanceSnapshot(db: AgencyDb, agencyId: number, listingId: number) {
+  const listing = await requireAgencyListing(db, agencyId, listingId);
+  const [[analytics], [leadCounts], [showingCounts], [offerCounts], [mediaCounts]] = await Promise.all([
+    db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).orderBy(desc(listingAnalytics.lastUpdated), desc(listingAnalytics.id)).limit(1),
+    db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${listingLeads.status} IN ('contacted','qualified','viewing_scheduled','offer_made','converted') THEN 1 ELSE 0 END)` }).from(listingLeads).where(eq(listingLeads.listingId, listingId)),
+    db.select({ requested: sql<number>`SUM(CASE WHEN ${showings.status} = 'requested' THEN 1 ELSE 0 END)`, confirmed: sql<number>`SUM(CASE WHEN ${showings.status} = 'confirmed' THEN 1 ELSE 0 END)`, completed: sql<number>`SUM(CASE WHEN ${showings.status} = 'completed' THEN 1 ELSE 0 END)`, cancelled: sql<number>`SUM(CASE WHEN ${showings.status} IN ('cancelled', 'no_show') THEN 1 ELSE 0 END)` }).from(showings).where(eq(showings.listingId, listingId)),
+    db.select({ offers: sql<number>`COUNT(*)` }).from(agencyDeals).innerJoin(agencyDealOfferVersions, eq(agencyDealOfferVersions.dealId, agencyDeals.id)).where(and(eq(agencyDeals.agencyId, agencyId), eq(agencyDeals.listingId, listingId))),
+    db.select({ media: sql<number>`COUNT(*)` }).from(listingMedia).where(eq(listingMedia.listingId, listingId)),
+  ]);
+  const views = Number(analytics?.totalViews || 0);
+  const enquiries = Math.max(Number(analytics?.totalLeads || 0), Number(leadCounts?.enquiries || 0));
+  const daysLive = daysBetweenNow((listing as any).publishedAt) || 0;
+  const flags = [
+    ...(daysLive >= 14 && views === 0 ? ['no_engagement'] : []),
+    ...(views > 0 && enquiries === 0 ? ['views_without_enquiries'] : []),
+    ...(enquiries > 0 && Number(showingCounts?.requested || 0) === 0 ? ['enquiries_without_viewings'] : []),
+    ...(Number(showingCounts?.completed || 0) > 0 && Number(offerCounts?.offers || 0) === 0 ? ['viewings_without_offers'] : []),
+    ...(Number(mediaCounts?.media || 0) === 0 ? ['missing_media'] : []),
+  ];
+  return { metrics: { capturedAt: nowAsDbTimestamp(), reviewPeriodStart: (listing as any).publishedAt || null, reviewPeriodEnd: nowAsDbTimestamp(), daysLive, views, uniqueViews: Number(analytics?.uniqueVisitors || 0), enquiries, progressingLeads: Number(leadCounts?.progressing || 0), viewingRequests: Number(showingCounts?.requested || 0), confirmedViewings: Number(showingCounts?.confirmed || 0), completedViewings: Number(showingCounts?.completed || 0), cancelledOrNoShowViewings: Number(showingCounts?.cancelled || 0), offers: Number(offerCounts?.offers || 0), currentPrice: priceForListing(listing as any) }, flags };
 }
 
 function insertResultId(result: any) {
@@ -6456,6 +6522,145 @@ export const agencyRouter = router({
       return { success: true, status: nextStatus };
     }),
 
+  getListingPerformance: protectedProcedure
+    .input(z.object({ listingId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      await requirePerformanceListingAccess(db, user, input.listingId);
+      const [snapshot, reviews] = await Promise.all([
+        createListingPerformanceSnapshot(db, agencyId, input.listingId),
+        db.select().from(agencyListingPerformanceReviews).where(and(eq(agencyListingPerformanceReviews.agencyId, agencyId), eq(agencyListingPerformanceReviews.listingId, input.listingId))).orderBy(desc(agencyListingPerformanceReviews.createdAt)),
+      ]);
+      const revisionIds = reviews.map(review => Number(review.canonicalRevisionListingId || 0)).filter(Boolean);
+      const revisionRows = revisionIds.length ? await db.select({ id: listings.id, status: listings.status, rejectionReason: listings.rejectionReason }).from(listings).where(inArray(listings.id, revisionIds)) : [];
+      const revisionById = new Map(revisionRows.map(row => [row.id, row]));
+      return {
+        listingId: input.listingId,
+        live: snapshot,
+        reviews: reviews.map(review => ({ ...review, canonicalRevision: review.canonicalRevisionListingId ? revisionById.get(Number(review.canonicalRevisionListingId)) || null : null })),
+        reportBoundary: 'Metrics reflect Property Listify activity only. They are operational engagement data, not all market activity, a CMA, or a valuation certificate.',
+      };
+    }),
+
+  getListingPerformanceQueue: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    const user = requireUser(ctx);
+    const agencyId = requireAgencyId(user);
+    const rows = await db.select({ listing: listings, agent: agents })
+      .from(listings)
+      .leftJoin(agents, eq(listings.agentId, agents.id))
+      .where(and(eq(listings.agencyId, agencyId), eq(listings.status, 'published')))
+      .orderBy(desc(listings.updatedAt));
+    const visible = user.role === 'agent'
+      ? rows.filter(row => row.agent?.userId === user.id || row.listing.ownerId === user.id)
+      : rows;
+    return Promise.all(visible.map(async row => {
+      const live = await createListingPerformanceSnapshot(db, agencyId, row.listing.id);
+      const [latestReview] = await db.select().from(agencyListingPerformanceReviews)
+        .where(and(eq(agencyListingPerformanceReviews.agencyId, agencyId), eq(agencyListingPerformanceReviews.listingId, row.listing.id)))
+        .orderBy(desc(agencyListingPerformanceReviews.createdAt)).limit(1);
+      const flags = live.flags;
+      const due = latestReview?.nextReviewAt ? new Date(latestReview.nextReviewAt) : null;
+      const overdue = Boolean(due && due.getTime() < Date.now());
+      const reason = overdue ? `Seller review overdue by ${Math.max(1, Math.ceil((Date.now() - due!.getTime()) / 86_400_000))} day${Math.ceil((Date.now() - due!.getTime()) / 86_400_000) === 1 ? '' : 's'}.`
+        : flags.includes('views_without_enquiries') ? `Listing has ${live.metrics.views} views but no enquiries.`
+        : flags.includes('enquiries_without_viewings') ? `Listing has ${live.metrics.enquiries} enquiries without a viewing request.`
+        : flags.includes('viewings_without_offers') ? `Listing has ${live.metrics.completedViewings} completed viewing${live.metrics.completedViewings === 1 ? '' : 's'} but no offers.`
+        : flags.includes('no_engagement') ? `No engagement recorded in ${live.metrics.daysLive} days live.`
+        : flags.includes('missing_media') ? 'Listing-quality blocker: no media is attached.'
+        : 'No immediate action is due.';
+      return {
+        listing: { id: row.listing.id, title: row.listing.title, address: row.listing.address, city: row.listing.city, askingPrice: row.listing.askingPrice, publishedAt: row.listing.publishedAt },
+        responsibleAgent: row.agent ? { id: row.agent.id, name: row.agent.displayName || [row.agent.firstName, row.agent.lastName].filter(Boolean).join(' ') || 'Assigned agent' } : null,
+        live, latestReview: latestReview || null, reason, actionable: overdue || flags.length > 0,
+      };
+    }));
+  }),
+
+  getListingPerformanceReport: protectedProcedure
+    .input(z.object({ reviewId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      const user = requireUser(ctx); const agencyId = requireAgencyId(user);
+      const [review] = await db.select().from(agencyListingPerformanceReviews).where(and(eq(agencyListingPerformanceReviews.id, input.reviewId), eq(agencyListingPerformanceReviews.agencyId, agencyId))).limit(1);
+      if (!review) throw new TRPCError({ code: 'NOT_FOUND', message: 'Seller review not found' });
+      const listing = await requirePerformanceListingAccess(db, user, review.listingId);
+      const [agency] = await db.select({ name: agencies.name }).from(agencies).where(eq(agencies.id, agencyId)).limit(1);
+      const [agent] = review.responsibleAgentId ? await db.select({ displayName: agents.displayName, firstName: agents.firstName, lastName: agents.lastName }).from(agents).where(eq(agents.id, review.responsibleAgentId)).limit(1) : [];
+      return { agencyName: agency?.name || 'Property Listify agency', agentName: agent?.displayName || [agent?.firstName, agent?.lastName].filter(Boolean).join(' ') || 'Assigned agent', listing: { title: listing.title, address: listing.address, city: listing.city, reference: `Listing ${listing.id}`, currentPrice: priceForListing(listing as any) }, review, limitations: ['Metrics reflect activity recorded within Property Listify.', 'Activity from external portals and offline marketing may not be included.', 'This report is not an automated valuation.', 'This report is not a formal CMA or valuation certificate.'] };
+    }),
+
+  recordListingPerformanceReview: protectedProcedure
+    .input(performanceReviewInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      const user = requireUser(ctx);
+      const agencyId = requireAgencyId(user);
+      const listing = await requirePerformanceListingAccess(db, user, input.listingId);
+      if (String(listing.status) !== 'published') throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Seller reviews can only be recorded for published listings.' });
+      if (input.sellerDecision !== 'unable_to_contact' && !input.contactDate) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A contact date is required unless the seller could not be reached.' });
+      if (input.recommendation === 'change_price' && (input.proposedPrice == null || !input.recommendationReason)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A proposed price and rationale are required for a price recommendation.' });
+      if (['deferred', 'unable_to_contact', 'pending'].includes(input.sellerDecision) && !input.nextReviewAt) throw new TRPCError({ code: 'BAD_REQUEST', message: 'A next review date is required when follow-up is needed.' });
+      const snapshot = await createListingPerformanceSnapshot(db, agencyId, input.listingId);
+      const [agent] = await db.select({ id: agents.id }).from(agents).where(and(eq(agents.userId, user.id), eq(agents.agencyId, agencyId))).limit(1);
+      const now = nowAsDbTimestamp();
+      const [result] = await db.insert(agencyListingPerformanceReviews).values({
+        agencyId, listingId: input.listingId, responsibleAgentId: listing.agentId || agent?.id || null, createdByUserId: user.id,
+        reviewStatus: input.sellerDecision === 'pending' ? 'scheduled' : 'completed',
+        contactDate: input.contactDate ? toDbTimestampRequired(input.contactDate) : null,
+        contactChannel: input.contactChannel || null,
+        // Review-period boundaries describe the immutable activity snapshot, not when the seller was contacted.
+        reviewPeriodStart: snapshot.metrics.reviewPeriodStart, reviewPeriodEnd: snapshot.metrics.reviewPeriodEnd, metricsSnapshot: snapshot.metrics, healthFlagsSnapshot: snapshot.flags,
+        agentAssessment: input.agentAssessment || null, buyerFeedbackThemes: input.buyerFeedbackThemes || null,
+        recommendation: input.recommendation, recommendationReason: input.recommendationReason || null,
+        sellerFeedback: [input.sellerFeedback, input.followUpNote].filter(Boolean).join('\n\nFollow-up: ') || null, sellerDecision: input.sellerDecision,
+        proposedPrice: toDecimalString(input.proposedPrice), effectiveDate: input.effectiveDate ? toDbTimestampRequired(input.effectiveDate) : null,
+        nextReviewAt: input.nextReviewAt ? toDbTimestampRequired(input.nextReviewAt) : null,
+      } as any);
+      const reviewId = insertResultId(result);
+      await db.insert(agencyListingPerformanceActivity).values({ agencyId, reviewId, userId: user.id, eventType: 'seller_review_recorded', description: 'Seller performance review recorded.', metadata: { sellerDecision: input.sellerDecision, recommendation: input.recommendation, flags: snapshot.flags } });
+      return { success: true, reviewId, snapshot };
+    }),
+
+  requestListingPerformancePriceRevision: protectedProcedure
+    .input(z.object({ reviewId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      const user = requireUser(ctx); const agencyId = requireAgencyId(user);
+      const [review] = await db.select().from(agencyListingPerformanceReviews).where(and(eq(agencyListingPerformanceReviews.id, input.reviewId), eq(agencyListingPerformanceReviews.agencyId, agencyId))).limit(1);
+      if (!review) throw new TRPCError({ code: 'NOT_FOUND', message: 'Performance review not found' });
+      await requirePerformanceListingAccess(db, user, review.listingId);
+      if (review.recommendation !== 'change_price' || review.sellerDecision !== 'accepted' || !review.proposedPrice) throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Only an accepted price recommendation with a proposed price can start a revision.' });
+      if (review.canonicalRevisionListingId) {
+        const [existing] = await db.select({ id: listings.id, status: listings.status }).from(listings).where(eq(listings.id, review.canonicalRevisionListingId)).limit(1);
+        if (existing) return { success: true, status: existing.status, revisionListingId: existing.id, duplicate: true };
+      }
+      const [source] = await db.select().from(listings).where(and(eq(listings.id, review.listingId), eq(listings.agencyId, agencyId))).limit(1);
+      if (!source || String(source.status) !== 'published') throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'A private revision can only be created from an active published listing.' });
+      const [otherRevision] = await db.select({ id: listings.id, status: listings.status }).from(listings).where(and(eq(listings.revisionOfListingId, source.id), inArray(listings.status, ['draft', 'pending_review'] as any))).limit(1);
+      if (otherRevision) throw new TRPCError({ code: 'CONFLICT', message: 'Another listing revision is already in progress. Open that revision to continue.' });
+      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, publishedAt: _publishedAt, reviewedBy: _reviewedBy, reviewedAt: _reviewedAt, rejectionReason: _rejectionReason, rejectionReasons: _rejectionReasons, rejectionNote: _rejectionNote, ...draftFields } = source as any;
+      const [draftResult] = await db.insert(listings).values({
+        ...draftFields,
+        askingPrice: review.proposedPrice,
+        status: 'draft', approvalStatus: 'pending', revisionOfListingId: source.id,
+        slug: `${source.slug}-revision-${review.id}`.slice(0, 255),
+        publishedAt: null, archivedAt: null, rejectionReason: null, rejectionReasons: null, rejectionNote: null,
+        updatedAt: nowAsDbTimestamp(),
+      } as any);
+      const revisionListingId = insertResultId(draftResult);
+      await db.update(agencyListingPerformanceReviews).set({ revisionRequestedAt: nowAsDbTimestamp(), canonicalRevisionListingId: revisionListingId }).where(eq(agencyListingPerformanceReviews.id, review.id));
+      await db.insert(agencyListingPerformanceActivity).values({ agencyId, reviewId: review.id, userId: user.id, eventType: 'price_revision_draft_created', description: 'Private canonical listing revision draft created from the accepted seller price action.', metadata: { proposedPrice: review.proposedPrice, revisionListingId } });
+      return { success: true, status: 'draft', revisionListingId, duplicate: false };
+    }),
+
   getMyDay: agentProcedure
     .input(
       z
@@ -6832,6 +7037,28 @@ export const agencyRouter = router({
         return { id: `mandate:${row.operation.id}`, type, sellerProspectId: row.prospect.id, ownerName: row.prospect.ownerName, propertyAddress: row.prospect.propertyAddress, dueAt: expired || expiringSoon ? row.prospect.mandateExpiresAt : row.operation.priceReviewAt, nextAction: row.operation.nextAction || 'Complete mandate requirements', status: row.operation.status, expired, assignedAgent: mapSellerProspect(row).assignedAgent };
       });
 
+      // A review is one personal work item, regardless of how many signals it contains.
+      const performanceReviewRows = await db.select({ review: agencyListingPerformanceReviews, listing: listings, agent: agents })
+        .from(agencyListingPerformanceReviews)
+        .innerJoin(listings, eq(agencyListingPerformanceReviews.listingId, listings.id))
+        .leftJoin(agents, eq(agencyListingPerformanceReviews.responsibleAgentId, agents.id))
+        .where(and(
+          eq(agencyListingPerformanceReviews.agencyId, agencyId),
+          user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
+          or(
+            sql`${agencyListingPerformanceReviews.nextReviewAt} IS NOT NULL AND ${agencyListingPerformanceReviews.nextReviewAt} < ${bounds.endDb}`,
+            and(eq(agencyListingPerformanceReviews.recommendation, 'change_price'), eq(agencyListingPerformanceReviews.sellerDecision, 'accepted'), isNull(agencyListingPerformanceReviews.revisionRequestedAt)),
+            eq(agencyListingPerformanceReviews.sellerDecision, 'unavailable'),
+          )!,
+        )).orderBy(asc(agencyListingPerformanceReviews.nextReviewAt), desc(agencyListingPerformanceReviews.createdAt)).limit(limit);
+      const performanceReviewWork = performanceReviewRows.map((row: any) => {
+        const dueAt = row.review.nextReviewAt || row.review.createdAt;
+        const overdue = row.review.nextReviewAt && new Date(row.review.nextReviewAt).getTime() < bounds.start.getTime();
+        const type = row.review.sellerDecision === 'unavailable' ? 'listing_unavailable_still_public' : row.review.recommendation === 'change_price' && row.review.sellerDecision === 'accepted' && !row.review.revisionRequestedAt ? 'accepted_price_change_awaiting_revision' : overdue ? 'seller_review_overdue' : 'seller_review_due';
+        const reason = type === 'listing_unavailable_still_public' ? 'Seller reported the property unavailable; confirm its public listing status.' : type === 'accepted_price_change_awaiting_revision' ? 'Seller accepted a price change; create the listing revision.' : overdue ? 'Seller review is overdue.' : 'Seller review is due today.';
+        return { id: `listing-performance:${row.review.id}`, reviewId: row.review.id, listingId: row.listing.id, property: row.listing.title || row.listing.address, responsibleAgent: row.agent?.displayName || [row.agent?.firstName, row.agent?.lastName].filter(Boolean).join(' ') || 'Assigned agent', dueAt, overdue: Boolean(overdue), type, reason, resolution: type === 'accepted_price_change_awaiting_revision' ? 'Clear when the canonical revision handoff is created.' : type === 'listing_unavailable_still_public' ? 'Clear when the listing is no longer public or the seller decision is corrected.' : 'Clear when a later seller review resolves or reschedules the due action.' };
+      });
+
       return {
         date: dayKey,
         overdueFollowUps: overdueFollowUps.map(mapLead),
@@ -6848,6 +7075,7 @@ export const agencyRouter = router({
         overdueSellerFollowUps: overdueSellerFollowUps.map(mapSellerProspect),
         dueTodaySellerFollowUps: dueTodaySellerFollowUps.map(mapSellerProspect),
         mandateWork,
+        performanceReviewWork,
         upcomingWork: upcomingViewings,
         counts: {
           overdueFollowUps: overdueFollowUps.length,
@@ -6861,6 +7089,7 @@ export const agencyRouter = router({
           transactionDeadlines: transactionDeadlines.length,
           overdueSellerFollowUps: overdueSellerFollowUps.length,
           mandateWork: mandateWork.length,
+          performanceReviewWork: performanceReviewWork.length,
           dueTodaySellerFollowUps: dueTodaySellerFollowUps.length,
           upcomingWork: upcomingViewings.length,
         },

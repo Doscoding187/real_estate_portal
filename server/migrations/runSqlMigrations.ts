@@ -534,6 +534,8 @@ const LEAD_ACTIVITY_TYPES_0068 = [...LEAD_ACTIVITY_TYPES_0061, 'contact_attempt'
 const SHOWING_STATUS_TYPES_0063 = ['requested', 'awaiting_confirmation', 'confirmed', 'completed', 'cancelled', 'no_show', 'rescheduled'] as const;
 const LEAD_ACTIVITY_TYPES_0068_MIGRATION = '0068_close_buyer_lead_loop.sql';
 const SHOWING_STATUS_TYPES_0063_MIGRATION = '0063_extend_showings_lifecycle.sql';
+const LISTING_PERFORMANCE_0071_MIGRATION = '0071_create_agency_listing_performance_mvp.sql';
+const LISTING_PERFORMANCE_0072_MIGRATION = '0072_add_listing_performance_contact_date.sql';
 
 function versionNumber(value: string): number {
   return Number.parseInt(value.match(/^(\d+)/)?.[1] ?? '', 10);
@@ -594,7 +596,7 @@ async function verifyShowingsStatusProfile(connection: SqlConnection, targetVers
   }
 }
 
-async function verifyTargetBaselineProfile(
+export async function verifyTargetBaselineProfile(
   connection: SqlConnection,
   targetVersion: number,
   baselineFiles: string[],
@@ -608,14 +610,24 @@ async function verifyTargetBaselineProfile(
   await verifyLeadActivitiesTypeProfile(connection, targetVersion);
   await verifyShowingsStatusProfile(connection, targetVersion);
   if (targetVersion < 71) return;
-  if (!baselineFiles.some(file => file.startsWith('0071_'))) {
-    throw new Error('Baseline target 0071 requires the committed 0071 migration file in the active migration directory.');
+  if (!baselineFiles.includes(LISTING_PERFORMANCE_0071_MIGRATION)) {
+    throw new Error(`Baseline target ${String(targetVersion).padStart(4, '0')} requires the committed ${LISTING_PERFORMANCE_0071_MIGRATION} file in the active migration directory.`);
   }
   if (!await tableExists(connection, 'agency_listing_performance_reviews', new Map())) {
     throw new Error('Cumulative baseline 0071 requires agency_listing_performance_reviews from migration 0071.');
   }
-  if (await columnExists(connection, 'agency_listing_performance_reviews', 'contact_date')) {
+  if (targetVersion === 71 && await columnExists(connection, 'agency_listing_performance_reviews', 'contact_date')) {
     throw new Error('Cumulative baseline 0071 rejected contact_date because it belongs to migration 0072.');
+  }
+  if (targetVersion < 72) return;
+  if (!baselineFiles.includes(LISTING_PERFORMANCE_0072_MIGRATION)) {
+    throw new Error(`Baseline target ${String(targetVersion).padStart(4, '0')} requires the committed ${LISTING_PERFORMANCE_0072_MIGRATION} file before accepting contact_date.`);
+  }
+  const contactDateRows = await queryRows(connection, `SELECT column_type, is_nullable FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'agency_listing_performance_reviews' AND column_name = 'contact_date'`);
+  const contactDateType = String(getRowValue(contactDateRows[0] ?? {}, 'column_type') ?? '').replace(/\s+/g, '').toLowerCase();
+  const contactDateNullable = String(getRowValue(contactDateRows[0] ?? {}, 'is_nullable') ?? '').toUpperCase();
+  if (contactDateType !== 'timestamp' || contactDateNullable !== 'YES') {
+    throw new Error(`Cumulative baseline ${String(targetVersion).padStart(4, '0')} requires nullable timestamp agency_listing_performance_reviews.contact_date from migration 0072.`);
   }
 }
 

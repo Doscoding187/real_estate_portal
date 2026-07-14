@@ -15,6 +15,14 @@ LOG_FILE="$LOCAL_DIR/mysqld.log"
 ROOT_PASSWORD="${LISTIFY_LOCAL_DB_ROOT_PASSWORD:-listify_root_password}"
 APP_PASSWORD="${LISTIFY_LOCAL_DB_APP_PASSWORD:-listify_app_password}"
 TEST_PASSWORD="${LISTIFY_LOCAL_DB_TEST_PASSWORD:-listify_test_password}"
+LISTING_PERFORMANCE_E2E_DATABASE="${LISTIFY_LISTING_PERFORMANCE_E2E_DATABASE:-listify_listing_performance_e2e}"
+
+assert_listing_performance_e2e_database() {
+  if [ "$LISTING_PERFORMANCE_E2E_DATABASE" != "listify_listing_performance_e2e" ]; then
+    echo "Listing Performance E2E database must be exactly listify_listing_performance_e2e." >&2
+    exit 1
+  fi
+}
 
 has_docker_compose() {
   command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1
@@ -78,6 +86,7 @@ native_ensure_schema() {
   mysql "${root_args[@]}" <<SQL
 CREATE DATABASE IF NOT EXISTS listify_local;
 CREATE DATABASE IF NOT EXISTS listify_test;
+CREATE DATABASE IF NOT EXISTS $LISTING_PERFORMANCE_E2E_DATABASE;
 
 CREATE USER IF NOT EXISTS 'listify_app'@'127.0.0.1' IDENTIFIED BY '$APP_PASSWORD';
 CREATE USER IF NOT EXISTS 'listify_app'@'localhost' IDENTIFIED BY '$APP_PASSWORD';
@@ -93,6 +102,8 @@ GRANT ALL PRIVILEGES ON listify_local.* TO 'listify_app'@'127.0.0.1';
 GRANT ALL PRIVILEGES ON listify_local.* TO 'listify_app'@'localhost';
 GRANT ALL PRIVILEGES ON listify_test.* TO 'listify_test'@'127.0.0.1';
 GRANT ALL PRIVILEGES ON listify_test.* TO 'listify_test'@'localhost';
+GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'localhost';
 
 ALTER USER 'root'@'localhost' IDENTIFIED BY '$ROOT_PASSWORD';
 FLUSH PRIVILEGES;
@@ -198,15 +209,50 @@ destroy() {
   fi
 }
 
+reset_listing_performance_e2e() {
+  assert_listing_performance_e2e_database
+  start
+  if use_docker; then
+    compose exec -T mysql-local mysql -uroot "-p$ROOT_PASSWORD" <<SQL
+DROP DATABASE IF EXISTS $LISTING_PERFORMANCE_E2E_DATABASE;
+CREATE DATABASE $LISTING_PERFORMANCE_E2E_DATABASE;
+GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+  else
+    mapfile -t root_args < <(native_root_args)
+    mysql "${root_args[@]}" <<SQL
+DROP DATABASE IF EXISTS $LISTING_PERFORMANCE_E2E_DATABASE;
+CREATE DATABASE $LISTING_PERFORMANCE_E2E_DATABASE;
+GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+  fi
+}
+
+drop_listing_performance_e2e() {
+  assert_listing_performance_e2e_database
+  if use_docker; then
+    compose exec -T mysql-local mysql -uroot "-p$ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS $LISTING_PERFORMANCE_E2E_DATABASE"
+  else
+    mapfile -t root_args < <(native_root_args)
+    mysql "${root_args[@]}" -e "DROP DATABASE IF EXISTS $LISTING_PERFORMANCE_E2E_DATABASE"
+  fi
+}
+
 case "${1:-help}" in
   start) start ;;
   wait) wait_for_tcp ;;
   status) wait_for_tcp ;;
   stop) stop ;;
   destroy) destroy ;;
+  listing-performance-e2e:reset) reset_listing_performance_e2e ;;
+  listing-performance-e2e:drop) drop_listing_performance_e2e ;;
   *)
     cat <<EOF
-Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy>
+Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy|listing-performance-e2e:reset|listing-performance-e2e:drop>
 
 Environment overrides:
   LISTIFY_LOCAL_DB_MODE=auto|docker|native

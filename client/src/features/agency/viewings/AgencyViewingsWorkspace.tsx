@@ -329,6 +329,7 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
               tone="rose"
             />
             <QueueMetric label="Mandate actions" value={data.counts?.mandateWork} tone="amber" />
+            <QueueMetric label="Listing performance" value={data.counts?.performanceReviewWork} tone="amber" />
             <QueueMetric label="Today viewings" value={data.counts?.todayViewings} tone="sky" />
             <QueueMetric label="Deal deadlines" value={data.counts?.transactionDeadlines} tone="teal" />
           </div>
@@ -410,6 +411,11 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
                 work={data.mandateWork || []}
                 onOpen={() => props.setLocation('/agency/canvassing')}
               />
+
+              <Card className="border-slate-200 bg-white shadow-sm">
+                <CardHeader className="pb-2"><SectionTitle icon={ListChecks} title="Listing Performance Work" eyebrow={`${numberLabel(data.performanceReviewWork?.length || 0)} actionable seller items`} /></CardHeader>
+                <CardContent className="space-y-3">{data.performanceReviewWork?.length ? data.performanceReviewWork.map((item: any) => <div key={item.id} className="rounded-lg border border-amber-200 bg-amber-50 p-3"><p className="font-medium text-slate-900">{item.property}</p><p className="mt-1 text-sm text-slate-700">{item.reason}</p><p className="mt-1 text-xs text-slate-600">Owner: {item.responsibleAgent} · Due {item.dueAt ? new Date(item.dueAt).toLocaleDateString('en-ZA') : 'now'}</p><p className="mt-1 text-xs text-slate-500">Clears when: {item.resolution}</p><Button className="mt-3" size="sm" variant="outline" onClick={() => props.onNavigate('performance')}>Open listing performance</Button></div>) : <p className="text-sm text-slate-500">No seller-review or revision actions are due.</p>}</CardContent>
+              </Card>
 
               <LeadQueue
                 title="Overdue Lead Follow-ups"

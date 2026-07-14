@@ -94,6 +94,9 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     { months: 3 },
     { enabled: dashboardReady && needsTeam },
   );
+  const performanceQueueQuery = trpc.agency.getListingPerformanceQueue.useQuery(undefined, {
+    enabled: dashboardReady && ['overview', 'attention'].includes(workspace),
+  });
 
   const stats = (statsQuery.data || EMPTY_STATS) as AgencyStats;
   const recentLeads = (recentLeadsQuery.data || []) as AgencyLead[];
@@ -112,6 +115,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     overdue?: boolean;
   }>;
   const leaderboard = (leaderboardQuery.data || []) as AgentLeaderboardRow[];
+  const performanceExceptions = (performanceQueueQuery.data || []) as Array<any>;
 
   const agencyName = status?.agency?.name || 'Agency';
   const principalName =
@@ -252,6 +256,19 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
         action: 'Review listings',
       });
     }
+    const actionablePerformance = performanceExceptions.filter(item => item.actionable);
+    if (actionablePerformance.length) {
+      const exception = actionablePerformance[0];
+      items.push({
+        title: exception.reason,
+        detail: `${exception.listing.title} · ${exception.responsibleAgent?.name || 'Unassigned agent'}. Clear this by completing the seller-review, revision, or availability action.`,
+        value: `${actionablePerformance.length} listing${actionablePerformance.length === 1 ? '' : 's'}`,
+        tone: exception.reason.toLowerCase().includes('overdue') ? 'rose' : 'amber',
+        icon: ClipboardCheck,
+        route: 'performance',
+        action: 'Open performance',
+      });
+    }
     const financialExceptions = settlements.filter(item =>
       Boolean(item.overdue) || ['disputed', 'reconciliation_required'].includes(String(item.status || '')),
     );
@@ -287,6 +304,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     leadSignals,
     stats.pendingListings,
     stats.totalAgents,
+    performanceExceptions,
     settlements,
     status?.teamMembersCount,
     teamNeedsAttention,
