@@ -166,19 +166,50 @@ DATABASE_URL=mysql://listify_test:listify_test_password@127.0.0.1:3307/listify_t
 
 A non-production TiDB development database can work as a fallback for some development tasks, but keep database names isolated and never reuse production credentials. Do not point browser tests at production or shared data.
 
-## Migrations And Seed Data
+## Local database startup and recovery
 
-For a fresh local database, run both Drizzle migrations and SQL reconciliation migrations:
+`listify_local` is a disposable development database only. Normal startup is non-destructive: it starts MySQL, applies both migration journals incrementally, then verifies schema, custom migration history, demo-login readiness, and the seeded agency workspace.
 
 ```bash
-pnpm db:migrate:fresh:local
+pnpm db:start:local
 ```
 
-For an existing local database that already has the Drizzle baseline, run only the SQL migration path:
+If MySQL is already running, use the incremental migration command directly:
 
 ```bash
 pnpm db:migrate:local
+pnpm db:verify:local
 ```
+
+Do not use either command to repair a database with incomplete custom migration history or untrusted schema drift. The custom migration runner will deliberately refuse historical replay in that situation.
+
+When `listify_local` is broken or disposable, reprovision it explicitly. This destroys only `listify_local`, recreates it from repository migrations, applies every custom SQL migration from the beginning, seeds deterministic demo data, and verifies the finished contract:
+
+```bash
+LISTIFY_LOCAL_DB_REPROVISION_CONFIRM=I_UNDERSTAND_LISTIFY_LOCAL_WILL_BE_DESTROYED pnpm db:reprovision:local
+```
+
+The command requires all of the following before it can issue a destructive statement:
+
+- `NODE_ENV=development` (the package script sets this)
+- exact database name `listify_local`
+- a repository-approved local MySQL host (`127.0.0.1`, `localhost`, Docker service aliases, or the approved local service host)
+- the exact acknowledgement above
+
+It prints only the selected host and database name—never credentials—and rejects staging, production, unknown hosts, prefixes, wildcard names, and missing acknowledgement. It never runs during application startup. A failed migration stops before seed, and a failed seed stops before verification or app use. A partial recreation is reported as failed; rerun the explicit command only after addressing the reported error.
+
+Never run the local reprovision command against staging or production. It is deliberately restricted to the exact local development database and is not a deployment or shared-environment recovery tool.
+
+`pnpm db:verify:local` is read-only. It checks connectivity and exact identity, Drizzle/custom schema essentials, complete executed custom-SQL ledger with checksums, migration-lock state, the current showings lifecycle enum, Listing Performance tables and `contact_date`, auth columns, and deterministic agency demo-login/workspace data.
+
+Only after `pnpm db:start:local` or `pnpm db:reprovision:local` succeeds should you start the application with `pnpm dev`. Reprovision never starts the app itself, so a migration or seed failure cannot leave a server claiming local readiness.
+
+### Common recovery errors
+
+- `users` missing, a stale `showings.status` enum, or an absent Listing Performance `contact_date` means the schema is not current. For disposable local data, reprovision instead of manually forcing migration-history rows.
+- “Historical custom schema effects exist” with an empty `sql_migration_history` ledger means normal migration correctly refused unsafe replay. Do not silently baseline that unknown state; reprovision the disposable local database.
+- A checksum mismatch means a committed custom SQL migration was changed after it was recorded. Restore the migration file; do not rewrite the ledger.
+- A healthy reprovision records every custom migration as `executed`, including the current `0072` entry. A subsequent `pnpm db:migrate:local` is expected to be a no-op.
 
 Run test migrations:
 
@@ -196,12 +227,10 @@ LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:verify:local-demo
 Full local bootstrap, when `LOCAL_DEMO_AGENCY_PASSWORD` is already present in `.env.local`:
 
 ```bash
-pnpm db:local:start
-pnpm db:local:wait
-pnpm db:migrate:fresh:local
-pnpm db:seed:local
-pnpm db:verify:local-demo
+LISTIFY_LOCAL_DB_REPROVISION_CONFIRM=I_UNDERSTAND_LISTIFY_LOCAL_WILL_BE_DESTROYED pnpm db:reprovision:local
 ```
+
+The demo password is never committed or printed. Set `LOCAL_DEMO_AGENCY_PASSWORD` in ignored `.env.local`; its placeholder and required variable name are in `.env.example`. The `agency@listify.local` account is the agency-workspace login verified by the commands above.
 
 Reset only local demo data:
 
