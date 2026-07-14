@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'fs';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { connect } from '@tidbcloud/serverless';
@@ -21,6 +21,7 @@ const MIGRATION_LOCK_NAME = 'real_estate_portal_sql_migrations';
 const MIGRATION_HISTORY_TABLE = 'sql_migration_history';
 
 type AppliedMigration = { fileName: string; checksum: string };
+type MigrationApplicationMode = 'executed' | 'baseline_verified';
 
 export type SqlMigrationOptions = {
   filePattern?: RegExp;
@@ -435,9 +436,22 @@ async function ensureMigrationHistoryTable(connection: SqlConnection) {
     \`applied_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     \`duration_ms\` int NULL,
     \`runtime_env\` varchar(32) NULL,
+    \`application_mode\` enum('executed','baseline_verified') NOT NULL DEFAULT 'executed',
+    \`baseline_batch_id\` char(36) NULL,
+    \`baseline_target_version\` varchar(32) NULL,
     PRIMARY KEY (\`filename\`),
     UNIQUE KEY \`uq_sql_migration_history_version\` (\`version\`)
   )`);
+  await ensureMigrationHistoryColumn(connection, 'application_mode', "enum('executed','baseline_verified') NOT NULL DEFAULT 'executed'");
+  await ensureMigrationHistoryColumn(connection, 'baseline_batch_id', 'char(36) NULL');
+  await ensureMigrationHistoryColumn(connection, 'baseline_target_version', 'varchar(32) NULL');
+}
+
+async function ensureMigrationHistoryColumn(connection: SqlConnection, columnName: string, definition: string) {
+  const rows = await queryRows(connection, `SELECT COUNT(*) AS count_value FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ${JSON.stringify(MIGRATION_HISTORY_TABLE)} AND column_name = ${JSON.stringify(columnName)}`);
+  if (Number(getRowValue(rows[0] ?? {}, 'count_value') ?? 0) === 0) {
+    await connection.execute(`ALTER TABLE \`${MIGRATION_HISTORY_TABLE}\` ADD COLUMN \`${columnName}\` ${definition}`);
+  }
 }
 
 async function readAppliedMigrations(connection: SqlConnection): Promise<Map<string, AppliedMigration>> {
@@ -459,46 +473,173 @@ async function hasHistoricalCustomSqlEffects(connection: SqlConnection): Promise
   return Number(getRowValue(rows[0] ?? {}, 'count_value') ?? 0) > 0;
 }
 
-async function recordMigration(connection: SqlConnection, fileName: string, checksum: string, durationMs: number) {
+async function recordMigration(
+  connection: SqlConnection,
+  fileName: string,
+  checksum: string,
+  durationMs: number,
+  metadata: { mode?: MigrationApplicationMode; baselineBatchId?: string; baselineTargetVersion?: string } = {},
+) {
   const numericVersion = Number.parseInt(fileName.match(/^(\d+)/)?.[1] ?? '', 10);
   if (!Number.isInteger(numericVersion)) throw new Error(`Malformed SQL migration filename "${fileName}".`);
   // Historical files have duplicate numeric prefixes, so the stable identity is the full stem plus numeric prefix.
   const version = fileName.replace(/\.sql$/, '');
   await connection.execute(
-    `INSERT INTO \`${MIGRATION_HISTORY_TABLE}\` (numeric_version, version, filename, checksum, duration_ms, runtime_env) VALUES (${numericVersion}, ${JSON.stringify(version)}, ${JSON.stringify(fileName)}, ${JSON.stringify(checksum)}, ${Math.max(0, Math.round(durationMs))}, ${JSON.stringify(process.env.NODE_ENV || 'development')})`,
+    `INSERT INTO \`${MIGRATION_HISTORY_TABLE}\` (numeric_version, version, filename, checksum, duration_ms, runtime_env, application_mode, baseline_batch_id, baseline_target_version) VALUES (${numericVersion}, ${JSON.stringify(version)}, ${JSON.stringify(fileName)}, ${JSON.stringify(checksum)}, ${Math.max(0, Math.round(durationMs))}, ${JSON.stringify(process.env.NODE_ENV || 'development')}, ${JSON.stringify(metadata.mode ?? 'executed')}, ${metadata.baselineBatchId ? JSON.stringify(metadata.baselineBatchId) : 'NULL'}, ${metadata.baselineTargetVersion ? JSON.stringify(metadata.baselineTargetVersion) : 'NULL'})`,
   );
 }
 
-type SchemaWitness = { kind: 'table' | 'column' | 'index' | 'foreignKey'; table: string; name?: string };
+export type SchemaWitness = { kind: 'table' | 'column' | 'index' | 'foreignKey'; table: string; name?: string; expectedColumnType?: string };
 
-function schemaWitnesses(sql: string): SchemaWitness[] {
+export function schemaWitnesses(sql: string): SchemaWitness[] {
   const witnesses: SchemaWitness[] = [];
   const add = (witness: SchemaWitness) => {
-    if (!witnesses.some(candidate => candidate.kind === witness.kind && candidate.table === witness.table && candidate.name === witness.name)) witnesses.push(witness);
+    const existingIndex = witnesses.findIndex(candidate => candidate.kind === witness.kind && candidate.table === witness.table && candidate.name === witness.name);
+    if (existingIndex >= 0) witnesses[existingIndex] = witness;
+    else witnesses.push(witness);
   };
-  for (const match of sql.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([a-zA-Z0-9_]+)`?/gi)) add({ kind: 'table', table: match[1] });
-  for (const match of sql.matchAll(/ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s+(?:[\s\S]*?\s)?ADD\s+(?:COLUMN\s+)?`?([a-zA-Z0-9_]+)`?\s/gi)) add({ kind: 'column', table: match[1], name: match[2] });
-  for (const match of sql.matchAll(/CREATE\s+(?:UNIQUE\s+)?INDEX\s+`?([a-zA-Z0-9_]+)`?\s+ON\s+`?([a-zA-Z0-9_]+)`?/gi)) add({ kind: 'index', table: match[2], name: match[1] });
-  for (const match of sql.matchAll(/ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?[\s\S]*?ADD\s+CONSTRAINT\s+`?([a-zA-Z0-9_]+)`?\s+FOREIGN\s+KEY/gi)) add({ kind: 'foreignKey', table: match[1], name: match[2] });
+  const remove = (kind: SchemaWitness['kind'], table: string, name?: string) => {
+    for (let index = witnesses.length - 1; index >= 0; index -= 1) {
+      if (witnesses[index].kind === kind && witnesses[index].table === table && witnesses[index].name === name) witnesses.splice(index, 1);
+    }
+  };
+  for (const statement of parseSqlStatements(sql)) {
+    for (const match of statement.matchAll(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([a-zA-Z0-9_]+)`?/gi)) add({ kind: 'table', table: match[1] });
+    for (const match of statement.matchAll(/ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s+(?:[\s\S]*?\s)?ADD\s+(?:COLUMN\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(?!(?:INDEX|KEY|CONSTRAINT|FOREIGN|UNIQUE|PRIMARY)\b)`?([a-zA-Z0-9_]+)`?\s/gi)) add({ kind: 'column', table: match[1], name: match[2] });
+    for (const match of statement.matchAll(/ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s+MODIFY\s+COLUMN\s+`?([a-zA-Z0-9_]+)`?\s+(enum\s*\([\s\S]*?\))/gi)) add({ kind: 'column', table: match[1], name: match[2], expectedColumnType: match[3] });
+    for (const match of statement.matchAll(/ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?\s+DROP\s+COLUMN\s+`?([a-zA-Z0-9_]+)`?/gi)) remove('column', match[1], match[2]);
+    for (const match of statement.matchAll(/ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?[\s\S]*?ADD\s+(?:UNIQUE\s+)?(?:INDEX|KEY)\s+`?([a-zA-Z0-9_]+)`?/gi)) add({ kind: 'index', table: match[1], name: match[2] });
+    for (const match of statement.matchAll(/CREATE\s+(?:UNIQUE\s+)?INDEX\s+`?([a-zA-Z0-9_]+)`?\s+ON\s+`?([a-zA-Z0-9_]+)`?/gi)) add({ kind: 'index', table: match[2], name: match[1] });
+    for (const match of statement.matchAll(/ALTER\s+TABLE\s+`?([a-zA-Z0-9_]+)`?[\s\S]*?ADD\s+CONSTRAINT\s+`?([a-zA-Z0-9_]+)`?\s+FOREIGN\s+KEY/gi)) add({ kind: 'foreignKey', table: match[1], name: match[2] });
+  }
   return witnesses;
 }
 
 async function schemaWitnessExists(connection: SqlConnection, witness: SchemaWitness): Promise<boolean> {
   if (witness.kind === 'table') return tableExists(connection, witness.table, new Map());
+  if (witness.kind === 'column' && witness.expectedColumnType) {
+    const rows = await queryRows(connection, `SELECT column_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ${JSON.stringify(witness.table)} AND column_name = ${JSON.stringify(witness.name)}`);
+    const actualType = String(getRowValue(rows[0] ?? {}, 'column_type') ?? '');
+    const normalizeColumnType = (value: string) => value.replace(/\s+/g, '').toLowerCase();
+    return normalizeColumnType(actualType) === normalizeColumnType(witness.expectedColumnType);
+  }
   const source = witness.kind === 'column' ? 'columns' : witness.kind === 'index' ? 'statistics' : 'table_constraints';
   const nameColumn = witness.kind === 'column' ? 'column_name' : witness.kind === 'index' ? 'index_name' : 'constraint_name';
   const rows = await queryRows(connection, `SELECT COUNT(*) AS count_value FROM information_schema.${source} WHERE table_schema = DATABASE() AND table_name = ${JSON.stringify(witness.table)} AND ${nameColumn} = ${JSON.stringify(witness.name)}`);
   return Number(getRowValue(rows[0] ?? {}, 'count_value') ?? 0) > 0;
 }
 
-async function baselineMigration(connection: SqlConnection, fileName: string, sql: string) {
-  const witnesses = schemaWitnesses(sql);
+const LEAD_ACTIVITY_TYPES_0061 = ['note', 'call', 'email', 'meeting', 'status_change'] as const;
+const LEAD_ACTIVITY_TYPES_0068 = [...LEAD_ACTIVITY_TYPES_0061, 'contact_attempt'] as const;
+const SHOWING_STATUS_TYPES_0063 = ['requested', 'awaiting_confirmation', 'confirmed', 'completed', 'cancelled', 'no_show', 'rescheduled'] as const;
+const LEAD_ACTIVITY_TYPES_0068_MIGRATION = '0068_close_buyer_lead_loop.sql';
+const SHOWING_STATUS_TYPES_0063_MIGRATION = '0063_extend_showings_lifecycle.sql';
+
+function versionNumber(value: string): number {
+  return Number.parseInt(value.match(/^(\d+)/)?.[1] ?? '', 10);
+}
+
+function enumDefinition(values: readonly string[]): string {
+  return `enum(${values.map(value => `'${value}'`).join(',')})`;
+}
+
+export function isBaselineWitnessSuperseded(fileName: string, witness: SchemaWitness, targetVersion: number): boolean {
+  const leadActivitiesTypeSuperseded = fileName === '0061_reconcile_agency_workspace_schema.sql'
+    && witness.kind === 'column'
+    && witness.table === 'lead_activities'
+    && witness.name === 'type'
+    && Boolean(witness.expectedColumnType)
+    && targetVersion >= 68;
+  const showingsStatusSuperseded = fileName === '0052_reconcile_showings_schema.sql'
+    && witness.kind === 'column'
+    && witness.table === 'showings'
+    && witness.name === 'status'
+    && Boolean(witness.expectedColumnType)
+    && targetVersion >= 63;
+  return leadActivitiesTypeSuperseded || showingsStatusSuperseded;
+}
+
+async function verifyLeadActivitiesTypeProfile(
+  connection: SqlConnection,
+  targetVersion: number,
+) {
+  if (targetVersion < 61) return;
+  const expectedValues = targetVersion >= 68 ? LEAD_ACTIVITY_TYPES_0068 : LEAD_ACTIVITY_TYPES_0061;
+  const columnRows = await queryRows(connection, `SELECT column_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'lead_activities' AND column_name = 'type'`);
+  const actualType = String(getRowValue(columnRows[0] ?? {}, 'column_type') ?? '');
+  const normalize = (value: string) => value.replace(/\s+/g, '').toLowerCase();
+  if (normalize(actualType) !== normalize(enumDefinition(expectedValues))) {
+    throw new Error(`Cumulative baseline ${String(targetVersion).padStart(4, '0')} rejected lead_activities.type. Expected ${enumDefinition(expectedValues)} from committed migrations through the target; found ${actualType || '(missing)'}.`);
+  }
+
+  const allowedValues = expectedValues.map(value => JSON.stringify(value)).join(', ');
+  const invalidRows = await queryRows(connection, `SELECT COUNT(*) AS count_value FROM \`lead_activities\` WHERE \`type\` IS NULL OR \`type\` NOT IN (${allowedValues})`);
+  if (Number(getRowValue(invalidRows[0] ?? {}, 'count_value') ?? 0) > 0) {
+    throw new Error(`Cumulative baseline ${String(targetVersion).padStart(4, '0')} rejected lead_activities.type data outside the committed enum values.`);
+  }
+}
+
+async function verifyShowingsStatusProfile(connection: SqlConnection, targetVersion: number) {
+  if (targetVersion < 63) return;
+  const columnRows = await queryRows(connection, `SELECT column_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'showings' AND column_name = 'status'`);
+  const actualType = String(getRowValue(columnRows[0] ?? {}, 'column_type') ?? '');
+  const normalize = (value: string) => value.replace(/\s+/g, '').toLowerCase();
+  if (normalize(actualType) !== normalize(enumDefinition(SHOWING_STATUS_TYPES_0063))) {
+    throw new Error(`Cumulative baseline ${String(targetVersion).padStart(4, '0')} rejected showings.status. Expected ${enumDefinition(SHOWING_STATUS_TYPES_0063)} from migration 0063; found ${actualType || '(missing)'}.`);
+  }
+  const allowedValues = SHOWING_STATUS_TYPES_0063.map(value => JSON.stringify(value)).join(', ');
+  const invalidRows = await queryRows(connection, `SELECT COUNT(*) AS count_value FROM \`showings\` WHERE \`status\` IS NULL OR \`status\` NOT IN (${allowedValues})`);
+  if (Number(getRowValue(invalidRows[0] ?? {}, 'count_value') ?? 0) > 0) {
+    throw new Error(`Cumulative baseline ${String(targetVersion).padStart(4, '0')} rejected showings.status data outside the committed enum values.`);
+  }
+}
+
+async function verifyTargetBaselineProfile(
+  connection: SqlConnection,
+  targetVersion: number,
+  baselineFiles: string[],
+) {
+  if (targetVersion >= 63 && !baselineFiles.includes(SHOWING_STATUS_TYPES_0063_MIGRATION)) {
+    throw new Error(`Baseline target ${String(targetVersion).padStart(4, '0')} requires committed migration ${SHOWING_STATUS_TYPES_0063_MIGRATION} before superseding the 0052 showings.status witness.`);
+  }
+  if (targetVersion >= 68 && !baselineFiles.includes(LEAD_ACTIVITY_TYPES_0068_MIGRATION)) {
+    throw new Error(`Baseline target ${String(targetVersion).padStart(4, '0')} requires committed migration ${LEAD_ACTIVITY_TYPES_0068_MIGRATION} before superseding the 0061 lead_activities.type witness.`);
+  }
+  await verifyLeadActivitiesTypeProfile(connection, targetVersion);
+  await verifyShowingsStatusProfile(connection, targetVersion);
+  if (targetVersion < 71) return;
+  if (!baselineFiles.some(file => file.startsWith('0071_'))) {
+    throw new Error('Baseline target 0071 requires the committed 0071 migration file in the active migration directory.');
+  }
+  if (!await tableExists(connection, 'agency_listing_performance_reviews', new Map())) {
+    throw new Error('Cumulative baseline 0071 requires agency_listing_performance_reviews from migration 0071.');
+  }
+  if (await columnExists(connection, 'agency_listing_performance_reviews', 'contact_date')) {
+    throw new Error('Cumulative baseline 0071 rejected contact_date because it belongs to migration 0072.');
+  }
+}
+
+async function baselineMigration(
+  connection: SqlConnection,
+  fileName: string,
+  sql: string,
+  metadata: { targetVersion: number; batchId: string; record?: boolean },
+) {
+  const witnesses = schemaWitnesses(sql).filter(witness => !isBaselineWitnessSuperseded(fileName, witness, metadata.targetVersion));
   if (witnesses.length === 0) throw new Error(`Cannot baseline ${fileName}: no structural schema witnesses were found. Add a migration-specific verifier rather than marking it applied.`);
   const missing: string[] = [];
   for (const witness of witnesses) if (!await schemaWitnessExists(connection, witness)) missing.push(`${witness.kind}:${witness.table}${witness.name ? `.${witness.name}` : ''}`);
   if (missing.length) throw new Error(`Cannot baseline ${fileName}: expected schema effects are missing (${missing.join(', ')}).`);
-  await recordMigration(connection, fileName, migrationChecksum(sql), 0);
-  console.log(`   - Baselined: ${fileName} (${witnesses.length} schema witness(es) verified)`);
+  if (metadata.record) {
+    await recordMigration(connection, fileName, migrationChecksum(sql), 0, {
+      mode: 'baseline_verified',
+      baselineBatchId: metadata.batchId,
+      baselineTargetVersion: String(metadata.targetVersion).padStart(4, '0'),
+    });
+    console.log(`   - Baselined: ${fileName} (${witnesses.length} schema witness(es) verified)`);
+  } else {
+    console.log(`   - Verified: ${fileName} (${witnesses.length} schema witness(es))`);
+  }
 }
 
 export async function runSqlMigrations(options?: SqlMigrationOptions) {
@@ -538,11 +679,29 @@ export async function runSqlMigrations(options?: SqlMigrationOptions) {
         throw new Error('Schema baselining is permitted only for development or test databases. It is never available for staging or production.');
       }
       if (appliedMigrations.size > 0) throw new Error('Baseline requires an empty custom SQL migration history. It is not a repair mechanism for partial history.');
-      const boundary = Number.parseInt(options.baselineThrough, 10);
+      const boundary = versionNumber(options.baselineThrough);
+      if (!Number.isInteger(boundary)) throw new Error(`Invalid baseline target version ${options.baselineThrough}.`);
       const baselineFiles = orderedSqlFiles.filter(file => Number.parseInt(file.match(/^(\d+)/)?.[1] ?? '0', 10) <= boundary);
       if (baselineFiles.length === 0) throw new Error(`No migration files found through baseline boundary ${options.baselineThrough}.`);
       console.log(`   Explicit baseline through ${options.baselineThrough}; verifying schema before recording history.`);
-      for (const file of baselineFiles) await baselineMigration(connection, file, readFileSync(join(migrationsDir, file), 'utf-8'));
+      const batchId = randomUUID();
+      for (const file of baselineFiles) await baselineMigration(connection, file, readFileSync(join(migrationsDir, file), 'utf-8'), { targetVersion: boundary, batchId });
+      await verifyTargetBaselineProfile(connection, boundary, baselineFiles);
+      // Verification above is intentionally complete before opening the ledger transaction.
+      // The ledger contains only DML, so MySQL/TiDB can roll back a failed batch without
+      // making a partially verified baseline look complete.
+      await connection.execute('START TRANSACTION');
+      try {
+        for (const file of baselineFiles) await baselineMigration(connection, file, readFileSync(join(migrationsDir, file), 'utf-8'), { targetVersion: boundary, batchId, record: true });
+        await connection.execute('COMMIT');
+      } catch (error) {
+        try {
+          await connection.execute('ROLLBACK');
+        } catch (rollbackError) {
+          console.error('SQL migration baseline ledger rollback failed; inspect the ledger before retrying.', rollbackError);
+        }
+        throw error;
+      }
       console.log('SQL migration baseline completed\n');
       return;
     }

@@ -5,10 +5,12 @@ import { join } from 'path';
 
 import {
   buildMysqlMigrationConnectionConfig,
+  isBaselineWitnessSuperseded,
   isDistributionCommissionBackfillStatement,
   isLegacyShowingsBackfillStatement,
   migrationChecksum,
   runSqlMigrations,
+  schemaWitnesses,
   sortMigrationFiles,
 } from '../runSqlMigrations';
 
@@ -20,6 +22,28 @@ describe('buildMysqlMigrationConnectionConfig', () => {
 
     expect(config.uri).toBe('mysql://user:pass@host:4000/db');
     expect(config.ssl).toEqual({ rejectUnauthorized: true });
+    expect(schemaWitnesses(`-- A comment must not become a schema witness.
+ALTER TABLE listings ADD INDEX idx_listings_brand_profile_id (brand_profile_id);`)).toEqual([
+      { kind: 'index', table: 'listings', name: 'idx_listings_brand_profile_id' },
+    ]);
+    expect(schemaWitnesses(`ALTER TABLE service_lead_events MODIFY COLUMN event_type enum('created', 'nearby_market_clicked') NOT NULL;`)).toEqual([
+      { kind: 'column', table: 'service_lead_events', name: 'event_type', expectedColumnType: "enum('created', 'nearby_market_clicked')" },
+    ]);
+    expect(schemaWitnesses(`ALTER TABLE development_required_documents ADD COLUMN IF NOT EXISTS category varchar(64) NULL;`)).toEqual([
+      { kind: 'column', table: 'development_required_documents', name: 'category' },
+    ]);
+    expect(schemaWitnesses(`ALTER TABLE showings ADD COLUMN scheduledTime timestamp NULL;
+ALTER TABLE showings MODIFY COLUMN status enum('scheduled') NOT NULL;
+ALTER TABLE showings MODIFY COLUMN status enum('confirmed') NOT NULL;
+ALTER TABLE showings DROP COLUMN scheduledTime;`)).toEqual([
+      { kind: 'column', table: 'showings', name: 'status', expectedColumnType: "enum('confirmed')" },
+    ]);
+    const legacyLeadTypeWitness = { kind: 'column' as const, table: 'lead_activities', name: 'type', expectedColumnType: "enum('note','call','email','meeting','status_change')" };
+    expect(isBaselineWitnessSuperseded('0061_reconcile_agency_workspace_schema.sql', legacyLeadTypeWitness, 61)).toBe(false);
+    expect(isBaselineWitnessSuperseded('0061_reconcile_agency_workspace_schema.sql', legacyLeadTypeWitness, 71)).toBe(true);
+    const legacyShowingStatusWitness = { kind: 'column' as const, table: 'showings', name: 'status', expectedColumnType: "enum('requested','confirmed')" };
+    expect(isBaselineWitnessSuperseded('0052_reconcile_showings_schema.sql', legacyShowingStatusWitness, 62)).toBe(false);
+    expect(isBaselineWitnessSuperseded('0052_reconcile_showings_schema.sql', legacyShowingStatusWitness, 71)).toBe(true);
   });
 
   it('preserves object-based ssl config from newer DATABASE_URL values', () => {
@@ -87,6 +111,7 @@ class MigrationConnection {
   async execute(statement: string) {
     this.calls.push(statement);
     if (statement.includes('GET_LOCK')) return [[{ lock_status: 1 }]];
+    if (statement.includes('information_schema.columns') && statement.includes("table_name = \"sql_migration_history\"")) return [[{ count_value: 1 }]];
     if (statement.includes("'plan_entitlements'")) return [[{ count_value: this.historicalEffects ? 1 : 0 }]];
     if (statement.startsWith('SELECT filename, checksum')) return [[...this.history.entries()].map(([filename, checksum]) => ({ filename, checksum }))];
     if (statement.startsWith('INSERT INTO `sql_migration_history`')) {
@@ -172,8 +197,11 @@ describe('custom SQL migration history', () => {
 
   it('refuses an explicit baseline when schema evidence is absent', async () => {
     const directory = tempMigrations({ '0071_create_performance.sql': 'CREATE TABLE agency_listing_performance_reviews (id int);' });
+    const connection = new MigrationConnection();
     try {
-      await expect(runSqlMigrations({ migrationsDir: directory, connection: new MigrationConnection(), baselineThrough: '0071' })).rejects.toThrow('expected schema effects are missing');
+      await expect(runSqlMigrations({ migrationsDir: directory, connection, baselineThrough: '0071' })).rejects.toThrow('expected schema effects are missing');
+      expect(connection.history.size).toBe(0);
+      expect(connection.calls).not.toContain('START TRANSACTION');
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });
