@@ -84,6 +84,13 @@ export function loadAppRuntimeEnv(options?: { cwd?: string; env?: NodeJS.Process
     loadedFiles.push(path.basename(envPath));
   }
 
+  if (env.LISTIFY_E2E_DATABASE_URL) {
+    if (runtimeEnv !== 'development' && runtimeEnv !== 'test') {
+      throw new Error('LISTIFY_E2E_DATABASE_URL is permitted only in development or test environments.');
+    }
+    env.DATABASE_URL = env.LISTIFY_E2E_DATABASE_URL;
+  }
+
   return {
     runtimeEnv,
     loadedFiles,

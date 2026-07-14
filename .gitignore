@@ -100,6 +100,7 @@ verification_*.txt
 # Environment Variables
 .env
 .env.local
+.env.playwright.local
 .env.test
 .env.development.local
 .env.test.local
