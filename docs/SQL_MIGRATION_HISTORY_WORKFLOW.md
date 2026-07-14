@@ -4,8 +4,9 @@
 
 ## Normal commands
 
-- `pnpm db:migrate:local` prints the guarded local target, runs only unapplied custom SQL files, then runs the distribution schema verifier.
-- `pnpm db:migrate:fresh:local` first applies Drizzle's journal to an empty or Drizzle-baselined database, then runs the custom SQL stream.
+- `pnpm db:migrate:local` validates the exact local target, applies Drizzle's journal and then only unapplied custom SQL files, then runs the distribution schema verifier.
+- `pnpm db:migrate:fresh:local` is retained as the same non-destructive incremental migration wrapper. It does not recreate a database.
+- `pnpm db:reprovision:local` is the only local recovery command that drops and recreates `listify_local`; it requires an exact destructive acknowledgement, applies both migration streams from an empty database, seeds demo fixtures, and verifies the completed ledger and schema.
 - `pnpm db:migrate:test` runs Drizzle and custom SQL against the guarded `listify_test` target.
 - `pnpm db:migrate:drizzle:local` runs only Drizzle and is for a fresh or explicitly Drizzle-baselined database.
 - `pnpm migration:sql` is the production custom-SQL command; `pnpm db:migrate` wraps it with target reporting and verification.
@@ -33,6 +34,8 @@ Target profiles model legitimate supersession instead of accepting arbitrary dri
 The 0071 profile requires the 0071 performance-review table, the cumulative enum/data invariants, and absence of the 0072 `contact_date` column. From target 0072 onward, the committed 0072 migration must be present and `contact_date` must instead be the expected nullable `timestamp`. The profile is intentionally evaluated using the active migration directory, so product migrations remain owned by their feature branch. Baseline mode is deliberately not part of the normal path, and the local wrapper prints the target without credentials before it can run.
 
 For a fresh disposable database, apply the Drizzle stream then run the custom stream, schema verifier, and the custom stream a second time to prove a no-op. For an effective 0071 database, verify the 0071 effects and that `contact_date` is absent before baselining through 0071. Then run the normal command. It must apply only 0072, record its checksum, create the expected column, and make the next run a no-op.
+
+For ordinary local development, do not baseline an unknown `listify_local` state. Use `pnpm db:verify:local` to diagnose it. If the database is disposable or inconsistent, use the explicit guarded reprovision command documented in `docs/local-development-setup.md`; a new database gets `executed` ledger records for every custom migration, rather than inferred or forced history.
 
 ## 0061 incident diagnosis
 
