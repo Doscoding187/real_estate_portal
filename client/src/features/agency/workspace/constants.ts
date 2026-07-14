@@ -59,6 +59,7 @@ export const WORKSPACE_TITLES: Record<
   'my-day': { title: 'My Day', eyebrow: 'Calendar and operations', icon: CalendarDays },
   leads: { title: 'Leads', eyebrow: 'Pipeline and CRM', icon: MessageSquare },
   listings: { title: 'Listings', eyebrow: 'Inventory readiness', icon: Home },
+  performance: { title: 'Listing Performance', eyebrow: 'Seller reporting', icon: BarChart3 },
   canvassing: { title: 'Canvassing', eyebrow: 'Seller acquisition', icon: MapPinned },
   viewings: { title: 'Viewings', eyebrow: 'Follow-through', icon: ClipboardCheck },
   transactions: { title: 'Transactions', eyebrow: 'Offers and deals', icon: BriefcaseBusiness },
@@ -97,6 +98,7 @@ export const NAV_GROUPS: Array<{
     title: 'Inventory and Growth',
     items: [
       { id: 'listings', label: 'Listings', icon: Home },
+      { id: 'performance', label: 'Listing Performance', icon: BarChart3 },
       { id: 'canvassing', label: 'Canvassing', icon: MapPinned },
       { id: 'growth', label: 'Growth', icon: Sparkles },
       { id: 'reporting', label: 'Reporting', icon: BarChart3 },

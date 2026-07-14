@@ -6,6 +6,7 @@ export type WorkspaceId =
   | 'my-day'
   | 'leads'
   | 'listings'
+  | 'performance'
   | 'canvassing'
   | 'viewings'
   | 'transactions'
