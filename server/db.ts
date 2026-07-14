@@ -2853,6 +2853,28 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     throw new Error(`Listing cannot be approved from status "${listing.status}"`);
   }
 
+  // A revision is a private listing-engine draft. Approval applies its public fields to
+  // the original canonical listing/projection; the revision itself never becomes public.
+  if ((listing as any).revisionOfListingId) {
+    const originalListingId = Number((listing as any).revisionOfListingId);
+    const [original] = await db.select().from(listings).where(eq(listings.id, originalListingId)).limit(1);
+    if (!original || original.status !== 'published') throw new Error('The original published listing is no longer available for this revision');
+    const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    await db.update(listings).set({
+      askingPrice: (listing as any).askingPrice,
+      monthlyRent: (listing as any).monthlyRent,
+      startingBid: (listing as any).startingBid,
+      propertyDetails: (listing as any).propertyDetails,
+      title: listing.title, description: listing.description, updatedAt: approvedAt,
+    } as any).where(eq(listings.id, originalListingId));
+    const publicPrice = (listing as any).askingPrice || (listing as any).monthlyRent || (listing as any).startingBid || 0;
+    await db.update(properties).set({ price: publicPrice, title: listing.title, description: listing.description, updatedAt: approvedAt } as any)
+      .where(and(eq(properties.sourceListingId, originalListingId), isNotNull(properties.sourceListingId)));
+    await db.update(listings).set({ status: 'archived' as any, approvalStatus: 'approved' as any, reviewedBy, reviewedAt: approvedAt, updatedAt: approvedAt } as any).where(eq(listings.id, listingId));
+    await db.update(listingApprovalQueue).set({ status: 'approved' as any, reviewedBy, reviewedAt: approvedAt, reviewNotes: notes }).where(eq(listingApprovalQueue.listingId, listingId));
+    return;
+  }
+
   // 2. Prepare property data
   // Parse pricing JSON if it's a string
   let pricingData: any = {};
