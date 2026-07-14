@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 import {
   buildMysqlMigrationConnectionConfig,
   isDistributionCommissionBackfillStatement,
   isLegacyShowingsBackfillStatement,
+  migrationChecksum,
+  runSqlMigrations,
+  sortMigrationFiles,
 } from '../runSqlMigrations';
 
 describe('buildMysqlMigrationConnectionConfig', () => {
@@ -69,5 +75,105 @@ SET d.\`referrer_commission_amount\` = COALESCE(d.\`referrer_commission_amount\`
 SET \`platform_commission_amount\` = 0
 WHERE \`platform_commission_amount\` IS NULL`),
     ).toBe(false);
+  });
+});
+
+class MigrationConnection {
+  calls: string[] = [];
+  history = new Map<string, string>();
+  failStatement?: RegExp;
+  historicalEffects = false;
+
+  async execute(statement: string) {
+    this.calls.push(statement);
+    if (statement.includes('GET_LOCK')) return [[{ lock_status: 1 }]];
+    if (statement.includes("'plan_entitlements'")) return [[{ count_value: this.historicalEffects ? 1 : 0 }]];
+    if (statement.startsWith('SELECT filename, checksum')) return [[...this.history.entries()].map(([filename, checksum]) => ({ filename, checksum }))];
+    if (statement.startsWith('INSERT INTO `sql_migration_history`')) {
+      const quoted = statement.match(/"(?:[^"\\]|\\.)*"/g) ?? [];
+      if (quoted.length < 3) throw new Error(`Unable to parse history insert: ${statement}`);
+      this.history.set(JSON.parse(quoted[1]), JSON.parse(quoted[2]));
+    }
+    if (this.failStatement?.test(statement)) throw Object.assign(new Error('intentional failure'), { code: 'ER_PARSE_ERROR' });
+    return {};
+  }
+}
+
+function tempMigrations(files: Record<string, string>) {
+  const directory = mkdtempSync(join(tmpdir(), 'sql-migrations-'));
+  for (const [name, contents] of Object.entries(files)) writeFileSync(join(directory, name), contents);
+  return directory;
+}
+
+describe('custom SQL migration history', () => {
+  it('refuses historical replay when a database has custom schema effects but no ledger', async () => {
+    const directory = tempMigrations({ '0061_reconcile.sql': 'ALTER TABLE plans ADD COLUMN segment varchar(20);' });
+    const connection = new MigrationConnection();
+    connection.historicalEffects = true;
+    try {
+      await expect(runSqlMigrations({ migrationsDir: directory, connection })).rejects.toThrow('Refusing to replay migrations');
+      expect(connection.calls.some(call => call.startsWith('ALTER TABLE plans'))).toBe(false);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('runs every file once for a fresh database and then is a no-op', async () => {
+    const directory = tempMigrations({
+      '0072_add_contact_date.sql': 'ALTER TABLE agency_listing_performance_reviews ADD COLUMN contact_date timestamp NULL;',
+      '0071_create_performance.sql': 'CREATE TABLE agency_listing_performance_reviews (id int);',
+    });
+    const connection = new MigrationConnection();
+    try {
+      await runSqlMigrations({ migrationsDir: directory, connection });
+      expect(connection.history.size).toBe(2);
+      const migrationStatements = () => connection.calls.filter(call => /^(CREATE TABLE agency_|ALTER TABLE agency_)/.test(call));
+      expect(migrationStatements()).toHaveLength(2);
+      await runSqlMigrations({ migrationsDir: directory, connection });
+      expect(migrationStatements()).toHaveLength(2);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('orders numerically and proves an incremental 0071 to 0072 upgrade is repeat-safe', async () => {
+    const directory = tempMigrations({
+      '0072_add_contact_date.sql': 'ALTER TABLE agency_listing_performance_reviews ADD COLUMN contact_date timestamp NULL;',
+      '0071_create_performance.sql': 'CREATE TABLE agency_listing_performance_reviews (id int);',
+    });
+    const connection = new MigrationConnection();
+    connection.history.set('0071_create_performance.sql', migrationChecksum('CREATE TABLE agency_listing_performance_reviews (id int);'));
+    try {
+      expect(sortMigrationFiles(['0072_b.sql', '0071_a.sql'])).toEqual(['0071_a.sql', '0072_b.sql']);
+      await runSqlMigrations({ migrationsDir: directory, connection });
+      expect(connection.calls.filter(call => call.startsWith('ALTER TABLE agency_listing_performance_reviews'))).toHaveLength(1);
+      expect(connection.history.has('0072_add_contact_date.sql')).toBe(true);
+
+      await runSqlMigrations({ migrationsDir: directory, connection });
+      expect(connection.calls.filter(call => call.startsWith('ALTER TABLE agency_listing_performance_reviews'))).toHaveLength(1);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('fails before execution when an applied migration checksum changes', async () => {
+    const directory = tempMigrations({ '0072_add_contact_date.sql': 'ALTER TABLE agency_listing_performance_reviews ADD COLUMN contact_date timestamp NULL;' });
+    const connection = new MigrationConnection();
+    connection.history.set('0072_add_contact_date.sql', migrationChecksum('ALTER TABLE elsewhere ADD COLUMN unexpected int;'));
+    try {
+      await expect(runSqlMigrations({ migrationsDir: directory, connection })).rejects.toThrow('Checksum mismatch');
+      expect(connection.calls.some(call => call.startsWith('ALTER TABLE agency_listing_performance_reviews'))).toBe(false);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('does not record a migration that fails', async () => {
+    const directory = tempMigrations({ '0072_broken.sql': 'ALTER TABLE agency_listing_performance_reviews ADD COLUMN contact_date timestamp NULL;' });
+    const connection = new MigrationConnection();
+    connection.failStatement = /ALTER TABLE/;
+    try {
+      await expect(runSqlMigrations({ migrationsDir: directory, connection })).rejects.toThrow('intentional failure');
+      expect(connection.history.size).toBe(0);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('refuses an explicit baseline when schema evidence is absent', async () => {
+    const directory = tempMigrations({ '0071_create_performance.sql': 'CREATE TABLE agency_listing_performance_reviews (id int);' });
+    try {
+      await expect(runSqlMigrations({ migrationsDir: directory, connection: new MigrationConnection(), baselineThrough: '0071' })).rejects.toThrow('expected schema effects are missing');
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });
