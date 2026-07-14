@@ -2188,7 +2188,7 @@ async function requirePerformanceListingAccess(
 async function createListingPerformanceSnapshot(db: AgencyDb, agencyId: number, listingId: number) {
   const listing = await requireAgencyListing(db, agencyId, listingId);
   const [[analytics], [leadCounts], [showingCounts], [offerCounts], [mediaCounts]] = await Promise.all([
-    db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).orderBy(desc(listingAnalytics.lastUpdated)).limit(1),
+    db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).orderBy(desc(listingAnalytics.lastUpdated), desc(listingAnalytics.id)).limit(1),
     db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${listingLeads.status} IN ('contacted','qualified','viewing_scheduled','offer_made','converted') THEN 1 ELSE 0 END)` }).from(listingLeads).where(eq(listingLeads.listingId, listingId)),
     db.select({ requested: sql<number>`SUM(CASE WHEN ${showings.status} = 'requested' THEN 1 ELSE 0 END)`, confirmed: sql<number>`SUM(CASE WHEN ${showings.status} = 'confirmed' THEN 1 ELSE 0 END)`, completed: sql<number>`SUM(CASE WHEN ${showings.status} = 'completed' THEN 1 ELSE 0 END)`, cancelled: sql<number>`SUM(CASE WHEN ${showings.status} IN ('cancelled', 'no_show') THEN 1 ELSE 0 END)` }).from(showings).where(eq(showings.listingId, listingId)),
     db.select({ offers: sql<number>`COUNT(*)` }).from(agencyDeals).innerJoin(agencyDealOfferVersions, eq(agencyDealOfferVersions.dealId, agencyDeals.id)).where(and(eq(agencyDeals.agencyId, agencyId), eq(agencyDeals.listingId, listingId))),
