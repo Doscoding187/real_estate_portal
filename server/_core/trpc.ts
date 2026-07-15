@@ -5,9 +5,7 @@ import superjson from 'superjson';
 import type { TrpcContext } from './context';
 import { applyBrandContext, type EnhancedTRPCContext } from './brandContext';
 
-const t = initTRPC.context<TrpcContext>().create({
-  transformer: superjson,
-  errorFormatter({ shape, error }) {
+export function formatTrpcError({ shape, error }: any) {
     const cause = error.cause;
 
     // Zod v4 can be ZodError, but also sometimes wrapped / different instance
@@ -20,17 +18,22 @@ const t = initTRPC.context<TrpcContext>().create({
       ? ((cause as any).flatten?.() ?? { formErrors: [], fieldErrors: {} })
       : undefined;
 
-    return {
-      ...shape,
-      data: {
-        ...shape.data,
-        // Safe optional payload for client-side display/debugging
-        zodError,
-        _zod: zodError, // Backwards compatibility for some client versions
-        cause: cause ? String((cause as any)?.message ?? cause) : undefined, // safe string
-      },
-    };
-  },
+  return {
+    ...shape,
+    data: {
+      ...shape.data,
+      // Safe optional payload for client-side display/debugging
+      zodError,
+      _zod: zodError, // Backwards compatibility for some client versions
+      // Causes may contain driver, SQL, or filesystem diagnostics. Keep them
+      // server-side; transport errors expose only their explicit message/code.
+    },
+  };
+}
+
+const t = initTRPC.context<TrpcContext>().create({
+  transformer: superjson,
+  errorFormatter: formatTrpcError,
 });
 
 export const router = t.router;
