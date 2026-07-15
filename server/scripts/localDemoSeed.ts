@@ -5,7 +5,7 @@ import mysql from 'mysql2/promise';
 
 type EnvLike = Record<string, string | undefined>;
 type SeedAction = 'seed' | 'reset';
-type SeedTarget = 'local' | 'test' | 'e2e';
+type SeedTarget = 'local' | 'test' | 'e2e' | 'prospect-journey-e2e';
 
 export const DEMO_EMAILS = [
   'admin@listify.local',
@@ -132,7 +132,13 @@ export function assertLocalSeedSafety(
     throw new Error('Local demo seed refused: production database name detected.');
   }
 
-  const expectedDb = target === 'test' ? 'listify_test' : target === 'e2e' ? 'listify_listing_performance_e2e' : 'listify_local';
+  const expectedDb = target === 'test'
+    ? 'listify_test'
+    : target === 'e2e'
+      ? 'listify_listing_performance_e2e'
+      : target === 'prospect-journey-e2e'
+        ? 'listify_prospect_journey_e2e'
+        : 'listify_local';
   if (dbName !== expectedDb) {
     throw new Error(
       `Local demo seed refused: ${target} seed must target database "${expectedDb}", received "${dbName}".`,
@@ -143,7 +149,7 @@ export function assertLocalSeedSafety(
 }
 
 function loadEnvForTarget(target: SeedTarget) {
-  const envFile = target === 'test' ? '.env.test' : target === 'e2e' ? '.env.playwright.local' : '.env.local';
+  const envFile = target === 'test' ? '.env.test' : target === 'e2e' || target === 'prospect-journey-e2e' ? '.env.playwright.local' : '.env.local';
   dotenv.config({ path: path.resolve(process.cwd(), envFile), override: false });
 }
 
@@ -2160,8 +2166,8 @@ async function main() {
   if (!['seed', 'reset'].includes(action)) {
     throw new Error('Usage: tsx server/scripts/localDemoSeed.ts <seed|reset> <local|test>');
   }
-  if (!['local', 'test', 'e2e'].includes(target)) {
-    throw new Error('Usage: tsx server/scripts/localDemoSeed.ts <seed|reset> <local|test|e2e>');
+  if (!['local', 'test', 'e2e', 'prospect-journey-e2e'].includes(target)) {
+    throw new Error('Usage: tsx server/scripts/localDemoSeed.ts <seed|reset> <local|test|e2e|prospect-journey-e2e>');
   }
 
   loadEnvForTarget(target);

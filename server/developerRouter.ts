@@ -625,7 +625,7 @@ export const developerRouter = router({
           message: 'developerId or id is required',
         }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const developerId = input.developerId ?? input.id;
       await db.setDeveloperTrust(developerId as number, input.isTrusted);
       return {
@@ -1499,7 +1499,7 @@ export const developerRouter = router({
         leadSource: z.string().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       return await capturePublicLead({
         developmentId: input.developmentId,
         developerBrandProfileId: input.developerBrandProfileId,
@@ -1520,6 +1520,7 @@ export const developerRouter = router({
         utmSource: input.utmSource,
         utmMedium: input.utmMedium,
         utmCampaign: input.utmCampaign,
+        authenticatedUserId: ctx.user?.id,
         affordabilityData: input.affordabilityData,
       });
     }),
