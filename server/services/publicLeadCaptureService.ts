@@ -12,6 +12,7 @@ import {
 } from '../../drizzle/schema';
 import { brandLeadService } from './brandLeadService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
+import { recordProspectLeadAction } from './prospectJourneyService';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -26,6 +27,8 @@ interface AffordabilityData {
 }
 
 export interface PublicLeadCaptureInput {
+  /** Set only by an authenticated server boundary; never a public client field. */
+  authenticatedUserId?: number;
   propertyId?: number;
   developmentId?: number;
   developerBrandProfileId?: number;
@@ -359,6 +362,19 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
       },
     });
 
+    await recordProspectLeadAction({
+      db,
+      leadId: brandCapture.leadId,
+      authenticatedUserId: input.authenticatedUserId,
+      source,
+      propertyId: resolved.propertyId,
+      developmentId: resolved.developmentId,
+      referrerUrl: input.referrerUrl,
+      utmSource: input.utmSource,
+      utmMedium: input.utmMedium,
+      utmCampaign: input.utmCampaign,
+    });
+
     return {
       success: true,
       leadId: brandCapture.leadId,
@@ -415,6 +431,19 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
       leadType,
       route: 'direct',
     },
+  });
+
+  await recordProspectLeadAction({
+    db,
+    leadId: Number(insertResult.insertId),
+    authenticatedUserId: input.authenticatedUserId,
+    source,
+    propertyId: resolved.propertyId,
+    developmentId: resolved.developmentId,
+    referrerUrl: input.referrerUrl,
+    utmSource: input.utmSource,
+    utmMedium: input.utmMedium,
+    utmCampaign: input.utmCampaign,
   });
 
   return {

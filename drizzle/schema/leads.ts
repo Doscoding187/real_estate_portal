@@ -24,6 +24,22 @@ import { properties, listings } from './listings';
 import { developments, developerBrandProfiles } from './developments';
 import { agencies, agents } from './agencies';
 
+/**
+ * Platform-owned identity for the private prospect journey. This deliberately
+ * sits beside, rather than replaces, the legacy `prospects` CRM-era table.
+ */
+export const prospectIdentities = mysqlTable(
+  'prospect_identities',
+  {
+    id: varchar({ length: 36 }).primaryKey(),
+    userId: int('user_id').references(() => users.id, { onDelete: 'set null' }),
+    contactPreferences: json('contact_preferences'),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [unique('uq_prospect_identities_user').on(table.userId)],
+);
+
 export const leads = mysqlTable('leads', {
   id: int().autoincrement().primaryKey(),
   propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
@@ -104,6 +120,10 @@ export const leads = mysqlTable('leads', {
     'manual',
     'none',
   ]).default('email'),
+  prospectIdentityId: varchar('prospect_identity_id', { length: 36 }).references(
+    () => prospectIdentities.id,
+    { onDelete: 'set null' },
+  ),
 });
 
 export const leadActivities = mysqlTable('lead_activities', {
@@ -191,6 +211,10 @@ export const showings = mysqlTable(
       .default('requested')
       .notNull(),
     visitorId: int().references(() => users.id, { onDelete: 'set null' }),
+    prospectIdentityId: varchar('prospect_identity_id', { length: 36 }).references(
+      () => prospectIdentities.id,
+      { onDelete: 'set null' },
+    ),
     createdByUserId: int('createdByUserId').references(() => users.id, { onDelete: 'set null' }),
     visitorName: varchar({ length: 150 }),
     durationMinutes: int().default(30).notNull(),
@@ -204,6 +228,47 @@ export const showings = mysqlTable(
     index('idx_showings_listing').on(table.listingId),
     index('idx_showings_property').on(table.propertyId),
     index('idx_showings_creator').on(table.createdByUserId),
+  ],
+);
+
+/** Immutable action attribution; it describes the action, never a new person. */
+export const prospectActionAttributions = mysqlTable(
+  'prospect_action_attributions',
+  {
+    id: int().autoincrement().primaryKey(),
+    leadId: int('lead_id')
+      .notNull()
+      .references(() => leads.id, { onDelete: 'cascade' }),
+    sourceType: varchar('source_type', { length: 80 }).notNull(),
+    sourceEntityId: varchar('source_entity_id', { length: 120 }),
+    campaignContext: json('campaign_context'),
+    utmContext: json('utm_context'),
+    referrerContext: text('referrer_context'),
+    firstTouch: json('first_touch'),
+    lastTouch: json('last_touch'),
+    actionTouch: json('action_touch').notNull(),
+    capturedAt: timestamp('captured_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [unique('uq_prospect_action_attribution_lead').on(table.leadId)],
+);
+
+/** One-time proof links exactly one historical lead to the authenticated owner. */
+export const prospectActionClaimTokens = mysqlTable(
+  'prospect_action_claim_tokens',
+  {
+    id: int().autoincrement().primaryKey(),
+    leadId: int('lead_id')
+      .notNull()
+      .references(() => leads.id, { onDelete: 'cascade' }),
+    tokenHash: varchar('token_hash', { length: 64 }).notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
+    usedAt: timestamp('used_at', { mode: 'string' }),
+    claimedByUserId: int('claimed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  },
+  table => [
+    unique('uq_prospect_action_claim_token_hash').on(table.tokenHash),
+    index('idx_prospect_action_claim_lead').on(table.leadId),
   ],
 );
 

@@ -275,6 +275,7 @@ import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
 import { leadsRouter } from './leadsRouter';
+import { prospectJourneyRouter } from './prospectJourneyRouter';
 import { distributionRouter } from './distributionRouter';
 import { demandRouter } from './demandRouter';
 import { servicesEngineRouter } from './servicesEngineRouter';
@@ -323,6 +324,7 @@ const appRouterConfig = {
   favorites: favoritesRouter,
   reviews: reviewsRouter,
   leads: leadsRouter,
+  prospectJourney: prospectJourneyRouter,
   distribution: distributionRouter,
   demand: demandRouter,
   servicesEngine: servicesEngineRouter,

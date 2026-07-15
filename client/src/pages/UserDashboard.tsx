@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ProspectLayout } from '@/components/ProspectLayout';
-import { ProspectDashboard } from '@/components/ProspectDashboard';
-import { RecentlyViewedCarousel } from '@/components/RecentlyViewedCarousel';
+import { ProspectJourneyTracker } from '@/components/prospect/ProspectJourneyTracker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +17,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useComparison } from '@/contexts/ComparisonContext';
-import { useProspectSessionId } from '@/hooks/useProspectSessionId';
 import { useTrendingSuburbs } from '@/hooks/useTrendingSuburbs';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import {
@@ -75,47 +73,20 @@ type SellerPlanningInputs = {
   estimatedValueBand?: SellerEstimatedValueBand;
 };
 type RawCriteria = Record<string, unknown>;
-type ProspectRecord = {
-  income?: number | null;
-  incomeRange?: string | null;
-  employmentStatus?: string | null;
-  combinedIncome?: number | null;
-  monthlyExpenses?: number | null;
-  monthlyDebts?: number | null;
-  dependents?: number | null;
-  savingsDeposit?: number | null;
-  creditScore?: number | null;
-  hasCreditConsent?: number | null;
-};
-type ProspectProgressRecord = {
-  progress?: number | null;
-};
-type BuyabilityResultsRecord = {
+type DeferredProspect = { income?: number | null };
+type DeferredProgress = { progress?: number | null };
+type DeferredBuyability = {
   affordabilityMin?: number | null;
   affordabilityMax?: number | null;
   monthlyPaymentCapacity?: number | null;
   buyabilityScore?: string | null;
 };
-type LegacyProspectProcedures = {
-  getProspect: {
-    useQuery: (
-      input: { sessionId: string },
-      options: { enabled: boolean },
-    ) => { data: ProspectRecord | null | undefined };
-  };
-  getProspectProgress: {
-    useQuery: (
-      input: { sessionId: string },
-      options: { enabled: boolean },
-    ) => { data: ProspectProgressRecord | null | undefined };
-  };
-  calculateBuyability: {
-    useQuery: (
-      input: unknown,
-      options: { enabled: boolean },
-    ) => { data: BuyabilityResultsRecord | null | undefined };
-  };
-};
+
+// Kept as typed empty sources while the legacy Buyability surface is retired.
+// The Journey Tracker must not call the unregistered `trpc.prospects.*` API.
+function deferredProspect(): DeferredProspect | null { return null; }
+function deferredProgress(): DeferredProgress | null { return null; }
+function deferredBuyability(): DeferredBuyability | null { return null; }
 type FavoriteCard = ReturnType<typeof normalizePropertyForUI> & {
   savedAt?: string | null;
   property?: Record<string, unknown>;
@@ -414,10 +385,7 @@ export default function UserDashboard() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, user, loading } = useAuth();
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
-  const sessionId = useProspectSessionId();
   const utils = trpc.useUtils();
-  const prospectApi = (trpc as unknown as { prospects: LegacyProspectProcedures }).prospects;
-  const [plannerOpen, setPlannerOpen] = useState(false);
   const [intent, setIntent] = useState<DashboardIntent>(() => {
     if (typeof window === 'undefined') return 'buyer';
     const saved = window.localStorage.getItem(DASHBOARD_INTENT_KEY);
@@ -471,14 +439,6 @@ export default function UserDashboard() {
     { status: 'available', limit: 120 },
     { enabled: isAuthenticated },
   );
-  const { data: prospect } = prospectApi.getProspect.useQuery(
-    { sessionId },
-    { enabled: isAuthenticated && !!sessionId },
-  );
-  const { data: prospectProgress } = prospectApi.getProspectProgress.useQuery(
-    { sessionId },
-    { enabled: isAuthenticated && !!sessionId },
-  );
   const { data: marketHeatmap, isLoading: marketHeatmapLoading } =
     trpc.priceInsights.getSuburbPriceHeatmap.useQuery(
       { limit: 120, offset: 0 },
@@ -518,38 +478,10 @@ export default function UserDashboard() {
     updateConsumerDashboardState.mutate({ preferences: { intent } });
   }, [intent, isAuthenticated, updateConsumerDashboardState]);
 
-  const buyabilityInput = useMemo(() => {
-    if (!prospect) return null;
-
-    return {
-      income: prospect.income ? prospect.income / 100 : undefined,
-      incomeRange: prospect.incomeRange as
-        | 'under_15k'
-        | '15k_25k'
-        | '25k_50k'
-        | '50k_75k'
-        | '75k_100k'
-        | '100k_plus'
-        | undefined,
-      employmentStatus: prospect.employmentStatus as
-        | 'employed'
-        | 'self_employed'
-        | 'contract'
-        | 'unemployed'
-        | undefined,
-      combinedIncome: prospect.combinedIncome ? prospect.combinedIncome / 100 : undefined,
-      monthlyExpenses: prospect.monthlyExpenses ? prospect.monthlyExpenses / 100 : undefined,
-      monthlyDebts: prospect.monthlyDebts ? prospect.monthlyDebts / 100 : undefined,
-      dependents: prospect.dependents || 0,
-      savingsDeposit: prospect.savingsDeposit ? prospect.savingsDeposit / 100 : undefined,
-      creditScore: prospect.creditScore || undefined,
-      hasCreditConsent: prospect.hasCreditConsent === 1,
-    };
-  }, [prospect]);
-
-  const { data: buyabilityResults } = prospectApi.calculateBuyability.useQuery(buyabilityInput, {
-    enabled: Boolean(buyabilityInput),
-  });
+  // Buyability is explicitly deferred until the identity and journey contracts are proven.
+  const prospect = deferredProspect();
+  const prospectProgress = deferredProgress();
+  const buyabilityResults = deferredBuyability();
 
   const favorites = useMemo(
     () =>
@@ -1334,12 +1266,14 @@ export default function UserDashboard() {
 
               <div className="flex flex-wrap gap-3">
                 <Button
-                  id="open-planner"
+                  id="open-journey"
                   className="bg-slate-900 text-white hover:bg-slate-800"
-                  onClick={() => setPlannerOpen(true)}
+                  onClick={() =>
+                    document.getElementById('prospect-journey-title')?.scrollIntoView({ behavior: 'smooth' })
+                  }
                 >
-                  <Calculator className="mr-2 h-4 w-4" />
-                  {prospect ? 'Update buyability plan' : 'Start buyability plan'}
+                  <Activity className="mr-2 h-4 w-4" />
+                  View your journey
                 </Button>
                 <Button variant="outline" onClick={() => setLocation('/properties')}>
                   <Search className="mr-2 h-4 w-4" />
@@ -1402,8 +1336,10 @@ export default function UserDashboard() {
           </CardContent>
         </Card>
 
+        <ProspectJourneyTracker />
+
         <Tabs defaultValue="overview" className="mt-8 w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-white/80 p-2 shadow-sm md:grid-cols-5">
+          <TabsList className="!grid w-full grid-cols-2 rounded-2xl bg-white/80 p-2 shadow-sm md:grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="homes">Saved Homes</TabsTrigger>
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
@@ -1430,7 +1366,7 @@ export default function UserDashboard() {
                       className="bg-white text-slate-950 hover:bg-slate-100"
                       onClick={() => {
                         if (bridgePlan.primaryHref === '#open-planner') {
-                          setPlannerOpen(true);
+                          document.getElementById('prospect-journey-title')?.scrollIntoView({ behavior: 'smooth' });
                           return;
                         }
                         if (bridgePlan.primaryHref === '#overview-seller-readiness') {
@@ -1452,7 +1388,7 @@ export default function UserDashboard() {
               </Card>
             ) : null}
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <Card className="border-white/60 bg-white/90">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -1494,8 +1430,8 @@ export default function UserDashboard() {
                     </div>
                   )}
 
-                  <Button variant="outline" onClick={() => setPlannerOpen(true)}>
-                    Open planner
+                  <Button variant="outline" onClick={() => document.getElementById('prospect-journey-title')?.scrollIntoView({ behavior: 'smooth' })}>
+                    View journey tracker
                   </Button>
                 </CardContent>
               </Card>
@@ -1896,14 +1832,14 @@ export default function UserDashboard() {
                   <div className="grid gap-3 pt-1">
                     <Button
                       variant="outline"
-                      className="h-auto w-full justify-between rounded-2xl px-4 py-4 text-left"
+                      className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
                       onClick={() =>
                         setLocation(
                           '/services/request/inspection_compliance?intentStage=seller_valuation&sourceSurface=journey_injection',
                         )
                       }
                     >
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold text-slate-900">Seller valuation prep</p>
                         <p className="text-sm text-slate-500">
                           Bring in inspections and readiness checks before you set your price.
@@ -1914,14 +1850,14 @@ export default function UserDashboard() {
 
                     <Button
                       variant="outline"
-                      className="h-auto w-full justify-between rounded-2xl px-4 py-4 text-left"
+                      className="h-auto w-full justify-between whitespace-normal rounded-2xl px-4 py-4 text-left"
                       onClick={() =>
                         setLocation(
                           '/services/request/media_marketing?intentStage=seller_listing_prep&sourceSurface=journey_injection',
                         )
                       }
                     >
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold text-slate-900">Listing prep</p>
                         <p className="text-sm text-slate-500">
                           Line up photography, staging, and launch media before you go live.
@@ -2134,7 +2070,6 @@ export default function UserDashboard() {
               </Card>
             </div>
 
-            {sessionId ? <RecentlyViewedCarousel sessionId={sessionId} /> : null}
           </TabsContent>
           <TabsContent value="homes" className="mt-6">
             {favoritesLoading ? (
@@ -2437,8 +2372,6 @@ export default function UserDashboard() {
           </TabsContent>
 
           <TabsContent value="activity" className="mt-6 space-y-4">
-            {sessionId ? <RecentlyViewedCarousel sessionId={sessionId} /> : null}
-
             <Card className="border-white/60 bg-white/90">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -2470,7 +2403,6 @@ export default function UserDashboard() {
         </Tabs>
       </div>
 
-      <ProspectDashboard isOpen={plannerOpen} onClose={() => setPlannerOpen(false)} />
     </ProspectLayout>
   );
 }

@@ -17,6 +17,16 @@
   display: none;
 }
 
+/* Sonner sets a 100% root width on touch devices while retaining its mobile
+ * inset. Bound that root only, so stacked toasts remain visible without
+ * widening the document beyond the viewport. */
+@media (max-width: 600px) {
+  [data-sonner-toaster].toaster {
+    width: min(356px, calc(100vw - 2rem)) !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

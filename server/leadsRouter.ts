@@ -167,7 +167,10 @@ export const leadsRouter = router({
         });
       }
 
-      const result = await capturePublicLead(input);
+      const result = await capturePublicLead({
+        ...input,
+        authenticatedUserId: ctx.user?.id,
+      });
 
       logLeadEvent('lead_accepted', {
         requestId,

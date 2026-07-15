@@ -12,6 +12,9 @@ const {
   mockUpdate,
   mockSet,
   mockUpdateWhere,
+  mockInsert,
+  mockInsertValues,
+  insertedAttributions,
   mockCaptureBrandLead,
   mockRecordAgentOsEventForAgentId,
 } = vi.hoisted(() => ({
@@ -26,6 +29,9 @@ const {
   mockUpdate: vi.fn(),
   mockSet: vi.fn(),
   mockUpdateWhere: vi.fn(),
+  mockInsert: vi.fn(),
+  mockInsertValues: vi.fn(),
+  insertedAttributions: [] as Array<Record<string, unknown>>,
   mockCaptureBrandLead: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
 }));
@@ -175,6 +181,11 @@ describe('development search-detail-lead public journey contract', () => {
     mockUpdate.mockReturnValue({ set: mockSet });
     mockSet.mockReturnValue({ where: mockUpdateWhere });
     mockUpdateWhere.mockResolvedValue(undefined);
+    insertedAttributions.length = 0;
+    mockInsertValues.mockImplementation(async (values: Record<string, unknown>) => {
+      insertedAttributions.push(values);
+    });
+    mockInsert.mockReturnValue({ values: mockInsertValues });
     mockCaptureBrandLead.mockResolvedValue({
       leadId: 909,
       delivered: true,
@@ -186,6 +197,7 @@ describe('development search-detail-lead public journey contract', () => {
     mockGetDb.mockResolvedValue({
       select: mockSelect,
       update: mockUpdate,
+      insert: mockInsert,
     });
   });
 
@@ -301,6 +313,31 @@ describe('development search-detail-lead public journey contract', () => {
     expect(mockCaptureBrandLead).not.toHaveBeenCalledWith(
       expect.objectContaining({ developerBrandProfileId: 999 }),
     );
+    expect(insertedAttributions).toHaveLength(1);
+    expect(insertedAttributions[0]).toMatchObject({
+      leadId: 909,
+      sourceType: 'web',
+      sourceEntityId: 'development:77',
+      campaignContext: { campaign: 'launch' },
+      utmContext: { source: 'google', medium: 'cpc', campaign: 'launch' },
+      referrerContext:
+        'https://property-listify.test/development/cosmopolitan-projects/unit/unit-a?utm_source=google&utm_medium=cpc&utm_campaign=launch',
+      firstTouch: expect.objectContaining({
+        sourceType: 'web',
+        propertyId: null,
+        developmentId: 77,
+      }),
+      lastTouch: expect.objectContaining({
+        sourceType: 'web',
+        propertyId: null,
+        developmentId: 77,
+      }),
+      actionTouch: expect.objectContaining({
+        sourceType: 'web',
+        propertyId: null,
+        developmentId: 77,
+      }),
+    });
   });
 
   it('does not expose published but unapproved detail through the public detail contract', async () => {

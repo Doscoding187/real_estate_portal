@@ -4783,6 +4783,7 @@ export const agencyRouter = router({
           scheduledAt,
           status: input.status,
           createdByUserId: user.id,
+          prospectIdentityId: lead.prospectIdentityId,
           visitorName: lead.name,
           durationMinutes: input.durationMinutes,
           notes: serializeViewingNotes({
@@ -4982,6 +4983,7 @@ export const agencyRouter = router({
           scheduledAt,
           status: input.status,
           createdByUserId: user.id,
+          prospectIdentityId: lead.prospectIdentityId,
           visitorName: lead.name,
           durationMinutes: input.durationMinutes,
           notes: serializeViewingNotes({
