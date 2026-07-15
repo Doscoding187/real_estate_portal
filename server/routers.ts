@@ -17,6 +17,7 @@ import {
   users,
 } from '../drizzle/schema';
 import { and, count, eq, inArray, or } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
 import { canvassingRouter } from './canvassingRouter';
@@ -1124,32 +1125,15 @@ const appRouterConfig = {
           images: z.array(z.string()).min(1, 'At least one image is required'), // Array of image URLs
         }),
       )
-      .mutation(async ({ ctx, input }) => {
-        const { images, ...propertyData } = input;
-
-        // Create property
-        const propertyId = await db.createProperty({
-          ...propertyData,
-          amenities: input.amenities ? JSON.stringify(input.amenities) : null,
-          ownerId: getUserId(ctx),
-          status: 'available',
-          featured: 0,
-          views: 0,
-          enquiries: 0,
-          transactionType: input.listingType === 'rent' ? 'rent' : 'sale',
+      .mutation(async () => {
+        // Keep this procedure name and input contract temporarily for legacy
+        // callers, but retire its direct-to-publication behavior. Listings
+        // must now use the canonical review and approval workflow.
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Direct property creation has been retired. Use the canonical listing workflow for review and publication.',
         });
-
-        // Create property images
-        for (let i = 0; i < images.length; i++) {
-          await db.createPropertyImage({
-            propertyId: Number(propertyId),
-            imageUrl: images[i],
-            isPrimary: i === 0 ? 1 : 0,
-            displayOrder: i,
-          });
-        }
-
-        return { success: true, propertyId: Number(propertyId) };
       }),
 
     update: protectedProcedure
