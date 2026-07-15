@@ -61,6 +61,10 @@ import {
 import { logAudit } from './_core/auditLog';
 import { requireUser } from './_core/requireUser';
 import { isPaidSubscriptionEntitled, setSubscriptionPlanForOwner } from './services/planAccessService';
+import {
+  assertListingPublicationEntitled,
+  ListingPublicationEntitlementError,
+} from './services/listingPublicationEntitlementService';
 import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 
 /**
@@ -7295,47 +7299,23 @@ export const agencyRouter = router({
       const listing = await requireAgencyListing(db, agencyId, input.listingId);
       const status = String(listing.status || 'draft');
 
-      const [agency] = await db
-        .select()
-        .from(agencies)
-        .where(eq(agencies.id, agencyId))
-        .limit(1);
-
-      if (!agency) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency not found' });
-      }
-
-      const [branding] = await db
-        .select({
-          companyName: agencyBranding.companyName,
-          primaryColor: agencyBranding.primaryColor,
-          secondaryColor: agencyBranding.secondaryColor,
-        })
-        .from(agencyBranding)
-        .where(eq(agencyBranding.agencyId, agencyId))
-        .limit(1);
-
-      const accessState = await getAgencyAccessStateForUser(db, {
-        user,
-        agency,
-        profileConfigured: Boolean(agency.name && agency.email && agency.city && agency.province),
-        brandingConfigured: Boolean(
-          branding?.companyName && branding?.primaryColor && branding?.secondaryColor,
-        ),
-      });
-
-      if (!accessState.workspaceAccess.publishing) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: accessState.actionableReason || 'Publishing is not available for this agency.',
-        });
-      }
-
       if (!['draft', 'rejected'].includes(status)) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message: `Listing cannot be submitted from status "${status}"`,
         });
+      }
+
+      try {
+        await assertListingPublicationEntitled(db, {
+          listingId: input.listingId,
+          operation: 'submit',
+        });
+      } catch (error) {
+        if (error instanceof ListingPublicationEntitlementError) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+        }
+        throw error;
       }
 
       if (Number(listing.readinessScore || 0) < 75) {
@@ -7348,6 +7328,9 @@ export const agencyRouter = router({
       try {
         await submitListingForReviewById(input.listingId);
       } catch (error) {
+        if (error instanceof ListingPublicationEntitlementError) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: error instanceof Error ? error.message : 'Failed to submit listing for review',

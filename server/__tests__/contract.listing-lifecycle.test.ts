@@ -14,27 +14,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Use vi.hoisted() to avoid hoisting issues with vi.mock factory functions.
 // ---------------------------------------------------------------------------
 
-const { mockDb } = vi.hoisted(() => ({
+const { mockDb, mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
   mockDb: {
-    getListingById: vi.fn(),
-    createListing: vi.fn(),
-    updateListing: vi.fn(),
-    submitListingForReview: vi.fn(),
-    approveListing: vi.fn(),
-    rejectListing: vi.fn(),
-    archiveListing: vi.fn(),
-    deleteListing: vi.fn(),
-    getListingMedia: vi.fn(),
-    replaceListingMedia: vi.fn(),
-    getUserListings: vi.fn(),
-    getListingAnalytics: vi.fn(),
-    getAgentById: vi.fn(),
-    getAgentByUserId: vi.fn(),
-    getUserById: vi.fn(),
-    getApprovalQueue: vi.fn(),
-    syncPublishedListingMediaToPropertyMirror: vi.fn(),
-    getDb: vi.fn(),
+      getListingById: vi.fn(),
+      createListing: vi.fn(),
+      updateListing: vi.fn(),
+      submitListingForReview: vi.fn(),
+      approveListing: vi.fn(),
+      rejectListing: vi.fn(),
+      archiveListing: vi.fn(),
+      deleteListing: vi.fn(),
+      getListingMedia: vi.fn(),
+      replaceListingMedia: vi.fn(),
+      getUserListings: vi.fn(),
+      getListingAnalytics: vi.fn(),
+      getAgentById: vi.fn(),
+      getAgentByUserId: vi.fn(),
+      getUserById: vi.fn(),
+      getApprovalQueue: vi.fn(),
+      syncPublishedListingMediaToPropertyMirror: vi.fn(),
+      getDb: vi.fn(),
   },
+  mockAssertListingPublicationEntitled: vi.fn(),
 }));
 
 vi.mock('../db', () => mockDb);
@@ -42,6 +43,15 @@ vi.mock('../db', () => mockDb);
 // Also mock the agent OS event service so tests don't fail on recording
 vi.mock('../services/agentOsEventService', () => ({
   recordAgentOsEvent: vi.fn(),
+}));
+
+vi.mock('../services/listingPublicationEntitlementService', () => ({
+  assertListingPublicationEntitled: mockAssertListingPublicationEntitled,
+  ListingPublicationEntitlementError: class ListingPublicationEntitlementError extends Error {
+    constructor(public readonly reason: string, message: string) {
+      super(message);
+    }
+  },
 }));
 
 // Mock readiness/quality to avoid calculation issues in tests
@@ -68,6 +78,7 @@ vi.mock('../services/locationPagesServiceEnhanced', () => ({
 }));
 
 import { appRouter } from '../routers';
+import { ListingPublicationEntitlementError } from '../services/listingPublicationEntitlementService';
 
 // ---------------------------------------------------------------------------
 // Shared test helpers
@@ -151,6 +162,12 @@ const withSilencedConsoleError = async (run: () => Promise<void>) => {
 describe('listing lifecycle — canonical identity contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(mockAssertListingPublicationEntitled).mockResolvedValue({
+      kind: 'agency',
+      agencyId: 1,
+      listingId: 1001,
+      responsibleAgentId: 55,
+    } as any);
 
     // Default mocks so most tests don't need to repeat setup.
     // NOTE: agent.isVerified = 0 by default so submitForReview does NOT
@@ -331,6 +348,40 @@ describe('listing lifecycle — canonical identity contract', () => {
 
     // Submit must have been called with the same ID
     expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+  });
+
+  it('does not let verified-agent fast-track bypass the canonical entitlement assertion', async () => {
+    const caller = makeCaller(ownerUser);
+    const listingId = 3002;
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({ id: listingId, status: 'draft' }),
+    );
+    vi.mocked(mockDb.getAgentByUserId).mockResolvedValue({
+      id: 55,
+      userId: ownerUser.id,
+      isVerified: 1,
+      whatsapp: '+27123456789',
+    });
+    vi.mocked(mockAssertListingPublicationEntitled).mockRejectedValueOnce(
+      new ListingPublicationEntitlementError(
+        'subscription_suspended',
+        'The subscription is suspended.',
+      ),
+    );
+
+    await withSilencedConsoleError(async () => {
+      await expect(caller.listing.submitForReview({ listingId })).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: 'The subscription is suspended.',
+      });
+    });
+
+    expect(mockAssertListingPublicationEntitled).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ listingId, operation: 'submit' }),
+    );
+    expect(mockDb.approveListing).not.toHaveBeenCalled();
+    expect(mockDb.submitListingForReview).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
