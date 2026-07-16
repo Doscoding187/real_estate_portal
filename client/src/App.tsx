@@ -58,6 +58,7 @@ const ExploreHome = lazy(() => import('./pages/ExploreHome'));
 const ExploreShorts = lazy(() => import('./pages/ExploreShorts'));
 const ExploreUpload = lazy(() => import('./pages/ExploreUpload'));
 const ExploreMap = lazy(() => import('./pages/ExploreMap'));
+const ExploreOptionAPilot = lazy(() => import('./pages/ExploreOptionAPilot'));
 const PartnerProfile = lazy(() => import('./pages/PartnerProfile'));
 const OnboardingSuccess = lazy(() => import('./pages/OnboardingSuccess'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -416,6 +417,7 @@ function Router() {
             <Redirect to="/explore/feed" />
           </Route>
           <Route path="/explore/map" component={ExploreMap} />
+          <Route path="/explore/pilot" component={ExploreOptionAPilot} />
 
           {/* Legacy Feed */}
           <Route path="/explore/feed" component={ExploreFeed} />
