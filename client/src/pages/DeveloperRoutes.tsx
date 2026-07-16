@@ -19,6 +19,7 @@ import DeveloperCampaignsPage from '@/pages/DeveloperCampaignsPage';
 import DeveloperPerformancePage from '@/pages/DeveloperPerformancePage';
 import DeveloperPlans from '@/pages/DeveloperPlans';
 import DeveloperBrandProfilePage from '@/pages/DeveloperBrandProfilePage';
+import DevelopmentHome from '@/pages/developer/DevelopmentHome';
 import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 
 // Placeholder components for missing pages
@@ -139,10 +140,11 @@ export default function DeveloperRoutes() {
         <Route path="/developer/dashboard" component={Overview} />
 
         {/* Developments */}
-        <Route path="/developer/developments" component={DevelopmentsList} />
         <Route path="/developer/developments/new">
           <Redirect to="/developer/create-development" />
         </Route>
+        <Route path="/developer/developments/:developmentId" component={DevelopmentHome} />
+        <Route path="/developer/developments" component={DevelopmentsList} />
         <Route path="/developer/create-development" component={CreateDevelopment} />
 
         {/* Drafts */}

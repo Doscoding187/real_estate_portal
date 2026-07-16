@@ -53,6 +53,53 @@ import { composeResidentialHomeFeedItems } from './services/homeFeedComposition'
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
+export type DevelopmentHomeLifecycleState =
+  | 'live'
+  | 'approved_private'
+  | 'in_review'
+  | 'rejected'
+  | 'draft';
+
+export const DevelopmentHomeInputSchema = z
+  .object({
+    developmentId: z.number().int().positive(),
+    range: z.enum(['7d', '30d', '90d']),
+  })
+  .strict();
+
+type DevelopmentHomeIdentityRow = Pick<
+  typeof developments.$inferSelect,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'address'
+  | 'suburb'
+  | 'city'
+  | 'province'
+  | 'transactionType'
+  | 'approvalStatus'
+  | 'isPublished'
+  | 'publishedAt'
+>;
+
+export function deriveDevelopmentHomeLifecycleState(input: {
+  approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
+  isPublished: (typeof developments.$inferSelect)['isPublished'];
+}): DevelopmentHomeLifecycleState {
+  if (input.approvalStatus === 'approved' && Number(input.isPublished) === 1) return 'live';
+  if (input.approvalStatus === 'approved') return 'approved_private';
+  if (input.approvalStatus === 'pending') return 'in_review';
+  if (input.approvalStatus === 'rejected') return 'rejected';
+  return 'draft';
+}
+
+export function isDevelopmentHomePublicEligible(input: {
+  approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
+  isPublished: (typeof developments.$inferSelect)['isPublished'];
+}): boolean {
+  return input.approvalStatus === 'approved' && Number(input.isPublished) === 1;
+}
+
 function assertDeveloperDistributionEnabled() {
   if (!ENV.distributionNetworkEnabled) {
     throw new TRPCError({
@@ -1922,6 +1969,98 @@ export const developerRouter = router({
         console.warn('[developer.getDevelopment] Returning null due to error:', error);
         return null;
       }
+    }),
+
+  getDevelopmentHome: protectedProcedure
+    .input(DevelopmentHomeInputSchema)
+    .query(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+
+      const selectIdentity = {
+        id: developments.id,
+        name: developments.name,
+        slug: developments.slug,
+        address: developments.address,
+        suburb: developments.suburb,
+        city: developments.city,
+        province: developments.province,
+        transactionType: developments.transactionType,
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+        publishedAt: developments.publishedAt,
+      };
+
+      let row: DevelopmentHomeIdentityRow | undefined;
+
+      if (user.role === 'property_developer') {
+        const profile = await requireDeveloperProfileByUserId(user.id);
+        [row] = await dbConn
+          .select(selectIdentity)
+          .from(developments)
+          .where(
+            and(eq(developments.id, input.developmentId), eq(developments.developerId, profile.id)),
+          )
+          .limit(1);
+      } else if (user.role === 'super_admin') {
+        const operatingAs = ctx.operatingAs;
+        if (!operatingAs?.brandProfileId) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'BRAND_CONTEXT_REQUIRED' });
+        }
+        if (operatingAs.brandType !== 'developer' && operatingAs.brandType !== 'hybrid') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Developer or hybrid brand context is required for Development Home.',
+          });
+        }
+
+        [row] = await dbConn
+          .select(selectIdentity)
+          .from(developments)
+          .where(
+            and(
+              eq(developments.id, input.developmentId),
+              eq(developments.developerBrandProfileId, operatingAs.brandProfileId),
+            ),
+          )
+          .limit(1);
+      } else {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only developers or contextual super admins can access Development Home.',
+        });
+      }
+
+      if (!row) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+      }
+
+      const lifecycleState = deriveDevelopmentHomeLifecycleState(row);
+      const isPublished = Number(row.isPublished) === 1;
+
+      return {
+        development: {
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          location: {
+            address: row.address ?? null,
+            suburb: row.suburb ?? null,
+            city: row.city,
+            province: row.province,
+          },
+          transactionType: row.transactionType,
+          approvalStatus: row.approvalStatus,
+          isPublished,
+          publishedAt: row.publishedAt,
+          publicEligible: isDevelopmentHomePublicEligible(row),
+          lifecycleState,
+        },
+        range: input.range,
+      };
     }),
 
   getDevelopments: protectedProcedure.query(async ({ ctx }) => {
