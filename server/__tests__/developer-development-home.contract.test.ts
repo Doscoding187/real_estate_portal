@@ -49,15 +49,16 @@ type DevelopmentHomeStateInput = Parameters<typeof deriveDevelopmentHomeLifecycl
 function developmentHomeState(
   approvalStatus: DevelopmentHomeStateInput['approvalStatus'],
   isPublished: DevelopmentHomeStateInput['isPublished'],
+  overrides: Omit<Partial<DevelopmentHomeStateInput>, 'approvalStatus' | 'isPublished'> = {},
 ): DevelopmentHomeStateInput {
-  return { approvalStatus, isPublished };
+  return { approvalStatus, isPublished, ...overrides };
 }
 
 const ownedDevelopment = {
   id: 42,
   name: 'Harbour Heights',
   slug: 'harbour-heights',
-  address: null,
+  address: '1 Harbour Road',
   suburb: 'Sea Point',
   city: 'Cape Town',
   province: 'Western Cape',
@@ -65,15 +66,33 @@ const ownedDevelopment = {
   approvalStatus: 'approved',
   isPublished: 1,
   publishedAt: new Date('2026-01-01'),
+  description:
+    'A valid persisted description that contains more than fifty characters for testing.',
+  images: JSON.stringify([{ url: 'https://example.com/harbour.jpg' }]),
+  highlights: JSON.stringify(['One', 'Two', 'Three']),
+  ownershipType: 'sectional-title',
+  developmentType: 'residential',
+  rejectionNote: null,
 };
 
-function configureDevelopmentQuery(result: unknown[] | Error) {
-  const limit =
-    result instanceof Error ? vi.fn().mockRejectedValue(result) : vi.fn().mockResolvedValue(result);
-  const where = vi.fn(() => ({ limit }));
-  const from = vi.fn(() => ({ where }));
-  mockGetDb.mockResolvedValue({ select: vi.fn(() => ({ from })) });
-  return { where };
+function configureDevelopmentQuery(
+  developmentResult: unknown[] | Error,
+  unitTypeResult: unknown[] = [],
+  reviewResult: unknown[] = [],
+) {
+  const results = [developmentResult, unitTypeResult, reviewResult];
+  let selectCall = 0;
+  const select = vi.fn(() => {
+    const result = results[Math.min(selectCall++, results.length - 1)];
+    const value = result instanceof Error ? Promise.reject(result) : Promise.resolve(result);
+    const chain = Object.assign(value, {
+      limit: vi.fn(() => value),
+      orderBy: vi.fn(() => chain),
+    });
+    return { from: vi.fn(() => ({ where: vi.fn(() => chain) })) };
+  });
+  mockGetDb.mockResolvedValue({ select });
+  return { select };
 }
 
 function callerFor(user: { id: number; role: 'property_developer' | 'super_admin' }, headers = {}) {
@@ -124,7 +143,7 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(isDevelopmentHomePublicEligible(developmentHomeState('pending', 1))).toBe(false);
   });
 
-  it('uses the Slice 1 lifecycle precedence without historical review inference', () => {
+  it('uses the deterministic Market Readiness lifecycle precedence', () => {
     expect(deriveDevelopmentHomeLifecycleState(developmentHomeState('approved', 1))).toBe('live');
     expect(deriveDevelopmentHomeLifecycleState(developmentHomeState('approved', 0))).toBe(
       'approved_private',
@@ -135,7 +154,27 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(deriveDevelopmentHomeLifecycleState(developmentHomeState('rejected', 0))).toBe(
       'rejected',
     );
-    expect(deriveDevelopmentHomeLifecycleState(developmentHomeState('draft', 0))).toBe('draft');
+    expect(
+      deriveDevelopmentHomeLifecycleState(
+        developmentHomeState('draft', 0, { currentChangesRequestedFeedback: 'Update pricing.' }),
+      ),
+    ).toBe('changes_required');
+    expect(deriveDevelopmentHomeLifecycleState(developmentHomeState('draft', 0))).toBe(
+      'draft_ready_to_submit',
+    );
+    expect(
+      deriveDevelopmentHomeLifecycleState(
+        developmentHomeState('draft', 0, {
+          blockers: [
+            {
+              field: 'description',
+              message: 'Description must contain at least 50 characters.',
+              severity: 'critical',
+            },
+          ],
+        }),
+      ),
+    ).toBe('draft_action_required');
   });
 
   it('uses owner-scoped queries and one private NOT_FOUND result for regular developers', () => {
@@ -147,10 +186,29 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(query.match(/code: 'NOT_FOUND'/g)).toHaveLength(1);
     expect(query).not.toContain('getPublicDevelopment');
     expect(query).not.toContain('.catch(');
+    expect(query).toContain(
+      '.orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id))',
+    );
+    expect(query).toContain('.limit(3);');
+    expect(query).not.toContain('reviewedBy: developmentApprovalQueue');
+    expect(query).not.toContain('complianceChecks: developmentApprovalQueue');
   });
 
   it('loads an owned development through the regular developer profile predicate', async () => {
-    configureDevelopmentQuery([ownedDevelopment]);
+    configureDevelopmentQuery(
+      [ownedDevelopment],
+      [
+        {
+          name: 'Two bedroom apartment',
+          isActive: 1,
+          totalUnits: 10,
+          availableUnits: 10,
+          reservedUnits: 0,
+          priceFrom: 1000000,
+          basePriceFrom: 1000000,
+        },
+      ],
+    );
 
     await expect(
       callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
@@ -164,6 +222,11 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
         name: 'Harbour Heights',
         publicEligible: true,
         lifecycleState: 'live',
+      },
+      readiness: {
+        state: 'live',
+        blockers: [],
+        recentReviewHistory: [],
       },
     });
 

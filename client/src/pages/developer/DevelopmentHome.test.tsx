@@ -39,6 +39,13 @@ vi.mock('@/lib/trpc', () => ({
 import DevelopmentHome from './DevelopmentHome';
 
 function homeData(overrides: Record<string, unknown> = {}) {
+  const readiness = {
+    state: 'live',
+    blockers: [],
+    latestReview: null,
+    recentReviewHistory: [],
+  };
+
   return {
     development: {
       id: 42,
@@ -53,11 +60,12 @@ function homeData(overrides: Record<string, unknown> = {}) {
       lifecycleState: 'live',
       ...overrides,
     },
+    readiness,
     range: '30d',
   };
 }
 
-describe('DevelopmentHome Slice 1 shell', () => {
+describe('DevelopmentHome Slice 2 Market Readiness', () => {
   beforeEach(() => {
     routeParamsMock.developmentId = '42';
     homeQueryMock.mockReturnValue({
@@ -74,16 +82,16 @@ describe('DevelopmentHome Slice 1 shell', () => {
     expect(screen.getByRole('heading', { name: 'Development Home' })).toBeInTheDocument();
     expect(screen.getByText('Harbour Heights')).toBeInTheDocument();
     expect(screen.getByText('Sea Point, Cape Town, Western Cape')).toBeInTheDocument();
-    expect(screen.getByText('Live')).toBeInTheDocument();
+    expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Edit development' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open leads' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'View public page' })).toBeInTheDocument();
-    expect(screen.queryByText(/market readiness/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'View public page' })).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Market Readiness' })).toBeInTheDocument();
     expect(screen.queryByText(/aggregate inventory/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit development' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open leads' }));
-    fireEvent.click(screen.getByRole('button', { name: 'View public page' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'View public page' })[0]);
 
     expect(setLocationMock).toHaveBeenNthCalledWith(1, '/developer/create-development?id=42');
     expect(setLocationMock).toHaveBeenNthCalledWith(
@@ -95,11 +103,19 @@ describe('DevelopmentHome Slice 1 shell', () => {
 
   it('does not offer a public link unless the development is publicly eligible', () => {
     homeQueryMock.mockReturnValue({
-      data: homeData({
-        isPublished: false,
-        publicEligible: false,
-        lifecycleState: 'approved_private',
-      }),
+      data: {
+        ...homeData({
+          isPublished: false,
+          publicEligible: false,
+          lifecycleState: 'approved_private',
+        }),
+        readiness: {
+          state: 'approved_private',
+          blockers: [],
+          latestReview: null,
+          recentReviewHistory: [],
+        },
+      },
       error: null,
       isLoading: false,
       refetch: refetchMock,
@@ -107,18 +123,31 @@ describe('DevelopmentHome Slice 1 shell', () => {
 
     render(<DevelopmentHome />);
 
-    expect(screen.getByText('Approved — private')).toBeInTheDocument();
+    expect(screen.getAllByText('Approved — private').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'View public page' })).not.toBeInTheDocument();
   });
 
   it('shows the current pending lifecycle state', () => {
     homeQueryMock.mockReturnValue({
-      data: homeData({
-        approvalStatus: 'pending',
-        isPublished: false,
-        publicEligible: false,
-        lifecycleState: 'in_review',
-      }),
+      data: {
+        ...homeData({
+          approvalStatus: 'pending',
+          isPublished: false,
+          publicEligible: false,
+          lifecycleState: 'in_review',
+        }),
+        readiness: {
+          state: 'in_review',
+          blockers: [],
+          latestReview: {
+            status: 'pending',
+            submittedAt: '2026-01-01T10:00:00.000Z',
+            reviewedAt: null,
+            feedback: null,
+          },
+          recentReviewHistory: [],
+        },
+      },
       error: null,
       isLoading: false,
       refetch: refetchMock,
@@ -126,8 +155,135 @@ describe('DevelopmentHome Slice 1 shell', () => {
 
     render(<DevelopmentHome />);
 
-    expect(screen.getByText('In review')).toBeInTheDocument();
+    expect(screen.getAllByText('In review').length).toBeGreaterThan(0);
+    expect(screen.getByText('Awaiting review')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /submit|resubmit/i })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['live', 'Live'],
+    ['approved_private', 'Approved — private'],
+    ['in_review', 'In review'],
+    ['changes_required', 'Changes required'],
+    ['rejected', 'Rejected'],
+    ['draft_ready_to_submit', 'Draft — ready to submit'],
+    ['draft_action_required', 'Draft — action required'],
+  ])('renders the %s Market Readiness label', (state, label) => {
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData({ lifecycleState: state }),
+        readiness: { state, blockers: [], latestReview: null, recentReviewHistory: [] },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+
+    render(<DevelopmentHome />);
+
+    expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+  });
+
+  it('renders current feedback, exact blockers, and only three review events', () => {
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData({
+          approvalStatus: 'draft',
+          isPublished: false,
+          publicEligible: false,
+          lifecycleState: 'changes_required',
+        }),
+        readiness: {
+          state: 'changes_required',
+          blockers: [
+            {
+              field: 'description',
+              message: 'Description must contain at least 50 characters.',
+              severity: 'critical',
+            },
+          ],
+          latestReview: {
+            status: 'changes_requested',
+            submittedAt: '2026-01-04T10:00:00.000Z',
+            reviewedAt: '2026-01-05T10:00:00.000Z',
+            feedback: 'Please provide updated pricing.',
+          },
+          recentReviewHistory: [
+            {
+              status: 'changes_requested',
+              submittedAt: '2026-01-04T10:00:00.000Z',
+              reviewedAt: '2026-01-05T10:00:00.000Z',
+              feedback: 'Please provide updated pricing.',
+            },
+            {
+              status: 'pending',
+              submittedAt: '2026-01-02T10:00:00.000Z',
+              reviewedAt: null,
+              feedback: null,
+            },
+            {
+              status: 'approved',
+              submittedAt: '2025-12-01T10:00:00.000Z',
+              reviewedAt: '2025-12-02T10:00:00.000Z',
+              feedback: null,
+            },
+            {
+              status: 'rejected',
+              submittedAt: '2025-11-01T10:00:00.000Z',
+              reviewedAt: '2025-11-02T10:00:00.000Z',
+              feedback: 'Older event',
+            },
+          ],
+        },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+
+    render(<DevelopmentHome />);
+
+    expect(screen.getAllByText('Please provide updated pricing.').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('Description must contain at least 50 characters.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Recent review events').parentElement?.querySelectorAll('li'),
+    ).toHaveLength(3);
+    expect(screen.queryByText('Older event')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open editor' })).toBeInTheDocument();
+  });
+
+  it('does not promise approval for a submit-ready draft or invent a republish action', () => {
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData({
+          approvalStatus: 'draft',
+          isPublished: false,
+          publicEligible: false,
+          lifecycleState: 'draft_ready_to_submit',
+        }),
+        readiness: {
+          state: 'draft_ready_to_submit',
+          blockers: [],
+          latestReview: null,
+          recentReviewHistory: [],
+        },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+
+    render(<DevelopmentHome />);
+
+    expect(screen.getByText(/submission remains subject to review/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open editor to submit' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /republish|publish now/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/readiness score|% ready/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent Activity')).not.toBeInTheDocument();
   });
 
   it('renders distinct loading, private not-found, and operational-error states', () => {
