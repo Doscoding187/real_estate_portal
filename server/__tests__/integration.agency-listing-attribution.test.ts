@@ -68,6 +68,10 @@ function insertId(result: any) {
   return Number(result?.insertId || result?.[0]?.insertId || 0);
 }
 
+function toMySqlTimestamp(value: Date) {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 async function makeAgencyPublicationReady(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   agencyId: number,
@@ -113,8 +117,8 @@ async function makeAgencyPublicationReady(
     ownerId: agencyId,
     planId: created.planId,
     status: 'active',
-    currentPeriodStart: now.toISOString(),
-    currentPeriodEnd: new Date(now.getTime() + 86_400_000).toISOString(),
+    currentPeriodStart: toMySqlTimestamp(now),
+    currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 86_400_000)),
     cancelAtPeriodEnd: 0,
   } as any);
   created.subscriptionId = insertId(subscriptionResult);

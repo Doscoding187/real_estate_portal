@@ -21,6 +21,7 @@ const hasTestDb = usesListifyTest(process.env.DATABASE_URL);
 const guardedDescribe: typeof describe = hasTestDb ? describe : ((name, fn) => describe.skip(`${name} (requires listify_test)`, fn)) as typeof describe;
 const ids = { agencies: [] as number[], users: [] as number[], agents: [] as number[], listings: [] as number[], properties: [] as number[], reviews: [] as number[], deals: [] as number[], branding: [] as number[], planEntitlements: [] as number[], plans: [] as number[], subscriptions: [] as number[] };
 const idOf = (result: any) => Number(result?.insertId || result?.[0]?.insertId || 0);
+const toMySqlTimestamp = (value: Date) => value.toISOString().slice(0, 19).replace('T', ' ');
 const caller = (user: { id: number; role: 'agency_admin' | 'agent'; agencyId: number }) => appRouter.createCaller({ user, req: { headers: {} }, res: {}, requestId: `performance-${Date.now()}` } as any);
 
 async function user(agencyId: number, role: 'agency_admin' | 'agent', suffix: string, label: string) {
@@ -42,7 +43,7 @@ async function makeAgencyPublicationReady(agencyId: number, suffix: string) {
   const [entitlementResult] = await db.insert(planEntitlements).values({ planId, featureKey: 'max_active_listings', valueJson: 50 } as any);
   ids.planEntitlements.push(idOf(entitlementResult));
   const now = new Date();
-  const [subscriptionResult] = await db.insert(subscriptions).values({ ownerType: 'agency', ownerId: agencyId, planId, status: 'active', currentPeriodStart: now.toISOString(), currentPeriodEnd: new Date(now.getTime() + 86_400_000).toISOString(), cancelAtPeriodEnd: 0 } as any);
+  const [subscriptionResult] = await db.insert(subscriptions).values({ ownerType: 'agency', ownerId: agencyId, planId, status: 'active', currentPeriodStart: toMySqlTimestamp(now), currentPeriodEnd: toMySqlTimestamp(new Date(now.getTime() + 86_400_000)), cancelAtPeriodEnd: 0 } as any);
   ids.subscriptions.push(idOf(subscriptionResult));
 }
 async function publishedListing(ownerId: number, agencyId: number, agentId: number, suffix: string, price = 2_000_000) {
