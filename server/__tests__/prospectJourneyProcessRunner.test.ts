@@ -23,6 +23,33 @@ function pidFile(name: string) {
   return value;
 }
 
+function linuxProcessState(pid: number) {
+  if (process.platform !== 'linux') return null;
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
+    return stat.slice(stat.lastIndexOf(')') + 2).split(' ', 1)[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function expectProcessQuiescent(pid: number) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      process.kill(pid, 0);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ESRCH') return;
+      throw error;
+    }
+
+    const state = linuxProcessState(pid);
+    if (state === 'Z') return;
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
+
+  throw new Error(`Descendant process ${pid} remained executable after shutdown (state: ${linuxProcessState(pid) ?? 'unknown'}).`);
+}
+
 afterEach(async () => {
   await Promise.all(runners.map(value => value.stop()));
   for (const file of pidFiles) rmSync(file, { force: true });
@@ -63,7 +90,7 @@ describe('Prospect Journey E2E child lifecycle', () => {
     await value.stop();
     await expect(pending).rejects.toBeInstanceOf(ProspectJourneyChildError);
     expect(value.activeCount).toBe(0);
-    expect(() => process.kill(childPid, 0)).toThrow();
+    await expectProcessQuiescent(childPid);
   });
 
   it('prevents overlapping commands and permits cleanup only after child exit', async () => {
