@@ -21,6 +21,10 @@ import { requireUser } from './_core/requireUser';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { resolvePropertyForListing } from './services/inventoryLinkResolver';
 import { prepareSellerProspectListingConversion } from './services/sellerProspectAccessService';
+import {
+  assertListingPublicationEntitled,
+  ListingPublicationEntitlementError,
+} from './services/listingPublicationEntitlementService';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -75,6 +79,10 @@ const LISTING_LIFECYCLE_ERROR_PATTERNS = [
 
 function mapListingLifecycleError(error: unknown, fallbackMessage: string): TRPCError {
   if (error instanceof TRPCError) return error;
+
+  if (error instanceof ListingPublicationEntitlementError) {
+    return new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+  }
 
   const message = error instanceof Error ? error.message : '';
   if (message === 'Listing not found') {
@@ -471,8 +479,19 @@ export const listingRouter = router({
           mediaIds: _mediaIds,
           mainMediaId,
           sellerProspectId: _sellerProspectId,
+          status: requestedStatus,
           ...listingInput
         } = input;
+
+        // Status changes are lifecycle transitions, not editable listing data.
+        // Legacy clients may echo the current status, but cannot promote a
+        // draft to pending review or published through update.
+        if (requestedStatus !== undefined && requestedStatus !== listing.status) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Listing status is controlled by the review workflow.',
+          });
+        }
         const updatePayload: any = { ...listingInput, updatedAt: new Date() };
 
         if (input.propertyDetails || input.pricing) {
@@ -490,6 +509,20 @@ export const listingRouter = router({
           updatePayload.locationId = resolvedLocationId;
           // Remove nested location object strictly to avoid Drizzle schema errors
           delete updatePayload.location;
+        }
+
+        if (requiresReviewBeforePublicUpdate) {
+          const database = await db.getDb();
+          if (!database) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Database not available',
+            });
+          }
+          await assertListingPublicationEntitled(database, {
+            listingId: input.id,
+            operation: 'republish',
+          });
         }
 
         // Update listing
@@ -536,6 +569,9 @@ export const listingRouter = router({
         console.error('Error updating listing:', error);
         if (error instanceof TRPCError) {
           throw error;
+        }
+        if (error instanceof ListingPublicationEntitlementError) {
+          throw mapListingLifecycleError(error, 'Failed to update listing');
         }
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update listing' });
       }
@@ -1067,6 +1103,15 @@ export const listingRouter = router({
           });
         }
 
+        const database = await db.getDb();
+        if (!database) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+        }
+        await assertListingPublicationEntitled(database, {
+          listingId: input.listingId,
+          operation: 'submit',
+        });
+
         const agent = await db.getAgentByUserId(currentUser.id);
         const owner = await db.getUserById(currentUser.id);
         const whatsappContact =
@@ -1102,6 +1147,7 @@ export const listingRouter = router({
             input.listingId,
             requireUser(ctx).id,
             'Fast-Track Auto Approval (High Quality & Trusted)',
+            'fast_track',
           );
           await recordAgentOsEvent({
             userId: requireUser(ctx).id,
@@ -1153,6 +1199,9 @@ export const listingRouter = router({
         }
 
         if (error instanceof TRPCError) throw error;
+        if (error instanceof ListingPublicationEntitlementError) {
+          throw mapListingLifecycleError(error, 'Failed to submit for review');
+        }
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to submit for review',

@@ -65,6 +65,10 @@ import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
 import { getInventoryBridgeSchemaCapabilities } from './services/inventoryLinkResolver';
+import {
+  assertListingPublicationEntitled,
+  isSameListingCommercialOwner,
+} from './services/listingPublicationEntitlementService';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -2509,6 +2513,16 @@ export async function submitListingForReview(listingId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const [transitionListing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+  if (!transitionListing) throw new Error('Listing not found');
+  if (!['draft', 'rejected'].includes(String(transitionListing.status))) {
+    throw new Error(`Listing cannot be submitted from status "${transitionListing.status}"`);
+  }
+
+  // This is the transition boundary for every caller, including agency routes,
+  // generic routes, scripts, and lower-level tests.
+  await assertListingPublicationEntitled(db, { listingId, operation: 'submit' });
+
   // Update listing status
   await db
     .update(listings)
@@ -2693,6 +2707,10 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
     return { synced: false, reason: 'listing_not_published' as const };
   }
 
+  // Replacing public media is a public projection update, never a draft-only
+  // action. This prevents repair/compatibility callers bypassing entitlement.
+  await assertListingPublicationEntitled(db, { listingId, operation: 'public_media_sync' });
+
   const mappedListingType =
     listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction';
 
@@ -2837,7 +2855,12 @@ export async function getApprovalQueue(status?: string) {
 /**
  * Approve listing
  */
-export async function approveListing(listingId: number, reviewedBy: number, notes?: string) {
+export async function approveListing(
+  listingId: number,
+  reviewedBy: number,
+  notes?: string,
+  source: 'admin_approval' | 'fast_track' = 'admin_approval',
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -2849,9 +2872,22 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     throw new Error('Listing is already published');
   }
 
-  if (listing.status === 'archived' || listing.status === 'rejected') {
+  if (listing.status === 'archived' || (listing.status === 'rejected' && source !== 'fast_track')) {
     throw new Error(`Listing cannot be approved from status "${listing.status}"`);
   }
+
+  const allowedStatuses = source === 'fast_track' ? ['draft', 'rejected'] : ['pending_review'];
+  if (!allowedStatuses.includes(String(listing.status))) {
+    throw new Error(`Listing cannot be approved from status "${listing.status}"`);
+  }
+
+  // This guard is deliberately in the persistence path. A router, script, or
+  // future service that invokes approveListing cannot create a public property
+  // without the same commercial decision.
+  const listingCommercialOwner = await assertListingPublicationEntitled(db, {
+    listingId,
+    operation: source === 'fast_track' ? 'fast_track' : 'admin_approval',
+  });
 
   // A revision is a private listing-engine draft. Approval applies its public fields to
   // the original canonical listing/projection; the revision itself never becomes public.
@@ -2859,6 +2895,13 @@ export async function approveListing(listingId: number, reviewedBy: number, note
     const originalListingId = Number((listing as any).revisionOfListingId);
     const [original] = await db.select().from(listings).where(eq(listings.id, originalListingId)).limit(1);
     if (!original || original.status !== 'published') throw new Error('The original published listing is no longer available for this revision');
+    const originalCommercialOwner = await assertListingPublicationEntitled(db, {
+      listingId: originalListingId,
+      operation: 'republish',
+    });
+    if (!isSameListingCommercialOwner(listingCommercialOwner, originalCommercialOwner)) {
+      throw new Error('Listing revision commercial owner does not match the original listing');
+    }
     const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
     await db.update(listings).set({
       askingPrice: (listing as any).askingPrice,
@@ -2921,6 +2964,10 @@ export async function approveListing(listingId: number, reviewedBy: number, note
   const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
 
   // 3. Upsert the public property projection
+
+  // Re-evaluate immediately before the first public write. This is defence in
+  // depth for entitlement changes between review and projection.
+  await assertListingPublicationEntitled(db, { listingId, operation: 'public_projection' });
 
   const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
   const bridgeHasSourceListingId = inventoryBridgeCapabilities.propertiesSourceListingIdColumn;

@@ -422,7 +422,11 @@ const ListingWizard: React.FC = () => {
         });
         setApiError(appError);
 
-        toast.error('Listing created but failed to submit for review.');
+        toast.error('Listing saved as a private draft.', {
+          description:
+            appError.message ||
+            'Resolve the publication requirement shown above, then submit the saved draft again.',
+        });
         // Keep as draft and stay on page
       }
     } catch (error: any) {

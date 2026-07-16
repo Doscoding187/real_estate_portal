@@ -15,6 +15,10 @@ describe('provider-independent billing foundation contract', () => {
   const proofStorage = readRepoFile('server/services/billingProofStorage.ts');
   const billingSchema = readRepoFile('drizzle/schema/billing.ts');
   const agencyRouter = readRepoFile('server/agencyRouter.ts');
+  const listingRouter = readRepoFile('server/listingRouter.ts');
+  const listingPublicationEntitlementService = readRepoFile(
+    'server/services/listingPublicationEntitlementService.ts',
+  );
   const agentEntitlements = readRepoFile('server/services/agentEntitlementService.ts');
   const appRoutes = readRepoFile('client/src/App.tsx');
   const agencyOnboardingPage = readRepoFile('client/src/pages/AgencyOnboarding.tsx');
@@ -139,18 +143,23 @@ describe('provider-independent billing foundation contract', () => {
     expect(billingService).toContain('currentPeriodEnd: periodEnd');
   });
 
-  it('routes agency publishing and agent paid entitlements through paid subscription states', () => {
+  it('routes agency and generic submission through the canonical subscription and plan boundary', () => {
     const submitForReviewPath = agencyRouter.slice(
       agencyRouter.indexOf('submitListingForReview: agencyAdminProcedure'),
       agencyRouter.indexOf('archiveListing: agencyAdminProcedure'),
     );
+    const genericSubmitForReviewPath = listingRouter.slice(
+      listingRouter.indexOf('submitForReview: protectedProcedure'),
+      listingRouter.indexOf('promote: protectedProcedure'),
+    );
 
-    expect(agencyRouter).toContain('isPaidSubscriptionEntitled');
-    expect(agencyRouter).toContain("'payment_under_review'");
-    expect(submitForReviewPath).toContain('getAgencyAccessStateForUser');
-    expect(submitForReviewPath).toContain('workspaceAccess.publishing');
-    expect(submitForReviewPath).toContain("code: 'FORBIDDEN'");
+    expect(submitForReviewPath).toMatch(/assertListingPublicationEntitled\s*\(/);
+    expect(genericSubmitForReviewPath).toMatch(/assertListingPublicationEntitled\s*\(/);
+    expect(listingPublicationEntitlementService).toContain("ownerType: 'agency'");
+    expect(listingPublicationEntitlementService).toContain("plan.segment !== 'agency'");
+    expect(listingPublicationEntitlementService).toContain("'max_active_listings'");
+    expect(billingSchema).toContain("ownerType: mysqlEnum('owner_type'");
+    expect(billingSchema).toContain("unique('uq_subscriptions_owner')");
     expect(agentEntitlements).toContain('isPaidSubscriptionEntitled');
-    expect(agentEntitlements).toContain("user.plan === 'paid'");
   });
 });

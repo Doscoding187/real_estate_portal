@@ -144,6 +144,10 @@ class FakeDrizzle {
 
 const fakeDb = new FakeDrizzle();
 
+const { mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
+  mockAssertListingPublicationEntitled: vi.fn(),
+}));
+
 // Controllable bridge capability flag — tests can flip this to simulate
 // environments where the sourceListingId column is not yet available.
 let bridgeHasSourceListingId = true;
@@ -161,6 +165,10 @@ vi.mock('../services/inventoryLinkResolver', () => ({
   ),
 }));
 
+vi.mock('../services/listingPublicationEntitlementService', () => ({
+  assertListingPublicationEntitled: mockAssertListingPublicationEntitled,
+}));
+
 // Now import the real functions (no mock of ../db — internal calls are real)
 import {
   approveListing,
@@ -170,6 +178,7 @@ import {
   replaceListingMedia,
   syncPublishedListingMediaToPropertyMirror,
 } from '../db';
+import { assertListingPublicationEntitled } from '../services/listingPublicationEntitlementService';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -226,6 +235,12 @@ const SELECTS_GET_LISTING_BY_ID = 1; // db.select().from(listings).where(id).lim
 beforeEach(() => {
   fakeDb.reset();
   vi.clearAllMocks();
+  vi.mocked(mockAssertListingPublicationEntitled).mockResolvedValue({
+    kind: 'agency',
+    agencyId: 1,
+    listingId: 1001,
+    responsibleAgentId: 55,
+  } as any);
   bridgeHasSourceListingId = true;
 });
 
@@ -566,6 +581,7 @@ describe('rejectListing (lower-level)', () => {
       status: 'rejected',
       rejectionReason: 'Incomplete documentation',
     });
+    expect(assertListingPublicationEntitled).not.toHaveBeenCalled();
   });
 
   it('rejects wrong-state listings before mutating records', async () => {
@@ -599,6 +615,7 @@ describe('archiveListing (lower-level)', () => {
     });
     // Prove the cascade uses sourceListingId in its WHERE
     expect(propUpdates[0].whereCols).toContain('sourceListingId');
+    expect(assertListingPublicationEntitled).not.toHaveBeenCalled();
   });
 
   describe('bridge column unavailable', () => {
@@ -612,6 +629,78 @@ describe('archiveListing (lower-level)', () => {
       );
       expect(propUpdates).toHaveLength(0);
     });
+  });
+});
+
+// ===========================================================================
+// publication entitlement — lower-level final guard
+// ===========================================================================
+
+describe('listing publication entitlement final guard', () => {
+  it('prevents a direct approval call from creating a public property when entitlement fails', async () => {
+    fakeDb.setNextSelectResult([listingRow({ id: 9101, status: 'pending_review' })]);
+    vi.mocked(mockAssertListingPublicationEntitled).mockRejectedValueOnce(
+      new Error('Subscription activation is required before this listing can be submitted.'),
+    );
+
+    await expect(approveListing(9101, 1)).rejects.toThrow('Subscription activation');
+
+    const publicWrites = fakeDb.calls.filter(
+      call => call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
+    );
+    expect(publicWrites).toHaveLength(0);
+  });
+
+  it('prevents persistence-layer fast-track approval from creating a public projection when entitlement fails', async () => {
+    fakeDb.setNextSelectResult([listingRow({ id: 9103, status: 'draft' })]);
+    vi.mocked(mockAssertListingPublicationEntitled).mockRejectedValueOnce(
+      new Error('The subscription period has ended.'),
+    );
+
+    await expect(approveListing(9103, 1, undefined, 'fast_track')).rejects.toThrow(
+      'subscription period has ended',
+    );
+
+    const publicWrites = fakeDb.calls.filter(
+      call => call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
+    );
+    expect(publicWrites).toHaveLength(0);
+    expect(assertListingPublicationEntitled).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({ listingId: 9103, operation: 'fast_track' }),
+    );
+  });
+
+  it('rechecks entitlement at administrative approval after submission and prevents public writes', async () => {
+    fakeDb.setNextSelectResult([listingRow({ id: 9104, status: 'pending_review' })]);
+    vi.mocked(mockAssertListingPublicationEntitled).mockRejectedValueOnce(
+      new Error('The subscription is suspended.'),
+    );
+
+    await expect(approveListing(9104, 1)).rejects.toThrow('subscription is suspended');
+
+    const publicWrites = fakeDb.calls.filter(
+      call => call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
+    );
+    expect(publicWrites).toHaveLength(0);
+    expect(assertListingPublicationEntitled).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({ listingId: 9104, operation: 'admin_approval' }),
+    );
+  });
+
+  it('uses the same entitlement assertion for public media synchronization', async () => {
+    fakeDb.setNextSelectResult([listingRow({ id: 9102, status: 'published' })]);
+    fakeDb.setNextSelectResult([]);
+    fakeDb.setNextSelectResult([]);
+    fakeDb.setNextSelectResult([]);
+
+    await syncPublishedListingMediaToPropertyMirror(9102);
+
+    expect(assertListingPublicationEntitled).toHaveBeenCalledWith(
+      fakeDb,
+      expect.objectContaining({ listingId: 9102, operation: 'public_media_sync' }),
+    );
   });
 });
 
