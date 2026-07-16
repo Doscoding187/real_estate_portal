@@ -533,8 +533,13 @@ export async function setSubscriptionPlanForOwner(input: {
   billingCycleAnchor?: string | null;
   metadata?: Record<string, unknown> | null;
   actorUserId?: number;
+  /**
+   * Optional caller-owned database handle. Bootstrap flows use this to keep
+   * the commercial subscription in the same transaction as its owner.
+   */
+  db?: any;
 }): Promise<SubscriptionSnapshot | null> {
-  const db = await getDb();
+  const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 
   const [planRow] = await db.select().from(plans).where(eq(plans.id, input.planId)).limit(1);

@@ -209,7 +209,7 @@ function getPlanAnnualPrice(plan: PlanRow) {
   return Math.round(monthly * 12 * (1 - boundedDiscount / 100));
 }
 
-function getBillingAmount(plan: PlanRow, billingCycle: BillingCycle) {
+export function getManualEftBillingAmount(plan: PlanRow, billingCycle: BillingCycle) {
   return billingCycle === 'annual' ? getPlanAnnualPrice(plan) : getPlanMonthlyPrice(plan);
 }
 
@@ -354,6 +354,56 @@ async function getAgencyOrThrow(db: DbOrTx, agencyId: number) {
   const [agency] = await db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1);
   if (!agency) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency not found.' });
   return agency;
+}
+
+/**
+ * Agency billing mutations share this lock order: agency, subscription, then
+ * invoice/payment. Keeping the agency row first prevents checkout and finance
+ * review from taking the same records in opposite orders.
+ */
+async function lockAgencyBillingState(tx: BillingTx, agencyId: number) {
+  await tx.execute(sql`SELECT id FROM agencies WHERE id = ${agencyId} FOR UPDATE`);
+  const agency = await getAgencyOrThrow(tx, agencyId);
+  await tx.execute(sql`
+    SELECT id
+    FROM subscriptions
+    WHERE owner_type = 'agency' AND owner_id = ${agencyId}
+    FOR UPDATE
+  `);
+  const [subscription] = await tx
+    .select()
+    .from(subscriptions)
+    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .limit(1);
+  return { agency, subscription: subscription || null };
+}
+
+async function lockAgencyInvoice(tx: BillingTx, input: { invoiceId: number; agencyId: number }) {
+  await tx.execute(sql`
+    SELECT id
+    FROM billing_invoices
+    WHERE id = ${input.invoiceId}
+      AND owner_type = 'agency'
+      AND owner_id = ${input.agencyId}
+    FOR UPDATE
+  `);
+  return getInvoiceForOwnerOrThrow(tx, input.invoiceId, 'agency', input.agencyId);
+}
+
+async function lockInvoicePayment(tx: BillingTx, input: { paymentId: number; invoiceId: number }) {
+  await tx.execute(sql`
+    SELECT id
+    FROM billing_payments
+    WHERE id = ${input.paymentId} AND invoice_id = ${input.invoiceId}
+    FOR UPDATE
+  `);
+  const [payment] = await tx
+    .select()
+    .from(billingPayments)
+    .where(and(eq(billingPayments.id, input.paymentId), eq(billingPayments.invoiceId, input.invoiceId)))
+    .limit(1);
+  if (!payment) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
+  return payment;
 }
 
 async function getInvoiceForOwnerOrThrow(db: DbOrTx, invoiceId: number, ownerType: string, ownerId: number) {
@@ -625,20 +675,132 @@ export async function startAgencyManualCheckout(input: {
     });
   }
 
+  // This is an observation only, outside the checkout transaction. It lets a
+  // stale retry return the invoice it originally observed when finance settles
+  // it while the checkout is waiting for the agency lock. It is revalidated
+  // under lock and never authorizes a general reuse of terminal invoices.
+  const [observedOutstandingInvoice] = await db
+    .select()
+    .from(billingInvoices)
+    .where(
+      and(
+        eq(billingInvoices.ownerType, 'agency'),
+        eq(billingInvoices.ownerId, agencyId),
+        inArray(billingInvoices.status, ['issued', 'submitted', 'partially_paid', 'overdue']),
+      ),
+    )
+    .orderBy(desc(billingInvoices.createdAt))
+    .limit(1);
+
   return db.transaction(async tx => {
-    const agency = await getAgencyOrThrow(tx, agencyId);
+    // Establish a per-agency current-read boundary before any consistent reads.
+    // A second checkout must wait here, then observe an invoice committed by the
+    // first checkout instead of retaining a pre-lock REPEATABLE READ snapshot.
+    const { agency, subscription: lockedSubscription } = await lockAgencyBillingState(tx, agencyId);
     const [plan] = await tx.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
     if (!plan || plan.isActive !== 1 || plan.segment !== 'agency') {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Agency plan not found.' });
     }
 
-    const baseAmount = getBillingAmount(plan, input.billingCycle);
+    const baseAmount = getManualEftBillingAmount(plan, input.billingCycle);
+    if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'The selected agency plan does not have a valid payable manual-EFT price.',
+      });
+    }
     const { coupon, discountAmount } = await resolveCouponDiscount(tx, {
       couponCode: input.couponCode,
       planId: plan.id,
       amount: baseAmount,
     });
     const amountDue = Math.max(0, baseAmount - discountAmount);
+    if (amountDue <= 0) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Manual EFT checkout requires a positive payable amount.',
+      });
+    }
+
+    const outstandingStatuses: InvoiceStatus[] = ['issued', 'submitted', 'partially_paid', 'overdue'];
+    if (lockedSubscription) {
+      await tx.execute(sql`
+        SELECT id
+        FROM billing_invoices
+        WHERE owner_type = 'agency'
+          AND owner_id = ${agencyId}
+          AND subscription_id = ${lockedSubscription.id}
+          AND status IN ('issued', 'submitted', 'partially_paid', 'overdue')
+        FOR UPDATE
+      `);
+
+      const outstandingInvoices = await tx
+        .select()
+        .from(billingInvoices)
+        .where(
+          and(
+            eq(billingInvoices.ownerType, 'agency'),
+            eq(billingInvoices.ownerId, agencyId),
+            eq(billingInvoices.subscriptionId, lockedSubscription.id),
+            inArray(billingInvoices.status, outstandingStatuses),
+          ),
+        )
+        .orderBy(desc(billingInvoices.createdAt));
+      const outstandingInvoice = outstandingInvoices[0];
+
+      if (outstandingInvoice) {
+        const sameTerms =
+          Number(outstandingInvoice.planId || 0) === Number(plan.id) &&
+          outstandingInvoice.billingCycle === input.billingCycle &&
+          Number(outstandingInvoice.amountDue) === amountDue &&
+          String(outstandingInvoice.currency || '') === String(plan.currency || 'ZAR');
+        if (!sameTerms) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'An outstanding manual-EFT invoice exists with different commercial terms. Resolve it before changing plan or billing cycle.',
+          });
+        }
+
+        return {
+          agency,
+          plan,
+          subscription: lockedSubscription,
+          invoice: outstandingInvoice,
+          bankDetails,
+          paymentReference: outstandingInvoice.paymentReference,
+          reused: true,
+        };
+      }
+
+      if (observedOutstandingInvoice) {
+        const [settledObservedInvoice] = await tx
+          .select()
+          .from(billingInvoices)
+          .where(eq(billingInvoices.id, observedOutstandingInvoice.id))
+          .limit(1);
+        const isSettledRetry =
+          settledObservedInvoice?.status === 'paid' &&
+          Number(settledObservedInvoice.subscriptionId || 0) === Number(lockedSubscription.id) &&
+          Number(settledObservedInvoice.planId || 0) === Number(plan.id) &&
+          settledObservedInvoice.billingCycle === input.billingCycle &&
+          Number(settledObservedInvoice.amountDue) === amountDue &&
+          String(settledObservedInvoice.currency || '') === String(plan.currency || 'ZAR');
+        if (isSettledRetry) {
+          return {
+            agency,
+            plan,
+            subscription: lockedSubscription,
+            invoice: settledObservedInvoice,
+            bankDetails,
+            paymentReference: settledObservedInvoice.paymentReference,
+            reused: true,
+            alreadyActivated: true,
+          };
+        }
+      }
+    }
+
     const invoiceNumber = buildInvoiceNumber('agency', agencyId);
     const paymentReference = buildPaymentReference('agency', agencyId);
 
@@ -766,6 +928,7 @@ export async function startAgencyManualCheckout(input: {
       invoice,
       bankDetails,
       paymentReference,
+      reused: false,
     };
   });
 }
@@ -855,7 +1018,11 @@ export async function submitAgencyPaymentProof(input: {
   }
 
   return db.transaction(async tx => {
-    const invoice = await getInvoiceForOwnerOrThrow(tx, input.invoiceId, 'agency', agencyId);
+    const { subscription: lockedSubscription } = await lockAgencyBillingState(tx, agencyId);
+    const invoice = await lockAgencyInvoice(tx, { invoiceId: input.invoiceId, agencyId });
+    if (invoice.subscriptionId && lockedSubscription && invoice.subscriptionId !== lockedSubscription.id) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'Invoice subscription no longer matches the agency account.' });
+    }
     if (!['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -1144,22 +1311,47 @@ export async function reviewManualPayment(input: {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
   }
 
+  // This identifies the agency for locking only. The payment and invoice are
+  // re-read under the final agency -> subscription -> invoice/payment locks.
+  const [paymentLookup] = await db
+    .select({ ownerType: billingInvoices.ownerType, ownerId: billingInvoices.ownerId })
+    .from(billingPayments)
+    .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+    .where(eq(billingPayments.id, input.paymentId))
+    .limit(1);
+  if (!paymentLookup) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
+
   let activatedAgencyId: number | null = null;
   const result = await db.transaction(async tx => {
-    const [row] = await tx
-      .select({
-        payment: billingPayments,
-        invoice: billingInvoices,
-      })
-      .from(billingPayments)
-      .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
-      .where(eq(billingPayments.id, input.paymentId))
-      .limit(1);
-
-    if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
-
-    const beforePayment = row.payment;
-    const invoice = row.invoice;
+    let beforePayment: PaymentRow;
+    let invoice: InvoiceRow;
+    if (paymentLookup.ownerType === 'agency') {
+      const { subscription: lockedSubscription } = await lockAgencyBillingState(tx, paymentLookup.ownerId);
+      // Re-read the payment after the agency and subscription locks; the lookup
+      // above is not authoritative and may have become stale while waiting.
+      const [lockedPaymentWithInvoice] = await tx
+        .select({ payment: billingPayments, invoice: billingInvoices })
+        .from(billingPayments)
+        .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+        .where(eq(billingPayments.id, input.paymentId))
+        .limit(1);
+      if (!lockedPaymentWithInvoice) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
+      invoice = await lockAgencyInvoice(tx, { invoiceId: lockedPaymentWithInvoice.invoice.id, agencyId: paymentLookup.ownerId });
+      beforePayment = await lockInvoicePayment(tx, { paymentId: input.paymentId, invoiceId: invoice.id });
+      if (lockedSubscription && invoice.subscriptionId && invoice.subscriptionId !== lockedSubscription.id) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Invoice subscription no longer matches the agency account.' });
+      }
+    } else {
+      const [row] = await tx
+        .select({ payment: billingPayments, invoice: billingInvoices })
+        .from(billingPayments)
+        .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+        .where(eq(billingPayments.id, input.paymentId))
+        .limit(1);
+      if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
+      beforePayment = row.payment;
+      invoice = row.invoice;
+    }
     const reviewedAt = nowDb();
 
     if (beforePayment.state === 'verified' && input.decision === 'approve') {
@@ -1395,7 +1587,18 @@ export async function updateSubscriptionLifecycle(input: {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Finance admin privileges required.' });
   }
 
+  const [subscriptionLookup] = await db
+    .select({ ownerType: subscriptions.ownerType, ownerId: subscriptions.ownerId })
+    .from(subscriptions)
+    .where(eq(subscriptions.id, input.subscriptionId))
+    .limit(1);
+  if (!subscriptionLookup) throw new TRPCError({ code: 'NOT_FOUND', message: 'Subscription not found.' });
+
   return db.transaction(async tx => {
+    const lockedAgencyState =
+      subscriptionLookup.ownerType === 'agency'
+        ? await lockAgencyBillingState(tx, subscriptionLookup.ownerId)
+        : null;
     const [subscription] = await tx
       .select()
       .from(subscriptions)
@@ -1403,6 +1606,12 @@ export async function updateSubscriptionLifecycle(input: {
       .limit(1);
 
     if (!subscription) throw new TRPCError({ code: 'NOT_FOUND', message: 'Subscription not found.' });
+    if (
+      lockedAgencyState &&
+      (!lockedAgencyState.subscription || lockedAgencyState.subscription.id !== subscription.id)
+    ) {
+      throw new TRPCError({ code: 'CONFLICT', message: 'Subscription no longer matches the agency account.' });
+    }
 
     const updateSet: Partial<typeof subscriptions.$inferInsert> = {
       status: input.status,
@@ -1453,6 +1662,7 @@ export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
   const agencyId = assertAgencyAdmin(user);
 
   return db.transaction(async tx => {
+    await lockAgencyBillingState(tx, agencyId);
     const [subscription] = await tx
       .select()
       .from(subscriptions)
@@ -1512,6 +1722,7 @@ export async function restoreAgencySubscription(user: BillingUser) {
   const agencyId = assertAgencyAdmin(user);
 
   return db.transaction(async tx => {
+    await lockAgencyBillingState(tx, agencyId);
     const [subscription] = await tx
       .select()
       .from(subscriptions)
