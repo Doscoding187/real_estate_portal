@@ -45,6 +45,7 @@ const REQUIRED_TABLES = [
   'agent_tasks',
   'agent_knowledge',
   'development_drafts',
+  'agency_agent_memberships',
 ];
 
 const REQUIRED_COLUMNS = {
@@ -93,6 +94,21 @@ const REQUIRED_COLUMNS = {
     { name: 'category', type: 'varchar' },
     { name: 'content', type: 'text' },
   ],
+  agency_agent_memberships: [
+    { name: 'id', type: 'int' },
+    { name: 'agency_id', type: 'int' },
+    { name: 'agent_id', type: 'int' },
+    { name: 'status', type: 'enum' },
+    { name: 'governance_mode', type: 'enum' },
+    { name: 'role', type: 'enum' },
+    { name: 'permissions_overrides', type: 'json' },
+    { name: 'effective_from', type: 'timestamp' },
+    { name: 'effective_to', type: 'timestamp' },
+    { name: 'created_by', type: 'int' },
+    { name: 'updated_by', type: 'int' },
+    { name: 'created_at', type: 'timestamp' },
+    { name: 'updated_at', type: 'timestamp' },
+  ],
 };
 
 const ENUM_VALUES = {
@@ -112,7 +128,35 @@ const ENUM_VALUES = {
     'studio',
   ],
   'agent_tasks.status': ['pending', 'running', 'completed', 'failed'], // DB uses 'running' not 'in_progress'
+  'agency_agent_memberships.status': ['invited', 'active', 'suspended', 'left'],
+  'agency_agent_memberships.governance_mode': ['affiliated', 'managed'],
+  'agency_agent_memberships.role': ['agent', 'team_lead', 'manager'],
 };
+
+const AGENCY_AGENT_MEMBERSHIP_COLUMN_SHAPES = [
+  { name: 'id', nullable: false },
+  { name: 'agency_id', nullable: false },
+  { name: 'agent_id', nullable: false },
+  { name: 'status', nullable: false, defaultValue: 'invited' },
+  { name: 'governance_mode', nullable: false, defaultValue: 'affiliated' },
+  { name: 'role', nullable: false, defaultValue: 'agent' },
+  { name: 'permissions_overrides', nullable: true, defaultValue: null },
+  { name: 'effective_from', nullable: true, defaultValue: null },
+  { name: 'effective_to', nullable: true, defaultValue: null },
+  { name: 'created_by', nullable: true, defaultValue: null },
+  { name: 'updated_by', nullable: true, defaultValue: null },
+  {
+    name: 'created_at',
+    nullable: false,
+    defaultValues: ['CURRENT_TIMESTAMP', 'CURRENT_TIMESTAMP()'],
+  },
+  {
+    name: 'updated_at',
+    nullable: false,
+    defaultValues: ['CURRENT_TIMESTAMP', 'CURRENT_TIMESTAMP()'],
+    extraIncludes: 'on update current_timestamp',
+  },
+];
 
 // ============================================================================
 // VERIFICATION FUNCTIONS
@@ -228,6 +272,199 @@ async function verifyEnumValues(
   });
 }
 
+async function verifyColumnShapes(
+  connection: mysql.Connection,
+  tableName: string,
+  expectedColumns: Array<{
+    name: string;
+    nullable: boolean;
+    defaultValue?: string | null;
+    defaultValues?: Array<string | null>;
+    extraIncludes?: string;
+  }>,
+): Promise<void> {
+  const [columns] = await connection.query<any[]>('SHOW COLUMNS FROM ??', [tableName]);
+  const columnMap = new Map(columns.map((column: any) => [column.Field, column]));
+
+  for (const expected of expectedColumns) {
+    const actual = columnMap.get(expected.name);
+    const nullableMatches = actual && (actual.Null === 'YES') === expected.nullable;
+    const defaultMatches =
+      actual &&
+      (!Object.prototype.hasOwnProperty.call(expected, 'defaultValue') ||
+        actual.Default === expected.defaultValue) &&
+      (!expected.defaultValues || expected.defaultValues.includes(actual.Default));
+    const extraMatches =
+      actual &&
+      (!expected.extraIncludes ||
+        String(actual.Extra).toLowerCase().includes(expected.extraIncludes));
+    const passed = Boolean(actual && nullableMatches && defaultMatches && extraMatches);
+
+    results.push({
+      name: `Column shape: ${tableName}.${expected.name}`,
+      passed,
+      error: passed
+        ? undefined
+        : actual
+          ? `Expected nullable=${expected.nullable}${Object.prototype.hasOwnProperty.call(expected, 'defaultValue') ? `, default=${expected.defaultValue}` : expected.defaultValues ? `, default one of ${expected.defaultValues.join(', ')}` : ''}${expected.extraIncludes ? `, extra containing ${expected.extraIncludes}` : ''}; got nullable=${actual.Null === 'YES'}, default=${actual.Default}, extra=${actual.Extra}`
+          : `Column '${expected.name}' does not exist in table '${tableName}'`,
+      details: actual
+        ? {
+            expected: {
+              nullable: expected.nullable,
+              defaultValue: expected.defaultValue,
+              defaultValues: expected.defaultValues,
+              extraIncludes: expected.extraIncludes,
+            },
+            actual: {
+              nullable: actual.Null === 'YES',
+              defaultValue: actual.Default,
+              extra: actual.Extra,
+            },
+          }
+        : undefined,
+    });
+  }
+}
+
+async function verifyIndex(
+  connection: mysql.Connection,
+  tableName: string,
+  expectedColumns: string[],
+  unique: boolean,
+  label: string,
+): Promise<void> {
+  const [rows] = await connection.query<any[]>(
+    `SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME
+     FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+     ORDER BY INDEX_NAME, SEQ_IN_INDEX`,
+    [tableName],
+  );
+  const indexes = new Map<string, any[]>();
+  for (const row of rows) {
+    indexes.set(row.INDEX_NAME, [...(indexes.get(row.INDEX_NAME) ?? []), row]);
+  }
+
+  const matchingIndex = [...indexes.entries()].find(([, columns]) => {
+    const orderedColumns = columns.map(column => column.COLUMN_NAME);
+    return (
+      columns[0]?.NON_UNIQUE === (unique ? 0 : 1) &&
+      orderedColumns.length === expectedColumns.length &&
+      orderedColumns.every((column, index) => column === expectedColumns[index])
+    );
+  });
+
+  results.push({
+    name: `Index: ${tableName}.${label}`,
+    passed: Boolean(matchingIndex),
+    error: matchingIndex
+      ? undefined
+      : `Missing ${unique ? 'unique ' : ''}index with ordered columns (${expectedColumns.join(', ')})`,
+    details: matchingIndex
+      ? { indexName: matchingIndex[0], columns: expectedColumns, unique }
+      : {
+          expectedColumns,
+          unique,
+        },
+  });
+}
+
+async function verifyPrimaryKey(
+  connection: mysql.Connection,
+  tableName: string,
+  columnName: string,
+): Promise<void> {
+  const [rows] = await connection.query<any[]>(
+    `SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME
+     FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND INDEX_NAME = 'PRIMARY'
+     ORDER BY SEQ_IN_INDEX`,
+    [tableName],
+  );
+  const passed =
+    rows.length === 1 &&
+    rows[0].INDEX_NAME === 'PRIMARY' &&
+    rows[0].NON_UNIQUE === 0 &&
+    rows[0].SEQ_IN_INDEX === 1 &&
+    rows[0].COLUMN_NAME === columnName;
+
+  results.push({
+    name: `Primary key: ${tableName}.${columnName}`,
+    passed,
+    error: passed
+      ? undefined
+      : `Missing or incorrect PRIMARY key: expected exactly (${columnName})`,
+    details: passed ? rows[0] : { expectedColumns: [columnName], actual: rows },
+  });
+}
+
+async function verifyAutoIncrement(
+  connection: mysql.Connection,
+  tableName: string,
+  columnName: string,
+): Promise<void> {
+  const [rows] = await connection.query<any[]>(
+    `SELECT EXTRA
+     FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?`,
+    [tableName, columnName],
+  );
+  const extra = rows[0]?.EXTRA;
+  const passed = rows.length === 1 && String(extra).toLowerCase().includes('auto_increment');
+
+  results.push({
+    name: `Identity: ${tableName}.${columnName}`,
+    passed,
+    error: passed ? undefined : `Column '${columnName}' must be AUTO_INCREMENT`,
+    details: rows.length === 1 ? { extra } : { expected: 'auto_increment', actual: rows },
+  });
+}
+
+async function verifyForeignKey(
+  connection: mysql.Connection,
+  tableName: string,
+  columnName: string,
+  referencedTable: string,
+  deleteRule: string,
+): Promise<void> {
+  const [rows] = await connection.query<any[]>(
+    `SELECT kcu.CONSTRAINT_NAME, kcu.REFERENCED_TABLE_NAME, kcu.REFERENCED_COLUMN_NAME, rc.DELETE_RULE
+     FROM information_schema.KEY_COLUMN_USAGE kcu
+     JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
+       ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
+      AND rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+      AND rc.TABLE_NAME = kcu.TABLE_NAME
+     WHERE kcu.CONSTRAINT_SCHEMA = DATABASE()
+       AND kcu.TABLE_NAME = ?
+       AND kcu.COLUMN_NAME = ?
+       AND kcu.REFERENCED_TABLE_NAME IS NOT NULL`,
+    [tableName, columnName],
+  );
+  const matchingForeignKey = rows.find(
+    row =>
+      row.REFERENCED_TABLE_NAME === referencedTable &&
+      row.REFERENCED_COLUMN_NAME === 'id' &&
+      row.DELETE_RULE === deleteRule,
+  );
+
+  results.push({
+    name: `Foreign key: ${tableName}.${columnName}`,
+    passed: Boolean(matchingForeignKey),
+    error: matchingForeignKey
+      ? undefined
+      : `Missing foreign key to ${referencedTable}.id with ON DELETE ${deleteRule}`,
+    details: matchingForeignKey ?? {
+      expectedTable: referencedTable,
+      expectedDeleteRule: deleteRule,
+    },
+  });
+}
+
 async function verifyMigrations(connection: mysql.Connection): Promise<void> {
   try {
     // Check if migrations table exists
@@ -328,7 +565,59 @@ async function main() {
       await verifyEnumValues(connection, table, column, values);
     }
 
-    // 4. Verify migrations
+    // 4. Verify canonical agency membership shape and relational contract.
+    await verifyColumnShapes(
+      connection,
+      'agency_agent_memberships',
+      AGENCY_AGENT_MEMBERSHIP_COLUMN_SHAPES,
+    );
+    await verifyPrimaryKey(connection, 'agency_agent_memberships', 'id');
+    await verifyAutoIncrement(connection, 'agency_agent_memberships', 'id');
+    await verifyIndex(
+      connection,
+      'agency_agent_memberships',
+      ['agency_id', 'agent_id'],
+      true,
+      'unique agency/agent pair',
+    );
+    await verifyIndex(
+      connection,
+      'agency_agent_memberships',
+      ['agency_id', 'status'],
+      false,
+      'agency/status',
+    );
+    await verifyIndex(
+      connection,
+      'agency_agent_memberships',
+      ['agent_id', 'status'],
+      false,
+      'agent/status',
+    );
+    await verifyForeignKey(
+      connection,
+      'agency_agent_memberships',
+      'agency_id',
+      'agencies',
+      'CASCADE',
+    );
+    await verifyForeignKey(connection, 'agency_agent_memberships', 'agent_id', 'agents', 'CASCADE');
+    await verifyForeignKey(
+      connection,
+      'agency_agent_memberships',
+      'created_by',
+      'users',
+      'SET NULL',
+    );
+    await verifyForeignKey(
+      connection,
+      'agency_agent_memberships',
+      'updated_by',
+      'users',
+      'SET NULL',
+    );
+
+    // 5. Verify migrations
     await verifyMigrations(connection);
 
     // ========================================================================
