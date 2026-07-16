@@ -442,11 +442,11 @@ export const developmentApprovalQueue = mysqlTable(
     id: int().autoincrement().primaryKey(),
     developmentId: int('development_id')
       .notNull()
-      .references(() => developments.id),
+      .references(() => developments.id, { onDelete: 'cascade' }),
     submittedBy: int('submitted_by')
       .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    status: mysqlEnum(['pending', 'reviewing', 'approved', 'rejected'])
+      .references(() => users.id, { onDelete: 'restrict' }),
+    status: mysqlEnum(['pending', 'reviewing', 'approved', 'rejected', 'changes_requested'])
       .default('pending')
       .notNull(),
     submissionType: mysqlEnum('submission_type', ['initial', 'update'])
@@ -459,7 +459,7 @@ export const developmentApprovalQueue = mysqlTable(
       .default('CURRENT_TIMESTAMP')
       .notNull(),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
-    reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'cascade' }),
+    reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
   },
   table => [
     index('idx_dev_approval_status').on(table.status),
