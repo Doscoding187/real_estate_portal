@@ -6,12 +6,16 @@ import { eq } from 'drizzle-orm';
 
 import {
   agencies,
+  agencyBranding,
   leads,
   listingAnalytics,
   listingApprovalQueue,
   listingMedia,
   listings,
+  planEntitlements,
+  plans,
   properties,
+  subscriptions,
   users,
 } from '../../drizzle/schema';
 import {
@@ -54,10 +58,66 @@ const created = {
   listingId: 0,
   propertyId: 0,
   leadId: 0,
+  brandingId: 0,
+  planEntitlementId: 0,
+  planId: 0,
+  subscriptionId: 0,
 };
 
 function insertId(result: any) {
   return Number(result?.insertId || result?.[0]?.insertId || 0);
+}
+
+async function makeAgencyPublicationReady(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  agencyId: number,
+  suffix: string,
+) {
+  const [brandingResult] = await db.insert(agencyBranding).values({
+    agencyId,
+    companyName: `Attribution Agency ${suffix}`,
+    primaryColor: '#0f766e',
+    secondaryColor: '#334155',
+    isEnabled: 1,
+  } as any);
+  created.brandingId = insertId(brandingResult);
+
+  const [planResult] = await db.insert(plans).values({
+    name: `attribution-publication-${suffix}`,
+    displayName: 'Attribution Publication Test Plan',
+    description: 'Canonical agency publication fixture for attribution coverage.',
+    segment: 'agency',
+    price: 99_000,
+    priceMonthly: 99_000,
+    currency: 'ZAR',
+    interval: 'month',
+    trialDays: 0,
+    features: JSON.stringify(['Listings', 'Publishing']),
+    limits: JSON.stringify({ max_active_listings: 50 }),
+    isActive: 1,
+    isPopular: 0,
+    sortOrder: 999,
+  } as any);
+  created.planId = insertId(planResult);
+
+  const [entitlementResult] = await db.insert(planEntitlements).values({
+    planId: created.planId,
+    featureKey: 'max_active_listings',
+    valueJson: 50,
+  } as any);
+  created.planEntitlementId = insertId(entitlementResult);
+
+  const now = new Date();
+  const [subscriptionResult] = await db.insert(subscriptions).values({
+    ownerType: 'agency',
+    ownerId: agencyId,
+    planId: created.planId,
+    status: 'active',
+    currentPeriodStart: now.toISOString(),
+    currentPeriodEnd: new Date(now.getTime() + 86_400_000).toISOString(),
+    cancelAtPeriodEnd: 0,
+  } as any);
+  created.subscriptionId = insertId(subscriptionResult);
 }
 
 afterEach(async () => {
@@ -73,10 +133,30 @@ afterEach(async () => {
     await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, created.listingId));
     await db.delete(listings).where(eq(listings.id, created.listingId));
   }
+  if (created.subscriptionId) {
+    await db.delete(subscriptions).where(eq(subscriptions.id, created.subscriptionId));
+  }
+  if (created.planEntitlementId) {
+    await db.delete(planEntitlements).where(eq(planEntitlements.id, created.planEntitlementId));
+  }
+  if (created.brandingId) {
+    await db.delete(agencyBranding).where(eq(agencyBranding.id, created.brandingId));
+  }
   if (created.userId) await db.delete(users).where(eq(users.id, created.userId));
   if (created.agencyId) await db.delete(agencies).where(eq(agencies.id, created.agencyId));
+  if (created.planId) await db.delete(plans).where(eq(plans.id, created.planId));
 
-  Object.assign(created, { agencyId: 0, userId: 0, listingId: 0, propertyId: 0, leadId: 0 });
+  Object.assign(created, {
+    agencyId: 0,
+    userId: 0,
+    listingId: 0,
+    propertyId: 0,
+    leadId: 0,
+    brandingId: 0,
+    planEntitlementId: 0,
+    planId: 0,
+    subscriptionId: 0,
+  });
 });
 
 describeWithDb('agency principal listing attribution', () => {
@@ -96,6 +176,7 @@ describeWithDb('agency principal listing attribution', () => {
       isVerified: 1,
     } as any);
     created.agencyId = insertId(agencyResult);
+    await makeAgencyPublicationReady(db, created.agencyId, suffix);
 
     const [userResult] = await db.insert(users).values({
       email: `principal-${suffix}@example.com`,

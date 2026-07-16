@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 
 import {
-  agencies, agents, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
+  agencies, agencyBranding, agents, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
   agencyListingPerformanceReviews, listingAnalytics, listingApprovalQueue, listingLeads, listings, properties,
-  showings, users,
+  planEntitlements, plans, showings, subscriptions, users,
 } from '../../drizzle/schema';
 import { approveListing, createListing, getDb, submitListingForReview } from '../db';
 import { appRouter } from '../routers';
@@ -19,7 +19,7 @@ function usesListifyTest(url?: string) {
 }
 const hasTestDb = usesListifyTest(process.env.DATABASE_URL);
 const guardedDescribe: typeof describe = hasTestDb ? describe : ((name, fn) => describe.skip(`${name} (requires listify_test)`, fn)) as typeof describe;
-const ids = { agencies: [] as number[], users: [] as number[], agents: [] as number[], listings: [] as number[], properties: [] as number[], reviews: [] as number[], deals: [] as number[] };
+const ids = { agencies: [] as number[], users: [] as number[], agents: [] as number[], listings: [] as number[], properties: [] as number[], reviews: [] as number[], deals: [] as number[], branding: [] as number[], planEntitlements: [] as number[], plans: [] as number[], subscriptions: [] as number[] };
 const idOf = (result: any) => Number(result?.insertId || result?.[0]?.insertId || 0);
 const caller = (user: { id: number; role: 'agency_admin' | 'agent'; agencyId: number }) => appRouter.createCaller({ user, req: { headers: {} }, res: {}, requestId: `performance-${Date.now()}` } as any);
 
@@ -32,6 +32,18 @@ async function agent(agencyId: number, userId: number, suffix: string, label: st
   const db = await getDb(); if (!db) throw new Error('Database not available');
   const [result] = await db.insert(agents).values({ agencyId, userId, firstName: label, lastName: 'Performance', displayName: label, email: `${label}-${suffix}@example.test`, phone: '+27115550000', whatsapp: '+27115550000', status: 'approved', isVerified: 1, isFeatured: 0 } as any);
   const id = idOf(result); ids.agents.push(id); return id;
+}
+async function makeAgencyPublicationReady(agencyId: number, suffix: string) {
+  const db = await getDb(); if (!db) throw new Error('Database not available');
+  const [brandingResult] = await db.insert(agencyBranding).values({ agencyId, companyName: `Performance Agency ${suffix}`, primaryColor: '#0f766e', secondaryColor: '#334155', isEnabled: 1 } as any);
+  ids.branding.push(idOf(brandingResult));
+  const [planResult] = await db.insert(plans).values({ name: `performance-publication-${suffix}`, displayName: 'Performance Publication Test Plan', description: 'Canonical agency publication fixture for performance coverage.', segment: 'agency', price: 99_000, priceMonthly: 99_000, currency: 'ZAR', interval: 'month', trialDays: 0, features: JSON.stringify(['Listings', 'Publishing']), limits: JSON.stringify({ max_active_listings: 50 }), isActive: 1, isPopular: 0, sortOrder: 999 } as any);
+  const planId = idOf(planResult); ids.plans.push(planId);
+  const [entitlementResult] = await db.insert(planEntitlements).values({ planId, featureKey: 'max_active_listings', valueJson: 50 } as any);
+  ids.planEntitlements.push(idOf(entitlementResult));
+  const now = new Date();
+  const [subscriptionResult] = await db.insert(subscriptions).values({ ownerType: 'agency', ownerId: agencyId, planId, status: 'active', currentPeriodStart: now.toISOString(), currentPeriodEnd: new Date(now.getTime() + 86_400_000).toISOString(), cancelAtPeriodEnd: 0 } as any);
+  ids.subscriptions.push(idOf(subscriptionResult));
 }
 async function publishedListing(ownerId: number, agencyId: number, agentId: number, suffix: string, price = 2_000_000) {
   const db = await getDb(); if (!db) throw new Error('Database not available');
@@ -53,10 +65,14 @@ afterEach(async () => {
   for (const listingId of ids.listings) { await db.delete(showings).where(eq(showings.listingId, listingId)); await db.delete(listingLeads).where(eq(listingLeads.listingId, listingId)); await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)); await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, listingId)); }
   for (const propertyId of ids.properties) await db.delete(properties).where(eq(properties.id, propertyId));
   for (const listingId of [...ids.listings].reverse()) await db.delete(listings).where(eq(listings.id, listingId));
+  for (const subscriptionId of ids.subscriptions) await db.delete(subscriptions).where(eq(subscriptions.id, subscriptionId));
+  for (const planEntitlementId of ids.planEntitlements) await db.delete(planEntitlements).where(eq(planEntitlements.id, planEntitlementId));
+  for (const brandingId of ids.branding) await db.delete(agencyBranding).where(eq(agencyBranding.id, brandingId));
   for (const agentId of ids.agents) await db.delete(agents).where(eq(agents.id, agentId));
   for (const userId of ids.users) await db.delete(users).where(eq(users.id, userId));
   for (const agencyId of ids.agencies) await db.delete(agencies).where(eq(agencies.id, agencyId));
-  Object.assign(ids, { agencies: [], users: [], agents: [], listings: [], properties: [], reviews: [], deals: [] });
+  for (const planId of ids.plans) await db.delete(plans).where(eq(plans.id, planId));
+  Object.assign(ids, { agencies: [], users: [], agents: [], listings: [], properties: [], reviews: [], deals: [], branding: [], planEntitlements: [], plans: [], subscriptions: [] });
 });
 
 guardedDescribe('agency listing performance MVP persisted integration', () => {
@@ -65,6 +81,7 @@ guardedDescribe('agency listing performance MVP persisted integration', () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
     const makeAgency = async (name: string) => { const [r] = await db.insert(agencies).values({ name, slug: `${name}-${suffix}`.toLowerCase().replace(/[^a-z0-9-]/g, '-'), email: `${name}-${suffix}@example.test`, city: 'Johannesburg', province: 'Gauteng', subscriptionPlan: 'premium', subscriptionStatus: 'active', isVerified: 1 } as any); const id = idOf(r); ids.agencies.push(id); return id; };
     const agencyId = await makeAgency('Performance Agency'); const outsideAgencyId = await makeAgency('Outside Performance Agency');
+    await makeAgencyPublicationReady(agencyId, suffix);
     const managerId = await user(agencyId, 'agency_admin', suffix, 'Manager'); const assignedUserId = await user(agencyId, 'agent', suffix, 'Assigned'); const unassignedUserId = await user(agencyId, 'agent', suffix, 'Unassigned'); const outsideManagerId = await user(outsideAgencyId, 'agency_admin', suffix, 'Outside');
     const assignedAgentId = await agent(agencyId, assignedUserId, suffix, 'Assigned'); await agent(agencyId, unassignedUserId, suffix, 'Unassigned');
     const manager = caller({ id: managerId, role: 'agency_admin', agencyId }); const assigned = caller({ id: assignedUserId, role: 'agent', agencyId }); const unassigned = caller({ id: unassignedUserId, role: 'agent', agencyId }); const outsider = caller({ id: outsideManagerId, role: 'agency_admin', agencyId: outsideAgencyId });
