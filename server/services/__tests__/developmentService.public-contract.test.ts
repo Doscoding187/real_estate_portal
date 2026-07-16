@@ -13,7 +13,7 @@ vi.mock('../../db-connection', () => ({
   getDb: mockGetDb,
 }));
 
-import { getPublicDevelopmentBySlug } from '../developmentService';
+import { getPublicDevelopment, getPublicDevelopmentBySlug } from '../developmentService';
 
 function collectSqlParts(
   value: unknown,
@@ -68,6 +68,22 @@ describe('developmentService public development contract', () => {
 
   it('requires id lookups to be published and approved before public exposure', async () => {
     const result = await getPublicDevelopmentBySlug('42');
+
+    expect(result).toBeNull();
+    const whereClause = mockWhere.mock.calls[0]?.[0];
+    const parts = collectSqlParts(whereClause);
+
+    expect(parts.columns).toEqual(expect.arrayContaining(['id', 'isPublished', 'approval_status']));
+    expect(parts.params).toEqual(expect.arrayContaining([42, 1, 'approved']));
+  });
+
+  it('requires direct public id reads to be published and approved before exposure', async () => {
+    mockSelect.mockReturnValueOnce({ from: mockFrom });
+    mockFrom.mockReturnValueOnce({ where: mockWhere });
+    mockWhere.mockReturnValueOnce({ limit: mockLimit });
+    mockLimit.mockResolvedValueOnce([]);
+
+    const result = await getPublicDevelopment(42);
 
     expect(result).toBeNull();
     const whereClause = mockWhere.mock.calls[0]?.[0];

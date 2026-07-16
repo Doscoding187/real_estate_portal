@@ -13,7 +13,7 @@ vi.mock('../services/propertySearchService', () => ({
 
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
-import { developers, developments, users } from '../../drizzle/schema';
+import { developmentApprovalQueue, developers, developments, users } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -26,6 +26,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
   let createdDevelopmentId: number | null = null;
   let createdDeveloperId: number | null = null;
   let createdUserId: number | null = null;
+  let createdReviewerUserId: number | null = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -44,6 +45,9 @@ describeWithDb('Development Card Data Flow Integration', () => {
     if (!db) return;
 
     if (createdDevelopmentId) {
+      await db
+        .delete(developmentApprovalQueue)
+        .where(eq(developmentApprovalQueue.developmentId, createdDevelopmentId));
       await db.delete(developments).where(eq(developments.id, createdDevelopmentId));
       createdDevelopmentId = null;
     }
@@ -51,6 +55,11 @@ describeWithDb('Development Card Data Flow Integration', () => {
     if (createdDeveloperId) {
       await db.delete(developers).where(eq(developers.id, createdDeveloperId));
       createdDeveloperId = null;
+    }
+
+    if (createdReviewerUserId) {
+      await db.delete(users).where(eq(users.id, createdReviewerUserId));
+      createdReviewerUserId = null;
     }
 
     if (createdUserId) {
@@ -81,6 +90,17 @@ describeWithDb('Development Card Data Flow Integration', () => {
     const testUserId = Number(userInsertResult[0].insertId);
     createdUserId = testUserId;
 
+    const reviewerInsertResult = await db!.insert(users).values({
+      email: `card-flow-reviewer-${suffix}@example.com`,
+      role: 'super_admin',
+      firstName: 'Card',
+      lastName: 'Reviewer',
+      name: 'Card Flow Reviewer',
+      emailVerified: 1,
+    });
+    const reviewerUserId = Number(reviewerInsertResult[0].insertId);
+    createdReviewerUserId = reviewerUserId;
+
     const insertResult = await db!.insert(developers).values({
       userId: testUserId,
       name: builderName,
@@ -98,7 +118,9 @@ describeWithDb('Development Card Data Flow Integration', () => {
       city: 'Johannesburg',
       province: 'Gauteng',
       suburb: 'Berea',
+      address: '1 Contract Test Road',
       status: 'selling',
+      ownershipType: 'sectional-title',
       description,
       highlights,
       images: [{ url: 'https://placehold.co/600x400/e2e8f0/64748b?text=Card+Flow' }],
@@ -122,7 +144,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
     createdDevelopmentId = Number(createdDevelopment.id);
 
     await developmentService.publishDevelopment(createdDevelopmentId, testUserId);
-    await developmentService.approveDevelopment(createdDevelopmentId, 1);
+    await developmentService.approveDevelopment(createdDevelopmentId, reviewerUserId);
 
     const caller = appRouter.createCaller({
       req: { headers: {} },
@@ -198,7 +220,10 @@ describeWithDb('Development Card Data Flow Integration', () => {
       city: 'Johannesburg',
       province: 'Gauteng',
       suburb: 'Berea',
+      address: '2 Contract Test Road',
       status: 'selling',
+      ownershipType: 'sectional-title',
+      highlights: ['Security', 'Transport', 'Lifestyle'],
       images: [{ url: 'https://placehold.co/600x400/e2e8f0/64748b?text=No+Description' }],
       unitTypes: [
         {
@@ -222,7 +247,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
       developmentService.publishDevelopment(createdDevelopmentId, testUserId),
     ).rejects.toMatchObject({
       code: 'BAD_REQUEST',
-      message: 'Description is required before publishing',
+      message: 'Development is not ready for submission.',
     });
 
     const [stillDraft] = await db!

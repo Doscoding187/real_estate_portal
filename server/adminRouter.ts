@@ -1346,7 +1346,7 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
-      await developmentService.approveDevelopment(input.developmentId, ctx.user.id);
+      await developmentService.approveDevelopment(input.developmentId, ctx.user.id, input.complianceChecks);
 
       await logAudit({
         userId: ctx.user.id,

@@ -130,6 +130,49 @@ export function FinalisationPhase({
   const errors = validationResult?.errors || [];
   const warnings: string[] = getCardFieldRecommendations().filter(message => !errors.includes(message));
   const canPublish = errors.length === 0;
+  const publisherBrandProfileId = publisherContext?.brandProfileId ?? null;
+  const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherBrandProfileId === 'number';
+  const finalisationCopy = shouldUseSuperAdminFlow
+    ? {
+        heading: 'Review & Publish',
+        description: 'Finalize your listing details before publishing it publicly.',
+        readinessTitle: 'Ready to Publish',
+        readinessDescription:
+          'All required fields are complete. You can publish this development publicly.',
+        controlTitle: 'Publishing Controls',
+        action: 'Publish Development',
+        disabledHelper: 'Resolve validation errors to publish.',
+        terms: 'By publishing, you agree to our listing terms.',
+        confirmTitle: 'Confirm Publication',
+        confirmDescription:
+          'You are about to make this development public according to the publisher flow.',
+        validationDescription: 'Your listing is ready to be published.',
+        progress: 'Publishing...',
+        confirmAction: 'Confirm & Publish',
+        success: 'Development published successfully!',
+        fallbackError: 'Failed to publish development',
+        validationErrorTitle: 'Cannot publish development:',
+      }
+    : {
+        heading: 'Review & Submit',
+        description: 'Finalize your listing details before submitting for review.',
+        readinessTitle: 'Ready to Submit for Review',
+        readinessDescription:
+          'All required fields are complete. You can submit this development for review.',
+        controlTitle: 'Submission Controls',
+        action: 'Submit for Review',
+        disabledHelper: 'Resolve validation errors to submit for review.',
+        terms: 'By submitting, you agree to our listing terms.',
+        confirmTitle: 'Confirm Submission for Review',
+        confirmDescription:
+          'You are about to submit this development for review. It will not be visible publicly until an authorised reviewer approves and publishes it.',
+        validationDescription: 'Your listing is ready for review.',
+        progress: 'Submitting...',
+        confirmAction: 'Confirm & Submit',
+        success: 'Development submitted for review!',
+        fallbackError: 'Failed to submit development for review',
+        validationErrorTitle: 'Cannot submit development for review:',
+      };
 
   const formatDate = (value?: string | Date) => {
     if (!value) return 'TBD';
@@ -259,10 +302,6 @@ export function FinalisationPhase({
       });
 
       let developmentId: number;
-      const publisherBrandProfileId = publisherContext?.brandProfileId ?? null;
-      const shouldUseSuperAdminFlow =
-        isSuperAdmin && typeof publisherBrandProfileId === 'number';
-
       if (editingId && shouldUseSuperAdminFlow) {
         await updatePublisherDevelopment.mutateAsync({
           brandProfileId: publisherBrandProfileId,
@@ -323,7 +362,7 @@ export function FinalisationPhase({
         }
       }
 
-      // Now publish (submit for review)
+      // The publisher flow publishes directly; the normal developer flow submits for review.
       if (shouldUseSuperAdminFlow) {
         await publishPublisherDevelopment.mutateAsync({
           brandProfileId: publisherBrandProfileId,
@@ -339,7 +378,7 @@ export function FinalisationPhase({
         spread: 70,
         origin: { y: 0.6 },
       });
-      toast.success('Development submitted for review!');
+      toast.success(finalisationCopy.success);
 
       reset();
       navigate(isSuperAdmin ? '/admin/overview' : '/developer/developments');
@@ -350,7 +389,7 @@ export function FinalisationPhase({
 
       const validationErrors = cause?.validationErrors;
       const legacyErrors = cause?.errors;
-      const primaryMessage = error?.message || 'Failed to publish development';
+      const primaryMessage = error?.message || finalisationCopy.fallbackError;
 
       const focusField = (fieldKey: string) => {
         const base = fieldKey.split('[')[0];
@@ -413,7 +452,7 @@ export function FinalisationPhase({
       if (Array.isArray(validationErrors) && validationErrors.length > 0) {
         toast.error(
           <div className="max-w-md">
-            <p className="font-semibold mb-2">Cannot publish development:</p>
+            <p className="font-semibold mb-2">{finalisationCopy.validationErrorTitle}</p>
             <ul className="space-y-1 text-sm">
               {validationErrors.map((err: { field: string; message: string }, idx: number) => (
                 <li key={idx} className="flex items-start gap-2">
@@ -433,7 +472,7 @@ export function FinalisationPhase({
       if (Array.isArray(legacyErrors) && legacyErrors.length > 0) {
         toast.error(
           <div className="max-w-md">
-            <p className="font-semibold mb-2">Cannot publish development:</p>
+            <p className="font-semibold mb-2">{finalisationCopy.validationErrorTitle}</p>
             <ul className="space-y-1 text-sm">
               {legacyErrors.map((msg: string, idx: number) => (
                 <li key={idx} className="flex items-start gap-2">
@@ -517,8 +556,8 @@ export function FinalisationPhase({
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12">
       {/* Header */}
       <div>
-        <h2 className="text-3xl font-bold text-slate-900">Review & Publish</h2>
-        <p className="text-slate-600">Finalize your listing details before going live.</p>
+        <h2 className="text-3xl font-bold text-slate-900">{finalisationCopy.heading}</h2>
+        <p className="text-slate-600">{finalisationCopy.description}</p>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
@@ -543,12 +582,12 @@ export function FinalisationPhase({
                 </div>
                 <div>
                   <CardTitle className={!canPublish ? 'text-red-900' : 'text-green-900'}>
-                    {!canPublish ? 'Action Required' : 'Ready to Publish'}
+                    {!canPublish ? 'Action Required' : finalisationCopy.readinessTitle}
                   </CardTitle>
                   <CardDescription className={!canPublish ? 'text-red-700' : 'text-green-700'}>
                     {!canPublish
                       ? `Please resolve ${errors.length} error${errors.length > 1 ? 's' : ''} to continue.`
-                      : 'All required fields are complete. You can schedule or publish now.'}
+                      : finalisationCopy.readinessDescription}
                   </CardDescription>
                 </div>
               </div>
@@ -757,7 +796,7 @@ export function FinalisationPhase({
           {/* Control Panel */}
           <Card className="sticky top-6 border-slate-200 shadow-md">
             <CardHeader className="bg-slate-50 border-b pb-4">
-              <CardTitle className="text-lg">Publishing Controls</CardTitle>
+              <CardTitle className="text-lg">{finalisationCopy.controlTitle}</CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <div className="grid grid-cols-2 gap-2">
@@ -794,16 +833,14 @@ export function FinalisationPhase({
                   onClick={() => setShowConfirmPublish(true)}
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Publish Listing
+                  {finalisationCopy.action}
                 </Button>
                 {!canPublish && (
                   <p className="text-xs text-center text-red-500">
-                    Resolve validation errors to publish.
+                    {finalisationCopy.disabledHelper}
                   </p>
                 )}
-                <p className="text-xs text-center text-slate-400">
-                  By publishing, you agree to our listing terms.
-                </p>
+                <p className="text-xs text-center text-slate-400">{finalisationCopy.terms}</p>
               </div>
             </CardContent>
           </Card>
@@ -813,7 +850,7 @@ export function FinalisationPhase({
             <CardHeader className="pb-2 border-b">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-sm font-medium uppercase tracking-wide text-slate-500">
-                  Live Preview Mode
+                  Public Listing Preview
                 </CardTitle>
                 <div className="flex bg-slate-100 rounded-lg p-1">
                   <button
@@ -925,17 +962,16 @@ export function FinalisationPhase({
       <Dialog open={showConfirmPublish} onOpenChange={setShowConfirmPublish}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Publication</DialogTitle>
+            <DialogTitle>{finalisationCopy.confirmTitle}</DialogTitle>
             <DialogDescription>
-              You are about to make <strong>{wizardData.name}</strong> live to the public. This will
-              activate search indexing and notifications.
+              {finalisationCopy.confirmDescription} <strong>{wizardData.name}</strong>
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <Alert className="bg-blue-50 border-blue-200 text-blue-800">
               <CheckCircle2 className="w-4 h-4 text-blue-600" />
               <AlertTitle className="text-blue-900">Passed Validation</AlertTitle>
-              <AlertDescription>Your listing meets 100% of the quality standards.</AlertDescription>
+              <AlertDescription>{finalisationCopy.validationDescription}</AlertDescription>
             </Alert>
           </div>
           <DialogFooter>
@@ -947,7 +983,7 @@ export function FinalisationPhase({
               disabled={isPublishing}
               className="bg-green-600 hover:bg-green-700"
             >
-              {isPublishing ? 'Publishing...' : 'Confirm & Publish'}
+              {isPublishing ? finalisationCopy.progress : finalisationCopy.confirmAction}
             </Button>
           </DialogFooter>
         </DialogContent>

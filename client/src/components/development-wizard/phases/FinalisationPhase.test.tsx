@@ -14,6 +14,9 @@ const testState = vi.hoisted(() => {
   const publishPublisherDevelopmentMock = vi.fn();
   const resetMock = vi.fn();
   const setPhaseMock = vi.fn();
+  let validationErrors: string[] = [];
+  let authUser = { id: 1, role: 'property_developer' };
+  let publisherContext: { brandProfileId: number } | null = null;
 
   const rentUnit = {
     id: 'rent-unit-final',
@@ -95,7 +98,10 @@ const testState = vi.hoisted(() => {
     stepData: wizardData.stepData,
     selectedAmenities: [],
     getWizardData: () => wizardData,
-    validateForPublish: () => ({ isValid: true, errors: [] }),
+    validateForPublish: () => ({
+      isValid: validationErrors.length === 0,
+      errors: validationErrors,
+    }),
     getCardFieldRecommendations: () => [],
     setPhase: setPhaseMock,
     reset: resetMock,
@@ -112,6 +118,18 @@ const testState = vi.hoisted(() => {
     toastSuccessMock,
     updateDevelopmentMock,
     updatePublisherDevelopmentMock,
+    setValidationErrors: (errors: string[]) => {
+      validationErrors = errors;
+    },
+    setActor: (
+      user: { id: number; role: string } = { id: 1, role: 'property_developer' },
+      context: { brandProfileId: number } | null = null,
+    ) => {
+      authUser = user;
+      publisherContext = context;
+    },
+    getAuthUser: () => authUser,
+    getPublisherContext: () => publisherContext,
     wizardState,
   };
 });
@@ -145,11 +163,11 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { id: 1, role: 'property_developer' } }),
+  useAuth: () => ({ user: testState.getAuthUser() }),
 }));
 
 vi.mock('@/hooks/usePublisherContext', () => ({
-  usePublisherContext: () => ({ context: null }),
+  usePublisherContext: () => ({ context: testState.getPublisherContext() }),
 }));
 
 vi.mock('wouter', () => ({
@@ -173,6 +191,8 @@ describe('FinalisationPhase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     testState.wizardState.editingId = undefined;
+    testState.setValidationErrors([]);
+    testState.setActor();
     testState.createDevelopmentMock.mockResolvedValue({ development: { id: 123 } });
     testState.updateDevelopmentMock.mockResolvedValue({ success: true });
     testState.publishDevelopmentMock.mockResolvedValue({ success: true });
@@ -181,11 +201,11 @@ describe('FinalisationPhase', () => {
     testState.publishPublisherDevelopmentMock.mockResolvedValue({ success: true });
   });
 
-  it('publishes create-mode DLE payloads through the canonical submit mapper', async () => {
+  it('submits create-mode DLE payloads through the canonical submit mapper', async () => {
     render(<FinalisationPhase />);
 
-    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
-    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & submit/i }));
 
     await waitFor(() => expect(testState.createDevelopmentMock).toHaveBeenCalledTimes(1));
 
@@ -229,6 +249,7 @@ describe('FinalisationPhase', () => {
       { url: 'https://example.com/edit-hero.jpg', category: 'hero' },
     ]);
     expect(testState.publishDevelopmentMock).toHaveBeenCalledWith({ id: 123 });
+    expect(testState.toastSuccessMock).toHaveBeenCalledWith('Development submitted for review!');
     expect(testState.resetMock).toHaveBeenCalled();
     expect(testState.navigateMock).toHaveBeenCalledWith('/developer/developments');
   });
@@ -238,8 +259,8 @@ describe('FinalisationPhase', () => {
 
     render(<FinalisationPhase />);
 
-    fireEvent.click(screen.getByRole('button', { name: /publish listing/i }));
-    fireEvent.click(screen.getByRole('button', { name: /confirm & publish/i }));
+    fireEvent.click(screen.getByRole('button', { name: /submit for review/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm & submit/i }));
 
     await waitFor(() => expect(testState.updateDevelopmentMock).toHaveBeenCalledTimes(1));
 
@@ -257,5 +278,45 @@ describe('FinalisationPhase', () => {
       'basePriceFrom',
     );
     expect(testState.publishDevelopmentMock).toHaveBeenCalledWith({ id: 987 });
+  });
+
+  it('blocks incomplete development data from entering the active submit flow', () => {
+    testState.setValidationErrors(['At least one photo is required']);
+
+    render(<FinalisationPhase />);
+
+    expect(screen.getByText('Action Required')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /submit for review/i })).toBeDisabled();
+    expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();
+  });
+
+  it('uses direct-publication wording and publisher mutations for a super-admin publisher context', async () => {
+    testState.setActor({ id: 2, role: 'super_admin' }, { brandProfileId: 44 });
+
+    render(<FinalisationPhase />);
+
+    expect(screen.getByRole('heading', { name: 'Review & Publish' })).toBeInTheDocument();
+    expect(screen.getByText('Publishing Controls')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publish Development' })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/not be visible publicly until an authorised reviewer/i),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+    expect(screen.getByRole('heading', { name: 'Confirm Publication' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/make this development public according to the publisher flow/i),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm & Publish' }));
+
+    await waitFor(() => expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1));
+
+    expect(testState.publishPublisherDevelopmentMock).toHaveBeenCalledWith({
+      brandProfileId: 44,
+      developmentId: 456,
+    });
+    expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();
+    expect(testState.toastSuccessMock).toHaveBeenCalledWith('Development published successfully!');
+    expect(testState.navigateMock).toHaveBeenCalledWith('/admin/overview');
   });
 });
