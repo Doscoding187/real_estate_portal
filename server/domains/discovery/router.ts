@@ -1,4 +1,4 @@
-import { publicProcedure, router } from '../../_core/trpc';
+import { protectedProcedure, publicProcedure, router } from '../../_core/trpc';
 import {
   discoveryEngagementSchema,
   discoveryFeedResponseSchema,
@@ -6,8 +6,13 @@ import {
 } from '../../../shared/discovery/schemas';
 import { discoveryFeedService } from './services/discoveryFeedService';
 import { discoveryEngagementService } from './services/discoveryEngagementService';
+import { canAccessExploreOptionAPilot } from './exploreOptionAPilotAccess';
 
 export const discoveryRouter = router({
+  getOptionAPilotAccess: protectedProcedure.query(({ ctx }) => ({
+    accessible: canAccessExploreOptionAPilot(ctx.user?.id),
+  })),
+
   getFeed: publicProcedure
     .input(discoveryQuerySchema)
     .output(discoveryFeedResponseSchema)
