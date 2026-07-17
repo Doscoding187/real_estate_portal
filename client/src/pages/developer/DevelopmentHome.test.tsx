@@ -103,6 +103,15 @@ function homeData(overrides: Record<string, unknown> = {}) {
       pricing: { kind: 'sale', from: 1200000, to: 1800000 },
       warnings: [],
     },
+    attention: {
+      totalCount: 0,
+      items: [],
+    },
+    distribution: {
+      status: 'not_configured',
+      eligiblePartnerCount: null,
+      manageHref: null,
+    },
     range: '30d',
   };
 }
@@ -407,6 +416,110 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/readiness score|% ready/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Recent Activity')).not.toBeInTheDocument();
+  });
+
+  it('renders bounded server-ordered attention items with existing specialist actions', () => {
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData(),
+        attention: {
+          totalCount: 6,
+          items: [
+            {
+              type: 'review_rejected',
+              severity: 'critical',
+              explanation: 'This development is currently rejected.',
+              actionLabel: 'Open editor',
+              href: '/developer/create-development?id=42',
+            },
+            {
+              type: 'lead_sla_breach',
+              severity: 'critical',
+              explanation: '1 Listify-captured lead SLA breach in the selected period.',
+              actionLabel: 'Work SLA breaches',
+              href: '/developer/leads?developmentId=42&range=30d&view=attention&sla=breach',
+            },
+            {
+              type: 'zero_aggregate_availability',
+              severity: 'warning',
+              explanation: '0 aggregate units are marked available.',
+              actionLabel: 'Review catalogue',
+              href: '/developer/create-development?id=42',
+            },
+          ],
+        },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+
+    render(<DevelopmentHome />);
+
+    expect(screen.getByRole('heading', { name: 'Requires Attention' })).toBeInTheDocument();
+    expect(screen.getAllByText('Critical')).toHaveLength(2);
+    expect(screen.getByText('0 aggregate units are marked available.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Requires Attention items').querySelectorAll('li')).toHaveLength(
+      3,
+    );
+    expect(
+      screen.queryByText(/view all|recent activity|notifications|tasks/i),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Work SLA breaches' }));
+    expect(setLocationMock).toHaveBeenCalledWith(
+      '/developer/leads?developmentId=42&range=30d&view=attention&sla=breach',
+    );
+  });
+
+  it('renders the exact clean attention state and truthful compact distribution states', () => {
+    render(<DevelopmentHome />);
+
+    expect(screen.getByText('Nothing requires attention right now.')).toBeInTheDocument();
+    expect(screen.getByText('Referral distribution not configured')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage distribution' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/partner-ready|distribution health|coverage|campaign/i),
+    ).not.toBeInTheDocument();
+
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData(),
+        distribution: { status: 'enabled', eligiblePartnerCount: 3, manageHref: null },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+    const { rerender } = render(<DevelopmentHome />);
+    expect(
+      screen.getByText('Referral distribution enabled — 3 eligible partners'),
+    ).toBeInTheDocument();
+
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData(),
+        distribution: { status: 'disabled', eligiblePartnerCount: null, manageHref: null },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+    rerender(<DevelopmentHome />);
+    expect(screen.getByText('Referral distribution disabled')).toBeInTheDocument();
+
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData(),
+        distribution: { status: 'enabled', eligiblePartnerCount: null, manageHref: null },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+    rerender(<DevelopmentHome />);
+    expect(screen.getByText('Referral distribution enabled')).toBeInTheDocument();
+    expect(screen.queryByText(/eligible partners/)).not.toBeInTheDocument();
   });
 
   it('shows only selected-period captured demand and routes funnel drill-downs to the CRM', () => {

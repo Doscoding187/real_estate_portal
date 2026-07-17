@@ -206,6 +206,34 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(query).not.toContain('complianceChecks: developmentApprovalQueue');
   });
 
+  it('composes bounded attention before the owner-scoped distribution read', () => {
+    const query = developmentHomeQuerySource();
+    const attentionSource = readRepoFile('server/services/developmentHomeAttention.ts');
+    const distributionSource = readRepoFile('server/services/developmentHomeDistribution.ts');
+
+    expect(query).toContain('buildDevelopmentHomeAttention({');
+    expect(query).toContain('getDevelopmentHomeDistribution({');
+    expect(query.indexOf('if (!row)')).toBeLessThan(
+      query.indexOf('buildDevelopmentHomeAttention({'),
+    );
+    expect(query.indexOf('buildDevelopmentHomeAttention({')).toBeLessThan(
+      query.indexOf('getDevelopmentHomeDistribution({'),
+    );
+    expect(query).toContain('attention,');
+    expect(query).toContain('distribution,');
+    expect(attentionSource).toContain('items: ordered.slice(0, 5)');
+    expect(attentionSource).toContain('totalCount: ordered.length');
+    expect(attentionSource).not.toContain('getDb');
+    expect(distributionSource).toContain(
+      'eq(distributionPrograms.developmentId, params.developmentId)',
+    );
+    expect(distributionSource).toContain(
+      'eq(distributionAgentAccess.developmentId, params.developmentId)',
+    );
+    expect(distributionSource).toContain('COUNT(DISTINCT ${distributionAgentAccess.agentId})');
+    expect(distributionSource).not.toContain("manageHref: '/");
+  });
+
   it('uses exact aggregate counts, a bounded recent preview, and cursor-batched SLA evaluation', () => {
     const service = readRepoFile('server/services/developerFunnelService.ts');
 

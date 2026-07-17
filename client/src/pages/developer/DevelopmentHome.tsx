@@ -153,7 +153,7 @@ export default function DevelopmentHome() {
   if (homeQuery.error || !homeQuery.data)
     return <DevelopmentHomeError onRetry={homeQuery.refetch} />;
 
-  const { development, demand, funnel, inventory } = homeQuery.data;
+  const { development, demand, funnel, inventory, attention, distribution } = homeQuery.data;
   const selectedRangeLabel = rangeLabels[demand.range];
   const location = [
     development.location.suburb,
@@ -167,6 +167,7 @@ export default function DevelopmentHome() {
   const latestSubmittedAt = formatTimestamp(readiness.latestReview?.submittedAt);
   const latestReviewedAt = formatTimestamp(readiness.latestReview?.reviewedAt);
   const publishedAt = formatTimestamp(development.publishedAt);
+  const distributionManageHref = distribution.manageHref;
   const openEditor = () => setLocation(`/developer/create-development?id=${development.id}`);
   const openLeads = (params: Record<string, string | number | undefined> = {}) => {
     const search = new URLSearchParams({
@@ -227,6 +228,48 @@ export default function DevelopmentHome() {
               View public page
             </Button>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Requires Attention</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {attention.items.length === 0 ? (
+            <p className="text-sm text-slate-600">Nothing requires attention right now.</p>
+          ) : (
+            <ul className="space-y-3" aria-label="Requires Attention items">
+              {attention.items.map(item => (
+                <li
+                  key={item.type}
+                  className={`rounded-md border p-3 ${
+                    item.severity === 'critical'
+                      ? 'border-rose-200 bg-rose-50'
+                      : 'border-amber-200 bg-amber-50'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <Badge
+                        className={
+                          item.severity === 'critical'
+                            ? 'bg-rose-100 text-rose-800 border-rose-200'
+                            : 'bg-amber-100 text-amber-800 border-amber-200'
+                        }
+                      >
+                        {item.severity === 'critical' ? 'Critical' : 'Warning'}
+                      </Badge>
+                      <p className="text-sm text-slate-800">{item.explanation}</p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => setLocation(item.href)}>
+                      {item.actionLabel}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
@@ -431,6 +474,25 @@ export default function DevelopmentHome() {
               ))}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <p className="text-sm font-medium text-slate-900">
+            {distribution.status === 'enabled' && distribution.eligiblePartnerCount !== null
+              ? `Referral distribution enabled — ${distribution.eligiblePartnerCount} eligible partners`
+              : distribution.status === 'enabled'
+                ? 'Referral distribution enabled'
+                : distribution.status === 'disabled'
+                  ? 'Referral distribution disabled'
+                  : 'Referral distribution not configured'}
+          </p>
+          {distributionManageHref ? (
+            <Button size="sm" variant="outline" onClick={() => setLocation(distributionManageHref)}>
+              Manage distribution
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
 

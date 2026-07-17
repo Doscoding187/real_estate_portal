@@ -54,6 +54,8 @@ import { requireUser } from './_core/requireUser';
 import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
 import { validatePersistedSubmissionReadiness } from './services/developmentSubmissionReadiness';
 import { buildDevelopmentHomeInventory } from './services/developmentInventorySummary';
+import { buildDevelopmentHomeAttention } from './services/developmentHomeAttention';
+import { getDevelopmentHomeDistribution } from './services/developmentHomeDistribution';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
@@ -2136,6 +2138,19 @@ export const developerRouter = router({
         range: input.range,
         now: new Date(),
       });
+      const attention = buildDevelopmentHomeAttention({
+        developmentId: row.id,
+        range: input.range,
+        lifecycleState,
+        latestReviewFeedback: latestReview?.feedback ?? null,
+        blockers,
+        inventory,
+        funnel: leadSummary.funnel,
+      });
+      const distribution = await getDevelopmentHomeDistribution({
+        db: dbConn,
+        developmentId: row.id,
+      });
 
       return {
         development: {
@@ -2169,6 +2184,8 @@ export const developerRouter = router({
         demand: leadSummary.demand,
         funnel: leadSummary.funnel,
         inventory,
+        attention,
+        distribution,
         range: input.range,
       };
     }),
