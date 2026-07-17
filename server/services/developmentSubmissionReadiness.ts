@@ -6,6 +6,19 @@ export type SubmissionValidationError = {
   message: string;
 };
 
+export type PersistedSalePriceResolution = {
+  status: 'canonical' | 'compatibility' | 'conflict' | 'invalid_canonical' | 'missing';
+  from: number | null;
+  to: number | null;
+  compatibilityDerived: boolean;
+};
+
+export type PersistedRentalPriceResolution = {
+  status: 'valid' | 'missing_or_invalid_from' | 'upper_bound_conflict';
+  from: number | null;
+  to: number | null;
+};
+
 type PersistedDevelopment = Pick<
   typeof developments.$inferSelect,
   | 'name'
@@ -26,7 +39,9 @@ type PersistedUnitType = Pick<
   | 'availableUnits'
   | 'reservedUnits'
   | 'priceFrom'
+  | 'priceTo'
   | 'basePriceFrom'
+  | 'basePriceTo'
   | 'monthlyRentFrom'
   | 'monthlyRentTo'
   | 'startingBid'
@@ -72,14 +87,104 @@ function parseJsonField(field: unknown): unknown[] {
   return [];
 }
 
-function positiveNumber(value: unknown): boolean {
+export function hasPositivePersistedNumber(value: unknown): boolean {
   const number = Number(value);
   return Number.isFinite(number) && number > 0;
 }
 
-function nonNegativeInteger(value: unknown): boolean {
+function hasPersistedValue(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== '';
+}
+
+function positiveNumberOrNull(value: unknown): number | null {
+  return hasPositivePersistedNumber(value) ? Number(value) : null;
+}
+
+/**
+ * Canonical sale-price authority: base fields are current; price fields are
+ * compatibility aliases only. A populated canonical value is never masked.
+ */
+export function resolvePersistedUnitTypeSalePrice(input: {
+  basePriceFrom?: unknown;
+  basePriceTo?: unknown;
+  priceFrom?: unknown;
+  priceTo?: unknown;
+}): PersistedSalePriceResolution {
+  const hasBaseFrom = hasPersistedValue(input.basePriceFrom);
+  const hasLegacyFrom = hasPersistedValue(input.priceFrom);
+  const baseFrom = positiveNumberOrNull(input.basePriceFrom);
+  const legacyFrom = positiveNumberOrNull(input.priceFrom);
+
+  if (hasBaseFrom && baseFrom === null) {
+    return { status: 'invalid_canonical', from: null, to: null, compatibilityDerived: false };
+  }
+  if (!hasBaseFrom && !hasLegacyFrom) {
+    return { status: 'missing', from: null, to: null, compatibilityDerived: false };
+  }
+  if (!hasBaseFrom || baseFrom === null) {
+    if (legacyFrom === null) {
+      return { status: 'missing', from: null, to: null, compatibilityDerived: false };
+    }
+    const legacyTo = hasPersistedValue(input.priceTo) ? positiveNumberOrNull(input.priceTo) : null;
+    if (hasPersistedValue(input.priceTo) && (legacyTo === null || legacyTo < legacyFrom)) {
+      return { status: 'invalid_canonical', from: null, to: null, compatibilityDerived: false };
+    }
+    return { status: 'compatibility', from: legacyFrom, to: legacyTo, compatibilityDerived: true };
+  }
+  if (hasLegacyFrom && (legacyFrom === null || legacyFrom !== baseFrom)) {
+    return { status: 'conflict', from: null, to: null, compatibilityDerived: false };
+  }
+
+  const hasBaseTo = hasPersistedValue(input.basePriceTo);
+  const hasLegacyTo = hasPersistedValue(input.priceTo);
+  const baseTo = positiveNumberOrNull(input.basePriceTo);
+  const legacyTo = positiveNumberOrNull(input.priceTo);
+  if (hasBaseTo && (baseTo === null || baseTo < baseFrom)) {
+    return { status: 'invalid_canonical', from: null, to: null, compatibilityDerived: false };
+  }
+  if (hasBaseTo && hasLegacyTo && (legacyTo === null || legacyTo !== baseTo)) {
+    return { status: 'conflict', from: null, to: null, compatibilityDerived: false };
+  }
+  if (!hasBaseTo && hasLegacyTo) {
+    if (legacyTo === null || legacyTo < baseFrom) {
+      return { status: 'conflict', from: null, to: null, compatibilityDerived: false };
+    }
+    return { status: 'compatibility', from: baseFrom, to: legacyTo, compatibilityDerived: true };
+  }
+  return { status: 'canonical', from: baseFrom, to: baseTo, compatibilityDerived: false };
+}
+
+export function resolvePersistedUnitTypeRentalPrice(input: {
+  monthlyRentFrom?: unknown;
+  monthlyRentTo?: unknown;
+}): PersistedRentalPriceResolution {
+  const from = positiveNumberOrNull(input.monthlyRentFrom);
+  if (from === null) return { status: 'missing_or_invalid_from', from: null, to: null };
+  if (!hasPersistedValue(input.monthlyRentTo)) return { status: 'valid', from, to: null };
+  const to = positiveNumberOrNull(input.monthlyRentTo);
+  if (to === null || to < from) return { status: 'upper_bound_conflict', from: null, to: null };
+  return { status: 'valid', from, to };
+}
+
+export function isNonNegativePersistedInteger(value: unknown): boolean {
   const number = Number(value);
   return Number.isFinite(number) && Number.isInteger(number) && number >= 0;
+}
+
+export function isPersistedUnitTypeActive(unit: Pick<PersistedUnitType, 'isActive'>): boolean {
+  return Number(unit.isActive ?? 1) !== 0;
+}
+
+export function hasValidPersistedUnitTypeInventory(
+  unit: Pick<PersistedUnitType, 'totalUnits' | 'availableUnits' | 'reservedUnits'>,
+): boolean {
+  const reserved = unit.reservedUnits ?? 0;
+  return (
+    isNonNegativePersistedInteger(unit.totalUnits) &&
+    isNonNegativePersistedInteger(unit.availableUnits) &&
+    isNonNegativePersistedInteger(reserved) &&
+    Number(unit.availableUnits) + Number(reserved) <= Number(unit.totalUnits)
+  );
 }
 
 function hasValidPersistedImage(images: unknown): boolean {
@@ -139,37 +244,41 @@ export function validatePersistedSubmissionReadiness(
     errors.push({ field: 'ownershipType', message: 'A supported ownership type is required.' });
   }
 
-  const activeUnits = persistedUnitTypes.filter(unit => Number(unit.isActive ?? 1) !== 0);
+  const activeUnits = persistedUnitTypes.filter(isPersistedUnitTypeActive);
   if (developmentType !== 'land' && activeUnits.length === 0) {
     errors.push({ field: 'unitTypes', message: 'At least one unit type is required.' });
   }
 
   for (const unit of activeUnits) {
     const label = String(unit.name ?? unit.label ?? 'Unit type').trim();
-    const total = unit.totalUnits;
-    const available = unit.availableUnits;
-    const reserved = unit.reservedUnits ?? 0;
-    if (
-      !nonNegativeInteger(total) ||
-      !nonNegativeInteger(available) ||
-      !nonNegativeInteger(reserved) ||
-      Number(available) + Number(reserved) > Number(total)
-    ) {
+    if (!hasValidPersistedUnitTypeInventory(unit)) {
       errors.push({
         field: `unitTypes.${label}.inventory`,
         message: `${label} has invalid aggregate inventory.`,
       });
     }
-    if (transactionType === 'for_sale' && !positiveNumber(unit.priceFrom ?? unit.basePriceFrom)) {
+    const salePrice = resolvePersistedUnitTypeSalePrice(unit);
+    if (transactionType === 'for_sale' && salePrice.status === 'conflict') {
+      errors.push({
+        field: `unitTypes.${label}.salePriceConflict`,
+        message: `${label} has conflicting canonical and legacy sale prices.`,
+      });
+    } else if (
+      transactionType === 'for_sale' &&
+      !['canonical', 'compatibility'].includes(salePrice.status)
+    ) {
       errors.push({
         field: `unitTypes.${label}.priceFrom`,
         message: `${label} requires a positive sale price.`,
       });
     }
-    if (
-      transactionType === 'for_rent' &&
-      !positiveNumber(unit.monthlyRentFrom ?? unit.monthlyRentTo)
-    ) {
+    const rentalPrice = resolvePersistedUnitTypeRentalPrice(unit);
+    if (transactionType === 'for_rent' && rentalPrice.status === 'upper_bound_conflict') {
+      errors.push({
+        field: `unitTypes.${label}.monthlyRentTo`,
+        message: `${label} has an invalid monthly rent range.`,
+      });
+    } else if (transactionType === 'for_rent' && rentalPrice.status !== 'valid') {
       errors.push({
         field: `unitTypes.${label}.monthlyRentFrom`,
         message: `${label} requires a positive rental price.`,
@@ -181,7 +290,7 @@ export function validatePersistedSubmissionReadiness(
       const reserve =
         unit.reservePrice == null || unit.reservePrice === '' ? null : Number(unit.reservePrice);
       if (
-        !positiveNumber(unit.startingBid) ||
+        !hasPositivePersistedNumber(unit.startingBid) ||
         !start ||
         !end ||
         Number.isNaN(start.getTime()) ||

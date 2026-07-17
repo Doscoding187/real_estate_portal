@@ -106,7 +106,11 @@ const UNIT_CATEGORY_OPTIONS = [
 
 const UNIT_SUBTYPE_OPTIONS = {
   house: [
-    { value: 'freestanding-house', label: 'Freestanding House', structuralType: 'freestanding-house' },
+    {
+      value: 'freestanding-house',
+      label: 'Freestanding House',
+      structuralType: 'freestanding-house',
+    },
     { value: 'simplex', label: 'Simplex', structuralType: 'simplex' },
     { value: 'duplex', label: 'Duplex', structuralType: 'duplex' },
     { value: 'semi-detached', label: 'Semi-Detached', structuralType: 'townhouse' },
@@ -153,7 +157,9 @@ const toSubtypeLabel = (unitSubType: string | undefined): string => {
   return SUBTYPE_META[unitSubType]?.label ?? unitSubType;
 };
 
-const inferClassification = (unit: any): { unitCategory: 'house' | 'apartment'; unitSubType: string } => {
+const inferClassification = (
+  unit: any,
+): { unitCategory: 'house' | 'apartment'; unitSubType: string } => {
   const explicitCategory = unit?.unitCategory;
   const explicitSubType = unit?.unitSubType;
   if (
@@ -184,7 +190,9 @@ const inferClassification = (unit: any): { unitCategory: 'house' | 'apartment'; 
     return { unitCategory: classification.category, unitSubType: classification.subType };
   }
 
-  const structuralType = String(unit?.structuralType || '').trim().toLowerCase();
+  const structuralType = String(unit?.structuralType || '')
+    .trim()
+    .toLowerCase();
   if (STRUCTURAL_TYPE_TO_CLASSIFICATION[structuralType]) {
     return STRUCTURAL_TYPE_TO_CLASSIFICATION[structuralType];
   }
@@ -388,9 +396,14 @@ export function UnitTypesPhase() {
       const availableFromUnit = Math.max(0, Number((unit as any).availableUnits ?? 0));
       const reservedFromUnit = Math.max(0, Number((unit as any).reservedUnits ?? 0));
       const soldHistorical = Math.max(totalFromUnit - availableFromUnit - reservedFromUnit, 0);
+      const canonicalSaleFrom = Number((unit as any).basePriceFrom ?? (unit as any).priceFrom ?? 0);
+      const canonicalSaleToRaw = (unit as any).basePriceTo ?? (unit as any).priceTo;
+      const canonicalSaleTo = canonicalSaleToRaw == null ? 0 : Number(canonicalSaleToRaw);
 
       setFormData({
         ...unit,
+        priceFrom: canonicalSaleFrom,
+        priceTo: canonicalSaleTo,
         unitCategory: classification.unitCategory,
         unitSubType: classification.unitSubType,
         structuralType: toStructuralType(classification.unitSubType),
@@ -510,9 +523,14 @@ export function UnitTypesPhase() {
     const availableFromUnit = Math.max(0, Number((unit as any).availableUnits ?? 0));
     const reservedFromUnit = Math.max(0, Number((unit as any).reservedUnits ?? 0));
     const soldHistorical = Math.max(totalFromUnit - availableFromUnit - reservedFromUnit, 0);
+    const canonicalSaleFrom = Number((unit as any).basePriceFrom ?? (unit as any).priceFrom ?? 0);
+    const canonicalSaleToRaw = (unit as any).basePriceTo ?? (unit as any).priceTo;
+    const canonicalSaleTo = canonicalSaleToRaw == null ? 0 : Number(canonicalSaleToRaw);
 
     setFormData({
       ...unit,
+      priceFrom: canonicalSaleFrom,
+      priceTo: canonicalSaleTo,
       name: `${unit.name} (Copy)`,
       unitCategory: classification.unitCategory,
       unitSubType: classification.unitSubType,
@@ -658,7 +676,7 @@ export function UnitTypesPhase() {
     const extrasTotal = isSale
       ? (formData.extras || []).reduce((acc, curr) => acc + (Number(curr.price) || 0), 0)
       : 0;
-    const calculatedPriceTo = basePrice + extrasTotal;
+    const calculatedPriceTo = extrasTotal > 0 ? basePrice + extrasTotal : null;
 
     const monthlyRentFrom = Number(formData.monthlyRentFrom || 0);
     const monthlyRentTo =
@@ -680,14 +698,20 @@ export function UnitTypesPhase() {
         ? formData.specifications
         : {};
     const normalizedYardSize =
-      formData.yardSize != null && Number(formData.yardSize) > 0 ? Number(formData.yardSize) : undefined;
+      formData.yardSize != null && Number(formData.yardSize) > 0
+        ? Number(formData.yardSize)
+        : undefined;
 
     const newUnit: any = {
       ...formData,
       // CRITICAL: Always ensure ID is present for persistence
       id: editingId || `unit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      // Legacy-shaped form fields are mirrored deliberately on explicit save;
+      // canonical base fields remain the persistence authority.
+      basePriceFrom: isSale ? basePrice : undefined,
+      basePriceTo: isSale ? calculatedPriceTo : null,
       priceFrom: isSale ? basePrice : 0,
-      priceTo: isSale ? calculatedPriceTo : 0, // Auto-calculated
+      priceTo: isSale ? calculatedPriceTo : null,
       monthlyRentFrom: isRental ? monthlyRentFrom : undefined,
       monthlyRentTo: isRental ? monthlyRentTo : undefined,
       depositRequired: isRental ? depositRequired : formData.depositRequired,
@@ -1200,109 +1224,116 @@ export function UnitTypesPhase() {
             const classification = inferClassification(unit as any);
             return (
               <Card key={unit.id} className="group hover:shadow-lg transition-all border-slate-200">
-              <div className="h-40 bg-slate-100 relative">
-                {unit.baseMedia?.gallery?.[0] ? (
-                  <img src={unit.baseMedia.gallery[0].url} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-slate-400">
-                    <Image className="w-8 h-8" />
-                  </div>
-                )}
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="h-8 w-8"
-                    onClick={() => handleDuplicate(unit)}
-                    title="Duplicate Unit Type"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    className="h-8 w-8"
-                    onClick={() => handleOpenDialog(unit)}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    className="h-8 w-8"
-                    onClick={() => removeUnitType(unit.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{unit.name}</CardTitle>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {classification.unitCategory === 'house' ? 'House' : 'Apartment'} -{' '}
-                      {toSubtypeLabel(classification.unitSubType)}
-                    </p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      unit.availableUnits > 0
-                        ? 'text-green-600 bg-green-50'
-                        : 'text-red-600 bg-red-50',
-                    )}
-                  >
-                    {unit.availableUnits > 0 ? `${unit.availableUnits} Avail` : 'Sold Out'}
-                  </Badge>
-                </div>
-                <p className="text-sm font-semibold text-blue-600">
-                  {(() => {
-                    const rentFrom = Number(
-                      (unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0,
-                    );
-                    const rentTo = Number((unit as any).monthlyRentTo ?? 0);
-                    const auctionStart = Number((unit as any).startingBid ?? 0);
-                    const saleFrom = Number(unit.priceFrom ?? 0);
-                    const saleTo = Number(unit.priceTo ?? 0);
-
-                    const primaryValue = isRental ? rentFrom : isAuction ? auctionStart : saleFrom;
-                    const secondaryValue = isRental ? rentTo : isAuction ? 0 : saleTo;
-
-                    if (!primaryValue || primaryValue <= 0) return '---';
-
-                    return (
-                      <>
-                        R {primaryValue.toLocaleString()}{' '}
-                        {!isAuction &&
-                          secondaryValue > primaryValue &&
-                          `- R ${secondaryValue.toLocaleString()}`}
-                      </>
-                    );
-                  })()}
-                  {isRental && <span className="text-xs text-slate-500"> / month</span>}
-                  {isAuction && <span className="text-xs text-slate-500"> starting bid</span>}
-                </p>
-              </CardHeader>
-              <CardContent className="text-sm text-slate-600 space-y-1">
-                <div className="flex gap-4 items-center">
-                  <span className="flex items-center gap-1">
-                    <HouseMeasureIcon className="w-3.5 h-3.5" /> {unit.unitSize} m²
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <BedDouble className="w-3.5 h-3.5" /> {unit.bedrooms}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Bath className="w-3.5 h-3.5" /> {unit.bathrooms}
-                  </span>
-                  {unit.yardSize && unit.yardSize > 0 && (
-                    <span className="flex items-center gap-1 text-slate-600">
-                      <Maximize className="w-3.5 h-3.5" /> {unit.yardSize} m²
-                    </span>
+                <div className="h-40 bg-slate-100 relative">
+                  {unit.baseMedia?.gallery?.[0] ? (
+                    <img
+                      src={unit.baseMedia.gallery[0].url}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-slate-400">
+                      <Image className="w-8 h-8" />
+                    </div>
                   )}
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="h-8 w-8"
+                      onClick={() => handleDuplicate(unit)}
+                      title="Duplicate Unit Type"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="h-8 w-8"
+                      onClick={() => handleOpenDialog(unit)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="h-8 w-8"
+                      onClick={() => removeUnitType(unit.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">{unit.name}</CardTitle>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {classification.unitCategory === 'house' ? 'House' : 'Apartment'} -{' '}
+                        {toSubtypeLabel(classification.unitSubType)}
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        unit.availableUnits > 0
+                          ? 'text-green-600 bg-green-50'
+                          : 'text-red-600 bg-red-50',
+                      )}
+                    >
+                      {unit.availableUnits > 0 ? `${unit.availableUnits} Avail` : 'Sold Out'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-semibold text-blue-600">
+                    {(() => {
+                      const rentFrom = Number(
+                        (unit as any).monthlyRentFrom ?? (unit as any).monthlyRent ?? 0,
+                      );
+                      const rentTo = Number((unit as any).monthlyRentTo ?? 0);
+                      const auctionStart = Number((unit as any).startingBid ?? 0);
+                      const saleFrom = Number(unit.priceFrom ?? 0);
+                      const saleTo = Number(unit.priceTo ?? 0);
+
+                      const primaryValue = isRental
+                        ? rentFrom
+                        : isAuction
+                          ? auctionStart
+                          : saleFrom;
+                      const secondaryValue = isRental ? rentTo : isAuction ? 0 : saleTo;
+
+                      if (!primaryValue || primaryValue <= 0) return '---';
+
+                      return (
+                        <>
+                          R {primaryValue.toLocaleString()}{' '}
+                          {!isAuction &&
+                            secondaryValue > primaryValue &&
+                            `- R ${secondaryValue.toLocaleString()}`}
+                        </>
+                      );
+                    })()}
+                    {isRental && <span className="text-xs text-slate-500"> / month</span>}
+                    {isAuction && <span className="text-xs text-slate-500"> starting bid</span>}
+                  </p>
+                </CardHeader>
+                <CardContent className="text-sm text-slate-600 space-y-1">
+                  <div className="flex gap-4 items-center">
+                    <span className="flex items-center gap-1">
+                      <HouseMeasureIcon className="w-3.5 h-3.5" /> {unit.unitSize} m²
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <BedDouble className="w-3.5 h-3.5" /> {unit.bedrooms}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Bath className="w-3.5 h-3.5" /> {unit.bathrooms}
+                    </span>
+                    {unit.yardSize && unit.yardSize > 0 && (
+                      <span className="flex items-center gap-1 text-slate-600">
+                        <Maximize className="w-3.5 h-3.5" /> {unit.yardSize} m²
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
@@ -1363,7 +1394,8 @@ export function UnitTypesPhase() {
                         value={(formData.unitCategory as string) || 'apartment'}
                         onValueChange={v => {
                           const category = v as 'house' | 'apartment';
-                          const fallbackSubType = UNIT_SUBTYPE_OPTIONS[category][0]?.value || 'apartment';
+                          const fallbackSubType =
+                            UNIT_SUBTYPE_OPTIONS[category][0]?.value || 'apartment';
                           setFormData(p => ({
                             ...p,
                             unitCategory: category,
@@ -1389,7 +1421,11 @@ export function UnitTypesPhase() {
                         Unit Subtype <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        value={(formData.unitSubType as string) || subtypeOptions?.[0]?.value || 'apartment'}
+                        value={
+                          (formData.unitSubType as string) ||
+                          subtypeOptions?.[0]?.value ||
+                          'apartment'
+                        }
                         onValueChange={v =>
                           setFormData(p => ({
                             ...p,

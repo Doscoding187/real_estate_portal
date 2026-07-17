@@ -71,6 +71,16 @@ function formatTimestamp(value: string | Date | null | undefined) {
   return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
 }
 
+function formatAmount(value: number | null) {
+  return value === null
+    ? 'Not available'
+    : new Intl.NumberFormat('en-ZA', {
+        style: 'currency',
+        currency: 'ZAR',
+        maximumFractionDigits: 0,
+      }).format(value);
+}
+
 function DevelopmentHomeLoading() {
   return (
     <div className="space-y-6" aria-label="Loading Development Home">
@@ -143,7 +153,7 @@ export default function DevelopmentHome() {
   if (homeQuery.error || !homeQuery.data)
     return <DevelopmentHomeError onRetry={homeQuery.refetch} />;
 
-  const { development, demand, funnel } = homeQuery.data;
+  const { development, demand, funnel, inventory } = homeQuery.data;
   const selectedRangeLabel = rangeLabels[demand.range];
   const location = [
     development.location.suburb,
@@ -323,6 +333,104 @@ export default function DevelopmentHome() {
               </Button>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>Aggregate Inventory</CardTitle>
+            <p className="text-sm text-slate-600">
+              Figures reflect the aggregate unit-type catalogue configured in Listify.
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={openEditor}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit catalogue
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {inventory.catalogueState === 'not_configured' ? (
+            <p className="text-sm text-slate-600">Aggregate catalogue not configured.</p>
+          ) : inventory.catalogueState === 'land_not_required' ? (
+            <p className="text-sm text-slate-600">
+              Aggregate catalogue is not required for this land development.
+            </p>
+          ) : (
+            <>
+              <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+                <div>
+                  <dt className="text-slate-600">Active unit types</dt>
+                  <dd className="font-semibold text-slate-950">{inventory.activeUnitTypeCount}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-600">Aggregate total</dt>
+                  <dd className="font-semibold text-slate-950">
+                    {inventory.totalUnits ?? 'Not available'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-600">Aggregate available</dt>
+                  <dd className="font-semibold text-slate-950">
+                    {inventory.availableUnits ?? 'Not available'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-600">Aggregate reserved</dt>
+                  <dd className="font-semibold text-slate-950">
+                    {inventory.reservedUnits ?? 'Not available'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-600">Derived aggregate sold</dt>
+                  <dd className="font-semibold text-slate-950">
+                    {inventory.derivedSoldUnits ?? 'Not available'}
+                  </dd>
+                </div>
+              </dl>
+              {inventory.availableUnits === 0 && (
+                <p className="text-sm text-amber-800">0 aggregate units are marked available.</p>
+              )}
+              {inventory.pricing.kind === 'sale' && (
+                <p className="text-sm text-slate-700">
+                  Sale pricing: {formatAmount(inventory.pricing.from)} to{' '}
+                  {formatAmount(inventory.pricing.to)}
+                </p>
+              )}
+              {inventory.pricing.kind === 'rent' && (
+                <p className="text-sm text-slate-700">
+                  Monthly rent: {formatAmount(inventory.pricing.from)} to{' '}
+                  {formatAmount(inventory.pricing.to)}
+                </p>
+              )}
+              {development.transactionType === 'auction' && (
+                <p className="text-sm text-slate-700">
+                  Auction terms are configured for {inventory.auctionTermsConfiguredCount} of{' '}
+                  {inventory.activeUnitTypeCount} active unit types.
+                </p>
+              )}
+              {inventory.pricing.kind === 'auction' && (
+                <div className="text-sm text-slate-700">
+                  <p>
+                    Starting bids: {formatAmount(inventory.pricing.from)} to{' '}
+                    {formatAmount(inventory.pricing.to)}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+          {inventory.warnings.length > 0 && (
+            <ul className="space-y-2" aria-label="Inventory warnings">
+              {inventory.warnings.map(warning => (
+                <li
+                  key={warning.code}
+                  className="rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                >
+                  {warning.message}
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

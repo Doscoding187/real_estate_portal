@@ -1862,6 +1862,11 @@ export async function persistUnitTypes(
       console.warn(`UnitType ${unitId}: basePriceFrom missing, defaulting to 0`);
       return 0;
     })();
+    const basePriceTo = (() => {
+      const value = asDecimalOrNull(unit.basePriceTo);
+      if (value !== null) return value;
+      return asDecimalOrNull(unit.priceTo);
+    })();
 
     const totalUnits = Math.max(0, sanitizeInt(unit.totalUnits) ?? 0);
     const availableUnits = Math.max(0, sanitizeInt(unit.availableUnits) ?? 0);
@@ -1914,10 +1919,11 @@ export async function persistUnitTypes(
       yardSize: sanitizeInt(unit.yardSize),
       unitSize: sanitizeInt(unit.unitSize),
 
-      priceFrom: asDecimalOrNull(unit.priceFrom),
-      priceTo: asDecimalOrNull(unit.priceTo),
+      // Explicit wizard saves mirror canonical sale fields for remaining legacy consumers.
+      priceFrom: basePriceFrom,
+      priceTo: basePriceTo,
       basePriceFrom,
-      basePriceTo: asDecimalOrNull(unit.basePriceTo),
+      basePriceTo,
       monthlyRentFrom: asDecimalOrNull(unit.monthlyRentFrom ?? unit.monthlyRent),
       monthlyRentTo: asDecimalOrNull(unit.monthlyRentTo),
       leaseTerm: asStringOrNull(unit.leaseTerm),

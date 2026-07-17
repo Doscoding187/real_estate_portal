@@ -194,6 +194,9 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(query).toContain('eq(developments.developerId, profile.id)');
     expect(query.match(/code: 'NOT_FOUND'/g)).toHaveLength(1);
     expect(query).not.toContain('getPublicDevelopment');
+    expect(query).toContain('eq(unitTypes.developmentId, row.id)');
+    expect(query.indexOf('if (!row)')).toBeLessThan(query.indexOf('unitTypes.developmentId'));
+    expect(query).toContain('buildDevelopmentHomeInventory(row, persistedUnitTypes, blockers)');
     expect(query).not.toContain('.catch(');
     expect(query).toContain(
       '.orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id))',
@@ -255,6 +258,57 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     });
 
     expect(mockRequireDeveloperProfileByUserId).toHaveBeenCalledWith(5);
+  });
+
+  it('adds active-unit-type aggregate inventory without legacy development fallbacks', async () => {
+    configureDevelopmentQuery(
+      [ownedDevelopment],
+      [
+        {
+          name: 'Two bedroom apartment',
+          isActive: 1,
+          totalUnits: 10,
+          availableUnits: 4,
+          reservedUnits: 2,
+          priceFrom: 1000000,
+          basePriceFrom: 1000000,
+        },
+      ],
+    );
+    const home = await callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
+      developmentId: 42,
+      range: '30d',
+    });
+    expect(home.inventory).toMatchObject({
+      activeUnitTypeCount: 1,
+      totalUnits: 10,
+      availableUnits: 4,
+      reservedUnits: 2,
+      derivedSoldUnits: 4,
+      pricing: { kind: 'sale', from: 1000000, to: 1000000 },
+    });
+    const query = developmentHomeQuerySource();
+    expect(query).not.toContain('developments.totalUnits');
+    expect(query).not.toContain('developments.availableUnits');
+    expect(query).not.toContain('developments.priceFrom');
+  });
+
+  it('keeps the active persistence boundary canonical by normalising legacy sale input into base pricing', () => {
+    const service = readRepoFile('server/services/developmentService.ts');
+    const wizard = readRepoFile(
+      'client/src/components/development-wizard/phases/UnitTypesPhase.tsx',
+    );
+    const hydration = readRepoFile('client/src/hooks/useDevelopmentWizard.ts');
+    expect(service).toContain('const v = asDecimalOrNull(unit.basePriceFrom);');
+    expect(service).toContain('const fallback = asDecimalOrNull(unit.priceFrom);');
+    expect(service).toContain('basePriceFrom,');
+    expect(service).toContain('const value = asDecimalOrNull(unit.basePriceTo);');
+    expect(service).toContain('priceFrom: basePriceFrom,');
+    expect(service).toContain('priceTo: basePriceTo,');
+    expect(hydration).toContain('priceFrom: Number(u.basePriceFrom ?? u.priceFrom ?? 0)');
+    expect(hydration).toContain('priceTo: Number(u.basePriceTo ?? u.priceTo ?? 0)');
+    expect(wizard).toContain('basePriceFrom: isSale ? basePrice : undefined');
+    expect(wizard).toContain('basePriceTo: isSale ? calculatedPriceTo : null');
   });
 
   it('adds selected-period captured demand and canonical funnel counts to the owned Home response', async () => {

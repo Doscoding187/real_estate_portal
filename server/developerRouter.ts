@@ -53,6 +53,7 @@ import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
 import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
 import { validatePersistedSubmissionReadiness } from './services/developmentSubmissionReadiness';
+import { buildDevelopmentHomeInventory } from './services/developmentInventorySummary';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
@@ -2094,6 +2095,7 @@ export const developerRouter = router({
         row,
         persistedUnitTypes,
       ).map(blocker => ({ ...blocker, severity: 'critical' }));
+      const inventory = buildDevelopmentHomeInventory(row, persistedUnitTypes, blockers);
       const reviewRows: DevelopmentHomeReviewRow[] = await dbConn
         .select({
           id: developmentApprovalQueue.id,
@@ -2166,6 +2168,7 @@ export const developerRouter = router({
         },
         demand: leadSummary.demand,
         funnel: leadSummary.funnel,
+        inventory,
         range: input.range,
       };
     }),

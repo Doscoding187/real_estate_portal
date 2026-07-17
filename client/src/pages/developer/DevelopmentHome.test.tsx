@@ -92,6 +92,17 @@ function homeData(overrides: Record<string, unknown> = {}) {
       slaWarningCount: 1,
       slaBreachCount: 0,
     },
+    inventory: {
+      catalogueState: 'configured',
+      activeUnitTypeCount: 2,
+      totalUnits: 10,
+      availableUnits: 4,
+      reservedUnits: 2,
+      derivedSoldUnits: 4,
+      auctionTermsConfiguredCount: 0,
+      pricing: { kind: 'sale', from: 1200000, to: 1800000 },
+      warnings: [],
+    },
     range: '30d',
   };
 }
@@ -118,7 +129,7 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     expect(screen.getAllByRole('button', { name: 'Open leads' })[0]).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'View public page' })).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'Market Readiness' })).toBeInTheDocument();
-    expect(screen.queryByText(/aggregate inventory/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Aggregate Inventory' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit development' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Open leads' })[0]);
@@ -130,6 +141,87 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
       '/developer/leads?developmentId=42&range=30d',
     );
     expect(setLocationMock).toHaveBeenNthCalledWith(3, '/development/harbour-heights');
+  });
+
+  it('renders aggregate-only catalogue data, warnings, empty and zero-availability states', () => {
+    render(<DevelopmentHome />);
+    expect(screen.getByText('Active unit types')).toBeInTheDocument();
+    expect(screen.getByText('Aggregate available')).toBeInTheDocument();
+    expect(screen.getByText('Derived aggregate sold')).toBeInTheDocument();
+    expect(screen.getByText(/Sale pricing:/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit catalogue' })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/individual unit|sales completed|reservation holder/i),
+    ).not.toBeInTheDocument();
+
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData(),
+        inventory: {
+          catalogueState: 'not_configured',
+          activeUnitTypeCount: 0,
+          totalUnits: null,
+          availableUnits: null,
+          reservedUnits: null,
+          derivedSoldUnits: null,
+          auctionTermsConfiguredCount: 0,
+          pricing: { kind: 'unavailable', from: null, to: null },
+          warnings: [
+            { code: 'no_active_unit_types', message: 'Aggregate catalogue not configured.' },
+          ],
+        },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+    const { rerender } = render(<DevelopmentHome />);
+    expect(screen.getAllByText('Aggregate catalogue not configured.').length).toBeGreaterThan(0);
+
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData(),
+        inventory: {
+          ...homeData().inventory,
+          availableUnits: 0,
+          warnings: [
+            {
+              code: 'zero_aggregate_availability',
+              message: '0 aggregate units are marked available.',
+            },
+          ],
+        },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+    rerender(<DevelopmentHome />);
+    expect(screen.getAllByText('0 aggregate units are marked available.').length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  it('shows per-unit-type auction configuration without inventing an auction window or reserve', () => {
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData({ transactionType: 'auction' }),
+        inventory: {
+          ...homeData().inventory,
+          auctionTermsConfiguredCount: 1,
+          pricing: { kind: 'auction', from: 1000000, to: 1500000 },
+        },
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+    render(<DevelopmentHome />);
+    expect(
+      screen.getByText('Auction terms are configured for 1 of 2 active unit types.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Starting bids:/)).toBeInTheDocument();
+    expect(screen.queryByText(/Auction dates|Reserve from/i)).not.toBeInTheDocument();
   });
 
   it('does not offer a public link unless the development is publicly eligible', () => {

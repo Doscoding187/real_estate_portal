@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { validatePersistedSubmissionReadiness } from '../developmentSubmissionReadiness';
+import {
+  resolvePersistedUnitTypeRentalPrice,
+  resolvePersistedUnitTypeSalePrice,
+  validatePersistedSubmissionReadiness,
+} from '../developmentSubmissionReadiness';
 
 const validDevelopment = {
   name: 'Harbour Heights',
@@ -23,7 +27,9 @@ const validUnit = {
   availableUnits: 10,
   reservedUnits: 0,
   priceFrom: '1000000',
+  priceTo: null,
   basePriceFrom: '1000000',
+  basePriceTo: null,
   monthlyRentFrom: null,
   monthlyRentTo: null,
   startingBid: null,
@@ -65,5 +71,57 @@ describe('development persisted submission readiness', () => {
       'validatePersistedSubmissionReadiness(ownedDevelopment, persistedUnits)',
     );
     expect(router).toContain('validatePersistedSubmissionReadiness(');
+  });
+
+  it('resolves canonical, compatibility, conflict, invalid canonical, and missing sale prices', () => {
+    expect(resolvePersistedUnitTypeSalePrice({ basePriceFrom: 100 })).toMatchObject({
+      status: 'canonical',
+      from: 100,
+    });
+    expect(resolvePersistedUnitTypeSalePrice({ basePriceFrom: 100, priceFrom: 100 })).toMatchObject(
+      { status: 'canonical', from: 100 },
+    );
+    expect(resolvePersistedUnitTypeSalePrice({ priceFrom: 100 })).toMatchObject({
+      status: 'compatibility',
+      compatibilityDerived: true,
+    });
+    expect(resolvePersistedUnitTypeSalePrice({ basePriceFrom: 100, priceFrom: 90 }).status).toBe(
+      'conflict',
+    );
+    expect(resolvePersistedUnitTypeSalePrice({ basePriceFrom: 0, priceFrom: 100 }).status).toBe(
+      'invalid_canonical',
+    );
+    expect(resolvePersistedUnitTypeSalePrice({}).status).toBe('missing');
+  });
+
+  it('keeps DOE-S0 sale and rental rules aligned to the shared resolvers', () => {
+    expect(
+      validatePersistedSubmissionReadiness(
+        validDevelopment as never,
+        [{ ...validUnit, basePriceFrom: '100', priceFrom: '90' }] as never,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: expect.stringContaining('salePriceConflict') }),
+      ]),
+    );
+    expect(
+      validatePersistedSubmissionReadiness(
+        { ...validDevelopment, transactionType: 'for_rent' } as never,
+        [{ ...validUnit, monthlyRentFrom: null, monthlyRentTo: '1000' }] as never,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: expect.stringContaining('monthlyRentFrom') }),
+      ]),
+    );
+    expect(resolvePersistedUnitTypeRentalPrice({ monthlyRentFrom: 1000 })).toEqual({
+      status: 'valid',
+      from: 1000,
+      to: null,
+    });
+    expect(
+      resolvePersistedUnitTypeRentalPrice({ monthlyRentFrom: 1000, monthlyRentTo: 900 }).status,
+    ).toBe('upper_bound_conflict');
   });
 });
