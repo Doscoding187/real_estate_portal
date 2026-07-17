@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createSavedSearchDeliveryActionToken } from '../services/savedSearchDeliveryActionTokenService';
+import {
+  createSavedSearchDeliveryActionToken,
+  verifySavedSearchDeliveryActionToken,
+  type SavedSearchDeliveryAction,
+} from '../services/savedSearchDeliveryActionTokenService';
 
 const {
   mockGetDb,
@@ -75,7 +79,6 @@ describe('savedSearch.applyDeliveryActionByToken contract', () => {
           savedSearchId: 11,
           userId: 77,
         },
-        { secret: 'saved-search-delivery-action-dev-only' },
       ),
     });
 
@@ -116,7 +119,6 @@ describe('savedSearch.applyDeliveryActionByToken contract', () => {
           savedSearchId: 11,
           userId: 77,
         },
-        { secret: 'saved-search-delivery-action-dev-only' },
       ),
     });
 
@@ -141,5 +143,43 @@ describe('savedSearch.applyDeliveryActionByToken contract', () => {
         inAppEnabled: true,
       },
     });
+  });
+
+  it('keeps signed action tokens bound to the canonical secret, action, and expiry', () => {
+    const token = createSavedSearchDeliveryActionToken(
+      {
+        action: 'pause',
+        savedSearchId: 11,
+        userId: 77,
+      },
+      { now: 1_000_000, ttlSeconds: 60 },
+    );
+
+    expect(verifySavedSearchDeliveryActionToken(token, { now: 1_030_000 })).toMatchObject({
+      action: 'pause',
+      savedSearchId: 11,
+      userId: 77,
+    });
+    expect(() => verifySavedSearchDeliveryActionToken(token, { secret: 'wrong-secret' })).toThrow(
+      'Invalid saved search action token signature.',
+    );
+    expect(() =>
+      verifySavedSearchDeliveryActionToken(`${token.slice(0, -1)}x`, { now: 1_030_000 }),
+    ).toThrow('Invalid saved search action token signature.');
+    expect(() => verifySavedSearchDeliveryActionToken(token, { now: 1_060_000 })).toThrow(
+      'Saved search action token has expired.',
+    );
+
+    const wrongActionToken = createSavedSearchDeliveryActionToken(
+      {
+        action: 'other' as unknown as SavedSearchDeliveryAction,
+        savedSearchId: 11,
+        userId: 77,
+      },
+      { now: 1_000_000, ttlSeconds: 60 },
+    );
+    expect(() => verifySavedSearchDeliveryActionToken(wrongActionToken, { now: 1_030_000 })).toThrow(
+      'Invalid saved search action.',
+    );
   });
 });
