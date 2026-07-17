@@ -2,15 +2,16 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetDb, mockGetBrandProfileById, mockRequireDeveloperProfileByUserId } = vi.hoisted(
-  () => ({
+const { mockDb, mockGetDb, mockGetBrandProfileById, mockRequireDeveloperProfileByUserId } =
+  vi.hoisted(() => ({
+    mockDb: { select: vi.fn() },
     mockGetDb: vi.fn(),
     mockGetBrandProfileById: vi.fn(),
     mockRequireDeveloperProfileByUserId: vi.fn(),
-  }),
-);
+  }));
 
 vi.mock('../db', () => ({
+  db: mockDb,
   getDb: mockGetDb,
 }));
 
@@ -79,19 +80,27 @@ function configureDevelopmentQuery(
   developmentResult: unknown[] | Error,
   unitTypeResult: unknown[] = [],
   reviewResult: unknown[] = [],
+  ...summaryResults: unknown[][]
 ) {
-  const results = [developmentResult, unitTypeResult, reviewResult];
+  const results = [
+    developmentResult,
+    unitTypeResult,
+    reviewResult,
+    ...(summaryResults.length ? summaryResults : [[], [], [], []]),
+  ];
   let selectCall = 0;
   const select = vi.fn(() => {
-    const result = results[Math.min(selectCall++, results.length - 1)];
+    const result = results[selectCall++] ?? [];
     const value = result instanceof Error ? Promise.reject(result) : Promise.resolve(result);
     const chain = Object.assign(value, {
       limit: vi.fn(() => value),
       orderBy: vi.fn(() => chain),
+      groupBy: vi.fn(() => chain),
     });
     return { from: vi.fn(() => ({ where: vi.fn(() => chain) })) };
   });
   mockGetDb.mockResolvedValue({ select });
+  mockDb.select = select;
   return { select };
 }
 
@@ -194,6 +203,21 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(query).not.toContain('complianceChecks: developmentApprovalQueue');
   });
 
+  it('uses exact aggregate counts, a bounded recent preview, and cursor-batched SLA evaluation', () => {
+    const service = readRepoFile('server/services/developerFunnelService.ts');
+
+    expect(service).toContain('gte(leads.createdAt, boundary.from)');
+    expect(service).toContain('lte(leads.createdAt, boundary.to)');
+    expect(service).toContain('DEVELOPMENT_HOME_RECENT_LEAD_LIMIT = 5');
+    expect(service).toContain('.limit(DEVELOPMENT_HOME_RECENT_LEAD_LIMIT)');
+    expect(service).toContain('DEVELOPMENT_HOME_SLA_BATCH_SIZE = 250');
+    expect(service).toContain('gt(leads.id, lastLeadId)');
+    expect(service).not.toContain('buildDevelopmentHomeLeadSummary');
+    expect(service).toContain(
+      "LOWER(COALESCE(${leads.lostReason}, '')) NOT IN ('spam', 'duplicate', 'archived')",
+    );
+  });
+
   it('loads an owned development through the regular developer profile predicate', async () => {
     configureDevelopmentQuery(
       [ownedDevelopment],
@@ -231,6 +255,99 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     });
 
     expect(mockRequireDeveloperProfileByUserId).toHaveBeenCalledWith(5);
+  });
+
+  it('adds selected-period captured demand and canonical funnel counts to the owned Home response', async () => {
+    configureDevelopmentQuery(
+      [ownedDevelopment],
+      [],
+      [],
+      [
+        {
+          capturedLeadCount: 3,
+          new: 1,
+          contacted: 0,
+          qualified: 0,
+          viewing: 0,
+          offer: 0,
+          dealInProgress: 1,
+          closedWon: 0,
+          closedLost: 0,
+        },
+      ],
+      [
+        {
+          channel: 'development_detail',
+          count: 1,
+        },
+        {
+          channel: 'referral',
+          count: 1,
+        },
+        { channel: 'Unknown source', count: 1 },
+      ],
+      [
+        {
+          id: 501,
+          name: 'Ayesha Patel',
+          source: 'legacy_web',
+          leadSource: 'development_detail',
+          createdAt: '2026-07-16T10:00:00.000Z',
+          status: 'new',
+          funnelStage: 'interest',
+          lostReason: null,
+        },
+      ],
+      [
+        {
+          id: 501,
+          createdAt: '2026-07-16T10:00:00.000Z',
+          lastContactedAt: null,
+          nextFollowUp: null,
+          notes: null,
+        },
+        {
+          id: 502,
+          createdAt: '2026-07-15T10:00:00.000Z',
+          lastContactedAt: null,
+          nextFollowUp: null,
+          notes: null,
+        },
+        {
+          id: 503,
+          createdAt: '2026-07-14T10:00:00.000Z',
+          lastContactedAt: null,
+          nextFollowUp: null,
+          notes: null,
+        },
+      ],
+    );
+
+    const home = await callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
+      developmentId: 42,
+      range: '30d',
+    });
+
+    expect(home.demand).toMatchObject({
+      range: '30d',
+      capturedLeadCount: 3,
+      newLeadCount: 1,
+      sources: [
+        { channel: 'development_detail', count: 1 },
+        { channel: 'referral', count: 1 },
+        { channel: 'Unknown source', count: 1 },
+      ],
+    });
+    expect(home.demand.recentLeads[0]).toMatchObject({
+      id: 501,
+      name: 'Ayesha Patel',
+      source: 'development_detail',
+      stage: 'new',
+    });
+    expect(home.funnel).toMatchObject({
+      stages: { new: 1, dealInProgress: 1, closedLost: 0 },
+      openLeadCount: 2,
+    });
   });
 
   it('makes foreign and nonexistent regular-developer IDs externally indistinguishable', async () => {

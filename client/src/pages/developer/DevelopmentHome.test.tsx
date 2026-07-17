@@ -61,6 +61,37 @@ function homeData(overrides: Record<string, unknown> = {}) {
       ...overrides,
     },
     readiness,
+    demand: {
+      range: '30d',
+      capturedLeadCount: 3,
+      newLeadCount: 1,
+      recentLeads: [
+        {
+          id: 501,
+          name: 'Ayesha Patel',
+          source: 'development_detail',
+          createdAt: '2026-01-04T10:00:00.000Z',
+          stage: 'new',
+        },
+      ],
+      sources: [{ channel: 'development_detail', count: 3 }],
+    },
+    funnel: {
+      stages: {
+        new: 1,
+        contacted: 1,
+        qualified: 0,
+        viewing: 0,
+        offer: 0,
+        dealInProgress: 0,
+        closedWon: 1,
+        closedLost: 0,
+      },
+      openLeadCount: 2,
+      closedWonCount: 1,
+      slaWarningCount: 1,
+      slaBreachCount: 0,
+    },
     range: '30d',
   };
 }
@@ -84,13 +115,13 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     expect(screen.getByText('Sea Point, Cape Town, Western Cape')).toBeInTheDocument();
     expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Edit development' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open leads' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Open leads' })[0]).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'View public page' })).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'Market Readiness' })).toBeInTheDocument();
     expect(screen.queryByText(/aggregate inventory/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit development' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Open leads' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open leads' })[0]);
     fireEvent.click(screen.getAllByRole('button', { name: 'View public page' })[0]);
 
     expect(setLocationMock).toHaveBeenNthCalledWith(1, '/developer/create-development?id=42');
@@ -284,6 +315,59 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/readiness score|% ready/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Recent Activity')).not.toBeInTheDocument();
+  });
+
+  it('shows only selected-period captured demand and routes funnel drill-downs to the CRM', () => {
+    render(<DevelopmentHome />);
+
+    expect(screen.getByText('Captured leads — last 30 days')).toBeInTheDocument();
+    expect(screen.getByText('New leads — last 30 days')).toBeInTheDocument();
+    expect(screen.getByText('Captured channels')).toBeInTheDocument();
+    expect(screen.getByText('Ayesha Patel')).toBeInTheDocument();
+    expect(screen.getByText(/selected-period listify-captured leads/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/total demand|total pipeline|market demand/i),
+    ).not.toBeInTheDocument();
+
+    const closedWonButton = screen.getAllByText('Closed won')[0].closest('button');
+    const slaWarningButton = screen
+      .getByText('SLA warnings')
+      .parentElement?.querySelector('button');
+    expect(closedWonButton).not.toBeNull();
+    expect(slaWarningButton).not.toBeNull();
+    if (!closedWonButton || !slaWarningButton)
+      throw new Error('Expected funnel CRM drill-down buttons.');
+
+    fireEvent.click(closedWonButton);
+    fireEvent.click(slaWarningButton);
+
+    expect(setLocationMock).toHaveBeenNthCalledWith(
+      1,
+      '/developer/leads?developmentId=42&range=30d&stage=won',
+    );
+    expect(setLocationMock).toHaveBeenNthCalledWith(
+      2,
+      '/developer/leads?developmentId=42&range=30d&view=attention&sla=warning',
+    );
+  });
+
+  it('shows Unknown source without creating an unsupported CRM source filter', () => {
+    const data = homeData();
+    data.demand.sources = [
+      { channel: 'Unknown source', count: 2 },
+      { channel: 'development_detail', count: 1 },
+    ];
+    homeQueryMock.mockReturnValue({ data, error: null, isLoading: false, refetch: refetchMock });
+
+    render(<DevelopmentHome />);
+
+    expect(screen.getByText('Unknown source · 2')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Unknown source/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'development_detail · 1' }));
+    expect(setLocationMock).toHaveBeenCalledWith(
+      '/developer/leads?developmentId=42&range=30d&source=development_detail',
+    );
   });
 
   it('renders distinct loading, private not-found, and operational-error states', () => {

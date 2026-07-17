@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
 import { ArrowLeft, ExternalLink, Pencil, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,33 @@ const readinessExplanations = {
     'Persisted submission requirements are currently satisfied. Submission remains subject to review.',
   draft_action_required: 'Persisted submission requirements need attention before submission.',
 } as const;
+
+const rangeLabels = {
+  '7d': 'last 7 days',
+  '30d': 'last 30 days',
+  '90d': 'last 90 days',
+} as const;
+
+const funnelStages = [
+  { key: 'new', label: 'New', crmStage: 'new' },
+  { key: 'contacted', label: 'Contacted', crmStage: 'contacted' },
+  { key: 'qualified', label: 'Qualified', crmStage: 'qualified' },
+  { key: 'viewing', label: 'Viewing', crmStage: 'viewing' },
+  { key: 'offer', label: 'Offer', crmStage: 'offer' },
+  { key: 'dealInProgress', label: 'Deal in progress', crmStage: 'deal' },
+  { key: 'closedWon', label: 'Closed won', crmStage: 'won' },
+  { key: 'closedLost', label: 'Closed lost', crmStage: 'lost' },
+] as const;
+
+function leadStageCrmFilter(stage: string) {
+  if (stage === 'viewing_scheduled' || stage === 'viewing_completed') return 'viewing';
+  if (stage === 'offer_made') return 'offer';
+  if (stage === 'deal_in_progress') return 'deal';
+  if (stage === 'closed_won') return 'won';
+  if (stage === 'closed_lost' || stage === 'spam' || stage === 'duplicate' || stage === 'archived')
+    return 'lost';
+  return stage;
+}
 
 function formatTimestamp(value: string | Date | null | undefined) {
   if (!value) return null;
@@ -103,8 +131,9 @@ export default function DevelopmentHome() {
   const [, setLocation] = useLocation();
   const developmentId = Number(params?.developmentId);
   const hasValidDevelopmentId = Number.isInteger(developmentId) && developmentId > 0;
+  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
   const homeQuery = trpc.developer.getDevelopmentHome.useQuery(
-    { developmentId, range: '30d' },
+    { developmentId, range },
     { enabled: hasValidDevelopmentId, retry: false, refetchOnWindowFocus: false },
   );
 
@@ -114,7 +143,8 @@ export default function DevelopmentHome() {
   if (homeQuery.error || !homeQuery.data)
     return <DevelopmentHomeError onRetry={homeQuery.refetch} />;
 
-  const { development, range } = homeQuery.data;
+  const { development, demand, funnel } = homeQuery.data;
+  const selectedRangeLabel = rangeLabels[demand.range];
   const location = [
     development.location.suburb,
     development.location.city,
@@ -128,6 +158,16 @@ export default function DevelopmentHome() {
   const latestReviewedAt = formatTimestamp(readiness.latestReview?.reviewedAt);
   const publishedAt = formatTimestamp(development.publishedAt);
   const openEditor = () => setLocation(`/developer/create-development?id=${development.id}`);
+  const openLeads = (params: Record<string, string | number | undefined> = {}) => {
+    const search = new URLSearchParams({
+      developmentId: String(development.id),
+      range: demand.range,
+    });
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) search.set(key, String(value));
+    }
+    setLocation(`/developer/leads?${search.toString()}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -164,12 +204,7 @@ export default function DevelopmentHome() {
             <Pencil className="mr-2 h-4 w-4" />
             Edit development
           </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              setLocation(`/developer/leads?developmentId=${development.id}&range=${range}`)
-            }
-          >
+          <Button variant="outline" onClick={() => openLeads()}>
             <Users className="mr-2 h-4 w-4" />
             Open leads
           </Button>
@@ -290,6 +325,192 @@ export default function DevelopmentHome() {
           </div>
         </CardContent>
       </Card>
+
+      <section className="space-y-4" aria-label="Captured demand and sales funnel">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">
+              Captured demand and sales funnel
+            </h2>
+            <p className="text-sm text-slate-600">
+              Listify-captured leads attached to this development during the selected period.
+            </p>
+          </div>
+          <div
+            className="flex gap-1 rounded-md border border-slate-200 p-1"
+            aria-label="Selected period"
+          >
+            {(Object.keys(rangeLabels) as Array<keyof typeof rangeLabels>).map(value => (
+              <Button
+                key={value}
+                size="sm"
+                variant={range === value ? 'default' : 'ghost'}
+                onClick={() => setRange(value)}
+              >
+                {value}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle>Demand</CardTitle>
+                <p className="text-sm text-slate-600">
+                  Captured channels from Listify lead records.
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => openLeads()}>
+                Open leads
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {demand.capturedLeadCount === 0 ? (
+                <p className="text-sm text-slate-600">
+                  No Listify-captured leads in the {selectedRangeLabel}.
+                </p>
+              ) : (
+                <>
+                  <dl className="grid grid-cols-2 gap-3">
+                    <div className="rounded-md bg-slate-50 p-3">
+                      <dt className="text-sm text-slate-600">
+                        Captured leads — {selectedRangeLabel}
+                      </dt>
+                      <dd className="mt-1 text-2xl font-semibold text-slate-950">
+                        {demand.capturedLeadCount}
+                      </dd>
+                    </div>
+                    <div className="rounded-md bg-slate-50 p-3">
+                      <dt className="text-sm text-slate-600">New leads — {selectedRangeLabel}</dt>
+                      <dd className="mt-1 text-2xl font-semibold text-slate-950">
+                        {demand.newLeadCount}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">Captured channels</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {demand.sources.map(source =>
+                        source.channel === 'Unknown source' ? (
+                          <span
+                            key={source.channel}
+                            className="inline-flex h-8 items-center rounded-md border border-input px-3 text-sm"
+                          >
+                            {source.channel} · {source.count}
+                          </span>
+                        ) : (
+                          <Button
+                            key={source.channel}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openLeads({ source: source.channel })}
+                          >
+                            {source.channel} · {source.count}
+                          </Button>
+                        ),
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">Recent captured leads</p>
+                    <ol className="mt-2 space-y-2">
+                      {demand.recentLeads.map(lead => (
+                        <li key={lead.id}>
+                          <Button
+                            className="h-auto w-full justify-between whitespace-normal px-3 py-2 text-left"
+                            variant="outline"
+                            onClick={() =>
+                              openLeads({
+                                stage: leadStageCrmFilter(lead.stage),
+                                leadId: lead.id,
+                              })
+                            }
+                          >
+                            <span>{lead.name || 'Unnamed lead'}</span>
+                            <span className="text-xs font-normal text-slate-500">
+                              {lead.source} · {formatTimestamp(lead.createdAt)}
+                            </span>
+                          </Button>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Sales Funnel</CardTitle>
+              <p className="text-sm text-slate-600">
+                Selected-period Listify-captured leads in the canonical developer workflow.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {demand.capturedLeadCount === 0 ? (
+                <p className="text-sm text-slate-600">
+                  No captured funnel activity in the {selectedRangeLabel}.
+                </p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    {funnelStages.map(stage => (
+                      <Button
+                        key={stage.key}
+                        className="h-auto justify-between px-3 py-2"
+                        variant="outline"
+                        onClick={() => openLeads({ stage: stage.crmStage })}
+                      >
+                        <span className="font-normal">{stage.label}</span>
+                        <span>{funnel.stages[stage.key]}</span>
+                      </Button>
+                    ))}
+                  </div>
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <dt className="text-slate-600">Open leads</dt>
+                      <dd className="font-semibold text-slate-950">{funnel.openLeadCount}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-600">Closed won</dt>
+                      <dd className="font-semibold text-slate-950">{funnel.closedWonCount}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-600">SLA warnings</dt>
+                      <dd>
+                        <Button
+                          className="h-auto p-0 font-semibold text-amber-800 hover:bg-transparent"
+                          variant="ghost"
+                          onClick={() => openLeads({ view: 'attention', sla: 'warning' })}
+                        >
+                          {funnel.slaWarningCount}
+                        </Button>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-600">SLA breaches</dt>
+                      <dd>
+                        <Button
+                          className="h-auto p-0 font-semibold text-rose-800 hover:bg-transparent"
+                          variant="ghost"
+                          onClick={() => openLeads({ view: 'attention', sla: 'breach' })}
+                        >
+                          {funnel.slaBreachCount}
+                        </Button>
+                      </dd>
+                    </div>
+                  </dl>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
     </div>
   );
 }

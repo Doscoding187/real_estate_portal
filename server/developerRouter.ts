@@ -25,6 +25,7 @@ import {
   getDeveloperDistributionSettings,
   getDeveloperFunnelAttention,
   getDeveloperFunnelKpis,
+  getOwnedDevelopmentHomeLeadSummary,
   listDeveloperLeads,
   logDeveloperLeadActivity,
   setDeveloperDistributionEnabled,
@@ -2127,6 +2128,12 @@ export const developerRouter = router({
         currentChangesRequestedFeedback,
       });
       const isPublished = Number(row.isPublished) === 1;
+      // A single server timestamp keeps all selected-period demand, funnel, and SLA values aligned.
+      const leadSummary = await getOwnedDevelopmentHomeLeadSummary({
+        developmentId: row.id,
+        range: input.range,
+        now: new Date(),
+      });
 
       return {
         development: {
@@ -2157,6 +2164,8 @@ export const developerRouter = router({
             feedback: developerVisibleReviewFeedback(review),
           })),
         },
+        demand: leadSummary.demand,
+        funnel: leadSummary.funnel,
         range: input.range,
       };
     }),

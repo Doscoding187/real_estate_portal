@@ -97,7 +97,8 @@ describe('Development Home route registration', () => {
     const source = readRepoFile('client/src/pages/developer/DevelopmentHome.tsx');
 
     expect(source).toContain('Number.isInteger(developmentId) && developmentId > 0');
-    expect(source).toContain("{ developmentId, range: '30d' }");
+    expect(source).toContain("useState<'7d' | '30d' | '90d'>('30d')");
+    expect(source).toContain('{ developmentId, range }');
     expect(source).toContain('if (!hasValidDevelopmentId) return <PrivateNotFound />;');
   });
 
