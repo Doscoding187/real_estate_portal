@@ -152,6 +152,12 @@ const AgencyOnboarding: React.FC = () => {
         planId: planSelection.selectedPlanId,
       });
 
+      if (agency.alreadyCreated) {
+        toast.info('Resuming agency setup', {
+          description: 'Your agency already exists. Continuing to the existing payment request.',
+        });
+      }
+
       // Make the upgraded agency-admin identity visible to route guards and workspace queries.
       await Promise.all([
         utils.auth.me.invalidate(),
@@ -162,7 +168,8 @@ const AgencyOnboarding: React.FC = () => {
 
       // Step 2: Issue a manual EFT invoice and hand off to billing.
       const checkout = await createCheckoutMutation.mutateAsync({
-        planId: planSelection.selectedPlanId,
+        // A retry must use the server-owned subscription plan, not stale form state.
+        planId: agency.alreadyCreated ? agency.planId : planSelection.selectedPlanId,
         successUrl: `${window.location.origin}/agency/onboarding/success?agency_id=${agency.agencyId}`,
         cancelUrl: onboardingConfig.urls.cancel(4),
       });

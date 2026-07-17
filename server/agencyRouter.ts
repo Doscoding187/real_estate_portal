@@ -22,7 +22,9 @@ import {
   users,
   notifications,
   agencyBranding,
+  agencyAgentMemberships,
   invitations,
+  planEntitlements,
   listings,
   listingApprovalQueue,
   listingMedia,
@@ -60,7 +62,12 @@ import {
 } from './db';
 import { logAudit } from './_core/auditLog';
 import { requireUser } from './_core/requireUser';
-import { isPaidSubscriptionEntitled, setSubscriptionPlanForOwner } from './services/planAccessService';
+import {
+  getEntitlementNumber,
+  isPaidSubscriptionEntitled,
+  setSubscriptionPlanForOwner,
+} from './services/planAccessService';
+import { getManualEftBillingAmount } from './services/billingFoundationService';
 import {
   assertListingPublicationEntitled,
   ListingPublicationEntitlementError,
@@ -3689,7 +3696,9 @@ export const agencyRouter = router({
   }),
 
   /**
-   * Create agency during onboarding (authenticated users only)
+   * Creates the one agency a verified prospective principal may bootstrap.
+   * The persisted user row is locked so retries and concurrent requests cannot
+   * create competing agencies for the same principal.
    */
   createOnboarding: protectedProcedure
     .input(
@@ -3711,7 +3720,10 @@ export const agencyRouter = router({
           tagline: z.string().max(100, 'Tagline must be less than 100 characters').optional(),
           companyName: z.string().min(2, 'Company name is required'),
         }),
-        teamEmails: z.array(z.string().email()).optional().default([]),
+        teamEmails: z
+          .array(z.string().trim().email())
+          .optional()
+          .default([]),
         planId: z.number(),
       }),
     )
@@ -3720,119 +3732,216 @@ export const agencyRouter = router({
       if (!db) {
         throw new Error('Database not available');
       }
-      const user = requireUser(ctx);
+      const authenticatedUser = requireUser(ctx);
 
-      // 1. Validate plan exists and is active
-      const [plan] = await db.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
+      const result = await db.transaction(async tx => {
+        await tx.execute(sql`SELECT id FROM users WHERE id = ${authenticatedUser.id} FOR UPDATE`);
+        const [principal] = await tx.select().from(users).where(eq(users.id, authenticatedUser.id)).limit(1);
+        if (!principal) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Agency onboarding requires a valid principal account.' });
+        }
+        if (Number(principal.emailVerified) !== 1) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Verify your email before creating an agency.',
+          });
+        }
+        if (principal.role !== 'agency_admin') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only a registered agency principal can create an agency.',
+          });
+        }
+        const normalizedTeamEmails = Array.from(
+          new Set(
+            input.teamEmails
+              .map(email => email.trim().toLowerCase())
+              .filter(Boolean)
+              .filter(email => email !== String(principal.email || '').trim().toLowerCase()),
+          ),
+        );
 
-      if (!plan || !plan.isActive) {
-        throw new Error('Selected plan is not available');
-      }
+        const linkedAgents = await tx
+          .select({ id: agents.id, agencyId: agents.agencyId })
+          .from(agents)
+          .where(eq(agents.userId, principal.id));
+        if (linkedAgents.length) {
+          const memberships = await tx
+            .select({ id: agencyAgentMemberships.id })
+            .from(agencyAgentMemberships)
+            .where(inArray(agencyAgentMemberships.agentId, linkedAgents.map(agent => agent.id)));
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              memberships.length || linkedAgents.some(agent => agent.agencyId)
+                ? 'This account already has an agency membership and cannot create a new agency.'
+                : 'This account is already an agent identity and cannot become an agency principal through onboarding.',
+          });
+        }
 
-      // 2. Check if agency name or email already exists
-      const existing = await db
-        .select()
-        .from(agencies)
-        .where(
-          or(eq(agencies.name, input.basicInfo.name), eq(agencies.email, input.basicInfo.email)),
-        )
-        .limit(1);
+        if (principal.agencyId) {
+          const [[existingAgency], [existingBranding], [existingSubscription]] = await Promise.all([
+            tx.select().from(agencies).where(eq(agencies.id, principal.agencyId)).limit(1),
+            tx.select().from(agencyBranding).where(eq(agencyBranding.agencyId, principal.agencyId)).limit(1),
+            tx
+              .select()
+              .from(subscriptions)
+              .where(
+                and(
+                  eq(subscriptions.ownerType, 'agency'),
+                  eq(subscriptions.ownerId, principal.agencyId),
+                ),
+              )
+              .limit(1),
+          ]);
+          if (
+            !existingAgency ||
+            !existingBranding ||
+            !existingSubscription ||
+            !Number(existingSubscription.planId || 0)
+          ) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'This account is linked to an incomplete agency onboarding record. Contact support to resolve it.',
+            });
+          }
+          return {
+            agencyId: Number(existingAgency.id),
+            slug: existingAgency.slug,
+            subscriptionId: Number(existingSubscription.id),
+            planId: Number(existingSubscription.planId || 0),
+            alreadyCreated: true,
+          };
+        }
 
-      if (existing.length > 0) {
-        throw new Error('Agency name or email already registered');
-      }
+        const [plan] = await tx.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
+        if (!plan || Number(plan.isActive) !== 1 || plan.segment !== 'agency') {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Select an active agency plan.' });
+        }
+        if (!['month', 'year'].includes(String(plan.interval))) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has an unsupported billing interval.' });
+        }
+        if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has no valid manual-EFT price.' });
+        }
+        const entitlementRows = await tx
+          .select({ featureKey: planEntitlements.featureKey, valueJson: planEntitlements.valueJson })
+          .from(planEntitlements)
+          .where(eq(planEntitlements.planId, plan.id));
+        const entitlements = Object.fromEntries(
+          entitlementRows.map(row => [row.featureKey, row.valueJson]),
+        );
+        if (getEntitlementNumber(entitlements, 'max_active_listings', 0) <= 0) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'The selected agency plan does not include listing publication capacity.',
+          });
+        }
 
-      // 3. Generate slug from name
-      const slug = input.basicInfo.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
+        const existing = await tx
+          .select()
+          .from(agencies)
+          .where(
+            or(eq(agencies.name, input.basicInfo.name), eq(agencies.email, input.basicInfo.email)),
+          )
+          .limit(1);
+        if (existing.length) {
+          throw new TRPCError({ code: 'CONFLICT', message: 'Agency name or email already registered.' });
+        }
 
-      // Check slug uniqueness
-      const [slugExists] = await db.select().from(agencies).where(eq(agencies.slug, slug)).limit(1);
-      const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
+        const slug = input.basicInfo.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        const [slugExists] = await tx.select().from(agencies).where(eq(agencies.slug, slug)).limit(1);
+        const finalSlug = slugExists ? `${slug}-${Date.now()}` : slug;
+        const [agencyResult] = await tx.insert(agencies).values({
+          name: input.basicInfo.name,
+          slug: finalSlug,
+          description: input.basicInfo.description,
+          email: input.basicInfo.email,
+          phone: input.basicInfo.phone || null,
+          website: input.basicInfo.website || null,
+          address: input.basicInfo.address,
+          city: input.basicInfo.city,
+          province: input.basicInfo.province,
+          logo: input.branding.logoUrl || null,
+          subscriptionPlan: 'free',
+          subscriptionStatus: 'pending_payment',
+          isVerified: 0,
+        });
+        const agencyId = Number(agencyResult.insertId);
 
-      // 4. Create agency with pending_payment status
-      const [agencyResult] = await db.insert(agencies).values({
-        name: input.basicInfo.name,
-        slug: finalSlug,
-        description: input.basicInfo.description,
-        email: input.basicInfo.email,
-        phone: input.basicInfo.phone || null,
-        website: input.basicInfo.website || null,
-        address: input.basicInfo.address,
-        city: input.basicInfo.city,
-        province: input.basicInfo.province,
-        logo: input.branding.logoUrl || null,
-        subscriptionPlan: 'free',
-        subscriptionStatus: 'pending_payment', // Will be updated to 'active' after payment
-        isVerified: 0,
-      });
-
-      const agencyId = Number(agencyResult.insertId);
-
-      // 5. Create agency branding record
-      await db.insert(agencyBranding).values({
-        agencyId,
-        primaryColor: input.branding.primaryColor,
-        secondaryColor: input.branding.secondaryColor,
-        companyName: input.branding.companyName,
-        tagline: input.branding.tagline || null,
-        logoUrl: input.branding.logoUrl || null,
-        isEnabled: 1,
-      });
-
-      // 6. Update user to be agency_admin of this agency
-      const principalPhone = input.basicInfo.phone?.trim();
-      await db
-        .update(users)
-        .set({
+        await tx.insert(agencyBranding).values({
           agencyId,
-          role: 'agency_admin',
-          ...(principalPhone ? { phone: principalPhone } : {}),
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, user.id));
+          primaryColor: input.branding.primaryColor,
+          secondaryColor: input.branding.secondaryColor,
+          companyName: input.branding.companyName,
+          tagline: input.branding.tagline || null,
+          logoUrl: input.branding.logoUrl || null,
+          isEnabled: 1,
+        });
 
-      // 7. Persist canonical agency plan access. Trial state is not treated as billing-active.
-      await setSubscriptionPlanForOwner({
-        ownerType: 'agency',
-        ownerId: agencyId,
-        planId: input.planId,
-        status: 'trial',
-        metadata: {
-          source: 'agency_onboarding',
-          legacy_agency_subscription_status: 'pending_payment',
-        },
-        actorUserId: user.id,
+        const principalPhone = input.basicInfo.phone?.trim();
+        await tx
+          .update(users)
+          .set({
+            agencyId,
+            role: 'agency_admin',
+            ...(principalPhone ? { phone: principalPhone } : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, principal.id));
+
+        const subscription = await setSubscriptionPlanForOwner({
+          ownerType: 'agency',
+          ownerId: agencyId,
+          planId: plan.id,
+          status: 'trial',
+          metadata: {
+            source: 'agency_onboarding',
+            legacy_agency_subscription_status: 'pending_payment',
+          },
+          actorUserId: principal.id,
+          db: tx,
+        });
+        if (!subscription) throw new Error('Unable to create the canonical agency subscription.');
+
+        if (normalizedTeamEmails.length) {
+          await tx.insert(invitations).values(
+            normalizedTeamEmails.map(email => ({
+              agencyId,
+              email,
+              invitedBy: principal.id,
+              role: 'agent',
+              token: randomBytes(32).toString('hex'),
+              status: 'pending' as const,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            })),
+          );
+        }
+
+        return {
+          agencyId,
+          slug: finalSlug,
+          subscriptionId: subscription.id,
+          planId: plan.id,
+          alreadyCreated: false,
+        };
       });
 
-      // 8. Store team invitations (will be sent after payment)
-      if (input.teamEmails && input.teamEmails.length > 0) {
-        const invitationValues = input.teamEmails.map(email => ({
-          agencyId,
-          email,
-          invitedBy: user.id,
-          role: 'agent',
-          token: randomBytes(32).toString('hex'),
-          status: 'pending' as const,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        }));
-
-        await db.insert(invitations).values(invitationValues);
+      if (!result.alreadyCreated) {
+        await logAudit({
+          userId: authenticatedUser.id,
+          action: 'agency.create_onboarding',
+          targetType: 'agency',
+          targetId: result.agencyId,
+          metadata: { planId: result.planId },
+          req: ctx.req,
+        });
       }
 
-      // 9. Audit log
-      await logAudit({
-        userId: user.id,
-        action: 'agency.create_onboarding',
-        targetType: 'agency',
-        targetId: agencyId,
-        metadata: { planId: input.planId },
-        req: ctx.req,
-      });
-
-      return { agencyId, slug: finalSlug };
+      return result;
     }),
 
   /**
