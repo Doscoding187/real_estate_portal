@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { originalAppUrl } = vi.hoisted(() => {
+  const originalAppUrl = process.env.APP_URL;
+  process.env.APP_URL = 'http://localhost:3009';
+
+  return { originalAppUrl };
+});
 
 const {
   mockGetDb,
@@ -69,6 +76,14 @@ const publicOriginEnvKeys = [
   'VITE_API_BASE_URL',
   'PORT',
 ] as const;
+
+afterAll(() => {
+  if (originalAppUrl === undefined) {
+    delete process.env.APP_URL;
+  } else {
+    process.env.APP_URL = originalAppUrl;
+  }
+});
 
 describe('savedSearchNotificationEngine', () => {
   beforeEach(() => {
