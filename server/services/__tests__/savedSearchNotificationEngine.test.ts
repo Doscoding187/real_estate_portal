@@ -1,4 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { originalAppUrl } = vi.hoisted(() => {
+  const originalAppUrl = process.env.APP_URL;
+  process.env.APP_URL = 'http://localhost:3009';
+
+  return { originalAppUrl };
+});
 
 const {
   mockGetDb,
@@ -57,6 +64,26 @@ vi.mock('../../_core/emailService', () => ({
 }));
 
 import { savedSearchNotificationEngine } from '../savedSearchNotificationEngine';
+
+const publicOriginEnvKeys = [
+  'APP_URL',
+  'FRONTEND_URL',
+  'BASE_URL',
+  'NEXT_PUBLIC_APP_URL',
+  'VITE_APP_URL',
+  'API_URL',
+  'VITE_API_URL',
+  'VITE_API_BASE_URL',
+  'PORT',
+] as const;
+
+afterAll(() => {
+  if (originalAppUrl === undefined) {
+    delete process.env.APP_URL;
+  } else {
+    process.env.APP_URL = originalAppUrl;
+  }
+});
 
 describe('savedSearchNotificationEngine', () => {
   beforeEach(() => {
@@ -186,16 +213,18 @@ describe('savedSearchNotificationEngine', () => {
     );
     expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        text: expect.stringContaining('Pause alerts: http://localhost:5173/saved-search/manage?token='),
+        text: expect.stringContaining('Pause alerts: http://localhost:3009/saved-search/manage?token='),
         html: expect.stringContaining('Pause alerts'),
       }),
     );
     expect(mockSendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
-        text: expect.stringContaining('Turn off email alerts: http://localhost:5173/saved-search/manage?token='),
+        text: expect.stringContaining('Turn off email alerts: http://localhost:3009/saved-search/manage?token='),
         html: expect.stringContaining('Turn off email alerts'),
       }),
     );
+    const [{ text: emailText }] = mockSendEmail.mock.calls[0];
+    expect(emailText).not.toContain('http://localhost:5001');
     expect(result).toMatchObject({
       scannedSearches: 1,
       dueSearches: 1,
@@ -214,6 +243,58 @@ describe('savedSearchNotificationEngine', () => {
       newMatchCount: 2,
       actionUrl: '/property/55',
     });
+  });
+
+  it('prefers and normalizes the explicit public origin for saved-search management links', async () => {
+    const originalEnv = Object.fromEntries(
+      publicOriginEnvKeys.map(key => [key, process.env[key]]),
+    ) as Record<(typeof publicOriginEnvKeys)[number], string | undefined>;
+
+    try {
+      process.env.APP_URL = 'https://portal.example.test/property-listify/';
+      process.env.FRONTEND_URL = 'https://frontend.example.test';
+      process.env.BASE_URL = 'https://base.example.test';
+      process.env.NEXT_PUBLIC_APP_URL = 'https://next.example.test';
+      process.env.VITE_APP_URL = 'http://localhost:3009';
+      process.env.API_URL = 'http://api.example.test:5001';
+      process.env.VITE_API_URL = 'http://vite-api.example.test:5001';
+      process.env.VITE_API_BASE_URL = 'http://vite-api-base.example.test:5001';
+      process.env.PORT = '5001';
+
+      vi.resetModules();
+      const { savedSearchNotificationEngine: reloadedNotificationEngine } = await import(
+        '../savedSearchNotificationEngine'
+      );
+
+      mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+      await reloadedNotificationEngine.processDueNotifications({
+        userId: 7,
+        now: new Date('2026-03-21T10:00:00.000Z'),
+      });
+
+      const [{ text: emailText }] = mockSendEmail.mock.calls[0];
+      const pauseUrlMatch = emailText.match(/Pause alerts: (https?:\/\/\S+)/);
+      expect(pauseUrlMatch?.[1]).toBeDefined();
+
+      const pauseUrl = new URL(pauseUrlMatch![1]);
+      expect(pauseUrl.protocol).toBe('https:');
+      expect(pauseUrl.hostname).toBe('portal.example.test');
+      expect(pauseUrl.pathname).toBe('/saved-search/manage');
+      expect(pauseUrl.searchParams.get('token')).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+      expect(pauseUrl.href).not.toContain('property-listify//saved-search');
+      expect(pauseUrl.href).not.toContain('localhost:3009');
+      expect(pauseUrl.href).not.toContain(':5001');
+    } finally {
+      for (const key of publicOriginEnvKeys) {
+        const value = originalEnv[key];
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+      vi.resetModules();
+    }
   });
 
   it('skips notification emission when no new matches exist since lastNotifiedAt', async () => {
