@@ -247,11 +247,11 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
     >
       {/* Logo/Brand */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-soft">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 to-indigo-600 flex items-center justify-center shadow-soft">
           <span className="text-white font-bold text-sm">{developerInitials}</span>
         </div>
         <div>
-          <h1 className="text-base font-semibold text-gray-900">{developerName}</h1>
+          <p className="text-base font-semibold text-gray-900">{developerName}</p>
           <p className="text-xs text-gray-500">Mission Control</p>
         </div>
       </div>
@@ -278,9 +278,9 @@ export function EnhancedSidebar({ className }: EnhancedSidebarProps) {
                     )}
                   </button>
                 ) : (
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     {section.label}
-                  </h3>
+                  </p>
                 )}
               </div>
 

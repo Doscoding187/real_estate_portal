@@ -130,8 +130,7 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
   it('renders owned development identity and only supported actions', () => {
     render(<DevelopmentHome />);
 
-    expect(screen.getByRole('heading', { name: 'Development Home' })).toBeInTheDocument();
-    expect(screen.getByText('Harbour Heights')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Harbour Heights', level: 1 })).toBeInTheDocument();
     expect(screen.getByText('Sea Point, Cape Town, Western Cape')).toBeInTheDocument();
     expect(screen.getAllByText('Live').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Edit development' })).toBeInTheDocument();

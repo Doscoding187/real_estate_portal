@@ -38,17 +38,18 @@ export function DeveloperTopNav() {
   const messageCount = 0; // TODO: Get from backend
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-100 bg-white/80 backdrop-blur-xl px-6 shadow-soft transition-all duration-200">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-100 bg-white/80 px-3 shadow-soft transition-all duration-200 sm:px-6">
       {/* Left: Quick Actions */}
       <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="default"
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-soft hover:shadow-hover rounded-xl transition-all duration-200"
+              aria-label="Quick Action"
+              className="bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 text-white shadow-soft hover:shadow-hover rounded-xl transition-all duration-200"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Quick Action
+              <Plus className="mr-0 h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Quick Action</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56 rounded-xl shadow-hover">
@@ -78,11 +79,12 @@ export function DeveloperTopNav() {
       </div>
 
       {/* Center: Search */}
-      <div className="flex-1 max-w-2xl mx-6">
+      <div className="mx-6 hidden max-w-2xl flex-1 sm:block">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
+            aria-label="Search developments, leads, units"
             placeholder="Search developments, leads, units..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -99,6 +101,7 @@ export function DeveloperTopNav() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Notifications"
               className="relative rounded-xl hover:bg-gray-100 transition-colors"
             >
               <Bell className="h-5 w-5 text-gray-600" />
@@ -137,6 +140,7 @@ export function DeveloperTopNav() {
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Messages"
               className="relative rounded-xl hover:bg-gray-100 transition-colors"
             >
               <MessageSquare className="h-5 w-5 text-gray-600" />
@@ -174,9 +178,9 @@ export function DeveloperTopNav() {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center gap-2 rounded-xl hover:bg-gray-100 transition-colors px-3"
+              className="flex items-center gap-2 rounded-xl px-1 transition-colors hover:bg-gray-100 sm:px-3"
             >
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-soft">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-700 to-blue-800 flex items-center justify-center text-white font-semibold text-sm shadow-soft">
                 {user?.name?.substring(0, 2).toUpperCase() || 'DE'}
               </div>
               <span className="text-sm font-medium text-gray-700 hidden md:block">

@@ -83,7 +83,8 @@ function formatAmount(value: number | null) {
 
 function DevelopmentHomeLoading() {
   return (
-    <div className="space-y-6" aria-label="Loading Development Home">
+    <div className="space-y-6" aria-label="Loading Development Home" role="status">
+      <span className="sr-only">Loading Development Home</span>
       <div className="h-10 w-48 animate-pulse rounded bg-slate-200" />
       <Card>
         <CardContent className="space-y-4 p-6">
@@ -122,7 +123,11 @@ function DevelopmentHomeError({ onRetry }: { onRetry: () => void }) {
       <CardContent className="space-y-4 p-8 text-center">
         <h1 className="text-xl font-semibold text-slate-900">Unable to load Development Home</h1>
         <p className="text-sm text-slate-600">Please try again. No development data was loaded.</p>
-        <div className="flex flex-wrap justify-center gap-2">
+        <div
+          className="flex flex-wrap justify-center gap-2"
+          role="group"
+          aria-label="Error actions"
+        >
           <Button onClick={onRetry}>Retry</Button>
           <Link
             href="/developer/developments"
@@ -181,8 +186,8 @@ export default function DevelopmentHome() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex min-w-0 flex-col gap-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link
             href="/developer/developments"
@@ -191,17 +196,17 @@ export default function DevelopmentHome() {
             <ArrowLeft className="mr-1 h-4 w-4" />
             Developments
           </Link>
-          <h1 className="mt-2 text-3xl font-bold text-slate-950">Development Home</h1>
+          <p className="mt-2 text-sm font-medium text-slate-600">Development Home</p>
+          <h1 className="text-3xl font-bold text-slate-950 break-words">{development.name}</h1>
         </div>
         <Badge className={lifecycleClasses[lifecycleState]}>
           {lifecycleLabels[lifecycleState]}
         </Badge>
-      </div>
+      </header>
 
       <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-2xl">{development.name}</CardTitle>
+          <div className="min-w-0 space-y-1">
             <p className="text-sm text-slate-600">
               {location || development.location.address || 'Location not available'}
             </p>
@@ -231,19 +236,21 @@ export default function DevelopmentHome() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="order-1 sm:order-2">
         <CardHeader>
-          <CardTitle>Requires Attention</CardTitle>
+          <h2 className="text-fluid-h3 font-semibold leading-none tracking-tight">
+            Requires Attention
+          </h2>
         </CardHeader>
         <CardContent>
           {attention.items.length === 0 ? (
             <p className="text-sm text-slate-600">Nothing requires attention right now.</p>
           ) : (
             <ul className="space-y-3" aria-label="Requires Attention items">
-              {attention.items.map(item => (
+              {attention.items.map((item, index) => (
                 <li
                   key={item.type}
-                  className={`rounded-md border p-3 ${
+                  className={`rounded-md border p-3 ${index > 2 ? 'hidden sm:list-item' : ''} ${
                     item.severity === 'critical'
                       ? 'border-rose-200 bg-rose-50'
                       : 'border-amber-200 bg-amber-50'
@@ -273,10 +280,12 @@ export default function DevelopmentHome() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="order-2 sm:order-1">
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <CardTitle>Market Readiness</CardTitle>
+            <h2 className="text-fluid-h3 font-semibold leading-none tracking-tight">
+              Market Readiness
+            </h2>
             <p className="text-sm text-slate-600">{readinessExplanations[readiness.state]}</p>
           </div>
           <Badge className={lifecycleClasses[readiness.state]}>
@@ -379,10 +388,12 @@ export default function DevelopmentHome() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="order-4">
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <CardTitle>Aggregate Inventory</CardTitle>
+            <h2 className="text-fluid-h3 font-semibold leading-none tracking-tight">
+              Aggregate Inventory
+            </h2>
             <p className="text-sm text-slate-600">
               Figures reflect the aggregate unit-type catalogue configured in Listify.
             </p>
@@ -477,7 +488,7 @@ export default function DevelopmentHome() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="order-5">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
           <p className="text-sm font-medium text-slate-900">
             {distribution.status === 'enabled' && distribution.eligiblePartnerCount !== null
@@ -496,7 +507,7 @@ export default function DevelopmentHome() {
         </CardContent>
       </Card>
 
-      <section className="space-y-4" aria-label="Captured demand and sales funnel">
+      <section className="order-3 space-y-4" aria-label="Captured demand and sales funnel">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-slate-950">
@@ -508,13 +519,16 @@ export default function DevelopmentHome() {
           </div>
           <div
             className="flex gap-1 rounded-md border border-slate-200 p-1"
-            aria-label="Selected period"
+            aria-label="Captured-lead period"
+            role="group"
           >
             {(Object.keys(rangeLabels) as Array<keyof typeof rangeLabels>).map(value => (
               <Button
                 key={value}
                 size="sm"
                 variant={range === value ? 'default' : 'ghost'}
+                aria-pressed={range === value}
+                aria-label={`Show captured leads for the ${rangeLabels[value]}`}
                 onClick={() => setRange(value)}
               >
                 {value}
@@ -588,8 +602,8 @@ export default function DevelopmentHome() {
                   <div>
                     <p className="text-sm font-medium text-slate-900">Recent captured leads</p>
                     <ol className="mt-2 space-y-2">
-                      {demand.recentLeads.map(lead => (
-                        <li key={lead.id}>
+                      {demand.recentLeads.map((lead, index) => (
+                        <li key={lead.id} className={index > 2 ? 'hidden sm:list-item' : ''}>
                           <Button
                             className="h-auto w-full justify-between whitespace-normal px-3 py-2 text-left"
                             variant="outline"
