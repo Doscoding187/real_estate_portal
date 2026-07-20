@@ -21,6 +21,8 @@ describe('database security containment contract', () => {
       'fix-schema.ts',
       'scripts/debug_service.ts',
       'scripts/reset-prod-tidb.mjs',
+      'run-migrations.mjs',
+      'server/migrations/tidbServerlessMigration.ts',
     ];
 
     for (const relativePath of prohibitedFiles) {
@@ -38,6 +40,32 @@ describe('database security containment contract', () => {
 
     expect(packageJson.scripts).not.toHaveProperty('reset:prod');
     expect(JSON.stringify(packageJson)).not.toContain('reset-prod-tidb');
+    expect(packageJson.scripts).not.toHaveProperty(
+      'migration:serverless',
+    );
+    expect(packageJson.scripts).not.toHaveProperty(
+      'migration:serverless:staging',
+    );
+    expect(packageJson.scripts).not.toHaveProperty(
+      'migration:serverless:production',
+    );
+    expect(JSON.stringify(packageJson)).not.toContain(
+      'tidbServerlessMigration',
+    );
+  });
+
+  it('documents only the canonical production migration pipeline', () => {
+    const migrationLock = readRepoFile('scripts/MIGRATION_LOCK.md');
+
+    expect(migrationLock).toContain(
+      'pnpm release:predeploy:production',
+    );
+    expect(migrationLock).not.toContain(
+      'migration:serverless',
+    );
+    expect(migrationLock).not.toContain(
+      'tidbServerlessMigration',
+    );
   });
 
   it('does not mount the legacy partner subscription API', () => {
@@ -65,6 +93,32 @@ describe('database security containment contract', () => {
       expect(source, relativePath).not.toMatch(connectionPattern);
       expect(source, relativePath).not.toMatch(/tidbcloud\.com/i);
     }
+  });
+
+  it('keeps runtime and canonical migrations on the shared TLS authority', () => {
+    const runtimeConnection = readRepoFile(
+      'server/db-connection.ts',
+    );
+    const migrationRunner = readRepoFile(
+      'server/migrations/runSqlMigrations.ts',
+    );
+
+    expect(runtimeConnection).toContain(
+      'buildMysqlConnectionSecurityConfig',
+    );
+    expect(migrationRunner).toContain(
+      'buildMysqlConnectionSecurityConfig',
+    );
+
+    expect(runtimeConnection).not.toContain(
+      'URL parsing warning',
+    );
+    expect(runtimeConnection).not.toContain(
+      'rejectUnauthorized: false',
+    );
+    expect(migrationRunner).not.toContain(
+      'let sslConfig: Record<string, unknown> = { rejectUnauthorized: false }',
+    );
   });
 
   it('ignores local VS Code settings that may contain connection profiles', () => {

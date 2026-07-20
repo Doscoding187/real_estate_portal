@@ -10,10 +10,10 @@ The `drizzle/schema.ts` file defines the application's view of the data, but the
 To apply migrations in PRODUCTION, you must run:
 
 ```bash
-pnpm migration:serverless:production
+pnpm release:predeploy:production
 ```
 
-(Or the equivalent command configured in your deployment pipeline for `tidbServerlessMigration.ts` with `NODE_ENV=production`)
+This runs the production launch preflight and the canonical `pnpm db:migrate` migration chain.
 
 ## 🚫 Forbidden Actions
 
