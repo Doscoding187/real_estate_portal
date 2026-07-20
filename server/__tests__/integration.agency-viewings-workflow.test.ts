@@ -526,7 +526,11 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
       agencyId: seed.agencyId,
     });
 
-    const targetDay = '2026-07-21';
+    const targetDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const targetDay = agencyDateKey(targetDate);
+    const followingDay = agencyDateKey(
+      new Date(targetDate.getTime() + 24 * 60 * 60 * 1000),
+    );
     const first = await caller.createViewing({
       leadId: seed.leadId,
       listingId: seed.listingId,
@@ -545,7 +549,7 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
       leadId: seed.tertiaryLeadId,
       listingId: seed.listingId,
       agentId: seed.agentId,
-      scheduledAt: jhbIso('2026-07-22', '00:30:00'),
+      scheduledAt: jhbIso(followingDay, '00:30:00'),
       status: 'confirmed',
     });
     createdState.showingIds.push(first.viewingId, second.viewingId, nextDay.viewingId);
