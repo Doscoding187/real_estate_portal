@@ -115,15 +115,15 @@ Your application has Database Guards that prevent environment mismatches:
 
 ```
 PRODUCTION:
-DATABASE_URL=mysql://292qWmvn2YGy2jW.listify_prod:B%3Axyze(v%3EHKad32rC2%7C@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_property_sa?ssl={%22rejectUnauthorized%22:true}
+> Database connection values must be supplied through protected deployment environment variables and are not stored in this repository.
 NODE_ENV=production
 
 STAGING:
-DATABASE_URL=mysql://292qWmvn2YGy2jW.listify_stg:6%C2%A3IAZVGx%26f*D871876@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_staging?ssl={%22rejectUnauthorized%22:true}
+> Database connection values must be supplied through protected deployment environment variables and are not stored in this repository.
 NODE_ENV=staging
 
 TESTING:
-DATABASE_URL=mysql://292qWmvn2YGy2jW.listify_test:9A%7Coa3J.C'r1z@xJ]Qw@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/listify_test?ssl={%22rejectUnauthorized%22:true}
+> Database connection values must be supplied through protected deployment environment variables and are not stored in this repository.
 NODE_ENV=test
 ```
 

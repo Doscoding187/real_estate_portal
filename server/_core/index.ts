@@ -246,7 +246,8 @@ async function startServer() {
   await mountOptionalRouter(app, '/api/partner-analytics', '../partnerAnalyticsRouter');
   await mountOptionalRouter(app, '/api/content', '../contentRouter');
   await mountOptionalRouter(app, '/api/topics', '../topicsRouter');
-  await mountOptionalRouter(app, '/api/subscriptions', '../partnerSubscriptionRouter');
+  // Legacy partner subscription routes are intentionally disabled.
+  // They require canonical authentication, ownership, and entitlement controls before remounting.
   await mountOptionalRouter(app, '/api/boosts', '../partnerBoostCampaignRouter');
   await mountOptionalRouter(app, '/api/leads', '../partnerLeadRouter');
 
