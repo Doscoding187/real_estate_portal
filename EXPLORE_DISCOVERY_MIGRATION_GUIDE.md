@@ -33,17 +33,17 @@ The migration creates 11 tables for the Explore Discovery Engine:
 Add your TiDB connection string to `.env`:
 
 ```env
-DATABASE_URL=mysql://username:password@host:port/database?ssl={"rejectUnauthorized":true}
+> Database connection values must be supplied through protected deployment environment variables and are not stored in this repository.
 ```
 
 **TiDB Connection String Format:**
 ```
-mysql://[username]:[password]@[host]:[port]/[database]?ssl={"rejectUnauthorized":true}
+> Database connection values must be supplied through protected deployment environment variables and are not stored in this repository.
 ```
 
 Example:
 ```
-DATABASE_URL=mysql://user123:pass456@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/real_estate_portal?ssl={"rejectUnauthorized":true}
+> Database connection values must be supplied through protected deployment environment variables and are not stored in this repository.
 ```
 
 ### 2. Run the Migration

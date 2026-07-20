@@ -22,7 +22,10 @@ describe('buildMysqlMigrationConnectionConfig', () => {
     );
 
     expect(config.uri).toBe('mysql://user:pass@host:4000/db');
-    expect(config.ssl).toEqual({ rejectUnauthorized: true });
+    expect(config.ssl).toEqual({
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2',
+    });
     expect(schemaWitnesses(`-- A comment must not become a schema witness.
 ALTER TABLE listings ADD INDEX idx_listings_brand_profile_id (brand_profile_id);`)).toEqual([
       { kind: 'index', table: 'listings', name: 'idx_listings_brand_profile_id' },
@@ -53,7 +56,10 @@ ALTER TABLE showings DROP COLUMN scheduledTime;`)).toEqual([
     );
 
     expect(config.uri).toBe('mysql://user:pass@host:4000/db');
-    expect(config.ssl).toEqual({ minVersion: 'TLSv1.2' });
+    expect(config.ssl).toEqual({
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: true,
+    });
   });
 
   it('treats sslaccept=strict as strict certificate validation', () => {
@@ -62,7 +68,28 @@ ALTER TABLE showings DROP COLUMN scheduledTime;`)).toEqual([
     );
 
     expect(config.uri).toBe('mysql://user:pass@host:4000/db');
-    expect(config.ssl).toEqual({ rejectUnauthorized: true });
+    expect(config.ssl).toEqual({
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2',
+    });
+  });
+
+  it('rejects insecure TLS settings for production migrations', () => {
+    expect(() =>
+      buildMysqlMigrationConnectionConfig(
+        'mysql://user:pass@host:4000/listify_property_sa?rejectUnauthorized=false',
+        'production',
+      ),
+    ).toThrow(/Certificate verification cannot be disabled/);
+  });
+
+  it('allows local development migrations without TLS', () => {
+    const config = buildMysqlMigrationConnectionConfig(
+      'mysql://listify_app@127.0.0.1:3307/listify_local',
+      'development',
+    );
+
+    expect(config.ssl).toBeUndefined();
   });
 
   it('detects the legacy showings backfill statement that depends on showings.listingId', () => {

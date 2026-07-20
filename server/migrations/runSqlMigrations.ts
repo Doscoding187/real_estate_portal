@@ -5,8 +5,9 @@ import { fileURLToPath } from 'url';
 import { connect } from '@tidbcloud/serverless';
 import mysql from 'mysql2/promise';
 import { loadAppRuntimeEnv } from '../_core/runtimeBootstrap';
+import { buildMysqlConnectionSecurityConfig } from '../_core/databaseTls';
 
-loadAppRuntimeEnv({ cwd: process.cwd() });
+const { runtimeEnv } = loadAppRuntimeEnv({ cwd: process.cwd() });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,63 +36,22 @@ function isMysqlUrl(url: string): boolean {
   return /^mysql:\/\//i.test(url);
 }
 
-function parseBooleanQueryParam(value: string | null): boolean | undefined {
-  if (!value) return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (normalized === 'true') return true;
-  if (normalized === 'false') return false;
-  return undefined;
-}
 
-export function buildMysqlMigrationConnectionConfig(databaseUrl: string) {
-  const parsedUrl = new URL(databaseUrl);
-  const sslParam = parsedUrl.searchParams.get('ssl');
-  const rejectUnauthorizedParam = parsedUrl.searchParams.get('rejectUnauthorized');
-  const sslAcceptParam = parsedUrl.searchParams.get('sslaccept');
-
-  parsedUrl.searchParams.delete('ssl');
-  parsedUrl.searchParams.delete('rejectUnauthorized');
-  parsedUrl.searchParams.delete('sslaccept');
-
-  const explicitRejectUnauthorized = parseBooleanQueryParam(rejectUnauthorizedParam);
-  const normalizedSslAccept = sslAcceptParam?.trim().toLowerCase();
-  let sslConfig: Record<string, unknown> = { rejectUnauthorized: false };
-
-  if (sslParam) {
-    const normalizedSslParam = sslParam.trim();
-    const booleanSsl = parseBooleanQueryParam(normalizedSslParam);
-
-    if (typeof booleanSsl === 'boolean') {
-      sslConfig = {
-        rejectUnauthorized: explicitRejectUnauthorized ?? booleanSsl,
-      };
-    } else if (normalizedSslParam.startsWith('{') || normalizedSslParam.startsWith('[')) {
-      try {
-        const parsedSsl = JSON.parse(normalizedSslParam);
-        if (parsedSsl && typeof parsedSsl === 'object' && !Array.isArray(parsedSsl)) {
-          sslConfig = parsedSsl as Record<string, unknown>;
-        }
-      } catch {
-        // Ignore invalid JSON and fall back to the default config below.
-      }
-    }
-  }
-
-  if (normalizedSslAccept === 'strict' || normalizedSslAccept === 'required') {
-    sslConfig = { ...sslConfig, rejectUnauthorized: true };
-  } else if (typeof explicitRejectUnauthorized === 'boolean') {
-    sslConfig = { ...sslConfig, rejectUnauthorized: explicitRejectUnauthorized };
-  }
-
+export function buildMysqlMigrationConnectionConfig(
+  databaseUrl: string,
+  environment: string = runtimeEnv,
+) {
   return {
-    uri: parsedUrl.toString(),
+    ...buildMysqlConnectionSecurityConfig(
+      databaseUrl,
+      environment,
+    ),
     waitForConnections: true,
     connectionLimit: 4,
     maxIdle: 4,
     idleTimeout: 60000,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
-    ssl: sslConfig,
   };
 }
 

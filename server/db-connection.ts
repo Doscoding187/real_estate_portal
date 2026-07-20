@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as schema from '../drizzle/schema';
 import { assertDatabaseTargetMatchesRuntime } from './_core/databaseTarget';
+import { buildMysqlConnectionSecurityConfig } from './_core/databaseTls';
 
 // Connection state
 export let _db: any = null;
@@ -353,31 +354,30 @@ export async function getDb() {
     );
   }
 
-  // Safety Check: Verify Database Environment Separation
-  try {
-    const env = process.env.NODE_ENV || 'development';
-    assertDatabaseTargetMatchesRuntime(process.env.DATABASE_URL, env as any);
-  } catch (e: any) {
-    // If URL parsing fails, we might want to let it slide or throw.
-    // Assuming valid URLs for now, but catching to be safe.
-    if (e.message.includes('CRITICAL')) throw e;
-    console.warn('[Database] URL parsing warning:', e.message);
-  }
+  // Safety Check: Verify Database Environment Separation.
+  // Malformed URLs and protected-environment mismatches fail closed.
+  const runtimeEnv =
+    process.env.APP_ENV ||
+    process.env.NODE_ENV ||
+    'development';
+
+  assertDatabaseTargetMatchesRuntime(
+    process.env.DATABASE_URL,
+    runtimeEnv as any,
+  );
 
   try {
-    const isProduction = process.env.NODE_ENV === 'production';
-
     // Debug log for connection attempt
     console.log('[Database] Attempting connection...');
 
+    const connectionSecurity =
+      buildMysqlConnectionSecurityConfig(
+        process.env.DATABASE_URL,
+        runtimeEnv,
+      );
+
     const poolConnection = mysql.createPool({
-      uri: process.env.DATABASE_URL,
-      ssl: {
-        // TiDB Cloud / PlanetScale often require this to be false on some platforms
-        // unless you provide the CA certificate explicitly.
-        // We set it to false to ensure connectivity, relying on the encrypted channel.
-        rejectUnauthorized: false,
-      },
+      ...connectionSecurity,
       connectionLimit: 10,
       maxIdle: 10,
       idleTimeout: 60000,

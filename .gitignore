@@ -146,3 +146,6 @@ test-results/
 # Local MySQL runtime data
 docker/mysql-local/data/
 docker/mysql-local/mysql-data/
+
+# Local editor settings may contain database connection profiles.
+.vscode/settings.json
