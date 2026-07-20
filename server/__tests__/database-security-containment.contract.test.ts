@@ -106,6 +106,19 @@ describe('database security containment contract', () => {
     expect(runtimeConnection).toContain(
       'buildMysqlConnectionSecurityConfig',
     );
+    expect(runtimeConnection).toContain(
+      "import { resolveAppRuntimeEnv } from './_core/runtimeBootstrap';",
+    );
+    expect(runtimeConnection).toContain(
+      'const runtimeEnv = resolveAppRuntimeEnv(process.env);',
+    );
+    expect(runtimeConnection).not.toContain(
+      'process.env.APP_ENV ||',
+    );
+    expect(runtimeConnection).not.toContain(
+      'runtimeEnv as any',
+    );
+
     expect(migrationRunner).toContain(
       'buildMysqlConnectionSecurityConfig',
     );

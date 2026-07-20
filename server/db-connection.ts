@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 import * as schema from '../drizzle/schema';
 import { assertDatabaseTargetMatchesRuntime } from './_core/databaseTarget';
 import { buildMysqlConnectionSecurityConfig } from './_core/databaseTls';
+import { resolveAppRuntimeEnv } from './_core/runtimeBootstrap';
 
 // Connection state
 export let _db: any = null;
@@ -356,14 +357,11 @@ export async function getDb() {
 
   // Safety Check: Verify Database Environment Separation.
   // Malformed URLs and protected-environment mismatches fail closed.
-  const runtimeEnv =
-    process.env.APP_ENV ||
-    process.env.NODE_ENV ||
-    'development';
+  const runtimeEnv = resolveAppRuntimeEnv(process.env);
 
   assertDatabaseTargetMatchesRuntime(
     process.env.DATABASE_URL,
-    runtimeEnv as any,
+    runtimeEnv,
   );
 
   try {
