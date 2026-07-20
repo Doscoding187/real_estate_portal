@@ -1,11 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-
-const { originalAppUrl } = vi.hoisted(() => {
-  const originalAppUrl = process.env.APP_URL;
-  process.env.APP_URL = 'http://localhost:3009';
-
-  return { originalAppUrl };
-});
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   mockGetDb,
@@ -77,13 +70,57 @@ const publicOriginEnvKeys = [
   'PORT',
 ] as const;
 
-afterAll(() => {
-  if (originalAppUrl === undefined) {
-    delete process.env.APP_URL;
-  } else {
-    process.env.APP_URL = originalAppUrl;
+type PublicOriginEnvKey = (typeof publicOriginEnvKeys)[number];
+
+function savePublicOriginEnv(): Record<PublicOriginEnvKey, string | undefined> {
+  return Object.fromEntries(publicOriginEnvKeys.map(key => [key, process.env[key]])) as Record<
+    PublicOriginEnvKey,
+    string | undefined
+  >;
+}
+
+function restorePublicOriginEnv(originalEnv: Record<PublicOriginEnvKey, string | undefined>): void {
+  for (const key of publicOriginEnvKeys) {
+    const value = originalEnv[key];
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
   }
-});
+}
+
+async function loadNotificationEngineWithPublicOrigin(values: Record<PublicOriginEnvKey, string>) {
+  const originalEnv = savePublicOriginEnv();
+
+  for (const key of publicOriginEnvKeys) {
+    process.env[key] = values[key];
+  }
+
+  vi.resetModules();
+  const { ENV } = await import('../../_core/env');
+  const { savedSearchNotificationEngine: notificationEngine } =
+    await import('../savedSearchNotificationEngine');
+
+  return {
+    ENV,
+    notificationEngine,
+    restore: () => {
+      restorePublicOriginEnv(originalEnv);
+      vi.resetModules();
+    },
+  };
+}
+
+function getTextUrl(text: string, label: string): URL {
+  const prefix = `${label}: `;
+  const url = text
+    .split('\n')
+    .find(line => line.startsWith(prefix))
+    ?.slice(prefix.length);
+  expect(url).toBeDefined();
+  return new URL(url!);
+}
 
 describe('savedSearchNotificationEngine', () => {
   beforeEach(() => {
@@ -169,103 +206,136 @@ describe('savedSearchNotificationEngine', () => {
   });
 
   it('emits notifications for due manual saved searches and updates lastNotifiedAt', async () => {
-    mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
-
-    const result = await savedSearchNotificationEngine.processDueNotifications({
-      userId: 7,
-      now: new Date('2026-03-21T10:00:00.000Z'),
+    const { ENV, notificationEngine, restore } = await loadNotificationEngineWithPublicOrigin({
+      APP_URL: 'https://saved-search-notifications.example.test/app/',
+      FRONTEND_URL: 'https://frontend-conflict.example.test',
+      BASE_URL: 'https://base-conflict.example.test',
+      NEXT_PUBLIC_APP_URL: 'https://next-conflict.example.test',
+      VITE_APP_URL: 'http://vite-conflict.example.test:3009',
+      API_URL: 'http://api-conflict.example.test:5001',
+      VITE_API_URL: 'http://vite-api-conflict.example.test:5001',
+      VITE_API_BASE_URL: 'http://vite-api-base-conflict.example.test:5001',
+      PORT: '5001',
     });
 
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      {
-        city: 'Johannesburg',
-        propertyType: ['apartment'],
-        listingType: 'sale',
-      },
-      'date_desc',
-      1,
-      100,
-    );
-    expect(mockInsertValues).toHaveBeenCalledTimes(2);
-    expect(mockInsertValues).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
+    try {
+      expect(ENV.appUrl).toBe('https://saved-search-notifications.example.test');
+      mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
+
+      const result = await notificationEngine.processDueNotifications({
+        userId: 7,
+        now: new Date('2026-03-21T10:00:00.000Z'),
+      });
+
+      expect(mockSearchProperties).toHaveBeenCalledWith(
+        {
+          city: 'Johannesburg',
+          propertyType: ['apartment'],
+          listingType: 'sale',
+        },
+        'date_desc',
+        1,
+        100,
+      );
+      expect(mockInsertValues).toHaveBeenCalledTimes(2);
+      expect(mockInsertValues).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          savedSearchId: 11,
+          userId: 7,
+          searchName: 'Johannesburg Apartments',
+          status: 'delivered',
+          inAppRequested: 1,
+          emailRequested: 1,
+          inAppDelivered: 1,
+          emailDelivered: 1,
+          newMatchCount: 2,
+          totalMatches: 2,
+        }),
+      );
+      expect(mockUpdateWhere).toHaveBeenCalledOnce();
+      expect(mockSendEmail).toHaveBeenCalledOnce();
+      expect(mockSendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'buyer@example.com',
+          subject: '2 new matches for Johannesburg Apartments',
+          text: expect.stringContaining('Top result: 2 Bedroom Apartment for Sale in Rosebank.'),
+          html: expect.stringContaining('Saved search digest'),
+        }),
+      );
+
+      const [{ text: emailText, html: emailHtml }] = mockSendEmail.mock.calls[0];
+      const pauseUrl = getTextUrl(emailText, 'Pause alerts');
+      const unsubscribeUrl = getTextUrl(emailText, 'Turn off email alerts');
+      const openSearchUrl = getTextUrl(emailText, 'Open saved search');
+      const textUrls = [...emailText.matchAll(/https?:\/\/\S+/g)].map(match => new URL(match[0]));
+      const htmlUrls = [...emailHtml.matchAll(/href="(https?:\/\/[^"]+)"/g)].map(
+        match => new URL(match[1]),
+      );
+
+      for (const url of [...textUrls, ...htmlUrls]) {
+        expect(url.protocol).toBe('https:');
+        expect(url.hostname).toBe('saved-search-notifications.example.test');
+        expect(url.href).not.toContain('.test//');
+      }
+      expect(textUrls.map(url => url.pathname)).toEqual(
+        expect.arrayContaining(['/property/55', '/property/56', '/saved-search/manage']),
+      );
+      expect(htmlUrls.map(url => url.pathname)).toEqual(
+        expect.arrayContaining(['/property/55', '/property/56', '/saved-search/manage']),
+      );
+      expect(openSearchUrl.pathname).toBe('/property/55');
+      expect(pauseUrl.pathname).toBe('/saved-search/manage');
+      expect(unsubscribeUrl.pathname).toBe('/saved-search/manage');
+      expect(pauseUrl.searchParams.get('token')).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+      expect(unsubscribeUrl.searchParams.get('token')).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+      expect(pauseUrl.searchParams.get('token')).not.toBe(unsubscribeUrl.searchParams.get('token'));
+      expect(emailText).not.toContain('localhost:5173');
+      expect(emailText).not.toContain('localhost:3009');
+      expect(emailText).not.toContain('api-conflict.example.test');
+      expect(emailText).not.toContain('vite-conflict.example.test');
+      expect(emailHtml).not.toContain('localhost:5173');
+      expect(emailHtml).not.toContain('localhost:3009');
+      expect(emailHtml).not.toContain('api-conflict.example.test');
+      expect(emailHtml).not.toContain('vite-conflict.example.test');
+      expect(result).toMatchObject({
+        scannedSearches: 1,
+        dueSearches: 1,
+        emittedNotifications: 1,
+        emailedNotifications: 1,
+        dryRun: false,
+      });
+      expect(result.notifications[0]).toMatchObject({
         savedSearchId: 11,
         userId: 7,
-        searchName: 'Johannesburg Apartments',
-        status: 'delivered',
-        inAppRequested: 1,
-        emailRequested: 1,
-        inAppDelivered: 1,
-        emailDelivered: 1,
-        newMatchCount: 2,
+        listingSource: 'all',
+        title: '2 new matches for Johannesburg Apartments',
+        content:
+          'Johannesburg: 2 new matches across listings and developments. Top result: 2 Bedroom Apartment for Sale in Rosebank. 2 total active.',
         totalMatches: 2,
-      }),
-    );
-    expect(mockUpdateWhere).toHaveBeenCalledOnce();
-    expect(mockSendEmail).toHaveBeenCalledOnce();
-    expect(mockSendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subject: '2 new matches for Johannesburg Apartments',
-        text: expect.stringContaining('Top result: 2 Bedroom Apartment for Sale in Rosebank.'),
-        html: expect.stringContaining('Saved search digest'),
-      }),
-    );
-    expect(mockSendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: expect.stringContaining('Pause alerts: http://localhost:3009/saved-search/manage?token='),
-        html: expect.stringContaining('Pause alerts'),
-      }),
-    );
-    expect(mockSendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: expect.stringContaining('Turn off email alerts: http://localhost:3009/saved-search/manage?token='),
-        html: expect.stringContaining('Turn off email alerts'),
-      }),
-    );
-    const [{ text: emailText }] = mockSendEmail.mock.calls[0];
-    expect(emailText).not.toContain('http://localhost:5001');
-    expect(result).toMatchObject({
-      scannedSearches: 1,
-      dueSearches: 1,
-      emittedNotifications: 1,
-      emailedNotifications: 1,
-      dryRun: false,
-    });
-    expect(result.notifications[0]).toMatchObject({
-      savedSearchId: 11,
-      userId: 7,
-      listingSource: 'all',
-      title: '2 new matches for Johannesburg Apartments',
-      content:
-        'Johannesburg: 2 new matches across listings and developments. Top result: 2 Bedroom Apartment for Sale in Rosebank. 2 total active.',
-      totalMatches: 2,
-      newMatchCount: 2,
-      actionUrl: '/property/55',
-    });
+        newMatchCount: 2,
+        actionUrl: '/property/55',
+      });
+    } finally {
+      restore();
+    }
   });
 
   it('prefers and normalizes the explicit public origin for saved-search management links', async () => {
-    const originalEnv = Object.fromEntries(
-      publicOriginEnvKeys.map(key => [key, process.env[key]]),
-    ) as Record<(typeof publicOriginEnvKeys)[number], string | undefined>;
+    const { notificationEngine: reloadedNotificationEngine, restore } =
+      await loadNotificationEngineWithPublicOrigin({
+        APP_URL: 'https://portal.example.test/property-listify/',
+        FRONTEND_URL: 'https://frontend.example.test',
+        BASE_URL: 'https://base.example.test',
+        NEXT_PUBLIC_APP_URL: 'https://next.example.test',
+        VITE_APP_URL: 'http://localhost:3009',
+        API_URL: 'http://api.example.test:5001',
+        VITE_API_URL: 'http://vite-api.example.test:5001',
+        VITE_API_BASE_URL: 'http://vite-api-base.example.test:5001',
+        PORT: '5001',
+      });
 
     try {
-      process.env.APP_URL = 'https://portal.example.test/property-listify/';
-      process.env.FRONTEND_URL = 'https://frontend.example.test';
-      process.env.BASE_URL = 'https://base.example.test';
-      process.env.NEXT_PUBLIC_APP_URL = 'https://next.example.test';
-      process.env.VITE_APP_URL = 'http://localhost:3009';
-      process.env.API_URL = 'http://api.example.test:5001';
-      process.env.VITE_API_URL = 'http://vite-api.example.test:5001';
-      process.env.VITE_API_BASE_URL = 'http://vite-api-base.example.test:5001';
-      process.env.PORT = '5001';
-
-      vi.resetModules();
-      const { savedSearchNotificationEngine: reloadedNotificationEngine } = await import(
-        '../savedSearchNotificationEngine'
-      );
-
       mockDbOrderBy.mockReturnValue({ where: mockDbWhere });
       await reloadedNotificationEngine.processDueNotifications({
         userId: 7,
@@ -285,15 +355,7 @@ describe('savedSearchNotificationEngine', () => {
       expect(pauseUrl.href).not.toContain('localhost:3009');
       expect(pauseUrl.href).not.toContain(':5001');
     } finally {
-      for (const key of publicOriginEnvKeys) {
-        const value = originalEnv[key];
-        if (value === undefined) {
-          delete process.env[key];
-        } else {
-          process.env[key] = value;
-        }
-      }
-      vi.resetModules();
+      restore();
     }
   });
 
