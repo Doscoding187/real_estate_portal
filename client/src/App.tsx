@@ -208,7 +208,9 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <>
-      <SkipToContent targetId="main-content" />
+      <nav aria-label="Skip navigation">
+        <SkipToContent targetId="main-content" />
+      </nav>
       {/* Route-based Code Splitting */}
       <Suspense
         fallback={
@@ -259,6 +261,7 @@ function Router() {
           </Route>
 
           {/* Resolve public brand slugs before entering the authenticated developer workspace. */}
+          <Route path="/developer/developments/:developmentId" component={DeveloperRouteBoundary} />
           <Route path="/developer/:rest*" component={DeveloperRouteBoundary} />
 
           {/* Developer Brand Directory (public) */}

@@ -7,6 +7,10 @@ import { generateUniqueSlug } from '../_core/utils/slug';
 import { normalizeForPublish, validateNormalizedPayload } from './publishNormalizer';
 import type { NormalizedDevelopmentPayload, WizardData } from './publishNormalizer';
 import { normalizeDateTimeForDb } from './developmentDateUtils';
+import {
+  submissionValidationError,
+  validatePersistedSubmissionReadiness,
+} from './developmentSubmissionReadiness';
 
 import {
   developments,
@@ -97,100 +101,6 @@ function parseJsonField(field: unknown): unknown[] {
   }
 
   return [];
-}
-
-type SubmissionValidationError = { field: string; message: string };
-const CANONICAL_OWNERSHIP_TYPES = ['full-title', 'sectional-title', 'leasehold', 'life-rights'] as const;
-
-function positiveNumber(value: unknown): boolean {
-  const number = Number(value);
-  return Number.isFinite(number) && number > 0;
-}
-
-function nonNegativeInteger(value: unknown): boolean {
-  const number = Number(value);
-  return Number.isFinite(number) && Number.isInteger(number) && number >= 0;
-}
-
-function hasValidPersistedImage(images: unknown): boolean {
-  return parseJsonField(images).some(image => {
-    const url = typeof image === 'string' ? image : (image as any)?.url;
-    return typeof url === 'string' && /^https?:\/\//i.test(url.trim());
-  });
-}
-
-function validatePersistedSubmissionReadiness(
-  development: any,
-  persistedUnitTypes: any[],
-): SubmissionValidationError[] {
-  const errors: SubmissionValidationError[] = [];
-  const name = String(development.name ?? '').trim();
-  const address = String(development.address ?? '').trim();
-  const description = String(development.description ?? '').trim();
-  const ownershipType = String(development.ownershipType ?? '').trim();
-  const developmentType = String(development.developmentType ?? '').trim();
-  const transactionType = String(development.transactionType ?? '').trim();
-
-  if (!name) errors.push({ field: 'name', message: 'Development name is required.' });
-  if (!address) errors.push({ field: 'address', message: 'Development address is required.' });
-  if (!['residential', 'commercial', 'mixed_use', 'land'].includes(developmentType)) {
-    errors.push({ field: 'developmentType', message: 'A supported development classification is required.' });
-  }
-  if (!['for_sale', 'for_rent', 'auction'].includes(transactionType)) {
-    errors.push({ field: 'transactionType', message: 'A supported transaction type is required.' });
-  }
-  if (description.length < 50) {
-    errors.push({ field: 'description', message: 'Description must contain at least 50 characters.' });
-  }
-  if (!hasValidPersistedImage(development.images)) {
-    errors.push({ field: 'media', message: 'At least one persisted image with a URL is required.' });
-  }
-  const highlights = parseJsonMaybeTwice<unknown[]>(development.highlights, []);
-  if (!Array.isArray(highlights) || highlights.filter(value => String(value ?? '').trim()).length < 3) {
-    errors.push({ field: 'highlights', message: 'At least three highlights are required.' });
-  }
-  if (!(CANONICAL_OWNERSHIP_TYPES as readonly string[]).includes(ownershipType)) {
-    errors.push({ field: 'ownershipType', message: 'A supported ownership type is required.' });
-  }
-
-  const activeUnits = persistedUnitTypes.filter(unit => Number(unit.isActive ?? 1) !== 0);
-  if (developmentType !== 'land' && activeUnits.length === 0) {
-    errors.push({ field: 'unitTypes', message: 'At least one unit type is required.' });
-  }
-
-  for (const unit of activeUnits) {
-    const label = String(unit.name ?? unit.label ?? 'Unit type').trim();
-    const total = unit.totalUnits;
-    const available = unit.availableUnits;
-    const reserved = unit.reservedUnits ?? 0;
-    if (!nonNegativeInteger(total) || !nonNegativeInteger(available) || !nonNegativeInteger(reserved) || Number(available) + Number(reserved) > Number(total)) {
-      errors.push({ field: `unitTypes.${label}.inventory`, message: `${label} has invalid aggregate inventory.` });
-    }
-    if (transactionType === 'for_sale' && !positiveNumber(unit.priceFrom ?? unit.basePriceFrom)) {
-      errors.push({ field: `unitTypes.${label}.priceFrom`, message: `${label} requires a positive sale price.` });
-    }
-    if (transactionType === 'for_rent' && !positiveNumber(unit.monthlyRentFrom ?? unit.monthlyRentTo)) {
-      errors.push({ field: `unitTypes.${label}.monthlyRentFrom`, message: `${label} requires a positive rental price.` });
-    }
-    if (transactionType === 'auction') {
-      const start = unit.auctionStartDate ? new Date(unit.auctionStartDate) : null;
-      const end = unit.auctionEndDate ? new Date(unit.auctionEndDate) : null;
-      const reserve = unit.reservePrice == null || unit.reservePrice === '' ? null : Number(unit.reservePrice);
-      if (!positiveNumber(unit.startingBid) || !start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start.getTime() <= Date.now() || end <= start || (reserve !== null && (!Number.isFinite(reserve) || reserve <= 0 || reserve < Number(unit.startingBid)))) {
-        errors.push({ field: `unitTypes.${label}.auction`, message: `${label} requires valid auction terms.` });
-      }
-    }
-  }
-
-  return errors;
-}
-
-function submissionValidationError(errors: SubmissionValidationError[]): TRPCError {
-  return new TRPCError({
-    code: 'BAD_REQUEST',
-    message: 'Development is not ready for submission.',
-    cause: { validationErrors: errors },
-  });
 }
 
 function normalizeAmenities(amenities: unknown): string[] {
@@ -351,7 +261,8 @@ async function resolveWritableDeveloperBrandProfileId(
       });
     }
 
-    const linkedToDeveloper = Number(brand.linkedDeveloperAccountId || 0) === input.developerProfileId;
+    const linkedToDeveloper =
+      Number(brand.linkedDeveloperAccountId || 0) === input.developerProfileId;
     const createdByDeveloper =
       brand.ownerType === 'developer' && Number(brand.createdBy || 0) === input.userId;
 
@@ -846,10 +757,7 @@ export async function listPublicDevelopments(options: {
       developerBrandProfiles,
       eq(developments.developerBrandProfileId, developerBrandProfiles.id),
     )
-    .leftJoin(
-      distributionPrograms,
-      eq(developments.id, distributionPrograms.developmentId),
-    )
+    .leftJoin(distributionPrograms, eq(developments.id, distributionPrograms.developmentId))
     .where(and(...conditions))
     .orderBy(desc(developments.createdAt))
     .limit(limit);
@@ -916,8 +824,10 @@ export async function listPublicDevelopments(options: {
     builderLogoUrl: d.brandLogoUrl || d.developerLogoUrl || null,
     commissionModel: d.commissionModel || null,
     referrerCommissionType: d.referrerCommissionType || null,
-    referrerCommissionValue: d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
-    referrerCommissionAmount: d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
+    referrerCommissionValue:
+      d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
+    referrerCommissionAmount:
+      d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
     configurations: unitsByDevelopment.get(Number(d.id)) || [],
     unitTypes: unitsByDevelopment.get(Number(d.id)) || [],
   }));
@@ -1952,6 +1862,11 @@ export async function persistUnitTypes(
       console.warn(`UnitType ${unitId}: basePriceFrom missing, defaulting to 0`);
       return 0;
     })();
+    const basePriceTo = (() => {
+      const value = asDecimalOrNull(unit.basePriceTo);
+      if (value !== null) return value;
+      return asDecimalOrNull(unit.priceTo);
+    })();
 
     const totalUnits = Math.max(0, sanitizeInt(unit.totalUnits) ?? 0);
     const availableUnits = Math.max(0, sanitizeInt(unit.availableUnits) ?? 0);
@@ -2004,10 +1919,11 @@ export async function persistUnitTypes(
       yardSize: sanitizeInt(unit.yardSize),
       unitSize: sanitizeInt(unit.unitSize),
 
-      priceFrom: asDecimalOrNull(unit.priceFrom),
-      priceTo: asDecimalOrNull(unit.priceTo),
+      // Explicit wizard saves mirror canonical sale fields for remaining legacy consumers.
+      priceFrom: basePriceFrom,
+      priceTo: basePriceTo,
       basePriceFrom,
-      basePriceTo: asDecimalOrNull(unit.basePriceTo),
+      basePriceTo,
       monthlyRentFrom: asDecimalOrNull(unit.monthlyRentFrom ?? unit.monthlyRent),
       monthlyRentTo: asDecimalOrNull(unit.monthlyRentTo),
       leaseTerm: asStringOrNull(unit.leaseTerm),
@@ -2566,10 +2482,16 @@ async function publishDevelopment(
       .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id));
 
     if (openRows.length > 0) {
-      throw new TRPCError({ code: 'CONFLICT', message: 'Development already has an unresolved review submission.' });
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Development already has an unresolved review submission.',
+      });
     }
     if (ownedDevelopment.approvalStatus === 'pending') {
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Development has no active review record and requires compatibility backfill.' });
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Development has no active review record and requires compatibility backfill.',
+      });
     }
 
     const priorRows = await tx
@@ -2608,7 +2530,11 @@ async function publishDevelopment(
   return updated;
 }
 
-async function approveDevelopment(id: number, adminId: number, complianceChecks?: Record<string, boolean>) {
+async function approveDevelopment(
+  id: number,
+  adminId: number,
+  complianceChecks?: Record<string, boolean>,
+) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -2634,7 +2560,11 @@ async function completeReview(
   developmentId: number,
   reviewerId: number,
   decision: 'approved' | 'rejected' | 'changes_requested',
-  details: { reviewNotes?: string; rejectionReason?: string; complianceChecks?: Record<string, boolean> },
+  details: {
+    reviewNotes?: string;
+    rejectionReason?: string;
+    complianceChecks?: Record<string, boolean>;
+  },
 ) {
   await db.transaction(async (tx: any) => {
     const [development] = await tx
@@ -2655,20 +2585,41 @@ async function completeReview(
       )
       .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id));
     if (openRows.length !== 1) {
-      throw new TRPCError({ code: openRows.length ? 'CONFLICT' : 'BAD_REQUEST', message: 'Development must have exactly one unresolved review record.' });
+      throw new TRPCError({
+        code: openRows.length ? 'CONFLICT' : 'BAD_REQUEST',
+        message: 'Development must have exactly one unresolved review record.',
+      });
     }
     const openRow = openRows[0];
     if (openRow.submittedBy === reviewerId) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'A submitter cannot review their own development submission.' });
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'A submitter cannot review their own development submission.',
+      });
     }
 
     const now = mysqlDateTime();
     const developmentProjection =
       decision === 'approved'
-        ? { approvalStatus: 'approved' as const, isPublished: 1, publishedAt: now, rejectionNote: null }
+        ? {
+            approvalStatus: 'approved' as const,
+            isPublished: 1,
+            publishedAt: now,
+            rejectionNote: null,
+          }
         : decision === 'changes_requested'
-          ? { approvalStatus: 'draft' as const, isPublished: 0, publishedAt: null, rejectionNote: details.reviewNotes ?? null }
-          : { approvalStatus: 'rejected' as const, isPublished: 0, publishedAt: null, rejectionNote: details.rejectionReason ?? null };
+          ? {
+              approvalStatus: 'draft' as const,
+              isPublished: 0,
+              publishedAt: null,
+              rejectionNote: details.reviewNotes ?? null,
+            }
+          : {
+              approvalStatus: 'rejected' as const,
+              isPublished: 0,
+              publishedAt: null,
+              rejectionNote: details.rejectionReason ?? null,
+            };
     const result = await tx
       .update(developmentApprovalQueue)
       .set({
@@ -2679,10 +2630,22 @@ async function completeReview(
         rejectionReason: details.rejectionReason ?? null,
         complianceChecks: details.complianceChecks ?? null,
       })
-      .where(and(eq(developmentApprovalQueue.id, openRow.id), inArray(developmentApprovalQueue.status, ['pending', 'reviewing'])));
+      .where(
+        and(
+          eq(developmentApprovalQueue.id, openRow.id),
+          inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      );
     const affectedRows = Number(result?.affectedRows ?? result?.[0]?.affectedRows ?? 0);
-    if (affectedRows !== 1) throw new TRPCError({ code: 'CONFLICT', message: 'Review record changed before completion.' });
-    await tx.update(developments).set(developmentProjection).where(eq(developments.id, developmentId));
+    if (affectedRows !== 1)
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Review record changed before completion.',
+      });
+    await tx
+      .update(developments)
+      .set(developmentProjection)
+      .where(eq(developments.id, developmentId));
   });
 }
 

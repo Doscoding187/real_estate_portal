@@ -25,6 +25,7 @@ import {
   getDeveloperDistributionSettings,
   getDeveloperFunnelAttention,
   getDeveloperFunnelKpis,
+  getOwnedDevelopmentHomeLeadSummary,
   listDeveloperLeads,
   logDeveloperLeadActivity,
   setDeveloperDistributionEnabled,
@@ -34,6 +35,7 @@ import {
 import {
   developmentDrafts,
   developments,
+  developmentApprovalQueue,
   developers,
   developerBrandProfiles,
   users,
@@ -50,8 +52,94 @@ import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
 import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
+import { validatePersistedSubmissionReadiness } from './services/developmentSubmissionReadiness';
+import { buildDevelopmentHomeInventory } from './services/developmentInventorySummary';
+import { buildDevelopmentHomeAttention } from './services/developmentHomeAttention';
+import { getDevelopmentHomeDistribution } from './services/developmentHomeDistribution';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
+
+export type DevelopmentHomeLifecycleState =
+  | 'live'
+  | 'approved_private'
+  | 'in_review'
+  | 'changes_required'
+  | 'rejected'
+  | 'draft_ready_to_submit'
+  | 'draft_action_required';
+
+export type CanonicalDevelopmentReviewStatus = NonNullable<
+  (typeof developmentApprovalQueue.$inferSelect)['status']
+>;
+
+export const DevelopmentHomeInputSchema = z
+  .object({
+    developmentId: z.number().int().positive(),
+    range: z.enum(['7d', '30d', '90d']),
+  })
+  .strict();
+
+type DevelopmentHomeIdentityRow = Pick<
+  typeof developments.$inferSelect,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'address'
+  | 'suburb'
+  | 'city'
+  | 'province'
+  | 'transactionType'
+  | 'approvalStatus'
+  | 'isPublished'
+  | 'publishedAt'
+  | 'description'
+  | 'images'
+  | 'highlights'
+  | 'ownershipType'
+  | 'developmentType'
+  | 'rejectionNote'
+>;
+
+type DevelopmentHomeReviewRow = Pick<
+  typeof developmentApprovalQueue.$inferSelect,
+  'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'reviewNotes' | 'rejectionReason'
+>;
+
+type DevelopmentHomeReadinessBlocker = {
+  field: string;
+  message: string;
+  severity: 'critical';
+};
+
+function developerVisibleReviewFeedback(
+  review: Pick<DevelopmentHomeReviewRow, 'status' | 'reviewNotes' | 'rejectionReason'>,
+): string | null {
+  if (review.status === 'changes_requested') return review.reviewNotes?.trim() || null;
+  if (review.status === 'rejected') return review.rejectionReason?.trim() || null;
+  return null;
+}
+
+export function deriveDevelopmentHomeLifecycleState(input: {
+  approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
+  isPublished: (typeof developments.$inferSelect)['isPublished'];
+  blockers?: readonly DevelopmentHomeReadinessBlocker[];
+  currentChangesRequestedFeedback?: string | null;
+}): DevelopmentHomeLifecycleState {
+  if (input.approvalStatus === 'approved' && Number(input.isPublished) === 1) return 'live';
+  if (input.approvalStatus === 'approved') return 'approved_private';
+  if (input.approvalStatus === 'pending') return 'in_review';
+  if (input.approvalStatus === 'rejected') return 'rejected';
+  if (input.currentChangesRequestedFeedback?.trim()) return 'changes_required';
+  if ((input.blockers?.length ?? 0) === 0) return 'draft_ready_to_submit';
+  return 'draft_action_required';
+}
+
+export function isDevelopmentHomePublicEligible(input: {
+  approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
+  isPublished: (typeof developments.$inferSelect)['isPublished'];
+}): boolean {
+  return input.approvalStatus === 'approved' && Number(input.isPublished) === 1;
+}
 
 function assertDeveloperDistributionEnabled() {
   if (!ENV.distributionNetworkEnabled) {
@@ -620,7 +708,11 @@ export const developerRouter = router({
   adminSetTrusted: superAdminProcedure
     .input(
       z
-        .object({ developerId: z.number().optional(), id: z.number().optional(), isTrusted: z.boolean() })
+        .object({
+          developerId: z.number().optional(),
+          id: z.number().optional(),
+          isTrusted: z.boolean(),
+        })
         .refine(value => typeof value.developerId === 'number' || typeof value.id === 'number', {
           message: 'developerId or id is required',
         }),
@@ -1131,13 +1223,13 @@ export const developerRouter = router({
 
         return toPublicListingImageUrl(
           prop.mainImage ||
-          prop.image ||
-          prop.coverImage ||
-          prop.thumbnailUrl ||
-          prop.imageUrl ||
-          firstImageUrl ||
-          primaryMediaUrl ||
-          fallbackMediaUrl,
+            prop.image ||
+            prop.coverImage ||
+            prop.thumbnailUrl ||
+            prop.imageUrl ||
+            firstImageUrl ||
+            primaryMediaUrl ||
+            fallbackMediaUrl,
         );
       };
 
@@ -1215,8 +1307,9 @@ export const developerRouter = router({
         propertyType: item.propertyType || null,
         developmentName: String(item.development?.name || '').trim() || null,
         developmentKey:
-          String(item.development?.id || item.developmentId || item.development?.slug || '').trim() ||
-          null,
+          String(
+            item.development?.id || item.developmentId || item.development?.slug || '',
+          ).trim() || null,
         badges: Array.isArray(item.badges)
           ? item.badges.filter((badge: unknown): badge is string => typeof badge === 'string')
           : [],
@@ -1227,9 +1320,8 @@ export const developerRouter = router({
         listingType: 'sale' | 'rent',
       ): Promise<{ items: FeedItem[]; source: 'mixed' | 'listings' | 'units' }> => {
         const { propertySearchService } = await import('./services/propertySearchService');
-        const { developmentDerivedListingService } = await import(
-          './services/developmentDerivedListingService'
-        );
+        const { developmentDerivedListingService } =
+          await import('./services/developmentDerivedListingService');
 
         const poolLimit = Math.max(limit * 2, 12);
         const [listingResults, developmentUnits] = await Promise.all([
@@ -1922,6 +2014,180 @@ export const developerRouter = router({
         console.warn('[developer.getDevelopment] Returning null due to error:', error);
         return null;
       }
+    }),
+
+  getDevelopmentHome: protectedProcedure
+    .input(DevelopmentHomeInputSchema)
+    .query(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+
+      const selectIdentity = {
+        id: developments.id,
+        name: developments.name,
+        slug: developments.slug,
+        address: developments.address,
+        suburb: developments.suburb,
+        city: developments.city,
+        province: developments.province,
+        transactionType: developments.transactionType,
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+        publishedAt: developments.publishedAt,
+        description: developments.description,
+        images: developments.images,
+        highlights: developments.highlights,
+        ownershipType: developments.ownershipType,
+        developmentType: developments.developmentType,
+        rejectionNote: developments.rejectionNote,
+      };
+
+      let row: DevelopmentHomeIdentityRow | undefined;
+
+      if (user.role === 'property_developer') {
+        const profile = await requireDeveloperProfileByUserId(user.id);
+        [row] = await dbConn
+          .select(selectIdentity)
+          .from(developments)
+          .where(
+            and(eq(developments.id, input.developmentId), eq(developments.developerId, profile.id)),
+          )
+          .limit(1);
+      } else if (user.role === 'super_admin') {
+        const operatingAs = ctx.operatingAs;
+        if (!operatingAs?.brandProfileId) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'BRAND_CONTEXT_REQUIRED' });
+        }
+        if (operatingAs.brandType !== 'developer' && operatingAs.brandType !== 'hybrid') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Developer or hybrid brand context is required for Development Home.',
+          });
+        }
+
+        [row] = await dbConn
+          .select(selectIdentity)
+          .from(developments)
+          .where(
+            and(
+              eq(developments.id, input.developmentId),
+              eq(developments.developerBrandProfileId, operatingAs.brandProfileId),
+            ),
+          )
+          .limit(1);
+      } else {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only developers or contextual super admins can access Development Home.',
+        });
+      }
+
+      if (!row) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+      }
+
+      const persistedUnitTypes = await dbConn
+        .select()
+        .from(unitTypes)
+        .where(eq(unitTypes.developmentId, row.id));
+      const blockers: DevelopmentHomeReadinessBlocker[] = validatePersistedSubmissionReadiness(
+        row,
+        persistedUnitTypes,
+      ).map(blocker => ({ ...blocker, severity: 'critical' }));
+      const inventory = buildDevelopmentHomeInventory(row, persistedUnitTypes, blockers);
+      const reviewRows: DevelopmentHomeReviewRow[] = await dbConn
+        .select({
+          id: developmentApprovalQueue.id,
+          status: developmentApprovalQueue.status,
+          submittedAt: developmentApprovalQueue.submittedAt,
+          reviewedAt: developmentApprovalQueue.reviewedAt,
+          reviewNotes: developmentApprovalQueue.reviewNotes,
+          rejectionReason: developmentApprovalQueue.rejectionReason,
+        })
+        .from(developmentApprovalQueue)
+        .where(eq(developmentApprovalQueue.developmentId, row.id))
+        .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id))
+        .limit(3);
+      const latestReviewRow = reviewRows[0] ?? null;
+      const latestReview = latestReviewRow
+        ? {
+            status: latestReviewRow.status,
+            submittedAt: latestReviewRow.submittedAt,
+            reviewedAt: latestReviewRow.reviewedAt,
+            feedback:
+              developerVisibleReviewFeedback(latestReviewRow) ??
+              (latestReviewRow.status === 'rejected' ? row.rejectionNote?.trim() || null : null),
+          }
+        : null;
+      const currentChangesRequestedFeedback =
+        row.approvalStatus === 'draft' && latestReview?.status === 'changes_requested'
+          ? latestReview.feedback
+          : null;
+      const lifecycleState = deriveDevelopmentHomeLifecycleState({
+        ...row,
+        blockers,
+        currentChangesRequestedFeedback,
+      });
+      const isPublished = Number(row.isPublished) === 1;
+      // A single server timestamp keeps all selected-period demand, funnel, and SLA values aligned.
+      const leadSummary = await getOwnedDevelopmentHomeLeadSummary({
+        developmentId: row.id,
+        range: input.range,
+        now: new Date(),
+      });
+      const attention = buildDevelopmentHomeAttention({
+        developmentId: row.id,
+        range: input.range,
+        lifecycleState,
+        latestReviewFeedback: latestReview?.feedback ?? null,
+        blockers,
+        inventory,
+        funnel: leadSummary.funnel,
+      });
+      const distribution = await getDevelopmentHomeDistribution({
+        db: dbConn,
+        developmentId: row.id,
+      });
+
+      return {
+        development: {
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          location: {
+            address: row.address ?? null,
+            suburb: row.suburb ?? null,
+            city: row.city,
+            province: row.province,
+          },
+          transactionType: row.transactionType,
+          approvalStatus: row.approvalStatus,
+          isPublished,
+          publishedAt: row.publishedAt,
+          publicEligible: isDevelopmentHomePublicEligible(row),
+          lifecycleState,
+        },
+        readiness: {
+          state: lifecycleState,
+          blockers,
+          latestReview,
+          recentReviewHistory: reviewRows.map(review => ({
+            status: review.status,
+            submittedAt: review.submittedAt,
+            reviewedAt: review.reviewedAt,
+            feedback: developerVisibleReviewFeedback(review),
+          })),
+        },
+        demand: leadSummary.demand,
+        funnel: leadSummary.funnel,
+        inventory,
+        attention,
+        distribution,
+        range: input.range,
+      };
     }),
 
   getDevelopments: protectedProcedure.query(async ({ ctx }) => {

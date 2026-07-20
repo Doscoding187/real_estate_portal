@@ -13,11 +13,12 @@ export const EnvironmentBadge: React.FC = () => {
   const label = (import.meta.env.MODE || 'NON-PROD').toUpperCase();
 
   return (
-    <div
-      className="fixed bottom-2 right-2 z-[9999] px-2 py-1 bg-red-600 text-white text-xs font-bold rounded shadow-lg opacity-80 pointer-events-none uppercase"
+    <aside
+      className="fixed bottom-2 right-2 z-[9999] px-2 py-1 bg-red-600 text-white text-xs font-bold rounded shadow-lg pointer-events-none uppercase"
+      aria-label="Environment status"
       title={`Backend: ${API_BASE_URL}`}
     >
       {label} ENV
-    </div>
+    </aside>
   );
 };

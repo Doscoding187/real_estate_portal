@@ -30,6 +30,7 @@ import {
   PhoneCall,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { invalidateDevelopmentHomeRanges } from '@/lib/developmentHomeInvalidation';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
 
@@ -105,6 +106,9 @@ export default function Overview() {
         distributionSettingsQuery.refetch(),
         utils.developer.getLeads.invalidate(),
         utils.developer.getFunnelKPIs.invalidate(),
+        invalidateDevelopmentHomeRanges(selectedDevelopmentId, input =>
+          utils.developer.getDevelopmentHome.invalidate(input),
+        ),
       ]);
     },
     onError: error => {

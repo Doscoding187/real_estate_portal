@@ -1057,7 +1057,8 @@ const createActions = (
     setResidentialConfig: (data: Partial<DevelopmentWizardState['residentialConfig']>) =>
       set(state => {
         const nextResidentialConfig = { ...state.residentialConfig, ...data };
-        const derivedPropertyTypes = derivePropertyTypesFromResidentialConfig(nextResidentialConfig);
+        const derivedPropertyTypes =
+          derivePropertyTypesFromResidentialConfig(nextResidentialConfig);
 
         if (!derivedPropertyTypes) {
           return { residentialConfig: nextResidentialConfig };
@@ -1263,7 +1264,8 @@ const createActions = (
         }
       }
 
-      const ownershipTypes = wizardData.ownershipTypes ?? state.developmentData.ownershipTypes ?? [];
+      const ownershipTypes =
+        wizardData.ownershipTypes ?? state.developmentData.ownershipTypes ?? [];
       if (!Array.isArray(ownershipTypes) || ownershipTypes.length === 0) {
         errors.push('Select at least one ownership type');
       }
@@ -1822,12 +1824,15 @@ const createActions = (
             });
             const storedClassification = parsedSpecifications?.classification ?? {};
             const structuralTypeValue = u.structuralType || undefined;
-            const inferredUnitCategory =
-              ['freestanding-house', 'simplex', 'duplex', 'townhouse', 'plot-and-plan'].includes(
-                String(structuralTypeValue || ''),
-              )
-                ? 'house'
-                : 'apartment';
+            const inferredUnitCategory = [
+              'freestanding-house',
+              'simplex',
+              'duplex',
+              'townhouse',
+              'plot-and-plan',
+            ].includes(String(structuralTypeValue || ''))
+              ? 'house'
+              : 'apartment';
             const unitCategory =
               u.unitCategory === 'house' || u.unitCategory === 'apartment'
                 ? u.unitCategory
@@ -1841,7 +1846,8 @@ const createActions = (
                 : typeof storedClassification?.subType === 'string' &&
                     storedClassification.subType.trim().length > 0
                   ? storedClassification.subType
-                  : structuralTypeValue || (unitCategory === 'house' ? 'freestanding-house' : 'apartment');
+                  : structuralTypeValue ||
+                    (unitCategory === 'house' ? 'freestanding-house' : 'apartment');
 
             return {
               id: u.id,
@@ -1867,8 +1873,10 @@ const createActions = (
               parkingBays: Number(u.parkingBays ?? u.parkingSpaces ?? 0),
 
               // Pricing - Numbers, not null
-              priceFrom: Number(u.priceFrom ?? u.basePriceFrom ?? 0),
-              priceTo: Number(u.priceTo ?? u.basePriceTo ?? u.priceFrom ?? u.basePriceFrom ?? 0),
+              // Canonical base prices win during edit hydration. Legacy fields only
+              // keep historical records editable when their base counterparts are absent.
+              priceFrom: Number(u.basePriceFrom ?? u.priceFrom ?? 0),
+              priceTo: Number(u.basePriceTo ?? u.priceTo ?? 0),
               basePriceFrom: u.basePriceFrom ? Number(u.basePriceFrom) : undefined,
               basePriceTo: u.basePriceTo ? Number(u.basePriceTo) : undefined,
               monthlyRentFrom: u.monthlyRentFrom ? Number(u.monthlyRentFrom) : undefined,
@@ -1975,44 +1983,44 @@ const createActions = (
         };
 
         const reconstructedStepData = {
-              identity_market: {
-                name: canonicalDevelopmentData.name,
-                subtitle: canonicalDevelopmentData.subtitle,
-                status: canonicalDevelopmentData.status,
-                nature: canonicalDevelopmentData.nature,
-                transactionType: canonicalDevelopmentData.transactionType,
-                ownershipTypes: ownershipTypesFromSource,
-                marketingRole: canonicalDevelopmentData.marketingRole,
-                completionDate: canonicalDevelopmentData.completionDate,
-                launchDate: canonicalDevelopmentData.launchDate,
-                expectedFirstHandoverDate: canonicalDevelopmentData.expectedFirstHandoverDate,
-                handoverDuringConstruction: canonicalDevelopmentData.handoverDuringConstruction,
-              },
-              location: { ...canonicalDevelopmentData.location },
-              governance_finances: {
-                hasGoverningBody: estateSpecs?.hasHOA ?? false,
-                governanceType: estateSpecs?.governanceType ?? '',
-                levyRange: resolvedLevyRange,
-                architecturalGuidelines: estateSpecs?.architecturalGuidelines ?? false,
-                guidelinesSummary: estateSpecs?.guidelinesSummary ?? '',
-                rightsAndTaxes: resolvedRightsAndTaxes,
-              },
-              amenities_features: {
-                amenities: normalizedAmenities,
-              },
-              marketing_summary: {
-                description: canonicalDevelopmentData.description,
-                tagline: canonicalDevelopmentData.subtitle ?? '',
-                keySellingPoints: canonicalDevelopmentData.highlights ?? [],
-              },
-              development_media: {
-                heroImage: canonicalDevelopmentData.media?.heroImage,
-                photos: canonicalDevelopmentData.media?.photos ?? [],
-                videos: canonicalDevelopmentData.media?.videos ?? [],
-                documents: canonicalDevelopmentData.media?.documents ?? [],
-              },
-              unit_types: { unitTypes: hydratedUnitTypes },
-            };
+          identity_market: {
+            name: canonicalDevelopmentData.name,
+            subtitle: canonicalDevelopmentData.subtitle,
+            status: canonicalDevelopmentData.status,
+            nature: canonicalDevelopmentData.nature,
+            transactionType: canonicalDevelopmentData.transactionType,
+            ownershipTypes: ownershipTypesFromSource,
+            marketingRole: canonicalDevelopmentData.marketingRole,
+            completionDate: canonicalDevelopmentData.completionDate,
+            launchDate: canonicalDevelopmentData.launchDate,
+            expectedFirstHandoverDate: canonicalDevelopmentData.expectedFirstHandoverDate,
+            handoverDuringConstruction: canonicalDevelopmentData.handoverDuringConstruction,
+          },
+          location: { ...canonicalDevelopmentData.location },
+          governance_finances: {
+            hasGoverningBody: estateSpecs?.hasHOA ?? false,
+            governanceType: estateSpecs?.governanceType ?? '',
+            levyRange: resolvedLevyRange,
+            architecturalGuidelines: estateSpecs?.architecturalGuidelines ?? false,
+            guidelinesSummary: estateSpecs?.guidelinesSummary ?? '',
+            rightsAndTaxes: resolvedRightsAndTaxes,
+          },
+          amenities_features: {
+            amenities: normalizedAmenities,
+          },
+          marketing_summary: {
+            description: canonicalDevelopmentData.description,
+            tagline: canonicalDevelopmentData.subtitle ?? '',
+            keySellingPoints: canonicalDevelopmentData.highlights ?? [],
+          },
+          development_media: {
+            heroImage: canonicalDevelopmentData.media?.heroImage,
+            photos: canonicalDevelopmentData.media?.photos ?? [],
+            videos: canonicalDevelopmentData.media?.videos ?? [],
+            documents: canonicalDevelopmentData.media?.documents ?? [],
+          },
+          unit_types: { unitTypes: hydratedUnitTypes },
+        };
         const hydratedStepData = snapshotSource?.stepData
           ? {
               ...reconstructedStepData,
@@ -2035,9 +2043,7 @@ const createActions = (
           ...state,
           // CRITICAL: Don't force currentPhase - let Wizard orchestrator decide
           // Only set phase for draft resume (not edit mode)
-          currentPhase: isDraft
-            ? source.currentPhase || state.currentPhase || 1
-            : 1,
+          currentPhase: isDraft ? source.currentPhase || state.currentPhase || 1 : 1,
 
           developmentData: canonicalDevelopmentData,
           residentialConfig: hydratedResidentialConfig,

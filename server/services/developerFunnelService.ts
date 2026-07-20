@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '../db';
 import {
   developments,
@@ -20,6 +20,15 @@ import {
 } from '../../shared/developerFunnel';
 
 type LeadRow = typeof leads.$inferSelect;
+type LeadStageRow = Pick<LeadRow, 'status' | 'funnelStage' | 'lostReason'>;
+type LeadSlaRow = Pick<LeadRow, 'createdAt' | 'lastContactedAt' | 'nextFollowUp' | 'notes'>;
+type LeadSourceRow = Pick<LeadRow, 'leadSource' | 'source'>;
+
+export type DevelopmentHomeRange = '7d' | '30d' | '90d';
+
+const DEVELOPMENT_HOME_RECENT_LEAD_LIMIT = 5;
+const DEVELOPMENT_HOME_SOURCE_LIMIT = 5;
+const DEVELOPMENT_HOME_SLA_BATCH_SIZE = 250;
 
 type FunnelListParams = {
   developerId: number;
@@ -93,7 +102,9 @@ function parseNextActionType(notes: string | null | undefined): string | null {
 
 function parseOwnerOverride(notes: string | null | undefined): LeadOwnerType | null {
   if (!notes) return null;
-  const matches = notes.match(/owner_override:(developer_sales|agency|distribution_partner|unassigned)/gi);
+  const matches = notes.match(
+    /owner_override:(developer_sales|agency|distribution_partner|unassigned)/gi,
+  );
   if (!matches || matches.length === 0) return null;
   const last = matches[matches.length - 1];
   const value = String(last.split(':')[1] || '').toLowerCase();
@@ -108,12 +119,17 @@ function parseOwnerOverride(notes: string | null | undefined): LeadOwnerType | n
   return null;
 }
 
-function appendOwnerOverride(existing: string | null | undefined, ownerType: LeadOwnerType): string {
+function appendOwnerOverride(
+  existing: string | null | undefined,
+  ownerType: LeadOwnerType,
+): string {
   return appendNote(existing, `owner_override:${ownerType}`);
 }
 
 function isDistributionSourceValue(value: string | null | undefined): boolean {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   if (!normalized) return false;
   return (
     normalized.includes('distribution') ||
@@ -126,7 +142,9 @@ function isDistributionLeadEligible(lead: LeadRow): boolean {
   return isDistributionSourceValue(lead.leadSource) || isDistributionSourceValue(lead.source);
 }
 
-export function getAvailableLeadOwnerTypes(distributionEnabledForDevelopment: boolean): LeadOwnerType[] {
+export function getAvailableLeadOwnerTypes(
+  distributionEnabledForDevelopment: boolean,
+): LeadOwnerType[] {
   return distributionEnabledForDevelopment
     ? ['developer_sales', 'agency', 'distribution_partner', 'unassigned']
     : ['developer_sales', 'agency', 'unassigned'];
@@ -137,7 +155,9 @@ export function evaluateDistributionAssignmentGate(input: {
   distributionEnabledForDevelopment: boolean;
   partnerEligible: boolean;
   leadEligible: boolean;
-}): { allowed: true } | { allowed: false; reason: 'distribution_disabled' | 'partner_ineligible' | 'lead_ineligible' } {
+}):
+  | { allowed: true }
+  | { allowed: false; reason: 'distribution_disabled' | 'partner_ineligible' | 'lead_ineligible' } {
   if (input.ownerType !== 'distribution_partner') return { allowed: true };
   if (!input.distributionEnabledForDevelopment) {
     return { allowed: false, reason: 'distribution_disabled' };
@@ -207,7 +227,7 @@ async function isDistributionPartnerEligibleForDevelopment(params: {
   return !!row;
 }
 
-export function deriveCanonicalLeadStage(lead: LeadRow): LeadStage {
+export function deriveCanonicalLeadStage(lead: LeadStageRow): LeadStage {
   if (lead.status === 'new') return 'new';
   if (lead.status === 'contacted') return 'contacted';
   if (lead.status === 'qualified') {
@@ -325,7 +345,7 @@ function deriveOwner(lead: LeadRow, ownerName: string | null) {
 }
 
 export function computeLeadSla(
-  lead: LeadRow,
+  lead: LeadSlaRow,
   now = new Date(),
 ): {
   status: SlaStatus;
@@ -347,7 +367,8 @@ export function computeLeadSla(
   if (createdAt && !lastContactedAt) {
     const hoursSinceCreate = minutesBetween(createdAt, now) / 60;
     if (hoursSinceCreate >= DEFAULT_LEAD_SLA_POLICY.firstContactBreachHours) status = 'breach';
-    else if (hoursSinceCreate >= DEFAULT_LEAD_SLA_POLICY.firstContactWarningHours) status = 'warning';
+    else if (hoursSinceCreate >= DEFAULT_LEAD_SLA_POLICY.firstContactWarningHours)
+      status = 'warning';
   }
 
   if (lastContactedAt) {
@@ -378,6 +399,152 @@ export function computeLeadSla(
   };
 }
 
+export function getCanonicalLeadSource(lead: LeadSourceRow): string {
+  return lead.leadSource?.trim() || lead.source?.trim() || 'Unknown source';
+}
+
+/**
+ * The lower bound is inclusive. Every Development Home demand and funnel value
+ * is derived from this one server-side timestamp and boundary.
+ */
+export function getDevelopmentHomeRangeBoundary(range: DevelopmentHomeRange, now: Date) {
+  const from = new Date(now);
+  const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
+  from.setDate(from.getDate() - days);
+  return { from: from.toISOString(), to: now.toISOString() };
+}
+
+/**
+ * Called only after Development Home has established ownership of the selected
+ * development. Aggregate reads retain exact cohort counts; recent and SLA reads
+ * are bounded so the complete period cohort is never held in memory.
+ */
+export async function getOwnedDevelopmentHomeLeadSummary(params: {
+  developmentId: number;
+  range: DevelopmentHomeRange;
+  now: Date;
+}) {
+  const boundary = getDevelopmentHomeRangeBoundary(params.range, params.now);
+  const periodCondition = and(
+    eq(leads.developmentId, params.developmentId),
+    gte(leads.createdAt, boundary.from),
+    lte(leads.createdAt, boundary.to),
+  );
+  const sourceChannel = sql<string>`COALESCE(NULLIF(TRIM(${leads.leadSource}), ''), NULLIF(TRIM(${leads.source}), ''), 'Unknown source')`;
+  const sum = (condition: ReturnType<typeof sql>) =>
+    sql<number>`COALESCE(SUM(CASE WHEN ${condition} THEN 1 ELSE 0 END), 0)`;
+  const [aggregate] = await db
+    .select({
+      capturedLeadCount: sql<number>`COUNT(*)`,
+      new: sum(sql`${leads.status} = 'new'`),
+      contacted: sum(sql`${leads.status} = 'contacted'`),
+      qualified: sum(
+        sql`${leads.status} = 'qualified' AND COALESCE(${leads.funnelStage}, '') <> 'viewing'`,
+      ),
+      viewing: sum(
+        sql`${leads.status} = 'viewing_scheduled' OR (${leads.status} = 'qualified' AND ${leads.funnelStage} = 'viewing')`,
+      ),
+      offer: sum(sql`${leads.status} = 'offer_sent'`),
+      dealInProgress: sum(sql`${leads.status} = 'converted'`),
+      closedWon: sum(sql`${leads.status} = 'closed'`),
+      closedLost: sum(
+        sql`${leads.status} = 'lost' AND LOWER(COALESCE(${leads.lostReason}, '')) NOT IN ('spam', 'duplicate', 'archived')`,
+      ),
+    })
+    .from(leads)
+    .where(periodCondition);
+  const sources = await db
+    .select({ channel: sourceChannel, count: sql<number>`COUNT(*)` })
+    .from(leads)
+    .where(periodCondition)
+    .groupBy(sourceChannel)
+    .orderBy(desc(sql`COUNT(*)`), asc(sourceChannel))
+    .limit(DEVELOPMENT_HOME_SOURCE_LIMIT);
+  const recentRows = await db
+    .select({
+      id: leads.id,
+      name: leads.name,
+      source: leads.source,
+      leadSource: leads.leadSource,
+      createdAt: leads.createdAt,
+      status: leads.status,
+      funnelStage: leads.funnelStage,
+      lostReason: leads.lostReason,
+    })
+    .from(leads)
+    .where(periodCondition)
+    .orderBy(desc(leads.createdAt), desc(leads.id))
+    .limit(DEVELOPMENT_HOME_RECENT_LEAD_LIMIT);
+
+  let slaWarningCount = 0;
+  let slaBreachCount = 0;
+  let lastLeadId = 0;
+  while (true) {
+    const slaRows = await db
+      .select({
+        id: leads.id,
+        createdAt: leads.createdAt,
+        lastContactedAt: leads.lastContactedAt,
+        nextFollowUp: leads.nextFollowUp,
+        notes: leads.notes,
+      })
+      .from(leads)
+      .where(and(periodCondition, gt(leads.id, lastLeadId)))
+      .orderBy(asc(leads.id))
+      .limit(DEVELOPMENT_HOME_SLA_BATCH_SIZE);
+    if (!slaRows.length) break;
+
+    for (const lead of slaRows) {
+      const status = computeLeadSla(lead, params.now).status;
+      if (status === 'warning') slaWarningCount += 1;
+      if (status === 'breach') slaBreachCount += 1;
+    }
+    lastLeadId = slaRows[slaRows.length - 1].id;
+    if (slaRows.length < DEVELOPMENT_HOME_SLA_BATCH_SIZE) break;
+  }
+
+  const toNumber = (value: unknown) => Number(value || 0);
+  const stages = {
+    new: toNumber(aggregate?.new),
+    contacted: toNumber(aggregate?.contacted),
+    qualified: toNumber(aggregate?.qualified),
+    viewing: toNumber(aggregate?.viewing),
+    offer: toNumber(aggregate?.offer),
+    dealInProgress: toNumber(aggregate?.dealInProgress),
+    closedWon: toNumber(aggregate?.closedWon),
+    closedLost: toNumber(aggregate?.closedLost),
+  };
+
+  return {
+    demand: {
+      range: params.range,
+      capturedLeadCount: toNumber(aggregate?.capturedLeadCount),
+      newLeadCount: stages.new,
+      recentLeads: recentRows.map(lead => ({
+        id: lead.id,
+        name: lead.name || null,
+        source: getCanonicalLeadSource(lead),
+        createdAt: lead.createdAt,
+        stage: deriveCanonicalLeadStage(lead),
+      })),
+      sources: sources.map(source => ({ channel: source.channel, count: toNumber(source.count) })),
+    },
+    funnel: {
+      stages,
+      openLeadCount:
+        stages.new +
+        stages.contacted +
+        stages.qualified +
+        stages.viewing +
+        stages.offer +
+        stages.dealInProgress,
+      closedWonCount: stages.closedWon,
+      slaWarningCount,
+      slaBreachCount,
+    },
+  };
+}
+
 function normalizeLeadRow(
   lead: LeadRow,
   ownerName: string | null,
@@ -401,7 +568,7 @@ function normalizeLeadRow(
       email: lead.email || undefined,
     },
     source: {
-      channel: lead.leadSource || lead.source || 'unknown',
+      channel: getCanonicalLeadSource(lead),
       utmSource: lead.utmSource || undefined,
       utmCampaign: lead.utmCampaign || undefined,
     },
@@ -496,7 +663,11 @@ export async function listDeveloperLeads(params: FunnelListParams) {
     .orderBy(desc(leads.createdAt));
 
   const developmentIds: number[] = Array.from(
-    new Set(rows.map(row => Number(row.lead.developmentId || 0)).filter(id => Number.isFinite(id) && id > 0)),
+    new Set(
+      rows
+        .map(row => Number(row.lead.developmentId || 0))
+        .filter(id => Number.isFinite(id) && id > 0),
+    ),
   ) as number[];
   const distributionEnabledMap = await getDistributionEnabledMapForDevelopments(developmentIds);
 
@@ -533,7 +704,9 @@ export async function assignDeveloperLead(params: AssignParams) {
     });
   }
 
-  const distributionEnabledMap = await getDistributionEnabledMapForDevelopments([leadDevelopmentId]);
+  const distributionEnabledMap = await getDistributionEnabledMapForDevelopments([
+    leadDevelopmentId,
+  ]);
   const distributionEnabledForDevelopment = distributionEnabledMap.get(leadDevelopmentId) === true;
   const availableOwnerTypes = getAvailableLeadOwnerTypes(distributionEnabledForDevelopment);
 
@@ -755,7 +928,12 @@ export async function getDeveloperDistributionSettings(params: {
       id: developments.id,
     })
     .from(developments)
-    .where(and(eq(developments.id, params.developmentId), eq(developments.developerId, params.developerId)))
+    .where(
+      and(
+        eq(developments.id, params.developmentId),
+        eq(developments.developerId, params.developerId),
+      ),
+    )
     .limit(1);
 
   if (!development) {
@@ -783,14 +961,13 @@ export async function getDeveloperDistributionSettings(params: {
   const isActive = Number(program?.isActive || 0) === 1;
   const isReferralEnabled = Number(program?.isReferralEnabled || 0) === 1;
   const distributionEnabled = isActive && isReferralEnabled;
-  const accessModel =
-    !program
-      ? ('unknown' as const)
-      : program.tierAccessPolicy === 'open'
-        ? ('open' as const)
-        : program.tierAccessPolicy === 'invite_only'
-          ? ('partner_based' as const)
-          : ('tier_based' as const);
+  const accessModel = !program
+    ? ('unknown' as const)
+    : program.tierAccessPolicy === 'open'
+      ? ('open' as const)
+      : program.tierAccessPolicy === 'invite_only'
+        ? ('partner_based' as const)
+        : ('tier_based' as const);
 
   const eligibleRows = await db
     .select({
@@ -872,7 +1049,12 @@ export async function setDeveloperDistributionEnabled(params: {
       id: developments.id,
     })
     .from(developments)
-    .where(and(eq(developments.id, params.developmentId), eq(developments.developerId, params.developerId)))
+    .where(
+      and(
+        eq(developments.id, params.developmentId),
+        eq(developments.developerId, params.developerId),
+      ),
+    )
     .limit(1);
 
   if (!development) {

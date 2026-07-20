@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import { invalidateDevelopmentHomeRanges } from '@/lib/developmentHomeInvalidation';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
@@ -116,6 +117,7 @@ export function FinalisationPhase({
   const [showConfirmPublish, setShowConfirmPublish] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [activePreviewTab, setActivePreviewTab] = useState<'desktop' | 'mobile'>('desktop');
+  const utils = trpc.useUtils();
 
   // Backend mutations
   const createDevelopment = trpc.developer.createDevelopment.useMutation();
@@ -371,6 +373,10 @@ export function FinalisationPhase({
       } else {
         await publishDevelopment.mutateAsync({ id: developmentId });
       }
+
+      await invalidateDevelopmentHomeRanges(developmentId, input =>
+        utils.developer.getDevelopmentHome.invalidate(input),
+      );
 
       setShowConfirmPublish(false);
       confetti({

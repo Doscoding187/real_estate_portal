@@ -342,5 +342,43 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(result.current.currentStepId).toBe('configuration');
       expect(result.current.currentStepId).not.toBe('review_publish');
     });
+
+    it('hydrates editable sale fields from canonical base values without mutating divergent aliases', () => {
+      const { result } = renderHook(() => useDevelopmentWizard());
+
+      act(() => {
+        result.current.hydrateDevelopment({
+          id: 124,
+          name: 'Canonical Pricing Development',
+          description: 'A persisted development with divergent compatibility pricing.',
+          developmentType: 'residential',
+          transactionType: 'for_sale',
+          status: 'selling',
+          address: '1 Main Road',
+          city: 'Cape Town',
+          province: 'Western Cape',
+          unitTypes: [
+            {
+              id: 'db-unit-2',
+              name: 'Type A',
+              bedrooms: 2,
+              bathrooms: 2,
+              basePriceFrom: 1200000,
+              basePriceTo: 1400000,
+              priceFrom: 1050000,
+              priceTo: 1300000,
+            },
+          ],
+        });
+      });
+
+      expect(result.current.unitTypes[0]).toMatchObject({
+        priceFrom: 1200000,
+        priceTo: 1400000,
+        basePriceFrom: 1200000,
+        basePriceTo: 1400000,
+      });
+      expect((result.current.unitTypes[0] as any).priceFrom).not.toBe(1050000);
+    });
   });
 });

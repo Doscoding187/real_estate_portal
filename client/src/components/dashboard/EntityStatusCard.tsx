@@ -238,6 +238,16 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                       >
                         Fix & Resubmit
                       </Button>
+                      {onView && !isListing && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-3 ml-2"
+                          onClick={() => onView(data.id)}
+                        >
+                          Open Development
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -263,7 +273,7 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
                     {onView && (
                       <Button size="sm" onClick={() => onView(data.id)}>
                         <Eye className="mr-2 h-4 w-4" />
-                        View Property
+                        {isListing ? 'View Property' : 'Open Development'}
                       </Button>
                     )}
                   </div>
@@ -271,7 +281,13 @@ export const EntityStatusCard: React.FC<EntityStatusCardProps> = ({
               )}
 
             {!isRejected && status !== 'published' && status !== 'active' && (
-              <div className="mt-5 flex justify-end border-t border-slate-50 pt-4">
+              <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-50 pt-4">
+                {onView && !isListing && (
+                  <Button size="sm" variant="outline" onClick={() => onView(data.id)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    Open Development
+                  </Button>
+                )}
                 {status === 'draft' ? (
                   <Button size="sm" onClick={() => onEdit(data.id)} className="font-medium">
                     {readiness.score >= 90 ? 'Review & Submit' : 'Continue Setup'}

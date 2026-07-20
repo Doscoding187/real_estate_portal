@@ -12,6 +12,7 @@ const testState = vi.hoisted(() => {
   const createPublisherDevelopmentMock = vi.fn();
   const updatePublisherDevelopmentMock = vi.fn();
   const publishPublisherDevelopmentMock = vi.fn();
+  const invalidateDevelopmentHomeMock = vi.fn().mockResolvedValue(undefined);
   const resetMock = vi.fn();
   const setPhaseMock = vi.fn();
   let validationErrors: string[] = [];
@@ -113,6 +114,7 @@ const testState = vi.hoisted(() => {
     navigateMock,
     publishDevelopmentMock,
     publishPublisherDevelopmentMock,
+    invalidateDevelopmentHomeMock,
     resetMock,
     toastErrorMock,
     toastSuccessMock,
@@ -141,6 +143,11 @@ vi.mock('@/hooks/useDevelopmentWizard', () => ({
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => ({
+      developer: {
+        getDevelopmentHome: { invalidate: testState.invalidateDevelopmentHomeMock },
+      },
+    }),
     developer: {
       createDevelopment: { useMutation: () => ({ mutateAsync: testState.createDevelopmentMock }) },
       updateDevelopment: { useMutation: () => ({ mutateAsync: testState.updateDevelopmentMock }) },
@@ -199,6 +206,7 @@ describe('FinalisationPhase', () => {
     testState.createPublisherDevelopmentMock.mockResolvedValue({ development: { id: 456 } });
     testState.updatePublisherDevelopmentMock.mockResolvedValue({ success: true });
     testState.publishPublisherDevelopmentMock.mockResolvedValue({ success: true });
+    testState.invalidateDevelopmentHomeMock.mockResolvedValue(undefined);
   });
 
   it('submits create-mode DLE payloads through the canonical submit mapper', async () => {
@@ -208,6 +216,12 @@ describe('FinalisationPhase', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm & submit/i }));
 
     await waitFor(() => expect(testState.createDevelopmentMock).toHaveBeenCalledTimes(1));
+
+    expect(testState.invalidateDevelopmentHomeMock).toHaveBeenCalledTimes(3);
+    expect(testState.invalidateDevelopmentHomeMock).toHaveBeenCalledWith({
+      developmentId: 123,
+      range: '30d',
+    });
 
     expect(testState.updateDevelopmentMock).not.toHaveBeenCalled();
 

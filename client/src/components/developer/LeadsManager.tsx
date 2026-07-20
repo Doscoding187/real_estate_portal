@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
+import { invalidateDevelopmentHomeRanges } from '@/lib/developmentHomeInvalidation';
 import { stageGroupMatches, useDeveloperLeadsQuery } from '@/hooks/useDeveloperLeadsQuery';
 import { useLocation } from 'wouter';
 
@@ -232,6 +233,9 @@ export default function LeadsManager() {
       utils.developer.getLeads.invalidate(),
       utils.developer.getFunnelAttention.invalidate(),
       utils.developer.getFunnelKPIs.invalidate(),
+      invalidateDevelopmentHomeRanges(selectedDevelopmentId, input =>
+        utils.developer.getDevelopmentHome.invalidate(input),
+      ),
     ]);
   };
 
