@@ -13,9 +13,13 @@ import {
 } from 'drizzle-orm/mysql-core';
 
 /**
- * Explore schema (PHASE 1)
- * DB-first contract.
- * These definitions MUST match MySQL exactly.
+ * Explore schema authority.
+ *
+ * explore_content is the primary launch feed authority.
+ * content_topics and explore_shorts remain compatibility authorities.
+ * Explore redesign and compatibility retirement are separate workstreams.
+ *
+ * These definitions must match the active launch database contract.
  */
 
 /**
@@ -119,14 +123,18 @@ export const topics = mysqlTable(
 export const contentTopics = mysqlTable(
   'content_topics',
   {
-    id: int().autoincrement().primaryKey(),
-    contentId: int('content_id').notNull(),
-    topicId: varchar('topic_id', { length: 36 }).notNull(),
+    contentId: varchar('content_id', { length: 36 }).notNull(),
+    topicId: varchar('topic_id', { length: 36 })
+      .notNull()
+      .references(() => topics.id),
+    relevanceScore: decimal('relevance_score', {
+      precision: 5,
+      scale: 2,
+    }).default('1.00'),
     createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
   },
   t => ({
-    contentIdx: index('idx_ct_content').on(t.contentId),
-    topicIdx: index('idx_ct_topic').on(t.topicId),
+    topicIdx: index('idx_content_topic').on(t.topicId),
   }),
 );
 
@@ -179,14 +187,76 @@ export const exploreFeedSessions = mysqlTable(
   }),
 );
 
-export const exploreShorts = mysqlTable(
-  'explore_shorts',
-  {
-    id: int('id').autoincrement().primaryKey(),
-    exploreContentId: int('explore_content_id').notNull(),
-    createdAt: timestamp('created_at').defaultNow(),
-  },
-  t => ({
-    idxContent: index('idx_es_content').on(t.exploreContentId),
-  }),
-);
+export const exploreShorts = mysqlTable('explore_shorts', {
+  id: int('id').autoincrement().primaryKey(),
+
+  listingId: int('listing_id'),
+  developmentId: int('development_id'),
+  agentId: int('agent_id'),
+  developerId: int('developer_id'),
+  agencyId: int('agency_id'),
+
+  contentType: varchar('content_type', { length: 50 }).default('property'),
+  topicId: int('topic_id'),
+  categoryId: int('category_id'),
+
+  title: varchar('title', { length: 255 }).notNull(),
+  caption: text('caption'),
+
+  primaryMediaId: int('primary_media_id').notNull(),
+  mediaIds: json('media_ids').notNull(),
+  highlights: json('highlights'),
+
+  performanceScore: decimal('performance_score', {
+    precision: 5,
+    scale: 2,
+  })
+    .default('0')
+    .notNull(),
+
+  boostPriority: int('boost_priority').default(0).notNull(),
+  viewCount: int('view_count').default(0).notNull(),
+  uniqueViewCount: int('unique_view_count').default(0).notNull(),
+  saveCount: int('save_count').default(0).notNull(),
+  shareCount: int('share_count').default(0).notNull(),
+  skipCount: int('skip_count').default(0).notNull(),
+  averageWatchTime: int('average_watch_time').default(0).notNull(),
+
+  viewThroughRate: decimal('view_through_rate', {
+    precision: 5,
+    scale: 2,
+  })
+    .default('0')
+    .notNull(),
+
+  saveRate: decimal('save_rate', {
+    precision: 5,
+    scale: 2,
+  })
+    .default('0')
+    .notNull(),
+
+  shareRate: decimal('share_rate', {
+    precision: 5,
+    scale: 2,
+  })
+    .default('0')
+    .notNull(),
+
+  skipRate: decimal('skip_rate', {
+    precision: 5,
+    scale: 2,
+  })
+    .default('0')
+    .notNull(),
+
+  isPublished: tinyint('is_published').default(1).notNull(),
+  isFeatured: tinyint('is_featured').default(0).notNull(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .onUpdateNow()
+    .notNull(),
+  publishedAt: timestamp('published_at'),
+});

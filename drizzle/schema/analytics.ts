@@ -4,8 +4,7 @@ import { sql } from 'drizzle-orm';
 
 import { users } from './core';
 import { locations, cities, suburbs } from './locations';
-import { listings, properties } from './listings';
-import { developments } from './developments';
+import { properties } from './listings';
 
 // --------------------
 // Analytics Aggregations
@@ -145,36 +144,6 @@ export const activities = mysqlTable('activities', {
   index('idx_activities_type').on(table.type),
   index('idx_activities_created').on(table.createdAt),
 ]);
-
-// --------------------
-// Location Analytics Events
-// --------------------
-export const locationAnalyticsEvents = mysqlTable(
-  'location_analytics_events',
-  {
-    id: int().autoincrement().primaryKey(),
-    eventType: varchar('event_type', { length: 50 }).notNull(),
-
-    locationId: int('location_id').references(() => locations.id, { onDelete: 'set null' }),
-    developmentId: int('development_id').references(() => developments.id, { onDelete: 'set null' }),
-    listingId: int('listing_id').references(() => listings.id, { onDelete: 'set null' }),
-
-    targetId: int('target_id'),
-    metadata: json('metadata'),
-
-    sessionId: varchar('session_id', { length: 100 }),
-    userId: int('user_id').references(() => users.id, { onDelete: 'set null' }),
-
-    createdAt: timestamp('created_at', { mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  },
-  (table) => [
-    index('idx_loc_analytics_event').on(table.eventType),
-    index('idx_loc_analytics_created').on(table.createdAt),
-    index('idx_loc_analytics_location').on(table.locationId),
-    index('idx_loc_analytics_development').on(table.developmentId),
-    index('idx_loc_analytics_user').on(table.userId),
-  ],
-);
 
 // --------------------
 // Location Searches + Recent Searches

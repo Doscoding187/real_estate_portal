@@ -15,7 +15,7 @@ A comprehensive smart listing creation wizard that adapts to user choices with:
 
 ## ✅ Completed Components
 
-### 1. Database Schema (`drizzle/listing-schema.ts`)
+### 1. Database Schema (`drizzle/schema/listings.ts`)
 
 **Tables Created:**
 
@@ -132,7 +132,7 @@ A comprehensive smart listing creation wizard that adapts to user choices with:
 ### Phase 1: Database Integration
 
 1. **Add schema to `drizzle/schema.ts`**
-   - Import tables from `listing-schema.ts`
+   - Import tables from `schema/listings.ts`
    - Add foreign key relationships
    - Run migrations: `pnpm db:generate && pnpm db:push`
 
@@ -385,7 +385,7 @@ export default function CreateListingPage() {
 
 ```sql
 -- Run this to create all listing tables
--- Copy from drizzle/listing-schema.ts and convert to SQL
+-- Copy from drizzle/schema/listings.ts and convert to SQL
 
 -- Example migration command:
 -- pnpm db:generate

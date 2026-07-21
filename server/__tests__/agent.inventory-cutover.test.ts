@@ -73,8 +73,6 @@ describe('agent inventory cutover', () => {
       checkedAt: '2026-04-30T00:00:00.000Z',
       demandEngineReady: false,
       demandEngineDetails: {},
-      economicActorsReady: false,
-      economicActorsDetails: {},
       showingsReady: true,
       showingsDetails: {
         table: true,

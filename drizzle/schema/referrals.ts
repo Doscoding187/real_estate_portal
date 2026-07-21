@@ -1,5 +1,4 @@
 import {
-  decimal,
   index,
   int,
   json,
@@ -56,8 +55,6 @@ export const REFERRAL_DOCUMENT_TYPE_VALUES = [
 export const REFERRAL_DOCUMENT_STATUS_VALUES = ['requested', 'received', 'verified', 'rejected'] as const;
 
 export const REFERRAL_DOCUMENT_UPLOADER_VALUES = ['agent', 'client', 'system'] as const;
-
-export const AFFORDABILITY_CONFIG_VALUE_TYPE_VALUES = ['number', 'integer', 'json'] as const;
 
 export const referrals = mysqlTable(
   'referrals',
@@ -244,31 +241,5 @@ export const referralDocuments = mysqlTable(
     index('idx_referral_documents_status').on(table.documentStatus),
     index('idx_referral_documents_type').on(table.documentType),
     index('idx_referral_documents_token').on(table.secureToken),
-  ],
-);
-
-export const affordabilityConfig = mysqlTable(
-  'affordability_config',
-  {
-    id: int().autoincrement().primaryKey(),
-    configKey: varchar('config_key', { length: 80 }).notNull(),
-    valueType: mysqlEnum(
-      'value_type',
-      AFFORDABILITY_CONFIG_VALUE_TYPE_VALUES as unknown as [string, ...string[]],
-    )
-      .default('number')
-      .notNull(),
-    valueNumber: decimal('value_number', { precision: 14, scale: 6 }),
-    valueJson: json('value_json'),
-    label: varchar('label', { length: 120 }).notNull(),
-    description: text('description'),
-    isActive: tinyint('is_active').default(1).notNull(),
-    updatedByUserId: int('updated_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-  },
-  table => [
-    unique('ux_affordability_config_key').on(table.configKey),
-    index('idx_affordability_config_active').on(table.isActive),
   ],
 );

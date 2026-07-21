@@ -352,7 +352,6 @@ class ProductionDataCleanup {
     const userRelatedQueries = [
       'DELETE FROM favorites WHERE userId NOT IN (SELECT id FROM users WHERE role = "super_admin")',
       'DELETE FROM recently_viewed WHERE userId NOT IN (SELECT id FROM users WHERE role = "super_admin")',
-      'DELETE FROM agent_profiles WHERE userId NOT IN (SELECT id FROM users WHERE role = "super_admin")',
     ];
 
     for (const query of userRelatedQueries) {

@@ -1,12 +1,12 @@
 /**
  * Demand Scoring Service (STUBBED)
  *
- * Disabled: References locationAnalyticsEvents which is not exported from schema.
+ * Disabled: no launch-authoritative demand analytics event store exists.
  * This service will be re-enabled once the table is properly added via migration.
  */
 
 // import { db } from '../db';
-// import { developments, locationAnalyticsEvents } from '../../drizzle/schema';
+// Legacy implementation intentionally remains disconnected from canonical schema authority.
 
 /**
  * Service to calculate demand scores and identify hot-selling developments
@@ -21,7 +21,7 @@ export class DemandScoringService {
    */
   static async updateAllScores() {
     console.debug(
-      '[DemandScoring] updateAllScores called but disabled (no locationAnalyticsEvents table)',
+      '[DemandScoring] updateAllScores called but disabled (no canonical event store)',
     );
     // No-op: Table not available
     return;

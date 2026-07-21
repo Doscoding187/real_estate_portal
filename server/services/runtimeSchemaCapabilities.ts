@@ -37,17 +37,6 @@ export type RuntimeSchemaCapabilities = {
     matchConfidenceColumn: boolean;
     assignmentAssignedAtColumn: boolean;
   };
-  economicActorsReady: boolean;
-  economicActorsDetails: {
-    table: boolean;
-    userIdColumn: boolean;
-    actorTypeColumn: boolean;
-    verificationStatusColumn: boolean;
-    profileCompletenessColumn: boolean;
-    trustScoreColumn: boolean;
-    subscriptionTierColumn: boolean;
-    momentumScoreColumn: boolean;
-  };
   showingsReady: boolean;
   showingsDetails: ShowingsSchemaDetails;
 };
@@ -412,23 +401,6 @@ export async function getRuntimeSchemaCapabilities(
     ? await columnExists('demand_lead_assignments', 'assigned_at')
     : false;
 
-  const economicActorsTable = await tableExists('economic_actors');
-  const userIdColumn = economicActorsTable ? await columnExists('economic_actors', 'user_id') : false;
-  const actorTypeColumn = economicActorsTable ? await columnExists('economic_actors', 'actor_type') : false;
-  const verificationStatusColumn = economicActorsTable
-    ? await columnExists('economic_actors', 'verification_status')
-    : false;
-  const profileCompletenessColumn = economicActorsTable
-    ? await columnExists('economic_actors', 'profile_completeness')
-    : false;
-  const trustScoreColumn = economicActorsTable ? await columnExists('economic_actors', 'trust_score') : false;
-  const subscriptionTierColumn = economicActorsTable
-    ? await columnExists('economic_actors', 'subscription_tier')
-    : false;
-  const momentumScoreColumn = economicActorsTable
-    ? await columnExists('economic_actors', 'momentum_score')
-    : false;
-
   const showingsTable = await tableExists('showings');
   const listingIdColumn = showingsTable ? await columnExists('showings', 'listingId') : false;
   const propertyIdColumn = showingsTable ? await columnExists('showings', 'propertyId') : false;
@@ -515,25 +487,6 @@ export async function getRuntimeSchemaCapabilities(
       matchCampaignIdColumn,
       matchConfidenceColumn,
       assignmentAssignedAtColumn,
-    },
-    economicActorsReady:
-      economicActorsTable &&
-      userIdColumn &&
-      actorTypeColumn &&
-      verificationStatusColumn &&
-      profileCompletenessColumn &&
-      trustScoreColumn &&
-      subscriptionTierColumn &&
-      momentumScoreColumn,
-    economicActorsDetails: {
-      table: economicActorsTable,
-      userIdColumn,
-      actorTypeColumn,
-      verificationStatusColumn,
-      profileCompletenessColumn,
-      trustScoreColumn,
-      subscriptionTierColumn,
-      momentumScoreColumn,
     },
     showingsReady: isShowingsSchemaReady(showingsDetails),
     showingsDetails,
@@ -647,7 +600,7 @@ export function warnSchemaCapabilityOnce(key: string, message: string, details?:
   console.warn(message);
 }
 
-export type RuntimeSchemaStrictTarget = 'demand_engine' | 'economic_actors' | 'showings';
+export type RuntimeSchemaStrictTarget = 'demand_engine' | 'showings';
 
 export function getMissingRuntimeSchemaTargets(
   capabilities: RuntimeSchemaCapabilities,
@@ -656,8 +609,6 @@ export function getMissingRuntimeSchemaTargets(
   const missing: RuntimeSchemaStrictTarget[] = [];
   for (const target of targets) {
     if (target === 'demand_engine' && !capabilities.demandEngineReady) {
-      missing.push(target);
-    } else if (target === 'economic_actors' && !capabilities.economicActorsReady) {
       missing.push(target);
     } else if (target === 'showings' && !capabilities.showingsReady) {
       missing.push(target);
@@ -670,7 +621,7 @@ export async function assertRuntimeSchemaCapabilities(options?: {
   targets?: RuntimeSchemaStrictTarget[];
   forceRefresh?: boolean;
 }): Promise<RuntimeSchemaCapabilities> {
-  const targets = options?.targets ?? ['demand_engine', 'economic_actors', 'showings'];
+  const targets = options?.targets ?? ['demand_engine', 'showings'];
   const capabilities = await getRuntimeSchemaCapabilities({ forceRefresh: options?.forceRefresh });
   const missingTargets = getMissingRuntimeSchemaTargets(capabilities, targets);
   if (missingTargets.length > 0) {
