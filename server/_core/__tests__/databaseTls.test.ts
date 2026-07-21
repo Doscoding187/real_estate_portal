@@ -55,6 +55,18 @@ describe('database TLS authority', () => {
     expect(config.ssl).toBeUndefined();
   });
 
+  it('allows bracketed IPv6 loopback development MySQL without TLS', () => {
+    const config = buildMysqlConnectionSecurityConfig(
+      'mysql://listify_app@[::1]:3307/listify_local',
+      'development',
+    );
+
+    expect(config.uri).toBe(
+      'mysql://listify_app@[::1]:3307/listify_local',
+    );
+    expect(config.ssl).toBeUndefined();
+  });
+
   it('keeps remote development targets strict by default', () => {
     const config = buildMysqlConnectionSecurityConfig(
       'mysql://user:pass@remote.example.com:4000/listify_local',

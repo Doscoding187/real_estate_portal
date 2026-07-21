@@ -36,6 +36,29 @@ describe('resolveAppRuntimeEnv', () => {
       } as NodeJS.ProcessEnv),
     ).toBe('production');
   });
+
+  it('normalizes APP_ENV aliases and capitalization', () => {
+    expect(
+      resolveAppRuntimeEnv({
+        APP_ENV: 'prod',
+        NODE_ENV: 'development',
+      } as NodeJS.ProcessEnv),
+    ).toBe('production');
+
+    expect(
+      resolveAppRuntimeEnv({
+        APP_ENV: 'stage',
+        NODE_ENV: 'development',
+      } as NodeJS.ProcessEnv),
+    ).toBe('staging');
+
+    expect(
+      resolveAppRuntimeEnv({
+        APP_ENV: 'Production',
+        NODE_ENV: 'development',
+      } as NodeJS.ProcessEnv),
+    ).toBe('production');
+  });
 });
 
 describe('loadAppRuntimeEnv', () => {

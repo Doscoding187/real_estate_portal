@@ -41,11 +41,15 @@ function parseSslObject(value: string): MysqlSslOptions {
 
 function isLocalDatabaseHost(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase();
+  const unwrapped =
+    normalized.startsWith('[') && normalized.endsWith(']')
+      ? normalized.slice(1, -1)
+      : normalized;
 
   return (
-    normalized === 'localhost' ||
-    normalized === '127.0.0.1' ||
-    normalized === '::1'
+    unwrapped === 'localhost' ||
+    unwrapped === '127.0.0.1' ||
+    unwrapped === '::1'
   );
 }
 
