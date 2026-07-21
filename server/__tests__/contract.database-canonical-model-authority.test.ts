@@ -73,6 +73,42 @@ describe('database canonical model authority', () => {
     );
   });
 
+  it('retires inactive analytics and affordability models while preserving recent searches', () => {
+    const analyticsSchema = readRepoFile('drizzle/schema/analytics.ts');
+    const referralSchema = readRepoFile('drizzle/schema/referrals.ts');
+    const demandScoringService = readRepoFile(
+      'server/services/demandScoringService.ts',
+    );
+
+    expect(analyticsSchema).not.toContain(
+      "mysqlTable(\n  'location_analytics_events'",
+    );
+    expect(analyticsSchema).not.toContain(
+      'export const locationAnalyticsEvents',
+    );
+
+    expect(referralSchema).not.toContain(
+      "mysqlTable(\n  'affordability_config'",
+    );
+    expect(referralSchema).not.toContain(
+      'export const affordabilityConfig',
+    );
+    expect(referralSchema).not.toContain(
+      'AFFORDABILITY_CONFIG_VALUE_TYPE_VALUES',
+    );
+
+    expect(
+      countPhysicalTableDefinitions(
+        analyticsSchema,
+        'recent_searches',
+      ),
+    ).toBe(1);
+
+    expect(demandScoringService).not.toContain(
+      'locationAnalyticsEvents',
+    );
+  });
+
   it('defines each canonical listing physical table once', () => {
     const schemaDirectory = path.join(ROOT, 'drizzle/schema');
 
