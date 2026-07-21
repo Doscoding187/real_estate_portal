@@ -42,6 +42,37 @@ describe('database canonical model authority', () => {
     ).toBe(false);
   });
 
+  it('retires the unadopted economic actor abstraction', () => {
+    expect(
+      existsSync(path.join(ROOT, 'drizzle/schema/economicActors.ts')),
+    ).toBe(false);
+
+    const schemaIndex = readRepoFile('drizzle/schema/index.ts');
+    const runtimeCapabilities = readRepoFile(
+      'server/services/runtimeSchemaCapabilities.ts',
+    );
+    const cleanupScript = readRepoFile('cleanup-production-data.ts');
+
+    expect(schemaIndex).not.toContain(
+      "export * from './economicActors';",
+    );
+
+    const retiredRuntimeAuthority = [
+      'economicActorsReady',
+      'economicActorsDetails',
+      'economicActorsTable',
+      "'economic_actors'",
+    ];
+
+    for (const authorityName of retiredRuntimeAuthority) {
+      expect(runtimeCapabilities).not.toContain(authorityName);
+    }
+
+    expect(cleanupScript).not.toContain(
+      'DELETE FROM agent_profiles',
+    );
+  });
+
   it('defines each canonical listing physical table once', () => {
     const schemaDirectory = path.join(ROOT, 'drizzle/schema');
 

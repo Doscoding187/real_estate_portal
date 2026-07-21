@@ -109,8 +109,6 @@ function createLegacyCapabilities() {
     checkedAt: '2026-04-04T10:00:00.000Z',
     demandEngineReady: false,
     demandEngineDetails: {},
-    economicActorsReady: false,
-    economicActorsDetails: {},
     showingsReady: true,
     showingsDetails: {
       table: true,

@@ -7,7 +7,6 @@ export * from './listings';
 export * from './developments';
 export * from './media';
 export * from './explore';
-export * from './economicActors';
 export * from './marketplace';
 export * from './distribution';
 export * from './views';
