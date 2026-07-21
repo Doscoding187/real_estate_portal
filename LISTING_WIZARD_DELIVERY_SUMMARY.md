@@ -4,7 +4,7 @@
 
 ### ✅ COMPLETED (Foundation & Core Wizard)
 
-#### 1. **Database Schema** (`drizzle/listing-schema.ts`)
+#### 1. **Database Schema** (`drizzle/schema/listings.ts`)
 
 Complete schema for 7 tables with comprehensive field definitions:
 
@@ -223,7 +223,7 @@ Comprehensive guide created (`LISTING_WIZARD_IMPLEMENTATION_GUIDE.md`):
 ```
 real_estate_portal/
 ├── drizzle/
-│   └── listing-schema.ts          ← Database schema (NEW)
+│   └── schema/listings.ts          ← Database schema (NEW)
 ├── shared/
 │   └── listing-types.ts           ← TypeScript types (NEW)
 ├── client/src/
