@@ -16,6 +16,8 @@ import { createHash } from 'crypto';
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 
+import { databaseDefaultMatches } from './db-contract-default-normalization.js';
+
 config();
 
 // ============================================================================
@@ -293,8 +295,11 @@ async function verifyColumnShapes(
     const defaultMatches =
       actual &&
       (!Object.prototype.hasOwnProperty.call(expected, 'defaultValue') ||
-        actual.Default === expected.defaultValue) &&
-      (!expected.defaultValues || expected.defaultValues.includes(actual.Default));
+        databaseDefaultMatches(actual.Default, expected.defaultValue)) &&
+      (!expected.defaultValues ||
+        expected.defaultValues.some(expectedDefault =>
+          databaseDefaultMatches(actual.Default, expectedDefault),
+        ));
     const extraMatches =
       actual &&
       (!expected.extraIncludes ||
