@@ -79,58 +79,6 @@ const DEFAULT_AGENT_PLAN = 'agent_starter';
 const DEFAULT_AGENCY_PLAN = 'agency_growth';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-function isPricingGovernanceSchemaError(error: unknown): boolean {
-  const code = String((error as any)?.code ?? '');
-  const message = String((error as any)?.message ?? '');
-  const normalizedMessage = message.toLowerCase();
-  const touchesPricingTables =
-    normalizedMessage.includes('subscriptions') ||
-    normalizedMessage.includes('plan_entitlements') ||
-    normalizedMessage.includes('owner_type') ||
-    normalizedMessage.includes('owner_id') ||
-    normalizedMessage.includes('segment') ||
-    normalizedMessage.includes('trial_days') ||
-    normalizedMessage.includes('price_monthly');
-
-  if (code === 'ER_NO_SUCH_TABLE' || code === 'ER_BAD_FIELD_ERROR') {
-    return true;
-  }
-
-  // Some DB drivers wrap schema errors as "Failed query: ... from `subscriptions` ..."
-  // without surfacing the underlying SQL error code/message. Treat these as recoverable
-  // pricing-governance mismatches so auth/session flows can continue on legacy fallback.
-  if (normalizedMessage.includes('failed query:') && touchesPricingTables) {
-    return true;
-  }
-
-  return (
-    (normalizedMessage.includes("doesn't exist") || normalizedMessage.includes('unknown column')) &&
-    touchesPricingTables
-  );
-}
-
-function isProductionRuntime() {
-  return (
-    String(process.env.NODE_ENV || '').toLowerCase() === 'production' ||
-    String(process.env.APP_ENV || '').toLowerCase() === 'production'
-  );
-}
-
-function buildBlockedProjectionForUser(user: UserRow): PlanAccessProjection {
-  const { ownerType, ownerId } = getOwnerContextForUser(user);
-
-  return {
-    ownerType,
-    ownerId,
-    currentPlan: null,
-    subscription: null,
-    entitlements: { ...DEFAULT_FEATURE_ENTITLEMENTS },
-    trialStatus: 'none',
-    trialEndsAt: null,
-    trialDaysRemaining: null,
-  };
-}
-
 function parseJsonRecord(value: unknown): Record<string, unknown> | null {
   if (!value) return null;
   if (typeof value === 'object' && !Array.isArray(value)) {
@@ -444,84 +392,73 @@ export async function getPlanAccessProjectionForUserId(
   if (!db) throw new Error('Database not available');
 
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
   if (!user) return null;
 
-  try {
-    const { ownerType, ownerId } = getOwnerContextForUser(user);
+  const { ownerType, ownerId } = getOwnerContextForUser(user);
 
-    let [subscriptionRow] = await db
+  let [subscriptionRow] = await db
+    .select()
+    .from(subscriptions)
+    .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
+    .limit(1);
+
+  const shouldAutoProvision =
+    user.role === 'agent' || (user.role === 'agency_admin' && ownerType === 'agency');
+
+  if (!subscriptionRow && shouldAutoProvision) {
+    subscriptionRow = await ensureDefaultSubscriptionForUser(user);
+  }
+
+  let planRow: typeof plans.$inferSelect | null = null;
+
+  if (subscriptionRow?.planId) {
+    const [selectedPlan] = await db
       .select()
-      .from(subscriptions)
-      .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
+      .from(plans)
+      .where(eq(plans.id, subscriptionRow.planId))
       .limit(1);
 
-    const shouldAutoProvision =
-      user.role === 'agent' || (user.role === 'agency_admin' && ownerType === 'agency');
-
-    if (!subscriptionRow && shouldAutoProvision) {
-      subscriptionRow = await ensureDefaultSubscriptionForUser(user);
-    }
-
-    let planRow: typeof plans.$inferSelect | null = null;
-    if (subscriptionRow?.planId) {
-      const [selectedPlan] = await db
-        .select()
-        .from(plans)
-        .where(eq(plans.id, subscriptionRow.planId))
-        .limit(1);
-      planRow = selectedPlan || null;
-    }
-
-    if (!planRow) {
-      const fallback = await getStarterPlan(db, ownerType);
-      planRow = fallback || null;
-    }
-
-    const entitlementMap = planRow
-      ? await fetchEntitlementsForPlan(planRow.id)
-      : { ...DEFAULT_FEATURE_ENTITLEMENTS };
-
-    if (subscriptionRow?.status === 'trial' && subscriptionRow.trialEndsAt) {
-      const trialEndTs = new Date(subscriptionRow.trialEndsAt).getTime();
-      if (Number.isFinite(trialEndTs) && trialEndTs <= Date.now()) {
-        await db
-          .update(subscriptions)
-          .set({
-            status: 'expired',
-          })
-          .where(eq(subscriptions.id, subscriptionRow.id));
-        subscriptionRow.status = 'expired';
-      }
-    }
-
-    const trialState = deriveTrialState(
-      (subscriptionRow?.status as SubscriptionStatus | null) || null,
-      subscriptionRow?.trialEndsAt || null,
-    );
-
-    return {
-      ownerType,
-      ownerId,
-      currentPlan: planRow ? toPlanSnapshot(planRow) : null,
-      subscription: subscriptionRow ? toSubscriptionSnapshot(subscriptionRow) : null,
-      entitlements: entitlementMap,
-      ...trialState,
-    };
-  } catch (error) {
-    if (!isPricingGovernanceSchemaError(error)) {
-      throw error;
-    }
-
-    if (!isProductionRuntime()) {
-      console.warn('[PlanAccess] Pricing governance unavailable; returning blocked projection.', {
-        userId,
-        code: (error as any)?.code,
-        message: (error as any)?.message,
-      });
-    }
-
-    return buildBlockedProjectionForUser(user);
+    planRow = selectedPlan || null;
   }
+
+  if (!planRow) {
+    const fallback = await getStarterPlan(db, ownerType);
+    planRow = fallback || null;
+  }
+
+  const entitlementMap = planRow
+    ? await fetchEntitlementsForPlan(planRow.id)
+    : { ...DEFAULT_FEATURE_ENTITLEMENTS };
+
+  if (subscriptionRow?.status === 'trial' && subscriptionRow.trialEndsAt) {
+    const trialEndTs = new Date(subscriptionRow.trialEndsAt).getTime();
+
+    if (Number.isFinite(trialEndTs) && trialEndTs <= Date.now()) {
+      await db
+        .update(subscriptions)
+        .set({
+          status: 'expired',
+        })
+        .where(eq(subscriptions.id, subscriptionRow.id));
+
+      subscriptionRow.status = 'expired';
+    }
+  }
+
+  const trialState = deriveTrialState(
+    (subscriptionRow?.status as SubscriptionStatus | null) || null,
+    subscriptionRow?.trialEndsAt || null,
+  );
+
+  return {
+    ownerType,
+    ownerId,
+    currentPlan: planRow ? toPlanSnapshot(planRow) : null,
+    subscription: subscriptionRow ? toSubscriptionSnapshot(subscriptionRow) : null,
+    entitlements: entitlementMap,
+    ...trialState,
+  };
 }
 
 export async function setSubscriptionPlanForOwner(input: {

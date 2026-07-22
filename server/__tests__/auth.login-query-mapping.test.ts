@@ -13,7 +13,12 @@ vi.mock('../db-connection', () => ({
   _db: null,
 }));
 
-import { AUTH_LOGIN_USER_COLUMNS, getUserByEmail } from '../db';
+import {
+  AUTH_LOGIN_USER_COLUMNS,
+  AUTH_SESSION_USER_COLUMNS,
+  getUserByEmail,
+  getUserById,
+} from '../db';
 
 describe('getUserByEmail query mapping', () => {
   beforeEach(() => {
@@ -33,6 +38,19 @@ describe('getUserByEmail query mapping', () => {
     expect(mockSelect).toHaveBeenCalledWith(AUTH_LOGIN_USER_COLUMNS);
     expect(Object.keys(AUTH_LOGIN_USER_COLUMNS)).toContain('passwordHash');
     expect(Object.keys(AUTH_LOGIN_USER_COLUMNS)).not.toContain('password');
+  });
+
+  it('fails closed when canonical session columns cannot be read', async () => {
+    const schemaError = Object.assign(new Error('Unknown canonical users column'), {
+      code: 'ER_BAD_FIELD_ERROR',
+    });
+
+    mockLimit.mockRejectedValueOnce(schemaError);
+
+    await expect(getUserById(42)).rejects.toBe(schemaError);
+
+    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockSelect).toHaveBeenCalledWith(AUTH_SESSION_USER_COLUMNS);
   });
 
   it('throws when multiple accounts share the same email', async () => {

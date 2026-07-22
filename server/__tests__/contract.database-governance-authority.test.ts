@@ -93,4 +93,53 @@ describe('database governance authority', () => {
     expect(fixture).not.toContain('offerAmount,');
     expect(fixture).not.toContain('WHERE propertyId = ${createdPropertyId}');
   });
+  it('fails closed on canonical platform settings, auth, and plan schemas', () => {
+    const dbSource = read('server/db.ts');
+    const planAccessSource = read('server/services/planAccessService.ts');
+
+    expect(dbSource).not.toContain('PlatformSettingsColumnMode');
+    expect(dbSource).not.toContain('cachedPlatformSettingsColumnMode');
+    expect(dbSource).not.toContain('getPlatformSettingsColumnMode');
+    expect(dbSource).not.toContain('${keyColumn}');
+    expect(dbSource).not.toContain('${valueColumn}');
+    expect(dbSource).toContain('\\`setting_key\\` AS settingKey');
+    expect(dbSource).toContain('\\`setting_value\\` AS settingValue');
+    expect(dbSource).toContain('WHERE \\`setting_key\\` = ${db.$client.escape(key)}');
+
+    const userByIdStart = dbSource.indexOf('export async function getUserById');
+    const userByIdEnd = dbSource.indexOf('/**\n * Get user by email', userByIdStart);
+
+    expect(userByIdStart).toBeGreaterThanOrEqual(0);
+    expect(userByIdEnd).toBeGreaterThan(userByIdStart);
+
+    const userById = dbSource.slice(userByIdStart, userByIdEnd);
+
+    expect(userById).toContain('.select(AUTH_SESSION_USER_COLUMNS)');
+    expect(userById).not.toContain('AUTH_LOGIN_USER_COLUMNS');
+    expect(userById).not.toContain('catch (error)');
+    expect(userById).not.toContain('falling back');
+
+    expect(planAccessSource).not.toContain('isPricingGovernanceSchemaError');
+    expect(planAccessSource).not.toContain('buildBlockedProjectionForUser');
+    expect(planAccessSource).not.toContain('pricing-governance mismatches');
+    expect(planAccessSource).not.toContain('legacy fallback');
+
+    const projectionStart = planAccessSource.indexOf(
+      'export async function getPlanAccessProjectionForUserId',
+    );
+    const projectionEnd = planAccessSource.indexOf(
+      'export async function setSubscriptionPlanForOwner',
+      projectionStart,
+    );
+
+    expect(projectionStart).toBeGreaterThanOrEqual(0);
+    expect(projectionEnd).toBeGreaterThan(projectionStart);
+
+    const projection = planAccessSource.slice(projectionStart, projectionEnd);
+
+    expect(projection).toContain('await ensureDefaultSubscriptionForUser(user)');
+    expect(projection).toContain('await getStarterPlan(db, ownerType)');
+    expect(projection).not.toContain('catch (error)');
+    expect(projection).not.toContain('return buildBlockedProjectionForUser');
+  });
 });
