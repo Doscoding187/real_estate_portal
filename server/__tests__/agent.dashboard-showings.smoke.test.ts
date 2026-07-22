@@ -300,6 +300,7 @@ describeWithDb('agent dashboard showings smoke', () => {
     createdLeadId = Number((leadInsert as any).insertId);
 
     const [showingInsert] = await db!.insert(showings).values({
+      listingId: createdListingId,
       propertyId: createdPropertyId,
       leadId: createdLeadId,
       agentId: createdAgentId,
@@ -422,6 +423,7 @@ describeWithDb('agent dashboard showings smoke', () => {
     expect(showingsResult[0]).toEqual(
       expect.objectContaining({
         id: createdShowingId,
+        listingId: createdListingId,
         propertyId: createdPropertyId,
         leadId: createdLeadId,
         agentId: createdAgentId,

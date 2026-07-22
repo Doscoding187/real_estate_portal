@@ -116,7 +116,6 @@ function createLegacyCapabilities() {
       propertyIdColumn: true,
       leadIdColumn: true,
       agentIdColumn: true,
-      scheduledTimeColumn: false,
       scheduledAtColumn: true,
       statusColumn: true,
       notesColumn: true,
@@ -130,7 +129,7 @@ describe('agent showings compatibility', () => {
     mockGetRuntimeSchemaCapabilities.mockResolvedValue(createLegacyCapabilities());
   });
 
-  it('returns normalized showings for the legacy showings schema', async () => {
+  it('returns normalized showings from canonical showings authority', async () => {
     const execute = vi.fn().mockResolvedValue([
       {
         id: 91,
@@ -167,7 +166,6 @@ describe('agent showings compatibility', () => {
         propertyId: 401,
         leadId: 33,
         scheduledAt: '2026-04-04T09:00:00.000Z',
-        scheduledTime: '2026-04-04T09:00:00.000Z',
         status: 'scheduled',
         property: null,
         client: null,
@@ -175,7 +173,7 @@ describe('agent showings compatibility', () => {
     ]);
   });
 
-  it('uses the legacy showings table for dashboard stats counts', async () => {
+  it('uses the canonical showings table for dashboard stats counts', async () => {
     const execute = vi
       .fn()
       .mockResolvedValueOnce([{ count_value: 2 }])
