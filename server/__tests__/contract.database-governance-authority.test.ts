@@ -260,6 +260,62 @@ describe('database governance authority', () => {
     expect(source).toContain(
       "return status === 'scheduled' ? 'confirmed' : status",
     );
+
+    expect(() =>
+      read('server/services/showingsSchemaCompatibility.ts'),
+    ).toThrow();
+    expect(() =>
+      read('server/services/__tests__/showingsSchemaCompatibility.test.ts'),
+    ).toThrow();
+
+    const runtimeCapabilities = read(
+      'server/services/runtimeSchemaCapabilities.ts',
+    );
+
+    expect(runtimeCapabilities).not.toContain(
+      'showingsSchemaCompatibility',
+    );
+    expect(runtimeCapabilities).not.toContain(
+      'showingsReady',
+    );
+    expect(runtimeCapabilities).not.toContain(
+      'showingsDetails',
+    );
+    expect(runtimeCapabilities).not.toContain(
+      "tableExists('showings')",
+    );
+    expect(runtimeCapabilities).not.toContain(
+      "columnExists('showings'",
+    );
+    expect(runtimeCapabilities).not.toContain(
+      "target === 'showings'",
+    );
+
+    const dashboardOverview = read(
+      'client/src/components/agent/AgentDashboardOverview.tsx',
+    );
+    const showingsCalendar = read(
+      'client/src/components/agent/ShowingsCalendar.tsx',
+    );
+    const agentProductivity = read(
+      'client/src/pages/agent/AgentProductivity.tsx',
+    );
+
+    expect(dashboardOverview).not.toContain(
+      'scheduledTime',
+    );
+    expect(showingsCalendar).not.toContain(
+      'scheduledTime',
+    );
+    expect(agentProductivity).not.toContain(
+      'scheduledAt || showing.scheduledAt',
+    );
+    expect(agentProductivity).not.toContain(
+      'left.scheduledAt || left.scheduledAt',
+    );
+    expect(agentProductivity).not.toContain(
+      'right.scheduledAt || right.scheduledAt',
+    );
   });
 
 });

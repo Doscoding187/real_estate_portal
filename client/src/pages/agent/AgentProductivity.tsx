@@ -192,14 +192,14 @@ export default function AgentProductivity() {
     () =>
       [...showingsData]
         .filter(showing => {
-          const scheduledAt = showing.scheduledAt || showing.scheduledAt;
+          const scheduledAt = showing.scheduledAt;
           if (!scheduledAt) return false;
           const scheduledDate = new Date(scheduledAt);
           return !Number.isNaN(scheduledDate.getTime()) && scheduledDate.getTime() >= Date.now();
         })
         .sort((left, right) => {
-          const leftTime = new Date(left.scheduledAt || left.scheduledAt || 0).getTime();
-          const rightTime = new Date(right.scheduledAt || right.scheduledAt || 0).getTime();
+          const leftTime = new Date(left.scheduledAt || 0).getTime();
+          const rightTime = new Date(right.scheduledAt || 0).getTime();
           return leftTime - rightTime;
         }),
     [showingsData],
@@ -209,7 +209,7 @@ export default function AgentProductivity() {
     const today = new Date();
 
     return upcomingShowings.filter(showing => {
-      const scheduledAt = showing.scheduledAt || showing.scheduledAt;
+      const scheduledAt = showing.scheduledAt;
       if (!scheduledAt) return false;
       const scheduledDate = new Date(scheduledAt);
       return !Number.isNaN(scheduledDate.getTime()) && sameDay(scheduledDate, today);
@@ -230,7 +230,7 @@ export default function AgentProductivity() {
     () =>
       new Set(
         upcomingShowings.map(showing => {
-          const scheduledAt = showing.scheduledAt || showing.scheduledAt;
+          const scheduledAt = showing.scheduledAt;
           const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
           return scheduledDate && !Number.isNaN(scheduledDate.getTime())
             ? scheduledDate.toISOString().split('T')[0]
@@ -261,7 +261,7 @@ export default function AgentProductivity() {
         showing.client?.name && showing.client.name !== 'Prospective buyer'
           ? `Prepare for ${showing.client.name}`
           : 'Scheduled appointment ready for follow-up',
-      meta: formatDateTime(showing.scheduledAt || showing.scheduledAt),
+      meta: formatDateTime(showing.scheduledAt),
       tone: getShowingTone(showing.status),
       badge: String(showing.status || 'scheduled').replace(/_/g, ' '),
       actionLabel: 'Open calendar',
@@ -509,7 +509,7 @@ export default function AgentProductivity() {
                             <div>
                               <p className="text-slate-500">When</p>
                               <p className="font-semibold text-slate-900">
-                                {formatDateTime(showing.scheduledAt || showing.scheduledAt)}
+                                {formatDateTime(showing.scheduledAt)}
                               </p>
                             </div>
                             <div>

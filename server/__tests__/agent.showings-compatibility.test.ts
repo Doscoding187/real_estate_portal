@@ -1,25 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetDb, mockGetRuntimeSchemaCapabilities, mockWarnSchemaCapabilityOnce } = vi.hoisted(
-  () => ({
-    mockGetDb: vi.fn(),
-    mockGetRuntimeSchemaCapabilities: vi.fn(),
-    mockWarnSchemaCapabilityOnce: vi.fn(),
-  }),
-);
+const { mockGetDb } = vi.hoisted(() => ({
+  mockGetDb: vi.fn(),
+}));
 
 vi.mock('../db', () => ({
   getDb: mockGetDb,
 }));
 
-vi.mock('../services/runtimeSchemaCapabilities', async () => {
-  const actual = await vi.importActual('../services/runtimeSchemaCapabilities');
-  return {
-    ...actual,
-    getRuntimeSchemaCapabilities: mockGetRuntimeSchemaCapabilities,
-    warnSchemaCapabilityOnce: mockWarnSchemaCapabilityOnce,
-  };
-});
+
 
 import { agentRouter } from '../agentRouter';
 
@@ -104,29 +93,10 @@ function createSelectDbMock(data: {
   };
 }
 
-function createLegacyCapabilities() {
-  return {
-    checkedAt: '2026-04-04T10:00:00.000Z',
-    demandEngineReady: false,
-    demandEngineDetails: {},
-    showingsReady: true,
-    showingsDetails: {
-      table: true,
-      listingIdColumn: false,
-      propertyIdColumn: true,
-      leadIdColumn: true,
-      agentIdColumn: true,
-      scheduledAtColumn: true,
-      statusColumn: true,
-      notesColumn: true,
-    },
-  } as any;
-}
 
-describe('agent showings compatibility', () => {
+describe('agent canonical showings authority', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetRuntimeSchemaCapabilities.mockResolvedValue(createLegacyCapabilities());
   });
 
   it('returns normalized showings from canonical showings authority', async () => {
