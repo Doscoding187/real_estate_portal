@@ -3,23 +3,25 @@ import { eq, sql } from 'drizzle-orm';
 
 import { agentRouter } from '../agentRouter';
 import { getDb } from '../db-connection';
-import { leads, showings } from '../../drizzle/schema';
+import { leads, listings, offers, showings } from '../../drizzle/schema';
 
 const describeWithDb = process.env.DATABASE_URL
   ? describe
-  : ((name: string, fn: () => void) =>
-      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe;
+  : (((name: string, fn: () => void) =>
+      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe);
 
 describeWithDb('agent dashboard showings smoke', () => {
   let createdUserId: number | null = null;
   let createdAgentId: number | null = null;
   let createdOtherUserId: number | null = null;
   let createdOtherAgentId: number | null = null;
+  let createdBuyerUserId: number | null = null;
   let createdPropertyId: number | null = null;
+  let createdListingId: number | null = null;
   let createdLeadId: number | null = null;
   let createdShowingId: number | null = null;
   let createdCommissionId: number | null = null;
-  let createdOfferBuyerName: string | null = null;
+  let createdOfferId: number | null = null;
 
   beforeEach(() => {
     process.env.NODE_ENV = 'test';
@@ -39,7 +41,9 @@ describeWithDb('agent dashboard showings smoke', () => {
     `);
 
     return new Set(
-      (Array.isArray(rows) ? rows : []).map((row: any) => String(row.column_name ?? row.COLUMN_NAME)),
+      (Array.isArray(rows) ? rows : []).map((row: any) =>
+        String(row.column_name ?? row.COLUMN_NAME),
+      ),
     );
   }
 
@@ -47,13 +51,9 @@ describeWithDb('agent dashboard showings smoke', () => {
     const db = await getDb();
     if (!db) return;
 
-    if (createdPropertyId && createdOfferBuyerName) {
-      await db.execute(sql`
-        DELETE FROM offers
-        WHERE propertyId = ${createdPropertyId}
-          AND buyerName = ${createdOfferBuyerName}
-      `);
-      createdOfferBuyerName = null;
+    if (createdOfferId) {
+      await db.delete(offers).where(eq(offers.id, createdOfferId));
+      createdOfferId = null;
     }
 
     if (createdCommissionId) {
@@ -71,6 +71,11 @@ describeWithDb('agent dashboard showings smoke', () => {
       createdLeadId = null;
     }
 
+    if (createdListingId) {
+      await db.delete(listings).where(eq(listings.id, createdListingId));
+      createdListingId = null;
+    }
+
     if (createdPropertyId) {
       await db.execute(sql`DELETE FROM properties WHERE id = ${createdPropertyId}`);
       createdPropertyId = null;
@@ -86,6 +91,11 @@ describeWithDb('agent dashboard showings smoke', () => {
       createdOtherAgentId = null;
     }
 
+    if (createdBuyerUserId) {
+      await db.execute(sql`DELETE FROM users WHERE id = ${createdBuyerUserId}`);
+      createdBuyerUserId = null;
+    }
+
     if (createdUserId) {
       await db.execute(sql`DELETE FROM users WHERE id = ${createdUserId}`);
       createdUserId = null;
@@ -97,9 +107,7 @@ describeWithDb('agent dashboard showings smoke', () => {
     }
   }, 30_000);
 
-  it(
-    'serves agent dashboard, showings, and lead follow-ups against the migrated schema',
-    async () => {
+  it('serves agent dashboard, showings, and lead follow-ups against the migrated schema', async () => {
     const db = await getDb();
     expect(db).toBeTruthy();
 
@@ -178,6 +186,12 @@ describeWithDb('agent dashboard showings smoke', () => {
     `);
     createdOtherAgentId = Number((otherAgentInsert as any).insertId);
 
+    const [buyerUserInsert] = await db!.execute(sql`
+      INSERT INTO users (email, name, role, emailVerified)
+      VALUES (${buyerEmail}, ${buyerName}, ${'visitor'}, ${1})
+    `);
+    createdBuyerUserId = Number((buyerUserInsert as any).insertId);
+
     const [propertyInsert] = await db!.execute(sql`
       INSERT INTO properties (
         title,
@@ -224,6 +238,25 @@ describeWithDb('agent dashboard showings smoke', () => {
       )
     `);
     createdPropertyId = Number((propertyInsert as any).insertId);
+
+    const [listingInsert] = await db!.insert(listings).values({
+      ownerId: createdUserId,
+      agentId: createdAgentId,
+      action: 'sell',
+      propertyType: 'house',
+      title: `Agent Dashboard Listing ${suffix}`,
+      description: 'Canonical offer smoke-test listing',
+      askingPrice: '2250000.00',
+      address: '123 Smoke Test Street',
+      latitude: '-26.1076000',
+      longitude: '28.0567000',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'published',
+      approvalStatus: 'approved',
+      slug: `agent-dashboard-listing-${suffix}`,
+    });
+    createdListingId = Number(listingInsert.insertId);
 
     const leadColumns = await getLeadColumnSet();
     const leadInsertColumns = [
@@ -277,26 +310,13 @@ describeWithDb('agent dashboard showings smoke', () => {
     });
     createdShowingId = Number(showingInsert.insertId);
 
-    createdOfferBuyerName = buyerName;
-    await db!.execute(sql`
-      INSERT INTO offers (
-        propertyId,
-        leadId,
-        agentId,
-        buyerName,
-        buyerEmail,
-        offerAmount,
-        status
-      ) VALUES (
-        ${createdPropertyId},
-        ${createdLeadId},
-        ${createdAgentId},
-        ${buyerName},
-        ${buyerEmail},
-        ${2150000},
-        ${'pending'}
-      )
-    `);
+    const [offerInsert] = await db!.insert(offers).values({
+      listingId: createdListingId,
+      buyerId: createdBuyerUserId,
+      amount: '2150000.00',
+      status: 'pending',
+    });
+    createdOfferId = Number(offerInsert.insertId);
 
     const [commissionInsert] = await db!.execute(sql`
       INSERT INTO commissions (
@@ -373,14 +393,13 @@ describeWithDb('agent dashboard showings smoke', () => {
         nextFollowUp: followUpAt.toISOString(),
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    await expect(otherCaller.completeLeadFollowUp({ leadId: createdLeadId })).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-    });
+    await expect(otherCaller.completeLeadFollowUp({ leadId: createdLeadId })).rejects.toMatchObject(
+      {
+        code: 'NOT_FOUND',
+      },
+    );
 
-    await db!
-      .update(leads)
-      .set({ status: 'converted' })
-      .where(eq(leads.id, createdLeadId));
+    await db!.update(leads).set({ status: 'converted' }).where(eq(leads.id, createdLeadId));
     expect(await caller.getMyFollowUps({ limit: 10 })).toEqual([]);
     await expect(
       caller.setLeadFollowUp({
@@ -391,10 +410,7 @@ describeWithDb('agent dashboard showings smoke', () => {
     await expect(caller.completeLeadFollowUp({ leadId: createdLeadId })).rejects.toMatchObject({
       code: 'BAD_REQUEST',
     });
-    await db!
-      .update(leads)
-      .set({ status: 'new' })
-      .where(eq(leads.id, createdLeadId));
+    await db!.update(leads).set({ status: 'new' }).where(eq(leads.id, createdLeadId));
 
     const showingsResult = await caller.getMyShowings({
       startDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
@@ -469,7 +485,5 @@ describeWithDb('agent dashboard showings smoke', () => {
         expect.stringContaining('Buyer called; viewing confirmed.'),
       ]),
     );
-    },
-    30_000,
-  );
+  }, 30_000);
 });
