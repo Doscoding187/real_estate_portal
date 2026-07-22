@@ -4,6 +4,7 @@ import path from 'node:path';
 const TARGET_DIRS = ['client', 'server', 'shared'];
 const TARGET_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 const ALLOWLIST_PATH = path.resolve('scripts/config/ts-nocheck-allowlist.txt');
+const TS_NOCHECK_DIRECTIVE = /^\s*\/\/\s*@ts-nocheck(?:\s|$)/m;
 
 async function walkDirectory(dirPath, collector) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -24,7 +25,7 @@ async function walkDirectory(dirPath, collector) {
     }
 
     const fileContents = await fs.readFile(fullPath, 'utf8');
-    if (fileContents.includes('@ts-nocheck')) {
+    if (TS_NOCHECK_DIRECTIVE.test(fileContents)) {
       const relativePath = path.relative(process.cwd(), fullPath).split(path.sep).join('/');
       collector.add(relativePath);
     }

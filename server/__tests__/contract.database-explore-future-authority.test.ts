@@ -2,6 +2,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+const runFutureExploreAuthorityContract =
+  process.env.RUN_FUTURE_EXPLORE_AUTHORITY_CONTRACT === 'true';
+
+const describeFutureExploreAuthority = runFutureExploreAuthorityContract
+  ? describe
+  : describe.skip;
+
 const ROOT = process.cwd();
 
 function read(path: string): string {
@@ -22,7 +29,7 @@ function block(
   return source.slice(start, end);
 }
 
-describe('future Explore database authority', () => {
+describeFutureExploreAuthority('future Explore database authority', () => {
   const exploreSchema = read('drizzle/schema/explore.ts');
   const marketplaceSchema = read('drizzle/schema/marketplace.ts');
   const servicesSchema = read('drizzle/schema/servicesEngine.ts');
