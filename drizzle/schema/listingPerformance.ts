@@ -29,7 +29,7 @@ export const agencyListingPerformanceReviews = mysqlTable('agency_listing_perfor
   nextReviewAt: timestamp('next_review_at', { mode: 'string' }),
   revisionRequestedAt: timestamp('revision_requested_at', { mode: 'string' }),
   canonicalRevisionListingId: int('canonical_revision_listing_id').references(() => listings.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 }, table => [
   index('idx_listing_performance_review_agency_listing').on(table.agencyId, table.listingId),
@@ -45,5 +45,5 @@ export const agencyListingPerformanceActivity = mysqlTable('agency_listing_perfo
   eventType: varchar('event_type', { length: 80 }).notNull(),
   description: text().notNull(),
   metadata: json(),
-  createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
 }, table => [index('idx_listing_performance_activity_review').on(table.agencyId, table.reviewId, table.createdAt)]);

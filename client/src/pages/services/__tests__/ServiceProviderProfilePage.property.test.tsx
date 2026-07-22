@@ -33,8 +33,8 @@ vi.mock('wouter', async () => {
   const actual = await vi.importActual<typeof import('wouter')>('wouter');
   return {
     ...actual,
-    useRoute: () => [true, { slug: 'test-provider-123' }],
-    useLocation: () => ['/services/provider/test-provider-123', vi.fn()],
+    useRoute: () => [true, { slug: 'test-provider--123' }],
+    useLocation: () => ['/services/provider/test-provider--123', vi.fn()],
     Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
       <a href={href}>{children}</a>
     ),
@@ -65,7 +65,7 @@ function makeReview(id: number) {
 
 function makeProfile(reviews: ReturnType<typeof makeReview>[]) {
   return {
-    providerId: 'test-provider-123',
+    providerId: 123,
     companyName: 'Test Provider Co',
     headline: 'We do great work',
     bio: 'A great provider',

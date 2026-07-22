@@ -10,7 +10,7 @@ This is a drift problem, not a brochure-specific migration problem.
 
 - `pnpm db:migrate` runs the custom SQL migration runner and then `db:verify:distribution`.
 - `pnpm db:migrate:local` now mirrors that idempotent path for day-to-day local work.
-- `pnpm db:migrate:drizzle:local` remains available when we intentionally need to run Drizzle journal migrations on a fresh or correctly baselined database.
+- Superseded by DBA-S2B: direct Drizzle journal migration execution is no longer an active workflow. Fresh databases are provisioned through the canonical SQL baseline.
 - `server/migrations/runSqlMigrations.ts` is the safer path for distribution changes because migrations are written with `CREATE TABLE IF NOT EXISTS`, duplicate-column handling, and schema verification afterward.
 
 ## Important runner behavior

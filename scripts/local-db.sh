@@ -17,7 +17,6 @@ APP_PASSWORD="${LISTIFY_LOCAL_DB_APP_PASSWORD:-listify_app_password}"
 TEST_PASSWORD="${LISTIFY_LOCAL_DB_TEST_PASSWORD:-listify_test_password}"
 LISTING_PERFORMANCE_E2E_DATABASE="${LISTIFY_LISTING_PERFORMANCE_E2E_DATABASE:-listify_listing_performance_e2e}"
 PROSPECT_JOURNEY_E2E_DATABASE="${LISTIFY_PROSPECT_JOURNEY_E2E_DATABASE:-listify_prospect_journey_e2e}"
-PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE="${LISTIFY_PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE:-listify_prospect_journey_migration_proof}"
 
 assert_listing_performance_e2e_database() {
   if [ "$LISTING_PERFORMANCE_E2E_DATABASE" != "listify_listing_performance_e2e" ]; then
@@ -29,13 +28,6 @@ assert_listing_performance_e2e_database() {
 assert_prospect_journey_e2e_database() {
   if [ "$PROSPECT_JOURNEY_E2E_DATABASE" != "listify_prospect_journey_e2e" ]; then
     echo "Prospect Journey E2E database must be exactly listify_prospect_journey_e2e." >&2
-    exit 1
-  fi
-}
-
-assert_prospect_journey_migration_proof_database() {
-  if [ "$PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE" != "listify_prospect_journey_migration_proof" ]; then
-    echo "Prospect Journey migration proof database must be exactly listify_prospect_journey_migration_proof." >&2
     exit 1
   fi
 }
@@ -104,7 +96,6 @@ CREATE DATABASE IF NOT EXISTS listify_local;
 CREATE DATABASE IF NOT EXISTS listify_test;
 CREATE DATABASE IF NOT EXISTS $LISTING_PERFORMANCE_E2E_DATABASE;
 CREATE DATABASE IF NOT EXISTS $PROSPECT_JOURNEY_E2E_DATABASE;
-CREATE DATABASE IF NOT EXISTS $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE;
 
 CREATE USER IF NOT EXISTS 'listify_app'@'127.0.0.1' IDENTIFIED BY '$APP_PASSWORD';
 CREATE USER IF NOT EXISTS 'listify_app'@'localhost' IDENTIFIED BY '$APP_PASSWORD';
@@ -124,8 +115,6 @@ GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'12
 GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'localhost';
 GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_E2E_DATABASE.* TO 'listify_app'@'127.0.0.1';
 GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_E2E_DATABASE.* TO 'listify_app'@'localhost';
-GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE.* TO 'listify_app'@'127.0.0.1';
-GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE.* TO 'listify_app'@'localhost';
 
 ALTER USER 'root'@'localhost' IDENTIFIED BY '$ROOT_PASSWORD';
 FLUSH PRIVILEGES;
@@ -297,39 +286,6 @@ drop_prospect_journey_e2e() {
   fi
 }
 
-reset_prospect_journey_migration_proof() {
-  assert_prospect_journey_migration_proof_database
-  start
-  if use_docker; then
-    compose exec -T mysql-local mysql -uroot "-p$ROOT_PASSWORD" <<SQL
-DROP DATABASE IF EXISTS $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE;
-CREATE DATABASE $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE;
-GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE.* TO 'listify_app'@'127.0.0.1';
-GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE.* TO 'listify_app'@'localhost';
-FLUSH PRIVILEGES;
-SQL
-  else
-    mapfile -t root_args < <(native_root_args)
-    mysql "${root_args[@]}" <<SQL
-DROP DATABASE IF EXISTS $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE;
-CREATE DATABASE $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE;
-GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE.* TO 'listify_app'@'127.0.0.1';
-GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE.* TO 'listify_app'@'localhost';
-FLUSH PRIVILEGES;
-SQL
-  fi
-}
-
-drop_prospect_journey_migration_proof() {
-  assert_prospect_journey_migration_proof_database
-  if use_docker; then
-    compose exec -T mysql-local mysql -uroot "-p$ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE"
-  else
-    mapfile -t root_args < <(native_root_args)
-    mysql "${root_args[@]}" -e "DROP DATABASE IF EXISTS $PROSPECT_JOURNEY_MIGRATION_PROOF_DATABASE"
-  fi
-}
-
 case "${1:-help}" in
   start) start ;;
   wait) wait_for_tcp ;;
@@ -340,11 +296,9 @@ case "${1:-help}" in
   listing-performance-e2e:drop) drop_listing_performance_e2e ;;
   prospect-journey-e2e:reset) reset_prospect_journey_e2e ;;
   prospect-journey-e2e:drop) drop_prospect_journey_e2e ;;
-  prospect-journey-migration-proof:reset) reset_prospect_journey_migration_proof ;;
-  prospect-journey-migration-proof:drop) drop_prospect_journey_migration_proof ;;
   *)
     cat <<EOF
-Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop|prospect-journey-migration-proof:reset|prospect-journey-migration-proof:drop>
+Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop>
 
 Environment overrides:
   LISTIFY_LOCAL_DB_MODE=auto|docker|native

@@ -20,66 +20,12 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { users } from './core';
-import { plans } from './billing';
 import { agencies } from './agencies';
 import { listings } from './listings';
 import { developments } from './developments';
 import { videos } from './media';
 import { exploreContent } from './explore';
-
-export const partnerTiers = mysqlTable('partner_tiers', {
-  id: int().autoincrement().primaryKey(),
-  name: varchar({ length: 100 }).notNull(),
-  slug: varchar({ length: 100 }).notNull(),
-  description: text(),
-  priceZar: int().notNull(),
-  maxListings: int().default(0),
-  features: json(),
-  isActive: int().default(1).notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const partners = mysqlTable(
-  'partners',
-  {
-    id: int().autoincrement().primaryKey(),
-    userId: int('user_id')
-      .notNull()
-      .references(() => users.id),
-    companyName: varchar('company_name', { length: 255 }).notNull(),
-    serviceType: mysqlEnum('service_type', [
-      'mortgage_originator',
-      'conveyancer',
-      'moving_company',
-      'interior_designer',
-      'photographer',
-      'cleaning_service',
-      'solar_installer',
-      'security_systems',
-    ]).notNull(),
-    verificationStatus: mysqlEnum('verification_status', [
-      'pending',
-      'verified',
-      'rejected',
-    ]).default('pending'),
-    rating: decimal({ precision: 3, scale: 2 }).default('0.00'),
-    reviewCount: int('review_count').default(0),
-    logoUrl: varchar('logo_url', { length: 500 }),
-    websiteUrl: varchar('website_url', { length: 500 }),
-    contactEmail: varchar('contact_email', { length: 320 }),
-    contactPhone: varchar('contact_phone', { length: 50 }),
-    serviceAreas: json('service_areas'),
-    isActive: tinyint('is_active').default(1),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
-  },
-  table => [
-    index('idx_partners_service_type').on(table.serviceType),
-    index('idx_partners_verification').on(table.verificationStatus),
-    index('idx_partners_location').on(table.serviceAreas), // Note: querying JSON this way is limited in MySQL
-  ],
-);
+import { partners } from './partners';
 
 export const partnerLeads = mysqlTable(
   'partner_leads',
@@ -95,31 +41,13 @@ export const partnerLeads = mysqlTable(
     serviceRequested: varchar('service_requested', { length: 100 }),
     message: text(),
     status: mysqlEnum(['new', 'contacted', 'quoted', 'converted', 'closed']).default('new'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
   },
   table => [
     index('idx_partner_leads_partner').on(table.partnerId),
     index('idx_partner_leads_status').on(table.status),
   ],
-);
-
-export const partnerSubscriptions = mysqlTable(
-  'partner_subscriptions',
-  {
-    id: int().autoincrement().primaryKey(),
-    partnerId: int('partner_id')
-      .notNull()
-      .references(() => partners.id),
-    planId: int('plan_id').references(() => plans.id),
-    status: mysqlEnum(['active', 'cancelled', 'past_due', 'trial']).default('active'),
-    billingInterval: mysqlEnum('billing_interval', ['monthly', 'yearly']).default('monthly'),
-    currentPeriodStart: timestamp('current_period_start', { mode: 'string' }),
-    currentPeriodEnd: timestamp('current_period_end', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
-  },
-  table => [index('idx_partner_subscriptions_status').on(table.status)],
 );
 
 export const marketplaceBundles = mysqlTable('marketplace_bundles', {
@@ -130,7 +58,7 @@ export const marketplaceBundles = mysqlTable('marketplace_bundles', {
   durationDays: int().notNull(),
   features: json(),
   isActive: int().default(1).notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -145,7 +73,7 @@ export const bundlePartners = mysqlTable('bundle_partners', {
   category: varchar({ length: 50 }).notNull(),
   displayOrder: int().default(0).notNull(),
   inclusionFeeZar: int(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const boostCampaigns = mysqlTable(
@@ -195,7 +123,7 @@ export const contentApprovalQueue = mysqlTable(
     rejectionReason: text('rejection_reason'),
     autoCheckResults: json('auto_check_results'),
     submittedAt: timestamp('submitted_at', { mode: 'string' })
-      .default('CURRENT_TIMESTAMP')
+      .defaultNow()
       .notNull(),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
   },
@@ -221,7 +149,7 @@ export const contentQualityScores = mysqlTable(
     policyScore: int('policy_score'),
     details: json(),
     lastCalculatedAt: timestamp('last_calculated_at', { mode: 'string' })
-      .default('CURRENT_TIMESTAMP')
+      .defaultNow()
       .notNull(),
   },
   table => [
@@ -278,7 +206,7 @@ export const foundingPartners = mysqlTable(
       .notNull()
       .references(() => partners.id, { onDelete: 'cascade' }),
     tier: mysqlEnum(['gold', 'platinum', 'diamond']).default('gold').notNull(),
-    joinDate: timestamp('join_date', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    joinDate: timestamp('join_date', { mode: 'string' }).defaultNow(),
     benefits: json(),
     contributionValue: int('contribution_value'),
     isPublic: tinyint('is_public').default(1),
@@ -312,7 +240,7 @@ export const heroCampaigns = mysqlTable(
     priority: int().default(0),
     impressions: int().default(0),
     clicks: int().default(0),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
   },
   table => [
     index('idx_hero_campaigns_slug').on(table.targetSlug),
@@ -329,7 +257,7 @@ export const services = mysqlTable('services', {
   averageCost: int(),
   durationMinutes: int(),
   isActive: int().default(1).notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -346,6 +274,6 @@ export const reviews = mysqlTable('reviews', {
   isVerified: int().default(0).notNull(),
   isPublished: int().default(1).notNull(),
   moderationStatus: mysqlEnum(['pending', 'approved', 'rejected']).default('pending').notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });

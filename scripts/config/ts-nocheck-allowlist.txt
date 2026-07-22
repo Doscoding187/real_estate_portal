@@ -73,7 +73,6 @@ client/src/pages/admin/DevelopersPage.tsx
 client/src/pages/admin/DevelopmentOversight.tsx
 client/src/pages/admin/LocationMonetizationPage.tsx
 client/src/pages/admin/MarketingCampaignsPage.tsx
-client/src/pages/admin/PartnerNetworkPage.tsx
 client/src/pages/admin/PlanEditor.tsx
 client/src/pages/admin/PlatformSettings.tsx
 client/src/pages/admin/RevenueCenterPage.tsx

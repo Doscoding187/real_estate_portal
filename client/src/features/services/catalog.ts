@@ -178,7 +178,7 @@ export function formatArea(city?: string | null, province?: string | null, subur
   return parts.length ? parts.join(', ') : 'your area';
 }
 
-export function toProviderSlug(companyName: string, providerId: string) {
+export function toProviderSlug(companyName: string, providerId: number) {
   const stem = companyName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -186,11 +186,20 @@ export function toProviderSlug(companyName: string, providerId: string) {
   return `${stem || 'provider'}--${providerId}`;
 }
 
-export function providerIdFromSlug(slug: string) {
+export function providerIdFromSlug(slug: string): number | null {
   const marker = '--';
-  if (!slug.includes(marker)) return slug;
   const parts = slug.split(marker);
-  return parts[parts.length - 1];
+  const rawProviderId = String(parts[parts.length - 1] || '').trim();
+
+  if (!/^\d+$/.test(rawProviderId)) {
+    return null;
+  }
+
+  const providerId = Number.parseInt(rawProviderId, 10);
+
+  return Number.isInteger(providerId) && providerId > 0
+    ? providerId
+    : null;
 }
 
 export const SA_PROVINCES = [

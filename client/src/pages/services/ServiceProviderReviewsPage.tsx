@@ -7,16 +7,29 @@ import { applySeo } from '@/lib/seo';
 import { StarRating } from '@/components/services/StarRating';
 import { ArrowRight, BadgeCheck, Sparkles } from 'lucide-react';
 
+function parsePositiveInteger(value: string | undefined): number | null {
+  if (!value || !/^\d+$/.test(value)) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  return Number.isInteger(parsed) && parsed > 0
+    ? parsed
+    : null;
+}
+
 export default function ServiceProviderReviewsPage() {
   const [, params] = useRoute('/services/reviews/:providerId');
-  const providerId = String(params?.providerId || '');
+  const providerId = parsePositiveInteger(params?.providerId);
+  const routeProviderId = providerId || 0;
 
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
-    { providerId },
+    { providerId: routeProviderId },
     { enabled: Boolean(providerId) },
   );
   const reviewsQuery = trpc.servicesEngine.getProviderReviews.useQuery(
-    { providerId, limit: 100 },
+    { providerId: routeProviderId, limit: 100 },
     { enabled: Boolean(providerId) },
   );
 
@@ -27,7 +40,7 @@ export default function ServiceProviderReviewsPage() {
     applySeo({
       title: `${providerName} Reviews | Services`,
       description: `Read verified customer reviews and ratings for ${providerName}.`,
-      canonicalPath: `/services/reviews/${encodeURIComponent(providerId)}`,
+      canonicalPath: `/services/reviews/${encodeURIComponent(routeProviderId)}`,
       noindex: true,
     });
   }, [providerId, providerName]);
@@ -58,7 +71,7 @@ export default function ServiceProviderReviewsPage() {
                   </p>
                 </div>
               </div>
-              <Link href={`/services/provider/${providerId}`}>
+              <Link href={`/services/provider/${routeProviderId}`}>
                 <Button variant="outline">
                   Back to profile
                   <ArrowRight className="ml-2 h-4 w-4" />

@@ -386,7 +386,7 @@ export async function listPartnerProgramTerms(
 
     warnSchemaCapabilityOnce(
       'distribution-partner-terms-missing-brochure-config-column',
-      '[DistributionPartnerTerms] brochure_config_json is missing. Serving partner terms without brochure overrides until migration 0060 is applied.',
+      '[DistributionPartnerTerms] brochure_config_json is missing. Serving partner terms without brochure overrides because the connected database is behind the canonical schema authority.',
       error,
     );
     rows = await selectPartnerRows(false);

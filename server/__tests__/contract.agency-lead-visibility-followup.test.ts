@@ -210,10 +210,6 @@ describe('agency lead visibility and follow-up contract', () => {
     const root = process.cwd();
     const router = readFileSync(path.resolve(root, 'server/agencyRouter.ts'), 'utf8');
     const schema = readFileSync(path.resolve(root, 'drizzle/schema/leads.ts'), 'utf8');
-    const migration = readFileSync(
-      path.resolve(root, 'server/migrations/0068_close_buyer_lead_loop.sql'),
-      'utf8',
-    );
 
     expect(schema).toContain("nextAction: varchar('nextAction'");
     expect(schema).toContain("firstRespondedAt: timestamp('firstRespondedAt'");
@@ -222,7 +218,5 @@ describe('agency lead visibility and follow-up contract', () => {
     expect(router).toContain('Record the next action for every active buyer lead.');
     expect(router).toContain('firstResponseOverdueLeads');
     expect(router).toContain('FIRST_RESPONSE_SLA_MINUTES = 15');
-    expect(migration).toContain('firstRespondedAt');
-    expect(migration).toContain("'contact_attempt'");
   });
 });

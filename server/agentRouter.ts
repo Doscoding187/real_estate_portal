@@ -299,39 +299,15 @@ async function countAgentShowingsInRange(params: {
 }
 
 async function countAgentPendingOffers(params: { db: any; agentId: number }) {
-  const strategies = [
-    sql`
-      SELECT COUNT(*) AS count_value
-      FROM offers
-      WHERE agentId = ${params.agentId}
-        AND status = ${'pending'}
-    `,
-    sql`
-      SELECT COUNT(*) AS count_value
-      FROM offers
-      WHERE assigned_agent_id = ${params.agentId}
-        AND status = ${'pending'}
-    `,
-    sql`
-      SELECT COUNT(*) AS count_value
-      FROM offers
-      INNER JOIN listings ON offers.listingId = listings.id
-      WHERE listings.agentId = ${params.agentId}
-        AND offers.status = ${'pending'}
-    `,
-  ];
+  const result = await params.db.execute(sql`
+    SELECT COUNT(*) AS count_value
+    FROM offers
+    INNER JOIN listings ON offers.listingId = listings.id
+    WHERE listings.agentId = ${params.agentId}
+      AND offers.status = ${'pending'}
+  `);
 
-  let lastError: unknown;
-  for (const statement of strategies) {
-    try {
-      const result = await params.db.execute(statement);
-      return readCountValue(result);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError;
+  return readCountValue(result);
 }
 
 async function listAgentShowings(params: {

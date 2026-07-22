@@ -48,17 +48,48 @@ async function verifyFeatureCleanup(databaseUrl: string) {
   }
 }
 
-async function verifyMigrationResult(databaseUrl: string) {
+async function verifyBaselineResult(databaseUrl: string) {
   const connection = await mysql.createConnection(databaseUrl);
+
   try {
-    const [ledger] = await connection.query<Array<{ filename: string }>>(
-      "SELECT filename FROM sql_migration_history WHERE filename = '0072_add_listing_performance_contact_date.sql'",
+    const [ledger] = await connection.query<
+      Array<{
+        filename: string;
+        application_mode: string;
+      }>
+    >(
+      "SELECT filename, application_mode FROM sql_migration_history WHERE filename = '0000_canonical_launch_baseline.sql'",
     );
-    const [column] = await connection.query<Array<{ data_type: string; is_nullable: string }>>(
+
+    const [column] = await connection.query<
+      Array<{
+        data_type: string;
+        is_nullable: string;
+      }>
+    >(
       "SELECT data_type, is_nullable FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'agency_listing_performance_reviews' AND column_name = 'contact_date'",
     );
-    if (ledger.length !== 1 || column.length !== 1) {
-      throw new Error('Dedicated E2E migration verification failed for 0072 contact_date.');
+
+    const columnType = String(
+      column[0]?.data_type ?? '',
+    ).toLowerCase();
+
+    const nullable = String(
+      column[0]?.is_nullable ?? '',
+    ).toUpperCase();
+
+    if (
+      ledger.length !== 1 ||
+      ledger[0]?.filename !==
+        '0000_canonical_launch_baseline.sql' ||
+      ledger[0]?.application_mode !== 'executed' ||
+      column.length !== 1 ||
+      columnType !== 'timestamp' ||
+      nullable !== 'YES'
+    ) {
+      throw new Error(
+        'Dedicated E2E canonical baseline verification failed for Listing Performance.',
+      );
     }
   } finally {
     await connection.end();
@@ -80,9 +111,8 @@ async function main() {
   let primaryError: unknown;
   try {
     run('pnpm', ['db:listing-performance-e2e:reset'], env);
-    run('pnpm', ['exec', 'drizzle-kit', 'migrate', '--config', 'drizzle.config.ts'], env);
     run('pnpm', ['exec', 'tsx', 'server/migrations/runSqlMigrations.ts'], env);
-    await verifyMigrationResult(databaseUrl);
+    await verifyBaselineResult(databaseUrl);
     run('pnpm', ['exec', 'tsx', 'server/scripts/localDemoSeed.ts', 'seed', 'e2e'], env);
     run('pnpm', ['exec', 'playwright', 'test', '--config', 'playwright.listing-performance.config.ts'], env);
     await verifyFeatureCleanup(databaseUrl);

@@ -49,7 +49,7 @@ jobs:
       - name: Validate migration/schema consistency
         run: pnpm run schema:sanity
 
-      - name: Apply Drizzle migrations
+      - name: Apply canonical SQL migrations
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:migrate:test
@@ -134,7 +134,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Apply Drizzle migrations
+      - name: Apply canonical SQL migrations
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
         run: pnpm db:migrate:test

@@ -228,7 +228,7 @@ export const distributionPrograms = mysqlTable(
     currencyCode: varchar('currency_code', { length: 3 }).default('ZAR').notNull(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -329,7 +329,7 @@ export const distributionProgramWorkflows = mysqlTable(
     turnaroundHours: int('turnaround_hours').default(48).notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
     configJson: json('config_json'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -358,7 +358,7 @@ export const distributionProgramWorkflowSteps = mysqlTable(
     stepOrder: int('step_order').notNull(),
     isBlocking: tinyint('is_blocking').default(0).notNull(),
     metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -396,7 +396,7 @@ export const developmentRequiredDocuments = mysqlTable(
     isRequired: tinyint('is_required').default(1).notNull(),
     sortOrder: int('sort_order').default(0).notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -515,7 +515,7 @@ export const affordabilityAssessments = mysqlTable(
     lockedAt: timestamp('locked_at', { mode: 'string' }),
     lockedByDealId: int('locked_by_deal_id'),
     lockedByUserId: int('locked_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -534,7 +534,7 @@ export const affordabilityMatchSnapshots = mysqlTable(
       .notNull()
       .references(() => affordabilityAssessments.id, { onDelete: 'cascade' }),
     matchesJson: json('matches_json').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_affordability_match_snapshots_assessment').on(table.assessmentId),
@@ -554,7 +554,7 @@ export const qualificationPackExports = mysqlTable(
       .references(() => affordabilityMatchSnapshots.id, { onDelete: 'cascade' }),
     pdfStorageKey: varchar('pdf_storage_key', { length: 500 }),
     pdfBytes: text('pdf_bytes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_qualification_pack_exports_assessment').on(table.assessmentId),
@@ -589,10 +589,10 @@ export const distributionAgentAccess = mysqlTable(
       .default('active')
       .notNull(),
     grantedBy: int('granted_by').references(() => users.id, { onDelete: 'set null' }),
-    grantedAt: timestamp('granted_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    grantedAt: timestamp('granted_at', { mode: 'string' }).defaultNow().notNull(),
     revokedAt: timestamp('revoked_at', { mode: 'string' }),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -616,11 +616,11 @@ export const distributionAgentTiers = mysqlTable(
     windowDays: int('window_days').default(90).notNull(),
     reason: text(),
     effectiveFrom: timestamp('effective_from', { mode: 'string' })
-      .default('CURRENT_TIMESTAMP')
+      .defaultNow()
       .notNull(),
     effectiveTo: timestamp('effective_to', { mode: 'string' }),
     assignedBy: int('assigned_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -714,9 +714,9 @@ export const distributionDeals = mysqlTable(
     attributionLockedBy: int('attribution_locked_by').references(() => users.id, {
       onDelete: 'set null',
     }),
-    submittedAt: timestamp('submitted_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }).defaultNow().notNull(),
     closedAt: timestamp('closed_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -762,7 +762,7 @@ export const distributionDealDocuments = mysqlTable(
     submittedAt: timestamp('submitted_at', { mode: 'string' }),
     submittedBy: int('submitted_by').references(() => users.id, { onDelete: 'set null' }),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -834,12 +834,12 @@ export const distributionDealBankOutcomes = mysqlTable(
     )
       .default('pending')
       .notNull(),
-    submittedAt: timestamp('submitted_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }).defaultNow().notNull(),
     outcomeAt: timestamp('outcome_at', { mode: 'string' }),
     selectedForClient: tinyint('selected_for_client').default(0).notNull(),
     selectionRank: int('selection_rank'),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -878,8 +878,8 @@ export const distributionDealEvents = mysqlTable(
       .notNull(),
     metadata: json(),
     notes: text(),
-    eventAt: timestamp('event_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    eventAt: timestamp('event_at', { mode: 'string' }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_distribution_deal_events_deal').on(table.dealId),
@@ -921,7 +921,7 @@ export const distributionViewings = mysqlTable(
     scheduledByUserId: int('scheduled_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     lastRescheduledBy: int('last_rescheduled_by').references(() => users.id, { onDelete: 'set null' }),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -959,9 +959,9 @@ export const distributionViewingValidations = mysqlTable(
       .notNull(),
     attributionLockApplied: tinyint('attribution_lock_applied').default(0).notNull(),
     attributionLockAt: timestamp('attribution_lock_at', { mode: 'string' }),
-    validatedAt: timestamp('validated_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    validatedAt: timestamp('validated_at', { mode: 'string' }).defaultNow().notNull(),
     notes: text(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -1009,7 +1009,7 @@ export const distributionCommissionEntries = mysqlTable(
     notes: text(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -1041,7 +1041,7 @@ export const distributionCommissionLedger = mysqlTable(
     currency: varchar({ length: 10 }).default('ZAR').notNull(),
     calculationHash: varchar('calculation_hash', { length: 64 }).notNull(),
     calculationInput: json('calculation_input').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_distribution_commission_ledger_deal').on(table.distributionDealId),
@@ -1065,7 +1065,7 @@ export const distributionCommissionOverrides = mysqlTable(
     reason: text().notNull(),
     previousSnapshot: json('previous_snapshot').notNull(),
     nextSnapshot: json('next_snapshot').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_distribution_commission_overrides_deal').on(table.dealId),
@@ -1088,8 +1088,8 @@ export const developmentManagerAssignments = mysqlTable(
     workloadCapacity: int('workload_capacity').default(0).notNull(),
     timezone: varchar({ length: 64 }),
     isActive: tinyint('is_active').default(1).notNull(),
-    assignedAt: timestamp('assigned_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    assignedAt: timestamp('assigned_at', { mode: 'string' }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -1118,7 +1118,7 @@ export const distributionIdentities = mysqlTable(
     ).notNull(),
     active: tinyint().default(1).notNull(),
     displayName: varchar('display_name', { length: 255 }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -1151,7 +1151,7 @@ export const distributionReferrerApplications = mysqlTable(
     reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     reviewNotes: text('review_notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -1187,7 +1187,7 @@ export const platformTeamRegistrations = mysqlTable(
     reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     reviewNotes: text('review_notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [

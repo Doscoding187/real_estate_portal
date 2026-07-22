@@ -43,7 +43,7 @@ export const videos = mysqlTable(
     status: mysqlEnum(['processing', 'ready', 'failed']).default('processing').notNull(),
     muxPlaybackId: varchar({ length: 100 }),
     muxAssetId: varchar({ length: 100 }),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     category: mysqlEnum('category', [
       'property_tour',
@@ -79,7 +79,7 @@ export const videoLikes = mysqlTable(
     videoId: int('video_id')
       .notNull()
       .references(() => videos.id),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
   },
   table => [index('unique_user_video_like').on(table.userId, table.videoId)],
 );

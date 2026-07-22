@@ -40,7 +40,7 @@ export const agencies = mysqlTable('agencies', {
   subscriptionStatus: varchar({ length: 30 }).default('trial').notNull(),
   subscriptionExpiry: timestamp({ mode: 'string' }),
   isVerified: int().notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -65,7 +65,7 @@ export const agencyBranding = mysqlTable('agency_branding', {
   supportPhone: varchar({ length: 50 }),
   socialLinks: text(),
   isEnabled: int().notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -79,7 +79,7 @@ export const agencyJoinRequests = mysqlTable('agency_join_requests', {
     .references(() => users.id, { onDelete: 'cascade' }),
   status: mysqlEnum(['pending', 'approved', 'rejected']).default('pending').notNull(),
   message: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   reviewedBy: int().references(() => users.id, { onDelete: 'set null' }),
   reviewedAt: timestamp({ mode: 'string' }),
@@ -112,7 +112,7 @@ export const agencySubscriptions = mysqlTable('agency_subscriptions', {
   canceledAt: timestamp({ mode: 'string' }),
   endedAt: timestamp({ mode: 'string' }),
   metadata: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -151,7 +151,7 @@ export const agents = mysqlTable(
     rejectionReason: text(),
     approvedBy: int().references(() => users.id, { onDelete: 'set null' }),
     approvedAt: timestamp({ mode: 'string' }),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [unique('uq_agents_slug').on(table.slug), index('idx_agents_slug').on(table.slug)],
@@ -166,7 +166,7 @@ export const agentCoverageAreas = mysqlTable('agent_coverage_areas', {
   areaType: mysqlEnum(['province', 'city', 'suburb', 'custom_polygon']).notNull(),
   areaData: text().notNull(),
   isActive: int().default(1).notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -181,7 +181,7 @@ export const agentKnowledge = mysqlTable(
     metadata: json(),
     isActive: int('is_active').default(1).notNull(),
     createdBy: int('created_by').references(() => users.id),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -202,7 +202,7 @@ export const agentMemory = mysqlTable(
     userInput: text('user_input').notNull(),
     agentResponse: text('agent_response').notNull(),
     metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_agent_memory_session').on(table.sessionId),
@@ -233,7 +233,7 @@ export const agentTasks = mysqlTable(
     errorMessage: text('error_message'),
     startedAt: timestamp('started_at', { mode: 'string' }),
     completedAt: timestamp('completed_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -263,7 +263,7 @@ export const invitations = mysqlTable('invitations', {
   expiresAt: timestamp({ mode: 'string' }).notNull(),
   acceptedAt: timestamp({ mode: 'string' }),
   acceptedBy: int().references(() => users.id, { onDelete: 'set null' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -287,7 +287,7 @@ export const agencyAgentMemberships = mysqlTable(
     effectiveTo: timestamp('effective_to', { mode: 'string' }),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -306,7 +306,7 @@ export const invites = mysqlTable('invites', {
   token: varchar({ length: 255 }).notNull(),
   role: varchar({ length: 30 }).default('agent'),
   expiresAt: timestamp({ mode: 'string' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   used: int().notNull(),
   usedAt: timestamp({ mode: 'string' }),
   usedBy: int().references(() => users.id, { onDelete: 'set null' }),
@@ -326,6 +326,6 @@ export const commissions = mysqlTable('commissions', {
   description: text(),
   payoutDate: timestamp({ mode: 'string' }),
   paymentReference: varchar({ length: 100 }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });

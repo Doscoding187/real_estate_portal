@@ -197,7 +197,7 @@ export const agencyDeals = mysqlTable(
     updatedByUserId: int('updated_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -253,7 +253,7 @@ export const agencyDealOfferVersions = mysqlTable(
     createdByUserId: int('created_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -304,7 +304,7 @@ export const agencyTransactions = mysqlTable(
       .notNull(),
     acceptedAmount: decimal('accepted_amount', { precision: 15, scale: 2 }).notNull(),
     acceptedTermsSnapshot: json('accepted_terms_snapshot'),
-    openedAt: timestamp('opened_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    openedAt: timestamp('opened_at', { mode: 'string' }).defaultNow().notNull(),
     targetCompletionDate: timestamp('target_completion_date', { mode: 'string' }),
     completedAt: timestamp('completed_at', { mode: 'string' }),
     cancelledAt: timestamp('cancelled_at', { mode: 'string' }),
@@ -355,7 +355,7 @@ export const agencyTransactions = mysqlTable(
     updatedByUserId: int('updated_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -395,7 +395,7 @@ export const agencyCommissionSettlements = mysqlTable(
     varianceReason: text('variance_reason'),
     approvedByUserId: int('approved_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     approvedAt: timestamp('approved_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -421,7 +421,7 @@ export const agencyCommissionSettlementPayments = mysqlTable(
     reference: varchar('reference', { length: 160 }),
     note: text('note'),
     recordedByUserId: int('recorded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_agency_commission_payment_settlement').on(table.agencyId, table.settlementId),
@@ -457,7 +457,7 @@ export const agencyTransactionMilestones = mysqlTable(
       .notNull(),
     completedAt: timestamp('completed_at', { mode: 'string' }),
     notes: text('notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -499,7 +499,7 @@ export const agencyTransactionConditions = mysqlTable(
     createdByUserId: int('created_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -530,7 +530,7 @@ export const agencyTransactionParties = mysqlTable(
     userId: int('user_id').references(() => users.id, { onDelete: 'set null' }),
     agentId: int('agent_id').references(() => agents.id, { onDelete: 'set null' }),
     notes: text('notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -570,9 +570,9 @@ export const agencyTransactionDocuments = mysqlTable(
     uploadedByUserId: int('uploaded_by_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    uploadedAt: timestamp('uploaded_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    uploadedAt: timestamp('uploaded_at', { mode: 'string' }).defaultNow().notNull(),
     notes: text('notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -596,7 +596,7 @@ export const agencyTransactionActivity = mysqlTable(
     eventType: varchar('event_type', { length: 100 }).notNull(),
     description: text('description').notNull(),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_agency_tx_activity_tx').on(table.transactionId),

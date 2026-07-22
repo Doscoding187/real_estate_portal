@@ -11,7 +11,7 @@ function readRepoFile(relativePath: string) {
 }
 
 describe('agency deal engine contract', () => {
-  const migration = readRepoFile('server/migrations/0065_create_agency_deal_engine.sql');
+  const schema = readRepoFile('drizzle/schema/agencyDeals.ts');
   const router = readRepoFile('server/agencyRouter.ts');
   const workspace = readRepoFile('client/src/features/agency/transactions/AgencyTransactionsWorkspace.tsx');
   const myDay = readRepoFile('client/src/features/agency/viewings/AgencyViewingsWorkspace.tsx');
@@ -28,14 +28,14 @@ describe('agency deal engine contract', () => {
       'agency_transaction_documents',
       'agency_transaction_activity',
     ]) {
-      expect(migration).toContain(`\`${tableName}\``);
+      expect(schema).toContain(`'${tableName}'`);
     }
 
-    expect(migration).toContain('`source_viewing_id` int NULL');
-    expect(migration).toContain('`lead_id` int NULL');
-    expect(migration).toContain('`listing_id` int NULL');
-    expect(migration).toContain('UNIQUE KEY `uq_agency_deal_offer_version` (`deal_id`, `version_number`)');
-    expect(migration).toContain('UNIQUE KEY `uq_agency_transactions_deal` (`deal_id`)');
+    expect(schema).toContain("sourceViewingId: int('source_viewing_id')");
+    expect(schema).toContain("leadId: int('lead_id')");
+    expect(schema).toContain("listingId: int('listing_id')");
+    expect(schema).toContain("unique('uq_agency_deal_offer_version')");
+    expect(schema).toContain("unique('uq_agency_transactions_deal')");
   });
 
   it('makes accepted offer transaction creation server-owned and idempotent', () => {

@@ -12,8 +12,11 @@
 
 import mysql from 'mysql2/promise';
 import { config } from 'dotenv';
+import { createHash } from 'crypto';
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
+
+import { databaseDefaultMatches } from './db-contract-default-normalization.js';
 
 config();
 
@@ -292,8 +295,11 @@ async function verifyColumnShapes(
     const defaultMatches =
       actual &&
       (!Object.prototype.hasOwnProperty.call(expected, 'defaultValue') ||
-        actual.Default === expected.defaultValue) &&
-      (!expected.defaultValues || expected.defaultValues.includes(actual.Default));
+        databaseDefaultMatches(actual.Default, expected.defaultValue)) &&
+      (!expected.defaultValues ||
+        expected.defaultValues.some(expectedDefault =>
+          databaseDefaultMatches(actual.Default, expectedDefault),
+        ));
     const extraMatches =
       actual &&
       (!expected.extraIncludes ||
@@ -465,64 +471,173 @@ async function verifyForeignKey(
   });
 }
 
-async function verifyMigrations(connection: mysql.Connection): Promise<void> {
+async function verifyMigrations(
+  connection: mysql.Connection,
+): Promise<void> {
   try {
-    // Check if migrations table exists
-    const [tables] = await connection.query<any[]>("SHOW TABLES LIKE '__drizzle_migrations'");
-
-    if (tables.length === 0) {
-      results.push({
-        name: 'Migrations: __drizzle_migrations table',
-        passed: false,
-        error: 'Migrations table does not exist. Run migrations first.',
-      });
-      return;
-    }
-
-    // Count applied migrations
-    const [rows] = await connection.query<any[]>(
-      'SELECT COUNT(*) as count FROM __drizzle_migrations',
+    const migrationsDir = join(
+      process.cwd(),
+      'server',
+      'migrations',
     );
 
-    const appliedCount = rows[0].count;
+    const sqlFiles = (await readdir(migrationsDir))
+      .filter(file => file.endsWith('.sql'));
 
-    // Count only journal-tracked Drizzle migrations
-    const migrationsDir = join(process.cwd(), 'drizzle', 'migrations');
-    const journalPath = join(migrationsDir, 'meta', '_journal.json');
-    let trackedFiles: string[] = [];
-    let missingFiles: string[] = [];
+    const validFilePattern =
+      /^\d{4}_[a-zA-Z0-9_]+\.sql$/;
 
-    try {
-      const journalRaw = await readFile(journalPath, 'utf-8');
-      const journal = JSON.parse(journalRaw) as { entries?: Array<{ tag?: string }> };
-      const tags = (journal.entries || []).map(entry => entry.tag).filter(Boolean) as string[];
-      trackedFiles = tags.map(tag => `${tag}.sql`);
+    const malformedFiles = sqlFiles.filter(
+      file => !validFilePattern.test(file),
+    );
 
-      const files = await readdir(migrationsDir);
-      const sqlFiles = new Set(files.filter(f => f.endsWith('.sql')));
-      missingFiles = trackedFiles.filter(file => !sqlFiles.has(file));
-    } catch (err) {
+    const activeFiles = sqlFiles
+      .filter(file => validFilePattern.test(file))
+      .sort((left, right) => {
+        const leftNumber = Number.parseInt(
+          left.slice(0, 4),
+          10,
+        );
+        const rightNumber = Number.parseInt(
+          right.slice(0, 4),
+          10,
+        );
+
+        return (
+          leftNumber - rightNumber ||
+          left.localeCompare(right)
+        );
+      });
+
+    const canonicalBaseline =
+      '0000_canonical_launch_baseline.sql';
+
+    if (
+      activeFiles.length === 0 ||
+      activeFiles[0] !== canonicalBaseline
+    ) {
       results.push({
-        name: 'Migrations: Journal integrity',
+        name: 'Migrations: Canonical SQL ledger',
         passed: false,
-        error: `Could not read migration journal/files: ${err}`,
+        error:
+          `${canonicalBaseline} must be the first ` +
+          'active SQL migration.',
+        details: {
+          activeFiles,
+          malformedFiles,
+        },
       });
       return;
     }
 
-    const trackedCount = trackedFiles.length;
-    const passed = missingFiles.length === 0 && appliedCount >= trackedCount;
+    const [historyTables] =
+      await connection.query<any[]>(
+        "SHOW TABLES LIKE 'sql_migration_history'",
+      );
+
+    if (historyTables.length === 0) {
+      results.push({
+        name: 'Migrations: Canonical SQL ledger',
+        passed: false,
+        error:
+          'sql_migration_history does not exist. ' +
+          'Run the canonical SQL migrations first.',
+      });
+      return;
+    }
+
+    const [ledgerRows] =
+      await connection.query<any[]>(
+        `
+          SELECT filename, checksum
+          FROM sql_migration_history
+          ORDER BY filename
+        `,
+      );
+
+    const ledger = new Map<string, string>(
+      ledgerRows.map(row => [
+        String(row.filename),
+        String(row.checksum),
+      ]),
+    );
+
+    const activeFileSet = new Set(activeFiles);
+
+    const missingLedgerFiles = activeFiles.filter(
+      file => !ledger.has(file),
+    );
+
+    const retiredLedgerFiles = ledgerRows
+      .map(row => String(row.filename))
+      .filter(file => !activeFileSet.has(file));
+
+    const checksumMismatches: Array<{
+      filename: string;
+      expected: string;
+      recorded: string;
+    }> = [];
+
+    for (const file of activeFiles) {
+      const recordedChecksum = ledger.get(file);
+      if (!recordedChecksum) continue;
+
+      const sql = await readFile(
+        join(migrationsDir, file),
+        'utf8',
+      );
+
+      const expectedChecksum = createHash('sha256')
+        .update(sql)
+        .digest('hex');
+
+      if (recordedChecksum !== expectedChecksum) {
+        checksumMismatches.push({
+          filename: file,
+          expected: expectedChecksum,
+          recorded: recordedChecksum,
+        });
+      }
+    }
+
+    const passed =
+      malformedFiles.length === 0 &&
+      missingLedgerFiles.length === 0 &&
+      retiredLedgerFiles.length === 0 &&
+      checksumMismatches.length === 0;
+
+    const findings = [
+      malformedFiles.length
+        ? `malformed active files: ${malformedFiles.join(', ')}`
+        : null,
+      missingLedgerFiles.length
+        ? `missing ledger files: ${missingLedgerFiles.join(', ')}`
+        : null,
+      retiredLedgerFiles.length
+        ? `retired ledger files: ${retiredLedgerFiles.join(', ')}`
+        : null,
+      checksumMismatches.length
+        ? `checksum mismatches: ${checksumMismatches
+            .map(item => item.filename)
+            .join(', ')}`
+        : null,
+    ].filter(Boolean);
 
     results.push({
-      name: 'Migrations: Applied vs Files',
+      name: 'Migrations: Canonical SQL ledger',
       passed,
       error: passed
         ? undefined
-        : `Migration drift: ${appliedCount} applied, ${trackedCount} tracked${missingFiles.length ? `, missing files: ${missingFiles.join(', ')}` : ''}.`,
+        : `Canonical migration drift: ${findings.join('; ')}.`,
       details: {
-        applied: appliedCount,
-        tracked: trackedCount,
-        missingFiles,
+        activeFiles,
+        appliedFiles: ledgerRows.map(
+          row => String(row.filename),
+        ),
+        malformedFiles,
+        missingLedgerFiles,
+        retiredLedgerFiles,
+        checksumMismatches,
       },
     });
   } catch (err: any) {

@@ -63,18 +63,19 @@ describe('agency canvassing boundary contract', () => {
     const workspace = readRepoFile(
       'client/src/features/agency/viewings/AgencyViewingsWorkspace.tsx',
     );
-    const migration = readRepoFile('server/migrations/0067_close_seller_acquisition_loop.sql');
-    const mandateMigration = readRepoFile('server/migrations/0069_create_agency_mandate_operations_mvp.sql');
+    const canvassingSchema = readRepoFile('drizzle/schema/canvassing.ts');
 
     expect(agencyRouter).toContain('overdueSellerFollowUps');
     expect(agencyRouter).toContain('dueTodaySellerFollowUps');
     expect(workspace).toContain('Overdue Seller Follow-ups');
     expect(workspace).toContain('Seller Follow-ups Due Today');
-    expect(migration).toContain('first_contacted_at');
-    expect(migration).toContain('mandate_checklist');
+    expect(canvassingSchema).toContain("firstContactedAt: timestamp('first_contacted_at'");
+    expect(canvassingSchema).toContain("mandateChecklist: json('mandate_checklist')");
     expect(getTableName(sellerMandateOperations)).toBe('seller_mandate_operations');
     expect(getTableName(sellerMandateComparables)).toBe('seller_mandate_comparables');
-    expect(mandateMigration).toContain('private_storage_reference');
+    expect(canvassingSchema).toContain(
+      "privateStorageReference: varchar('private_storage_reference'",
+    );
     expect(agencyRouter).toContain('mandateWork');
   });
 

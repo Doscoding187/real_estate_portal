@@ -34,7 +34,7 @@ export const prospectIdentities = mysqlTable(
     id: varchar({ length: 36 }).primaryKey(),
     userId: int('user_id').references(() => users.id, { onDelete: 'set null' }),
     contactPreferences: json('contact_preferences'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [unique('uq_prospect_identities_user').on(table.userId)],
@@ -71,7 +71,7 @@ export const leads = mysqlTable('leads', {
     .default('new')
     .notNull(),
   source: varchar({ length: 100 }),
-  createdAt: timestamp('createdAt', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   nextFollowUp: timestamp('nextFollowUp', { mode: 'string' }),
   nextAction: varchar('nextAction', { length: 255 }),
@@ -135,7 +135,7 @@ export const leadActivities = mysqlTable('lead_activities', {
   type: mysqlEnum(['note', 'call', 'email', 'meeting', 'status_change', 'contact_attempt']).notNull(),
   description: text(),
   metadata: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const prospects = mysqlTable('prospects', {
@@ -146,7 +146,7 @@ export const prospects = mysqlTable('prospects', {
   status: mysqlEnum(['active', 'inactive', 'banned']).default('active').notNull(),
   preferences: json(),
   lastActiveAt: timestamp({ mode: 'string' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -158,7 +158,7 @@ export const prospectFavorites = mysqlTable('prospect_favorites', {
   listingId: int().references(() => listings.id, { onDelete: 'cascade' }),
   developmentId: int().references(() => developments.id, { onDelete: 'cascade' }),
   notes: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const recentlyViewed = mysqlTable('recently_viewed', {
@@ -167,7 +167,7 @@ export const recentlyViewed = mysqlTable('recently_viewed', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   listingId: int().references(() => listings.id, { onDelete: 'cascade' }),
-  viewedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  viewedAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const offers = mysqlTable('offers', {
@@ -184,7 +184,7 @@ export const offers = mysqlTable('offers', {
     .notNull(),
   expiryDate: timestamp({ mode: 'string' }),
   conditions: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -195,9 +195,10 @@ export const showings = mysqlTable(
     listingId: int('listingId').references(() => listings.id, { onDelete: 'set null' }),
     propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
     leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
-    agentId: int()
-      .notNull()
-      .references(() => agents.id, { onDelete: 'set null' }),
+    agentId: int().references(
+      () => agents.id,
+      { onDelete: 'set null' },
+    ),
     scheduledAt: timestamp({ mode: 'string' }).notNull(),
     status: mysqlEnum([
       'requested',
@@ -247,7 +248,7 @@ export const prospectActionAttributions = mysqlTable(
     firstTouch: json('first_touch'),
     lastTouch: json('last_touch'),
     actionTouch: json('action_touch').notNull(),
-    capturedAt: timestamp('captured_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    capturedAt: timestamp('captured_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [unique('uq_prospect_action_attribution_lead').on(table.leadId)],
 );
@@ -264,7 +265,7 @@ export const prospectActionClaimTokens = mysqlTable(
     expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
     usedAt: timestamp('used_at', { mode: 'string' }),
     claimedByUserId: int('claimed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     unique('uq_prospect_action_claim_token_hash').on(table.tokenHash),
@@ -288,7 +289,7 @@ export const scheduledViewings = mysqlTable(
       .notNull(),
     notes: text(),
     agentNotes: text('agent_notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -308,7 +309,7 @@ export const favorites = mysqlTable(
     propertyId: int('property_id')
       .notNull()
       .references(() => properties.id),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_favorites_user').on(table.userId),
@@ -334,7 +335,7 @@ export const savedSearches = mysqlTable(
       .default('daily')
       .notNull(),
     lastNotifiedAt: timestamp('last_notified_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -397,7 +398,7 @@ export const savedSearchDeliveryHistory = mysqlTable(
     actionUrl: varchar('action_url', { length: 500 }),
     previewMatches: json('preview_matches'),
     error: text(),
-    processedAt: timestamp('processed_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    processedAt: timestamp('processed_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_saved_search_delivery_history_saved_search').on(table.savedSearchId),
