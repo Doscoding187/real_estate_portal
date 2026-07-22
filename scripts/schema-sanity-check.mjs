@@ -117,6 +117,40 @@ async function main() {
 
   const baselineSql = await readFile(baselinePath, 'utf8');
 
+  const mysqlIdentifierLimit = 64;
+  const mysqlNamedIdentifierPatterns = [
+    [
+      'constraint',
+      /\bCONSTRAINT\s+`([^`]+)`/gi,
+    ],
+    [
+      'primary key',
+      /\bPRIMARY\s+KEY\s+`([^`]+)`/gi,
+    ],
+    [
+      'unique key',
+      /\bUNIQUE(?:\s+KEY|\s+INDEX)?\s+`([^`]+)`/gi,
+    ],
+    [
+      'index',
+      /(?<!UNIQUE\s)\b(?:KEY|INDEX)\s+`([^`]+)`/gi,
+    ],
+  ];
+
+  for (const [kind, pattern] of mysqlNamedIdentifierPatterns) {
+    for (const match of baselineSql.matchAll(pattern)) {
+      const identifier = String(match[1]);
+
+      if (identifier.length > mysqlIdentifierLimit) {
+        errors.push(
+          `Canonical baseline ${kind} identifier exceeds ` +
+          `MySQL's ${mysqlIdentifierLimit}-character limit: ` +
+          `${identifier} (${identifier.length}).`,
+        );
+      }
+    }
+  }
+
   const baselineTables = Array.from(
     baselineSql.matchAll(
       /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/gi,
