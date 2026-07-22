@@ -2661,7 +2661,7 @@ CREATE TABLE `showings` (
 	`listingId` int,
 	`propertyId` int,
 	`leadId` int,
-	`agentId` int NOT NULL,
+   `agentId` int,
 	`scheduledAt` timestamp NOT NULL,
 	`status` enum('requested','awaiting_confirmation','confirmed','completed','cancelled','no_show','rescheduled') NOT NULL DEFAULT 'requested',
 	`visitorId` int,

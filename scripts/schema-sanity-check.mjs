@@ -151,6 +151,79 @@ async function main() {
     }
   }
 
+  const mysqlTableColumnDefinitions = new Map();
+
+  for (
+    const tableMatch of baselineSql.matchAll(
+      /CREATE\s+TABLE\s+`([^`]+)`\s*\((.*?)\n\);/gis,
+    )
+  ) {
+    const tableName = String(tableMatch[1]);
+    const tableBody = String(tableMatch[2]);
+
+    for (const rawLine of tableBody.split('\n')) {
+      const columnMatch = rawLine.match(
+        /^\s*`([^`]+)`\s+(.+?)(?:,\s*)?$/,
+      );
+
+      if (!columnMatch) {
+        continue;
+      }
+
+      const columnName = String(columnMatch[1]);
+      const definition = String(columnMatch[2]).trim();
+
+      mysqlTableColumnDefinitions.set(
+        `${tableName}.${columnName}`,
+        definition,
+      );
+    }
+  }
+
+  const mysqlSetNullForeignKeyPattern =
+    /ALTER\s+TABLE\s+`([^`]+)`\s+ADD\s+CONSTRAINT\s+`([^`]+)`\s+FOREIGN\s+KEY\s+\(`([^`]+)`\)\s+REFERENCES\s+`([^`]+)`\(`([^`]+)`\)\s+ON\s+DELETE\s+([a-z ]+?)\s+ON\s+UPDATE\s+([a-z ]+?)\s*;/gi;
+
+  for (
+    const foreignKeyMatch of baselineSql.matchAll(
+      mysqlSetNullForeignKeyPattern,
+    )
+  ) {
+    const tableName = String(foreignKeyMatch[1]);
+    const constraintName = String(foreignKeyMatch[2]);
+    const columnName = String(foreignKeyMatch[3]);
+    const onDelete = String(foreignKeyMatch[6])
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
+    const onUpdate = String(foreignKeyMatch[7])
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
+
+    if (onDelete !== 'SET NULL' && onUpdate !== 'SET NULL') {
+      continue;
+    }
+
+    const columnKey = `${tableName}.${columnName}`;
+    const columnDefinition =
+      mysqlTableColumnDefinitions.get(columnKey);
+
+    if (!columnDefinition) {
+      errors.push(
+        `Canonical baseline foreign key ${constraintName} ` +
+        `references unresolved local column ${columnKey}.`,
+      );
+      continue;
+    }
+
+    if (/\bNOT\s+NULL\b/i.test(columnDefinition)) {
+      errors.push(
+        `Canonical baseline foreign key ${constraintName} uses ` +
+        `SET NULL but ${columnKey} is declared NOT NULL.`,
+      );
+    }
+  }
+
   const baselineTables = Array.from(
     baselineSql.matchAll(
       /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/gi,

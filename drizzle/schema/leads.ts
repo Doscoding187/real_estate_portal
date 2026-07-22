@@ -195,9 +195,10 @@ export const showings = mysqlTable(
     listingId: int('listingId').references(() => listings.id, { onDelete: 'set null' }),
     propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
     leadId: int('leadId').references(() => leads.id, { onDelete: 'set null' }),
-    agentId: int()
-      .notNull()
-      .references(() => agents.id, { onDelete: 'set null' }),
+    agentId: int().references(
+      () => agents.id,
+      { onDelete: 'set null' },
+    ),
     scheduledAt: timestamp({ mode: 'string' }).notNull(),
     status: mysqlEnum([
       'requested',
