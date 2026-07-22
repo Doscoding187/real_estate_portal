@@ -3868,9 +3868,8 @@ CREATE INDEX `idx_launch_quotas_phase` ON `launch_content_quotas` (`phase_id`,`c
 CREATE INDEX `idx_partner_leads_partner` ON `partner_leads` (`partner_id`);
 CREATE INDEX `idx_partner_leads_status` ON `partner_leads` (`status`);
 CREATE INDEX `idx_partner_subscriptions_status` ON `partner_subscriptions` (`status`);
-CREATE INDEX `idx_partners_service_type` ON `partners` (`service_type`);
 CREATE INDEX `idx_partners_verification` ON `partners` (`verification_status`);
-CREATE INDEX `idx_partners_location` ON `partners` (`service_areas`);
+CREATE INDEX `idx_partners_trust_score` ON `partners` (`trust_score`);
 CREATE INDEX `idx_affordability_assessments_actor` ON `affordability_assessments` (`actor_user_id`);
 CREATE INDEX `idx_affordability_assessments_created_at` ON `affordability_assessments` (`created_at`);
 CREATE INDEX `idx_affordability_assessments_credit_check` ON `affordability_assessments` (`credit_check_consent_given`);

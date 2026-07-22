@@ -224,6 +224,209 @@ async function main() {
     }
   }
 
+  {
+    const baselineColumnReferenceGuard = true;
+    const referenceGuardTables = new Map();
+
+    const createTablePattern =
+      /CREATE\s+TABLE\s+`([^`]+)`\s*\((.*?)\n\);/gis;
+
+    for (
+      const tableMatch of baselineSql.matchAll(createTablePattern)
+    ) {
+      const tableName = String(tableMatch[1]);
+      const tableBody = String(tableMatch[2]);
+      const columns = new Set();
+
+      for (const rawLine of tableBody.split('\n')) {
+        const columnMatch = rawLine.match(
+          /^\s*`([^`]+)`\s+(.+?)(?:,\s*)?$/,
+        );
+
+        if (!columnMatch) {
+          continue;
+        }
+
+        columns.add(String(columnMatch[1]));
+      }
+
+      referenceGuardTables.set(tableName, {
+        body: tableBody,
+        columns,
+      });
+    }
+
+    const extractQuotedIdentifiers = value =>
+      Array.from(
+        String(value).matchAll(/`([^`]+)`/g),
+        match => String(match[1]),
+      );
+
+    const reportMissingColumn = ({
+      authorityType,
+      authorityName,
+      tableName,
+      columnName,
+    }) => {
+      errors.push(
+        `Canonical baseline ${authorityType} ` +
+        `${authorityName} references absent column ` +
+        `${tableName}.${columnName}.`,
+      );
+    };
+
+    const createIndexPattern =
+      /CREATE\s+(?:UNIQUE\s+)?INDEX\s+`([^`]+)`\s+ON\s+`([^`]+)`\s*\((.*?)\)\s*;/gis;
+
+    for (
+      const indexMatch of baselineSql.matchAll(
+        createIndexPattern,
+      )
+    ) {
+      const indexName = String(indexMatch[1]);
+      const tableName = String(indexMatch[2]);
+      const indexedColumns = extractQuotedIdentifiers(
+        indexMatch[3],
+      );
+      const tableAuthority =
+        referenceGuardTables.get(tableName);
+
+      if (!tableAuthority) {
+        errors.push(
+          `Canonical baseline index ${indexName} ` +
+          `references absent table ${tableName}.`,
+        );
+        continue;
+      }
+
+      for (const columnName of indexedColumns) {
+        if (!tableAuthority.columns.has(columnName)) {
+          reportMissingColumn({
+            authorityType: 'index',
+            authorityName: indexName,
+            tableName,
+            columnName,
+          });
+        }
+      }
+    }
+
+    const inlineKeyPattern =
+      /CONSTRAINT\s+`([^`]+)`\s+(PRIMARY\s+KEY|UNIQUE)\s*\((.*?)\)/gis;
+
+    for (
+      const [tableName, tableAuthority] of
+        referenceGuardTables.entries()
+    ) {
+      for (
+        const keyMatch of tableAuthority.body.matchAll(
+          inlineKeyPattern,
+        )
+      ) {
+        const keyName = String(keyMatch[1]);
+        const keyType = String(keyMatch[2])
+          .trim()
+          .replace(/\s+/g, ' ')
+          .toLowerCase();
+
+        for (
+          const columnName of extractQuotedIdentifiers(
+            keyMatch[3],
+          )
+        ) {
+          if (!tableAuthority.columns.has(columnName)) {
+            reportMissingColumn({
+              authorityType: keyType,
+              authorityName: keyName,
+              tableName,
+              columnName,
+            });
+          }
+        }
+      }
+    }
+
+    const foreignKeyPattern =
+      /ALTER\s+TABLE\s+`([^`]+)`\s+ADD\s+CONSTRAINT\s+`([^`]+)`\s+FOREIGN\s+KEY\s+\((.*?)\)\s+REFERENCES\s+`([^`]+)`\s*\((.*?)\)/gis;
+
+    for (
+      const foreignKeyMatch of baselineSql.matchAll(
+        foreignKeyPattern,
+      )
+    ) {
+      const localTableName = String(foreignKeyMatch[1]);
+      const constraintName = String(foreignKeyMatch[2]);
+      const localColumns = extractQuotedIdentifiers(
+        foreignKeyMatch[3],
+      );
+      const referencedTableName = String(
+        foreignKeyMatch[4],
+      );
+      const referencedColumns = extractQuotedIdentifiers(
+        foreignKeyMatch[5],
+      );
+
+      const localTableAuthority =
+        referenceGuardTables.get(localTableName);
+      const referencedTableAuthority =
+        referenceGuardTables.get(referencedTableName);
+
+      if (!localTableAuthority) {
+        errors.push(
+          `Canonical baseline foreign key ` +
+          `${constraintName} references absent local table ` +
+          `${localTableName}.`,
+        );
+      }
+
+      if (!referencedTableAuthority) {
+        errors.push(
+          `Canonical baseline foreign key ` +
+          `${constraintName} references absent target table ` +
+          `${referencedTableName}.`,
+        );
+      }
+
+      if (localColumns.length !== referencedColumns.length) {
+        errors.push(
+          `Canonical baseline foreign key ` +
+          `${constraintName} has mismatched local and ` +
+          `referenced column counts.`,
+        );
+      }
+
+      if (localTableAuthority) {
+        for (const columnName of localColumns) {
+          if (!localTableAuthority.columns.has(columnName)) {
+            reportMissingColumn({
+              authorityType: 'foreign key',
+              authorityName: constraintName,
+              tableName: localTableName,
+              columnName,
+            });
+          }
+        }
+      }
+
+      if (referencedTableAuthority) {
+        for (const columnName of referencedColumns) {
+          if (
+            !referencedTableAuthority.columns.has(columnName)
+          ) {
+            reportMissingColumn({
+              authorityType: 'foreign key target',
+              authorityName: constraintName,
+              tableName: referencedTableName,
+              columnName,
+            });
+          }
+        }
+      }
+    }
+
+    void baselineColumnReferenceGuard;
+  }
+
   const baselineTables = Array.from(
     baselineSql.matchAll(
       /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/gi,
