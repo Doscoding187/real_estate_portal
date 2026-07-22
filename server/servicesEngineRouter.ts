@@ -57,15 +57,18 @@ const moderationStatusSchema = z.enum([
   'changes_requested',
 ]);
 
-async function requireProviderId(userId: number): Promise<string> {
+async function requireProviderId(userId: number): Promise<number> {
   const provider = await servicesEngineService.getProviderByUserId(userId);
-  if (!provider?.id) {
+  const providerId = Number(provider?.id || 0);
+
+  if (!providerId) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Provider profile not found. Create your provider identity first.',
     });
   }
-  return String(provider.id);
+
+  return providerId;
 }
 
 function requireProviderRole(role: string | null | undefined) {
@@ -159,7 +162,7 @@ export const servicesEngineRouter = router({
         z.object({
           leadId: z.string().trim().min(1).max(20),
           type: leadInteractionEventTypeSchema,
-          providerId: z.string().trim().min(1).max(36).optional(),
+          providerId: z.number().int().positive().optional(),
           metadata: z.record(z.string(), z.unknown()).optional(),
         }),
       )
@@ -196,7 +199,6 @@ export const servicesEngineRouter = router({
     .input(
       z.object({
         companyName: z.string().trim().min(2).max(255),
-        tierId: z.number().int().positive().optional(),
         description: z.string().trim().max(2000).optional(),
         logoUrl: z.string().trim().max(500).optional(),
       }),
@@ -207,7 +209,6 @@ export const servicesEngineRouter = router({
       return servicesEngineService.upsertProviderIdentity({
         userId: user.id,
         companyName: input.companyName,
-        tierId: input.tierId,
         description: input.description || null,
         logoUrl: input.logoUrl || null,
       });
@@ -309,7 +310,7 @@ export const servicesEngineRouter = router({
   getProviderPublicProfile: publicProcedure
     .input(
       z.object({
-        providerId: z.string().trim().min(1).max(36),
+        providerId: z.number().int().positive(),
       }),
     )
     .query(({ input }) => servicesEngineService.getProviderPublicProfile(input.providerId)),
@@ -317,7 +318,7 @@ export const servicesEngineRouter = router({
   getProviderReviews: publicProcedure
     .input(
       z.object({
-        providerId: z.string().trim().min(1).max(36),
+        providerId: z.number().int().positive(),
         limit: z.number().int().min(1).max(200).optional(),
       }),
     )
@@ -342,7 +343,7 @@ export const servicesEngineRouter = router({
   createLeadFromJourney: protectedProcedure
     .input(
       z.object({
-        providerId: z.string().trim().min(1).max(36).optional(),
+        providerId: z.number().int().positive().optional(),
         category: serviceCategorySchema,
         sourceSurface: sourceSurfaceSchema,
         intentStage: intentStageSchema,

@@ -72,7 +72,7 @@ export default function ServicesRequestPage() {
   const defaultLocation = [query.get('suburb'), query.get('city'), query.get('province')]
     .filter(Boolean)
     .join(', ');
-  const providerId = query.get('providerId') || undefined;
+  const providerId = parsePositiveInteger(query.get('providerId'));
   const propertyId = parsePositiveInteger(query.get('propertyId'));
   const intentStage = parseIntentStage(query.get('intentStage'));
   const sourceSurface = parseSourceSurface(query.get('sourceSurface'));

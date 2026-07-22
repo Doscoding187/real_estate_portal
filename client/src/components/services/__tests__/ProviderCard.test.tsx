@@ -35,7 +35,7 @@ vi.mock('wouter', async () => {
 
 function buildProvider(overrides: Partial<ProviderDirectoryItem> = {}): ProviderDirectoryItem {
   return {
-    providerId: 'provider-123',
+    providerId: 123,
     companyName: 'Acme Builders',
     verificationStatus: null,
     subscriptionTier: null,
@@ -236,12 +236,12 @@ describe('ProviderCard — general rendering', () => {
 
   it('calls onCta with the providerId when the CTA button is clicked', () => {
     const onCta = vi.fn();
-    const provider = buildProvider({ providerId: 'prov-abc' });
+    const provider = buildProvider({ providerId: 456 });
     render(<ProviderCard provider={provider} onCta={onCta} />);
 
     screen.getByRole('button', { name: 'Request quote' }).click();
 
-    expect(onCta).toHaveBeenCalledWith('prov-abc');
+    expect(onCta).toHaveBeenCalledWith(456);
   });
 
   it('renders "New" star rating when averageRating is null and reviewCount is 0', () => {

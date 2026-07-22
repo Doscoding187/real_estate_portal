@@ -18,7 +18,7 @@ vi.mock('@/lib/trpc', () => ({
         useMutation: ({ onSuccess }: { onSuccess: (data: any) => void }) => ({
           mutate: (input: any) => {
             mockMutate(input);
-            onSuccess({ leadIds: [99], providerIds: ['prov-1'], unmatched: false });
+            onSuccess({ leadIds: [99], providerIds: [1], unmatched: false });
           },
           isPending: false,
           error: null,

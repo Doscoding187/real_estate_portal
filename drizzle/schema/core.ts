@@ -68,9 +68,9 @@ export const users = mysqlTable(
       .notNull(),
     agencyId: int().references(() => agencies.id, { onDelete: 'set null' }),
     isSubaccount: int().default(0).notNull(),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-    lastSignedIn: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    lastSignedIn: timestamp({ mode: 'string' }).defaultNow().notNull(),
     passwordResetToken: varchar({ length: 255 }),
     passwordResetTokenExpiresAt: timestamp({ mode: 'string' }),
     emailVerificationToken: varchar({ length: 255 }),
@@ -89,7 +89,7 @@ export const auditLogs = mysqlTable('audit_logs', {
   metadata: text(),
   ipAddress: varchar({ length: 45 }),
   userAgent: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const managerialAuditLogs = mysqlTable(
@@ -105,7 +105,7 @@ export const managerialAuditLogs = mysqlTable(
     beforeData: json('before_data'),
     afterData: json('after_data'),
     metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_managerial_audit_actor').on(table.actorUserId),
@@ -124,7 +124,7 @@ export const platformSettings = mysqlTable('platform_settings', {
     .notNull(),
   isPublic: int().notNull(),
   updatedBy: int().references(() => users.id, { onDelete: 'set null' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -144,7 +144,7 @@ export const notifications = mysqlTable('notifications', {
   data: text(),
   isRead: int().notNull(),
   readAt: timestamp({ mode: 'string' }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const emailTemplates = mysqlTable('email_templates', {
@@ -155,7 +155,7 @@ export const emailTemplates = mysqlTable('email_templates', {
   textContent: text(),
   agencyId: int().references(() => agencies.id, { onDelete: 'cascade' }),
   isActive: int().default(1).notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -174,6 +174,6 @@ export const userOnboardingState = mysqlTable('user_onboarding_state', {
   featuresUnlocked: json('features_unlocked'),
   consumerDashboardPreferences: json('consumer_dashboard_preferences'),
   sellerPlanningInputs: json('seller_planning_inputs'),
-  createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP'),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow(),
 });

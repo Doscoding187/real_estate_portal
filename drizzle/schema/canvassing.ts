@@ -156,7 +156,7 @@ export const sellerProspects = mysqlTable(
       onDelete: 'set null',
     }),
     convertedAt: timestamp('converted_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -185,7 +185,7 @@ export const sellerProspectActivities = mysqlTable(
     ).notNull(),
     description: text('description').notNull(),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_seller_prospect_activities_prospect').on(table.sellerProspectId, table.createdAt),
@@ -217,7 +217,7 @@ export const sellerMandateOperations = mysqlTable(
     requirements: json('requirements'),
     nextAction: varchar('next_action', { length: 255 }),
     listingReadyAt: timestamp('listing_ready_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -240,7 +240,7 @@ export const sellerMandateComparables = mysqlTable(
     price: decimal('price', { precision: 15, scale: 2 }),
     priceKind: mysqlEnum('price_kind', ['asking', 'selling', 'other']).default('other').notNull(),
     notes: text('notes'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [index('idx_seller_mandate_comparables_operation').on(table.mandateOperationId)],
 );

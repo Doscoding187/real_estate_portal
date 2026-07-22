@@ -1,2 +1,0 @@
-ALTER TABLE developers
-  MODIFY COLUMN isVerified int(11) NOT NULL DEFAULT 0;

@@ -22,7 +22,7 @@ export default function ServiceProviderProfilePage() {
   const providerId = providerIdFromSlug(decodeURIComponent(slug));
 
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
-    { providerId },
+    { providerId: providerId || 0 },
     { enabled: Boolean(providerId) },
   );
   const profile = profileQuery.data;

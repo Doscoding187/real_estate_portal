@@ -11,7 +11,7 @@ export type ServiceProviderOnboardingStatus = {
   fullFeaturesUnlocked: boolean;
   recommendedNextStep: string;
   provider: {
-    providerId: string;
+    providerId: number;
     companyName: string;
     verificationStatus: 'pending' | 'verified' | 'rejected';
     subscriptionTier: 'directory' | 'directory_explore' | 'ecosystem_pro';

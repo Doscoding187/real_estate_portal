@@ -12,7 +12,6 @@ function readRepoFile(relativePath: string) {
 describe('agency viewings operating workflow contract', () => {
   const agencyRouter = readRepoFile('server/agencyRouter.ts');
   const leadsSchema = readRepoFile('drizzle/schema/leads.ts');
-  const lifecycleMigration = readRepoFile('server/migrations/0063_extend_showings_lifecycle.sql');
   const workspace = readRepoFile('client/src/features/agency/viewings/AgencyViewingsWorkspace.tsx');
 
   it('extends canonical showings instead of introducing a parallel appointment table', () => {
@@ -21,8 +20,7 @@ describe('agency viewings operating workflow contract', () => {
     expect(agencyRouter).toContain('getMyDay: agentProcedure');
     expect(agencyRouter).not.toContain('agencyViewings');
     expect(agencyRouter).not.toContain('appointments');
-    expect(leadsSchema).toContain('createdByUserId');
-    expect(readRepoFile('server/migrations/0064_add_showings_creator.sql')).toContain('createdByUserId');
+    expect(leadsSchema).toContain("createdByUserId: int('createdByUserId')");
 
     for (const status of [
       'requested',
@@ -34,7 +32,6 @@ describe('agency viewings operating workflow contract', () => {
       'rescheduled',
     ]) {
       expect(leadsSchema).toContain(`'${status}'`);
-      expect(lifecycleMigration).toContain(`'${status}'`);
     }
   });
 

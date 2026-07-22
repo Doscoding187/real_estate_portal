@@ -135,7 +135,7 @@ export default function ServicesResultsPage() {
       | 'quote_requested'
       | 'results_empty_shown'
       | 'nearby_market_clicked',
-    providerId?: string,
+    providerId?: number,
     metadata?: Record<string, unknown>,
   ) => {
     if (!canLogEvents) return;

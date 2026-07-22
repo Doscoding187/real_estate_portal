@@ -3866,22 +3866,16 @@ export async function setDeveloperTrust(id: number, isTrusted: boolean) {
 export async function listPartners({
   page = 1,
   limit = 50,
-  category,
   search,
 }: {
   page?: number;
   limit?: number;
-  category?: string;
   search?: string;
 }) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const conditions: SQL[] = [];
-
-  if (category) {
-    conditions.push(eq(partners.serviceType, category as any));
-  }
 
   if (search) {
     conditions.push(

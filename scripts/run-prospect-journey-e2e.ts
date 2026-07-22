@@ -66,15 +66,55 @@ async function run(command: string, args: string[], env: NodeJS.ProcessEnv) {
   }
 }
 
-async function verifyMigration(url: string) {
+async function verifyBaseline(url: string) {
   const connection = await mysql.createConnection(url);
+
   try {
-    const [ledger] = await connection.query<mysql.RowDataPacket[]>("SELECT filename, checksum, application_mode FROM sql_migration_history WHERE filename = '0073_create_prospect_journey_tracker_mvp.sql'");
-    const checksum = createHash('sha256').update(readFileSync(path.join(process.cwd(), 'server/migrations/0073_create_prospect_journey_tracker_mvp.sql'))).digest('hex');
-    const [tables] = await connection.query<mysql.RowDataPacket[]>("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('prospect_identities', 'prospect_action_attributions', 'prospect_action_claim_tokens')");
-    const [columns] = await connection.query<mysql.RowDataPacket[]>("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND ((table_name = 'leads' AND column_name = 'prospect_identity_id') OR (table_name = 'showings' AND column_name = 'prospect_identity_id'))");
-    if (ledger.length !== 1 || ledger[0].checksum !== checksum || ledger[0].application_mode !== 'executed' || tables.length !== 3 || columns.length !== 2) throw new Error('Prospect Journey E2E migration witness failed.');
-  } finally { await connection.end(); }
+    const baselineFile =
+      '0000_canonical_launch_baseline.sql';
+
+    const [ledger] =
+      await connection.query<mysql.RowDataPacket[]>(
+        "SELECT filename, checksum, application_mode FROM sql_migration_history WHERE filename = '0000_canonical_launch_baseline.sql'",
+      );
+
+    const checksum = createHash('sha256')
+      .update(
+        readFileSync(
+          path.join(
+            process.cwd(),
+            'server/migrations',
+            baselineFile,
+          ),
+        ),
+      )
+      .digest('hex');
+
+    const [tables] =
+      await connection.query<mysql.RowDataPacket[]>(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN ('prospect_identities', 'prospect_action_attributions', 'prospect_action_claim_tokens')",
+      );
+
+    const [columns] =
+      await connection.query<mysql.RowDataPacket[]>(
+        "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND ((table_name = 'leads' AND column_name = 'prospect_identity_id') OR (table_name = 'showings' AND column_name = 'prospect_identity_id'))",
+      );
+
+    if (
+      ledger.length !== 1 ||
+      ledger[0]?.filename !== baselineFile ||
+      ledger[0]?.checksum !== checksum ||
+      ledger[0]?.application_mode !== 'executed' ||
+      tables.length !== 3 ||
+      columns.length !== 2
+    ) {
+      throw new Error(
+        'Prospect Journey canonical baseline witness failed.',
+      );
+    }
+  } finally {
+    await connection.end();
+  }
 }
 
 async function verifyNoMigrationLock(url: string) {
@@ -129,9 +169,8 @@ async function main() {
   process.once('SIGINT', () => signal('SIGINT')); process.once('SIGTERM', () => signal('SIGTERM'));
   try {
     await run('pnpm', ['db:prospect-journey-e2e:reset'], env);
-    await run('pnpm', ['exec', 'drizzle-kit', 'migrate', '--config', 'drizzle.config.ts'], env);
     await run('pnpm', ['exec', 'tsx', 'server/migrations/runSqlMigrations.ts'], env);
-    await verifyMigration(databaseUrl);
+    await verifyBaseline(databaseUrl);
     await verifyNoMigrationLock(databaseUrl);
     if (!setupOnly) {
       await run('pnpm', ['exec', 'tsx', 'server/scripts/localDemoSeed.ts', 'seed', 'prospect-journey-e2e'], env);

@@ -1,8 +1,6 @@
-import { randomUUID } from 'crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
-  explorePartners,
-  partnerTiers,
+  partners,
   SERVICE_CATEGORY_VALUES,
   SERVICE_INTENT_STAGE_VALUES,
   SERVICE_LEAD_EVENT_TYPE_VALUES,
@@ -26,7 +24,7 @@ export type ServiceSourceSurface = (typeof SERVICE_SOURCE_SURFACE_VALUES)[number
 export type ServiceLeadStatus = (typeof SERVICE_LEAD_STATUS_VALUES)[number];
 
 type ProviderDirectoryRecord = {
-  providerId: string;
+  providerId: number;
   companyName: string;
   verificationStatus: 'pending' | 'verified' | 'rejected';
   trustScore: number;
@@ -133,7 +131,6 @@ export function scoreProviderCandidate(input: ProviderScoreInput): number {
 export type UpsertProviderIdentityInput = {
   userId: number;
   companyName: string;
-  tierId?: number;
   description?: string | null;
   logoUrl?: string | null;
 };
@@ -193,7 +190,7 @@ type RecommendProvidersInput = {
 
 type CreateServiceLeadInput = {
   requesterUserId?: number | null;
-  providerId?: string | null;
+  providerId?: number | null;
   category: ServiceCategory;
   sourceSurface: ServiceSourceSurface;
   intentStage: ServiceIntentStage;
@@ -216,28 +213,44 @@ type LeadInteractionEventType =
   | 'nearby_market_clicked';
 
 export class ServicesEngineService {
+  async getProviderById(providerId: number) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const [provider] = await db
+      .select()
+      .from(partners)
+      .where(eq(partners.id, providerId))
+      .limit(1);
+
+    return provider || null;
+  }
+
   async getProviderByUserId(userId: number) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    return db.query.explorePartners.findFirst({
-      where: eq(explorePartners.userId, String(userId)),
-    });
+    const [provider] = await db
+      .select()
+      .from(partners)
+      .where(eq(partners.userId, userId))
+      .limit(1);
+
+    return provider || null;
   }
 
-  async getProviderPublicProfile(providerId: string) {
+  async getProviderPublicProfile(providerId: number) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
     const [base] = await db
       .select({
-        providerId: explorePartners.id,
-        companyName: explorePartners.companyName,
-        description: explorePartners.description,
-        logoUrl: explorePartners.logoUrl,
-        verificationStatus: explorePartners.verificationStatus,
-        trustScore: explorePartners.trustScore,
-        tierId: explorePartners.tierId,
+        providerId: partners.id,
+        companyName: partners.companyName,
+        description: partners.description,
+        logoUrl: partners.logoUrl,
+        verificationStatus: partners.verificationStatus,
+        trustScore: partners.trustScore,
         profileHeadline: serviceProviderProfiles.headline,
         profileBio: serviceProviderProfiles.bio,
         profileWebsiteUrl: serviceProviderProfiles.websiteUrl,
@@ -249,13 +262,13 @@ export class ServicesEngineService {
         subscriptionTier: serviceProviderSubscriptions.tier,
         subscriptionStatus: serviceProviderSubscriptions.status,
       })
-      .from(explorePartners)
-      .leftJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, explorePartners.id))
+      .from(partners)
+      .leftJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
       .leftJoin(
         serviceProviderSubscriptions,
-        eq(serviceProviderSubscriptions.providerId, explorePartners.id),
+        eq(serviceProviderSubscriptions.providerId, partners.id),
       )
-      .where(eq(explorePartners.id, providerId))
+      .where(eq(partners.id, providerId))
       .limit(1);
 
     if (!base) return null;
@@ -321,7 +334,6 @@ export class ServicesEngineService {
       logoUrl: base.logoUrl || null,
       verificationStatus: base.verificationStatus,
       trustScore: Number(base.trustScore || 0),
-      tierId: Number(base.tierId || 0),
       headline: base.profileHeadline || null,
       bio: base.profileBio || null,
       websiteUrl: base.profileWebsiteUrl || null,
@@ -365,7 +377,7 @@ export class ServicesEngineService {
     };
   }
 
-  async getProviderReviews(providerId: string, limit = 50) {
+  async getProviderReviews(providerId: number, limit = 50) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -392,7 +404,7 @@ export class ServicesEngineService {
   async getMyProviderProfile(userId: number) {
     const provider = await this.getProviderByUserId(userId);
     if (!provider?.id) return null;
-    return this.getProviderPublicProfile(String(provider.id));
+    return this.getProviderPublicProfile(Number(provider.id));
   }
 
   async upsertProviderIdentity(input: UpsertProviderIdentityInput) {
@@ -404,38 +416,26 @@ export class ServicesEngineService {
       return existing;
     }
 
-    let tierId = Number(input.tierId || 0);
-    if (!tierId) {
-      const [preferredTier] = await db
-        .select({ id: partnerTiers.id })
-        .from(partnerTiers)
-        .where(eq(partnerTiers.id, 2))
-        .limit(1);
-      const [fallbackTier] = await db
-        .select({ id: partnerTiers.id })
-        .from(partnerTiers)
-        .orderBy(partnerTiers.id)
-        .limit(1);
-      const resolvedTierId = Number(preferredTier?.id || fallbackTier?.id || 0);
-      if (!resolvedTierId) {
-        throw new Error('Cannot create provider without a partner tier. Seed partner_tiers first.');
-      }
-      tierId = resolvedTierId;
-    }
-
-    const providerId = randomUUID();
-    await db.insert(explorePartners).values({
-      id: providerId,
-      userId: String(input.userId),
-      tierId,
+    const insertResult = await db.insert(partners).values({
+      userId: input.userId,
       companyName: input.companyName,
       description: normalizeText(input.description) || null,
       logoUrl: normalizeText(input.logoUrl) || null,
       verificationStatus: 'pending',
       trustScore: '50.00',
-      serviceLocations: [],
       approvedContentCount: 0,
+      isActive: 1,
     });
+
+    const providerId = Number(
+      (insertResult as any)?.[0]?.insertId || 0,
+    );
+
+    if (!providerId) {
+      throw new Error(
+        'Failed to create canonical Service Partner identity.',
+      );
+    }
 
     await db.insert(serviceProviderProfiles).values({
       providerId,
@@ -457,12 +457,10 @@ export class ServicesEngineService {
       metadata: null,
     });
 
-    return db.query.explorePartners.findFirst({
-      where: eq(explorePartners.id, providerId),
-    });
+    return this.getProviderById(providerId);
   }
 
-  async upsertProviderProfile(providerId: string, input: UpsertProviderProfileInput) {
+  async upsertProviderProfile(providerId: number, input: UpsertProviderProfileInput) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -508,7 +506,7 @@ export class ServicesEngineService {
     return profile || null;
   }
 
-  async replaceProviderServices(providerId: string, services: ReplaceProviderServiceInput[]) {
+  async replaceProviderServices(providerId: number, services: ReplaceProviderServiceInput[]) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -541,7 +539,7 @@ export class ServicesEngineService {
       .orderBy(serviceProviderServices.displayName);
   }
 
-  async replaceProviderLocations(providerId: string, locations: ReplaceProviderLocationInput[]) {
+  async replaceProviderLocations(providerId: number, locations: ReplaceProviderLocationInput[]) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -585,10 +583,10 @@ export class ServicesEngineService {
 
     const baseRows = await db
       .select({
-        providerId: explorePartners.id,
-        companyName: explorePartners.companyName,
-        verificationStatus: explorePartners.verificationStatus,
-        trustScore: explorePartners.trustScore,
+        providerId: partners.id,
+        companyName: partners.companyName,
+        verificationStatus: partners.verificationStatus,
+        trustScore: partners.trustScore,
         headline: serviceProviderProfiles.headline,
         bio: serviceProviderProfiles.bio,
         moderationTier: serviceProviderProfiles.moderationTier,
@@ -596,17 +594,17 @@ export class ServicesEngineService {
         reviewCount: serviceProviderProfiles.reviewCount,
         subscriptionTier: serviceProviderSubscriptions.tier,
       })
-      .from(explorePartners)
+      .from(partners)
       .innerJoin(
         serviceProviderProfiles,
-        eq(serviceProviderProfiles.providerId, explorePartners.id),
+        eq(serviceProviderProfiles.providerId, partners.id),
       )
       .leftJoin(
         serviceProviderSubscriptions,
-        eq(serviceProviderSubscriptions.providerId, explorePartners.id),
+        eq(serviceProviderSubscriptions.providerId, partners.id),
       )
       .where(eq(serviceProviderProfiles.directoryActive, 1))
-      .orderBy(desc(explorePartners.trustScore))
+      .orderBy(desc(partners.trustScore))
       .limit(300);
 
     if (baseRows.length === 0) {
@@ -643,7 +641,7 @@ export class ServicesEngineService {
       .from(serviceProviderLocations)
       .where(inArray(serviceProviderLocations.providerId, baseProviderIds));
 
-    const servicesByProvider = new Map<string, ProviderDirectoryRecord['services']>();
+    const servicesByProvider = new Map<number, ProviderDirectoryRecord['services']>();
     for (const row of services) {
       const current = servicesByProvider.get(row.providerId) || [];
       current.push({
@@ -656,7 +654,7 @@ export class ServicesEngineService {
       servicesByProvider.set(row.providerId, current);
     }
 
-    const locationsByProvider = new Map<string, ProviderDirectoryRecord['locations']>();
+    const locationsByProvider = new Map<number, ProviderDirectoryRecord['locations']>();
     for (const row of locations) {
       const current = locationsByProvider.get(row.providerId) || [];
       current.push({
@@ -772,9 +770,12 @@ export class ServicesEngineService {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
-    let providerIds: string[] = [];
-    if (normalizeText(input.providerId)) {
-      providerIds = [String(input.providerId)];
+    let providerIds: number[] = [];
+    if (
+      Number.isInteger(input.providerId) &&
+      Number(input.providerId) > 0
+    ) {
+      providerIds = [Number(input.providerId)];
     } else {
       const recommendations = await this.recommendProviders({
         category: input.category,
@@ -789,8 +790,7 @@ export class ServicesEngineService {
     }
 
     const leadIds: number[] = [];
-    const subscriptionMap = new Map<
-      string,
+    const subscriptionMap = new Map<number,
       { tier: 'directory' | 'directory_explore' | 'ecosystem_pro' | null }
     >();
 
@@ -868,7 +868,7 @@ export class ServicesEngineService {
     eventType: LeadInteractionEventType;
     actorUserId: number;
     actorRole?: string | null;
-    providerId?: string | null;
+    providerId?: number | null;
     metadata?: Record<string, unknown> | null;
   }) {
     const db = await getDb();
@@ -921,7 +921,12 @@ export class ServicesEngineService {
     }
 
     const payload: Record<string, unknown> = {};
-    if (normalizeText(input.providerId)) payload.providerId = normalizeText(input.providerId);
+    if (
+      Number.isInteger(input.providerId) &&
+      Number(input.providerId) > 0
+    ) {
+      payload.providerId = Number(input.providerId);
+    }
     if (input.metadata && Object.keys(input.metadata).length > 0) payload.metadata = input.metadata;
 
     const insertResult = await db.insert(serviceLeadEvents).values({
@@ -936,7 +941,7 @@ export class ServicesEngineService {
 
   async updateProviderLeadStatus(input: {
     leadId: number;
-    providerId: string;
+    providerId: number;
     status: ServiceLeadStatus;
     actorUserId?: number | null;
     note?: string | null;
@@ -977,7 +982,7 @@ export class ServicesEngineService {
     });
   }
 
-  async listProviderLeads(providerId: string, limit = 50) {
+  async listProviderLeads(providerId: number, limit = 50) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -989,7 +994,7 @@ export class ServicesEngineService {
       .limit(Math.max(1, Math.min(100, Number(limit || 50))));
   }
 
-  async listMyExploreVideos(providerId: string, limit = 50) {
+  async listMyExploreVideos(providerId: number, limit = 50) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -1001,7 +1006,7 @@ export class ServicesEngineService {
       .limit(Math.max(1, Math.min(100, Number(limit || 50))));
   }
 
-  async getProviderDashboard(providerId: string, days = 30) {
+  async getProviderDashboard(providerId: number, days = 30) {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -1063,7 +1068,7 @@ export class ServicesEngineService {
   }
 
   async submitExploreVideo(input: {
-    providerId: string;
+    providerId: number;
     title: string;
     description?: string | null;
     vertical:

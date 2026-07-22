@@ -93,7 +93,7 @@ export const listings = mysqlTable(
     canonicalUrl: text(),
     searchTags: text(),
     featured: int().default(0).notNull(),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     publishedAt: timestamp({ mode: 'string' }),
     archivedAt: timestamp({ mode: 'string' }),
@@ -128,7 +128,7 @@ export const listingAnalytics = mysqlTable('listing_analytics', {
   conversionRate: decimal({ precision: 5, scale: 2 }),
   leadConversionRate: decimal({ precision: 5, scale: 2 }),
   lastUpdated: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const listingApprovalQueue = mysqlTable('listing_approval_queue', {
@@ -137,7 +137,7 @@ export const listingApprovalQueue = mysqlTable('listing_approval_queue', {
     .notNull()
     .references(() => listings.id),
   submittedBy: int().notNull(),
-  submittedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  submittedAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   status: mysqlEnum(['pending', 'reviewing', 'approved', 'rejected']).default('pending').notNull(),
   priority: mysqlEnum(['low', 'normal', 'high', 'urgent']).default('normal').notNull(),
   reviewedBy: int(),
@@ -145,7 +145,7 @@ export const listingApprovalQueue = mysqlTable('listing_approval_queue', {
   reviewNotes: text(),
   rejectionReason: text(),
   complianceChecks: json(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -187,7 +187,7 @@ export const listingLeads = mysqlTable('listing_leads', {
   crmSynced: int().default(0),
   crmSyncedAt: timestamp({ mode: 'string' }),
   crmId: varchar({ length: 255 }),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -213,8 +213,8 @@ export const listingMedia = mysqlTable('listing_media', {
   isPrimary: int().default(0).notNull(),
   processingStatus: mysqlEnum(['pending', 'processing', 'completed', 'failed']).default('pending'),
   processingError: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-  uploadedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+  uploadedAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   processedAt: timestamp({ mode: 'string' }),
 });
 
@@ -259,7 +259,7 @@ export const listingViewings = mysqlTable('listing_viewings', {
   visitorRating: int(),
   reminderSent: int().default(0),
   confirmationSent: int().default(0),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
@@ -319,7 +319,7 @@ export const properties = mysqlTable(
     levies: int(),
     ratesAndTaxes: int(),
     mainImage: varchar({ length: 1024 }),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     locationId: int('location_id').references(() => locations.id, { onDelete: 'set null' }),
     developerBrandProfileId: int('developer_brand_profile_id').references(
@@ -353,7 +353,7 @@ export const propertyImages = mysqlTable('propertyImages', {
   imageUrl: text().notNull(),
   isPrimary: int().notNull(),
   displayOrder: int().notNull(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
 
 export const propertySimilarityIndex = mysqlTable('property_similarity_index', {
@@ -370,5 +370,5 @@ export const propertySimilarityIndex = mysqlTable('property_similarity_index', {
   featureSimilarity: int(),
   overallSimilarity: int(),
   similarityReason: text(),
-  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });

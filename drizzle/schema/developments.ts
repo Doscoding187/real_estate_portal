@@ -46,7 +46,7 @@ export const developers = mysqlTable(
     rating: decimal({ precision: 3, scale: 2 }).default('0.00'),
     reviewCount: int().default(0),
     isVerified: int().notNull(),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     userId: int()
       .notNull()
@@ -105,7 +105,7 @@ export const developerBrandProfiles = mysqlTable(
     lastLeadDate: timestamp('last_lead_date', { mode: 'string' }),
     unclaimedLeadCount: int('unclaimed_lead_count').default(0).notNull(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     identityType: mysqlEnum('identity_type', ['developer', 'marketing_agency', 'hybrid'])
       .default('developer')
@@ -136,7 +136,7 @@ export const developerNotifications = mysqlTable(
     read: tinyint().default(0).notNull(),
     actionUrl: varchar('action_url', { length: 500 }),
     metadata: json(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_developer_notifications_developer_id').on(table.developerId),
@@ -163,7 +163,7 @@ export const developerSubscriptions = mysqlTable(
     currentPeriodEnd: timestamp('current_period_end', { mode: 'string' }),
     stripeSubscriptionId: varchar('stripe_subscription_id', { length: 100 }),
     stripeCustomerId: varchar('stripe_customer_id', { length: 100 }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -187,7 +187,7 @@ export const developerSubscriptionLimits = mysqlTable(
     crmIntegrationEnabled: tinyint('crm_integration_enabled').default(0).notNull(),
     advancedAnalyticsEnabled: tinyint('advanced_analytics_enabled').default(0).notNull(),
     bondIntegrationEnabled: tinyint('bond_integration_enabled').default(0).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [index('idx_developer_subscription_limits_subscription_id').on(table.subscriptionId)],
@@ -204,9 +204,9 @@ export const developerSubscriptionUsage = mysqlTable(
     leadsThisMonth: int('leads_this_month').default(0).notNull(),
     teamMembersCount: int('team_members_count').default(0).notNull(),
     lastResetAt: timestamp('last_reset_at', { mode: 'string' })
-      .default('CURRENT_TIMESTAMP')
+      .defaultNow()
       .notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [index('idx_developer_subscription_usage_subscription_id').on(table.subscriptionId)],
@@ -235,7 +235,7 @@ export const developments = mysqlTable(
     completionDate: timestamp({ mode: 'string' }),
     isFeatured: int().default(0).notNull(),
     views: int().default(0).notNull(),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     slug: varchar({ length: 255 }),
     isPublished: tinyint().default(0).notNull(),
@@ -352,7 +352,7 @@ export const developmentPhases = mysqlTable(
     priceTo: int('price_to'),
     launchDate: timestamp('launch_date', { mode: 'string' }),
     completionDate: timestamp('completion_date', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     specType: mysqlEnum('spec_type', ['affordable', 'gap', 'luxury', 'custom']).default(
       'affordable',
@@ -401,7 +401,7 @@ export const developmentUnits = mysqlTable(
     reservedAt: timestamp('reserved_at', { mode: 'string' }),
     reservedBy: int('reserved_by'),
     soldAt: timestamp('sold_at', { mode: 'string' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -424,7 +424,7 @@ export const developmentDrafts = mysqlTable(
     progress: int().default(0).notNull(),
     currentStep: int().default(0).notNull(),
     lastModified: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-    createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     developerBrandProfileId: int('developer_brand_profile_id').references(
       () => developerBrandProfiles.id,
       { onDelete: 'cascade' },
@@ -456,7 +456,7 @@ export const developmentApprovalQueue = mysqlTable(
     rejectionReason: text('rejection_reason'),
     complianceChecks: json('compliance_checks'),
     submittedAt: timestamp('submitted_at', { mode: 'string' })
-      .default('CURRENT_TIMESTAMP')
+      .defaultNow()
       .notNull(),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     reviewedBy: int('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
@@ -493,7 +493,7 @@ export const developmentLeadRoutes = mysqlTable(
     ),
     priority: int().default(0).notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_lead_routes_development_id').on(table.developmentId),
@@ -525,7 +525,7 @@ export const unitTypes = mysqlTable(
     baseMedia: json('base_media'),
     displayOrder: int('display_order').default(0),
     isActive: tinyint('is_active').default(1),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     totalUnits: int('total_units').default(0).notNull(),
     availableUnits: int('available_units').default(0).notNull(),

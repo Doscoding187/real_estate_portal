@@ -10,7 +10,7 @@ import { render, screen } from '@testing-library/react';
 
 const mockProviders = [
   {
-    providerId: 'prov-1',
+    providerId: 1,
     companyName: 'Cape Plumbing Co',
     verificationStatus: 'verified',
     subscriptionTier: 'directory_explore',
@@ -22,7 +22,7 @@ const mockProviders = [
     moderationTier: null,
   },
   {
-    providerId: 'prov-2',
+    providerId: 2,
     companyName: 'Gauteng Movers',
     verificationStatus: 'pending',
     subscriptionTier: 'directory',

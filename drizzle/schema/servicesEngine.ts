@@ -13,7 +13,8 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { users } from './core';
 import { developments } from './developments';
-import { exploreContent, explorePartners } from './explore';
+import { exploreContent } from './explore';
+import { partners } from './partners';
 import { listings, properties } from './listings';
 
 export const SERVICE_PROVIDER_MODERATION_TIER_VALUES = ['basic', 'verified', 'pro'] as const;
@@ -88,9 +89,9 @@ export const serviceProviderProfiles = mysqlTable(
   'service_provider_profiles',
   {
     id: int('id').autoincrement().primaryKey(),
-    providerId: varchar('provider_id', { length: 36 })
+    providerId: int('provider_id')
       .notNull()
-      .references(() => explorePartners.id, { onDelete: 'cascade' }),
+      .references(() => partners.id, { onDelete: 'cascade' }),
     headline: varchar('headline', { length: 180 }),
     bio: text('bio'),
     websiteUrl: varchar('website_url', { length: 500 }),
@@ -108,7 +109,7 @@ export const serviceProviderProfiles = mysqlTable(
     averageRating: decimal('average_rating', { precision: 3, scale: 2 }).default('0.00').notNull(),
     reviewCount: int('review_count').default(0).notNull(),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -121,9 +122,9 @@ export const serviceProviderLocations = mysqlTable(
   'service_provider_locations',
   {
     id: int('id').autoincrement().primaryKey(),
-    providerId: varchar('provider_id', { length: 36 })
+    providerId: int('provider_id')
       .notNull()
-      .references(() => explorePartners.id, { onDelete: 'cascade' }),
+      .references(() => partners.id, { onDelete: 'cascade' }),
     countryCode: varchar('country_code', { length: 2 }).default('ZA').notNull(),
     province: varchar('province', { length: 120 }),
     city: varchar('city', { length: 120 }),
@@ -133,7 +134,7 @@ export const serviceProviderLocations = mysqlTable(
     longitude: decimal('longitude', { precision: 11, scale: 8 }),
     radiusKm: int('radius_km').default(25).notNull(),
     isPrimary: tinyint('is_primary').default(0).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_service_provider_locations_provider').on(table.providerId),
@@ -145,9 +146,9 @@ export const serviceProviderServices = mysqlTable(
   'service_provider_services',
   {
     id: int('id').autoincrement().primaryKey(),
-    providerId: varchar('provider_id', { length: 36 })
+    providerId: int('provider_id')
       .notNull()
-      .references(() => explorePartners.id, { onDelete: 'cascade' }),
+      .references(() => partners.id, { onDelete: 'cascade' }),
     serviceCategory: mysqlEnum(
       'service_category',
       SERVICE_CATEGORY_VALUES as unknown as [string, ...string[]],
@@ -159,7 +160,7 @@ export const serviceProviderServices = mysqlTable(
     maxPrice: int('max_price'),
     currency: varchar('currency', { length: 8 }).default('ZAR').notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -173,9 +174,9 @@ export const serviceProviderSubscriptions = mysqlTable(
   'service_provider_subscriptions',
   {
     id: int('id').autoincrement().primaryKey(),
-    providerId: varchar('provider_id', { length: 36 })
+    providerId: int('provider_id')
       .notNull()
-      .references(() => explorePartners.id, { onDelete: 'cascade' }),
+      .references(() => partners.id, { onDelete: 'cascade' }),
     tier: mysqlEnum(
       'tier',
       SERVICE_PROVIDER_SUBSCRIPTION_TIER_VALUES as unknown as [string, ...string[]],
@@ -191,7 +192,7 @@ export const serviceProviderSubscriptions = mysqlTable(
     startsAt: timestamp('starts_at', { mode: 'string' }),
     endsAt: timestamp('ends_at', { mode: 'string' }),
     metadata: json('metadata'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -205,9 +206,9 @@ export const serviceExploreVideos = mysqlTable(
   'service_explore_videos',
   {
     id: int('id').autoincrement().primaryKey(),
-    providerId: varchar('provider_id', { length: 36 })
+    providerId: int('provider_id')
       .notNull()
-      .references(() => explorePartners.id, { onDelete: 'cascade' }),
+      .references(() => partners.id, { onDelete: 'cascade' }),
     exploreContentId: int('explore_content_id').references(() => exploreContent.id, {
       onDelete: 'set null',
     }),
@@ -230,7 +231,7 @@ export const serviceExploreVideos = mysqlTable(
       onDelete: 'set null',
     }),
     moderationNotes: text('moderation_notes'),
-    submittedAt: timestamp('submitted_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }).defaultNow().notNull(),
     reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
     publishedAt: timestamp('published_at', { mode: 'string' }),
   },
@@ -248,7 +249,7 @@ export const serviceLeads = mysqlTable(
     requesterUserId: int('requester_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
-    providerId: varchar('provider_id', { length: 36 }).references(() => explorePartners.id, {
+    providerId: int('provider_id').references(() => partners.id, {
       onDelete: 'set null',
     }),
     serviceCategory: mysqlEnum(
@@ -287,7 +288,7 @@ export const serviceLeads = mysqlTable(
       'billing_tier_snapshot',
       SERVICE_PROVIDER_SUBSCRIPTION_TIER_VALUES as unknown as [string, ...string[]],
     ),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
   table => [
@@ -312,7 +313,7 @@ export const serviceLeadEvents = mysqlTable(
     ).notNull(),
     actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
     payload: json('payload'),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_service_lead_events_lead').on(table.leadId),
@@ -325,9 +326,9 @@ export const serviceProviderReviews = mysqlTable(
   'service_provider_reviews',
   {
     id: int('id').autoincrement().primaryKey(),
-    providerId: varchar('provider_id', { length: 36 })
+    providerId: int('provider_id')
       .notNull()
-      .references(() => explorePartners.id, { onDelete: 'cascade' }),
+      .references(() => partners.id, { onDelete: 'cascade' }),
     reviewerUserId: int('reviewer_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
@@ -336,7 +337,7 @@ export const serviceProviderReviews = mysqlTable(
     content: text('content'),
     isVerified: tinyint('is_verified').default(0).notNull(),
     isPublished: tinyint('is_published').default(1).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
   table => [
     index('idx_service_provider_reviews_provider').on(table.providerId),

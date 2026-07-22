@@ -8,7 +8,7 @@ import { MatchQualityBadge } from './MatchQualityBadge';
 import { toProviderSlug } from '@/features/services/catalog';
 
 export type ProviderDirectoryItem = {
-  providerId: string;
+  providerId: number;
   companyName: string;
   logoUrl?: string | null;
   verificationStatus?: string | null;
@@ -41,8 +41,8 @@ type ProviderCardProps = {
   /** When true, applies muted border styling to indicate a fallback provider. */
   isFallback?: boolean;
   ctaLabel?: string;
-  onCta?: (providerId: string) => void;
-  onViewProfile?: (providerId: string) => void;
+  onCta?: (providerId: number) => void;
+  onViewProfile?: (providerId: number) => void;
 };
 
 export function ProviderCard({
