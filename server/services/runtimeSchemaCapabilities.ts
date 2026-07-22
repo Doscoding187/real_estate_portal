@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
-import { isShowingsSchemaReady, type ShowingsSchemaDetails } from './showingsSchemaCompatibility';
 
 export type RuntimeSchemaCapabilities = {
   checkedAt: string;
@@ -37,8 +36,6 @@ export type RuntimeSchemaCapabilities = {
     matchConfidenceColumn: boolean;
     assignmentAssignedAtColumn: boolean;
   };
-  showingsReady: boolean;
-  showingsDetails: ShowingsSchemaDetails;
 };
 
 export type DistributionSchemaOperation =
@@ -401,28 +398,6 @@ export async function getRuntimeSchemaCapabilities(
     ? await columnExists('demand_lead_assignments', 'assigned_at')
     : false;
 
-  const showingsTable = await tableExists('showings');
-  const listingIdColumn = showingsTable ? await columnExists('showings', 'listingId') : false;
-  const propertyIdColumn = showingsTable ? await columnExists('showings', 'propertyId') : false;
-  const leadIdColumn = showingsTable ? await columnExists('showings', 'leadId') : false;
-  const agentIdColumn = showingsTable ? await columnExists('showings', 'agentId') : false;
-  const scheduledTimeColumn = showingsTable ? await columnExists('showings', 'scheduledTime') : false;
-  const scheduledAtColumn = showingsTable ? await columnExists('showings', 'scheduledAt') : false;
-  const statusColumn = showingsTable ? await columnExists('showings', 'status') : false;
-  const notesColumn = showingsTable ? await columnExists('showings', 'notes') : false;
-
-  const showingsDetails: ShowingsSchemaDetails = {
-    table: showingsTable,
-    listingIdColumn,
-    propertyIdColumn,
-    leadIdColumn,
-    agentIdColumn,
-    scheduledTimeColumn,
-    scheduledAtColumn,
-    statusColumn,
-    notesColumn,
-  };
-
   const value: RuntimeSchemaCapabilities = {
     checkedAt: new Date().toISOString(),
     demandEngineReady:
@@ -488,8 +463,6 @@ export async function getRuntimeSchemaCapabilities(
       matchConfidenceColumn,
       assignmentAssignedAtColumn,
     },
-    showingsReady: isShowingsSchemaReady(showingsDetails),
-    showingsDetails,
   };
 
   cachedCapabilities = {
@@ -600,20 +573,20 @@ export function warnSchemaCapabilityOnce(key: string, message: string, details?:
   console.warn(message);
 }
 
-export type RuntimeSchemaStrictTarget = 'demand_engine' | 'showings';
+export type RuntimeSchemaStrictTarget = 'demand_engine';
 
 export function getMissingRuntimeSchemaTargets(
   capabilities: RuntimeSchemaCapabilities,
   targets: RuntimeSchemaStrictTarget[],
 ): RuntimeSchemaStrictTarget[] {
   const missing: RuntimeSchemaStrictTarget[] = [];
+
   for (const target of targets) {
     if (target === 'demand_engine' && !capabilities.demandEngineReady) {
       missing.push(target);
-    } else if (target === 'showings' && !capabilities.showingsReady) {
-      missing.push(target);
     }
   }
+
   return missing;
 }
 
@@ -621,7 +594,7 @@ export async function assertRuntimeSchemaCapabilities(options?: {
   targets?: RuntimeSchemaStrictTarget[];
   forceRefresh?: boolean;
 }): Promise<RuntimeSchemaCapabilities> {
-  const targets = options?.targets ?? ['demand_engine', 'showings'];
+  const targets = options?.targets ?? ['demand_engine'];
   const capabilities = await getRuntimeSchemaCapabilities({ forceRefresh: options?.forceRefresh });
   const missingTargets = getMissingRuntimeSchemaTargets(capabilities, targets);
   if (missingTargets.length > 0) {

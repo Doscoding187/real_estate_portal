@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import mysql, { type Connection } from 'mysql2/promise';
 
 import { showings } from '../../../drizzle/schema/leads';
-import { isShowingsSchemaReady, type ShowingsSchemaDetails } from '../showingsSchemaCompatibility';
 
 const CANONICAL_COLUMNS = [
   'id',
@@ -117,35 +116,6 @@ describe('showings schema drift guard', () => {
       expect(Array.from(indexNames)).toEqual(expect.arrayContaining([...CANONICAL_INDEXES]));
     });
 
-    it('ensures the canonical showings shape is runtime-ready', async () => {
-      const readColumn = async (columnName: string) => {
-        const [rows] = await connection!.query<Array<Record<string, unknown>>>(
-          `
-          SELECT COUNT(*) AS count_value
-          FROM information_schema.columns
-          WHERE table_schema = DATABASE()
-            AND table_name = 'showings'
-            AND column_name = ?
-        `,
-          [columnName],
-        );
 
-        return Number(rowValue(rows[0] ?? {}, 'count_value') ?? 0) > 0;
-      };
-
-      const details: ShowingsSchemaDetails = {
-        table: true,
-        listingIdColumn: await readColumn('listingId'),
-        propertyIdColumn: await readColumn('propertyId'),
-        leadIdColumn: await readColumn('leadId'),
-        agentIdColumn: await readColumn('agentId'),
-        scheduledTimeColumn: await readColumn('scheduledTime'),
-        scheduledAtColumn: await readColumn('scheduledAt'),
-        statusColumn: await readColumn('status'),
-        notesColumn: await readColumn('notes'),
-      };
-
-      expect(isShowingsSchemaReady(details)).toBe(true);
-    });
   });
 });

@@ -39,7 +39,6 @@ interface Showing {
   id: number;
   listingId: number | null;
   scheduledAt: string | Date | null;
-  scheduledTime?: string | Date | null;
   durationMinutes?: number | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   notes: string | null;
@@ -64,7 +63,7 @@ const VIEW_MODES = [
 type ViewMode = (typeof VIEW_MODES)[number]['id'];
 
 function getShowingScheduledDate(showing: Showing): Date | null {
-  const value = showing.scheduledTime ?? showing.scheduledAt;
+  const value = showing.scheduledAt;
   if (!value) return null;
 
   const date = value instanceof Date ? value : new Date(value);

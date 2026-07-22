@@ -65,7 +65,6 @@ type ShowingItem = {
   listingId?: number | null;
   visitorName?: string | null;
   status: string;
-  scheduledTime?: string | Date;
   scheduledAt?: string | Date;
 };
 
@@ -245,7 +244,7 @@ function formatRelativeTime(value: string | Date | null | undefined): string {
 }
 
 function getScheduleTime(showing: ShowingItem): Date | null {
-  return toDate(showing.scheduledTime ?? showing.scheduledAt);
+  return toDate(showing.scheduledAt);
 }
 
 function getLeadStage(status: string): PipelineStage {
