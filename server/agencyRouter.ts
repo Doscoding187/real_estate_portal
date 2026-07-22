@@ -534,43 +534,6 @@ function normalizeBillingStatus(value: unknown): AgencyBillingStatus {
   return 'unavailable';
 }
 
-function isProductionRuntime() {
-  return (
-    String(process.env.NODE_ENV || '').toLowerCase() === 'production' ||
-    String(process.env.APP_ENV || '').toLowerCase() === 'production'
-  );
-}
-
-function isPricingGovernanceSchemaError(error: unknown): boolean {
-  const cause = (error as any)?.cause;
-  const code = String((error as any)?.code ?? cause?.code ?? '');
-  const message = String(
-    [
-      (error as any)?.message,
-      cause?.message,
-      cause?.sqlMessage,
-      cause?.sql,
-      (error as any)?.query,
-    ]
-      .filter(Boolean)
-      .join(' '),
-  ).toLowerCase();
-  const touchesPricingGovernance =
-    message.includes('subscriptions') ||
-    message.includes('agency_subscriptions') ||
-    message.includes('plans') ||
-    message.includes('owner_type') ||
-    message.includes('plan_id');
-
-  return (
-    code === 'ER_NO_SUCH_TABLE' ||
-    code === 'ER_BAD_FIELD_ERROR' ||
-    ((message.includes("doesn't exist") ||
-      message.includes('unknown column') ||
-      message.includes('failed query:')) &&
-      touchesPricingGovernance)
-  );
-}
 
 function toLeadTemperature(score: unknown): {
   label: 'hot' | 'warm' | 'cool';
@@ -3338,71 +3301,31 @@ async function getAgencyAccessStateForUser(
     },
   };
 
-  try {
-    const [canonical] = await db
-      .select({
-        subscription: subscriptions,
-        plan: plans,
-      })
-      .from(subscriptions)
-      .leftJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
-      .limit(1);
+  const [canonical] = await db
+    .select({
+      subscription: subscriptions,
+      plan: plans,
+    })
+    .from(subscriptions)
+    .leftJoin(plans, eq(subscriptions.planId, plans.id))
+    .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)))
+    .limit(1);
 
-    if (canonical?.subscription) {
-      base.billingStatus = normalizeBillingStatus(canonical.subscription.status);
-      base.planKey = canonical.plan?.name || null;
-      base.planAccessSource = 'subscriptions';
-      base.actionableReason =
-        base.billingStatus === 'active'
-          ? 'Access is active from the canonical subscription record.'
-          : `Subscription status is ${base.billingStatus}.`;
-    } else {
-      const [stripeStyle] = await db
-        .select({
-          subscription: agencySubscriptions,
-          plan: plans,
-        })
-        .from(agencySubscriptions)
-        .leftJoin(plans, eq(agencySubscriptions.planId, plans.id))
-        .where(eq(agencySubscriptions.agencyId, agencyId))
-        .limit(1);
-
-      if (stripeStyle?.subscription) {
-        base.billingStatus = normalizeBillingStatus(stripeStyle.subscription.status);
-        base.planKey = stripeStyle.plan?.name || null;
-        base.planAccessSource = 'agency_subscriptions';
-        base.actionableReason =
-          base.billingStatus === 'active'
-            ? 'Access is active from the agency subscription record.'
-            : `Agency subscription status is ${base.billingStatus}.`;
-      } else {
-        base.billingStatus = 'not_started';
-        base.planKey = null;
-        base.planAccessSource = 'none';
-        base.degraded = false;
-        base.fallbackReason = 'No canonical subscription row found; legacy agency billing fields ignored.';
-        base.actionableReason = 'No canonical subscription exists for this agency.';
-      }
-    }
-  } catch (error) {
-    if (!isPricingGovernanceSchemaError(error)) {
-      throw error;
-    }
-
-    base.billingStatus = 'unavailable';
-    base.planAccessSource = 'schema_unavailable';
-    base.degraded = true;
-    base.fallbackReason = 'Pricing governance schema is missing or outdated.';
-    base.actionableReason = 'Run local pricing-governance migrations before trusting billing gates.';
-
-    if (!isProductionRuntime()) {
-      console.warn('[AgencyAccess] Pricing governance unavailable; returning blocked dev fallback.', {
-        agencyId,
-        code: (error as any)?.code,
-        message: (error as any)?.message,
-      });
-    }
+  if (canonical?.subscription) {
+    base.billingStatus = normalizeBillingStatus(canonical.subscription.status);
+    base.planKey = canonical.plan?.name || null;
+    base.planAccessSource = 'subscriptions';
+    base.actionableReason =
+      base.billingStatus === 'active'
+        ? 'Access is active from the canonical subscription record.'
+        : `Subscription status is ${base.billingStatus}.`;
+  } else {
+    base.billingStatus = 'not_started';
+    base.planKey = null;
+    base.planAccessSource = 'none';
+    base.degraded = false;
+    base.fallbackReason = 'No canonical subscription row found.';
+    base.actionableReason = 'No canonical subscription exists for this agency.';
   }
 
   const billingActive = isPaidSubscriptionEntitled(base.billingStatus as any);

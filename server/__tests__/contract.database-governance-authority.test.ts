@@ -96,6 +96,7 @@ describe('database governance authority', () => {
   it('fails closed on canonical platform settings, auth, and plan schemas', () => {
     const dbSource = read('server/db.ts');
     const planAccessSource = read('server/services/planAccessService.ts');
+    const agencyRouterSource = read('server/agencyRouter.ts');
 
     expect(dbSource).not.toContain('PlatformSettingsColumnMode');
     expect(dbSource).not.toContain('cachedPlatformSettingsColumnMode');
@@ -141,5 +142,55 @@ describe('database governance authority', () => {
     expect(projection).toContain('await getStarterPlan(db, ownerType)');
     expect(projection).not.toContain('catch (error)');
     expect(projection).not.toContain('return buildBlockedProjectionForUser');
+
+    expect(agencyRouterSource).not.toContain('function isProductionRuntime()');
+    expect(agencyRouterSource).not.toContain('isPricingGovernanceSchemaError');
+    expect(agencyRouterSource).not.toContain(
+      'Pricing governance unavailable; returning blocked dev fallback',
+    );
+
+    const agencyAccessStart = agencyRouterSource.indexOf(
+      'async function getAgencyAccessStateForUser',
+    );
+    const agencyRouterStart = agencyRouterSource.indexOf(
+      'export const agencyRouter = router({',
+      agencyAccessStart,
+    );
+
+    expect(agencyAccessStart).toBeGreaterThanOrEqual(0);
+    expect(agencyRouterStart).toBeGreaterThan(agencyAccessStart);
+
+    const agencyAccessRegion = agencyRouterSource.slice(
+      agencyAccessStart,
+      agencyRouterStart,
+    );
+    const agencyAccessReturn = agencyAccessRegion.lastIndexOf(
+      '\n  return base;\n}',
+    );
+
+    expect(agencyAccessReturn).toBeGreaterThan(0);
+
+    const agencyAccessEnd =
+      agencyAccessStart +
+      agencyAccessReturn +
+      '\n  return base;\n}'.length;
+
+    const agencyAccess = agencyRouterSource.slice(
+      agencyAccessStart,
+      agencyAccessEnd,
+    );
+
+    expect(agencyAccess).toContain('.from(subscriptions)');
+    expect(agencyAccess).toContain(
+      "base.planAccessSource = 'subscriptions'",
+    );
+    expect(agencyAccess).not.toContain('.from(agencySubscriptions)');
+    expect(agencyAccess).not.toContain(
+      "base.planAccessSource = 'agency_subscriptions'",
+    );
+    expect(agencyAccess).not.toContain(
+      "base.planAccessSource = 'schema_unavailable'",
+    );
+    expect(agencyAccess).not.toContain('catch (error)');
   });
 });

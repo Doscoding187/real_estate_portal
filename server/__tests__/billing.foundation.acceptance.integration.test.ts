@@ -359,17 +359,6 @@ describeWithDb('billing foundation persisted acceptance', () => {
       expect(activeRows.invoiceRows.find(row => row.id === checkout.invoice.id)?.status).toBe('paid');
       expect(activeRows.paymentRows.find(row => row.id === proof.paymentId)?.state).toBe('verified');
 
-      await (await getDb())!.insert(agencySubscriptions).values({
-        agencyId: seed.agencyId,
-        planId: seed.planId,
-        stripeCustomerId: `legacy-customer-${randomUUID()}`,
-        status: 'unpaid',
-        cancelAtPeriodEnd: 0,
-      } as any);
-      const accessWithLegacyConflict = await agencyCaller.agency.getAccessState();
-      expect(accessWithLegacyConflict.billingStatus).toBe('active');
-      expect(accessWithLegacyConflict.planAccessSource).toBe('subscriptions');
-
       const periodEndBeforeDuplicate = activeRows.subscription.currentPeriodEnd;
       const auditCountBeforeDuplicate = await countApprovalAuditEvents(proof.paymentId);
       const duplicateApproval = await adminCaller.billing.admin.reviewManualPayment({
