@@ -193,4 +193,73 @@ describe('database governance authority', () => {
     );
     expect(agencyAccess).not.toContain('catch (error)');
   });
+  it('requires agent showings request paths to use canonical database authority', () => {
+    const source = read('server/agentRouter.ts');
+
+    expect(source).not.toContain(
+      "from './services/showingsSchemaCompatibility'",
+    );
+    expect(source).not.toContain(
+      'getRuntimeSchemaCapabilities',
+    );
+    expect(source).not.toContain(
+      'warnSchemaCapabilityOnce',
+    );
+    expect(source).not.toContain(
+      'getShowingsSchemaVariant',
+    );
+    expect(source).not.toContain(
+      'ShowingsSchemaDetails',
+    );
+    expect(source).not.toContain(
+      'ShowingsSchemaVariant',
+    );
+    expect(source).not.toContain(
+      'mapAgentShowingStatusToStorage',
+    );
+    expect(source).not.toContain(
+      'mapStorageShowingStatusToAgent',
+    );
+    expect(source).not.toContain(
+      'scheduledTime',
+    );
+    expect(source).not.toContain(
+      'capabilities.showingsReady',
+    );
+    expect(source).not.toContain(
+      'capabilities.showingsDetails',
+    );
+    expect(source).not.toContain(
+      'Showings schema not ready',
+    );
+    expect(source).not.toContain(
+      'Returning empty showings due to error',
+    );
+    expect(source).not.toContain(
+      'Returning safe defaults due to error',
+    );
+
+    expect(source).toContain(
+      "sql.identifier('scheduledAt')",
+    );
+    expect(source).toContain(
+      "sql.identifier('listingId')",
+    );
+    expect(source).toContain(
+      "sql.identifier('propertyId')",
+    );
+    expect(source).toContain(
+      "sql.identifier('notes')",
+    );
+    expect(source).toContain(
+      "sql.identifier('feedback')",
+    );
+    expect(source).toContain(
+      "status: 'confirmed'",
+    );
+    expect(source).toContain(
+      "return status === 'scheduled' ? 'confirmed' : status",
+    );
+  });
+
 });

@@ -41,24 +41,45 @@ import { slugify } from './_core/utils/slug';
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { agentOnboardingService } from './services/agentOnboardingService';
-import {
-  getRuntimeSchemaCapabilities,
-  warnSchemaCapabilityOnce,
-} from './services/runtimeSchemaCapabilities';
+
 import {
   getAgentInventorySchedulingOptions,
   getInventoryBridgeSchemaCapabilities,
   resolvePropertiesForListings,
   resolvePropertyForListing,
 } from './services/inventoryLinkResolver';
-import {
-  getShowingsSchemaVariant,
-  mapAgentShowingStatusToStorage,
-  mapStorageShowingStatusToAgent,
-  type AgentShowingStatus,
-  type ShowingsSchemaDetails,
-  type ShowingsSchemaVariant,
-} from './services/showingsSchemaCompatibility';
+type AgentShowingStatus =
+  | 'scheduled'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
+
+type CanonicalAgentShowingStorageStatus =
+  | 'confirmed'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
+
+function mapAgentShowingStatusToCanonical(
+  status: AgentShowingStatus,
+): CanonicalAgentShowingStorageStatus {
+  return status === 'scheduled' ? 'confirmed' : status;
+}
+
+function mapCanonicalShowingStatusToAgent(
+  status: unknown,
+): AgentShowingStatus {
+  switch (status) {
+    case 'completed':
+      return 'completed';
+    case 'cancelled':
+      return 'cancelled';
+    case 'no_show':
+      return 'no_show';
+    default:
+      return 'scheduled';
+  }
+}
 
 // Pipeline stages for Kanban board
 const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
@@ -165,7 +186,6 @@ type RawAgentShowingRow = {
   propertyId?: number | string | null;
   leadId?: number | string | null;
   agentId?: number | string | null;
-  scheduledTime?: string | Date | null;
   scheduledAt?: string | Date | null;
   status?: string | null;
   notes?: string | null;
@@ -197,7 +217,6 @@ type AgentShowingRecord = {
   leadId: number | null;
   agentId: number | null;
   scheduledAt: string | Date | null;
-  scheduledTime: string | Date | null;
   status: AgentShowingStatus;
   notes: string | null;
   createdAt: string | Date | null;
@@ -234,40 +253,37 @@ function readCountValue(result: any): number {
   return Number.isFinite(countValue) ? countValue : 0;
 }
 
-function getShowingsDateColumn(variant: ShowingsSchemaVariant) {
-  return sql.identifier(variant === 'current' ? 'scheduledTime' : 'scheduledAt');
-}
 
-function getShowingsIdColumn(details: ShowingsSchemaDetails, variant: ShowingsSchemaVariant) {
-  if (variant === 'current' || (variant === 'hybrid' && details.listingIdColumn)) {
-    return sql.identifier('listingId');
-  }
-  if (details.propertyIdColumn) {
-    return sql.identifier('propertyId');
-  }
-  return sql`NULL`;
-}
 
-function getShowingsNotesColumn(details: ShowingsSchemaDetails) {
-  return details.notesColumn ? sql.identifier('notes') : sql.identifier('feedback');
-}
+
+
+
 
 function normalizeAgentShowingRow(
   row: RawAgentShowingRow,
-  variant: ShowingsSchemaVariant,
 ): AgentShowingRecord {
-  const listingIdRaw = row.listingId ?? row.propertyId ?? null;
-  const scheduledAt = row.scheduledAt ?? row.scheduledTime ?? null;
-
   return {
     id: Number(row.id),
-    listingId: listingIdRaw === null ? null : Number(listingIdRaw),
-    propertyId: row.propertyId == null ? null : Number(row.propertyId),
-    leadId: row.leadId == null ? null : Number(row.leadId),
-    agentId: row.agentId == null ? null : Number(row.agentId),
-    scheduledAt,
-    scheduledTime: scheduledAt,
-    status: mapStorageShowingStatusToAgent(row.status, variant),
+    listingId:
+      row.listingId == null
+        ? null
+        : Number(row.listingId),
+    propertyId:
+      row.propertyId == null
+        ? null
+        : Number(row.propertyId),
+    leadId:
+      row.leadId == null
+        ? null
+        : Number(row.leadId),
+    agentId:
+      row.agentId == null
+        ? null
+        : Number(row.agentId),
+    scheduledAt: row.scheduledAt ?? null,
+    status: mapCanonicalShowingStatusToAgent(
+      row.status,
+    ),
     notes: row.notes ?? row.feedback ?? null,
     createdAt: row.createdAt ?? null,
     updatedAt: row.updatedAt ?? null,
@@ -281,18 +297,13 @@ async function countAgentShowingsInRange(params: {
   agentId: number;
   startIso: string;
   endIso: string;
-  details: ShowingsSchemaDetails;
 }) {
-  const variant = getShowingsSchemaVariant(params.details);
-  if (variant === 'missing') return 0;
-
-  const scheduledColumn = getShowingsDateColumn(variant);
   const result = await params.db.execute(sql`
     SELECT COUNT(*) AS count_value
     FROM showings
     WHERE agentId = ${params.agentId}
-      AND ${scheduledColumn} >= ${params.startIso}
-      AND ${scheduledColumn} <= ${params.endIso}
+      AND scheduledAt >= ${params.startIso}
+      AND scheduledAt <= ${params.endIso}
   `);
 
   return readCountValue(result);
@@ -316,37 +327,34 @@ async function listAgentShowings(params: {
   startDate?: string;
   endDate?: string;
   status?: 'all' | AgentShowingStatus;
-  details: ShowingsSchemaDetails;
 }): Promise<AgentShowingRecord[]> {
-  const variant = getShowingsSchemaVariant(params.details);
-  if (variant === 'missing') return [];
-
-  const scheduledColumn = getShowingsDateColumn(variant);
-  const listingColumn = getShowingsIdColumn(params.details, variant);
-  const leadColumn = params.details.leadIdColumn ? sql.identifier('leadId') : sql`NULL`;
-  const notesColumn = getShowingsNotesColumn(params.details);
   const startCondition = params.startDate
-    ? sql` AND ${scheduledColumn} >= ${new Date(params.startDate).toISOString()}`
+    ? sql` AND scheduledAt >= ${new Date(params.startDate).toISOString()}`
     : sql``;
   const endCondition = params.endDate
-    ? sql` AND ${scheduledColumn} <= ${new Date(params.endDate).toISOString()}`
+    ? sql` AND scheduledAt <= ${new Date(params.endDate).toISOString()}`
     : sql``;
   const statusValue =
     params.status && params.status !== 'all'
-      ? mapAgentShowingStatusToStorage(params.status, variant)
+      ? mapAgentShowingStatusToCanonical(
+          params.status,
+        )
       : null;
-  const statusCondition = statusValue ? sql` AND status = ${statusValue}` : sql``;
+  const statusCondition = statusValue
+    ? sql` AND status = ${statusValue}`
+    : sql``;
 
   const result = await params.db.execute(sql`
     SELECT
       id,
-      ${listingColumn} AS listingId,
-      ${params.details.propertyIdColumn ? sql.identifier('propertyId') : sql`NULL`} AS propertyId,
-      ${leadColumn} AS leadId,
+      listingId,
+      propertyId,
+      leadId,
       agentId,
-      ${scheduledColumn} AS scheduledAt,
+      scheduledAt,
       status,
-      ${notesColumn} AS notes,
+      notes,
+      feedback,
       createdAt,
       updatedAt
     FROM showings
@@ -354,11 +362,13 @@ async function listAgentShowings(params: {
     ${startCondition}
     ${endCondition}
     ${statusCondition}
-    ORDER BY ${scheduledColumn}
+    ORDER BY scheduledAt
   `);
 
   return normalizeDbRows(result).map(row =>
-    normalizeAgentShowingRow(row as RawAgentShowingRow, variant),
+    normalizeAgentShowingRow(
+      row as RawAgentShowingRow,
+    ),
   );
 }
 
@@ -473,83 +483,101 @@ export const agentRouter = router({
       offersInProgress: number;
       commissionsPending: number;
     }> => {
-      try {
-        const db = await getDb();
-        const capabilities = await getRuntimeSchemaCapabilities();
-        const userId = requireUser(ctx).id;
+      const db = await getDb();
+      const userId = requireUser(ctx).id;
 
-        // Get agent record from user
-        const [agentRecord] = await db
-          .select()
-          .from(agents)
-          .where(eq(agents.userId, userId))
-          .limit(1);
-        const agentId = agentRecord?.id ?? null;
-        // Date calculations
-        const todayDate = new Date();
-        todayDate.setHours(0, 0, 0, 0);
-        const tomorrowDate = new Date(todayDate);
-        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      const [agentRecord] = await db
+        .select()
+        .from(agents)
+        .where(eq(agents.userId, userId))
+        .limit(1);
+      const agentId = agentRecord?.id ?? null;
 
-        const today = todayDate.toISOString();
-        const tomorrow = tomorrowDate.toISOString();
-        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      const tomorrowDate = new Date(todayDate);
+      tomorrowDate.setDate(
+        tomorrowDate.getDate() + 1,
+      );
 
-        // Active listings count
-        const [activeListingsResult] = await db
+      const today = todayDate.toISOString();
+      const tomorrow = tomorrowDate.toISOString();
+      const weekAgo = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
+
+      const [activeListingsResult] = await db
+        .select({ count: count() })
+        .from(properties)
+        .where(
+          and(
+            ...buildAgentInventoryConditions(
+              userId,
+              agentId,
+              'active',
+            ),
+          ),
+        );
+
+      let newLeadsResult:
+        | { count: number }
+        | undefined;
+      let pendingCommissionsResult:
+        | { total: number | null }
+        | undefined;
+      let showingsTodayCount = 0;
+      let offersInProgressCount = 0;
+
+      if (agentId) {
+        [newLeadsResult] = await db
           .select({ count: count() })
-          .from(properties)
-          .where(and(...buildAgentInventoryConditions(userId, agentId, 'active')));
+          .from(leads)
+          .where(
+            and(
+              eq(leads.agentId, agentId),
+              gte(leads.createdAt, weekAgo),
+            ),
+          );
 
-        let newLeadsResult: { count: number } | undefined;
-        let pendingCommissionsResult: { total: number | null } | undefined;
-        let showingsTodayCount = 0;
-        let offersInProgressCount = 0;
+        showingsTodayCount =
+          await countAgentShowingsInRange({
+            db,
+            agentId,
+            startIso: today,
+            endIso: tomorrow,
+          });
 
-        if (agentId) {
-          [newLeadsResult] = await db
-            .select({ count: count() })
-            .from(leads)
-            .where(and(eq(leads.agentId, agentId), gte(leads.createdAt, weekAgo)));
-
-          showingsTodayCount = capabilities.showingsReady
-            ? await countAgentShowingsInRange({
-                db,
-                agentId,
-                startIso: today,
-                endIso: tomorrow,
-                details: capabilities.showingsDetails,
-              })
-            : 0;
-
-          offersInProgressCount = await countAgentPendingOffers({
+        offersInProgressCount =
+          await countAgentPendingOffers({
             db,
             agentId,
           });
 
-          [pendingCommissionsResult] = await db
-            .select({ total: sql<number>`SUM(${commissions.amount})` })
-            .from(commissions)
-            .where(and(eq(commissions.agentId, agentId), eq(commissions.status, 'pending')));
-        }
-
-        return {
-          activeListings: activeListingsResult?.count || 0,
-          newLeadsThisWeek: newLeadsResult?.count || 0,
-          showingsToday: showingsTodayCount,
-          offersInProgress: offersInProgressCount,
-          commissionsPending: Number(pendingCommissionsResult?.total || 0),
-        };
-      } catch (error) {
-        console.warn('[agent.getDashboardStats] Returning safe defaults due to error:', error);
-        return {
-          activeListings: 0,
-          newLeadsThisWeek: 0,
-          showingsToday: 0,
-          offersInProgress: 0,
-          commissionsPending: 0,
-        };
+        [pendingCommissionsResult] = await db
+          .select({
+            total: sql<number>`SUM(${commissions.amount})`,
+          })
+          .from(commissions)
+          .where(
+            and(
+              eq(commissions.agentId, agentId),
+              eq(commissions.status, 'pending'),
+            ),
+          );
       }
+
+      return {
+        activeListings:
+          activeListingsResult?.count || 0,
+        newLeadsThisWeek:
+          newLeadsResult?.count || 0,
+        showingsToday: showingsTodayCount,
+        offersInProgress:
+          offersInProgressCount,
+        commissionsPending: Number(
+          pendingCommissionsResult?.total || 0,
+        ),
+      };
     },
   ),
 
@@ -1774,44 +1802,42 @@ export const agentRouter = router({
       z.object({
         startDate: z.string().optional(),
         endDate: z.string().optional(),
-        status: z.enum(['all', 'scheduled', 'completed', 'cancelled', 'no_show']).optional(),
+        status: z
+          .enum([
+            'all',
+            'scheduled',
+            'completed',
+            'cancelled',
+            'no_show',
+          ])
+          .optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      try {
-        const db = await getDb();
-        const capabilities = await getRuntimeSchemaCapabilities();
-        if (!capabilities.showingsReady) {
-          warnSchemaCapabilityOnce(
-            'agent-getMyShowings-schema-not-ready',
-            '[agent.getMyShowings] Showings schema not ready. Returning empty showings.',
-            capabilities.showingsDetails,
-          );
-          return [];
-        }
+      const db = await getDb();
 
-        const [agentRecord] = await db
-          .select()
-          .from(agents)
-          .where(eq(agents.userId, requireUser(ctx).id))
-          .limit(1);
+      const [agentRecord] = await db
+        .select()
+        .from(agents)
+        .where(
+          eq(
+            agents.userId,
+            requireUser(ctx).id,
+          ),
+        )
+        .limit(1);
 
-        if (!agentRecord) {
-          return [];
-        }
-
-        return await listAgentShowings({
-          db,
-          agentId: agentRecord.id,
-          startDate: input.startDate,
-          endDate: input.endDate,
-          status: input.status,
-          details: capabilities.showingsDetails,
-        });
-      } catch (error) {
-        console.warn('[agent.getMyShowings] Returning empty showings due to error:', error);
+      if (!agentRecord) {
         return [];
       }
+
+      return listAgentShowings({
+        db,
+        agentId: agentRecord.id,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        status: input.status,
+      });
     }),
 
   bookShowing: agentProcedure
@@ -1913,69 +1939,68 @@ export const agentRouter = router({
         }
       }
 
-      const capabilities = await getRuntimeSchemaCapabilities();
-      const variant = getShowingsSchemaVariant(capabilities.showingsDetails);
-      if (variant === 'missing') {
-        throw new Error('Showings schema not ready');
-      }
-
       const showingColumns = [
-        sql.identifier('listingId'),
-        sql.identifier('agentId'),
-        sql.identifier('visitorName'),
-        getShowingsDateColumn(variant),
-        sql.identifier('durationMinutes'),
-        sql.identifier('status'),
-      ];
-      const showingValues = [
-        sql`${input.listingId}`,
-        sql`${agentRecord.id}`,
-        sql`${input.visitorName}`,
-        sql`${toDbTimestampRequired(input.scheduledAt)}`,
-        sql`${input.durationMinutes ?? 30}`,
-        sql`${mapAgentShowingStatusToStorage('scheduled', variant)}`,
-      ];
+          sql.identifier('listingId'),
+          sql.identifier('propertyId'),
+          sql.identifier('leadId'),
+          sql.identifier('agentId'),
+          sql.identifier('visitorName'),
+          sql.identifier('scheduledAt'),
+          sql.identifier('durationMinutes'),
+          sql.identifier('status'),
+          sql.identifier('notes'),
+          sql.identifier('feedback'),
+        ];
+        const showingValues = [
+          sql`${input.listingId}`,
+          sql`${resolvedInventory.propertyId}`,
+          sql`${leadRecord?.id ?? null}`,
+          sql`${agentRecord.id}`,
+          sql`${input.visitorName}`,
+          sql`${toDbTimestampRequired(
+            input.scheduledAt,
+          )}`,
+          sql`${input.durationMinutes ?? 30}`,
+          sql`${'confirmed'}`,
+          sql`${input.notes || null}`,
+          sql`${null}`,
+        ];
 
-      if (capabilities.showingsDetails.propertyIdColumn) {
-        showingColumns.push(sql.identifier('propertyId'));
-        showingValues.push(sql`${resolvedInventory.propertyId}`);
-      }
-
-      if (capabilities.showingsDetails.leadIdColumn) {
-        showingColumns.push(sql.identifier('leadId'));
-        showingValues.push(sql`${leadRecord?.id ?? null}`);
-      }
-
-      if (capabilities.showingsDetails.notesColumn) {
-        showingColumns.push(sql.identifier('notes'));
-        showingValues.push(sql`${input.notes || null}`);
-      } else {
-        showingColumns.push(sql.identifier('feedback'));
-        showingValues.push(sql`${input.notes || null}`);
-      }
-
-      const insertResult =
-        typeof (db as { execute?: unknown }).execute === 'function'
-          ? await db.execute(sql`
-              INSERT INTO showings (${sql.join(showingColumns, sql`, `)})
-              VALUES (${sql.join(showingValues, sql`, `)})
-            `)
-          : await db.insert(showings).values({
-              listingId: input.listingId,
-              propertyId: capabilities.showingsDetails.propertyIdColumn
-                ? resolvedInventory.propertyId
-                : undefined,
-              leadId: capabilities.showingsDetails.leadIdColumn
-                ? (leadRecord?.id ?? null)
-                : undefined,
-              agentId: agentRecord.id,
-              visitorName: input.visitorName,
-              scheduledAt: toDbTimestampRequired(input.scheduledAt),
-              durationMinutes: input.durationMinutes ?? 30,
-              status: mapAgentShowingStatusToStorage('scheduled', variant),
-              notes: capabilities.showingsDetails.notesColumn ? input.notes || null : undefined,
-              feedback: capabilities.showingsDetails.notesColumn ? undefined : input.notes || null,
-            } as any);
+        const insertResult =
+          typeof (
+            db as { execute?: unknown }
+          ).execute === 'function'
+            ? await db.execute(sql`
+                INSERT INTO showings (
+                  ${sql.join(
+                    showingColumns,
+                    sql`, `,
+                  )}
+                )
+                VALUES (
+                  ${sql.join(
+                    showingValues,
+                    sql`, `,
+                  )}
+                )
+              `)
+            : await db.insert(showings).values({
+                listingId: input.listingId,
+                propertyId:
+                  resolvedInventory.propertyId,
+                leadId: leadRecord?.id ?? null,
+                agentId: agentRecord.id,
+                visitorName: input.visitorName,
+                scheduledAt:
+                  toDbTimestampRequired(
+                    input.scheduledAt,
+                  ),
+                durationMinutes:
+                  input.durationMinutes ?? 30,
+                status: 'confirmed',
+                notes: input.notes || null,
+                feedback: null,
+              } as any);
 
       const insertRows = Array.isArray(insertResult) ? insertResult : [insertResult];
       const showingId = Number(
@@ -2044,7 +2069,7 @@ export const agentRouter = router({
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
-      const capabilities = await getRuntimeSchemaCapabilities();
+
 
       // Get agent record
       const [agentRecord] = await db
@@ -2057,22 +2082,18 @@ export const agentRouter = router({
         throw new Error('Agent profile not found');
       }
 
-      const variant = getShowingsSchemaVariant(capabilities.showingsDetails);
-      if (variant === 'missing') {
-        throw new Error('Showings schema not ready');
-      }
-
-      const nextStatus = mapAgentShowingStatusToStorage(input.status, variant);
-      const notesAssignment = capabilities.showingsDetails.notesColumn
-        ? sql`, notes = ${input.notes ?? null}`
-        : sql`, feedback = ${input.notes ?? null}`;
+      const nextStatus =
+          mapAgentShowingStatusToCanonical(
+            input.status,
+          );
       const result = await db.execute(sql`
-        UPDATE showings
-        SET status = ${nextStatus},
-            updatedAt = ${nowAsDbTimestamp()}
-            ${notesAssignment}
-        WHERE id = ${input.showingId} AND agentId = ${agentRecord.id}
-      `);
+          UPDATE showings
+          SET status = ${nextStatus},
+              updatedAt = ${nowAsDbTimestamp()},
+              notes = ${input.notes ?? null}
+          WHERE id = ${input.showingId}
+            AND agentId = ${agentRecord.id}
+        `);
 
       const affectedRows = Number(
         (result as any)?.affectedRows ?? (result as any)?.[0]?.affectedRows ?? 0,
