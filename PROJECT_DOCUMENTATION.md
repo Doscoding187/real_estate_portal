@@ -107,12 +107,12 @@ User authentication follows the OAuth 2.0 protocol through Manus OAuth. When use
 
 The database consists of four primary tables that manage users, properties, property images, and user favorites. Each table is designed with appropriate relationships and constraints to maintain data integrity.
 
-| Table Name | Purpose | Key Relationships |
-|------------|---------|-------------------|
-| users | Stores user account information | Referenced by properties and favorites |
-| properties | Contains all property listings | References users, referenced by propertyImages and favorites |
-| propertyImages | Stores multiple images per property | References properties |
-| favorites | Manages user's saved properties | References users and properties |
+| Table Name     | Purpose                             | Key Relationships                                            |
+| -------------- | ----------------------------------- | ------------------------------------------------------------ |
+| users          | Stores user account information     | Referenced by properties and favorites                       |
+| properties     | Contains all property listings      | References users, referenced by propertyImages and favorites |
+| propertyImages | Stores multiple images per property | References properties                                        |
+| favorites      | Manages user's saved properties     | References users and properties                              |
 
 ### Users Table
 
@@ -212,7 +212,13 @@ Install all project dependencies by running the command `pnpm install`. This wil
 
 Configure environment variables by ensuring all required variables are set. The key variables include DATABASE_URL for the MySQL connection string, JWT_SECRET for session cookie signing, VITE_APP_ID for Manus OAuth application ID, and various OAuth-related URLs. These are typically pre-configured in the Manus platform environment.
 
-Initialize the database schema by running `pnpm db:push`. This command generates and applies database migrations based on the schema defined in drizzle/schema.ts.
+Initialize a local database schema with `pnpm db:migrate:local`. The
+repository's production command is `pnpm db:migrate` and the CI/test wrapper
+is `pnpm db:migrate:test`; all use
+`server/migrations/runSqlMigrations.ts` against top-level
+`server/migrations` with `sql_migration_history` as the ledger. See
+`server/migrations/README.md`. `db:push` and direct `drizzle-kit`
+execution are not operational migration authority.
 
 Populate the database with sample data by executing `DATABASE_URL="$DATABASE_URL" npx tsx seed-data.ts`. This script inserts 12 sample properties with images into the database.
 
@@ -238,7 +244,10 @@ The favorites page provides quick access to all saved properties, allowing users
 
 Developers working on this project should familiarize themselves with the tRPC workflow for adding new features. To add a new API endpoint, define the procedure in server/routers.ts with appropriate input validation using Zod schemas. Create corresponding database query helpers in server/db.ts to handle data operations. The frontend can then consume the new endpoint using tRPC hooks such as useQuery or useMutation.
 
-When modifying the database schema, update the table definitions in drizzle/schema.ts and run `pnpm db:push` to apply changes. Always test schema changes thoroughly before deploying to production.
+When modifying the database schema, update the accepted canonical model and add
+an approved incremental SQL migration in top-level `server/migrations`; use
+the canonical command graph in `server/migrations/README.md`. Do not use
+`db:push` or direct `drizzle-kit` execution.
 
 For UI development, leverage the existing shadcn/ui components and Tailwind utility classes to maintain design consistency. Follow the established patterns in existing components for state management and data fetching.
 
@@ -277,4 +286,3 @@ This documentation serves as a complete reference for understanding, deploying, 
 **Document Version:** 1.0  
 **Last Updated:** October 23, 2025  
 **Maintained by:** Manus AI
-

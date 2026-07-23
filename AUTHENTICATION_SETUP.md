@@ -22,13 +22,19 @@ pnpm add -D @types/bcryptjs
 
 ### Step 2: Update Database Schema
 
-The schema has been updated to support email/password authentication. Run migrations:
+The schema has been updated to support email/password authentication. Apply the
+approved local migration path:
 
 ```bash
-pnpm db:push
+pnpm db:migrate:local
 ```
 
+Production uses `pnpm db:migrate`; CI/test uses `pnpm db:migrate:test`.
+`db:push` and direct `drizzle-kit` commands are not operational migration
+authority. See `server/migrations/README.md`.
+
 This will:
+
 - Make `openId` optional (for backward compatibility)
 - Add `passwordHash` field (for storing hashed passwords)
 - Add `emailVerified` field (for email verification later)
@@ -37,17 +43,20 @@ This will:
 ### Step 3: Environment Variables
 
 **Required:**
+
 ```env
 JWT_SECRET=your-secret-key-here-minimum-32-characters
 DATABASE_URL=mysql://user:password@host:port/database
 ```
 
 **Optional:**
+
 ```env
 BCRYPT_ROUNDS=10
 ```
 
 **Removed (no longer needed):**
+
 - `VITE_APP_ID` (was used for Manus OAuth)
 - `OAUTH_SERVER_URL` (was used for Manus OAuth)
 - `OWNER_OPEN_ID` (can remove if not needed)
@@ -68,6 +77,7 @@ NODE_ENV=development
 ```
 
 **Important:** Generate a strong JWT secret:
+
 ```bash
 # Generate a random secret (use this in production)
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -89,6 +99,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -115,6 +126,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -176,7 +188,7 @@ async function handleLogin(email: string, password: string) {
     credentials: 'include', // Important: include cookies
     body: JSON.stringify({ email, password }),
   });
-  
+
   if (response.ok) {
     const data = await response.json();
     // User is now logged in (cookie is set)
@@ -195,7 +207,7 @@ async function handleRegister(email: string, password: string, name?: string) {
     credentials: 'include', // Important: include cookies
     body: JSON.stringify({ email, password, name }),
   });
-  
+
   if (response.ok) {
     // User is now registered and logged in
   }
@@ -219,6 +231,7 @@ If you have existing users with Manus OAuth:
 3. **Manus `openId` is optional** - kept for backward compatibility
 
 To migrate existing users:
+
 - Users log in with Manus OAuth one last time
 - Prompt them to set a password
 - Link email to their account
@@ -243,6 +256,7 @@ To migrate existing users:
 ### Add Social Login (Optional)
 
 Use Passport.js to add:
+
 - Google OAuth
 - GitHub OAuth
 - Facebook OAuth
@@ -269,6 +283,7 @@ Use Passport.js to add:
 ## Files Changed
 
 ### Backend
+
 - ✅ `server/_core/auth.ts` - New custom auth service
 - ✅ `server/_core/authRoutes.ts` - New auth routes (register/login/logout)
 - ✅ `server/_core/context.ts` - Updated to use custom auth
@@ -277,6 +292,7 @@ Use Passport.js to add:
 - ✅ `drizzle/schema.ts` - Updated users table schema
 
 ### Frontend (Next Steps)
+
 - `client/src/components/ManusDialog.tsx` - Replace with LoginForm
 - `client/src/components/RegisterForm.tsx` - Create new component
 - `client/src/const.ts` - Update login URL
@@ -284,12 +300,13 @@ Use Passport.js to add:
 ## Support
 
 If you encounter issues:
+
 1. Check the console for error messages
 2. Verify environment variables are set
-3. Check database schema is up to date (`pnpm db:push`)
+3. Check database schema is up to date through the approved `pnpm db:migrate:local`
+   workflow (see `server/migrations/README.md`)
 4. Verify dependencies are installed (`pnpm install`)
 
 ---
 
 **You now have full control over your authentication system!** 🎉
-

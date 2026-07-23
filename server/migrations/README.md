@@ -24,6 +24,20 @@ runner executes only top-level `.sql` files in this directory.
 Future schema changes must be introduced as new top-level incremental SQL
 migrations generated from the accepted canonical model authority.
 
+## Migration-tree authority
+
+`docs/database-authority/migration-tree-authority.json` is the
+machine-readable classification of every tracked migration-related SQL or
+metadata surface. It distinguishes canonical active SQL from archived evidence,
+approved local/test database-user initialization, diagnostics, and legacy
+surfaces retained temporarily until Gap 3 retires or repoints their manual
+utility callers.
+
+Only top-level `server/migrations/*.sql` may become new executable
+migrations. Do not create another migration tree, make `_archived/`
+executable, or present Drizzle journals as the applied production ledger.
+`_archived/` remains historical evidence and is never scanned.
+
 ## Operational command authority
 
 `pnpm db:migrate` is the only approved production migration command. It checks

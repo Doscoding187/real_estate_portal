@@ -1,9 +1,17 @@
+> **Superseded migration guidance.** This historical Railway repair workflow is
+> not operational authority. Use
+> [`server/migrations/README.md`](server/migrations/README.md): production
+> uses `pnpm db:migrate`, CI/test uses `pnpm db:migrate:test`, and local
+> development uses `pnpm db:migrate:local`.
+
 # Railway Explore Shorts Migration Guide
 
 ## Issue
+
 The `explore.getFeed` endpoint is returning a 500 error because the `explore_shorts` table is missing or has missing columns.
 
 ## Solution
+
 Run the migration script to create/update the `explore_shorts` table with all required columns.
 
 ## Step 1: Run the Migration Script
@@ -34,6 +42,7 @@ SELECT COUNT(*) FROM explore_shorts;
 ## Expected Tables
 
 The migration creates these tables:
+
 1. **explore_shorts** - Main content table
 2. **explore_interactions** - User interaction tracking
 3. **explore_highlight_tags** - Highlight tag definitions
@@ -45,7 +54,7 @@ If you're still getting errors about missing columns (`content_type`, `topic_id`
 
 ```sql
 -- Add missing columns to explore_shorts table
-ALTER TABLE explore_shorts 
+ALTER TABLE explore_shorts
 ADD COLUMN content_type VARCHAR(50) DEFAULT 'property' AFTER developer_id,
 ADD COLUMN topic_id INT NULL AFTER content_type,
 ADD COLUMN category_id INT NULL AFTER topic_id;
@@ -67,10 +76,13 @@ tsx scripts/seed-explore-shorts-sample.ts
 ## Troubleshooting
 
 ### Error: Table already exists
+
 If you get "table already exists" errors, the tables are already created. You may just need to add the missing columns (see above).
 
 ### Error: Foreign key constraint fails
+
 Make sure the referenced tables exist:
+
 - `listings`
 - `developments`
 - `agents`
@@ -78,6 +90,7 @@ Make sure the referenced tables exist:
 - `users`
 
 ### Error: Cannot connect to database
+
 Verify your `DATABASE_URL` environment variable is set correctly for Railway.
 
 ## Alternative: Direct SQL Execution on Railway
@@ -104,6 +117,7 @@ You should get a 200 response instead of 500.
 ## Next Steps
 
 After the migration:
+
 1. ✅ Tables created
 2. ✅ Missing columns added
 3. 🔄 Seed sample data (optional)

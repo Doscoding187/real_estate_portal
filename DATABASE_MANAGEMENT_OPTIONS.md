@@ -1,3 +1,8 @@
+> **Superseded migration guidance.** This historical manual-SQL workflow is not
+> operational authority. Use [`server/migrations/README.md`](server/migrations/README.md):
+> production uses `pnpm db:migrate`, CI/test uses `pnpm db:migrate:test`,
+> and local development uses `pnpm db:migrate:local`.
+
 # Database Management Options - Multiple Solutions
 
 ## 🎯 **Since Docker isn't working properly, here are 3 alternative approaches**
@@ -7,6 +12,7 @@
 ## **Option 1: SQL Workbench + Local MySQL** (Recommended for you)
 
 ### **Step 1: Install MySQL Locally**
+
 1. **Download MySQL Community Server:**
    - Go to: https://dev.mysql.com/downloads/mysql/
    - Download MySQL Community Server (8.0 or 5.7)
@@ -18,8 +24,10 @@
    - Add to PATH for easy command line access
 
 ### **Step 2: Create Database**
+
 1. **Open MySQL Command Line or Workbench**
 2. **Execute these commands:**
+
 ```sql
 -- Connect as root
 mysql -u root -p
@@ -37,6 +45,7 @@ USE real_estate_portal;
 ```
 
 ### **Step 3: Create User Preferences Table**
+
 1. **Open SQL Workbench**
 2. **Connect to MySQL:**
    - Host: localhost
@@ -51,6 +60,7 @@ USE real_estate_portal;
    - Execute to create the table
 
 ### **Step 4: Verify Creation**
+
 ```sql
 -- Check tables were created
 SHOW TABLES;
@@ -67,6 +77,7 @@ SELECT * FROM user_preferences;
 ## **Option 2: Use Existing Database (Easiest)**
 
 ### **If you already have MySQL/MariaDB running:**
+
 1. **Use your existing connection details**
 2. **Run the migration in SQL Workbench:**
    ```sql
@@ -75,6 +86,7 @@ SELECT * FROM user_preferences;
    ```
 
 ### **Update Drizzle Connection:**
+
 1. **Find your database configuration** (likely in `server/db.ts` or environment variables)
 2. **Update to point to your database:**
    ```typescript
@@ -87,7 +99,9 @@ SELECT * FROM user_preferences;
 ## **Option 3: Use SQLite for Development (Quick Start)**
 
 ### **Convert the migration to SQLite:**
+
 1. **Create SQLite version of user_preferences table:**
+
 ```sql
 -- SQLite-compatible user_preferences table
 CREATE TABLE user_preferences (
@@ -135,12 +149,14 @@ INSERT INTO user_preferences (
 ## **Quick SQL Workbench Workflow**
 
 ### **For All Options:**
+
 1. **Open SQL Workbench**
 2. **Connect to your database**
 3. **Create the user_preferences table**
 4. **Test the setup**
 
 ### **Sample Queries to Test:**
+
 ```sql
 -- Insert a test preference
 INSERT INTO user_preferences (
@@ -153,12 +169,12 @@ INSERT INTO user_preferences (
 SELECT * FROM user_preferences WHERE userId = 1;
 
 -- Update preferences
-UPDATE user_preferences 
+UPDATE user_preferences
 SET preferredPriceMax = 2000000, preferredAmenities = '["garden", "garage"]'
 WHERE userId = 1;
 
 -- Check weighted scoring
-SELECT 
+SELECT
   userId,
   locationWeight,
   priceWeight,
@@ -169,7 +185,9 @@ FROM user_preferences;
 ---
 
 ## **Database Connection Examples**
+
 ### **For MySQL/MariaDB:**
+
 ```
 Connection Name: Real Estate Portal
 Connection Type: MySQL
@@ -181,6 +199,7 @@ Password: admin123
 ```
 
 ### **For SQLite:**
+
 ```
 Connection Name: Real Estate Portal SQLite
 Connection Type: SQLite
@@ -188,6 +207,7 @@ Database file: ./real_estate_portal.db
 ```
 
 ### **For Remote MySQL:**
+
 ```
 Connection Name: Real Estate Portal Remote
 Connection Type: MySQL
@@ -197,7 +217,6 @@ Database: real_estate_portal
 Username: realestate_user
 Password: your-secure-password
 ```
-
 
 ---
 
@@ -279,21 +298,25 @@ SELECT COUNT(*) as tableCreated FROM user_preferences;
 ## **Troubleshooting**
 
 ### **MySQL Connection Issues:**
+
 - Check MySQL service is running: `sudo systemctl status mysql` (Linux) or check Services (Windows)
 - Verify port 3306 is available
 - Check firewall settings
 - Try connecting with different username (root vs realestate_user)
 
 ### **SQL Workbench Issues:**
+
 - Update to latest version of SQL Workbench
 - Try different drivers (MySQL JDBC vs MariaDB JDBC)
 - Check connection timeout settings
 
 ### **Permission Issues:**
+
 - Ensure database user has CREATE, SELECT, INSERT, UPDATE, DELETE privileges
 - For root user, ensure skip-grant-tables isn't enabled in production
 
 ### **Migration Issues:**
+
 - Check MySQL version compatibility (8.0 vs 5.7)
 - Verify character set is UTF-8
 - Check if table already exists (DROP TABLE IF EXISTS)
