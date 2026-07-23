@@ -146,12 +146,6 @@ export default function PlatformSettings() {
         type: 'boolean',
         default: false,
       },
-      {
-        key: 'agent_os_allow_legacy_scheduling_inventory',
-        label: 'Allow Legacy Scheduling Inventory Fallback',
-        type: 'boolean',
-        default: true,
-      },
     ],
     notifications: [
       {

@@ -148,21 +148,10 @@ const { mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
   mockAssertListingPublicationEntitled: vi.fn(),
 }));
 
-// Controllable bridge capability flag — tests can flip this to simulate
-// environments where the sourceListingId column is not yet available.
-let bridgeHasSourceListingId = true;
-
 // Mock db-connection BEFORE importing the db functions
 vi.mock('../db-connection', () => ({
   getDb: vi.fn(() => fakeDb),
   _db: null,
-}));
-
-// Mock the inventory link resolver — uses the controllable flag
-vi.mock('../services/inventoryLinkResolver', () => ({
-  getInventoryBridgeSchemaCapabilities: vi.fn(() =>
-    Promise.resolve({ propertiesSourceListingIdColumn: bridgeHasSourceListingId }),
-  ),
 }));
 
 vi.mock('../services/listingPublicationEntitlementService', () => ({
@@ -241,7 +230,6 @@ beforeEach(() => {
     listingId: 1001,
     responsibleAgentId: 55,
   } as any);
-  bridgeHasSourceListingId = true;
 });
 
 // ===========================================================================
@@ -349,39 +337,6 @@ describe('approveListing (lower-level)', () => {
       expect(inserts[0].values.listingType).toBe(expectedType);
     },
   );
-
-  describe('bridge column unavailable', () => {
-    it('inserts without sourceListingId when bridge column is missing', async () => {
-      bridgeHasSourceListingId = false;
-      fakeDb.setNextSelectResult([listingRow({ id: 5201 })]);
-
-      await approveListing(5201, 1);
-
-      const inserts = fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'properties');
-      expect(inserts).toHaveLength(1);
-      // No sourceListingId in the insert values
-      expect(inserts[0].values.sourceListingId).toBeUndefined();
-      // No idempotency select (the bridge guard skips it)
-      const propSelects = fakeDb.calls.filter(
-        c => c.type === 'select' && c.table === 'properties',
-      );
-      // Only the getListingById select should exist, not an idempotency check
-      expect(propSelects.filter(s => s.whereCols?.includes('sourceListingId'))).toHaveLength(0);
-    });
-
-    it('skips idempotency check entirely', async () => {
-      bridgeHasSourceListingId = false;
-      fakeDb.setNextSelectResult([listingRow({ id: 5202 })]);
-
-      await approveListing(5202, 1);
-
-      // No properties select should exist beyond getListingById
-      const propSelects = fakeDb.calls.filter(
-        c => c.type === 'select' && c.table === 'properties',
-      );
-      expect(propSelects).toHaveLength(0);
-    });
-  });
 });
 
 // ===========================================================================
@@ -444,13 +399,11 @@ describe('replaceListingMedia (lower-level)', () => {
 // ===========================================================================
 
 describe('syncPublishedListingMediaToPropertyMirror (lower-level)', () => {
-  it('queries by sourceListingId as primary lookup', async () => {
+  it('queries by sourceListingId as the sole canonical lookup', async () => {
     // getListingById → returns published listing
     fakeDb.setNextSelectResult([listingRow({ id: 6001, status: 'published' })]);
     // sourceListingId query → property found
     fakeDb.setNextSelectResult([{ id: 777 }]);
-    // sourceListingId column check → exists
-    fakeDb.setNextSelectResult([{ id: 777, sourceListingId: 6001 }]);
     // getListingMedia → media items
     fakeDb.setNextSelectResult([listingMediaRow({ id: 801, isPrimary: 1 })]);
 
@@ -468,89 +421,15 @@ describe('syncPublishedListingMediaToPropertyMirror (lower-level)', () => {
     expect(propSelects[0].whereCols).toContain('sourceListingId');
   });
 
-  it('stamps sourceListingId on legacy-matched property', async () => {
-    fakeDb.setNextSelectResult([listingRow({ id: 6002, status: 'published' })]);
-    // sourceListingId query → nothing found
-    fakeDb.setNextSelectResult([]);
-    // Legacy placeId match → found
-    fakeDb.setNextSelectResult([{ id: 888 }]);
-    // sourceListingId column check → null (legacy)
-    fakeDb.setNextSelectResult([{ id: 888, sourceListingId: null }]);
-    // getListingMedia → media items
-    fakeDb.setNextSelectResult([listingMediaRow({ id: 802, isPrimary: 1 })]);
-
-    const result = await syncPublishedListingMediaToPropertyMirror(6002);
-
-    expect(result.synced).toBe(true);
-
-    // Should have stamped sourceListingId
-    const updates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'properties');
-    const sourceListingIdUpdate = updates.find(u => u.set?.sourceListingId === 6002);
-    expect(sourceListingIdUpdate).toBeTruthy();
-  });
-
   it('returns synced:false if no property mirror found', async () => {
     fakeDb.setNextSelectResult([listingRow({ id: 6003, status: 'published' })]);
-    // sourceListingId query → nothing
-    fakeDb.setNextSelectResult([]);
-    // Legacy placeId match → nothing (no normalized placeId on this listing)
-    // (the code checks listing.placeId first, which is 'ChIJ123', so it enters the placeId branch)
-    fakeDb.setNextSelectResult([]);
-    // Legacy identity match → nothing
+    // Canonical sourceListingId lookup → no property projection
     fakeDb.setNextSelectResult([]);
 
     const result = await syncPublishedListingMediaToPropertyMirror(6003);
 
     expect(result.synced).toBe(false);
     expect(result.reason).toBe('property_mirror_not_found');
-  });
-
-  describe('bridge column unavailable', () => {
-    it('skips sourceListingId lookup and uses legacy matching directly', async () => {
-      bridgeHasSourceListingId = false;
-      fakeDb.setNextSelectResult([listingRow({ id: 6004, status: 'published' })]);
-      // Legacy placeId match → found (no sourceListingId query before it)
-      fakeDb.setNextSelectResult([{ id: 777 }]);
-      // getListingMedia → media items
-      fakeDb.setNextSelectResult([listingMediaRow({ id: 803, isPrimary: 1 })]);
-
-      const result = await syncPublishedListingMediaToPropertyMirror(6004);
-
-      expect(result.synced).toBe(true);
-      expect(result.propertyId).toBe(777);
-
-      // No select should reference sourceListingId
-      const selectsWithSourceListingId = fakeDb.calls.filter(
-        c => c.type === 'select' && c.whereCols?.includes('sourceListingId'),
-      );
-      expect(selectsWithSourceListingId).toHaveLength(0);
-
-      // No stamping update for sourceListingId
-      const stampUpdates = fakeDb.calls.filter(
-        c => c.type === 'update' && c.set?.sourceListingId,
-      );
-      expect(stampUpdates).toHaveLength(0);
-    });
-
-    it('legacy matching does not include isNull(sourceListingId) guard', async () => {
-      bridgeHasSourceListingId = false;
-      fakeDb.setNextSelectResult([listingRow({ id: 6005, status: 'published' })]);
-      // Legacy placeId match → found
-      fakeDb.setNextSelectResult([{ id: 888 }]);
-      // getListingMedia
-      fakeDb.setNextSelectResult([listingMediaRow({ id: 804, isPrimary: 1 })]);
-
-      const result = await syncPublishedListingMediaToPropertyMirror(6005);
-
-      expect(result.synced).toBe(true);
-
-      // Legacy selects should NOT include sourceListingId in whereCols
-      const legacySelects = fakeDb.calls.filter(c => c.type === 'select' && c.table === 'properties');
-      // No select should have sourceListingId in its where clause
-      legacySelects.forEach(s => {
-        expect(s.whereCols).not.toContain('sourceListingId');
-      });
-    });
   });
 });
 
@@ -616,19 +495,6 @@ describe('archiveListing (lower-level)', () => {
     // Prove the cascade uses sourceListingId in its WHERE
     expect(propUpdates[0].whereCols).toContain('sourceListingId');
     expect(assertListingPublicationEntitled).not.toHaveBeenCalled();
-  });
-
-  describe('bridge column unavailable', () => {
-    it('does not cascade archive to property when bridge column is missing', async () => {
-      bridgeHasSourceListingId = false;
-
-      await archiveListing(9002);
-
-      const propUpdates = fakeDb.calls.filter(
-        c => c.type === 'update' && c.table === 'properties',
-      );
-      expect(propUpdates).toHaveLength(0);
-    });
   });
 });
 
@@ -725,22 +591,5 @@ describe('deleteListing (lower-level)', () => {
     // Should also delete listing-related rows
     const deletes = fakeDb.calls.filter(c => c.type === 'delete');
     expect(deletes.length).toBeGreaterThanOrEqual(1);
-  });
-
-  describe('bridge column unavailable', () => {
-    it('does not soft-archive property when bridge column is missing', async () => {
-      bridgeHasSourceListingId = false;
-
-      await deleteListing(10002);
-
-      const propUpdates = fakeDb.calls.filter(
-        c => c.type === 'update' && c.table === 'properties',
-      );
-      expect(propUpdates).toHaveLength(0);
-
-      // But still deletes listing-related rows (unaffected by bridge)
-      const deletes = fakeDb.calls.filter(c => c.type === 'delete');
-      expect(deletes.length).toBeGreaterThanOrEqual(1);
-    });
   });
 });

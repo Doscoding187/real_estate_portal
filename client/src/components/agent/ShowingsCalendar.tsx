@@ -32,7 +32,6 @@ interface ShowingProperty {
   title?: string | null;
   address?: string | null;
   city?: string | null;
-  inventoryModel?: string | null;
 }
 
 interface Showing {
@@ -143,8 +142,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     status: statusFilter || undefined,
   });
   const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
-  const resolvedListings = availableListings.filter(listing => listing.isResolved);
-  const legacyListings = availableListings.filter(listing => !listing.isResolved);
+  const resolvedListings = availableListings;
 
   // Update showing status mutation
   const updateShowingStatusMutation = trpc.agent.updateShowingStatus.useMutation({
@@ -507,46 +505,26 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               <label className="text-sm font-medium">Listing</label>
               {availableListings.length === 0 ? (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  No schedulable inventory is currently available. Publish and bridge listings into
-                  Agent OS inventory before booking showings.
+                  No schedulable inventory is currently available. Publish the listing so its
+                  canonical property projection exists before booking showings.
                 </div>
-              ) : null}
-              {resolvedListings.length > 0 && legacyListings.length > 0 ? (
-                <p className="text-xs text-amber-700">
-                  Legacy listing options are fallback only until inventory bridging is fully
-                  backfilled.
-                </p>
               ) : null}
               <select
                 value={bookingForm.listingId}
-                onChange={e => setBookingForm(prev => ({ ...prev, listingId: e.target.value }))}
+                onChange={e =>
+                  setBookingForm(prev => ({
+                    ...prev,
+                    listingId: e.target.value,
+                  }))
+                }
                 className="w-full rounded-md border px-3 py-2 text-sm"
               >
                 <option value="">Select listing</option>
-                {resolvedListings.length > 0 ? (
-                  <optgroup label="Resolved inventory">
-                    {resolvedListings.map((listing: ShowingProperty, index: number) => (
-                      <option
-                        key={listing.id ?? `resolved-${index}`}
-                        value={String(listing.id ?? '')}
-                      >
-                        {listing.title} {listing.city ? `- ${listing.city}` : ''}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                {legacyListings.length > 0 ? (
-                  <optgroup label="Legacy fallback">
-                    {legacyListings.map((listing: ShowingProperty, index: number) => (
-                      <option
-                        key={listing.id ?? `legacy-${index}`}
-                        value={String(listing.id ?? '')}
-                      >
-                        {listing.title} {listing.city ? `- ${listing.city}` : ''} (Legacy listing)
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
+                {resolvedListings.map((listing: ShowingProperty, index: number) => (
+                  <option key={listing.id ?? `listing-${index}`} value={String(listing.id ?? '')}>
+                    {listing.title} {listing.city ? `- ${listing.city}` : ''}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -655,9 +633,6 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                     {showing.property.address}, {showing.property.city}
                   </div>
                 )}
-                {showing.property?.inventoryModel === 'legacy_listing' ? (
-                  <div className="text-amber-700 text-xs font-medium">Legacy listing fallback</div>
-                ) : null}
               </div>
 
               {showing.client && (

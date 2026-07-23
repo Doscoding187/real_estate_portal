@@ -70,7 +70,7 @@ export const adminRouter = router({
         updatedAt: listings.updatedAt,
       })
       .from(listings)
-      .where(inArray(listings.status, ['approved', 'published', 'pending_review', 'draft']))
+      .where(inArray(listings.status, ['approved', 'published']))
       .orderBy(desc(listings.updatedAt));
 
     const resolvedMap = await resolvePropertiesForListings(db, candidateListings);
@@ -144,14 +144,14 @@ export const adminRouter = router({
         },
         {
           key: 'unresolved_listing_inventory',
-          label: 'Listings Still Legacy-Only',
+          label: 'Listings Missing Canonical Property Links',
           count: totals.unresolvedListings,
           total: totals.totalListings,
           rate: totals.totalListings > 0 ? totals.unresolvedListings / totals.totalListings : 0,
         },
         {
           key: 'showings_on_unresolved_inventory',
-          label: 'Showings On Unresolved Legacy Listings',
+          label: 'Showings On Unlinked Listings',
           count: totals.unresolvedShowings,
         },
       ],

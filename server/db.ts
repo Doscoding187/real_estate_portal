@@ -64,7 +64,6 @@ import { ENV } from './_core/env';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
-import { getInventoryBridgeSchemaCapabilities } from './services/inventoryLinkResolver';
 import {
   assertListingPublicationEntitled,
   isSameListingCommercialOwner,
@@ -2642,79 +2641,14 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
   // action. This prevents repair/compatibility callers bypassing entitlement.
   await assertListingPublicationEntitled(db, { listingId, operation: 'public_media_sync' });
 
-  const mappedListingType =
-    listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction';
-
-  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-  const bridgeHasSourceListingId = inventoryBridgeCapabilities.propertiesSourceListingIdColumn;
-  let mirroredProperty: { id: number } | undefined;
-
-  if (bridgeHasSourceListingId) {
-    const [bySourceListingId] = await db
-      .select({ id: properties.id })
-      .from(properties)
-      .where(and(eq(properties.sourceListingId, listingId), isNotNull(properties.sourceListingId)))
-      .limit(1);
-    mirroredProperty = bySourceListingId;
-  }
-
-  if (!mirroredProperty) {
-    const legacyPropertyMatch = [
-      eq(properties.ownerId, Number(listing.ownerId || 0)),
-      eq(properties.listingType, mappedListingType as any),
-    ] as SQL[];
-
-    if (bridgeHasSourceListingId) {
-      legacyPropertyMatch.push(isNull(properties.sourceListingId));
-    }
-
-    const normalizedPlaceId = String(listing.placeId || '').trim();
-    if (normalizedPlaceId) {
-      const [byPlaceId] = await db
-        .select({ id: properties.id })
-        .from(properties)
-        .where(and(...legacyPropertyMatch, eq(properties.placeId, normalizedPlaceId)))
-        .orderBy(desc(properties.createdAt))
-        .limit(1);
-      mirroredProperty = byPlaceId;
-    }
-
-    if (!mirroredProperty) {
-      const [byIdentity] = await db
-        .select({ id: properties.id })
-        .from(properties)
-        .where(
-          and(
-            ...legacyPropertyMatch,
-            eq(properties.title, listing.title),
-            eq(properties.address, listing.address),
-            eq(properties.city, listing.city),
-            eq(properties.province, listing.province),
-          ),
-        )
-        .orderBy(desc(properties.createdAt))
-        .limit(1);
-      mirroredProperty = byIdentity;
-    }
-  }
+  const [mirroredProperty] = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(eq(properties.sourceListingId, listingId))
+    .limit(1);
 
   if (!mirroredProperty) {
     return { synced: false, reason: 'property_mirror_not_found' as const };
-  }
-
-  if (bridgeHasSourceListingId) {
-    const [matchedProperty] = await db
-      .select({ sourceListingId: properties.sourceListingId })
-      .from(properties)
-      .where(eq(properties.id, mirroredProperty.id))
-      .limit(1);
-
-    if (matchedProperty && !matchedProperty.sourceListingId) {
-      await db
-        .update(properties)
-        .set({ sourceListingId: listingId })
-        .where(eq(properties.id, mirroredProperty.id));
-    }
   }
 
   const mediaItems = await getListingMedia(listingId);
@@ -2900,9 +2834,6 @@ export async function approveListing(
   // depth for entitlement changes between review and projection.
   await assertListingPublicationEntitled(db, { listingId, operation: 'public_projection' });
 
-  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-  const bridgeHasSourceListingId = inventoryBridgeCapabilities.propertiesSourceListingIdColumn;
-
   const propertyValues: any = {
     title: listing.title,
     description: listing.description,
@@ -2928,35 +2859,24 @@ export async function approveListing(
     featured: listing.featured || 0,
     agentId: listing.agentId,
     ownerId: listing.ownerId,
+    sourceListingId: listingId,
     propertySettings: JSON.stringify(details),
     levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
     ratesAndTaxes: Number(details.ratesAndTaxes) || Number(details.ratesTaxes) || null,
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
+  const existingProperty = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(eq(properties.sourceListingId, listingId))
+    .limit(1);
+
   let newPropertyId: number;
 
-  if (bridgeHasSourceListingId) {
-    propertyValues.sourceListingId = listingId;
-
-    const existingProperty = await db
-      .select({ id: properties.id })
-      .from(properties)
-      .where(and(eq(properties.sourceListingId, listingId), isNotNull(properties.sourceListingId)))
-      .limit(1);
-
-    if (existingProperty.length > 0) {
-      newPropertyId = existingProperty[0].id;
-      await db.update(properties).set(propertyValues).where(eq(properties.id, newPropertyId));
-    } else {
-      const [propertyResult] = await db.insert(properties).values({
-        ...propertyValues,
-        views: 0,
-        enquiries: 0,
-        createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      });
-      newPropertyId = Number(propertyResult.insertId);
-    }
+  if (existingProperty.length > 0) {
+    newPropertyId = existingProperty[0].id;
+    await db.update(properties).set(propertyValues).where(eq(properties.id, newPropertyId));
   } else {
     const [propertyResult] = await db.insert(properties).values({
       ...propertyValues,
@@ -3085,16 +3005,13 @@ export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
-    await db
-      .update(properties)
-      .set({
-        status: 'archived' as any,
-        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      })
-      .where(and(eq(properties.sourceListingId, id), isNotNull(properties.sourceListingId)));
-  }
+  await db
+    .update(properties)
+    .set({
+      status: 'archived',
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(eq(properties.sourceListingId, id));
 
   // Delete related media first to avoid foreign key constraint errors
   await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
@@ -3129,16 +3046,13 @@ export async function archiveListing(id: number) {
     })
     .where(eq(listings.id, id));
 
-  const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-  if (inventoryBridgeCapabilities.propertiesSourceListingIdColumn) {
-    await db
-      .update(properties)
-      .set({
-        status: 'archived' as any,
-        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      })
-      .where(and(eq(properties.sourceListingId, id), isNotNull(properties.sourceListingId)));
-  }
+  await db
+    .update(properties)
+    .set({
+      status: 'archived',
+      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    })
+    .where(eq(properties.sourceListingId, id));
 }
 
 /**
