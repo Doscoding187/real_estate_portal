@@ -1,0 +1,321 @@
+{
+  "version": 2,
+  "canonicalAuthority": {
+    "productionCommand": "pnpm db:migrate",
+    "testCommand": "pnpm db:migrate:test",
+    "localCommand": "pnpm db:migrate:local",
+    "runner": "server/migrations/runSqlMigrations.ts",
+    "activeSqlDirectory": "server/migrations",
+    "ledger": "sql_migration_history"
+  },
+  "classifications": [
+    {
+      "path": "server/migrations/0000_canonical_launch_baseline.sql",
+      "classification": "canonical active",
+      "purpose": "The sole executable launch baseline."
+    },
+    {
+      "path": "server/migrations/_archived/**",
+      "classification": "archived historical",
+      "purpose": "Historical evidence only; the runner must never discover it.",
+      "approvedFiles": [
+        "server/migrations/_archived/add-residential-auction-workflow-v1.sql",
+        "server/migrations/_archived/add-residential-rental-flow-v1.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0001_add_ownership_columns.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0002_add_brand_status_tracking.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0003_create_audit_logs.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0004_configure_cascades.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0005_fix_production_schema_drift.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0006_add_agent_os_inventory_bridge.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0037_create_distribution_core_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0038_create_distribution_program_workflow_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0039_add_distribution_dual_commission_tracks.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0040_create_distribution_access_layer.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0040_harden_distribution_commission_snapshots.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0041_add_distribution_schema_readiness_items.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0042_create_services_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0043_expand_service_lead_event_types.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0044_add_users_trial_columns.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0045_create_distribution_referral_accelerator.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0046_distribution_referral_assessment_locking.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0047_create_development_required_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0047_create_distribution_execution_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0048_allow_multiple_custom_required_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0049_harden_development_required_documents_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0050_add_brand_onboarding_defaults.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0051_add_development_required_document_categories.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0051_add_service_provider_role.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_add_unit_context_to_leads.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_add_user_onboarding_state.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_create_distribution_deal_documents.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_distribution_document_workflow_files.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0052_reconcile_showings_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0053_add_consumer_dashboard_preferences.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0054_create_platform_team_registrations_and_analytics_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0054_reconcile_agent_profile_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0055_add_distribution_brand_partnership_onboarding_defaults_json.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0055_create_distribution_identity_and_team_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0056_reconcile_saved_search_scheduler_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0057_create_analytics_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0058_create_distribution_docs_v2_tables.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0059_reconcile_distribution_deal_events.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0060_add_distribution_brochure_config.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0061_reconcile_agency_workspace_schema.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0062_create_provider_independent_billing.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0063_extend_showings_lifecycle.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0064_add_showings_creator.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0065_create_agency_deal_engine.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0066_create_agency_canvassing_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0067_close_seller_acquisition_loop.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0068_close_buyer_lead_loop.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0069_create_agency_mandate_operations_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0070_create_agency_commission_reconciliation_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0071_create_agency_listing_performance_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0072_add_listing_performance_contact_date.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0073_create_prospect_journey_tracker_mvp.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0074_activate_development_approval_queue.sql",
+        "server/migrations/_archived/pre-canonical-baseline/0075_create_agency_agent_memberships.sql"
+      ]
+    },
+    {
+      "path": "drizzle/*.sql",
+      "classification": "temporary legacy pending Gap 3",
+      "purpose": "Legacy SQL retained only while Gap 3 retires or repoints dependent manual utilities.",
+      "approvedFiles": [
+        "drizzle/0000_bumpy_starfox.sql",
+        "drizzle/0000_fuzzy_thunderbolt_ross.sql",
+        "drizzle/0000_new_marvel_zombies.sql",
+        "drizzle/0001_broad_dark_beast.sql",
+        "drizzle/0001_icy_giant_man.sql",
+        "drizzle/0001_petite_tattoo.sql",
+        "drizzle/0002_add_property_developer_role.sql",
+        "drizzle/0002_stormy_kate_bishop.sql",
+        "drizzle/0003_messy_payback.sql",
+        "drizzle/0003_slippery_marvel_zombies.sql",
+        "drizzle/0004_abandoned_lady_bullseye.sql",
+        "drizzle/0004_material_logan.sql",
+        "drizzle/0005_colorful_toxin.sql",
+        "drizzle/0005_dry_maria_hill.sql",
+        "drizzle/0006_aspiring_shaman.sql",
+        "drizzle/0006_naive_marvex.sql",
+        "drizzle/0007_jittery_cloak.sql",
+        "drizzle/0007_parched_sister_grimm.sql",
+        "drizzle/0008_add_wizard_fields.sql",
+        "drizzle/0008_tired_scream.sql",
+        "drizzle/0009_curly_frog_thor.sql",
+        "drizzle/0009_hesitant_rachel_grey.sql",
+        "drizzle/0010_melodic_mordo.sql",
+        "drizzle/0010_wide_thunderbolts.sql",
+        "drizzle/0011_add_explore_tables.sql",
+        "drizzle/0011_add_financial_columns.sql",
+        "drizzle/0011_cold_bill_hollister.sql",
+        "drizzle/0012_add_unit_types_financial_columns.sql",
+        "drizzle/0012_crazy_yellow_claw.sql",
+        "drizzle/0012_light_captain_cross.sql",
+        "drizzle/0013_ambiguous_jasper_sitwell.sql",
+        "drizzle/0013_cultured_naoko.sql",
+        "drizzle/0014_cheerful_amazoness.sql",
+        "drizzle/0014_cooing_amphibian.sql",
+        "drizzle/0014_shallow_mesmero.sql",
+        "drizzle/0015_chemical_network.sql",
+        "drizzle/0015_cloudy_romulus.sql",
+        "drizzle/0015_icy_hedge_knight.sql",
+        "drizzle/0016_add_missing_unit_types_columns.sql",
+        "drizzle/0017_add_partnership_tables.sql",
+        "drizzle/0018_add_agent_columns.sql",
+        "drizzle/0019_remove_unit_type_size_range.sql",
+        "drizzle/consolidated_missing_tables.sql",
+        "drizzle/manual_development_phases.sql",
+        "drizzle/manual_pricing_migration.sql"
+      ]
+    },
+    {
+      "path": "drizzle/meta/**",
+      "classification": "temporary legacy pending Gap 3",
+      "purpose": "Generated Drizzle history, not the production migration ledger.",
+      "approvedFiles": [
+        "drizzle/meta/0000_snapshot.json",
+        "drizzle/meta/0001_snapshot.json",
+        "drizzle/meta/0002_snapshot.json",
+        "drizzle/meta/0003_snapshot.json",
+        "drizzle/meta/0004_snapshot.json",
+        "drizzle/meta/0005_snapshot.json",
+        "drizzle/meta/0006_snapshot.json",
+        "drizzle/meta/0007_snapshot.json",
+        "drizzle/meta/0008_snapshot.json",
+        "drizzle/meta/0009_snapshot.json",
+        "drizzle/meta/0010_snapshot.json",
+        "drizzle/meta/0011_snapshot.json",
+        "drizzle/meta/0012_snapshot.json",
+        "drizzle/meta/0013_snapshot.json",
+        "drizzle/meta/0014_snapshot.json",
+        "drizzle/meta/0015_snapshot.json",
+        "drizzle/meta/_journal.json"
+      ]
+    },
+    {
+      "path": "migrations/**",
+      "classification": "temporary legacy pending Gap 3",
+      "purpose": "Legacy SQL retained only while Gap 3 retires or repoints dependent manual utilities.",
+      "approvedFiles": [
+        "migrations/00-create-database.sql",
+        "migrations/add-missing-developer-columns.sql",
+        "migrations/add-payment-proofs-table.sql",
+        "migrations/add-pending-agent-profiles-table.sql",
+        "migrations/add-property-images.sql",
+        "migrations/add-sandton-test-properties.sql",
+        "migrations/add-sarb-rate-settings.sql",
+        "migrations/add_developer_specializations.sql",
+        "migrations/add_portfolio_metrics.sql",
+        "migrations/backup-database.sql",
+        "migrations/check-data.sql",
+        "migrations/create-agencies-table.sql",
+        "migrations/create-agent-dashboard-tables.sql",
+        "migrations/create-base-schema.sql",
+        "migrations/create-core-tables.sql",
+        "migrations/create-development-drafts-table.sql",
+        "migrations/create-explore-feed-tables.sql",
+        "migrations/create-invitations-table.sql",
+        "migrations/create-location-hierarchy.sql",
+        "migrations/create-locations-table.sql",
+        "migrations/create-missing-tables.sql",
+        "migrations/create-notifications-table.sql",
+        "migrations/create-optimized-analytics-schema.sql",
+        "migrations/create-price-insights-analytics-schema.sql",
+        "migrations/create-prospect-tables.sql",
+        "migrations/create-revenue-center-tables.sql",
+        "migrations/create-saved-searches-table.sql",
+        "migrations/create-subscription-system.sql",
+        "migrations/create-user-preferences-table.sql",
+        "migrations/debug-properties.sql",
+        "migrations/enhance-mysql-spatial.sql",
+        "migrations/enhance-postgis-integration.sql",
+        "migrations/full-database-setup.sql",
+        "migrations/grant-permissions.sql",
+        "migrations/prospect-tables-workbench.sql",
+        "migrations/seed-explore-feed-data.sql",
+        "migrations/seed-sample-data.sql",
+        "migrations/verify-setup.sql"
+      ]
+    },
+    {
+      "path": "/*.sql",
+      "classification": "temporary legacy pending Gap 3",
+      "purpose": "Root ad-hoc SQL retained only while Gap 3 retires or repoints dependent manual utilities.",
+      "approvedFiles": [
+        "DEVELOPER_APPROVAL_MIGRATION.sql",
+        "RAILWAY_DIRECT_SQL.sql",
+        "RAILWAY_EXPLORE_SHORTS_FIX.sql",
+        "RAILWAY_MIGRATION_SETUP.sql",
+        "add-auth-columns.sql",
+        "add-role-based-auth.sql",
+        "create-mysql-user.sql",
+        "fix-developer-database.sql",
+        "grant_test_permissions.sql",
+        "quick-developer-fix.sql",
+        "seed-super-admin.sql"
+      ]
+    },
+    {
+      "path": "scripts/*.sql",
+      "classification": "temporary legacy pending Gap 3",
+      "purpose": "Manual and repair SQL retained only while Gap 3 retires or repoints dependent manual utilities.",
+      "approvedFiles": [
+        "scripts/debug_schema.sql",
+        "scripts/fix-agents-table.sql",
+        "scripts/fix-listings-schema.sql",
+        "scripts/fix_schema_drift.sql",
+        "scripts/manual_schema_verify.sql",
+        "scripts/manual_unit_migration.sql",
+        "scripts/verify_unit_types_schema.sql"
+      ]
+    },
+    {
+      "path": "backups/**",
+      "classification": "archived historical",
+      "purpose": "Backup evidence; never an application migration source.",
+      "approvedFiles": ["backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"]
+    },
+    {
+      "path": "docker/mysql-local/init/01-create-local-databases.sql",
+      "classification": "approved local/test initialization",
+      "purpose": "Creates only local and test databases/users; it must not apply application schema."
+    },
+    {
+      "path": "server/scripts/sanity_test_seed_cleanup.sql",
+      "classification": "test/diagnostic fixture",
+      "purpose": "Schema-sanity cleanup fixture, not a migration."
+    },
+    {
+      "path": "server/__tests__/fixtures/migration-tree-authority/**",
+      "classification": "test/diagnostic fixture",
+      "purpose": "Narrow authority-contract fixture location; it is never an operational migration source.",
+      "allowUntrackedSql": true
+    },
+    {
+      "path": "server/scripts/init-local-db.sql",
+      "classification": "documentation/example",
+      "purpose": "Legacy local initialization example; not an operational migration path."
+    },
+    {
+      "path": "server/routes/SELECT id, name, userId.sql",
+      "classification": "documentation/example",
+      "purpose": "SQL query example, not a migration file."
+    }
+  ],
+  "prohibitedPaths": ["drizzle_old/**", "server/db/migrations/**", "docker/mysql/init.sql"],
+  "operationalDocumentation": [
+    {
+      "path": "MIGRATION_GUIDE.md",
+      "disposition": "updated"
+    },
+    {
+      "path": "QUICK_START_AUTH.md",
+      "disposition": "updated"
+    },
+    {
+      "path": "START_SERVER.md",
+      "disposition": "updated"
+    },
+    {
+      "path": "AUTHENTICATION_SETUP.md",
+      "disposition": "updated"
+    },
+    {
+      "path": "PROJECT_DOCUMENTATION.md",
+      "disposition": "updated"
+    },
+    {
+      "path": "DATABASE_SETUP_GUIDE.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "DATABASE_MANAGEMENT_OPTIONS.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "RAILWAY_EXPLORE_SHORTS_MIGRATION.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "RAILWAY_EXPLORE_SETUP.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "EXPLORE_DISCOVERY_MIGRATION_GUIDE.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "docs/MIGRATION_CHECKLIST.md",
+      "disposition": "updated"
+    },
+    {
+      "path": "MIGRATIONS.md",
+      "disposition": "superseded"
+    },
+    {
+      "path": "server/migrations/README.md",
+      "disposition": "updated"
+    }
+  ]
+}

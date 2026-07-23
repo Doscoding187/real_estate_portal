@@ -5,12 +5,14 @@ This guide documents how to migrate from Manus AI OAuth to a custom authenticati
 ## Overview
 
 **What We're Replacing:**
+
 - Manus OAuth server calls
 - `openId` as user identifier
 - Manus SDK dependencies
 - Manus OAuth callback endpoint
 
 **What We're Creating:**
+
 - Email/Password authentication
 - Custom JWT session tokens
 - User registration and login endpoints
@@ -32,6 +34,10 @@ These are for password hashing.
 
 The `users` table already has `openId` field. We'll keep it for backward compatibility but add new fields:
 
+> **Historical design example — do not execute this SQL directly.** Current
+> schema changes must follow `server/migrations/README.md` and the canonical
+> command graph below.
+
 ```sql
 -- Add these fields to users table:
 ALTER TABLE users ADD COLUMN email VARCHAR(320) UNIQUE;
@@ -39,11 +45,16 @@ ALTER TABLE users ADD COLUMN passwordHash VARCHAR(255);
 ALTER TABLE users ADD COLUMN emailVerified INT DEFAULT 0;
 ```
 
-Or update `drizzle/schema.ts` and run `pnpm db:push`.
+For schema changes, follow the canonical migration workflow in
+`server/migrations/README.md`: approved production execution is
+`pnpm db:migrate`, test execution is `pnpm db:migrate:test`, and controlled
+local execution is `pnpm db:migrate:local`. `db:push` and direct
+`drizzle-kit` execution are not operational migration authority.
 
 ### Step 3: Create New Authentication Files
 
 We'll create:
+
 - `server/_core/auth.ts` - Custom auth service (replaces SDK)
 - `server/routers/auth.ts` - Registration/login endpoints
 - Update `server/_core/oauth.ts` → rename to handle custom auth
@@ -51,6 +62,7 @@ We'll create:
 ### Step 4: Replace Manus SDK References
 
 Files to update:
+
 - `server/_core/sdk.ts` → Replace with custom auth service
 - `server/_core/context.ts` → Update to use new auth
 - `server/_core/oauth.ts` → Replace OAuth callback with custom login
@@ -65,16 +77,19 @@ Files to update:
 ### Step 6: Environment Variables
 
 Remove:
+
 - `VITE_APP_ID`
 - `OAUTH_SERVER_URL`
 
 Add:
+
 - `JWT_SECRET` (you should already have this)
 - `BCRYPT_ROUNDS=10` (optional, for password hashing)
 
 ## Files That Need Changes
 
 ### Backend Files:
+
 1. `server/_core/sdk.ts` - Replace entire file
 2. `server/_core/oauth.ts` - Replace OAuth routes with custom auth
 3. `server/_core/context.ts` - Update auth verification
@@ -83,11 +98,13 @@ Add:
 6. `drizzle/schema.ts` - Add password/email fields
 
 ### Frontend Files:
+
 1. `client/src/components/ManusDialog.tsx` - Replace with LoginForm
 2. `client/src/const.ts` - Update login URL function
 3. `client/src/_core/hooks/useAuth.ts` - Minor updates (optional)
 
 ### Config Files:
+
 1. `vite.config.ts` - Remove Manus plugin (optional)
 2. `.env` - Update environment variables
 
@@ -110,6 +127,7 @@ Add:
 ## Testing Checklist
 
 After migration, test:
+
 - [ ] User registration
 - [ ] User login
 - [ ] Session persistence (cookie works)
@@ -120,6 +138,7 @@ After migration, test:
 ## Rollback Plan
 
 If you need to rollback:
+
 1. Git commit before migration
 2. Keep old Manus files backed up
 3. Restore environment variables
@@ -128,4 +147,3 @@ If you need to rollback:
 ---
 
 **Note**: This migration maintains backward compatibility where possible. Existing sessions using Manus will stop working after migration, but users can re-register with email/password.
-

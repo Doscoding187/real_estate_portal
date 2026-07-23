@@ -3,28 +3,38 @@
 ## 🚀 3-Minute Setup
 
 ### 1. Install Dependencies
+
 ```bash
 pnpm add bcryptjs
 pnpm add -D @types/bcryptjs
 ```
 
 ### 2. Update Database
+
 ```bash
-pnpm db:push
+pnpm db:migrate:local
 ```
 
+This uses the canonical SQL runner. Production uses `pnpm db:migrate`; CI and
+test databases use `pnpm db:migrate:test`. Do not use `db:push` or direct
+`drizzle-kit` commands. See `server/migrations/README.md`.
+
 ### 3. Set Environment Variable
+
 Add to your `.env` file:
+
 ```env
 JWT_SECRET=generate-a-random-32-character-secret-here
 ```
 
 Generate a secret:
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ### 4. Test It
+
 ```bash
 # Start server
 pnpm dev
@@ -38,6 +48,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 ## ✅ Done!
 
 Your authentication system is now:
+
 - ✅ Email/password based
 - ✅ Fully independent from Manus OAuth
 - ✅ Secure with bcrypt hashing
@@ -47,6 +58,7 @@ Your authentication system is now:
 ## 📚 Full Documentation
 
 See:
+
 - **AUTHENTICATION_SETUP.md** - Complete setup guide
 - **MIGRATION_GUIDE.md** - Migration details
 - **IMPLEMENTATION_SUMMARY.md** - What was changed
@@ -54,18 +66,21 @@ See:
 ## 🔗 API Endpoints
 
 ### Register
+
 ```http
 POST /api/auth/register
 Body: { "email": "...", "password": "...", "name": "..." }
 ```
 
 ### Login
+
 ```http
 POST /api/auth/login
 Body: { "email": "...", "password": "..." }
 ```
 
 ### Logout
+
 ```http
 POST /api/auth/logout
 ```
@@ -73,4 +88,3 @@ POST /api/auth/logout
 ---
 
 **That's it!** You now have full control over authentication. 🎉
-

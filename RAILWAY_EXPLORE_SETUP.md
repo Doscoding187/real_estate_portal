@@ -1,3 +1,9 @@
+> **Superseded migration guidance.** This historical Railway manual-SQL
+> workflow is not operational authority. Use
+> [`server/migrations/README.md`](server/migrations/README.md): production
+> uses `pnpm db:migrate`, CI/test uses `pnpm db:migrate:test`, and local
+> development uses `pnpm db:migrate:local`.
+
 # Railway Explore Tables Setup
 
 ## Problem
@@ -52,6 +58,7 @@ Add this to your `package.json` scripts:
 ```
 
 Then run on Railway:
+
 ```bash
 railway run npm run migrate:explore
 railway run npm run seed:explore
@@ -123,9 +130,9 @@ railway run tsx scripts/check-explore-tables.ts
 After tables are created, check if your upload is in the database:
 
 ```sql
-SELECT id, title, agent_id, developer_id, is_published, created_at 
-FROM explore_shorts 
-ORDER BY created_at DESC 
+SELECT id, title, agent_id, developer_id, is_published, created_at
+FROM explore_shorts
+ORDER BY created_at DESC
 LIMIT 10;
 ```
 
@@ -134,6 +141,7 @@ LIMIT 10;
 ### Still seeing 500 errors?
 
 1. **Check Railway logs:**
+
    ```bash
    railway logs
    ```
@@ -150,11 +158,13 @@ LIMIT 10;
 ### Upload succeeded but no videos showing?
 
 1. **Check if record was created:**
+
    ```sql
    SELECT * FROM explore_shorts WHERE agent_id = YOUR_AGENT_ID;
    ```
 
 2. **Check is_published flag:**
+
    ```sql
    UPDATE explore_shorts SET is_published = 1 WHERE id = YOUR_SHORT_ID;
    ```
@@ -168,6 +178,7 @@ LIMIT 10;
 The code now handles missing tables gracefully, so the 500 error should be fixed. However, you still need to create the tables to see any content.
 
 **Fastest solution:**
+
 1. Run migrations on Railway (Option 1 above)
 2. Upload a new video from your agent account
 3. Refresh the explore page
@@ -175,4 +186,5 @@ The code now handles missing tables gracefully, so the 500 error should be fixed
 ---
 
 **Need help?** Check the full migration SQL in:
+
 - `drizzle/migrations/create-explore-shorts-tables.sql`

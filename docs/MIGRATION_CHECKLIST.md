@@ -1,5 +1,11 @@
 # Migration Checklist
 
+For the authoritative command graph and migration-tree boundary, see
+`server/migrations/README.md`. Production uses `pnpm db:migrate`, CI/test
+uses `pnpm db:migrate:test`, and controlled local development uses
+`pnpm db:migrate:local`. `db:push` and direct `drizzle-kit` execution are
+not operational migration authority.
+
 This checklist ensures safe database migrations and prevents schema drift.
 
 ## Pre-Migration
@@ -16,7 +22,7 @@ This checklist ensures safe database migrations and prevents schema drift.
   # Or export via mysqldump
   ```
 
-- [ ] Review migration files in `drizzle/migrations/`
+- [ ] Review the approved top-level SQL files in `server/migrations/`
   - Check for breaking changes
   - Verify enum values match expectations
   - Confirm foreign key relationships
@@ -26,20 +32,17 @@ This checklist ensures safe database migrations and prevents schema drift.
 1. **Run Migrations**
 
    ```bash
-   pnpm db:push
+   pnpm db:migrate
    ```
 
-2. **Verify Contract**
+2. **Verify canonical schema authority**
 
    ```bash
-   pnpm db:verify
+   pnpm run schema:sanity
    ```
 
-   Expected output:
-
-   ```
-   ✅ All contract checks passed!
-   ```
+   This validates the canonical baseline and inventory without substituting a
+   second migration runner.
 
 3. **Run Integration Tests**
    ```bash
