@@ -291,31 +291,60 @@ describe('database governance authority', () => {
       "target === 'showings'",
     );
 
-    const dashboardOverview = read(
-      'client/src/components/agent/AgentDashboardOverview.tsx',
-    );
-    const showingsCalendar = read(
-      'client/src/components/agent/ShowingsCalendar.tsx',
-    );
-    const agentProductivity = read(
-      'client/src/pages/agent/AgentProductivity.tsx',
-    );
+    const dashboardOverview = read('client/src/components/agent/AgentDashboardOverview.tsx');
+    const showingsCalendar = read('client/src/components/agent/ShowingsCalendar.tsx');
+    const agentProductivity = read('client/src/pages/agent/AgentProductivity.tsx');
 
-    expect(dashboardOverview).not.toContain(
-      'scheduledTime',
-    );
-    expect(showingsCalendar).not.toContain(
-      'scheduledTime',
-    );
-    expect(agentProductivity).not.toContain(
-      'scheduledAt || showing.scheduledAt',
-    );
-    expect(agentProductivity).not.toContain(
-      'left.scheduledAt || left.scheduledAt',
-    );
-    expect(agentProductivity).not.toContain(
-      'right.scheduledAt || right.scheduledAt',
-    );
+    expect(dashboardOverview).not.toContain('scheduledTime');
+    expect(source).not.toContain('agent_os_allow_legacy_scheduling_inventory');
+    expect(source).not.toContain('allowLegacyFallback');
+    expect(source).not.toContain('getInventoryBridgeSchemaCapabilities');
+    expect(source).toContain('const canonicalPropertyId = resolvedInventory.propertyId');
+    expect(source).toContain('not linked to canonical property inventory');
+
+    const inventoryResolver = read('server/services/inventoryLinkResolver.ts');
+
+    expect(inventoryResolver).not.toContain('information_schema');
+    expect(inventoryResolver).not.toContain('getInventoryBridgeSchemaCapabilities');
+    expect(inventoryResolver).not.toContain('InventoryBridgeSchemaCapabilities');
+    expect(inventoryResolver).not.toContain('allowLegacyFallback');
+    expect(inventoryResolver).not.toContain('legacy_listing');
+    expect(inventoryResolver).not.toContain('owner_title_address');
+    expect(inventoryResolver).toContain('.where(eq(properties.sourceListingId, listing.id))');
+    expect(inventoryResolver).toContain("inArray(listings.status, ['approved', 'published'])");
+    expect(inventoryResolver).toContain('duplicate_source_listing_id');
+
+    const databaseSource = read('server/db.ts');
+
+    expect(databaseSource).not.toContain('getInventoryBridgeSchemaCapabilities');
+    expect(databaseSource).not.toContain('bridgeHasSourceListingId');
+    expect(databaseSource).not.toContain('legacyPropertyMatch');
+    expect(databaseSource).toContain('sourceListingId: listingId');
+
+    const platformSettings = read('client/src/pages/admin/PlatformSettings.tsx');
+    const inventoryBoundaryPage = read('client/src/pages/admin/AgentInventoryBoundaryPage.tsx');
+    const leadPipeline = read('client/src/components/agent/LeadPipeline.tsx');
+
+    expect(platformSettings).not.toContain('agent_os_allow_legacy_scheduling_inventory');
+    expect(inventoryBoundaryPage).not.toContain('agent_os_allow_legacy_scheduling_inventory');
+    expect(inventoryBoundaryPage).not.toContain('updatePlatformSetting');
+    expect(inventoryBoundaryPage).toContain('Canonical Scheduling Authority');
+    expect(leadPipeline).not.toContain('legacyListings');
+    expect(leadPipeline).not.toContain('Legacy fallback');
+
+    expect(() => read('scripts/preflight-agent-os-inventory-cutover.ts')).toThrow();
+    expect(() => read('scripts/backfill-agent-os-inventory-bridge.ts')).toThrow();
+
+    const packageJson = read('package.json');
+    expect(packageJson).not.toContain('agent-os:inventory:preflight');
+
+    expect(showingsCalendar).not.toContain('scheduledTime');
+    expect(showingsCalendar).not.toContain('legacy_listing');
+    expect(showingsCalendar).not.toContain('legacyListings');
+    expect(showingsCalendar).not.toContain('Legacy fallback');
+    expect(agentProductivity).not.toContain('scheduledAt || showing.scheduledAt');
+    expect(agentProductivity).not.toContain('left.scheduledAt || left.scheduledAt');
+    expect(agentProductivity).not.toContain('right.scheduledAt || right.scheduledAt');
   });
 
 });

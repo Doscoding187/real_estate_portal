@@ -38,7 +38,6 @@
     "test:integration": "vitest run tests/integration",
     "db:verify": "tsx scripts/db-contract-verify.ts",
     "db:verify:distribution": "tsx scripts/db-verify-distribution-schema.ts",
-    "agent-os:inventory:preflight": "npx tsx scripts/preflight-agent-os-inventory-cutover.ts",
     "db:verify:ci": "tsx scripts/db-contract-verify.ts --format=json",
     "schema:sanity": "node scripts/schema-sanity-check.mjs",
     "test:wizard:e2e": "npx tsx scripts/verify-wizard-e2e.ts",

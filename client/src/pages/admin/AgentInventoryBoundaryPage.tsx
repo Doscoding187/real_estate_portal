@@ -4,9 +4,7 @@ import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { toast } from 'sonner';
-import { AlertTriangle, ArrowLeft, Layers3, Link2, CalendarClock, Shield } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CalendarClock, Layers3, Link2, Shield } from 'lucide-react';
 
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(0)}%`;
@@ -14,36 +12,7 @@ function formatPercent(value: number) {
 
 const AgentInventoryBoundaryPage: React.FC = () => {
   const [, setLocation] = useLocation();
-  const utils = trpc.useUtils();
   const { data, isLoading } = trpc.admin.getAgentInventoryBoundaryReport.useQuery();
-  const { data: settings = [] } = trpc.admin.getPlatformSettings.useQuery();
-
-  const legacySchedulingSetting = settings.find(
-    (setting: any) => setting.key === 'agent_os_allow_legacy_scheduling_inventory',
-  );
-  const allowLegacyFallback =
-    legacySchedulingSetting == null
-      ? true
-      : (() => {
-          try {
-            return Boolean(JSON.parse(legacySchedulingSetting.value));
-          } catch {
-            return true;
-          }
-        })();
-
-  const updateSettingMutation = trpc.admin.updatePlatformSetting.useMutation({
-    onSuccess: async () => {
-      await Promise.all([
-        utils.admin.getPlatformSettings.invalidate(),
-        utils.admin.getAgentInventoryBoundaryReport.invalidate(),
-      ]);
-      toast.success('Scheduling fallback setting updated');
-    },
-    onError: error => {
-      toast.error(error.message || 'Failed to update scheduling fallback setting');
-    },
-  });
 
   if (isLoading) {
     return (
@@ -56,7 +25,7 @@ const AgentInventoryBoundaryPage: React.FC = () => {
   const summary = data?.summary;
   const metrics = data?.metrics || [];
   const unresolvedListings = data?.unresolvedListings || [];
-  const canDisableLegacyFallback = (summary?.unresolvedListings || 0) === 0;
+  const boundaryIsClean = (summary?.unresolvedListings || 0) === 0;
 
   return (
     <div className="space-y-6 pb-20 max-w-7xl mx-auto py-8">
@@ -67,21 +36,22 @@ const AgentInventoryBoundaryPage: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              Agent Inventory Boundary
+              Canonical Inventory Linkage
             </h1>
             <p className="text-slate-500">
-              Tracks how much Agent OS inventory is resolved from legacy listings into properties.
+              Monitors whether scheduling-eligible listings have exactly one canonical property
+              projection.
             </p>
           </div>
         </div>
         <Badge
           className={
-            (summary?.unresolvedListings || 0) === 0
+            boundaryIsClean
               ? 'bg-green-100 text-green-700 border border-green-200'
               : 'bg-amber-100 text-amber-700 border border-amber-200'
           }
         >
-          {(summary?.unresolvedListings || 0) === 0 ? 'Boundary Clean' : 'Legacy Inventory Present'}
+          {boundaryIsClean ? 'Canonical Boundary Clean' : 'Linkage Gaps Present'}
         </Badge>
       </div>
 
@@ -89,47 +59,34 @@ const AgentInventoryBoundaryPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-slate-800">
             <Shield className="h-5 w-5 text-blue-600" />
-            Scheduling Cutover
+            Canonical Scheduling Authority
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <p className="font-medium text-slate-900">Allow legacy scheduling inventory fallback</p>
-            <p className="text-sm text-slate-500">
-              When enabled, unresolved legacy listings can still appear in agent scheduling flows.
+            <p className="font-medium text-slate-900">
+              Property projections are the sole Agent OS scheduling inventory
             </p>
-            {!canDisableLegacyFallback ? (
+            <p className="text-sm text-slate-500">
+              A listing is schedulable only when properties.sourceListingId resolves it to one
+              canonical property record.
+            </p>
+            {!boundaryIsClean ? (
               <p className="text-sm text-amber-700">
-                Disable this only after unresolved legacy inventory reaches zero.
+                Unlinked or ambiguous listings are excluded from agent scheduling until their
+                canonical projection is repaired.
               </p>
             ) : (
               <p className="text-sm text-green-700">
-                Boundary is clean enough to cut over without legacy fallback.
+                Every approved or published listing in the scheduling boundary currently resolves
+                canonically.
               </p>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <Badge
-              className={
-                allowLegacyFallback
-                  ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                  : 'bg-green-100 text-green-700 border border-green-200'
-              }
-            >
-              {allowLegacyFallback ? 'Fallback Enabled' : 'Fallback Disabled'}
-            </Badge>
-            <Switch
-              checked={allowLegacyFallback}
-              disabled={updateSettingMutation.isPending || (!canDisableLegacyFallback && allowLegacyFallback)}
-              onCheckedChange={checked => {
-                updateSettingMutation.mutate({
-                  key: 'agent_os_allow_legacy_scheduling_inventory',
-                  value: checked,
-                });
-              }}
-            />
-          </div>
+          <Badge className="bg-green-100 text-green-700 border border-green-200">
+            Canonical Only
+          </Badge>
         </CardContent>
       </Card>
 
@@ -138,12 +95,14 @@ const AgentInventoryBoundaryPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
               <Layers3 className="h-5 w-5 text-blue-600" />
-              Candidate Listings
+              Eligible Listings
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-slate-900">{summary?.totalListings || 0}</div>
-            <p className="text-sm text-slate-500 mt-1">Listings in the active scheduling/publication set</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Approved or published listings eligible for scheduling
+            </p>
           </CardContent>
         </Card>
 
@@ -159,7 +118,7 @@ const AgentInventoryBoundaryPage: React.FC = () => {
               {summary?.resolvedListings || 0}
             </div>
             <p className="text-sm text-slate-500 mt-1">
-              {formatPercent(summary?.resolutionRate || 0)} of active listings resolve to properties
+              {formatPercent(summary?.resolutionRate || 0)} resolve to canonical properties
             </p>
           </CardContent>
         </Card>
@@ -168,14 +127,16 @@ const AgentInventoryBoundaryPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
               <AlertTriangle className="h-5 w-5 text-amber-600" />
-              Unresolved
+              Unlinked
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-slate-900">
               {summary?.unresolvedListings || 0}
             </div>
-            <p className="text-sm text-slate-500 mt-1">Legacy-only listings still visible to Agent OS flows</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Eligible listings missing an unambiguous property link
+            </p>
           </CardContent>
         </Card>
 
@@ -183,7 +144,7 @@ const AgentInventoryBoundaryPage: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-800">
               <CalendarClock className="h-5 w-5 text-amber-600" />
-              Legacy Showings
+              Affected Showings
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -191,7 +152,7 @@ const AgentInventoryBoundaryPage: React.FC = () => {
               {summary?.unresolvedShowings || 0}
             </div>
             <p className="text-sm text-slate-500 mt-1">
-              Showings currently attached to unresolved legacy listings
+              Existing showings attached to currently unlinked listings
             </p>
           </CardContent>
         </Card>
@@ -199,7 +160,7 @@ const AgentInventoryBoundaryPage: React.FC = () => {
 
       <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-slate-800">Boundary Metrics</CardTitle>
+          <CardTitle className="text-slate-800">Linkage Metrics</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -211,7 +172,9 @@ const AgentInventoryBoundaryPage: React.FC = () => {
                 <div className="space-y-1">
                   <p className="font-semibold text-slate-900">{metric.label}</p>
                   <p className="text-sm text-slate-500">
-                    {metric.total ? `${metric.count} of ${metric.total}` : `${metric.count} records`}
+                    {metric.total
+                      ? `${metric.count} of ${metric.total}`
+                      : `${metric.count} records`}
                   </p>
                 </div>
 
@@ -223,7 +186,9 @@ const AgentInventoryBoundaryPage: React.FC = () => {
                     <div className="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden">
                       <div
                         className="h-full bg-blue-500"
-                        style={{ width: `${Math.min(metric.rate, 1) * 100}%` }}
+                        style={{
+                          width: `${Math.min(metric.rate, 1) * 100}%`,
+                        }}
                       />
                     </div>
                   ) : null}
@@ -236,12 +201,14 @@ const AgentInventoryBoundaryPage: React.FC = () => {
 
       <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-slate-800">Unresolved Legacy Listings</CardTitle>
+          <CardTitle className="text-slate-800">Listings Requiring Canonical-Link Repair</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {unresolvedListings.length === 0 ? (
-              <p className="text-sm text-slate-500">No unresolved legacy listings in the active set.</p>
+              <p className="text-sm text-slate-500">
+                No canonical-link defects in the scheduling-eligible set.
+              </p>
             ) : (
               unresolvedListings.map((listing: any) => (
                 <div
@@ -260,7 +227,7 @@ const AgentInventoryBoundaryPage: React.FC = () => {
                       {listing.status}
                     </Badge>
                     <p className="text-sm text-slate-500">
-                      Active showings: {listing.activeShowings}
+                      Existing showings: {listing.activeShowings}
                     </p>
                   </div>
                 </div>
@@ -274,4 +241,3 @@ const AgentInventoryBoundaryPage: React.FC = () => {
 };
 
 export default AgentInventoryBoundaryPage;
-

@@ -1,7 +1,7 @@
 import { router } from './_core/trpc';
 import { agentProcedure, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
-import { getDb, getPlatformSetting } from './db';
+import { getDb } from './db';
 import {
   properties,
   listings,
@@ -44,7 +44,6 @@ import { agentOnboardingService } from './services/agentOnboardingService';
 
 import {
   getAgentInventorySchedulingOptions,
-  getInventoryBridgeSchemaCapabilities,
   resolvePropertiesForListings,
   resolvePropertyForListing,
 } from './services/inventoryLinkResolver';
@@ -198,7 +197,6 @@ type AgentShowingProperty = {
   id: number;
   listingId?: number | null;
   propertyId?: number | null;
-  inventoryModel?: string;
   title: string;
   address?: string | null;
   city?: string | null;
@@ -974,21 +972,7 @@ export const agentRouter = router({
       .where(eq(agents.userId, userId))
       .limit(1);
 
-    const allowLegacySetting = await getPlatformSetting(
-      'agent_os_allow_legacy_scheduling_inventory',
-    );
-    let allowLegacyFallback = true;
-    if (allowLegacySetting != null) {
-      try {
-        allowLegacyFallback = Boolean(JSON.parse(String(allowLegacySetting.settingValue)));
-      } catch {
-        allowLegacyFallback = true;
-      }
-    }
-
-    return getAgentInventorySchedulingOptions(db, userId, agentRecord?.id ?? null, {
-      allowLegacyFallback,
-    });
+    return getAgentInventorySchedulingOptions(db, userId, agentRecord?.id ?? null);
   }),
 
   /**
@@ -1339,8 +1323,6 @@ export const agentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      const inventoryBridgeCapabilities = await getInventoryBridgeSchemaCapabilities(db);
-
       // Get agent record
       const [agentRecord] = await db
         .select()
@@ -1901,22 +1883,13 @@ export const agentRouter = router({
         status: listingRecord.status,
       });
 
-      const allowLegacySetting = await getPlatformSetting(
-        'agent_os_allow_legacy_scheduling_inventory',
-      );
-      let allowLegacyFallback = true;
-      if (allowLegacySetting != null) {
-        try {
-          allowLegacyFallback = Boolean(JSON.parse(String(allowLegacySetting.settingValue)));
-        } catch {
-          allowLegacyFallback = true;
-        }
-      }
-
-      if (!allowLegacyFallback && resolvedInventory.propertyId == null) {
-        throw new Error(
-          'This listing is not yet linked to Agent OS inventory. Legacy scheduling fallback is disabled.',
-        );
+      const canonicalPropertyId = resolvedInventory.propertyId;
+      if (canonicalPropertyId == null) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'This listing is not linked to canonical property inventory. Publish or repair its property projection before booking a showing.',
+        });
       }
 
       let leadRecord: typeof leads.$inferSelect | null = null;
@@ -1932,39 +1905,36 @@ export const agentRouter = router({
 
         if (
           persistedLead.propertyId != null &&
-          resolvedInventory.propertyId != null &&
-          Number(persistedLead.propertyId) !== Number(resolvedInventory.propertyId)
+          Number(persistedLead.propertyId) !== Number(canonicalPropertyId)
         ) {
           throw new Error('Selected listing does not match the lead inventory');
         }
       }
 
       const showingColumns = [
-          sql.identifier('listingId'),
-          sql.identifier('propertyId'),
-          sql.identifier('leadId'),
-          sql.identifier('agentId'),
-          sql.identifier('visitorName'),
-          sql.identifier('scheduledAt'),
-          sql.identifier('durationMinutes'),
-          sql.identifier('status'),
-          sql.identifier('notes'),
-          sql.identifier('feedback'),
-        ];
-        const showingValues = [
-          sql`${input.listingId}`,
-          sql`${resolvedInventory.propertyId}`,
-          sql`${leadRecord?.id ?? null}`,
-          sql`${agentRecord.id}`,
-          sql`${input.visitorName}`,
-          sql`${toDbTimestampRequired(
-            input.scheduledAt,
-          )}`,
-          sql`${input.durationMinutes ?? 30}`,
-          sql`${'confirmed'}`,
-          sql`${input.notes || null}`,
-          sql`${null}`,
-        ];
+        sql.identifier('listingId'),
+        sql.identifier('propertyId'),
+        sql.identifier('leadId'),
+        sql.identifier('agentId'),
+        sql.identifier('visitorName'),
+        sql.identifier('scheduledAt'),
+        sql.identifier('durationMinutes'),
+        sql.identifier('status'),
+        sql.identifier('notes'),
+        sql.identifier('feedback'),
+      ];
+      const showingValues = [
+        sql`${input.listingId}`,
+        sql`${canonicalPropertyId}`,
+        sql`${leadRecord?.id ?? null}`,
+        sql`${agentRecord.id}`,
+        sql`${input.visitorName}`,
+        sql`${toDbTimestampRequired(input.scheduledAt)}`,
+        sql`${input.durationMinutes ?? 30}`,
+        sql`${'confirmed'}`,
+        sql`${input.notes || null}`,
+        sql`${null}`,
+      ];
 
         const insertResult =
           typeof (
@@ -1978,29 +1948,21 @@ export const agentRouter = router({
                   )}
                 )
                 VALUES (
-                  ${sql.join(
-                    showingValues,
-                    sql`, `,
-                  )}
+                  ${sql.join(showingValues, sql`, `)}
                 )
               `)
-            : await db.insert(showings).values({
-                listingId: input.listingId,
-                propertyId:
-                  resolvedInventory.propertyId,
-                leadId: leadRecord?.id ?? null,
-                agentId: agentRecord.id,
-                visitorName: input.visitorName,
-                scheduledAt:
-                  toDbTimestampRequired(
-                    input.scheduledAt,
-                  ),
-                durationMinutes:
-                  input.durationMinutes ?? 30,
-                status: 'confirmed',
-                notes: input.notes || null,
-                feedback: null,
-              } as any);
+          : await db.insert(showings).values({
+              listingId: input.listingId,
+              propertyId: canonicalPropertyId,
+              leadId: leadRecord?.id ?? null,
+              agentId: agentRecord.id,
+              visitorName: input.visitorName,
+              scheduledAt: toDbTimestampRequired(input.scheduledAt),
+              durationMinutes: input.durationMinutes ?? 30,
+              status: 'confirmed',
+              notes: input.notes || null,
+              feedback: null,
+            } satisfies typeof showings.$inferInsert);
 
       const insertRows = Array.isArray(insertResult) ? insertResult : [insertResult];
       const showingId = Number(

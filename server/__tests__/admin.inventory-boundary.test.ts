@@ -54,7 +54,7 @@ function createSuperAdminCaller() {
   } as any);
 }
 
-describe('admin inventory boundary and settings', () => {
+describe('admin canonical inventory boundary and settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -76,7 +76,7 @@ describe('admin inventory boundary and settings', () => {
         id: 2,
         ownerId: 11,
         agentId: 101,
-        title: 'Legacy Listing',
+        title: 'Unlinked Listing',
         address: '2 Main Road',
         city: 'Cape Town',
         province: 'Western Cape',
@@ -112,8 +112,24 @@ describe('admin inventory boundary and settings', () => {
     mockGetDb.mockResolvedValue(db);
     mockResolvePropertiesForListings.mockResolvedValue(
       new Map([
-        [1, { listingId: 1, propertyId: 2001, inventoryModel: 'property', matchReason: 'source_listing_id' }],
-        [2, { listingId: 2, propertyId: null, inventoryModel: 'legacy_listing', matchReason: 'none' }],
+        [
+          1,
+          {
+            listingId: 1,
+            propertyId: 2001,
+            isResolved: true,
+            matchReason: 'source_listing_id',
+          },
+        ],
+        [
+          2,
+          {
+            listingId: 2,
+            propertyId: null,
+            isResolved: false,
+            matchReason: 'missing_source_listing_id',
+          },
+        ],
       ]),
     );
 
@@ -131,7 +147,7 @@ describe('admin inventory boundary and settings', () => {
     expect(result.unresolvedListings[0]).toEqual(
       expect.objectContaining({
         listingId: 2,
-        title: 'Legacy Listing',
+        title: 'Unlinked Listing',
         activeShowings: 3,
       }),
     );
@@ -141,9 +157,9 @@ describe('admin inventory boundary and settings', () => {
     mockGetAllPlatformSettings.mockResolvedValue([
       {
         id: 1,
-        settingKey: 'agent_os_allow_legacy_scheduling_inventory',
+        settingKey: 'maintenance_mode',
         settingValue: 'true',
-        description: 'Allow unresolved legacy listings in scheduling',
+        description: 'Enable maintenance mode',
         category: 'agent_os',
         isPublic: false,
         updatedBy: 99,
@@ -158,9 +174,9 @@ describe('admin inventory boundary and settings', () => {
     expect(result).toEqual([
       {
         id: 1,
-        key: 'agent_os_allow_legacy_scheduling_inventory',
+        key: 'maintenance_mode',
         value: 'true',
-        description: 'Allow unresolved legacy listings in scheduling',
+        description: 'Enable maintenance mode',
         category: 'agent_os',
         isPublic: false,
         updatedBy: 99,
@@ -174,15 +190,11 @@ describe('admin inventory boundary and settings', () => {
     const caller = createSuperAdminCaller();
 
     const result = await caller.updatePlatformSetting({
-      key: 'agent_os_allow_legacy_scheduling_inventory',
+      key: 'maintenance_mode',
       value: false,
     });
 
-    expect(mockSetPlatformSetting).toHaveBeenCalledWith(
-      'agent_os_allow_legacy_scheduling_inventory',
-      false,
-      99,
-    );
+    expect(mockSetPlatformSetting).toHaveBeenCalledWith('maintenance_mode', false, 99);
     expect(result).toEqual({ success: true });
   });
 });

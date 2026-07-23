@@ -1,28 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  mockGetDb,
-  mockGetPlatformSetting,
-  mockGetAgentInventorySchedulingOptions,
-  mockGetInventoryBridgeSchemaCapabilities,
-  mockResolvePropertyForListing,
-} = vi.hoisted(() => ({
-  mockGetDb: vi.fn(),
-  mockGetPlatformSetting: vi.fn(),
-  mockGetAgentInventorySchedulingOptions: vi.fn(),
-  mockGetInventoryBridgeSchemaCapabilities: vi.fn(),
-  mockResolvePropertyForListing: vi.fn(),
-}));
+const { mockGetDb, mockGetAgentInventorySchedulingOptions, mockResolvePropertyForListing } =
+  vi.hoisted(() => ({
+    mockGetDb: vi.fn(),
+    mockGetAgentInventorySchedulingOptions: vi.fn(),
+    mockResolvePropertyForListing: vi.fn(),
+  }));
 
 vi.mock('../db', () => ({
   getDb: mockGetDb,
-  getPlatformSetting: mockGetPlatformSetting,
 }));
-
 
 vi.mock('../services/inventoryLinkResolver', () => ({
   getAgentInventorySchedulingOptions: mockGetAgentInventorySchedulingOptions,
-  getInventoryBridgeSchemaCapabilities: mockGetInventoryBridgeSchemaCapabilities,
   resolvePropertiesForListings: vi.fn(),
   resolvePropertyForListing: mockResolvePropertyForListing,
 }));
@@ -42,12 +32,13 @@ function createAgentCaller() {
     } as any,
     req: {} as any,
     res: {} as any,
-    requestId: 'agent-inventory-cutover-test',
+    requestId: 'agent-inventory-authority-test',
   } as any);
 }
 
 function createSelectSequence(results: unknown[]) {
   const queue = [...results];
+
   return vi.fn(() => ({
     from: vi.fn(() => ({
       where: vi.fn(() => ({
@@ -57,32 +48,23 @@ function createSelectSequence(results: unknown[]) {
   }));
 }
 
-describe('agent inventory cutover', () => {
+describe('agent canonical inventory authority', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
   });
 
-  it('passes the legacy fallback setting into scheduling options resolution', async () => {
+  it('requests only canonical scheduling options', async () => {
     const select = createSelectSequence([[{ id: 7 }]]);
     mockGetDb.mockResolvedValue({ select } as any);
-    mockGetPlatformSetting.mockResolvedValue({
-      settingValue: 'false',
-    });
     mockGetAgentInventorySchedulingOptions.mockResolvedValue([]);
 
     const caller = createAgentCaller();
     await caller.getShowingListingOptions();
 
-    expect(mockGetAgentInventorySchedulingOptions).toHaveBeenCalledWith(
-      expect.anything(),
-      1,
-      7,
-      { allowLegacyFallback: false },
-    );
+    expect(mockGetAgentInventorySchedulingOptions).toHaveBeenCalledWith(expect.anything(), 1, 7);
   });
 
-  it('blocks showing booking for unresolved legacy inventory when fallback is disabled', async () => {
+  it('blocks showing booking when no canonical property link exists', async () => {
     const select = createSelectSequence([
       [{ id: 7 }],
       [
@@ -90,7 +72,7 @@ describe('agent inventory cutover', () => {
           id: 55,
           ownerId: 1,
           agentId: 7,
-          title: 'Legacy Listing',
+          title: 'Unlinked Listing',
           address: '1 Main Road',
           city: 'Cape Town',
           province: 'Western Cape',
@@ -106,14 +88,11 @@ describe('agent inventory cutover', () => {
       select,
       insert,
     } as any);
-    mockGetPlatformSetting.mockResolvedValue({
-      settingValue: 'false',
-    });
     mockResolvePropertyForListing.mockResolvedValue({
       listingId: 55,
       propertyId: null,
-      inventoryModel: 'legacy_listing',
-      matchReason: 'none',
+      isResolved: false,
+      matchReason: 'missing_source_listing_id',
     });
 
     const caller = createAgentCaller();
@@ -124,12 +103,12 @@ describe('agent inventory cutover', () => {
         scheduledAt: '2026-03-12T10:00:00.000Z',
         visitorName: 'Buyer Example',
       }),
-    ).rejects.toThrow('Legacy scheduling fallback is disabled');
+    ).rejects.toThrow('not linked to canonical property inventory');
 
     expect(insert).not.toHaveBeenCalled();
   });
 
-  it('allows showing booking when fallback remains enabled', async () => {
+  it('persists the canonical property id when booking a showing', async () => {
     const select = createSelectSequence([
       [{ id: 7 }],
       [
@@ -137,7 +116,7 @@ describe('agent inventory cutover', () => {
           id: 55,
           ownerId: 1,
           agentId: 7,
-          title: 'Legacy Listing',
+          title: 'Canonical Listing',
           address: '1 Main Road',
           city: 'Cape Town',
           province: 'Western Cape',
@@ -154,19 +133,11 @@ describe('agent inventory cutover', () => {
       select,
       insert,
     } as any);
-    mockGetPlatformSetting.mockResolvedValue({
-      settingValue: 'true',
-    });
     mockResolvePropertyForListing.mockResolvedValue({
       listingId: 55,
-      propertyId: null,
-      inventoryModel: 'legacy_listing',
-      matchReason: 'none',
-    });
-    mockGetInventoryBridgeSchemaCapabilities.mockResolvedValue({
-      propertiesSourceListingIdColumn: false,
-      showingsPropertyIdColumn: false,
-      showingsLeadIdColumn: false,
+      propertyId: 5001,
+      isResolved: true,
+      matchReason: 'source_listing_id',
     });
 
     const caller = createAgentCaller();
@@ -177,10 +148,10 @@ describe('agent inventory cutover', () => {
     });
 
     expect(result).toEqual({ success: true, showingId: 99 });
-    expect(insert).toHaveBeenCalled();
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         listingId: 55,
+        propertyId: 5001,
         agentId: 7,
         visitorName: 'Buyer Example',
         scheduledAt: '2026-03-12T10:00:00.000Z',
