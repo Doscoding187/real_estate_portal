@@ -81,16 +81,13 @@ describe('launch preflight contract', () => {
     expect(failedIds).toContain('transactional-email');
   });
 
-  it('runs preflight before production migrations and exposes a direct script', () => {
+  it('keeps production migration preflight explicit and outside startup', () => {
     const startProduction = readRepoFile('scripts/start-production.ts');
     const packageJson = readRepoFile('package.json');
 
-    expect(startProduction.indexOf('assertLaunchPreflight')).toBeGreaterThan(-1);
-    expect(startProduction.indexOf("run('pnpm', ['db:migrate'])")).toBeGreaterThan(
-      startProduction.indexOf('assertLaunchPreflight'),
-    );
-    expect(startProduction).toContain("process.env.APP_ENV = 'production'");
-    expect(startProduction).toContain("APP_ENV: 'production'");
+    expect(startProduction).toContain('is retired');
+    expect(startProduction).not.toContain('db:migrate');
+    expect(startProduction).not.toContain('runSqlMigrations');
     expect(packageJson).toContain('"launch:preflight":');
     expect(packageJson).toContain(
       '"launch:preflight": "cross-env NODE_ENV=production APP_ENV=production tsx scripts/launch-preflight.ts"',
