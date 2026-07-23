@@ -3,6 +3,8 @@
 Status: strategic commercial architecture layer
 Scope: revenue surfaces, sponsored placement boundaries, attribution, billing dependencies, and commercial maturity
 
+> **Related governing authority:** For audience value propositions, public commercial messaging, acquisition journeys, commercial motions and their review rules, read [Commercial Value Proposition & Acquisition Engine](../commercial-value-proposition-acquisition-engine/index.md). This revenue architecture retains authority over the revenue-domain boundaries and maturity assessment documented here.
+
 ## Executive Position
 
 Property Listify should treat revenue architecture as a set of commercial products sitting on top of domain engines and public experiences. The strongest current commercial engine is Distribution and Referral. Subscriptions and entitlements exist, but are fragmented by stakeholder. Sponsored placement and campaign capability is strategically important, but current evidence is split across marketplace tables, monetization labels, advertising pages, marketing router fragments, boost campaign code, location billboard components, and demand campaigns.
