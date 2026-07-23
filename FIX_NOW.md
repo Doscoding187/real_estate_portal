@@ -1,5 +1,7 @@
-# 🚨 QUICK FIX - Explore Tables Missing
+> **Superseded database-execution guidance.** Any SQL, direct Railway operation, legacy migration, or manual setup named below is historical only and must not be run. Current schema changes use [server/migrations/README.md](server/migrations/README.md) and the canonical `pnpm db:migrate` command graph. Data repair requires separate approved environment and operating controls.
 
+
+# 🚨 QUICK FIX - Explore Tables Missing
 ## The Error You're Seeing
 ```
 Table 'railway.explore_shorts' doesn't exist

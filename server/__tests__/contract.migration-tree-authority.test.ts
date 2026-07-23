@@ -35,6 +35,30 @@ type Documentation = {
   disposition: 'updated' | 'superseded';
 };
 
+type ManualDocumentation = {
+  path: string;
+  disposition: 'corrected' | 'superseded';
+};
+
+type ManualUtilityAuthority = {
+  canonicalMigrationExecutor: string;
+  knownManualSchemaExecutorCandidates: string[];
+  directSchemaCandidateClasses: Record<string, string[]>;
+  approvedMigrationVerification: string[];
+  approvedLocalTestInitialization: string[];
+  approvedReadOnlyDiagnostics: string[];
+  controlledDataRepairUtilities: string[];
+  localTestSeedOrFixtureUtilities: string[];
+  historicalEvidenceOnly: string[];
+  deferredGap3Utilities: string[];
+  prohibitedManualSchemaExecutors: string[];
+  retiredPaths: string[];
+  manualUtilityDocumentation: ManualDocumentation[];
+  historicalDocumentationRoots: string[];
+  historicalDocumentationFiles: string[];
+  implementationAuditDocumentationFiles: string[];
+};
+
 type AuthorityManifest = {
   canonicalAuthority: {
     productionCommand: string;
@@ -47,6 +71,7 @@ type AuthorityManifest = {
   classifications: Classification[];
   prohibitedPaths: string[];
   operationalDocumentation: Documentation[];
+  manualUtilityAuthority: ManualUtilityAuthority;
 };
 
 function read(path: string): string {
@@ -157,12 +182,74 @@ function legacyDocumentationDirectives(source: string): string[] {
 function nonCanonicalRunnerSignals(source: string): string[] {
   const fileReferences = Array.from(
     source.matchAll(
-      /(?:tsx|ts-node|node)\s+([^\s'"\\]+(?:migrat|schema)[^\s'"\\]*\.[cm]?[jt]sx?)/gi,
+      /(?:tsx|ts-node|node)\s+([^\s'"\\]+(?:migrat|schema|snapshot|setup|fix)[^\s'"\\]*\.[cm]?[jt]sx?)/gi,
     ),
     match => match[1],
   );
   return fileReferences.filter(
     path => path !== CANONICAL_RUNNER && !APPROVED_DIAGNOSTIC_EXECUTABLES.has(path),
+  );
+}
+
+function manualUtilityGroups(manual: ManualUtilityAuthority): Array<[string, string[]]> {
+  return [
+    ['approved migration verification', manual.approvedMigrationVerification],
+    ['approved local/test initialization', manual.approvedLocalTestInitialization],
+    ['approved read-only diagnostics', manual.approvedReadOnlyDiagnostics],
+    ['controlled data repair', manual.controlledDataRepairUtilities],
+    ['local/test seed or fixture', manual.localTestSeedOrFixtureUtilities],
+    ['historical evidence', manual.historicalEvidenceOnly],
+    ['deferred Gap 3', manual.deferredGap3Utilities],
+  ];
+}
+
+function manualSchemaUtilitySignals(source: string): string[] {
+  const patterns = [
+    /drizzle-kit\s+(?:push|migrate)/g,
+    /drizzle\/(?:migrations|meta)\//g,
+    /(?:readFileSync|readFile|writeFileSync|writeFile)\([^\n]*\.sql/g,
+    /\b(?:CREATE|ALTER|DROP)\s+(?:TABLE|INDEX|DATABASE)\b/gi,
+    /\b(?:exec|execFile|spawn|spawnSync)\s*\([^\n]*(?:mysql|mariadb|drizzle|migrat)/gi,
+  ];
+  return patterns.flatMap(pattern => Array.from(source.matchAll(pattern), match => match[0]));
+}
+
+function isManualSchemaExecutorCandidate(path: string, source: string): boolean {
+  if (
+    path === CANONICAL_RUNNER ||
+    path.startsWith('server/__tests__/') ||
+    path.includes('/__tests__/')
+  ) {
+    return false;
+  }
+  if (!/\.(?:[cm]?[jt]sx?|ps1|sh)$/.test(path)) return false;
+  if (!/(?:migration|schema|snapshot|journal|metadata|setup|init|apply|fix)/i.test(path))
+    return false;
+  const signals = manualSchemaUtilitySignals(source);
+  return signals.some(signal => /drizzle|\.sql|\b(?:CREATE|ALTER|DROP)\b/i.test(signal));
+}
+
+function manualDocumentationDirectives(source: string, retiredPaths: string[]): string[] {
+  const leadingBoundary = source.split('\n').slice(0, 12).join('\n');
+  if (
+    /\b(?:do not|not operational|never|superseded|historical|prohibited)\b/i.test(leadingBoundary)
+  ) {
+    return [];
+  }
+  return source.split('\n').flatMap(line => {
+    const isCurrentLooking = /\b(?:run|use|execute|apply|approved|command|setup)\b/i.test(line);
+    const isClearlyHistorical =
+      /\b(?:do not|not operational|never|superseded|historical|prohibited)\b/i.test(line);
+    if (!isCurrentLooking || isClearlyHistorical) return [];
+    return retiredPaths.filter(path => line.includes(path));
+  });
+}
+
+function isHistoricalManualDocumentation(path: string, manual: ManualUtilityAuthority): boolean {
+  return (
+    manual.historicalDocumentationFiles.includes(path) ||
+    manual.implementationAuditDocumentationFiles.includes(path) ||
+    manual.historicalDocumentationRoots.some(pattern => matchesPath(path, pattern))
   );
 }
 
@@ -291,5 +378,105 @@ describe('migration tree authority', () => {
 
     expect(read('package.json')).toContain('server/migrations/runSqlMigrations.ts');
     expect(read('package.json')).not.toContain('drizzle-kit');
+  });
+
+  it('contains manual schema executors and keeps diagnostics outside migration authority', () => {
+    const manifest = readManifest();
+    const manual = manifest.manualUtilityAuthority;
+    const paths = workingTreePaths();
+    const classified = manualUtilityGroups(manual);
+    const approved = classified.flatMap(([, entries]) => entries);
+
+    expect(
+      manual.canonicalMigrationExecutor,
+      'Only the canonical runner may be classified as migration authority',
+    ).toBe(CANONICAL_RUNNER);
+    expect(new Set(approved).size).toBe(approved.length);
+    expect(new Set(manual.knownManualSchemaExecutorCandidates).size).toBe(
+      manual.knownManualSchemaExecutorCandidates.length,
+    );
+    const directClassifications = Object.values(manual.directSchemaCandidateClasses).flat();
+    expect(new Set(directClassifications).size).toBe(directClassifications.length);
+    expect([...directClassifications].sort()).toEqual(
+      [...manual.knownManualSchemaExecutorCandidates].sort(),
+    );
+    expect([...manual.prohibitedManualSchemaExecutors].sort()).toEqual(
+      [...manual.retiredPaths].sort(),
+    );
+
+    for (const retiredPath of manual.retiredPaths) {
+      expect(paths, `Retired manual schema executor returned: ${retiredPath}`).not.toContain(
+        retiredPath,
+      );
+    }
+
+    for (const path of manual.approvedReadOnlyDiagnostics) {
+      const source = read(path);
+      expect(
+        manualSchemaUtilitySignals(source).filter(signal =>
+          /\b(?:CREATE|ALTER|DROP)\b/i.test(signal),
+        ),
+        `Approved diagnostic became a schema mutation: ${path}`,
+      ).toEqual([]);
+    }
+
+    for (const path of paths.filter(path => /\.(?:[cm]?[jt]sx?|ps1|sh)$/.test(path))) {
+      const source = read(path);
+      if (isManualSchemaExecutorCandidate(path, source)) {
+        expect(
+          manual.knownManualSchemaExecutorCandidates,
+          `Unclassified manual schema executor: ${path}`,
+        ).toContain(path);
+        expect(
+          directClassifications.filter(candidate => candidate === path),
+          `Manual schema executor must have one primary class: ${path}`,
+        ).toHaveLength(1);
+      }
+    }
+    for (const path of manual.controlledDataRepairUtilities) {
+      const source = read(path);
+      expect(source, `Data repair must not claim migration authority: ${path}`).not.toMatch(
+        /(?:drizzle-kit\s+(?:push|migrate)|db:migrate(?::test|:local)?)/,
+      );
+    }
+
+    for (const path of operationalSourcePaths(paths)) {
+      const source = read(path);
+      for (const retiredPath of manual.retiredPaths) {
+        expect(source, `Operational source invokes retired utility: ${path}`).not.toContain(
+          retiredPath,
+        );
+      }
+    }
+
+    for (const document of manual.manualUtilityDocumentation) {
+      const source = read(document.path);
+      expect(
+        source,
+        `Manual utility document must point to canonical guidance: ${document.path}`,
+      ).toContain('server/migrations/README.md');
+      if (document.disposition === 'superseded') {
+        expect(source, `Missing superseded notice: ${document.path}`).toMatch(
+          /^#.*\n\n> \*\*Superseded|^> \*\*Superseded/m,
+        );
+        continue;
+      }
+      expect(
+        manualDocumentationDirectives(source, manual.retiredPaths),
+        `Current operational instruction invokes retired utility: ${document.path}`,
+      ).toEqual([]);
+    }
+
+    const documentationByPath = new Map(
+      manual.manualUtilityDocumentation.map(document => [document.path, document]),
+    );
+    for (const path of paths.filter(path => path.endsWith('.md'))) {
+      if (isHistoricalManualDocumentation(path, manual)) continue;
+      if (documentationByPath.get(path)?.disposition === 'superseded') continue;
+      expect(
+        manualDocumentationDirectives(read(path), manual.retiredPaths),
+        `Current documentation invokes retired utility: ${path}`,
+      ).toEqual([]);
+    }
   });
 });

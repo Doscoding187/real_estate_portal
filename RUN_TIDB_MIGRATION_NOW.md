@@ -1,5 +1,7 @@
-# 🚀 Run TiDB Explore Migration NOW
+> **Superseded database-execution guidance.** Any SQL, direct Railway operation, legacy migration, or manual setup named below is historical only and must not be run. Current schema changes use [server/migrations/README.md](server/migrations/README.md) and the canonical `pnpm db:migrate` command graph. Data repair requires separate approved environment and operating controls.
 
+
+# 🚀 Run TiDB Explore Migration NOW
 ## Quick Start (2 minutes)
 
 Your TiDB database needs the missing columns in the `explore_shorts` table. Here's how to fix it:

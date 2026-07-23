@@ -1,5 +1,7 @@
-# 🚀 Run Railway Migration NOW - Quick Guide
+> **Superseded database-execution guidance.** Any SQL, direct Railway operation, legacy migration, or manual setup named below is historical only and must not be run. Current schema changes use [server/migrations/README.md](server/migrations/README.md) and the canonical `pnpm db:migrate` command graph. Data repair requires separate approved environment and operating controls.
 
+
+# 🚀 Run Railway Migration NOW - Quick Guide
 ## The Problem
 Your Explore page is showing a 500 error because the `explore_shorts` table is missing columns: `content_type`, `topic_id`, and `category_id`.
 

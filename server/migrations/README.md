@@ -38,6 +38,20 @@ migrations. Do not create another migration tree, make `_archived/`
 executable, or present Drizzle journals as the applied production ledger.
 `_archived/` remains historical evidence and is never scanned.
 
+## Manual utility boundary
+
+Manual schema-migration wrappers, direct schema-repair scripts, snapshot
+mutators, and direct SQL setup guides are prohibited migration authority. Only
+`server/migrations/runSqlMigrations.ts` may execute canonical migration SQL.
+Read-only diagnostics, controlled data-repair tools, and local/test fixtures
+are separate operational categories; none may replace `pnpm db:migrate`,
+`pnpm db:migrate:test`, or `pnpm db:migrate:local`.
+
+Do not run a database repair without explicit environment, owner, approval,
+and data-safety controls. Temporary legacy SQL and Drizzle metadata remain
+tracked during Gap 3 while their callers are retired; Slice 1 removes callers
+before any dependent SQL is considered for deletion.
+
 ## Operational command authority
 
 `pnpm db:migrate` is the only approved production migration command. It checks

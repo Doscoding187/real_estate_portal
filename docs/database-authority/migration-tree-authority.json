@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:migrate",
     "testCommand": "pnpm db:migrate:test",
@@ -7,6 +7,145 @@
     "runner": "server/migrations/runSqlMigrations.ts",
     "activeSqlDirectory": "server/migrations",
     "ledger": "sql_migration_history"
+  },
+  "manualUtilityAuthority": {
+    "canonicalMigrationExecutor": "server/migrations/runSqlMigrations.ts",
+    "knownManualSchemaExecutorCandidates": [
+      "add-missing-columns.ts", "apply-hotfix.ts", "apply-schema.ts", "cleanup-production-data.ts", "execute-cleanup.ts", "fix_developments_schema.ts", "fix_locations_schema.ts", "generate-hash.ts", "init-db.ts", "migrate-schema.ts", "migrations/setup-database.ps1", "scripts/__tests__/localDbWorkflow.test.ts", "scripts/add-developer-columns.ts", "scripts/add-location-id-column.ts", "scripts/add-missing-developer-columns.ts", "scripts/add-portfolio-columns.ts", "scripts/add-portfolio-defaults.ts", "scripts/add-remaining-columns.ts", "scripts/add-remaining-unit-types-columns.ts", "scripts/add-unit-stock-columns.ts", "scripts/apply-financial-migration.ts", "scripts/apply-indexes.ts", "scripts/apply-pricing-migration.ts", "scripts/apply-unit-types-migration.ts", "scripts/apply-wizard-migration.ts", "scripts/bootstrap-essential-cities.ts", "scripts/create-development-phases-table.ts", "scripts/create-listings-tables.ts", "scripts/db-contract-verify.ts", "scripts/debug-create-development.ts", "scripts/debug_schema.ts", "scripts/diagnose-location-pages.ts", "scripts/fix-brand-ownership-schema.ts", "scripts/fix-location-pages.ts", "scripts/fix-locations-code.ts", "scripts/fix-provinces-schema.ts", "scripts/fix_listings_column.ts", "scripts/fix_schema_drift.ts", "scripts/fix_snapshot.js", "scripts/integrate-subscription-system.ts", "scripts/investigate_schema.ts", "scripts/local-db.sh", "scripts/localDbWorkflow.ts", "scripts/manual_migration_listings.ts", "scripts/migrate-hero-campaigns.ts", "scripts/migrate-locations.ts", "scripts/push-schema-with-fk-disabled.ts", "scripts/quick-subscription-integration.ts", "scripts/reproduce_listing_500.ts", "scripts/run-activities-migration.ts", "scripts/run-agents-migration.ts", "scripts/run-developer-migration-step-by-step.ts", "scripts/run-developer-migration.ts", "scripts/run-development-location-migration.ts", "scripts/run-development-wizard-migration.ts", "scripts/run-enhanced-unit-types-migration.ts", "scripts/run-google-places-migration.ts", "scripts/run-google-places-monitoring-migration.ts", "scripts/run-kpi-caching-migration.ts", "scripts/run-listing-performance-e2e.ts", "scripts/run-location-performance-migration.ts", "scripts/run-manual-migration.ts", "scripts/run-migration.ts", "scripts/run-mission-control-phase1-migrations.ts", "scripts/run-notifications-migration.ts", "scripts/run-phase-optimization-migration.ts", "scripts/run-price-insights-indexes.ts", "scripts/run-property-results-optimization-migration.ts", "scripts/run-prospect-journey-e2e.ts", "scripts/run-tidb-explore-migration.ts", "scripts/run-unit-types-spec-variations-migration.ts", "scripts/run-wizard-optimization-migration.ts", "scripts/run-wizard-v2-migration.ts", "scripts/schema-sanity-check.mjs", "scripts/seed-location-data.ts", "scripts/seed-provinces-only.ts", "scripts/show-create-table.ts", "scripts/show-create-unit-types.ts", "scripts/verify-prospect-journey-security.ts", "scripts/verify-schema.ts", "server/scripts/apply-approval-schema.ts", "server/scripts/create-local-db.ts", "server/scripts/debug-schema.ts", "server/scripts/verify-fast-track.ts", "setup-explore-feed.ps1", "verify-developer-user.ts", "verify-explore-feed.ts"
+    ],
+    "directSchemaCandidateClasses": {
+      "retired prohibited": ["scripts/apply-financial-migration.ts", "scripts/apply-unit-types-migration.ts", "scripts/fix_snapshot.js", "scripts/push-schema-with-fk-disabled.ts", "scripts/run-development-location-migration.ts", "scripts/run-development-wizard-migration.ts", "scripts/run-enhanced-unit-types-migration.ts", "scripts/run-google-places-monitoring-migration.ts", "scripts/run-location-performance-migration.ts", "scripts/run-manual-migration.ts", "scripts/run-mission-control-phase1-migrations.ts", "scripts/run-phase-optimization-migration.ts", "scripts/run-price-insights-indexes.ts", "scripts/run-unit-types-spec-variations-migration.ts", "scripts/run-wizard-optimization-migration.ts", "scripts/run-wizard-v2-migration.ts", "setup-explore-feed.ps1", "verify-explore-feed.ts"],
+      "deferred schema executor": ["add-missing-columns.ts", "apply-hotfix.ts", "apply-schema.ts", "fix_developments_schema.ts", "fix_locations_schema.ts", "generate-hash.ts", "init-db.ts", "migrate-schema.ts", "migrations/setup-database.ps1", "scripts/add-developer-columns.ts", "scripts/add-location-id-column.ts", "scripts/add-missing-developer-columns.ts", "scripts/add-portfolio-columns.ts", "scripts/add-portfolio-defaults.ts", "scripts/add-remaining-columns.ts", "scripts/add-remaining-unit-types-columns.ts", "scripts/add-unit-stock-columns.ts", "scripts/apply-indexes.ts", "scripts/apply-pricing-migration.ts", "scripts/apply-wizard-migration.ts", "scripts/create-development-phases-table.ts", "scripts/create-listings-tables.ts", "scripts/debug-create-development.ts", "scripts/debug_schema.ts", "scripts/diagnose-location-pages.ts", "scripts/fix-brand-ownership-schema.ts", "scripts/fix-location-pages.ts", "scripts/fix-locations-code.ts", "scripts/fix-provinces-schema.ts", "scripts/fix_listings_column.ts", "scripts/fix_schema_drift.ts", "scripts/integrate-subscription-system.ts", "scripts/local-db.sh", "scripts/localDbWorkflow.ts", "scripts/manual_migration_listings.ts", "scripts/reproduce_listing_500.ts", "scripts/run-activities-migration.ts", "scripts/run-agents-migration.ts", "scripts/run-developer-migration-step-by-step.ts", "scripts/run-developer-migration.ts", "scripts/run-google-places-migration.ts", "scripts/run-kpi-caching-migration.ts", "scripts/run-listing-performance-e2e.ts", "scripts/run-migration.ts", "scripts/run-notifications-migration.ts", "scripts/run-property-results-optimization-migration.ts", "scripts/run-prospect-journey-e2e.ts", "scripts/run-tidb-explore-migration.ts", "server/scripts/apply-approval-schema.ts", "server/scripts/create-local-db.ts", "server/scripts/debug-schema.ts", "server/scripts/verify-fast-track.ts", "verify-developer-user.ts"],
+      "controlled data repair": ["cleanup-production-data.ts", "execute-cleanup.ts", "scripts/bootstrap-essential-cities.ts", "scripts/migrate-hero-campaigns.ts", "scripts/migrate-locations.ts", "scripts/quick-subscription-integration.ts", "scripts/seed-location-data.ts", "scripts/seed-provinces-only.ts"],
+      "verification or diagnostic": ["scripts/db-contract-verify.ts", "scripts/investigate_schema.ts", "scripts/schema-sanity-check.mjs", "scripts/show-create-table.ts", "scripts/show-create-unit-types.ts", "scripts/verify-prospect-journey-security.ts", "scripts/verify-schema.ts"],
+      "test-only": ["scripts/__tests__/localDbWorkflow.test.ts"]
+    },
+    "approvedMigrationVerification": [
+      "scripts/db-contract-verify.ts",
+      "scripts/db-verify-distribution-schema.ts",
+      "scripts/schema-sanity-check.mjs"
+    ],
+    "approvedLocalTestInitialization": [
+      "server/scripts/localDemoSeed.ts",
+      "server/scripts/verifyLocalDemoSeed.ts",
+      "docker/mysql-local/init/01-create-local-databases.sql",
+      "server/scripts/sanity_test_seed_cleanup.sql"
+    ],
+    "approvedReadOnlyDiagnostics": [
+      "scripts/print-db-target.ts",
+      "scripts/check-db-schema.ts",
+      "scripts/check-db-status.ts",
+      "scripts/check-schema.ts",
+      "scripts/quick-db-check.ts"
+    ],
+    "controlledDataRepairUtilities": [
+      "cleanup-production-data.ts",
+      "execute-cleanup.ts",
+      "scripts/bootstrap-essential-cities.ts",
+      "scripts/cleanup-brand-profiles.ts",
+      "scripts/cleanup_duplicates.ts",
+      "scripts/clean-developer-test-data.ts",
+      "scripts/fix-approval-status.ts",
+      "scripts/fix-published-at.ts",
+      "scripts/migrate-hero-campaigns.ts",
+      "scripts/migrate-locations.ts",
+      "scripts/quick-subscription-integration.ts",
+      "scripts/repair_listing_placeid.ts",
+      "scripts/seed-location-data.ts",
+      "scripts/seed-provinces-only.ts",
+      "server/scripts/fix-unit-data.ts",
+      "server/scripts/repair-property-media-mirrors.ts"
+    ],
+    "localTestSeedOrFixtureUtilities": [
+      "scripts/seed-provinces.ts",
+      "scripts/seed-platform-brands.ts",
+      "server/scripts/seed-local-users.ts",
+      "server/scripts/seed-prod-super-admin.ts",
+      "server/scripts/seed-rich-development-content.ts",
+      "server/scripts/seedDemoDevelopments.ts",
+      "server/scripts/seed_super_admin.ts"
+    ],
+    "historicalEvidenceOnly": [
+      "server/scripts/init-local-db.sql",
+      "server/routes/SELECT id, name, userId.sql",
+      "backups/cleanup-backup-2026-01-29T20-02-35-220Z.sql"
+    ],
+    "deferredGap3Utilities": [
+      "scripts/diagnose-location-pages.ts",
+      "scripts/fix-location-pages.ts",
+      "scripts/local-db.sh",
+      "scripts/localDbWorkflow.ts",
+      "scripts/run-developer-migration.ts",
+      "scripts/run-developer-migration-step-by-step.ts",
+      "scripts/manual_migration_listings.ts"
+    ],
+    "prohibitedManualSchemaExecutors": [
+      "scripts/apply-financial-migration.ts",
+      "scripts/apply-unit-types-migration.ts",
+      "scripts/fix_snapshot.js",
+      "scripts/push-schema-with-fk-disabled.ts",
+      "scripts/run-development-location-migration.ts",
+      "scripts/run-development-wizard-migration.ts",
+      "scripts/run-enhanced-unit-types-migration.ts",
+      "scripts/run-google-places-monitoring-migration.ts",
+      "scripts/run-location-performance-migration.ts",
+      "scripts/run-manual-migration.ts",
+      "scripts/run-mission-control-phase1-migrations.ts",
+      "scripts/run-phase-optimization-migration.ts",
+      "scripts/run-price-insights-indexes.ts",
+      "scripts/run-unit-types-spec-variations-migration.ts",
+      "scripts/run-wizard-optimization-migration.ts",
+      "scripts/run-wizard-v2-migration.ts",
+      "setup-explore-feed.ps1",
+      "verify-explore-feed.ts"
+    ],
+    "retiredPaths": [
+      "scripts/apply-financial-migration.ts",
+      "scripts/apply-unit-types-migration.ts",
+      "scripts/fix_snapshot.js",
+      "scripts/push-schema-with-fk-disabled.ts",
+      "scripts/run-development-location-migration.ts",
+      "scripts/run-development-wizard-migration.ts",
+      "scripts/run-enhanced-unit-types-migration.ts",
+      "scripts/run-google-places-monitoring-migration.ts",
+      "scripts/run-location-performance-migration.ts",
+      "scripts/run-manual-migration.ts",
+      "scripts/run-mission-control-phase1-migrations.ts",
+      "scripts/run-phase-optimization-migration.ts",
+      "scripts/run-price-insights-indexes.ts",
+      "scripts/run-unit-types-spec-variations-migration.ts",
+      "scripts/run-wizard-optimization-migration.ts",
+      "scripts/run-wizard-v2-migration.ts",
+      "setup-explore-feed.ps1",
+      "verify-explore-feed.ts"
+    ],
+    "manualUtilityDocumentation": [
+      { "path": "README.md", "disposition": "corrected" },
+      { "path": "DATABASE_MANAGEMENT_OPTIONS.md", "disposition": "superseded" },
+      { "path": "DATABASE_SETUP_GUIDE.md", "disposition": "superseded" },
+      { "path": "DEVELOPMENT_SUBMISSION_GUIDE.md", "disposition": "superseded" },
+      { "path": "DEVELOPMENT_WIZARD_SCHEMA_COMPLETE.md", "disposition": "superseded" },
+      { "path": "EXPLORE_DISCOVERY_MIGRATION_GUIDE.md", "disposition": "superseded" },
+      { "path": "EXPLORE_PAGE_ERRORS_FIX.md", "disposition": "superseded" },
+      { "path": "FIX_NOW.md", "disposition": "superseded" },
+      { "path": "LOCATION_PAGES_IMPLEMENTATION_ROADMAP.md", "disposition": "superseded" },
+      { "path": "PHASE10_IMPLEMENTATION_GUIDE.md", "disposition": "superseded" },
+      { "path": "PHASE3_4_IMPLEMENTATION_GUIDE.md", "disposition": "superseded" },
+      { "path": "PHASE5_LOCATION_INTELLIGENCE_GUIDE.md", "disposition": "superseded" },
+      { "path": "PHASE8_ADVANCED_LOCATION_INTELLIGENCE_GUIDE.md", "disposition": "superseded" },
+      { "path": "QUICK_FIX_RAILWAY.md", "disposition": "superseded" },
+      { "path": "RAILWAY_FIX_EXPLORE_TABLES.md", "disposition": "superseded" },
+      { "path": "RUN_RAILWAY_MIGRATION_NOW.md", "disposition": "superseded" },
+      { "path": "RUN_TIDB_MIGRATION_NOW.md", "disposition": "superseded" },
+      { "path": "SUBSCRIPTION_MODULE_DELIVERABLE.md", "disposition": "superseded" },
+      { "path": "SUBSCRIPTION_SYSTEM_COMPLETE.md", "disposition": "superseded" },
+      { "path": "TESTING_EXPLORE_FEED.md", "disposition": "superseded" },
+      { "path": "TASK_1_DATABASE_SCHEMA_COMPLETE.md", "disposition": "superseded" },
+      { "path": "UNIT_TYPES_IMPLEMENTATION_COMPLETE.md", "disposition": "superseded" }
+    ],
+    "historicalDocumentationRoots": [".kiro/**"],
+    "historicalDocumentationFiles": ["COMPLETE_DELIVERY_SUMMARY.md", "EXPLORE_QUICK_REFERENCE.md", "EXPLORE_UPLOAD_READY.md", "FINAL_CHECKLIST.md", "IMPLEMENTATION_STATUS.md", "UNIT_TYPES_DELIVERY_SUMMARY.md", "UNIT_TYPES_INTEGRATION_GUIDE.md", "database-migration-tree-authority-audit-s3b2.md", "database-migration-tree-semantic-reconciliation-s3b2.md"],
+    "implementationAuditDocumentationFiles": ["docs/database-authority/dba-s3c2-manual-utility-containment-implementation-report.md"]
   },
   "classifications": [
     {
