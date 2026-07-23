@@ -23,3 +23,22 @@ runner executes only top-level `.sql` files in this directory.
 
 Future schema changes must be introduced as new top-level incremental SQL
 migrations generated from the accepted canonical model authority.
+
+## Operational command authority
+
+`pnpm db:migrate` is the only approved production migration command. It checks
+the database target, runs this directory through `runSqlMigrations.ts`, then
+performs the distribution schema verification. `pnpm db:migrate:test` is the
+CI/test-database wrapper for the same runner; `pnpm db:migrate:local` is the
+local-development wrapper for the same runner.
+
+Migration execution is a release operation, not application startup work. Run
+`pnpm release:predeploy:production` before a production deployment; hosted and
+normal server startup use `pnpm start:prod` and must not create, alter, repair,
+or migrate schema.
+
+The runner scans only top-level `NNNN_name.sql` files in this directory. Files
+are ordered by numeric prefix and then complete filename. `_archived/` is never
+scanned. `sql_migration_history` records the complete filename and SHA-256
+checksum after successful execution; changed historical migration content is
+rejected.

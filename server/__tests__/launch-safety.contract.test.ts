@@ -20,12 +20,13 @@ describe('launch safety contract', () => {
     expect(appRouter).not.toContain('dev: devRouter, //');
   });
 
-  it('uses the migration-aware production startup command for hosted deploys', () => {
+  it('keeps migration execution outside hosted application startup', () => {
     const railway = readRepoFile('railway.json');
     const packageJson = readRepoFile('package.json');
 
-    expect(railway).toContain('"startCommand": "pnpm start:prod:with-migrations"');
-    expect(packageJson).toContain('"start": "pnpm start:prod:with-migrations"');
+    expect(railway).toContain('"startCommand": "pnpm start:prod"');
+    expect(packageJson).toContain('"start": "pnpm start:prod"');
+    expect(packageJson).not.toContain('start:prod:with-migrations');
   });
 
   it('keeps committed email env examples shell-safe', () => {

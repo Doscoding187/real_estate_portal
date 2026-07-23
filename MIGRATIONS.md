@@ -1,5 +1,11 @@
 # Database Migration Workflow
 
+> **Superseded historical guide — not an operational migration workflow.**
+> Do not run the Drizzle commands below. The only canonical migration authority
+> is [`server/migrations/README.md`](server/migrations/README.md): use
+> `pnpm db:migrate` for controlled production migration, `pnpm db:migrate:test`
+> for CI/test, and `pnpm db:migrate:local` for local development.
+
 ## 🚨 Critical Rules
 
 1. **Production is Read-Only** for schema changes. Never edit tables manually in TiDB.

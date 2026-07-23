@@ -23,7 +23,7 @@ help:
 	@echo ""
 	@echo "Database:"
 	@echo "  make db-shell     - Open MySQL CLI"
-	@echo "  make db-migrate   - Run Drizzle migrations"
+	@echo "  make db-migrate   - Run canonical local SQL migrations"
 	@echo "  make db-seed      - Seed database"
 	@echo ""
 	@echo "Development:"
@@ -65,7 +65,7 @@ db-shell:
 	@docker exec -it propertylistify-mysql mysql -upropertylistify -ppropertylistify propertylistify_dev
 
 db-migrate:
-	@pnpm drizzle-kit push
+	@pnpm db:migrate:local
 	@echo "📦 Database migrated"
 
 db-seed:
