@@ -2,13 +2,13 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Approved AAE-S0 governing baseline |
+| Status | Approved AAE-S0 strategic baseline with approved AAE-S1A evidence extension |
 | Scope | Commercial value proposition, public messaging, stakeholder acquisition, commercial journeys, offers, proof, onboarding and future content authority |
 | Owner | Founder — Edward Banda, with product, commercial, marketing, legal/compliance and engineering governance |
 | Implementation status | Public implementation is not authorised |
 | Pricing status | Unresolved; no pricing model is approved by this authority |
 | CMS status | A database-backed CMS is not authorised |
-| Next authorised phase | AAE-S1 — Commercial Proposition Architecture |
+| Next authorised phase | AAE-S1B — Master and Audience Proposition Architecture, with approved evidence boundaries |
 
 ## Read this first
 
@@ -19,6 +19,12 @@ This index is the entry point for the Property Listify Commercial Value Proposit
 1. [00 — AAE-S0 Final Strategic Audit and Product Direction](00-aae-s0-final-strategic-audit-and-product-direction.md) is the approved strategic baseline.
 2. [01 — AAE-S0A Market and Competitor Research](01-aae-s0a-market-competitor-research.md) is the original supporting research record.
 3. [02 — AAE-S0A Research Verification and Corrections](02-aae-s0a-research-verification-and-corrections.md) records later factual qualifications and evidence grading. Where 01 and 02 differ on a factual interpretation, 02 governs that interpretation. It does not amend 00 unless an explicit authority amendment says so.
+4. [10 — AAE-S1A Capability and Evidence Authority](10-aae-s1a-capability-and-evidence-authority.md) establishes the approved repository-evidence and commercial-truth boundary; it extends but does not amend AAE-S0.
+5. [11 — AAE-S1A Atomic Capability Evidence Register](11-aae-s1a-capability-evidence-register.md) is the authoritative capability evidence register for future proposition work.
+6. [12 — AAE-S1A Public Claim and Route-Readiness Register](12-aae-s1a-public-claim-contradiction-register.md) records the public-claim and acquisition-route launch blockers.
+7. [13 — AAE-S1A Commercial-Authority Dependency Register](13-aae-s1a-commercial-authority-dependency-map.md) records plans, entitlements, subscriptions, trials and offer-authority conflicts without selecting a canonical authority.
+8. [14 — AAE-S1A Proof and Testimonial Evidence Register](14-aae-s1a-proof-and-testimonial-evidence-inventory.md) governs the evidence, consent and freshness boundary for proof assets.
+9. [15 — AAE-S1A Entry Gate](15-aae-s1a-s1b-entry-gate.md) authorises AAE-S1B only within its stated offline proposition-architecture boundary.
 
 ## Approved baseline
 
@@ -45,7 +51,15 @@ Unresolved:
 - agency product versus agent-volume-tier model;
 - service-provider commercial model;
 - exact developer sales and campaign model; and
-- AAE-S1 capability truth, offer and onboarding contracts.
+- offer, pricing, trial, entitlement and onboarding authority reconciliation.
+
+## Approved AAE-S1A evidence extension
+
+AAE-S1A is approved and extends, but does not amend, the AAE-S0 strategic baseline. Its atomic capability, public-claim contradiction, route-readiness, commercial-dependency and proof registers govern the evidence boundary for future proposition work.
+
+AAE-S1B is authorised only as offline Master and Audience Proposition Architecture. It must cite the AAE-S0 strategic baseline together with relevant S1A atomic IDs and may use delivered evidence or explicitly qualified evidence with its limitations. Exploratory evidence may appear only as clearly labelled future direction.
+
+This authorisation does **not** authorise public copy, public routes, pricing, offers, trials, entitlements, commercial availability or implementation. AAE-S1C and AAE-S2 require separate authorisation.
 
 ## Mandatory review rule
 
