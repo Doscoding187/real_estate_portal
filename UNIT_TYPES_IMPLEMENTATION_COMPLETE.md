@@ -1,5 +1,7 @@
-# Unit Types & Configurations - Implementation Complete ✅
+> **Superseded database-execution guidance.** Any SQL, direct Railway operation, legacy migration, or manual setup named below is historical only and must not be run. Current schema changes use [server/migrations/README.md](server/migrations/README.md) and the canonical `pnpm db:migrate` command graph. Data repair requires separate approved environment and operating controls.
 
+
+# Unit Types & Configurations - Implementation Complete ✅
 ## Overview
 
 Successfully implemented a comprehensive Unit Types & Configurations step for the Developer Listing Wizard, following the exact specifications provided. The implementation uses a clean 4-tab modal approach with specification inheritance, media management, and upgrade packs.

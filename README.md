@@ -123,18 +123,14 @@ pnpm install
 2. **Database Setup**
 
 ```bash
-# Create database
-mysql -u root -p
-CREATE DATABASE real_estate_portal;
-
-# Run migrations in order
-mysql -u root -p real_estate_portal < migrations/create-base-schema.sql
-mysql -u root -p real_estate_portal < migrations/create-core-tables.sql
-mysql -u root -p real_estate_portal < migrations/create-agencies-table.sql
-mysql -u root -p real_estate_portal < migrations/create-invitations-table.sql
-mysql -u root -p real_estate_portal < migrations/create-agent-dashboard-tables.sql
-mysql -u root -p real_estate_portal < migrations/create-prospect-tables.sql
+# Apply the canonical local migration workflow
+pnpm db:migrate:local
 ```
+
+Do not apply files under root `migrations/`, `drizzle/`, or root SQL directly.
+See [`server/migrations/README.md`](server/migrations/README.md) for production,
+CI/test, and local authority. Data repair and seed operations are separate,
+approved workflows and are not migrations.
 
 3. **Environment Configuration**
 
@@ -154,12 +150,9 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 4. **Seed Data (Optional)**
 
-```bash
-# Run seed scripts
-pnpm ts-node seed-sa-locations.ts
-pnpm ts-node seed-super-admin.sql
-pnpm ts-node seed-plans.ts
-```
+Legacy seed files are not part of schema migration. Use only a separately
+approved local/test seed workflow; do not execute root SQL or manual utilities
+as setup instructions.
 
 5. **Start Development Server**
 

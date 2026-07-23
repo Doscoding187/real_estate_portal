@@ -1,5 +1,7 @@
-# Task 1: Database Schema and Migrations - Complete ✅
+> **Superseded database-execution guidance.** Any SQL, direct Railway operation, legacy migration, or manual setup named below is historical only and must not be run. Current schema changes use [server/migrations/README.md](server/migrations/README.md) and the canonical `pnpm db:migrate` command graph. Data repair requires separate approved environment and operating controls.
 
+
+# Task 1: Database Schema and Migrations - Complete ✅
 ## Summary
 
 Successfully completed Task 1 from the development-wizard-optimization spec. All database schemas and migrations have been created for the 5-step wizard with specification inheritance support.

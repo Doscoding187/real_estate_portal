@@ -1,5 +1,7 @@
-# 🔧 Railway Database Fix - Explore Tables Missing
+> **Superseded database-execution guidance.** Any SQL, direct Railway operation, legacy migration, or manual setup named below is historical only and must not be run. Current schema changes use [server/migrations/README.md](server/migrations/README.md) and the canonical `pnpm db:migrate` command graph. Data repair requires separate approved environment and operating controls.
 
+
+# 🔧 Railway Database Fix - Explore Tables Missing
 ## 🔴 THE PROBLEM
 
 Your app shows this error:
@@ -187,4 +189,3 @@ Make sure you're using the Railway Query tab, not an external MySQL client. Rail
 **Status**: Ready to fix your database!  
 **Time Required**: 5 minutes  
 **Difficulty**: Easy (just copy/paste SQL)
-
