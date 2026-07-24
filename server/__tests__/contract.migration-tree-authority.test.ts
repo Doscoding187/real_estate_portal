@@ -12,6 +12,11 @@ const APPROVED_DIAGNOSTIC_EXECUTABLES = new Set([
   'scripts/schema-sanity-check.mjs',
   'scripts/verify-showings-migration.ts',
 ]);
+const ROLLBACK_PROOF_PATHS = [
+  'scripts/verify-prospect-journey-security.ts',
+  'server/__tests__/integration.agency-deal-engine.test.ts',
+] as const;
+
 const ALLOWED_CLASSIFICATIONS = new Set([
   'canonical active',
   'canonical supporting',
@@ -562,6 +567,16 @@ describe('migration tree authority', () => {
         ).toHaveLength(1);
       }
     }
+    for (const path of ROLLBACK_PROOF_PATHS) {
+      const source = read(path);
+      expect(source, 'Rollback proof must not recreate temporary indexes: ' + path).not.toMatch(
+        /\b(?:CREATE(?:\s+UNIQUE)?\s+INDEX|DROP\s+INDEX)\b/i,
+      );
+      expect(source, 'Retired temporary-index marker returned: ' + path).not.toMatch(
+        /uq_prospect_journey_rollback_identity|deal_atomic_/i,
+      );
+    }
+
     for (const path of manual.controlledDataRepairUtilities) {
       const source = read(path);
       expect(source, `Data repair must not claim migration authority: ${path}`).not.toMatch(

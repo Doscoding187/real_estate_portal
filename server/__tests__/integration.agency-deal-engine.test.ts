@@ -994,11 +994,18 @@ describeWithDb('agency deal engine persisted workflow', () => {
 
     const db = await getDb();
     if (!db) throw new Error('Database not available');
-    const indexName = `deal_atomic_${randomUUID().replace(/-/g, '').slice(0, 18)}`;
-
-    await db.execute(
-      sql.raw(`CREATE UNIQUE INDEX ${indexName} ON agency_transaction_milestones (transaction_id)`),
-    );
+    // Force failure inside the real transaction after generated work is written.
+    // This proves rollback without creating temporary schema objects.
+    const originalTransaction = db.transaction;
+    db.transaction = async (callback: (tx: any) => Promise<unknown>, ...args: any[]) =>
+      originalTransaction.call(
+        db,
+        async (tx: any) => {
+          await callback(tx);
+          throw new Error('Agency deal forced rollback proof.');
+        },
+        ...args,
+      );
 
     try {
       await expect(
@@ -1010,9 +1017,9 @@ describeWithDb('agency deal engine persisted workflow', () => {
           agencySharePercentage: 50,
           transferDutyVatTreatment: 'transfer_duty',
         }),
-      ).rejects.toThrow(/Duplicate entry|agency_transaction_milestones|transaction_id/i);
+      ).rejects.toThrow('Agency deal forced rollback proof.');
     } finally {
-      await db.execute(sql.raw(`DROP INDEX ${indexName} ON agency_transaction_milestones`));
+      db.transaction = originalTransaction;
     }
 
     const [offerAfterFailure] = await db

@@ -145,16 +145,25 @@ async function main() {
     stage = 'rollback claim';
     const rollbackLead = await insertLead('rollback@claim-proof.local', '+27000000004');
     const rollback = await issueProspectActionClaimToken({ db: drizzleDb, leadId: rollbackLead });
-    // This disposable-schema index forces the canonical lead link to fail only
-    // after the token update. It needs no privileged trigger capability.
-    await connection.query('CREATE UNIQUE INDEX uq_prospect_journey_rollback_identity ON leads (prospect_identity_id)');
+    // Force failure inside the existing transaction after its writes.
+    // The wrapper is test-local and avoids granting this verifier schema authority.
+    const originalTransaction = drizzleDb.transaction;
+    drizzleDb.transaction = async (callback: (tx: any) => Promise<unknown>, ...args: any[]) =>
+      originalTransaction.call(
+        drizzleDb,
+        async (tx: any) => {
+          await callback(tx);
+          throw new Error('Prospect Journey forced rollback proof.');
+        },
+        ...args,
+      );
     let rollbackError: unknown;
     try {
       await caller(prospectA.id).claimAction({ token: rollback.token });
     } catch (error) {
       rollbackError = error;
     } finally {
-      await connection.query('DROP INDEX uq_prospect_journey_rollback_identity ON leads');
+      drizzleDb.transaction = originalTransaction;
     }
     assert.ok(rollbackError, 'Rollback fixture must reject the router call.');
     const rollbackMessage = String((rollbackError as Error).message || '');

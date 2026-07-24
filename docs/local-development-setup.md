@@ -274,15 +274,9 @@ The local demo seed is idempotent. It first removes only records it owns:
 - slugs prefixed with `local-demo-`
 - referral external refs prefixed with `LOCAL-DEMO-`
 
-Older seed scripts are available, but only run them against disposable local databases:
+Use only the guarded local and test seed commands documented above. Legacy ad-hoc seed scripts are not approved local setup authority and may delete or mutate unrelated records.
 
-```powershell
-pnpm tsx server/scripts/seed-local-users.ts
-pnpm tsx scripts/seed.ts
-pnpm tsx scripts/seed-location-data.ts
-```
-
-Do not run production seed/reset scripts locally unless you have reviewed the target database first.
+Do not run production seed or reset operations against a local environment unless the database target and operation have been explicitly reviewed.
 
 ## Local Demo Login Details
 
