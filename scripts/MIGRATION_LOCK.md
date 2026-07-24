@@ -23,4 +23,6 @@ This runs the production launch preflight and the canonical `pnpm db:migrate` mi
 
 ## ✅ Verification
 
-Use `scripts/verify-schema.ts` to inspect the live database schema and ensure it matches expectations.
+Use `pnpm db:verify` to compare the target database against the current application schema contract.
+
+See `server/migrations/README.md` for the canonical migration and verification command boundary.

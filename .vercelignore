@@ -15,9 +15,6 @@ drizzle
 test-*.ts
 seed-*.ts
 check-*.ts
-apply-schema.ts
-init-db.ts
-migrate-schema.ts
 fix-schema.ts
 generate-hash.ts
 set-admin.ts

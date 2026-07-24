@@ -1,206 +1,55 @@
 # Location Auto-Population System
 
-## 🎯 Overview
+## Overview
 
-This system automatically creates city and suburb records from Google Places data when agents add properties. No need to manually seed thousands of locations!
+Property Listify resolves location information from Google Places during listing creation. The active listing flow can resolve province, city, and suburb records without requiring operators to run standalone location seed scripts.
 
-## 📋 How It Works
+## Runtime authority
 
-### 1. **Provinces (Manual - One Time)**
-- ✅ 9 South African provinces are seeded once
-- ✅ These are fixed and won't change
+The active implementation is:
 
-### 2. **Cities & Suburbs (Automatic - Dynamic)**
-- ✅ Auto-created when agents add properties
-- ✅ Uses Google Places API data
-- ✅ Prevents duplicates
-- ✅ Keeps location data in sync with actual properties
+- `server/listingRouter.ts` receives the selected Google Places location data.
+- `server/services/locationAutoPopulation.ts` extracts address components and resolves the legacy province, city, and suburb identifiers.
+- `server/services/locationPagesServiceEnhanced.ts` resolves or creates canonical location records and synchronizes the legacy location tables where required.
 
-## 🚀 Setup Instructions
+Manual province or location seed scripts are not part of the approved runtime or migration workflow.
 
-### Step 1: Seed Provinces
+## Required listing input
 
-Run this command once:
+The listing location payload must include:
 
-\`\`\`bash
-pnpm tsx scripts/seed-provinces-only.ts
-\`\`\`
+- a Google Places `placeId`
+- the formatted address
+- latitude and longitude
+- Google Places address components
 
-This creates the 9 SA provinces with slugs for location pages.
+The runtime uses `administrative_area_level_1` for the province, `locality` or `administrative_area_level_2` for the city, and `sublocality` for the suburb.
 
-### Step 2: Integrate Auto-Population
+## Operational behaviour
 
-When a property is created, call the auto-population service. Here's how:
+When a listing is created:
 
-#### In your property creation endpoint (e.g., `propertiesRouter.ts`):
+1. `server/listingRouter.ts` extracts the Google Places components.
+2. The location services look for existing matching records.
+3. Missing canonical location records may be created by the enhanced location service.
+4. The resolved location identifiers are associated with the listing.
 
-\`\`\`typescript
-import { autoCreateLocationHierarchy, extractPlaceComponents } from '../services/locationAutoPopulation';
+## Troubleshooting
 
-// When creating or updating a property:
-createListing: protectedProcedure
-  .input(createPropertySchema)
-  .mutation(async ({ ctx, input }) => {
-    
-    // ... your existing code ...
+### Province is not resolved
 
-    // Auto-create location hierarchy from Google Places data
-    let locationIds = { provinceId: null, cityId: null, suburbId: null };
-    
-    if (input.googlePlaceData) {
-      const components = extractPlaceComponents(input.googlePlaceData.address_components);
-      
-      locationIds = await autoCreateLocationHierarchy({
-        placeId: input.googlePlaceData.place_id,
-        formattedAddress: input.googlePlaceData.formatted_address,
-        latitude: input.latitude,
-        longitude: input.longitude,
-        components
-      });
-    }
+Confirm that the Google Places address components contain `administrative_area_level_1` and review the listing and enhanced-location service logs.
 
-    // Create property with auto-populated location IDs
-    const newProperty = await db.insert(properties).values({
-      ...input,
-      provinceId: locationIds.provinceId,
-      cityId: locationIds.cityId,
-      suburbId: locationIds.suburbId,
-      // ... other fields
-    });
+### City or suburb is not resolved
 
-    return newProperty;
-  });
-\`\`\`
+Confirm that the payload contains `locality`, `administrative_area_level_2`, or `sublocality` as applicable.
 
-###  Step 3: Update Your Frontend
+### Duplicate locations appear
 
-Make sure the listing wizard captures Google Places data:
+The services check existing names and hierarchy relationships before creating records. Investigate normalization or parent-location mismatches rather than running repair or seed scripts.
 
-#### In `LocationStep.tsx` or similar:
+## Verification
 
-\`\`\`typescript
-// When user selects a location from Google Places:
-const handleLocationSelect = (place: google.maps.places.PlaceResult) => {
-  onUpdate({
-    address: place.formatted_address,
-    latitude: place.geometry?.location?.lat(),
-    longitude: place.geometry?.location?.lng(),
-    // 👇 Add this - capture full Google Places data
-    googlePlaceData: {
-      place_id: place.place_id,
-      formatted_address: place.formatted_address,
-      address_components: place.address_components,
-      // ... other relevant fields
-    }
-  });
-};
-\`\`\`
+Create a listing using a valid Google Places selection and verify the resolved province, city, and suburb through the normal listing flow.
 
-## 🔄 How It Works Internally
-
-1. **Agent adds property** → Selects location from Google Places autocomplete
-2. **Frontend captures** → Full Google Places data (not just address)
-3. **Backend receives** → Property creation request with Google Places data
-4. **Auto-population service**:
-   - Extracts: Province, City, Suburb from `address_components`
-   - Checks if city exists → Creates if not
-   - Checks if suburb exists → Creates if not
-   - Returns IDs for linking to property
-5. **Property saved** → Linked to auto-created locations
-6. **Location pages work** → `/gauteng/johannesburg` now has data!
-
-## 📊 Benefits
-
-✅ **No manual seeding** - Locations create themselves
-✅ **Always accurate** - Data comes from Google Places
-✅ **No duplicates** - Checks before creating
-✅ **Scalable** - Works for any location in South Africa
-✅ **SEO-friendly** - Automatic slugs for URL paths
-✅ **Low maintenance** - Set it and forget it
-
-## 🧪 Testing
-
-After setup, test by:
-
-1. Creating a property in Sandton, Johannesburg
-2. Check database: `SELECT * FROM cities WHERE name = 'Johannesburg'`
-3. Check database: `SELECT * FROM suburbs WHERE name = 'Sandton'`
-4. Visit: `http://localhost:3001/gauteng/johannesburg`
-5. Should see the city page with your property!
-
-## 📝 Database Schema
-
-The auto-population service creates records in these tables:
-
-### Cities
-\`\`\`sql
-CREATE TABLE cities (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  provinceId INT NOT NULL,
-  name VARCHAR(150) NOT NULL,
-  slug VARCHAR(100),  -- Auto-generated (e.g., 'johannesburg')
-  latitude VARCHAR(20),
-  longitude VARCHAR(21),
-  isMetro INT DEFAULT 0,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-\`\`\`
-
-### Suburbs
-\`\`\`sql
-CREATE TABLE suburbs (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  cityId INT NOT NULL,
-  name VARCHAR(200) NOT NULL,
-  slug VARCHAR(100),  -- Auto-generated (e.g., 'sandton')
-  latitude VARCHAR(20),
-  longitude VARCHAR(21),
-  postalCode VARCHAR(10),
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-\`\`\`
-
-## 🔍 Monitoring
-
-Check auto-creation logs in your server console:
-
-\`\`\`
-[AutoLocation] Processing: 123 Main St, Sandton, Johannesburg, 2196
-[AutoLocation] Looking for province: Gauteng
-[AutoLocation] Province found: Gauteng (id: 3)
-[AutoLocation] Looking for city: Johannesburg
-[AutoLocation] City found: Johannesburg (id: 15)
-[AutoLocation] Looking for suburb: Sandton
-[AutoLocation] Auto-creating suburb: Sandton
-[AutoLocation] ✅ Suburb created: Sandton (id: 42)
-\`\`\`
-
-## 🛠️ Troubleshooting
-
-### Issue: Cities not being created
-**Solution**: Check that `input.googlePlaceData.address_components` contains `locality` type
-
-### Issue: Wrong province detected
-**Solution**: Ensure provinces are seeded first with correct names matching Google Places
-
-### Issue: Duplicate cities
-**Solution**: The service checks for existing cities by name (case-insensitive)
-
-## 📚 Files Created
-
-1. \`scripts/seed-provinces-only.ts\` - One-time province seeding
-2. \`server/services/locationAutoPopulation.ts\` - Auto-creation logic
-3. \`LOCATION_AUTO_POPULATION_GUIDE.md\` - This guide
-
-## ✅ Next Steps
-
-1. Run: `pnpm tsx scripts/seed-provinces-only.ts`
-2. Integrate auto-population into your property creation flow
-3. Test by creating a property
-4. Visit location pages to see them populate!
-
----
-
-💡 **Pro Tip**: The more properties agents add, the more comprehensive your location pages become. It's a self-improving system!
+Database schema changes must use the canonical commands documented in `server/migrations/README.md`. Do not use standalone location scripts as migration or schema authority.
