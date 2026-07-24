@@ -144,7 +144,7 @@
       { "path": "UNIT_TYPES_IMPLEMENTATION_COMPLETE.md", "disposition": "superseded" }
     ],
     "historicalDocumentationRoots": [".kiro/**"],
-    "historicalDocumentationFiles": ["COMPLETE_DELIVERY_SUMMARY.md", "EXPLORE_QUICK_REFERENCE.md", "EXPLORE_UPLOAD_READY.md", "FINAL_CHECKLIST.md", "IMPLEMENTATION_STATUS.md", "UNIT_TYPES_DELIVERY_SUMMARY.md", "UNIT_TYPES_INTEGRATION_GUIDE.md", "database-migration-tree-authority-audit-s3b2.md", "database-migration-tree-semantic-reconciliation-s3b2.md"],
+    "historicalDocumentationFiles": ["COMPLETE_DELIVERY_SUMMARY.md", "EXPLORE_QUICK_REFERENCE.md", "EXPLORE_UPLOAD_READY.md", "FINAL_CHECKLIST.md", "IMPLEMENTATION_STATUS.md", "UNIT_TYPES_DELIVERY_SUMMARY.md", "UNIT_TYPES_INTEGRATION_GUIDE.md", "database-gap-3-disposition-and-implementation-plan-s3c1.md", "database-manual-utility-authority-audit-s3c1.md", "database-migration-tree-authority-audit-s3b2.md", "database-migration-tree-semantic-reconciliation-s3b2.md", "database-temporary-legacy-sql-reconciliation-s3c1.md"],
     "implementationAuditDocumentationFiles": ["docs/database-authority/dba-s3c2-manual-utility-containment-implementation-report.md"]
   },
   "classifications": [

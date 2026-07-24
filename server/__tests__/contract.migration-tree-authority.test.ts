@@ -230,17 +230,10 @@ function isManualSchemaExecutorCandidate(path: string, source: string): boolean 
 }
 
 function manualDocumentationDirectives(source: string, retiredPaths: string[]): string[] {
-  const leadingBoundary = source.split('\n').slice(0, 12).join('\n');
-  if (
-    /\b(?:do not|not operational|never|superseded|historical|prohibited)\b/i.test(leadingBoundary)
-  ) {
-    return [];
-  }
   return source.split('\n').flatMap(line => {
     const isCurrentLooking = /\b(?:run|use|execute|apply|approved|command|setup)\b/i.test(line);
-    const isClearlyHistorical =
-      /\b(?:do not|not operational|never|superseded|historical|prohibited)\b/i.test(line);
-    if (!isCurrentLooking || isClearlyHistorical) return [];
+    const isExplicitlyProhibited = /\b(?:do not|not operational|never|prohibited)\b/i.test(line);
+    if (!isCurrentLooking || isExplicitlyProhibited) return [];
     return retiredPaths.filter(path => line.includes(path));
   });
 }
@@ -383,6 +376,37 @@ describe('migration tree authority', () => {
   it('contains manual schema executors and keeps diagnostics outside migration authority', () => {
     const manifest = readManifest();
     const manual = manifest.manualUtilityAuthority;
+    const retiredDocumentationExample = 'scripts/apply-financial-migration.ts';
+
+    expect(
+      manualDocumentationDirectives(
+        [
+          '# Prior note',
+          '',
+          'This historical note records a former process.',
+          '',
+          `Run \`${retiredDocumentationExample}\` before continuing.`,
+        ].join('\n'),
+        [retiredDocumentationExample],
+      ),
+      'A document-level historical claim must not exempt a later operational command',
+    ).toEqual([retiredDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `Historical command: run \`${retiredDocumentationExample}\` before continuing.`,
+        [retiredDocumentationExample],
+      ),
+      'A command line must not self-exempt merely by saying historical',
+    ).toEqual([retiredDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `Do not run \`${retiredDocumentationExample}\`; it is prohibited.`,
+        [retiredDocumentationExample],
+      ),
+      'An explicit prohibition must not be treated as an operational instruction',
+    ).toEqual([]);
     const paths = workingTreePaths();
     const classified = manualUtilityGroups(manual);
     const approved = classified.flatMap(([, entries]) => entries);
