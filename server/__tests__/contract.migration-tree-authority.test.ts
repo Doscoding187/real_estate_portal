@@ -229,12 +229,53 @@ function isManualSchemaExecutorCandidate(path: string, source: string): boolean 
   return signals.some(signal => /drizzle|\.sql|\b(?:CREATE|ALTER|DROP)\b/i.test(signal));
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isExplicitlyProhibitedReference(line: string, retiredPath: string): boolean {
+  const escapedPath = escapeRegex(retiredPath);
+  const prohibitionBeforePath = new RegExp(
+    `\\b(?:do\\s+not|never)\\s+(?:run|use|execute|apply|setup)\\s+(?:the\\s+)?(?:retired\\s+)?(?:utility\\s+)?[\\\`'"]?${escapedPath}\\b`,
+    'i',
+  );
+  const prohibitionAfterPath = new RegExp(
+    `\\b${escapedPath}\\b[^.\\n]{0,120}\\b(?:not\\s+operational|prohibited)\\b`,
+    'i',
+  );
+
+  return prohibitionBeforePath.test(line) || prohibitionAfterPath.test(line);
+}
+
+function hasAffirmativeInstructionReference(line: string, retiredPath: string): boolean {
+  const escapedPath = escapeRegex(retiredPath);
+  const actionPattern = new RegExp(
+    `\\b(?:run|use|execute|apply|setup)\\b[^.;\\n]{0,120}\\b${escapedPath}\\b`,
+    'gi',
+  );
+  const anaphoricActionAfterReference = new RegExp(
+    `\\b${escapedPath}\\b[^.\\n]{0,120}[;,]\\s*(?:but\\s+|instead\\s+|however\\s+)?(?:run|use|execute|apply|setup)\\s+(?:it|this|that)\\b`,
+    'i',
+  );
+
+  for (const match of line.matchAll(actionPattern)) {
+    const prefix = line.slice(0, match.index);
+    if (!/\b(?:do\s+not|never)\s*$/i.test(prefix)) return true;
+  }
+
+  return anaphoricActionAfterReference.test(line);
+}
+
 function manualDocumentationDirectives(source: string, retiredPaths: string[]): string[] {
   return source.split('\n').flatMap(line => {
     const isCurrentLooking = /\b(?:run|use|execute|apply|approved|command|setup)\b/i.test(line);
-    const isExplicitlyProhibited = /\b(?:do not|not operational|never|prohibited)\b/i.test(line);
-    if (!isCurrentLooking || isExplicitlyProhibited) return [];
-    return retiredPaths.filter(path => line.includes(path));
+    if (!isCurrentLooking) return [];
+    return retiredPaths.filter(
+      retiredPath =>
+        line.includes(retiredPath) &&
+        (hasAffirmativeInstructionReference(line, retiredPath) ||
+          !isExplicitlyProhibitedReference(line, retiredPath)),
+    );
   });
 }
 
@@ -377,6 +418,7 @@ describe('migration tree authority', () => {
     const manifest = readManifest();
     const manual = manifest.manualUtilityAuthority;
     const retiredDocumentationExample = 'scripts/apply-financial-migration.ts';
+    const retiredUnitTypesDocumentationExample = 'scripts/apply-unit-types-migration.ts';
 
     expect(
       manualDocumentationDirectives(
@@ -407,6 +449,69 @@ describe('migration tree authority', () => {
       ),
       'An explicit prohibition must not be treated as an operational instruction',
     ).toEqual([]);
+
+    expect(
+      manualDocumentationDirectives(
+        `Do not use db:push; instead run ${retiredDocumentationExample}`,
+        [retiredDocumentationExample],
+      ),
+      'A prohibition for another command must not exempt a retired utility instruction',
+    ).toEqual([retiredDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `Do not run ${retiredDocumentationExample}; instead run ${retiredUnitTypesDocumentationExample}`,
+        [retiredDocumentationExample, retiredUnitTypesDocumentationExample],
+      ),
+      'Only the retired utility directly prohibited by a warning may be exempted',
+    ).toEqual([retiredUnitTypesDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `${retiredDocumentationExample} is prohibited and must never be executed.`,
+        [retiredDocumentationExample],
+      ),
+      'A post-path prohibition must not be treated as an operational instruction',
+    ).toEqual([]);
+
+    expect(
+      manualDocumentationDirectives(`Run ${retiredDocumentationExample}; it is prohibited.`, [
+        retiredDocumentationExample,
+      ]),
+      'An affirmative instruction must not be suppressed by a later prohibition clause',
+    ).toEqual([retiredDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `${retiredDocumentationExample} is prohibited; run it anyway.`,
+        [retiredDocumentationExample],
+      ),
+      'A post-path prohibition must not suppress a later affirmative instruction',
+    ).toEqual([retiredDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `${retiredDocumentationExample} is prohibited; use ${retiredUnitTypesDocumentationExample} instead.`,
+        [retiredDocumentationExample, retiredUnitTypesDocumentationExample],
+      ),
+      'A path-specific prohibition must not suppress another retired utility instruction',
+    ).toEqual([retiredUnitTypesDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `Never execute ${retiredDocumentationExample}; use ${retiredDocumentationExample} to apply the migration.`,
+        [retiredDocumentationExample],
+      ),
+      'A later instruction must override an earlier prohibition for the same retired path',
+    ).toEqual([retiredDocumentationExample]);
+
+    expect(
+      manualDocumentationDirectives(
+        `Do not run ${retiredDocumentationExample}, but run ${retiredDocumentationExample} if the migration fails.`,
+        [retiredDocumentationExample],
+      ),
+      'A contradictory instruction must fail closed for the same retired path',
+    ).toEqual([retiredDocumentationExample]);
     const paths = workingTreePaths();
     const classified = manualUtilityGroups(manual);
     const approved = classified.flatMap(([, entries]) => entries);
