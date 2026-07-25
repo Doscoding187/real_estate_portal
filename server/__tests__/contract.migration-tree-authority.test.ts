@@ -10,7 +10,6 @@ const CANONICAL_SQL = 'server/migrations/0000_canonical_launch_baseline.sql';
 const APPROVED_DIAGNOSTIC_EXECUTABLES = new Set([
   'scripts/db-verify-distribution-schema.ts',
   'scripts/schema-sanity-check.mjs',
-  'scripts/verify-showings-migration.ts',
 ]);
 const ROLLBACK_PROOF_PATHS = [
   'scripts/verify-prospect-journey-security.ts',

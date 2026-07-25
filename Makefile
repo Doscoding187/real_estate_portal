@@ -24,7 +24,7 @@ help:
 	@echo "Database:"
 	@echo "  make db-shell     - Open MySQL CLI"
 	@echo "  make db-migrate   - Run canonical local SQL migrations"
-	@echo "  make db-seed      - Seed database"
+	@echo "  make db-seed      - Seed the canonical guarded local database"
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev          - Start dev server"
@@ -69,7 +69,7 @@ db-migrate:
 	@echo "📦 Database migrated"
 
 db-seed:
-	@pnpm tsx scripts/seed.ts
+	@pnpm db:seed:local
 	@echo "🌱 Database seeded"
 
 ## ---------- DEV ----------

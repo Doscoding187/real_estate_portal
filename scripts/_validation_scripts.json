@@ -1,7 +1,0 @@
-{
-  "scripts": {
-    "validate-schema": "tsx scripts/validate-schema-sync.ts",
-    "check-migrations": "drizzle-kit check",
-    "pre-deploy": "npm run validate-schema && npm run check-migrations"
-  }
-}
