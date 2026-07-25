@@ -99,18 +99,26 @@ The retained workflows must:
 
 ## Remaining schema-mutator blocker
 
-`scripts/verify-prospect-journey-security.ts` is still invoked by
-`scripts/run-prospect-journey-e2e.ts` and still contains schema mutation.
+Focused S3C6B1 source and history inspection corrected the initial heuristic
+finding for `scripts/verify-prospect-journey-security.ts`.
 
-It may not remain in its current form.
+The current verifier contains no executed schema DDL. The apparent
+`ALTER TABLE` match is text inside its error-sanitisation regular expression.
+The former temporary `CREATE UNIQUE INDEX` and `DROP INDEX` rollback fixture was
+already removed by commit `ca68e8ca2ac08acbd37e9bc723fcedec00a65cf5`.
 
-The implementation must preserve its security assertions while removing every
-DDL operation. The verifier must consume the canonical migrated disposable E2E
-schema and fail when required schema is absent. It must never create or alter
-that schema itself.
+The verifier does perform fixture DML, but only after enforcing the exact
+`listify_prospect_journey_e2e` database name and a localhost or loopback host.
+It is invoked only through the guarded prospect-journey E2E runner, which
+provisions schema through `server/migrations/runSqlMigrations.ts`.
 
-After correction it may be classified as controlled local/test verification,
-not migration or general diagnostic authority.
+Final S3C6B1 disposition:
+
+- retain as controlled local/test fixture verification;
+- prohibit schema DDL;
+- prohibit production or staging execution;
+- require the exact disposable E2E database;
+- keep it outside supported production diagnostic authority.
 
 ## Unapproved package entrypoints
 
@@ -283,7 +291,7 @@ connect to a database outside the canonical local command graph.
 5. Delete the stale validation registry and validator.
 6. Delete the complete legacy location migration cluster.
 7. Delete the 13 dead/redundant paths.
-8. Remove DDL from `scripts/verify-prospect-journey-security.ts`.
+8. Reclassify `scripts/verify-prospect-journey-security.ts` as a controlled local/test fixture and enforce its no-DDL boundary.
 9. Update authority manifests and contracts.
 10. Add regression checks preventing these entrypoints from returning.
 
