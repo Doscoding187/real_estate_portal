@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:migrate",
     "testCommand": "pnpm db:migrate:test",
@@ -7,6 +7,21 @@
     "runner": "server/migrations/runSqlMigrations.ts",
     "activeSqlDirectory": "server/migrations",
     "ledger": "sql_migration_history"
+  },
+  "supportedDiagnosticAuthority": {
+    "owner": "Database and Release Engineering",
+    "commands": {
+      "pnpm db:verify": "scripts/db-contract-verify.ts",
+      "pnpm db:verify:distribution": "scripts/db-verify-distribution-schema.ts",
+      "pnpm schema:sanity": "scripts/schema-sanity-check.mjs",
+      "pnpm db:target": "scripts/print-db-target.ts"
+    },
+    "connectedVerifiers": ["scripts/db-contract-verify.ts", "scripts/db-verify-distribution-schema.ts"],
+    "offlineDiagnostics": ["scripts/schema-sanity-check.mjs", "scripts/print-db-target.ts"],
+    "runtimeLoader": "server/_core/runtimeBootstrap.ts",
+    "targetGuard": "server/_core/databaseTarget.ts",
+    "contract": "read-only diagnostics with target disclosure and pre-connection target validation",
+    "retiredPaths": ["scripts/check-db-schema.ts", "scripts/check-db-status.ts", "scripts/check-schema.ts", "scripts/quick-db-check.ts"]
   },
   "manualUtilityAuthority": {
     "canonicalMigrationExecutor": "server/migrations/runSqlMigrations.ts",
@@ -32,11 +47,7 @@
       "server/scripts/sanity_test_seed_cleanup.sql"
     ],
     "approvedReadOnlyDiagnostics": [
-      "scripts/print-db-target.ts",
-      "scripts/check-db-schema.ts",
-      "scripts/check-db-status.ts",
-      "scripts/check-schema.ts",
-      "scripts/quick-db-check.ts"
+      "scripts/print-db-target.ts"
     ],
     "controlledDataRepairUtilities": [
       "cleanup-production-data.ts",
