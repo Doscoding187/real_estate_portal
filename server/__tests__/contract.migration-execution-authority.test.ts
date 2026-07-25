@@ -8,11 +8,8 @@ const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'db:migrate',
   'db:migrate:test',
   'db:migrate:local',
-  'db:migrate:fresh:local',
-  'db:migrate:dev',
-  'db:start:local',
+  'db:prepare:local',
   'db:reprovision:local',
-  'db:bootstrap:local',
   'release:predeploy:production',
 ]);
 const APPROVED_TEST_ENTRYPOINTS = new Set([

@@ -5,9 +5,7 @@
 # ============================================================================
 
 APP_NAME=propertylistify
-DOCKER_COMPOSE=docker compose
-
-.PHONY: env docker-up docker-down docker-reset docker-logs db-shell db-migrate db-seed dev dev-full build preview clean help
+.PHONY: env docker-up docker-down db-migrate db-seed dev dev-full build preview clean help
 
 ## ---------- HELP ----------
 help:
@@ -17,12 +15,10 @@ help:
 	@echo ""
 	@echo "Setup:"
 	@echo "  make env          - Create .env.local from example"
-	@echo "  make docker-up    - Start Docker services (MySQL)"
-	@echo "  make docker-down  - Stop Docker services"
-	@echo "  make docker-reset - Reset Docker (wipe DB)"
+	@echo "  make docker-up    - Start canonical local MySQL"
+	@echo "  make docker-down  - Stop canonical local MySQL"
 	@echo ""
 	@echo "Database:"
-	@echo "  make db-shell     - Open MySQL CLI"
 	@echo "  make db-migrate   - Run canonical local SQL migrations"
 	@echo "  make db-seed      - Seed the canonical guarded local database"
 	@echo ""
@@ -40,30 +36,19 @@ help:
 
 ## ---------- ENV ----------
 env:
-	@if not exist .env.local copy .env.example .env.local
+	@test -f .env.local || cp .env.example .env.local
 	@echo "✅ .env.local ready"
 
 ## ---------- DOCKER ----------
 docker-up:
-	@$(DOCKER_COMPOSE) up -d
-	@echo "🐳 Docker services started"
+	@pnpm db:local:start
+	@echo "🐳 Canonical local MySQL started"
 
 docker-down:
-	@$(DOCKER_COMPOSE) down
-	@echo "🛑 Docker services stopped"
-
-docker-reset:
-	@$(DOCKER_COMPOSE) down -v
-	@$(DOCKER_COMPOSE) up -d
-	@echo "♻️ Docker reset complete"
-
-docker-logs:
-	@$(DOCKER_COMPOSE) logs -f
+	@pnpm db:local:stop
+	@echo "🛑 Canonical local MySQL stopped"
 
 ## ---------- DATABASE ----------
-db-shell:
-	@docker exec -it propertylistify-mysql mysql -upropertylistify -ppropertylistify propertylistify_dev
-
 db-migrate:
 	@pnpm db:migrate:local
 	@echo "📦 Database migrated"
@@ -76,7 +61,9 @@ db-seed:
 dev:
 	@pnpm run dev
 
-dev-full: env docker-up dev
+dev-full: env
+	@pnpm db:prepare:local
+	@pnpm run dev
 
 ## ---------- BUILD ----------
 build:
