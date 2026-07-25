@@ -1,8 +1,9 @@
 #!/usr/bin/env tsx
 import mysql from 'mysql2/promise';
+import { assertDatabaseTargetMatchesRuntime } from '../server/_core/databaseTarget';
 import { loadAppRuntimeEnv } from '../server/_core/runtimeBootstrap';
 
-loadAppRuntimeEnv({ cwd: process.cwd() });
+const { runtimeEnv } = loadAppRuntimeEnv({ cwd: process.cwd() });
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -46,6 +47,9 @@ async function main() {
     console.error('[db:verify:distribution] DATABASE_URL is required');
     process.exit(1);
   }
+
+  const target = assertDatabaseTargetMatchesRuntime(DATABASE_URL, runtimeEnv);
+  console.log('[db:verify:distribution] Target:', target.fingerprint);
 
   const connection = await mysql.createConnection(DATABASE_URL);
   const failures: string[] = [];

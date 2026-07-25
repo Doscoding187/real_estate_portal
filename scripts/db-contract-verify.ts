@@ -11,14 +11,15 @@
  */
 
 import mysql from 'mysql2/promise';
-import { config } from 'dotenv';
 import { createHash } from 'crypto';
 import { readFile, readdir } from 'fs/promises';
 import { join } from 'path';
 
+import { assertDatabaseTargetMatchesRuntime } from '../server/_core/databaseTarget';
+import { loadAppRuntimeEnv } from '../server/_core/runtimeBootstrap';
 import { databaseDefaultMatches } from './db-contract-default-normalization.js';
 
-config();
+const { runtimeEnv } = loadAppRuntimeEnv({ cwd: process.cwd() });
 
 // ============================================================================
 // CONFIGURATION
@@ -659,6 +660,9 @@ async function main() {
     process.exit(1);
   }
 
+  const target = assertDatabaseTargetMatchesRuntime(DATABASE_URL, runtimeEnv);
+  if (FORMAT === 'human') console.log('[db:verify] Target:', target.fingerprint);
+
   let connection: mysql.Connection | null = null;
 
   try {
@@ -747,6 +751,7 @@ async function main() {
         JSON.stringify(
           {
             success: failed.length === 0,
+            target: target.fingerprint,
             total: results.length,
             passed: passed.length,
             failed: failed.length,

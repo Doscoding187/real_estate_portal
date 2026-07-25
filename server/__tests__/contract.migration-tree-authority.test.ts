@@ -64,6 +64,17 @@ type ManualUtilityAuthority = {
   implementationAuditDocumentationFiles: string[];
 };
 
+type SupportedDiagnosticAuthority = {
+  owner: string;
+  commands: Record<string, string>;
+  connectedVerifiers: string[];
+  offlineDiagnostics: string[];
+  runtimeLoader: string;
+  targetGuard: string;
+  contract: string;
+  retiredPaths: string[];
+};
+
 type AuthorityManifest = {
   canonicalAuthority: {
     productionCommand: string;
@@ -73,6 +84,7 @@ type AuthorityManifest = {
     activeSqlDirectory: string;
     ledger: string;
   };
+  supportedDiagnosticAuthority: SupportedDiagnosticAuthority;
   classifications: Classification[];
   prohibitedPaths: string[];
   operationalDocumentation: Documentation[];
@@ -621,6 +633,58 @@ describe('migration tree authority', () => {
         manualDocumentationDirectives(read(path), manual.retiredPaths),
         `Current documentation invokes retired utility: ${path}`,
       ).toEqual([]);
+    }
+  });
+
+  it('hardens supported diagnostics and retires unowned duplicates', () => {
+    const manifest = readManifest();
+    const diagnostics = manifest.supportedDiagnosticAuthority;
+    const paths = workingTreePaths();
+    const packageScripts = (
+      JSON.parse(read('package.json')) as {
+        scripts: Record<string, string>;
+      }
+    ).scripts;
+
+    expect(diagnostics.owner).toBe('Database and Release Engineering');
+    expect(diagnostics.commands).toEqual({
+      'pnpm db:verify': 'scripts/db-contract-verify.ts',
+      'pnpm db:verify:distribution': 'scripts/db-verify-distribution-schema.ts',
+      'pnpm schema:sanity': 'scripts/schema-sanity-check.mjs',
+      'pnpm db:target': 'scripts/print-db-target.ts',
+    });
+
+    for (const [command, path] of Object.entries(diagnostics.commands)) {
+      const scriptName = command.replace(/^pnpm /, '');
+      expect(packageScripts[scriptName], `Missing package command: ${command}`).toContain(path);
+      expect(paths, `Missing supported diagnostic: ${path}`).toContain(path);
+    }
+
+    for (const path of diagnostics.connectedVerifiers) {
+      const source = read(path);
+      const guard = source.indexOf('assertDatabaseTargetMatchesRuntime(DATABASE_URL, runtimeEnv)');
+      const connection = source.indexOf('mysql.createConnection(DATABASE_URL)');
+
+      expect(source, `Missing runtime loader: ${path}`).toContain('loadAppRuntimeEnv');
+      expect(guard, `Missing target guard: ${path}`).toBeGreaterThan(-1);
+      expect(connection, `Target guard must run before connection: ${path}`).toBeGreaterThan(guard);
+      expect(source, `Missing target disclosure: ${path}`).toContain('target.fingerprint');
+      expect(source, `Diagnostic became mutating: ${path}`).not.toMatch(
+        /\b(?:CREATE(?:\s+UNIQUE)?\s+(?:TABLE|INDEX)|ALTER\s+TABLE|DROP\s+(?:TABLE|INDEX|DATABASE)|TRUNCATE\s+TABLE|INSERT\s+INTO|DELETE\s+FROM|REPLACE\s+INTO|UPDATE\s+(?:`[^`]+`|[A-Za-z_][\w.]*)\s+SET)\b/i,
+      );
+    }
+
+    for (const path of diagnostics.offlineDiagnostics) {
+      const source = read(path);
+      expect(source, `Offline diagnostic opened a connection: ${path}`).not.toContain(
+        'mysql.createConnection',
+      );
+      expect(source, `Offline diagnostic imported mysql2: ${path}`).not.toContain('mysql2/');
+    }
+
+    for (const path of diagnostics.retiredPaths) {
+      expect(paths, `Retired diagnostic returned: ${path}`).not.toContain(path);
+      expect(manifest.manualUtilityAuthority.approvedReadOnlyDiagnostics).not.toContain(path);
     }
   });
 });

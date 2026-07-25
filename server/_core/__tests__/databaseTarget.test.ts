@@ -24,6 +24,15 @@ describe('databaseTarget', () => {
     });
   });
 
+  it('rejects the production database outside production', () => {
+    expect(() =>
+      assertDatabaseTargetMatchesRuntime(
+        'mysql://user:pass@db.example.com:4000/listify_property_sa',
+        'development',
+      ),
+    ).toThrow(/Refusing to use production database in development/);
+  });
+
   it('rejects mismatched production targets', () => {
     expect(() =>
       assertDatabaseTargetMatchesRuntime(
