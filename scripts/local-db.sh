@@ -4,19 +4,26 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.local-db.yml"
 
-PORT="${LISTIFY_LOCAL_DB_PORT:-3307}"
-HOST="${LISTIFY_LOCAL_DB_HOST:-127.0.0.1}"
-LOCAL_DIR="${LISTIFY_LOCAL_DB_DIR:-/tmp/listify-mysql-3307}"
-DATA_DIR="$LOCAL_DIR/data"
-SOCKET="$LOCAL_DIR/mysql.sock"
-PID_FILE="$LOCAL_DIR/mysqld.pid"
-LOG_FILE="$LOCAL_DIR/mysqld.log"
+readonly PORT=3307
+readonly HOST=127.0.0.1
+readonly LOCAL_DIR=/tmp/listify-mysql-3307
+readonly DATA_DIR="$LOCAL_DIR/data"
+readonly SOCKET="$LOCAL_DIR/mysql.sock"
+readonly PID_FILE="$LOCAL_DIR/mysqld.pid"
+readonly LOG_FILE="$LOCAL_DIR/mysqld.log"
 
-ROOT_PASSWORD="${LISTIFY_LOCAL_DB_ROOT_PASSWORD:-listify_root_password}"
-APP_PASSWORD="${LISTIFY_LOCAL_DB_APP_PASSWORD:-listify_app_password}"
-TEST_PASSWORD="${LISTIFY_LOCAL_DB_TEST_PASSWORD:-listify_test_password}"
-LISTING_PERFORMANCE_E2E_DATABASE="${LISTIFY_LISTING_PERFORMANCE_E2E_DATABASE:-listify_listing_performance_e2e}"
-PROSPECT_JOURNEY_E2E_DATABASE="${LISTIFY_PROSPECT_JOURNEY_E2E_DATABASE:-listify_prospect_journey_e2e}"
+readonly ROOT_PASSWORD=listify_root_password
+readonly APP_PASSWORD=listify_app_password
+readonly TEST_PASSWORD=listify_test_password
+readonly LISTING_PERFORMANCE_E2E_DATABASE=listify_listing_performance_e2e
+readonly PROSPECT_JOURNEY_E2E_DATABASE=listify_prospect_journey_e2e
+
+assert_native_local_directory() {
+  if [ "$LOCAL_DIR" != "/tmp/listify-mysql-3307" ]; then
+    echo "Native local database directory must be exactly /tmp/listify-mysql-3307." >&2
+    exit 1
+  fi
+}
 
 assert_listing_performance_e2e_database() {
   if [ "$LISTING_PERFORMANCE_E2E_DATABASE" != "listify_listing_performance_e2e" ]; then
@@ -122,6 +129,7 @@ SQL
 }
 
 native_initialize_if_needed() {
+  assert_native_local_directory
   mkdir -p "$LOCAL_DIR"
 
   if [ -d "$DATA_DIR/mysql" ]; then
@@ -215,8 +223,9 @@ destroy() {
   if use_docker; then
     compose down -v
   else
+    assert_native_local_directory
     native_stop
-    rm -rf "$LOCAL_DIR"
+    rm -rf -- "$LOCAL_DIR"
   fi
 }
 
@@ -300,10 +309,11 @@ case "${1:-help}" in
     cat <<EOF
 Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop>
 
-Environment overrides:
+Infrastructure mode:
   LISTIFY_LOCAL_DB_MODE=auto|docker|native
-  LISTIFY_LOCAL_DB_PORT=3307
-  LISTIFY_LOCAL_DB_DIR=/tmp/listify-mysql-3307
+
+All hosts, ports, credentials, directories, and database names are pinned to
+the canonical disposable local/test topology.
 EOF
     ;;
 esac

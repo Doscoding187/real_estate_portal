@@ -22,6 +22,8 @@ const ALLOWED_CLASSIFICATIONS = new Set([
   'archived historical',
   'temporary legacy pending Gap 3',
   'approved local/test initialization',
+  'approved local/test lifecycle infrastructure',
+  'approved guarded local orchestration',
   'test/diagnostic fixture',
   'documentation/example',
 ]);
