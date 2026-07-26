@@ -8,14 +8,14 @@ None is owned by a package command, CI workflow, or executable application calle
 
 ## Retired paths
 
-- `generate-hash.ts`
-- `scripts/diagnose-location-pages.ts`
-- `scripts/integrate-subscription-system.ts`
-- `scripts/reproduce_listing_500.ts`
-- `scripts/run-google-places-migration.ts`
-- `scripts/run-property-results-optimization-migration.ts`
-- `scripts/run-tidb-explore-migration.ts`
-- `server/scripts/debug-schema.ts`
+- `generate-hash.ts` is prohibited and must never be executed.
+- `scripts/diagnose-location-pages.ts` is prohibited and must never be executed.
+- `scripts/integrate-subscription-system.ts` is prohibited and must never be executed.
+- `scripts/reproduce_listing_500.ts` is prohibited and must never be executed.
+- `scripts/run-google-places-migration.ts` is prohibited and must never be executed.
+- `scripts/run-property-results-optimization-migration.ts` is prohibited and must never be executed.
+- `scripts/run-tidb-explore-migration.ts` is prohibited and must never be executed.
+- `server/scripts/debug-schema.ts` is prohibited and must never be executed.
 
 All eight paths are terminal, prohibited authorities. They must not be restored or repointed.
 
@@ -24,6 +24,8 @@ All eight paths are terminal, prohibited authorities. They must not be restored 
 The only directly executable SQL migration is:
 
 - `server/migrations/0000_canonical_launch_baseline.sql`
+
+Canonical operational guidance is maintained in `server/migrations/README.md`.
 
 All schema changes must pass through the canonical migration runner and ledger.
 
