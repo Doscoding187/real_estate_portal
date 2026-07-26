@@ -28,7 +28,7 @@ function collectSourceFiles(directory: string): string[] {
 }
 
 function hasLiteralProperty(source: string, property: string): boolean {
-  return new RegExp(`\\b${property}\\s*:\\s*['\"][^'\"\\n]+['\"]`, 'i').test(source);
+  return new RegExp(`\\b${property}\\s*:\\s*['"][^'"\\n]+['"]`, 'i').test(source);
 }
 
 function isDirectDatabaseConnection(source: string): boolean {
