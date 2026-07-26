@@ -1,5 +1,7 @@
 # Explore Feature Implementation Report
 
+> **Historical implementation record.** Do not execute migration commands or utilities described in this report. Current operational migration guidance is `server/migrations/README.md`.
+
 **Submitted by:** Junior Developer  
 **Date:** December 7, 2025  
 **Project:** Real Estate Portal - Explore Feature  
@@ -104,7 +106,7 @@ async function addMissingColumns() {
 
 **Migration Scripts Created:**
 - `scripts/fix-tidb-explore-columns.ts` - Targeted fix (✅ Successfully executed)
-- `scripts/run-tidb-explore-migration.ts` - Full migration
+- Retired TiDB Explore migration utility — removed; do not execute
 - `scripts/test-explore-feature.ts` - Verification script
 
 **Result:** Database schema complete, all API calls working ✅
@@ -649,7 +651,7 @@ Fix Explore feature mutation errors and add TiDB migration scripts
 - `client/src/hooks/useSaveProperty.ts` ✅ FIXED
 - `client/src/hooks/useFollowNeighbourhood.ts` ✅ FIXED
 - `scripts/fix-tidb-explore-columns.ts` ✅ NEW
-- `scripts/run-tidb-explore-migration.ts` ✅ NEW
+- Retired TiDB Explore migration utility — removed
 - `scripts/test-explore-feature.ts` ✅ NEW
 - Multiple documentation files ✅ NEW
 
@@ -815,7 +817,7 @@ server/
 
 scripts/
 ├── fix-tidb-explore-columns.ts     # ✅ Migration script
-├── run-tidb-explore-migration.ts   # Full migration
+├── [retired Explore migration utility]  # Removed; do not execute
 └── test-explore-feature.ts         # Verification script
 ```
 

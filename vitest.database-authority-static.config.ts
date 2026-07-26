@@ -3,7 +3,10 @@ export default {
   test: {
     name: 'database-authority-static',
     environment: 'node',
-    include: ['server/__tests__/contract.database-production-seed-security.test.ts'],
+    include: [
+      'server/__tests__/contract.database-production-seed-security.test.ts',
+      'server/__tests__/contract.database-final-closure-authority.test.ts',
+    ],
     globals: true,
     restoreMocks: true,
     clearMocks: true,
