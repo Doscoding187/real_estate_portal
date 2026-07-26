@@ -65,10 +65,8 @@
       "scripts/seed-provinces.ts",
       "scripts/seed-platform-brands.ts",
       "server/scripts/seed-local-users.ts",
-      "server/scripts/seed-prod-super-admin.ts",
       "server/scripts/seed-rich-development-content.ts",
       "server/scripts/seedDemoDevelopments.ts",
-      "server/scripts/seed_super_admin.ts",
       "scripts/run-listing-performance-e2e.ts",
       "scripts/run-prospect-journey-e2e.ts",
       "scripts/verify-prospect-journey-security.ts"
@@ -266,7 +264,7 @@
     ],
     "historicalDocumentationRoots": [".kiro/**"],
     "historicalDocumentationFiles": ["COMPLETE_DELIVERY_SUMMARY.md", "EXPLORE_QUICK_REFERENCE.md", "EXPLORE_UPLOAD_READY.md", "FINAL_CHECKLIST.md", "IMPLEMENTATION_STATUS.md", "UNIT_TYPES_DELIVERY_SUMMARY.md", "UNIT_TYPES_INTEGRATION_GUIDE.md", "database-gap-3-disposition-and-implementation-plan-s3c1.md", "database-gap-3-slice-2-diagnostics-data-repair-authority-audit-s3c3.md", "database-manual-utility-authority-audit-s3c1.md", "database-migration-tree-authority-audit-s3b2.md", "database-migration-tree-semantic-reconciliation-s3b2.md", "database-temporary-legacy-sql-reconciliation-s3c1.md"],
-    "implementationAuditDocumentationFiles": ["docs/database-authority/dba-s3c2-manual-utility-containment-implementation-report.md", "docs/database-authority/dba-s3c6b2-local-lifecycle-authority-audit-and-consolidation-plan.md"]
+    "implementationAuditDocumentationFiles": ["docs/database-authority/dba-s3c2-manual-utility-containment-implementation-report.md", "docs/database-authority/dba-s3c6b2-local-lifecycle-authority-audit-and-consolidation-plan.md", "docs/database-authority/dba-s3c7-production-seed-security-containment.md"]
   },
   "classifications": [
     {
@@ -530,7 +528,7 @@
       "purpose": "SQL query example, not a migration file."
     }
   ],
-  "prohibitedPaths": ["drizzle_old/**", "server/db/migrations/**", "docker/mysql/init.sql", "docker-compose.yml", "scripts/verify-development-page.ts", "scripts/verify-showings-migration.ts", "scripts/verify-wizard-e2e.ts", "scripts/seed.ts", "scripts/_validation_scripts.json", "scripts/validate-schema-sync.ts", "scripts/run-location-migration.ts", "scripts/extract-legacy-location-data.ts", "scripts/generate-location-slugs.ts", "scripts/sync-locations-table.ts", "scripts/migrate-listings-location-id.ts", "scripts/verify-location-migration.ts", "scripts/debug-create-development.ts", "scripts/debug-db.ts", "scripts/debug_schema.sql", "scripts/manual_schema_verify.sql", "scripts/repro-500.ts", "scripts/test-persistence.ts", "scripts/validate-phase4.ts", "scripts/verify_unit_types_schema.sql", "server/scripts/init-local-db.sql", "server/scripts/simulate-save.ts", "server/scripts/verify-dev-service.ts", "server/scripts/verify_development_flow.ts", "verify_fix.ts"],
+  "prohibitedPaths": ["drizzle_old/**", "server/db/migrations/**", "docker/mysql/init.sql", "docker-compose.yml", "server/scripts/seed-prod-super-admin.ts", "server/scripts/seed_super_admin.ts", "scripts/check_prod_data.ts", "scripts/create-verified-user.ts", "scripts/debug_user_status.ts", "scripts/repro-superadmin-seed.ts", "scripts/verify-development-page.ts", "scripts/verify-showings-migration.ts", "scripts/verify-wizard-e2e.ts", "scripts/seed.ts", "scripts/_validation_scripts.json", "scripts/validate-schema-sync.ts", "scripts/run-location-migration.ts", "scripts/extract-legacy-location-data.ts", "scripts/generate-location-slugs.ts", "scripts/sync-locations-table.ts", "scripts/migrate-listings-location-id.ts", "scripts/verify-location-migration.ts", "scripts/debug-create-development.ts", "scripts/debug-db.ts", "scripts/debug_schema.sql", "scripts/manual_schema_verify.sql", "scripts/repro-500.ts", "scripts/test-persistence.ts", "scripts/validate-phase4.ts", "scripts/verify_unit_types_schema.sql", "server/scripts/init-local-db.sql", "server/scripts/simulate-save.ts", "server/scripts/verify-dev-service.ts", "server/scripts/verify_development_flow.ts", "verify_fix.ts"],
   "operationalDocumentation": [
     {
       "path": "MIGRATION_GUIDE.md",
