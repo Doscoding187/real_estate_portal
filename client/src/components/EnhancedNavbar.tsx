@@ -38,12 +38,13 @@ import { cn } from '@/lib/utils';
  */
 
 type NavigationUser = {
-  email?: string;
-  firstName?: string;
+  email?: string | null;
+  firstName?: string | null;
   hasManagerIdentity?: boolean;
-  lastName?: string;
-  name?: string;
-  role?: string;
+  hasReferrerIdentity?: boolean;
+  lastName?: string | null;
+  name?: string | null;
+  role?: string | null;
 } | null;
 
 type LocationSelection = {
@@ -216,9 +217,14 @@ const rentCityFallbackLinks = FALLBACK_CITY_LINKS.filter(
   .filter((link): link is NonNullable<typeof link> => Boolean(link))
   .map(link => ({ label: `Rent in ${link.label}`, href: link.href }));
 
-function getAccountHref(user: NavigationUser) {
+const REFERRER_PRIORITY_EXCLUSIONS = new Set(['super_admin', 'property_developer', 'agency_admin']);
+
+export function getMainPlatformAccountHref(user: NavigationUser) {
   if (!user) return '/login';
   if (user.hasManagerIdentity) return '/distribution/manager';
+  if (user.hasReferrerIdentity && !REFERRER_PRIORITY_EXCLUSIONS.has(user.role ?? '')) {
+    return '/distribution/partner/overview';
+  }
 
   switch (user.role) {
     case 'super_admin':
@@ -439,7 +445,7 @@ function AccountLink({
   children: ReactNode;
 }) {
   return (
-    <Link href={getAccountHref(user)} onClick={onNavigate} className={className}>
+    <Link href={getMainPlatformAccountHref(user)} onClick={onNavigate} className={className}>
       {children}
     </Link>
   );
@@ -450,7 +456,7 @@ export function EnhancedNavbar() {
   const [, setLocation] = useLocation();
   const [desktopMenuValue, setDesktopMenuValue] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigationUser = user as NavigationUser;
+  const navigationUser: NavigationUser = user;
   const accountLabel = useMemo(() => getAccountLabel(navigationUser), [navigationUser]);
 
   useEffect(() => {

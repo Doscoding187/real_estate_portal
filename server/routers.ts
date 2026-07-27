@@ -33,6 +33,7 @@ import { googleMapsRouter } from './googleMapsRouter';
 import { priceInsightsRouter } from './priceInsightsRouter';
 import { devRouter } from './devRouter';
 import { requireUser } from './_core/requireUser';
+import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -338,6 +339,7 @@ const appRouterConfig = {
       const user = opts.ctx.user;
       if (!user) return null;
       let entitlements: Awaited<ReturnType<typeof getAgentEntitlementsForUserId>> | null = null;
+      let identityFlags = { hasManagerIdentity: false, hasReferrerIdentity: false };
       try {
         entitlements = await getAgentEntitlementsForUserId(user.id);
       } catch (error) {
@@ -345,6 +347,18 @@ const appRouterConfig = {
           userId: user.id,
           code: (error as any)?.code,
           message: (error as any)?.message,
+        });
+      }
+      try {
+        identityFlags = await getActiveDistributionIdentityFlags(user.id);
+      } catch (error) {
+        const identityError = error as { code?: unknown; message?: unknown };
+        // Keep the durable session projection available, but never infer identity access when the
+        // canonical active-identity query is unavailable.
+        console.warn('[Auth.me] Distribution identity projection failed; returning false flags.', {
+          userId: user.id,
+          code: identityError.code,
+          message: identityError.message,
         });
       }
       const currentPlan = entitlements?.currentPlan || null;
@@ -355,6 +369,7 @@ const appRouterConfig = {
       };
       return {
         ...toAuthMeUser(user),
+        ...identityFlags,
         entitlements,
         current_plan: currentPlan,
         trial_status: trialStatus,

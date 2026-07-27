@@ -1,4 +1,11 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+const DESKTOP_NAVIGATION_BREAKPOINT = 1024;
+
+function hasDesktopNavigation(page: Page) {
+  return (page.viewportSize()?.width ?? 0) >= DESKTOP_NAVIGATION_BREAKPOINT;
+}
 
 test.describe('Homepage nav SEO architecture', () => {
   test('primary navigation does not expose placeholder links', async ({ page }) => {
@@ -9,6 +16,10 @@ test.describe('Homepage nav SEO architecture', () => {
   });
 
   test('city navigation uses canonical location SEO pages', async ({ page }) => {
+    test.skip(
+      !hasDesktopNavigation(page),
+      'City mega-menu is intentionally desktop-only below lg.',
+    );
     await page.goto('/');
 
     await page.getByRole('button', { name: 'City' }).click();
@@ -30,6 +41,10 @@ test.describe('Homepage nav SEO architecture', () => {
   });
 
   test('service nav keeps users inside the services engine', async ({ page }) => {
+    test.skip(
+      !hasDesktopNavigation(page),
+      'Services mega-menu is intentionally desktop-only below lg.',
+    );
     await page.goto('/');
     await page.getByRole('button', { name: 'Services' }).click();
 
@@ -47,6 +62,10 @@ test.describe('Homepage nav SEO architecture', () => {
   });
 
   test('insight and guide nav keeps users inside content engines', async ({ page }) => {
+    test.skip(
+      !hasDesktopNavigation(page),
+      'Insights mega-menu is intentionally desktop-only below lg.',
+    );
     await page.goto('/');
     await page.getByRole('button', { name: 'Insights' }).click();
 
@@ -61,6 +80,51 @@ test.describe('Homepage nav SEO architecture', () => {
     for (const href of contentLinks) {
       await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
     }
+  });
+
+  test('explore nav keeps users inside the Explore engine', async ({ page }) => {
+    test.skip(
+      !hasDesktopNavigation(page),
+      'Explore mega-menu is intentionally desktop-only below lg.',
+    );
+    await page.goto('/');
+    await page.getByRole('button', { name: /^Explore/ }).click();
+
+    for (const href of ['/explore/home', '/explore/feed', '/explore/map', '/explore/upload']) {
+      await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
+    }
+  });
+
+  test('narrow navigation exposes canonical platform destinations', async ({ page }) => {
+    test.skip(
+      hasDesktopNavigation(page),
+      'Mobile drawer is intentionally replaced by desktop navigation at lg.',
+    );
+    await page.goto('/');
+
+    const toggle = page.getByRole('button', { name: 'Open navigation menu' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    for (const [label, href] of [
+      ['Buy Property', '/property-for-sale'],
+      ['Rent Property', '/property-to-rent'],
+      ['New Developments', '/new-developments'],
+      ['Explore', '/explore/home'],
+      ['Services', '/services'],
+      ['Referrals', '/distribution-network'],
+      ['Advertise', '/advertise'],
+      ['Log in', '/login'],
+    ]) {
+      await expect(page.getByRole('link', { name: label, exact: true })).toHaveAttribute(
+        'href',
+        href,
+      );
+    }
+
+    await page.getByRole('link', { name: 'Buy Property', exact: true }).click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 });
 
