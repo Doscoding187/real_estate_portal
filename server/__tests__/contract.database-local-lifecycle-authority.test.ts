@@ -86,6 +86,9 @@ describe('database local lifecycle authority', () => {
     expect(scripts['db:demo:reset:local']).toBe(
       'cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts reset local',
     );
+    expect(scripts['db:test:rebuild']).toBe(
+      'cross-env NODE_ENV=test APP_ENV=test LISTIFY_TEST_DB_REBUILD_CONFIRM=I_UNDERSTAND_LISTIFY_TEST_WILL_BE_DESTROYED tsx scripts/testDbWorkflow.ts rebuild',
+    );
 
     for (const retired of [
       'db:start:local',
@@ -108,6 +111,9 @@ describe('database local lifecycle authority', () => {
       'readonly ROOT_PASSWORD=listify_root_password',
       'readonly APP_PASSWORD=listify_app_password',
       'readonly TEST_PASSWORD=listify_test_password',
+      'readonly TEST_DATABASE=listify_test',
+      'readonly TEST_REBUILD_ACKNOWLEDGEMENT=I_UNDERSTAND_LISTIFY_TEST_WILL_BE_DESTROYED',
+      'assert_test_runtime',
       'readonly LISTING_PERFORMANCE_E2E_DATABASE=listify_listing_performance_e2e',
       'readonly PROSPECT_JOURNEY_E2E_DATABASE=listify_prospect_journey_e2e',
     ]) {
@@ -133,6 +139,7 @@ describe('database local lifecycle authority', () => {
     ].sort();
 
     expect(overrideTokens).toEqual(['LISTIFY_LOCAL_DB_MODE']);
+    expect(shell).toContain('LISTIFY_TEST_DB_REBUILD_CONFIRM');
   });
 
   it('keeps the orchestrator local, guarded, and migration-delegating', () => {
@@ -226,6 +233,9 @@ describe('database local lifecycle manifest authority', () => {
     expect(classifications.get('scripts/localDbWorkflow.ts')).toBe(
       'approved guarded local orchestration',
     );
+    expect(classifications.get('scripts/testDbWorkflow.ts')).toBe(
+      'approved guarded local test orchestration',
+    );
 
     expect(manifest.prohibitedPaths).toContain('docker-compose.yml');
 
@@ -234,6 +244,7 @@ describe('database local lifecycle manifest authority', () => {
     for (const path of [
       'scripts/local-db.sh',
       'scripts/localDbWorkflow.ts',
+      'scripts/testDbWorkflow.ts',
     ]) {
       expect(
         manual.knownManualSchemaExecutorCandidates,

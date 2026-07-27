@@ -15,12 +15,35 @@ readonly LOG_FILE="$LOCAL_DIR/mysqld.log"
 readonly ROOT_PASSWORD=listify_root_password
 readonly APP_PASSWORD=listify_app_password
 readonly TEST_PASSWORD=listify_test_password
+readonly TEST_DATABASE=listify_test
+readonly TEST_REBUILD_ACKNOWLEDGEMENT=I_UNDERSTAND_LISTIFY_TEST_WILL_BE_DESTROYED
 readonly LISTING_PERFORMANCE_E2E_DATABASE=listify_listing_performance_e2e
 readonly PROSPECT_JOURNEY_E2E_DATABASE=listify_prospect_journey_e2e
 
 assert_native_local_directory() {
   if [ "$LOCAL_DIR" != "/tmp/listify-mysql-3307" ]; then
     echo "Native local database directory must be exactly /tmp/listify-mysql-3307." >&2
+    exit 1
+  fi
+}
+
+assert_test_database() {
+  if [ "$TEST_DATABASE" != "listify_test" ]; then
+    echo "Test database must be exactly listify_test." >&2
+    exit 1
+  fi
+}
+
+assert_test_runtime() {
+  if [ "${NODE_ENV:-}" != "test" ] || [ "${APP_ENV:-}" != "test" ]; then
+    echo "Test database rebuild refused: NODE_ENV and APP_ENV must both be test." >&2
+    exit 1
+  fi
+}
+
+assert_test_rebuild_acknowledgement() {
+  if [ "${LISTIFY_TEST_DB_REBUILD_CONFIRM:-}" != "$TEST_REBUILD_ACKNOWLEDGEMENT" ]; then
+    echo "Test database rebuild refused: run the explicit pnpm db:test:rebuild command." >&2
     exit 1
   fi
 }
@@ -100,7 +123,7 @@ native_ensure_schema() {
 
   mysql "${root_args[@]}" <<SQL
 CREATE DATABASE IF NOT EXISTS listify_local;
-CREATE DATABASE IF NOT EXISTS listify_test;
+CREATE DATABASE IF NOT EXISTS $TEST_DATABASE;
 CREATE DATABASE IF NOT EXISTS $LISTING_PERFORMANCE_E2E_DATABASE;
 CREATE DATABASE IF NOT EXISTS $PROSPECT_JOURNEY_E2E_DATABASE;
 
@@ -116,8 +139,8 @@ ALTER USER 'listify_test'@'localhost' IDENTIFIED BY '$TEST_PASSWORD';
 
 GRANT ALL PRIVILEGES ON listify_local.* TO 'listify_app'@'127.0.0.1';
 GRANT ALL PRIVILEGES ON listify_local.* TO 'listify_app'@'localhost';
-GRANT ALL PRIVILEGES ON listify_test.* TO 'listify_test'@'127.0.0.1';
-GRANT ALL PRIVILEGES ON listify_test.* TO 'listify_test'@'localhost';
+GRANT ALL PRIVILEGES ON $TEST_DATABASE.* TO 'listify_test'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON $TEST_DATABASE.* TO 'listify_test'@'localhost';
 GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'127.0.0.1';
 GRANT ALL PRIVILEGES ON $LISTING_PERFORMANCE_E2E_DATABASE.* TO 'listify_app'@'localhost';
 GRANT ALL PRIVILEGES ON $PROSPECT_JOURNEY_E2E_DATABASE.* TO 'listify_app'@'127.0.0.1';
@@ -229,6 +252,33 @@ destroy() {
   fi
 }
 
+rebuild_test_database() {
+  assert_native_local_directory
+  assert_test_database
+  assert_test_runtime
+  assert_test_rebuild_acknowledgement
+  start
+
+  echo "Rebuilding approved disposable test database: $TEST_DATABASE on $HOST:$PORT."
+  if use_docker; then
+    compose exec -T mysql-local mysql -uroot "-p$ROOT_PASSWORD" <<SQL
+DROP DATABASE IF EXISTS $TEST_DATABASE;
+CREATE DATABASE $TEST_DATABASE;
+GRANT ALL PRIVILEGES ON $TEST_DATABASE.* TO 'listify_test'@'%';
+FLUSH PRIVILEGES;
+SQL
+  else
+    mapfile -t root_args < <(native_root_args)
+    mysql "${root_args[@]}" <<SQL
+DROP DATABASE IF EXISTS $TEST_DATABASE;
+CREATE DATABASE $TEST_DATABASE;
+GRANT ALL PRIVILEGES ON $TEST_DATABASE.* TO 'listify_test'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON $TEST_DATABASE.* TO 'listify_test'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+  fi
+}
+
 reset_listing_performance_e2e() {
   assert_listing_performance_e2e_database
   start
@@ -301,19 +351,23 @@ case "${1:-help}" in
   status) wait_for_tcp ;;
   stop) stop ;;
   destroy) destroy ;;
+  test:rebuild) rebuild_test_database ;;
   listing-performance-e2e:reset) reset_listing_performance_e2e ;;
   listing-performance-e2e:drop) drop_listing_performance_e2e ;;
   prospect-journey-e2e:reset) reset_prospect_journey_e2e ;;
   prospect-journey-e2e:drop) drop_prospect_journey_e2e ;;
   *)
     cat <<EOF
-Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop>
+Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy|test:rebuild|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop>
 
 Infrastructure mode:
   LISTIFY_LOCAL_DB_MODE=auto|docker|native
 
 All hosts, ports, credentials, directories, and database names are pinned to
 the canonical disposable local/test topology.
+
+test:rebuild is destructive and only accepts the exact disposable listify_test
+database after LISTIFY_TEST_DB_REBUILD_CONFIRM acknowledges the action.
 EOF
     ;;
 esac
