@@ -523,7 +523,7 @@
     },
     {
       "path": "scripts/testDbWorkflow.ts",
-      "classification": "approved guarded local test orchestration",
+      "classification": "approved guarded local orchestration",
       "purpose": "Validates the exact disposable loopback test target, delegates selective test-schema recreation to local lifecycle infrastructure, then delegates application schema and ledger initialization to the canonical test migration command."
     },
     {

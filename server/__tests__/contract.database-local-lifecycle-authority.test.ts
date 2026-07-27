@@ -234,7 +234,7 @@ describe('database local lifecycle manifest authority', () => {
       'approved guarded local orchestration',
     );
     expect(classifications.get('scripts/testDbWorkflow.ts')).toBe(
-      'approved guarded local test orchestration',
+      'approved guarded local orchestration',
     );
 
     expect(manifest.prohibitedPaths).toContain('docker-compose.yml');
