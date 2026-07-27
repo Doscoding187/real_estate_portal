@@ -8,6 +8,7 @@ function readRepoFile(relativePath: string) {
 
 describe('Main Platform Navigation authority', () => {
   const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+  const navSeoSpec = readRepoFile('e2e/routing/nav-seo-architecture.spec.ts');
 
   it('restores the canonical desktop platform menu breadth', () => {
     for (const label of [
@@ -73,5 +74,12 @@ describe('Main Platform Navigation authority', () => {
     expect(nav).toContain('aria-expanded={mobileMenuOpen}');
     expect(nav).not.toContain('<Link href="/advertise">\n                  <button');
     expect(nav).not.toContain('<Link href="/explore/home">\n                  <button');
+  });
+
+  it('separates desktop mega-menu and narrow drawer coverage at the lg breakpoint', () => {
+    expect(navSeoSpec).toContain('const DESKTOP_NAVIGATION_BREAKPOINT = 1024');
+    expect(navSeoSpec).toContain('!hasDesktopNavigation(page)');
+    expect(navSeoSpec).toContain('hasDesktopNavigation(page)');
+    expect(navSeoSpec).toContain('narrow navigation exposes canonical platform destinations');
   });
 });

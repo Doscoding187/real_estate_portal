@@ -3,9 +3,7 @@ import type { Express, Request, Response } from 'express';
 import { getSessionCookieOptions } from './cookies';
 import { authService } from './auth';
 import { ENV } from './env';
-import { and, eq } from 'drizzle-orm';
-import { getDb } from '../db';
-import { distributionIdentities } from '../../drizzle/schema';
+import { getActiveDistributionIdentityFlags } from '../services/distributionIdentityProjection';
 
 const VERIFIED_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -176,29 +174,16 @@ export function registerAuthRoutes(app: Express) {
         email: user.email || null,
       });
 
-      let hasReferrerIdentity = false;
-      let hasManagerIdentity = false;
+      let identityFlags = { hasReferrerIdentity: false, hasManagerIdentity: false };
       try {
-        const db = await getDb();
-        if (db) {
-          const identityRows = await db
-            .select({
-              id: distributionIdentities.id,
-              identityType: distributionIdentities.identityType,
-            })
-            .from(distributionIdentities)
-            .where(
-              and(eq(distributionIdentities.userId, user.id), eq(distributionIdentities.active, 1)),
-            );
-          hasReferrerIdentity = identityRows.some(
-            row => Boolean(row.id) && row.identityType === 'referrer',
-          );
-          hasManagerIdentity = identityRows.some(
-            row => Boolean(row.id) && row.identityType === 'manager',
-          );
-        }
+        identityFlags = await getActiveDistributionIdentityFlags(user.id);
       } catch (identityError) {
-        console.warn('[Auth] Distribution identity lookup failed (non-fatal):', identityError);
+        // Authentication remains available if this optional projection is unavailable. The client
+        // receives explicit false flags rather than stale or partially-resolved identity data.
+        console.warn(
+          '[Auth] Distribution identity projection failed; returning false flags.',
+          identityError,
+        );
       }
 
       // Feature 4: "Remember Me" Functionality
@@ -221,8 +206,7 @@ export function registerAuthRoutes(app: Express) {
           email: user.email,
           name: user.name,
           role: user.role,
-          hasReferrerIdentity,
-          hasManagerIdentity,
+          ...identityFlags,
         },
       });
     } catch (error: any) {
