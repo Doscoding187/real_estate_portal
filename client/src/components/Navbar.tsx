@@ -1,6 +1,15 @@
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Heart, User, Menu, Home, Plus, Play, LayoutDashboard, Briefcase } from 'lucide-react';
+import {
+  Heart,
+  User,
+  Menu,
+  Home,
+  Plus,
+  LayoutDashboard,
+  Briefcase,
+  type LucideIcon,
+} from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { APP_TITLE } from '@/const';
 import { useBranding } from '@/contexts/BrandingContext';
@@ -71,34 +80,24 @@ export function Navbar() {
       'service_provider',
     ].includes(user.role);
 
-  const navLinks = [
+  const navLinks: Array<{
+    href: string;
+    label: string;
+    icon?: LucideIcon;
+    protected?: boolean;
+    desktopClassName?: string;
+  }> = [
     { href: '/', label: 'Home', icon: Home },
-    // Add Dashboard link for specialized roles
+    { href: '/property-for-sale', label: 'Buy' },
+    { href: '/property-to-rent', label: 'Rent' },
+    { href: '/new-developments', label: 'Developments' },
+    { href: '/agents', label: 'Agents' },
+    { href: '/developers', label: 'Developers' },
+    { href: '/advertise', label: 'Advertise / List Property' },
+    // Role-specific dashboards are account actions, not public discovery promises.
     ...(showDashboardLink
       ? [{ href: dashboardRoute, label: 'Dashboard', icon: LayoutDashboard }]
       : []),
-    ...(hasReferrerAccess
-      ? [{ href: '/distribution/partner/overview', label: 'Referrer', icon: Briefcase }]
-      : []),
-    { href: '/properties', label: 'Properties' },
-    { href: '/explore', label: 'Explore', icon: Play },
-    { href: '/services', label: 'Services' },
-    { href: '/distribution-network', label: 'Referrals', icon: Briefcase },
-    { href: '/agents', label: 'Agents' },
-    { href: '/listing-template', label: 'Listing Template', desktopClassName: 'hidden 2xl:flex' },
-    {
-      href: '/dashboard',
-      label: 'My Properties',
-      protected: true,
-      desktopClassName: 'hidden 2xl:flex',
-    },
-    {
-      href: '/favorites',
-      label: 'Favorites',
-      icon: Heart,
-      protected: true,
-      desktopClassName: 'hidden 2xl:flex',
-    },
   ];
 
   return (

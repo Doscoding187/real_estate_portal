@@ -1,12 +1,11 @@
 import { Button } from './ui/button';
-import { Search, Mic, Menu, User, ChevronDown, X } from 'lucide-react';
+import { Search, User, ChevronDown, X } from 'lucide-react';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import { Badge } from './ui/badge';
 import { useLocation } from 'wouter';
 import { useState } from 'react';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { trpc } from '@/lib/trpc';
 
 interface ListingNavbarProps {
   defaultLocations?: {
@@ -23,12 +22,6 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
-  const referrerStatusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
-    enabled: isAuthenticated,
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
 
   // Multi-location state
   const [selectedLocations, setSelectedLocations] = useState<
@@ -211,27 +204,9 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
             FREE
           </Badge>
         </Button>
-        {hasReferrerAccess && (
-          <Button
-            variant="secondary"
-            className="hidden md:flex bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm h-9 px-4"
-            onClick={() => setLocation('/distribution/partner/overview')}
-          >
-            Referrer Dashboard
-          </Button>
-        )}
-
         <div
           className="relative cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() =>
-            setLocation(
-              isAuthenticated
-                ? hasReferrerAccess
-                  ? '/distribution/partner/overview'
-                  : '/dashboard'
-                : '/login',
-            )
-          }
+          onClick={() => setLocation(isAuthenticated ? '/dashboard' : '/login')}
           title={isAuthenticated ? 'Account' : 'Sign In'}
         >
           <User className="h-6 w-6 text-white" />
@@ -240,13 +215,13 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
           )}
         </div>
 
-        <div
-          className="cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => setLocation(hasReferrerAccess ? '/distribution/partner/overview' : '/dashboard')}
-          title="Menu"
+        <Button
+          variant="ghost"
+          className="hidden text-white hover:bg-white/10 hover:text-white md:inline-flex"
+          onClick={() => setLocation('/property-for-sale')}
         >
-          <Menu className="h-6 w-6 text-white" />
-        </div>
+          Search
+        </Button>
       </div>
     </div>
   );

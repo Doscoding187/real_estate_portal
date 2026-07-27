@@ -27,7 +27,6 @@ client/src/components/development-wizard/unit-types/tabs/MediaTab.tsx
 client/src/components/development-wizard/unit-types/tabs/SpecificationsTab.tsx
 client/src/components/development-wizard/unit-types/UnitTypeCard.tsx
 client/src/components/EnhancedHero.tsx
-client/src/components/EnhancedNavbar.tsx
 client/src/components/explore/ContactAgentModal.tsx
 client/src/components/explore/VideoCard.tsx
 client/src/components/explore/VideoUploadModal.tsx
@@ -56,7 +55,6 @@ client/src/components/marketing/wizard/Step4Budget.tsx
 client/src/components/marketing/wizard/Step6Creative.tsx
 client/src/components/partnerships/AddPartnerDialog.tsx
 client/src/components/partnerships/PartnershipManager.tsx
-client/src/components/PropertyCardWithProspect.tsx
 client/src/components/PropertyCategories.tsx
 client/src/components/property-results/QuickFilters.tsx
 client/src/components/ProspectDashboard.tsx

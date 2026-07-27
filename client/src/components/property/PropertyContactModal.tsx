@@ -35,6 +35,7 @@ interface PropertyContactModalProps {
   developmentId?: number;
   initialMessage?: string;
   source?: string;
+  intent?: 'enquiry' | 'viewing_request';
   submitLabel?: string;
   successMessage?: string;
   successAction?: {
@@ -76,6 +77,7 @@ export function PropertyContactModal({
   developmentId,
   initialMessage,
   source = 'property_search',
+  intent = 'enquiry',
   submitLabel = 'Send Inquiry',
   successMessage = 'Your inquiry has been sent successfully!',
   successAction,
@@ -85,7 +87,7 @@ export function PropertyContactModal({
     name: '',
     email: '',
     phone: '',
-    inquiryType: 'general',
+    inquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
     message: initialMessage || '',
   });
 
@@ -107,9 +109,10 @@ export function PropertyContactModal({
 
     setFormData(prev => ({
       ...prev,
+      inquiryType: intent === 'viewing_request' ? 'viewing' : prev.inquiryType,
       message: initialMessage || '',
     }));
-  }, [initialMessage, isOpen]);
+  }, [initialMessage, intent, isOpen]);
 
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: () => {
@@ -132,7 +135,11 @@ export function PropertyContactModal({
       onClose();
     },
     onError: error => {
-      toast.error('Failed to send inquiry. Please try again.');
+      toast.error(
+        intent === 'viewing_request'
+          ? 'Unable to submit your viewing request. Please try again.'
+          : 'Failed to send inquiry. Please try again.',
+      );
       console.error('Lead creation error:', error);
     },
   });
@@ -151,6 +158,7 @@ export function PropertyContactModal({
       email: formData.email,
       phone: formData.phone,
       message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
+      leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry',
       source,
       agentId,
       agencyId,
@@ -168,30 +176,36 @@ export function PropertyContactModal({
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Contact {agentName}</DialogTitle>
+          <DialogTitle>
+            {intent === 'viewing_request' ? 'Request a Viewing' : `Contact ${agentName}`}
+          </DialogTitle>
           <DialogDescription>
-            Interested in {propertyTitle}? Send a message and we'll get back to you.
+            {intent === 'viewing_request'
+              ? `Request a viewing for ${propertyTitle}. The listing contact will follow up to confirm a suitable date and time.`
+              : `Interested in ${propertyTitle}? Send a message and we'll get back to you.`}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="inquiryType">Inquiry Type</Label>
-            <Select
-              value={formData.inquiryType}
-              onValueChange={value => handleChange('inquiryType', value as InquiryType)}
-            >
-              <SelectTrigger id="inquiryType">
-                <SelectValue placeholder="Select inquiry type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="general">General Inquiry</SelectItem>
-                <SelectItem value="viewing">Schedule Viewing</SelectItem>
-                <SelectItem value="offer">Make an Offer</SelectItem>
-                <SelectItem value="financing">Financing Options</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {intent !== 'viewing_request' && (
+            <div className="space-y-2">
+              <Label htmlFor="inquiryType">Inquiry Type</Label>
+              <Select
+                value={formData.inquiryType}
+                onValueChange={value => handleChange('inquiryType', value as InquiryType)}
+              >
+                <SelectTrigger id="inquiryType">
+                  <SelectValue placeholder="Select inquiry type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General Inquiry</SelectItem>
+                  <SelectItem value="viewing">Request a Viewing</SelectItem>
+                  <SelectItem value="offer">Make an Offer</SelectItem>
+                  <SelectItem value="financing">Financing Options</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="name">

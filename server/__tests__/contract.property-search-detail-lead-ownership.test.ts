@@ -269,6 +269,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       name: 'Pat Buyer',
       email: 'pat@example.com',
       phone: '0840000000',
+      leadType: 'viewing_request',
       leadSource: 'property_detail',
       sourceSurface: 'property_detail_contact_modal',
     });
@@ -287,6 +288,7 @@ describe('single-property search-detail-lead ownership contract', () => {
         agencyId: 44,
         source: 'property_detail_contact_modal',
         leadSource: 'property_detail',
+        leadType: 'viewing_request',
       }),
     );
   });
