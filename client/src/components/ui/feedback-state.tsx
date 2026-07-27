@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { AlertCircle, FileQuestion, Inbox, RotateCcw } from 'lucide-react';
 
@@ -72,14 +72,16 @@ function ErrorState({
 }
 
 function EmptyState({ title, description, action, className }: StateProps) {
+  const titleId = `empty-state-${useId()}-title`;
+
   return (
-    <section data-slot="empty-state" aria-labelledby="empty-state-title" className={className}>
+    <section data-slot="empty-state" aria-labelledby={titleId} className={className}>
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <Inbox aria-hidden="true" />
           </EmptyMedia>
-          <h2 id="empty-state-title" className="text-lg font-semibold tracking-tight">
+          <h2 id={titleId} className="text-lg font-semibold tracking-tight">
             {title}
           </h2>
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
@@ -91,19 +93,18 @@ function EmptyState({ title, description, action, className }: StateProps) {
 }
 
 function NotFoundState({ title, description, action, className }: StateProps) {
+  const titleId = `not-found-state-${useId()}-title`;
+
   return (
     <section
       data-slot="not-found-state"
-      aria-labelledby="not-found-state-title"
+      aria-labelledby={titleId}
       className={cn('w-full max-w-lg', className)}
     >
       <Card>
         <CardContent className="p-8 text-center">
           <FileQuestion className="mx-auto size-12 text-muted-foreground" aria-hidden="true" />
-          <h1
-            id="not-found-state-title"
-            className="mt-[var(--space-md)] text-fluid-h1 font-semibold"
-          >
+          <h1 id={titleId} className="mt-[var(--space-md)] text-fluid-h1 font-semibold">
             {title}
           </h1>
           {description ? (
