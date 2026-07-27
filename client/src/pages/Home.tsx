@@ -7,6 +7,7 @@ import { HomeDesktopView } from '@/pages/home/HomeDesktopView';
 import { HomeMobileView } from '@/pages/home/HomeMobileView';
 import { useIsMobile } from '@/hooks/useMobile';
 import { trpc } from '@/lib/trpc';
+import { PageFrame } from '@/components/ui/page-frame';
 import {
   buildOrganizationStructuredData,
   buildWebsiteStructuredData,
@@ -93,29 +94,31 @@ export default function Home() {
         image={toAbsoluteUrl(VITE_APP_LOGO)}
         structuredData={homeStructuredData}
       />
-      {isMobile ? (
-        <HomeMobileView
-          activeHeroTab={effectiveHeroTab}
-          heroTabValue={heroTabValue}
-          onBrowseProperties={() => setLocation('/properties')}
-          onProvinceChange={setSelectedProvince}
-          onTabChange={handleTabChange}
-          popularCities={popularCities}
-          provinces={provinces}
-          selectedProvince={selectedProvince}
-        />
-      ) : (
-        <HomeDesktopView
-          activeHeroTab={effectiveHeroTab}
-          heroTabValue={heroTabValue}
-          onBrowseProperties={() => setLocation('/properties')}
-          onProvinceChange={setSelectedProvince}
-          onTabChange={handleTabChange}
-          popularCities={popularCities}
-          provinces={provinces}
-          selectedProvince={selectedProvince}
-        />
-      )}
+      <PageFrame contained={false}>
+        {isMobile ? (
+          <HomeMobileView
+            activeHeroTab={effectiveHeroTab}
+            heroTabValue={heroTabValue}
+            onBrowseProperties={() => setLocation('/properties')}
+            onProvinceChange={setSelectedProvince}
+            onTabChange={handleTabChange}
+            popularCities={popularCities}
+            provinces={provinces}
+            selectedProvince={selectedProvince}
+          />
+        ) : (
+          <HomeDesktopView
+            activeHeroTab={effectiveHeroTab}
+            heroTabValue={heroTabValue}
+            onBrowseProperties={() => setLocation('/properties')}
+            onProvinceChange={setSelectedProvince}
+            onTabChange={handleTabChange}
+            popularCities={popularCities}
+            provinces={provinces}
+            selectedProvince={selectedProvince}
+          />
+        )}
+      </PageFrame>
     </HomeLayout>
   );
 }

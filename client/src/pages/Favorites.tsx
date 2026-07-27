@@ -2,9 +2,10 @@ import { ProspectLayout } from '@/components/ProspectLayout';
 import PropertyCard from '@/components/PropertyCard';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import { Button } from '@/components/ui/button';
+import { EmptyState, LoadingState } from '@/components/ui/feedback-state';
+import { PageFrame, PageHeader } from '@/components/ui/page-frame';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { Heart, Loader2 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import { getLoginUrl } from '@/const';
@@ -35,9 +36,9 @@ export default function Favorites() {
   if (loading || isLoading) {
     return (
       <ProspectLayout>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
+        <PageFrame>
+          <LoadingState title="Loading favorites" />
+        </PageFrame>
       </ProspectLayout>
     );
   }
@@ -45,25 +46,25 @@ export default function Favorites() {
   if (!isAuthenticated) {
     return (
       <ProspectLayout>
-        <div className="container py-20 text-center">
-          <Heart className="h-20 w-20 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-2xl font-semibold mb-4">Login Required</h2>
-          <p className="text-muted-foreground mb-6">
-            Please login to view your favorite properties
-          </p>
-          <Button onClick={() => (window.location.href = getLoginUrl())}>Login</Button>
-        </div>
+        <PageFrame>
+          <EmptyState
+            title="Login required"
+            description="Please login to view your favorite properties."
+            action={<Button onClick={() => (window.location.href = getLoginUrl())}>Login</Button>}
+          />
+        </PageFrame>
       </ProspectLayout>
     );
   }
 
   return (
     <ProspectLayout>
-      <div className="container py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">My Favorites</h1>
-          <p className="text-muted-foreground">Properties you've saved for later</p>
-        </div>
+      <PageFrame contentClassName="py-8">
+        <PageHeader
+          title="My Favorites"
+          description="Properties you've saved for later"
+          className="mb-8"
+        />
 
         {favorites && favorites.length > 0 ? (
           <div className="flex flex-col gap-6">
@@ -79,18 +80,15 @@ export default function Favorites() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 bg-muted/30 rounded-lg">
-            <Heart className="h-20 w-20 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No Favorites Yet</h3>
-            <p className="text-muted-foreground mb-6">
-              Start browsing properties and save your favorites
-            </p>
-            <Button onClick={() => setLocation('/properties')}>Browse Properties</Button>
-          </div>
+          <EmptyState
+            title="No favorites yet"
+            description="Start browsing properties and save your favorites."
+            action={<Button onClick={() => setLocation('/properties')}>Browse properties</Button>}
+          />
         )}
-      </div>
+      </PageFrame>
 
-      <footer className="bg-muted/30 py-8 mt-12">
+      <footer className="mt-12 bg-muted/30 py-8">
         <div className="container text-center text-muted-foreground">
           <p>&copy; 2025 Real Estate Portal. All rights reserved.</p>
         </div>
