@@ -11,8 +11,12 @@ test.describe('Homepage nav SEO architecture', () => {
   test('city navigation uses canonical location SEO pages', async ({ page }) => {
     await page.goto('/');
 
+    await page.getByRole('button', { name: 'City' }).click();
+
     const johannesburgLink = page.locator('nav a[href="/property-for-sale/gauteng/johannesburg"]');
     await expect(johannesburgLink.first()).toHaveCount(1);
+
+    await page.getByRole('button', { name: 'For Renters' }).click();
 
     const rentLinks = [
       '/property-to-rent/gauteng/johannesburg',
@@ -27,6 +31,7 @@ test.describe('Homepage nav SEO architecture', () => {
 
   test('service nav keeps users inside the services engine', async ({ page }) => {
     await page.goto('/');
+    await page.getByRole('button', { name: 'Services' }).click();
 
     const serviceTopicLinks = [
       '/services/home-loans',
@@ -43,6 +48,7 @@ test.describe('Homepage nav SEO architecture', () => {
 
   test('insight and guide nav keeps users inside content engines', async ({ page }) => {
     await page.goto('/');
+    await page.getByRole('button', { name: 'Insights' }).click();
 
     const contentLinks = [
       '/insights/market-trends',

@@ -6,55 +6,72 @@ function readRepoFile(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 }
 
-describe('PXF-S1 public navigation contract', () => {
-  it('promotes only verified launch surfaces in the shared public header', () => {
-    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+describe('Main Platform Navigation authority', () => {
+  const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
 
-    for (const route of [
-      "{ href: '/', label: 'Home' }",
-      "{ href: '/property-for-sale', label: 'Buy' }",
-      "{ href: '/property-to-rent', label: 'Rent' }",
-      "{ href: '/new-developments', label: 'Developments' }",
-      "{ href: '/agents', label: 'Agents' }",
-      "{ href: '/developers', label: 'Developers' }",
-      "{ href: '/advertise', label: 'Advertise / List Property' }",
+  it('restores the canonical desktop platform menu breadth', () => {
+    for (const label of [
+      'City',
+      'For Buyers',
+      'For Renters',
+      'For Sellers',
+      'Insights',
+      'Explore',
+      'Services',
+      'Referrals',
+      'Advertise with us',
     ]) {
-      expect(nav).toContain(route);
+      expect(nav).toContain(label);
     }
 
-    expect(nav).toContain('Search properties');
-    expect(nav).toContain("const accountHref = isAuthenticated ? '/dashboard' : '/login'");
+    expect(nav).toContain('Main Platform Navigation is the canonical global public navigation.');
+    expect(nav).not.toContain('const launchLinks');
   });
 
-  it('does not market deferred engines in primary public navigation', () => {
-    const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
-    const footer = readRepoFile('client/src/components/ModernFooter.tsx');
-
-    for (const deferredRoute of [
-      '/explore/',
-      '/services',
+  it('keeps every restored link routed and within its owning engine', () => {
+    for (const href of [
+      '/property-for-sale',
+      '/property-to-rent',
+      '/new-developments',
+      '/explore/home',
+      '/explore/feed',
+      '/explore/map',
+      '/explore/upload',
+      '/explore/shorts',
+      '/services/home-loans',
+      '/services/property-valuation',
+      '/services/legal-services',
+      '/services/home-insurance',
+      '/services/interior-design',
       '/distribution-network',
-      '/insights/',
-      '/guides/',
-      '/tools/',
-      'Referrer Dashboard',
+      '/advertise',
+      '/insights/market-trends',
+      '/guides/buying-property',
     ]) {
-      expect(nav).not.toContain(deferredRoute);
-      expect(footer).not.toContain(deferredRoute);
+      expect(nav).toContain(href);
     }
 
-    expect(footer).toContain('Marketplace footer navigation');
-    expect(footer).toContain('Advertise / List Property');
+    expect(nav).not.toContain('href="#"');
+    expect(nav).not.toContain('@ts-nocheck');
   });
 
-  it('keeps the search and property-detail header free of a referrer primary action', () => {
-    const listingNav = readRepoFile('client/src/components/ListingNavbar.tsx');
-    const prospectNav = readRepoFile('client/src/components/Navbar.tsx');
+  it('uses canonical location authority and preserves mobile account access', () => {
+    expect(nav).toContain('FALLBACK_CITY_LINKS');
+    expect(nav).toContain('cityToNavLink');
+    expect(nav).toContain("transactionType: 'rent'");
+    expect(nav).toContain('Buy Property');
+    expect(nav).toContain('Rent Property');
+    expect(nav).toContain('New Developments');
+    expect(nav).toContain("return '/login'");
+    expect(nav).toContain("return '/agent/dashboard'");
+    expect(nav).toContain("return '/distribution/manager'");
+  });
 
-    expect(listingNav).not.toContain('Referrer Dashboard');
-    expect(listingNav).not.toContain('distribution.referrer.status');
-    expect(prospectNav).not.toContain("{ href: '/explore'");
-    expect(prospectNav).not.toContain("{ href: '/services'");
-    expect(prospectNav).not.toContain("{ href: '/distribution-network'");
+  it('uses semantic links and keyboard-capable menu primitives without nested controls', () => {
+    expect(nav).toContain('NavigationMenuTrigger');
+    expect(nav).toContain('aria-label="Main platform navigation"');
+    expect(nav).toContain('aria-expanded={mobileMenuOpen}');
+    expect(nav).not.toContain('<Link href="/advertise">\n                  <button');
+    expect(nav).not.toContain('<Link href="/explore/home">\n                  <button');
   });
 });
