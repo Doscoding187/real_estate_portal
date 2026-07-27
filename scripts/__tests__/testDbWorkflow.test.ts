@@ -1,8 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   assertApprovedNativeTestDataRoot,
   assertTestDatabaseTarget,
   assertTestRebuildAcknowledgement,
+  executeTestRebuildCommandSequence,
+  isDirectModuleExecution,
   testRebuildCommandSequence,
 } from '../testDbWorkflow';
 
@@ -73,6 +77,80 @@ describe('canonical local test database rebuild guards', () => {
       ['pnpm', ['db:local:wait']],
       ['bash', ['scripts/local-db.sh', 'test:rebuild']],
       ['pnpm', ['db:migrate:test']],
+      ['pnpm', ['db:verify:distribution']],
     ]);
+  });
+
+  it('recognizes direct execution using normalized native Linux and macOS paths', () => {
+    expect(
+      isDirectModuleExecution(
+        '/workspace/scripts/testDbWorkflow.ts',
+        'file:///workspace/scripts/testDbWorkflow.ts',
+        'linux',
+      ),
+    ).toBe(true);
+    expect(
+      isDirectModuleExecution(
+        '/Users/listify/project/scripts/testDbWorkflow.ts',
+        'file:///Users/listify/project/scripts/testDbWorkflow.ts',
+        'darwin',
+      ),
+    ).toBe(true);
+  });
+
+  it('normalizes the Windows file URL before comparing a direct entrypoint', () => {
+    const moduleUrl = 'file:///C:/workspace/scripts/testDbWorkflow.ts';
+    const nativePath = 'C:\\workspace\\scripts\\testDbWorkflow.ts';
+
+    expect(new URL(moduleUrl).pathname).toBe('/C:/workspace/scripts/testDbWorkflow.ts');
+    expect(isDirectModuleExecution(nativePath, moduleUrl, 'win32')).toBe(true);
+    expect(
+      isDirectModuleExecution('C:\\workspace\\scripts\\anotherModule.ts', moduleUrl, 'win32'),
+    ).toBe(false);
+  });
+
+  it('keeps the rebuild orchestrator free of hard-coded application tables', () => {
+    const source = readFileSync(resolve(process.cwd(), 'scripts/testDbWorkflow.ts'), 'utf8');
+
+    expect(source).not.toMatch(/['"]properties['"]/);
+    expect(source).not.toMatch(/['"]showings['"]/);
+    expect(source).toContain('sql_migration_history');
+    expect(source).toContain("['pnpm', ['db:verify:distribution']]");
+  });
+
+  it('runs the canonical verifier only after migration and ledger verification pass', async () => {
+    const invoked: string[] = [];
+    const target = assertTestDatabaseTarget(baseEnv);
+
+    await executeTestRebuildCommandSequence(
+      target,
+      async () => invoked.push('ledger'),
+      (_target, command, args) => invoked.push(`${command} ${args.join(' ')}`),
+    );
+
+    expect(invoked).toEqual([
+      'pnpm db:local:start',
+      'pnpm db:local:wait',
+      'bash scripts/local-db.sh test:rebuild',
+      'pnpm db:migrate:test',
+      'ledger',
+      'pnpm db:verify:distribution',
+    ]);
+  });
+
+  it('fails the rebuild when the canonical verifier fails', async () => {
+    const target = assertTestDatabaseTarget(baseEnv);
+
+    await expect(
+      executeTestRebuildCommandSequence(
+        target,
+        async () => undefined,
+        (_target, command, args) => {
+          if (command === 'pnpm' && args[0] === 'db:verify:distribution') {
+            throw new Error('canonical verifier failed');
+          }
+        },
+      ),
+    ).rejects.toThrow('canonical verifier failed');
   });
 });

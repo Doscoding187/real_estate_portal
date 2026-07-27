@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { posix, resolve, win32 } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
 
@@ -12,6 +13,7 @@ const CANONICAL_BASELINE_FILE = '0000_canonical_launch_baseline.sql';
 
 type Env = Record<string, string | undefined>;
 export type TestDatabaseTarget = { url: URL; host: string; port: string; database: string };
+type InvocationPlatform = 'linux' | 'darwin' | 'win32';
 
 function value(env: Env, name: string) {
   return String(env[name] ?? '')
@@ -78,7 +80,20 @@ export function testRebuildCommandSequence() {
     ['pnpm', ['db:local:wait']],
     ['bash', ['scripts/local-db.sh', 'test:rebuild']],
     ['pnpm', ['db:migrate:test']],
+    ['pnpm', ['db:verify:distribution']],
   ] as const;
+}
+
+/** Compares native filesystem paths so direct execution is portable across platforms. */
+export function isDirectModuleExecution(
+  entryPoint: string | undefined,
+  moduleUrl: string,
+  platform: InvocationPlatform = process.platform as InvocationPlatform,
+) {
+  if (!entryPoint) return false;
+  const pathApi = platform === 'win32' ? win32 : posix;
+  const modulePath = fileURLToPath(moduleUrl, { windows: platform === 'win32' });
+  return pathApi.resolve(entryPoint) === pathApi.resolve(modulePath);
 }
 
 function run(target: TestDatabaseTarget, command: string, args: readonly string[]) {
@@ -99,6 +114,12 @@ function run(target: TestDatabaseTarget, command: string, args: readonly string[
     throw new Error(`[Test DB] Command failed: ${command} ${args.join(' ')}`);
 }
 
+type TestWorkflowInvoker = (
+  target: TestDatabaseTarget,
+  command: string,
+  args: readonly string[],
+) => void;
+
 export async function verifyCanonicalTestDatabase(target: TestDatabaseTarget) {
   const connection = await mysql.createConnection(target.url.toString());
   try {
@@ -109,19 +130,25 @@ export async function verifyCanonicalTestDatabase(target: TestDatabaseTarget) {
     if (ledgerRows.length !== 1) {
       throw new Error('Canonical baseline ledger entry is missing after rebuild.');
     }
-
-    const [schemaRows] = await connection.query<Array<{ table_name: string }>>(
-      `SELECT table_name FROM information_schema.tables
-       WHERE table_schema = DATABASE()
-         AND table_type = 'BASE TABLE'
-         AND table_name IN ('properties', 'showings')`,
-    );
-    if (new Set(schemaRows.map(row => row.table_name)).size !== 2) {
-      throw new Error('Canonical application schema is not ready after rebuild.');
-    }
   } finally {
     await connection.end();
   }
+}
+
+export async function executeTestRebuildCommandSequence(
+  target: TestDatabaseTarget,
+  verifyLedger: (target: TestDatabaseTarget) => Promise<void> = verifyCanonicalTestDatabase,
+  invoke: TestWorkflowInvoker = run,
+) {
+  const sequence = testRebuildCommandSequence();
+  const canonicalVerifier = sequence.at(-1);
+  if (!canonicalVerifier) throw new Error('Canonical test schema verifier is not configured.');
+
+  for (const [command, args] of sequence.slice(0, -1)) {
+    invoke(target, command, args);
+  }
+  await verifyLedger(target);
+  invoke(target, canonicalVerifier[0], canonicalVerifier[1]);
 }
 
 async function main() {
@@ -135,14 +162,11 @@ async function main() {
   assertTestRebuildAcknowledgement();
   console.log(`[Test DB] Target: ${target.host}:${target.port}/${target.database}`);
 
-  for (const [command, args] of testRebuildCommandSequence()) {
-    run(target, command, args);
-  }
-  await verifyCanonicalTestDatabase(target);
-  console.log('[Test DB] Canonical migration ledger and application schema verified.');
+  await executeTestRebuildCommandSequence(target);
+  console.log('[Test DB] Canonical migration ledger and connected schema verifier passed.');
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (isDirectModuleExecution(process.argv[1], import.meta.url)) {
   main().catch(() => {
     console.error(
       '[Test DB] Rebuild failed before canonical test database verification completed.',
