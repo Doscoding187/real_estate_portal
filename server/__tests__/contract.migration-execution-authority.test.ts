@@ -13,6 +13,7 @@ const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'release:predeploy:production',
 ]);
 const APPROVED_TEST_ENTRYPOINTS = new Set([
+  'db:test:rebuild',
   'test:listing-performance',
   'test:prospect-journey',
   'test:prospect-journey:security',

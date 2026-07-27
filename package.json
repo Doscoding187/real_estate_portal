@@ -66,6 +66,7 @@
     "db:verify:local": "cross-env NODE_ENV=development APP_ENV=development LOCAL_SEED_ALLOWED=true tsx scripts/localDbWorkflow.ts verify",
     "db:reprovision:local": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/localDbWorkflow.ts reprovision",
     "db:migrate:test": "cross-env NODE_ENV=test tsx server/migrations/runSqlMigrations.ts",
+    "db:test:rebuild": "cross-env NODE_ENV=test APP_ENV=test LISTIFY_TEST_DB_REBUILD_CONFIRM=I_UNDERSTAND_LISTIFY_TEST_WILL_BE_DESTROYED tsx scripts/testDbWorkflow.ts rebuild",
     "db:seed:local": "cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts seed local",
     "db:demo:reset:local": "cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts reset local",
     "db:seed:test": "cross-env NODE_ENV=test LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts seed test",
