@@ -57,4 +57,48 @@ describe('shared feedback-state contract', () => {
     expect(screen.getByRole('button', { name: 'Browse properties' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Go home' })).toBeInTheDocument();
   });
+
+  it('assigns each EmptyState section a unique associated heading ID', () => {
+    render(
+      <>
+        <EmptyState title="First empty state" />
+        <EmptyState title="Second empty state" />
+      </>,
+    );
+
+    const sections = [...document.querySelectorAll<HTMLElement>('[data-slot="empty-state"]')];
+    const firstHeading = sections[0].querySelector('h2');
+    const secondHeading = sections[1].querySelector('h2');
+
+    expect(sections).toHaveLength(2);
+    expect(firstHeading).not.toBeNull();
+    expect(secondHeading).not.toBeNull();
+    expect(firstHeading?.id).toBeTruthy();
+    expect(secondHeading?.id).toBeTruthy();
+    expect(firstHeading?.id).not.toBe(secondHeading?.id);
+    expect(sections[0]).toHaveAttribute('aria-labelledby', firstHeading?.id);
+    expect(sections[1]).toHaveAttribute('aria-labelledby', secondHeading?.id);
+  });
+
+  it('assigns each NotFoundState section a unique associated heading ID', () => {
+    render(
+      <>
+        <NotFoundState title="First missing page" />
+        <NotFoundState title="Second missing page" />
+      </>,
+    );
+
+    const sections = [...document.querySelectorAll<HTMLElement>('[data-slot="not-found-state"]')];
+    const firstHeading = sections[0].querySelector('h1');
+    const secondHeading = sections[1].querySelector('h1');
+
+    expect(sections).toHaveLength(2);
+    expect(firstHeading).not.toBeNull();
+    expect(secondHeading).not.toBeNull();
+    expect(firstHeading?.id).toBeTruthy();
+    expect(secondHeading?.id).toBeTruthy();
+    expect(firstHeading?.id).not.toBe(secondHeading?.id);
+    expect(sections[0]).toHaveAttribute('aria-labelledby', firstHeading?.id);
+    expect(sections[1]).toHaveAttribute('aria-labelledby', secondHeading?.id);
+  });
 });
