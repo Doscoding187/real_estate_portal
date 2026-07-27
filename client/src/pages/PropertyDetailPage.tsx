@@ -16,7 +16,6 @@ import {
   MapPin,
   Bed,
   Bath,
-  Maximize,
   Heart,
   Share2,
   CheckCircle2,
@@ -172,24 +171,17 @@ const amenityIcons: Record<string, LucideIcon> = {
   electricity: Zap,
 };
 
-const formatLabel = (value?: string | null) =>
-  String(value || '')
-    .replace(/_/g, ' ')
-    .trim()
-    .replace(/\b\w/g, char => char.toUpperCase());
-
 const parseStrictNumber = (value: unknown) => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
-export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) {
+export default function PropertyDetailPage(props: PropertyDetailProps) {
   const { propertyId: propPropertyId } = props;
   const [, params] = useRoute('/property/:id');
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
-  const { addViewedProperty, addGuestFavorite, removeGuestFavorite, isGuestFavorite } =
-    useGuestActivity();
+  const { addViewedProperty } = useGuestActivity();
 
   // Use prop if provided, otherwise try to get from route
   const rawId = propPropertyId?.toString() || params?.id || '0';
@@ -204,11 +196,17 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     useState<PropertyQualificationSnapshot | null>(null);
   const [contactInitialMessage, setContactInitialMessage] = useState('');
   const [contactIntent, setContactIntent] = useState<'enquiry' | 'whatsapp'>('enquiry');
+  const [contactRequestType, setContactRequestType] = useState<'enquiry' | 'viewing_request'>(
+    'enquiry',
+  );
 
   const { data, isLoading } = trpc.properties.getById.useQuery(
     { id: propertyId },
     { enabled: propertyId > 0 },
   );
+  const { data: favorites = [] } = trpc.properties.getFavorites.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   // Fetch similar properties
   const { data: similarPropertiesData } = trpc.properties.getAll.useQuery(
@@ -222,12 +220,16 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     },
   );
 
-  const addFavoriteMutation = trpc.favorites.add.useMutation({
-    onSuccess: () => {
-      toast.success('Added to favorites');
+  const utils = trpc.useUtils();
+  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+    onSuccess: result => {
+      void utils.properties.getFavorites.invalidate();
+      toast.success(
+        result.favorited ? 'Property saved to your homes.' : 'Property removed from saved homes.',
+      );
     },
     onError: () => {
-      toast.error('Failed to add to favorites');
+      toast.error('Unable to update saved homes. Please try again.');
     },
   });
 
@@ -240,17 +242,14 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
 
   const handleFavoriteClick = () => {
     if (!isAuthenticated) {
-      // For guest users, use localStorage
-      if (isGuestFavorite(propertyId)) {
-        removeGuestFavorite(propertyId);
-        toast.success('Removed from guest favorites');
-      } else {
-        addGuestFavorite(propertyId);
-        toast.success('Added to guest favorites! Login to save permanently.');
-      }
+      toast.info('Sign in to save this property to your account.');
+      setLocation(
+        `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+      );
       return;
     }
-    addFavoriteMutation.mutate({ propertyId });
+    if (toggleFavoriteMutation.isPending) return;
+    toggleFavoriteMutation.mutate({ propertyId });
   };
 
   const handleShare = () => {
@@ -286,6 +285,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
   }
 
   const { property, images } = data as PropertyDetailResponse;
+  const isFavorite = favorites.some(favorite => Number(favorite.propertyId) === propertyId);
   const agent = property.agent || (data as PropertyDetailResponse).agent;
 
   // Safely parse amenities with error handling
@@ -340,10 +340,10 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
       )
       .join(', ');
 
-  let specs: PropertySpecs = {};
+  let parsedSpecs: PropertySpecs = {};
   try {
     if (property.propertySettings) {
-      specs =
+      parsedSpecs =
         typeof property.propertySettings === 'string'
           ? JSON.parse(property.propertySettings)
           : property.propertySettings;
@@ -366,14 +366,9 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
 
   const resolvedSecurity =
     String(
-      specs.security ??
-        rawPropertyDetails.security ??
-        rawPropertyDetails.securityLevel ??
-        '',
+      parsedSpecs.security ?? rawPropertyDetails.security ?? rawPropertyDetails.securityLevel ?? '',
     ).trim() || undefined;
-  if (resolvedSecurity) {
-    specs.security = resolvedSecurity;
-  }
+  const specs = resolvedSecurity ? { ...parsedSpecs, security: resolvedSecurity } : parsedSpecs;
 
   const developerBrand = property.developerBrand || property.developerBrandProfile;
   const normalizedListerType = String(property.listerType || '')
@@ -608,22 +603,26 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     initialMessage = '',
     snapshot = null,
     intent = 'enquiry',
+    requestType = 'enquiry',
   }: {
     initialMessage?: string;
     snapshot?: PropertyQualificationSnapshot | null;
     intent?: 'enquiry' | 'whatsapp';
+    requestType?: 'enquiry' | 'viewing_request';
   } = {}) => {
     setContactInitialMessage(initialMessage);
     setQualificationSnapshot(snapshot);
     setContactIntent(intent);
+    setContactRequestType(requestType);
     setIsContactModalOpen(true);
   };
   const handleOpenStandardEnquiry = () => {
     openContactModal();
   };
-  const handleBookAppointment = () => {
+  const handleRequestViewing = () => {
     openContactModal({
-      initialMessage: `Hi, I'd like to book an appointment to view ${property.title}. Please let me know the next available time slot.`,
+      initialMessage: `Hi, I'd like to request a viewing for ${property.title}. Please contact me to discuss a suitable time.`,
+      requestType: 'viewing_request',
     });
   };
   const handleWhatsAppContact = (message?: string) => {
@@ -646,7 +645,6 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
     setIsQualificationOpen(false);
     handleWhatsAppContact(snapshot.summaryMessage);
   };
-  const showLegacyPropertyDetails = false;
   const propertyStructuredData = [
     buildBreadcrumbStructuredData([
       ...breadcrumbItems,
@@ -765,9 +763,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
               <h1 className="text-fluid-h2 font-bold text-slate-900 mb-1">{property.title}</h1>
               <div className="flex items-center gap-2 text-slate-500">
                 <MapPin className="h-4 w-4" />
-                <span className="text-base text-slate-500">
-                  {displayLocationLabel}
-                </span>
+                <span className="text-base text-slate-500">{displayLocationLabel}</span>
               </div>
               {developmentName && (
                 <div className="mt-2 flex items-center gap-2 text-slate-500">
@@ -795,9 +791,16 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                 variant="outline"
                 size="icon"
                 onClick={handleFavoriteClick}
-                className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500"
+                disabled={toggleFavoriteMutation.isPending}
+                aria-label={isFavorite ? 'Remove from saved homes' : 'Save property'}
+                aria-pressed={isFavorite}
+                className={`h-10 w-10 border-slate-200 transition-colors ${
+                  isFavorite
+                    ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-red-500'
+                }`}
               >
-                <Heart className="h-3.5 w-3.5" />
+                <Heart className="h-3.5 w-3.5" fill={isFavorite ? 'currentColor' : 'none'} />
               </Button>
               <Button
                 variant="outline"
@@ -852,9 +855,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                 <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-slate-500">
-                        Est. monthly repayment
-                      </p>
+                      <p className="text-sm font-medium text-slate-500">Est. monthly repayment</p>
                       <p className="mt-1 text-xs text-slate-500">Est. over 20 years at 10.5%</p>
                     </div>
                     <div className="text-right">
@@ -910,7 +911,10 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         const Icon = item.icon;
                         const isMissing = item.status === 'missing';
                         return (
-                          <div key={item.key} className="grid min-h-[44px] min-w-0 grid-cols-[36px_minmax(0,1fr)] items-start gap-x-2.5">
+                          <div
+                            key={item.key}
+                            className="grid min-h-[44px] min-w-0 grid-cols-[36px_minmax(0,1fr)] items-start gap-x-2.5"
+                          >
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
                               <Icon className="h-4 w-4" />
                             </span>
@@ -1040,9 +1044,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                         </p>
                       </div>
                       <p className="text-sm font-bold text-slate-900">{item.value}</p>
-                      {item.note && (
-                        <p className="mt-1 text-[11px] text-slate-400">{item.note}</p>
-                      )}
+                      {item.note && <p className="mt-1 text-[11px] text-slate-400">{item.note}</p>}
                     </div>
                   );
                 })}
@@ -1215,9 +1217,9 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
 
                         <Button
                           className="h-12 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
-                          onClick={handleBookAppointment}
+                          onClick={handleRequestViewing}
                         >
-                          Contact Now
+                          Request a Viewing
                         </Button>
 
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -1282,31 +1284,33 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
             )}
 
             {/* 2.3 Additional Rooms */}
-            {propertyFeatureChecklistItems.length === 0 && specs.additionalRooms && specs.additionalRooms.length > 0 && (
-              <Card
-                id={featureSpecItems.length === 0 ? 'features' : undefined}
-                className="border-slate-200 shadow-sm"
-              >
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Additional Rooms & Specifications
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="flex flex-wrap gap-2">
-                    {specs.additionalRooms.map(room => (
-                      <Badge
-                        key={room}
-                        variant="secondary"
-                        className="bg-blue-50 text-slate-900 hover:bg-blue-100 border-0 px-4 py-1.5 rounded-full font-medium"
-                      >
-                        {room}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {propertyFeatureChecklistItems.length === 0 &&
+              specs.additionalRooms &&
+              specs.additionalRooms.length > 0 && (
+                <Card
+                  id={featureSpecItems.length === 0 ? 'features' : undefined}
+                  className="border-slate-200 shadow-sm"
+                >
+                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                    <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                      Additional Rooms & Specifications
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="flex flex-wrap gap-2">
+                      {specs.additionalRooms.map(room => (
+                        <Badge
+                          key={room}
+                          variant="secondary"
+                          className="bg-blue-50 text-slate-900 hover:bg-blue-100 border-0 px-4 py-1.5 rounded-full font-medium"
+                        >
+                          {room}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             {/* 2.4 Amenities */}
             {propertyFeatureChecklistItems.length === 0 && highlights.length > 0 && (
@@ -1526,9 +1530,9 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
                             )}
                             <Button
                               className="h-12 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600 focus-visible:ring-orange-500/30"
-                              onClick={handleBookAppointment}
+                              onClick={handleRequestViewing}
                             >
-                              Book an Appointment
+                              Request a Viewing
                             </Button>
                           </div>
 
@@ -1821,6 +1825,7 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
           setIsContactModalOpen(false);
           setContactInitialMessage('');
           setContactIntent('enquiry');
+          setContactRequestType('enquiry');
         }}
         propertyId={propertyId}
         propertyTitle={property.title}
@@ -1845,11 +1850,20 @@ export default function PropertyDetailDesktopLegacy(props: PropertyDetailProps) 
         }
         initialMessage={contactInitialMessage}
         source={contactIntent === 'whatsapp' ? 'property_detail_whatsapp' : 'property_detail'}
-        submitLabel={contactIntent === 'whatsapp' ? 'Continue with WhatsApp' : 'Send enquiry'}
+        intent={contactRequestType}
+        submitLabel={
+          contactIntent === 'whatsapp'
+            ? 'Continue with WhatsApp'
+            : contactRequestType === 'viewing_request'
+              ? 'Submit viewing request'
+              : 'Send enquiry'
+        }
         successMessage={
           contactIntent === 'whatsapp'
             ? 'Your WhatsApp lead has been captured.'
-            : 'Your enquiry has been sent successfully.'
+            : contactRequestType === 'viewing_request'
+              ? 'Your viewing request has been sent. The listing contact will follow up to confirm a suitable date and time.'
+              : 'Your enquiry has been sent successfully.'
         }
         successAction={
           contactIntent === 'whatsapp' && whatsappNumber

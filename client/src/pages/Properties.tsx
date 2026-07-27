@@ -27,11 +27,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function Properties() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
   const [filters, setFilters] = useState<SearchFilters>({});
   const [page, setPage] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
@@ -84,18 +91,17 @@ export default function Properties() {
     offset: page * limit,
   };
 
-  const {
-    data: properties,
-    isLoading,
-    refetch,
-  } = trpc.properties.search.useQuery(queryInput);
+  const { data: properties, isLoading, refetch } = trpc.properties.search.useQuery(queryInput);
 
-  const addFavoriteMutation = trpc.favorites.add.useMutation({
-    onSuccess: () => {
-      toast.success('Added to favorites');
+  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+    onSuccess: result => {
+      void utils.properties.getFavorites.invalidate();
+      toast.success(
+        result.favorited ? 'Property saved to your homes.' : 'Property removed from saved homes.',
+      );
     },
     onError: () => {
-      toast.error('Failed to add to favorites');
+      toast.error('Unable to update saved homes. Please try again.');
     },
   });
 
@@ -137,10 +143,14 @@ export default function Properties() {
 
   const handleFavoriteClick = (propertyId: string) => {
     if (!isAuthenticated) {
-      toast.error('Please login to save favorites');
+      toast.info('Sign in to save this property to your account.');
+      setLocation(
+        `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+      );
       return;
     }
-    addFavoriteMutation.mutate({ propertyId: parseInt(propertyId) });
+    if (toggleFavoriteMutation.isPending) return;
+    toggleFavoriteMutation.mutate({ propertyId: parseInt(propertyId) });
   };
 
   const handleSaveSearch = () => {
@@ -188,9 +198,7 @@ export default function Properties() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div>
                 <h2 className="text-xl font-bold text-slate-800">
-                  {items.length > 0
-                    ? `${items.length} Properties Found`
-                    : 'Available Properties'}
+                  {items.length > 0 ? `${items.length} Properties Found` : 'Available Properties'}
                 </h2>
                 {Object.keys(filters).length > 0 && (
                   <p className="text-sm text-slate-500 mt-1">
@@ -324,7 +332,9 @@ export default function Properties() {
               <Select
                 value={saveSearchNotificationFrequency}
                 onValueChange={value =>
-                  setSaveSearchNotificationFrequency(value as typeof saveSearchNotificationFrequency)
+                  setSaveSearchNotificationFrequency(
+                    value as typeof saveSearchNotificationFrequency,
+                  )
                 }
               >
                 <SelectTrigger id="search-frequency">
@@ -367,10 +377,7 @@ export default function Properties() {
             <Button variant="outline" onClick={() => setIsSaveSearchOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={confirmSaveSearch}
-              disabled={saveSearchMutation.isPending}
-            >
+            <Button onClick={confirmSaveSearch} disabled={saveSearchMutation.isPending}>
               {saveSearchMutation.isPending ? 'Saving...' : 'Save Search'}
             </Button>
           </DialogFooter>
