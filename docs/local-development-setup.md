@@ -440,7 +440,8 @@ If the test is skipped, `DATABASE_URL` is missing or `.env.test` was not loaded.
 
 - Use `pnpm db:migrate:fresh:local` for a fresh local database and `pnpm db:migrate:local` for existing local databases. Do not use production migration commands for local bootstrap.
 - `docker-compose.yml` defines a MySQL database named `real_estate_portal` on port `3306`. It is useful for older workflows, but the recommended local setup above uses `docker-compose.local-db.yml`, `listify_local`, and `listify_test` on port `3307` to match current runtime guards and avoid collisions.
-- `.env.vercel` is tracked in this repo and appears to contain concrete deployment-style values. Review whether any value is sensitive, rotate anything that has been exposed, and prefer platform-managed env vars over committed env files.
+- `.env.vercel` is a local Vercel environment file and is intentionally ignored by Git. Create it locally from `.env.vercel.example`, populate the required values through the appropriate provider or local environment, and never commit real credentials or tokens.
+- Earlier repository revisions contained concrete `.env.vercel` credential material. Removing the current file from the main tree does not remove those historical values from Git history or revoke them at their providers. Credential rotation and the Git-history remediation decision remain separate operational obligations.
 - Durable local drafts/autosave may still use browser-local state unless a feature adds schema-backed drafts.
 
 ## Preview And Staging Recommendation
