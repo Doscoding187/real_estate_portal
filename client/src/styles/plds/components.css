@@ -1,0 +1,25 @@
+/* PLDS component contracts. Values preserve the existing pilot output. */
+:root {
+  --card-padding: clamp(0.75rem, 1.2vw, 1.1rem);
+  --card-gap: clamp(0.5rem, 0.8vw, 0.75rem);
+  --card-radius: 12px;
+  --card-border: 1px solid rgba(0, 0, 0, 0.06);
+  --card-width-sm: clamp(240px, 70vw, 280px);
+  --card-width-md: clamp(260px, 45vw, 320px);
+  --card-width-lg: 300px;
+
+  --plds-nav-height: 4rem;
+  --plds-nav-action-height: 2.25rem;
+
+  --plds-home-hero-title-max-width: 24rem;
+  --plds-home-hero-search-max-width: 56rem;
+  --plds-home-hero-search-radius: 1rem;
+
+  --plds-listing-card-max-width: 280px;
+  --plds-listing-card-radius: 0.75rem;
+  --plds-listing-card-padding: 1rem;
+
+  --plds-field-group-gap: 1.75rem;
+  --plds-field-gap: 0.75rem;
+  --plds-field-content-gap: 0.375rem;
+}

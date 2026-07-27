@@ -510,7 +510,7 @@ export function EnhancedHero({
 
       <div className="container relative z-10 flex flex-col py-8 sm:py-12 md:py-16 lg:py-20">
         {/* Hero Title */}
-        <div className="mx-auto mb-7 max-w-[24rem] text-center sm:mb-8 sm:max-w-4xl md:max-w-5xl">
+        <div className="mx-auto mb-7 max-w-[var(--plds-home-hero-title-max-width)] text-center sm:mb-8 sm:max-w-4xl md:max-w-5xl">
           {title ? (
             // Location / Context Title
             <h1 className="mb-3 text-3xl font-bold leading-tight text-slate-950 sm:text-4xl md:text-5xl lg:text-6xl">
@@ -597,8 +597,8 @@ export function EnhancedHero({
         </div>
 
         {/* Search Card */}
-        <div className="mx-auto w-full max-w-4xl">
-          <Card className="overflow-hidden rounded-[1rem] border border-slate-200 bg-white shadow-xl shadow-slate-200/70 sm:rounded-2xl">
+        <div className="mx-auto w-full max-w-[var(--plds-home-hero-search-max-width)]">
+          <Card className="overflow-hidden rounded-[var(--plds-home-hero-search-radius)] border border-slate-200 bg-white shadow-xl shadow-slate-200/70 sm:rounded-2xl">
             <CardContent className="p-0">
               <div className="bg-gradient-to-r from-blue-700 to-cyan-600 px-4 py-4 text-white sm:px-6">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
