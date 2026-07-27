@@ -149,3 +149,7 @@ docker/mysql-local/mysql-data/
 
 # Local editor settings may contain database connection profiles.
 .vscode/settings.json
+# Local Vercel environment files
+.env.vercel
+.env.vercel.*
+!.env.vercel.example
