@@ -2,9 +2,9 @@
 
 | Field | Current authority |
 | --- | --- |
-| Programme status | **Stage 1 — launch-readiness governance authority merged, post-merge verified, and complete. Stage 2A — local environment-authority audit complete and under architectural review in this branch. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
+| Programme status | **Stage 1 — launch-readiness governance authority merged, post-merge verified, and complete. Stage 2A — merged, but in review closure because actionable findings remained unresolved at merge. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
 | Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | Stage 2A documentation closure only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, or feature changes. |
+| Current authorised stage | Stage 2A review closure only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, or feature changes. Stage 2B remains unauthorised. |
 
 ## Authority roles
 
