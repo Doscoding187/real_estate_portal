@@ -30,7 +30,7 @@ Moved variables retain their existing computed values. The new `--plds-*` names 
 | `--card-*`, `--card-width-*` | Component | Active `index.css` variables | `components.css`; existing card/carousel consumers | Relocates existing scoped card values; no computed-value change. |
 | `--plds-nav-height`, `--plds-nav-action-height` | Component | `min-h-16`, `h-9` | `components.css`; `EnhancedNavbar` | Names repeatable navbar geometry; `4rem` / `2.25rem`, no output change. |
 | `--plds-home-hero-title-max-width`, `--plds-home-hero-search-max-width`, `--plds-home-hero-search-radius` | Component | `24rem`, `max-w-4xl`, `1rem` | `components.css`; `EnhancedHero` | Names the live home hero/search contract; no output change. |
-| `--plds-listing-card-max-width`, `--plds-listing-card-radius`, `--plds-listing-card-padding` | Component | `280px`, `rounded-xl`, `p-4` | `components.css`; `SimplePropertyListingCard` | Names an existing listing-card contract; no output change. |
+| `--plds-listing-card-max-width`, `--plds-listing-card-radius`, `--plds-listing-card-padding` | Component | `280px`, `rounded-xl`, `p-4` | `components.css`; `SimplePropertyListingCard` | Preserves the existing `rounded-xl` relationship as `calc(var(--radius) + 4px)`, alongside the existing width and padding; no output change. |
 | `--plds-field-group-gap`, `--plds-field-gap`, `--plds-field-content-gap` | Component | `gap-7`, `gap-3`, `gap-1.5` | `components.css`; `FieldGroup`, `Field`, `FieldContent` | Names the existing field rhythm; no output change. |
 
 ## Working rules

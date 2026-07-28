@@ -45,7 +45,7 @@ The source uses ordinary Tailwind width/height, min/max, grid/flex, spacing, typ
 
 ## Unit usage summary
 
-The active source contains `px`, `rem`, `em`, percentages, `ch`, `vw`, `vh`, `fr`, CSS math functions, `minmax()`, `auto-fit`, and aspect-ratio utilities. It has no active `ex`, `lh`, `rlh`, `vmin`, `vmax`, `svw`, `svh`, `lvw`, `lvh`, `dvw`, `dvh`, container-query unit, `min-content`, `max-content`, `fit-content`, or `auto-fill` declarations. The source-wide literal search is intentionally not reported as a policy-quality metric: Tailwind strings, inline style data, and non-layout code create many false lexical matches. The inventory records active meaningful patterns instead.
+The active source contains `px`, `rem`, `em`, percentages, `ch`, `vw`, `vh`, `svh`, `fr`, CSS math functions, `minmax()`, `auto-fit`, and aspect-ratio utilities. The sidebar primitive uses Tailwind `min-h-svh` and `h-svh`, which compile to modern small-viewport-height sizing; this is existing precedent, not a product-wide viewport policy. Active Tailwind utilities such as `w-max`, `min-w-max`, and `max-w-max` also compile to intrinsic `max-content` sizing. The source has no active `ex`, `lh`, `rlh`, `vmin`, `vmax`, `svw`, `lvw`, `lvh`, `dvw`, `dvh`, container-query unit, `min-content`, `fit-content`, or `auto-fill` declarations. The source-wide literal search is intentionally not reported as a policy-quality metric: direct CSS declarations, Tailwind strings, inline style data, and non-layout code have different meanings. The inventory records active meaningful patterns instead.
 
 Dominant relationships are:
 
@@ -54,6 +54,8 @@ Dominant relationships are:
 - percentages and `w-full` for containing-block width; `fr`/`minmax()` for desktop grids.
 - `vw` in page-level fluid tokens, viewport-bounded menus/toasts, and horizontal carousel cards.
 - `vh` for modal/drawer bounds, short-form media, maps, and a few hero/loading heights.
+- `svh` in the sidebar primitive, where a stable small viewport height is part of the full-height navigation relationship.
+- intrinsic `max-content` sizing through active Tailwind `w-max`/`min-w-max`/`max-w-max` utilities, where content width is intentional rather than a generic grid rule.
 - unitless line heights in the active global base (`1.55`, headings `1.2`–`1.4`) and Tailwind classes such as `leading-tight`; this is an appropriate existing pattern.
 
 ## Responsive authority summary
@@ -62,13 +64,13 @@ Page and route layouts primarily change at viewport width using Tailwind `sm`, `
 
 Container responsiveness exists only in `components/ui/field.tsx`: `FieldGroup` establishes `@container/field-group`, and the responsive field orientation changes at `@md/field-group`. This is appropriate because the label/control relationship depends on its parent width. No source uses container-query units. Candidates that may benefit from a similar parent-aware decision are reusable card metadata rows, compact filter groups, PageHeader action clusters, and form field groups; full-page grids, public navigation, and mobile overlays remain viewport decisions.
 
-Capability media queries are separately used for reduced motion, contrast, forced colours, print, and coarse pointer. They are not layout breakpoint authorities and should remain distinct.
+Capability media queries are not layout breakpoint authorities and should remain distinct. The runtime imports reduced-motion support; `styles/accessibility.css` contains additional contrast, forced-colours, and coarse-pointer rules but is dormant because it has no runtime import.
 
 ## Viewport and fluid-scaling findings
 
 The global fluid scale is bounded: `--space-*`, card spacing, root/body/headings, and `text-fluid-*` use `clamp()`. Bounds prevent unlimited large-screen growth, but the root font clamp and viewport-driven typography compete with user root-font preferences. The `--card-width-sm` and `--card-width-md` tokens use px bounds with `vw` preferred values for mobile carousels; that relationship is deliberate but component-specific, not a general card-width token.
 
-`min(356px, calc(100vw - 2rem))` on the Sonner toaster and `min(92vw, …px)` on the desktop mega menu are controlled viewport-bounded overlays. They are appropriate viewport relationships. `max-h-[80–92vh]` on dialogs/drawers normally includes `overflow-y-auto`, which is a reasonable bounded-overlay pattern but may be affected by browser chrome because it uses legacy `vh`. `h-screen` in the Explore feed, `70vh` on the Explore property overlay, `30/35vh` on a location hero, `calc(100vh - 2rem)` on a fullscreen map, and marketing `max(90vh, 640px)` need visual testing on mobile. No modern viewport-unit fallback (`dvh`/`svh`/`lvh`) is active.
+`min(356px, calc(100vw - 2rem))` on the Sonner toaster and `min(92vw, …px)` on the desktop mega menu are controlled viewport-bounded overlays. They are appropriate viewport relationships. `max-h-[80–92vh]` on dialogs/drawers normally includes `overflow-y-auto`, which is a reasonable bounded-overlay pattern but may be affected by browser chrome because it uses legacy `vh`. The sidebar's active `min-h-svh`/`h-svh` utilities are a modern viewport-unit precedent, but no product-wide viewport-height policy or `dvh`/`svh`/`lvh` fallback strategy exists. `h-screen` in the Explore feed, `70vh` on the Explore property overlay, `30/35vh` on a location hero, `calc(100vh - 2rem)` on a fullscreen map, and marketing `max(90vh, 640px)` need visual testing on mobile. The expanded Explore overlay already has an `h-full overflow-y-auto` internal scroll path; its remaining risk is viewport-height, nested-scroll, and mobile-browser behaviour rather than absent overflow.
 
 ## Content-growth, text resize, and reflow assessment
 
