@@ -4,6 +4,12 @@ import dotenv from 'dotenv';
 import { getLocalDemoCredentials } from '../server/scripts/localDemoSeed';
 import { assertLocalDatabaseTarget } from './localDbWorkflow';
 import { loadAuthorityManifest, validateAuthorityManifest } from './databaseAuthorityStatus';
+import {
+  assertCentralEnvironmentReady,
+  ensureWorktreeLink,
+  establishCentralLocalEnvironment,
+  resolveCentralLocalEnvironment,
+} from './localEnvironmentAuthority';
 
 const BOOTSTRAP_STEPS = [
   ['pnpm', ['db:local:start']],
@@ -38,15 +44,19 @@ function runStep(command: string, args: readonly string[], databaseUrl: string) 
 }
 
 async function main() {
-  dotenv.config({ path: resolve(process.cwd(), '.env.local'), override: false, quiet: true });
   const manifest = loadAuthorityManifest();
   validateAuthorityManifest(manifest);
+  const centralPath = resolveCentralLocalEnvironment();
+  const central = establishCentralLocalEnvironment(process.cwd(), centralPath);
+  assertCentralEnvironmentReady(central);
+  ensureWorktreeLink(process.cwd(), centralPath);
+  dotenv.config({ path: resolve(process.cwd(), '.env.local'), override: false, quiet: true });
   const target = assertLocalDatabaseTarget();
   try {
     getLocalDemoCredentials();
   } catch {
     throw new Error(
-      'Local setup failure: configure LOCAL_DEMO_AGENCY_PASSWORD in .env.local or the approved local environment before bootstrapping.',
+      'Local setup failure: reconcile LOCAL_DEMO_AGENCY_PASSWORD in the approved central local environment before bootstrapping.',
     );
   }
   console.log(`[Database Authority] Approved local target: ${target.host}/${target.database}`);

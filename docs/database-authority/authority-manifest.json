@@ -1,5 +1,5 @@
 {
-  "authorityVersion": 1,
+  "authorityVersion": 2,
   "canonicalMigrationPath": "server/migrations/0000_canonical_launch_baseline.sql",
   "activeMigrationDirectory": "server/migrations",
   "archivedMigrationDirectory": "server/migrations/_archived/pre-canonical-baseline",
@@ -10,6 +10,17 @@
   "migrationRunner": "server/migrations/runSqlMigrations.ts",
   "migrationLedger": "sql_migration_history",
   "approvedLocalDatabaseName": "listify_local",
+  "localEnvironmentTemplate": ".env.local.example",
+  "machineLocalEnvironmentRelativePath": ".config/property-listify/local.env",
+  "requiredLocalVariables": [
+    "DATABASE_URL",
+    "LOCAL_DEMO_AGENCY_PASSWORD",
+    "JWT_SECRET",
+    "APP_URL",
+    "FRONTEND_URL",
+    "VITE_API_URL",
+    "VITE_API_BASE_URL"
+  ],
   "approvedLocalHosts": [
     "localhost",
     "127.0.0.1",

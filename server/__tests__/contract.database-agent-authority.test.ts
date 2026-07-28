@@ -19,7 +19,7 @@ describe('database authority agent entry contract', () => {
     const manifest = loadAuthorityManifest(ROOT);
 
     expect(() => validateAuthorityManifest(manifest, ROOT)).not.toThrow();
-    expect(manifest.authorityVersion).toBe(1);
+    expect(manifest.authorityVersion).toBe(2);
     expect(manifest.canonicalMigrationPath).toBe(
       'server/migrations/0000_canonical_launch_baseline.sql',
     );
@@ -29,6 +29,9 @@ describe('database authority agent entry contract', () => {
     );
     expect(manifest.approvedLocalDatabaseName).toBe('listify_local');
     expect(manifest.migrationLedger).toBe('sql_migration_history');
+    expect(manifest.localEnvironmentTemplate).toBe('.env.local.example');
+    expect(manifest.machineLocalEnvironmentRelativePath).toBe('.config/property-listify/local.env');
+    expect(manifest.requiredLocalVariables).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
     expect(manifest.approvedLocalCommands).toContain('db:authority:bootstrap:local');
     expect(manifest.consumerContractEntrypoint).toBe(
       'scripts/databaseAuthorityConsumerContract.ts',
@@ -112,6 +115,19 @@ describe('database authority agent entry contract', () => {
     );
     expect(entry).toContain('pnpm db:authority:status');
     expect(entry).toContain('pnpm db:authority:bootstrap:local');
+    expect(entry).toContain('admin@listify.local');
+    expect(entry).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
     expect(index.indexOf('Agent Entry Contract')).toBeLessThan(index.indexOf('Machine Manifest'));
+  });
+
+  it('keeps full and fresh database verification layers in CI without exposing local values', () => {
+    const ci = readFileSync(resolve(ROOT, '.github/workflows/ci.yml'), 'utf8');
+    const status = readFileSync(resolve(ROOT, 'scripts/databaseAuthorityStatus.ts'), 'utf8');
+
+    expect(ci).toContain('pnpm db:verify:ci');
+    expect(ci).toContain('pnpm db:authority:consumer-contract');
+    expect(status).toContain('Required Local Variables:');
+    expect(status).not.toContain('console.log(process.env.DATABASE_URL)');
+    expect(status).not.toContain('console.log(process.env.LOCAL_DEMO_AGENCY_PASSWORD)');
   });
 });

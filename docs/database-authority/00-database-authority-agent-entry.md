@@ -61,9 +61,27 @@ MySQL, applies canonical migrations, seeds the local demo, and verifies the
 distribution schema and demo data. It never generates migrations, pushes a
 schema, destroys the database, or modifies tracked files.
 
-Before bootstrapping, configure `LOCAL_DEMO_AGENCY_PASSWORD` in `.env.local`
-or the approved local environment. The command reports that configuration as a
-setup failure (without revealing its value), not as schema-consumer drift.
+The machine-local development authority is `~/.config/property-listify/local.env`
+(resolved from the operating-system home directory, never committed). It must
+be mode `0600`; each worktree’s ignored `.env.local` is a symlink to it. On a
+new worktree bootstrap creates that link. It never overwrites a normal or
+incorrect `.env.local` link: preserve the file, reconcile it into the central
+environment, then replace it with the approved link. Status reports only
+sanitized path, linkage, permission, and variable state.
+
+## Local demo access
+
+| Account | Role |
+| --- | --- |
+| `admin@listify.local` | super administrator |
+| `agency@listify.local` | agency administrator |
+| `developer@listify.local` | property developer |
+| `agent@listify.local` | agency agent |
+| `referrer@listify.local` | referral user |
+| `buyer@listify.local` | buyer/prospect |
+
+All six seeded demo accounts use the password supplied through
+`LOCAL_DEMO_AGENCY_PASSWORD`; its value is never tracked or reported.
 
 Use only the package commands named by the status report and manifest. Do not
 use `db:reprovision:local`, `db:local:destroy`, or `db:test:rebuild` without

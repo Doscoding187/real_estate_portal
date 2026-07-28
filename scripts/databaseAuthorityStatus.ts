@@ -1,7 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
+import {
+  inspectCentralLocalEnvironment,
+  inspectWorktreeLink,
+  requiredLocalVariableStates,
+  resolveCentralLocalEnvironment,
+} from './localEnvironmentAuthority';
 
 type AuthorityManifest = {
   authorityVersion: number;
@@ -12,6 +17,9 @@ type AuthorityManifest = {
   migrationRunner: string;
   migrationLedger: string;
   approvedLocalDatabaseName: string;
+  localEnvironmentTemplate: string;
+  machineLocalEnvironmentRelativePath: string;
+  requiredLocalVariables: string[];
   approvedLocalHosts: string[];
   approvedLocalCommands: string[];
   destructiveLocalCommands: string[];
@@ -41,6 +49,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.archivedMigrationDirectory,
     ...manifest.canonicalDrizzleSchemaRoots,
     manifest.migrationRunner,
+    manifest.localEnvironmentTemplate,
     manifest.localSeedEntrypoint,
     ...manifest.verificationEntrypoints,
     manifest.consumerContractEntrypoint,
@@ -61,7 +70,8 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
   if (
     missingPaths.length ||
     missingScripts.length ||
-    manifest.approvedLocalDatabaseName !== 'listify_local'
+    manifest.approvedLocalDatabaseName !== 'listify_local' ||
+    manifest.machineLocalEnvironmentRelativePath !== '.config/property-listify/local.env'
   ) {
     throw new Error(
       `Database authority manifest is inconsistent: ${[
@@ -69,6 +79,9 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
         missingScripts.length ? `missing scripts: ${missingScripts.join(', ')}` : '',
         manifest.approvedLocalDatabaseName !== 'listify_local'
           ? 'local database must be listify_local'
+          : '',
+        manifest.machineLocalEnvironmentRelativePath !== '.config/property-listify/local.env'
+          ? 'machine-local environment path is inconsistent'
           : '',
       ]
         .filter(Boolean)
@@ -150,12 +163,28 @@ async function migrationLedgerState(target: Target, ledger: string) {
 }
 
 async function main() {
-  dotenv.config({ path: resolve(process.cwd(), '.env.local'), override: false, quiet: true });
   const manifest = loadAuthorityManifest();
   validateAuthorityManifest(manifest);
-  const target = classifyDatabaseTarget(process.env.DATABASE_URL, manifest);
+  const centralPath = resolveCentralLocalEnvironment();
+  const central = inspectCentralLocalEnvironment(centralPath);
+  const worktreeLink = inspectWorktreeLink(process.cwd(), centralPath);
+  const variableStates = requiredLocalVariableStates(central.values);
+  const target = classifyDatabaseTarget(
+    central.values.DATABASE_URL ?? process.env.DATABASE_URL,
+    manifest,
+    {
+      ...process.env,
+      ...central.values,
+    },
+  );
   const ledgerState = await migrationLedgerState(target, manifest.migrationLedger);
-  const environment = String(process.env.APP_ENV ?? process.env.NODE_ENV ?? 'unset');
+  const environment = String(
+    central.values.APP_ENV ??
+      central.values.NODE_ENV ??
+      process.env.APP_ENV ??
+      process.env.NODE_ENV ??
+      'unset',
+  );
 
   console.log(`Database Authority Version: ${manifest.authorityVersion}`);
   console.log(`Canonical Baseline: ${manifest.canonicalMigrationPath}`);
@@ -164,14 +193,21 @@ async function main() {
   console.log(`Canonical Schema Roots: ${manifest.canonicalDrizzleSchemaRoots.join(', ')}`);
   console.log(`Current Migration Ledger State: ${ledgerState}`);
   console.log(`Current Environment: ${environment}`);
+  console.log(`Central Local Environment: ${central.exists ? 'found' : 'missing'}`);
+  console.log(`Resolved Central Path: ${central.path}`);
+  console.log(`Central Permissions: ${central.permissions}`);
+  console.log(`Worktree .env.local: ${worktreeLink}`);
+  console.log(
+    `Required Local Variables: ${Object.entries(variableStates)
+      .map(([name, state]) => `${name}=${state}`)
+      .join(', ')}`,
+  );
   console.log(`Sanitized Database Host: ${target.host}`);
   console.log(`Database Name: ${target.database}`);
   console.log(
     `Target Classification: ${target.classification}${target.approved ? ' (approved)' : ' (not approved)'}`,
   );
-  console.log(
-    `Local Demo Seed Credential: ${process.env.LOCAL_DEMO_AGENCY_PASSWORD ? 'configured' : 'missing'}`,
-  );
+  console.log(`Local Demo Seed Credential: ${variableStates.LOCAL_DEMO_AGENCY_PASSWORD}`);
   console.log('Approved Local Workflow: pnpm db:authority:bootstrap:local');
   console.log(`Prohibited Operations: ${manifest.prohibitedCommandCategories.join('; ')}`);
   console.log(`Authority Contract Path: ${manifest.agentEntryContract}`);

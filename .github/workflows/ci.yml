@@ -58,6 +58,11 @@ jobs:
           LOCAL_DEMO_AGENCY_PASSWORD: ci-local-demo-password
         run: pnpm db:authority:consumer-contract
 
+      - name: Run full database contract verification
+        env:
+          DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
+        run: pnpm db:verify:ci
+
   lint-and-typecheck:
     name: Lint & TypeCheck
     runs-on: ubuntu-latest

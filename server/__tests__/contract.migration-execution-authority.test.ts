@@ -10,10 +10,12 @@ const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'db:migrate:local',
   'db:prepare:local',
   'db:reprovision:local',
+  'db:authority:bootstrap:local',
   'release:predeploy:production',
 ]);
 const APPROVED_TEST_ENTRYPOINTS = new Set([
   'db:test:rebuild',
+  'db:authority:consumer-contract',
   'test:listing-performance',
   'test:prospect-journey',
   'test:prospect-journey:security',
@@ -95,8 +97,11 @@ function resolvePackageScript(
 
     const isReadOnlyLocalWorkflowAction =
       executable === 'scripts/localDbWorkflow.ts' && /\s(?:target|verify)$/.test(command);
+    const isReadOnlyAuthorityStatus = executable === 'scripts/databaseAuthorityStatus.ts';
 
-    for (const reference of isReadOnlyLocalWorkflowAction ? [] : sourcePackageReferences(source)) {
+    for (const reference of isReadOnlyLocalWorkflowAction || isReadOnlyAuthorityStatus
+      ? []
+      : sourcePackageReferences(source)) {
       if (!manifest.scripts[reference]) continue;
       const resolved = resolvePackageScript(reference, manifest, visited);
       resolved.runners.forEach(runner => runners.add(runner));
@@ -182,14 +187,17 @@ describe('migration execution authority', () => {
       for (const reference of references) {
         if (!manifest.scripts[reference]) continue;
         if (!isMigrationCapable(reference, manifest)) continue;
-        expect(reference, `${workflow} may only invoke the canonical CI migration wrapper.`).toBe(
-          'db:migrate:test',
-        );
+        expect(
+          ['db:migrate:test', 'db:authority:consumer-contract', 'db:verify:ci'],
+          `${workflow} may only invoke an approved canonical CI migration or verification wrapper.`,
+        ).toContain(reference);
       }
     }
 
     const ci = read('.github/workflows/ci.yml');
-    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(2);
+    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(1);
+    expect(ci.match(/pnpm db:authority:consumer-contract/g)).toHaveLength(1);
+    expect(ci.match(/pnpm db:verify:ci/g)).toHaveLength(1);
   });
 
   it('keeps every operational startup and deployment path migration-free', () => {
