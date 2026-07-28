@@ -5,6 +5,12 @@ add stricter requirements but may not weaken this authority.
 
 ## Mandatory database rule
 
+For database-related agent work, load
+`.agent/skills/property-listify-database-authority/SKILL.md`, then read
+`docs/database-authority/00-database-authority-agent-entry.md` and run
+`pnpm db:authority:status`. The skill is an operating guide only; repository
+authority remains canonical.
+
 Before changing schemas, migrations, runtime database queries, database
 services, seeds, fixtures, or database contract tests, read:
 
