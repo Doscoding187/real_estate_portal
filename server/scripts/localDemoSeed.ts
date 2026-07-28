@@ -1413,7 +1413,6 @@ async function insertDeal(
     buyerEmail: string;
     buyerPhone: string;
     currentStage: string;
-    status: string;
     commissionStatus: string;
     dealAmount: number;
     commissionAmount: number;
@@ -1423,9 +1422,9 @@ async function insertDeal(
     connection,
     `
       INSERT INTO distribution_deals
-        (program_id, development_id, agent_id, owner_type, owner_id, assigned_agent_id, visibility_scope, manager_user_id, external_ref, buyer_name, buyer_email, buyer_phone, deal_amount, commission_base_amount, referrer_commission_type, referrer_commission_value, referrer_commission_basis, referrer_commission_amount, platform_commission_type, platform_commission_value, platform_commission_basis, platform_commission_amount, snapshot_version, snapshot_source, current_stage, commission_trigger_stage, commission_status, status, submitted_at, attribution_locked_at, attribution_locked_by)
+        (program_id, development_id, agent_id, owner_type, owner_id, assigned_agent_id, visibility_scope, manager_user_id, external_ref, buyer_name, buyer_email, buyer_phone, deal_amount, commission_base_amount, referrer_commission_type, referrer_commission_value, referrer_commission_basis, referrer_commission_amount, platform_commission_type, platform_commission_value, platform_commission_basis, platform_commission_amount, snapshot_version, snapshot_source, current_stage, commission_trigger_stage, commission_status, submitted_at, attribution_locked_at, attribution_locked_by)
       VALUES
-        (?, ?, ?, 'agent', ?, ?, 'private', ?, ?, ?, ?, ?, ?, ?, 'flat', ?, 'sale_price', ?, 'percentage', 0.50, 'sale_price', 8000, 1, 'submission_gate', ?, 'bond_approved', ?, ?, NOW(), NOW(), ?)
+        (?, ?, ?, 'agent', ?, ?, 'private', ?, ?, ?, ?, ?, ?, ?, 'flat', ?, 'sale_price', ?, 'percentage', 0.50, 'sale_price', 8000, 1, 'submission_gate', ?, 'bond_approved', ?, NOW(), NOW(), ?)
     `,
     [
       input.programId,
@@ -1444,7 +1443,6 @@ async function insertDeal(
       input.commissionAmount,
       input.currentStage,
       input.commissionStatus,
-      input.status,
       input.managerUserId,
     ],
   );
@@ -1971,13 +1969,12 @@ async function seedDemoData(connection: mysql.Connection) {
     connection,
     `
       INSERT INTO distribution_brand_partnerships
-        (brand_profile_id, status, channel_scope, partnered_at, notes, onboarding_defaults_json, created_by, updated_by)
+        (brand_profile_id, status, partnered_at, notes, onboarding_defaults_json, created_by, updated_by)
       VALUES
-        (?, 'active', ?, NOW(), ?, ?, ?, ?)
+        (?, 'active', NOW(), ?, ?, ?, ?)
     `,
     [
       brandProfileId,
-      json(['open_referrer', 'agency_agent']),
       `${LOCAL_DEMO_DESCRIPTION} Active brand partnership for local demo scenarios.`,
       json({ localDemo: true, preferredCopy: 'buyer-first' }),
       adminId,
@@ -1990,31 +1987,28 @@ async function seedDemoData(connection: mysql.Connection) {
     connection,
     `
       INSERT INTO distribution_development_access
-        (development_id, brand_partnership_id, brand_profile_id, status, submission_allowed, excluded_by_mandate, excluded_by_exclusivity, visibility_scope, reason_code, notes, included_at, created_by, updated_by)
+        (development_id, brand_partnership_id, brand_profile_id, status, submission_allowed, excluded_by_mandate, excluded_by_exclusivity, reason_code, notes, included_at, created_by, updated_by)
       VALUES
-        (?, ?, ?, 'included', 1, 0, 0, ?, NULL, ?, NOW(), ?, ?),
-        (?, ?, ?, 'listed', 0, 0, 0, ?, 'PENDING_SETUP', ?, NULL, ?, ?),
-        (?, ?, ?, 'excluded', 0, 1, 0, ?, 'MANDATE_EXCLUSION', ?, NULL, ?, ?)
+        (?, ?, ?, 'included', 1, 0, 0, NULL, ?, NOW(), ?, ?),
+        (?, ?, ?, 'listed', 0, 0, 0, 'PENDING_SETUP', ?, NULL, ?, ?),
+        (?, ?, ?, 'excluded', 0, 1, 0, 'MANDATE_EXCLUSION', ?, NULL, ?, ?)
     `,
     [
       readyDevelopmentId,
       partnershipId,
       brandProfileId,
-      json(['referrer', 'agent']),
       `${LOCAL_DEMO_DESCRIPTION} Submit-ready opportunity.`,
       adminId,
       adminId,
       pendingDevelopmentId,
       partnershipId,
       brandProfileId,
-      json(['explore']),
       `${LOCAL_DEMO_DESCRIPTION} Coming soon: setup is incomplete.`,
       adminId,
       adminId,
       blockedDevelopmentId,
       partnershipId,
       brandProfileId,
-      json(['explore']),
       `${LOCAL_DEMO_DESCRIPTION} Blocked by mandate/exclusivity logic.`,
       adminId,
       adminId,
@@ -2031,7 +2025,6 @@ async function seedDemoData(connection: mysql.Connection) {
     buyerEmail: 'submitted-buyer@listify.local',
     buyerPhone: '+27000000001',
     currentStage: 'viewing_scheduled',
-    status: 'submitted',
     commissionStatus: 'not_ready',
     dealAmount: 1250000,
     commissionAmount: 24000,
@@ -2055,7 +2048,6 @@ async function seedDemoData(connection: mysql.Connection) {
     buyerEmail: 'needs-action-buyer@listify.local',
     buyerPhone: '+27000000002',
     currentStage: 'application_submitted',
-    status: 'docs_pending',
     commissionStatus: 'not_ready',
     dealAmount: 1425000,
     commissionAmount: 24000,
@@ -2085,7 +2077,6 @@ async function seedDemoData(connection: mysql.Connection) {
     buyerEmail: 'payout-progress-buyer@listify.local',
     buyerPhone: '+27000000003',
     currentStage: 'commission_pending',
-    status: 'payout_ready',
     commissionStatus: 'approved',
     dealAmount: 1600000,
     commissionAmount: 24000,
@@ -2125,7 +2116,6 @@ async function seedDemoData(connection: mysql.Connection) {
     buyerEmail: 'agent-buyer@listify.local',
     buyerPhone: '+27000000004',
     currentStage: 'viewing_completed',
-    status: 'in_review',
     commissionStatus: 'not_ready',
     dealAmount: 1350000,
     commissionAmount: 24000,
@@ -2158,6 +2148,20 @@ async function seedDemoData(connection: mysql.Connection) {
   console.log('- [LOCAL DEMO] Mandate Locked Estate: blocked');
 }
 
+export async function runSeedTransaction(
+  connection: Pick<mysql.Connection, 'beginTransaction' | 'commit' | 'rollback'>,
+  action: () => Promise<void>,
+) {
+  await connection.beginTransaction();
+  try {
+    await action();
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  }
+}
+
 async function main() {
   const action = (process.argv[2] || 'seed') as SeedAction;
   const target = (process.argv[3] ||
@@ -2175,17 +2179,14 @@ async function main() {
   const connection = await mysql.createConnection(parsedUrl.toString());
 
   try {
-    await connection.beginTransaction();
+    await runSeedTransaction(connection, async () => {
     if (action === 'reset') {
       await resetDemoData(connection);
       console.log(`Local demo data reset from ${target} database.`);
     } else {
       await seedDemoData(connection);
     }
-    await connection.commit();
-  } catch (error) {
-    await connection.rollback();
-    throw error;
+    });
   } finally {
     await connection.end();
   }
