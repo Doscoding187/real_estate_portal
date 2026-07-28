@@ -5,7 +5,7 @@ Status: proposed for founder and senior frontend authority review. This is a dec
 ## Questions answered by evidence
 
 - `client/src/index.css` is the active product-wide runtime CSS/token entry. Tailwind v4 is active, and its config is explicitly loaded there.
-- The repository has no 62.5% root convention, no active modern viewport units, no active container-query units, and no custom Tailwind screen declaration.
+- The repository has no 62.5% root convention, no active container-query units, and no custom Tailwind screen declaration. The sidebar has active `min-h-svh`/`h-svh` utilities as an `svh` precedent, but there is no product-wide modern viewport-unit policy.
 - Root size is currently viewport-clamped (`14px` to `16px`), so existing rem use does not by itself demonstrate user-root-relative scaling.
 - `globals.css` and `styles/theme.css` are dormant overlapping variable authorities; `theme.css` is explicitly guarded against runtime import.
 - Viewport media queries are appropriate for page/nav layout. A named field-group container query is already an appropriate reusable-component pattern.

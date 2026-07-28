@@ -16,7 +16,7 @@
   --plds-home-hero-search-radius: 1rem;
 
   --plds-listing-card-max-width: 280px;
-  --plds-listing-card-radius: 0.75rem;
+  --plds-listing-card-radius: calc(var(--radius) + 4px);
   --plds-listing-card-padding: 1rem;
 
   --plds-field-group-gap: 1.75rem;

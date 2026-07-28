@@ -13,16 +13,16 @@ This compares the requested external baseline with the current repository. It is
 | 7 | Prefer min-height to fixed height for content surfaces. | SUPPORTED_WITH_EXCEPTIONS; REQUIRES_VISUAL_TESTING | Loading/marketing cards use min-height; Explore overlay, media heroes, and wizard modal include fixed height patterns. |
 | 8 | Percentages only for containing-block relationships. | SUPPORTED_BY_REPOSITORY | `w-full`, grid fractions, overlay insets, and progress widths generally express containing-block relationships. |
 | 9 | Use ch for readable text measure. | INSUFFICIENT_EVIDENCE | One active literal `ch` usage was found; no established readable-measure policy exists. |
-| 10 | Use intrinsic sizing, fr and minmax for grids. | SUPPORTED_BY_REPOSITORY | Many responsive grids use `fr` and `minmax(0, ...)`; dense fixed tracks require reflow validation. |
+| 10 | Use intrinsic sizing, fr and minmax for grids. | SUPPORTED_BY_REPOSITORY | Many responsive grids use `fr` and `minmax(0, ...)`; active `w-max`/`min-w-max`/`max-w-max` utilities provide intentional intrinsic `max-content` sizing; dense fixed tracks require reflow validation. |
 | 11 | Use viewport units only for viewport relationships. | SUPPORTED_WITH_EXCEPTIONS; REQUIRES_VISUAL_TESTING | Overlays, map canvas, immersive media, carousel widths, and heroes have plausible intent; mobile chrome risks remain. |
-| 12 | Distinguish vh, svh, lvh and dvh. | REQUIRES_MIGRATION; REQUIRES_VISUAL_TESTING | Active source uses legacy vh only; no modern viewport-unit policy or fallback exists. |
+| 12 | Distinguish vh, svh, lvh and dvh. | SUPPORTED_WITH_EXCEPTIONS; REQUIRES_VISUAL_TESTING | Active sidebar `min-h-svh`/`h-svh` utilities provide an `svh` precedent, while overlays and media still use legacy `vh`; no product-wide viewport-unit policy or fallback strategy exists. |
 | 13 | Consider container queries for reusable components in varied containers. | SUPPORTED_BY_REPOSITORY | `FieldGroup`/responsive `Field` is an active named-container pattern. No evidence supports converting page layouts wholesale. |
 | 14 | Keep media queries for page/viewport changes. | SUPPORTED_BY_REPOSITORY | Navbar, page grids, marketing, and dense dashboards correctly make viewport-level decisions. |
 | 15 | Justify clamp min/preferred/max values. | SUPPORTED_WITH_EXCEPTIONS; REQUIRES_VISUAL_TESTING | Bounds are explicit in `index.css`, but values duplicate across root/headings/Tailwind and have no recorded rationale. |
 | 16 | Test fluid typography/spacing for accessibility. | REQUIRES_VISUAL_TESTING | No browser evidence was produced in this audit; root clamp raises priority. |
 | 17 | Tolerate 200% text resizing. | REQUIRES_VISUAL_TESTING | Fixed controls, clamps, line clamps, and bounded overlays are static risks; no conformance claim. |
 | 18 | Reflow normal vertical content at 320 CSS px without unnecessary horizontal scroll. | REQUIRES_VISUAL_TESTING | Flexible rails are promising; desktop grids, nonwrapping controls, and carousel/media surfaces need targeted testing. |
-| 19 | Tolerate text-spacing overrides without clipping/overlap. | REQUIRES_VISUAL_TESTING | `accessibility.css` contains spacing-related rules, but fixed-height/line-clamped surfaces remain unverified. |
+| 19 | Tolerate text-spacing overrides without clipping/overlap. | REQUIRES_VISUAL_TESTING | `accessibility.css` contains spacing-related rules but is dormant because it is not runtime-imported; fixed-height/line-clamped surfaces remain unverified. |
 | 20 | Do not adopt a 62.5% root convention without evidence. | SUPPORTED_BY_REPOSITORY | No 62.5% root convention found. Current root clamp is a separate, higher-priority decision. |
 
 ## Compatibility conclusion

@@ -39,6 +39,47 @@ describe('FPE-S1A foundation authority', () => {
     expect(field).toContain('@md/field-group:flex-row');
   });
 
+  it('preserves the listing-card radius relationship and corrected PLDS-R1 evidence', () => {
+    const tokens = readRepoFile('client/src/styles/plds/components.css');
+    const indexCss = readRepoFile('client/src/index.css');
+    const listingCard = readRepoFile('client/src/components/SimplePropertyListingCard.tsx');
+    const sidebar = readRepoFile('client/src/components/ui/sidebar.tsx');
+    const main = readRepoFile('client/src/main.tsx');
+    const overlay = readRepoFile('client/src/components/explore/PropertyOverlay.tsx');
+    const unitAudit = readRepoFile(
+      'docs/architecture/frontend-design-system/audits/plds-r1/01-current-unit-authority-audit.md',
+    );
+    const responsiveInventory = readRepoFile(
+      'docs/architecture/frontend-design-system/audits/plds-r1/03-responsive-authority-inventory.tsv',
+    );
+    const riskInventory = readRepoFile(
+      'docs/architecture/frontend-design-system/audits/plds-r1/04-fixed-size-and-content-growth-risks.tsv',
+    );
+
+    expect(tokens).toMatch(/--plds-listing-card-radius:\s*calc\(var\(--radius\) \+ 4px\);/);
+    expect(tokens).toMatch(/--plds-nav-height:\s*4rem;/);
+    expect(tokens).toMatch(/--plds-nav-action-height:\s*2\.25rem;/);
+    expect(tokens).toMatch(/--plds-home-hero-title-max-width:\s*24rem;/);
+    expect(tokens).toMatch(/--plds-home-hero-search-max-width:\s*56rem;/);
+    expect(tokens).toMatch(/--plds-home-hero-search-radius:\s*1rem;/);
+    expect(tokens).toMatch(/--plds-field-group-gap:\s*1\.75rem;/);
+    expect(tokens).toMatch(/--plds-field-gap:\s*0\.75rem;/);
+    expect(tokens).toMatch(/--plds-field-content-gap:\s*0\.375rem;/);
+    expect(indexCss).toMatch(/--radius-xl:\s*calc\(var\(--radius\) \+ 4px\);/);
+    expect(listingCard).toContain('rounded-[var(--plds-listing-card-radius)]');
+    expect(listingCard).not.toMatch(/\brounded-xl\b/);
+    expect(sidebar).toContain('min-h-svh');
+    expect(sidebar).toContain('h-svh');
+    expect(main).not.toContain("import './styles/accessibility.css'");
+    expect(overlay).toContain('h-full overflow-y-auto');
+    expect(unitAudit).toContain('min-h-svh` and `h-svh');
+    expect(unitAudit).toContain('intrinsic `max-content` sizing');
+    expect(responsiveInventory).toMatch(
+      /client\/src\/styles\/accessibility\.css[\s\S]*DORMANT_AUTHORITY/,
+    );
+    expect(riskInventory).toContain('h-full overflow-y-auto');
+  });
+
   it('keeps foundation components inside the accepted primitive authority without engine imports', () => {
     for (const relativePath of [
       'client/src/components/ui/page-frame.tsx',
