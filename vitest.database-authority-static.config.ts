@@ -6,6 +6,7 @@ export default {
     include: [
       'server/__tests__/contract.database-production-seed-security.test.ts',
       'server/__tests__/contract.database-final-closure-authority.test.ts',
+      'server/__tests__/contract.database-agent-authority.test.ts',
     ],
     globals: true,
     restoreMocks: true,
