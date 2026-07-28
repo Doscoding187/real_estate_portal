@@ -2,13 +2,13 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Approved AAE-S0 strategic baseline with approved AAE-S1A evidence extension |
+| Status | Approved AAE-S0 strategic baseline with approved AAE-S1A evidence extension and founder-approved nine-audience AAE-S1B proposition architecture |
 | Scope | Commercial value proposition, public messaging, stakeholder acquisition, commercial journeys, offers, proof, onboarding and future content authority |
 | Owner | Founder — Edward Banda, with product, commercial, marketing, legal/compliance and engineering governance |
 | Implementation status | Public implementation is not authorised |
 | Pricing status | Unresolved; no pricing model is approved by this authority |
 | CMS status | A database-backed CMS is not authorised |
-| Next authorised phase | AAE-S1B — Master and Audience Proposition Architecture, with approved evidence boundaries |
+| Next authority decision | Separate founder decision on whether to authorise AAE-S1C; AAE-S1C and public implementation remain unauthorised |
 
 ## Read this first
 
@@ -25,6 +25,12 @@ This index is the entry point for the Property Listify Commercial Value Proposit
 7. [13 — AAE-S1A Commercial-Authority Dependency Register](13-aae-s1a-commercial-authority-dependency-map.md) records plans, entitlements, subscriptions, trials and offer-authority conflicts without selecting a canonical authority.
 8. [14 — AAE-S1A Proof and Testimonial Evidence Register](14-aae-s1a-proof-and-testimonial-evidence-inventory.md) governs the evidence, consent and freshness boundary for proof assets.
 9. [15 — AAE-S1A Entry Gate](15-aae-s1a-s1b-entry-gate.md) authorises AAE-S1B only within its stated offline proposition-architecture boundary.
+10. [20 — AAE-S1B Master Platform Proposition](20-aae-s1b-master-platform-proposition.md) establishes the selected evidence-bounded internal platform proposition and four-layer interpretation.
+11. [21 — AAE-S1B Audience Proposition Matrix](21-aae-s1b-audience-proposition-matrix.md) establishes nine distinct audience problem hypotheses, outcomes and internal propositions, including private property owners/direct listers and individual/portfolio property investors.
+12. [22 — AAE-S1B Proposition Evidence Traceability](22-aae-s1b-proposition-evidence-traceability.md) maps all 46 atomic propositions to AAE-S0 and approved S1A evidence, including the two targeted audience-structure amendments.
+13. [23 — AAE-S1B Differentiation, Objections and Message Boundaries](23-aae-s1b-differentiation-objections-and-message-boundaries.md) establishes evidence-safe differentiation and prohibited comparative claims.
+14. [24 — AAE-S1B Launch-Stage Positioning and Message Hierarchy](24-aae-s1b-launch-stage-positioning-and-message-hierarchy.md) establishes the internal eight-level message hierarchy and demonstration doctrine.
+15. [25 — AAE-S1B AAE-S1C Entry Gate](25-aae-s1b-s1c-entry-gate.md) records that S1C requires a separate founder decision and commercial-authority brief.
 
 ## Approved baseline
 
@@ -60,6 +66,31 @@ AAE-S1A is approved and extends, but does not amend, the AAE-S0 strategic baseli
 AAE-S1B is authorised only as offline Master and Audience Proposition Architecture. It must cite the AAE-S0 strategic baseline together with relevant S1A atomic IDs and may use delivered evidence or explicitly qualified evidence with its limitations. Exploratory evidence may appear only as clearly labelled future direction.
 
 This authorisation does **not** authorise public copy, public routes, pricing, offers, trials, entitlements, commercial availability or implementation. AAE-S1C and AAE-S2 require separate authorisation.
+
+## AAE-S1B review state
+
+AAE-S1B content reconciliation is complete. The proposition architecture now covers nine strategic audiences and contains 46 atomic proposition records.
+
+The private-owner and investor additions are deliberately qualified:
+
+- private property owners/direct listers have reusable listing, presentation, review, enquiry and assisted-handoff foundations, but no authorised owner role, ownership-verification process, publication entitlement, commercial package or complete self-service journey;
+- individual and portfolio investors have discovery, saved-property, affordability, referral and acquisition-adjacent foundations, but no authorised investor workspace, yield or valuation methodology, investment-advice service, property-ownership graph, portfolio engine or rental-operation authority.
+
+The additions amend only the AAE-S0 audience structure. They do not change the selected master proposition or the Discovery → Trust → Operations → Progression model.
+
+The six-document internal proposition architecture received founder approval on 2026-07-28 for commit and pull-request review. This approval does not authorise public copy, public routes, pricing, plans, offers, trials, entitlements, commercial availability, customer-result claims, owner/investor implementation or AAE-S1C.
+
+`AAE_S1B_CLOSEOUT=FOUNDER_APPROVED`
+
+`AAE_S1B_FOUNDER_APPROVAL_DATE=2026-07-28`
+
+`AAE_S1B_FOUNDER_APPROVAL_SCOPE=COMMIT_AND_PULL_REQUEST_REVIEW_ONLY`
+
+`AAE_S1B_AUDIENCE_COUNT=9`
+
+`AAE_S1B_PROPOSITION_RECORD_COUNT=46`
+
+`AAE_S1C_ENTRY=REQUIRES_FOUNDER_DECISION`
 
 ## Mandatory review rule
 
