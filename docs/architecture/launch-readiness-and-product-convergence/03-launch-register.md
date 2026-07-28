@@ -36,10 +36,48 @@ Do not reuse identifiers. A corrected finding retains its original ID and gains 
 | Status | Open, authorised, in progress, integrated verified, production verified, deferred, or closed |
 | Notes | Decision rationale, dependencies, and expiry/removal condition where relevant |
 
-## Register entries
+## Compact register index
 
-| Issue ID | Date observed | Exact Git SHA | Page or journey | Role / viewport | Severity | Owning engine | Launch decision | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| _No findings recorded_ | — | — | — | — | — | — | — | — |
+This index is for navigation and programme oversight. Its **Full record** column must link to the matching complete record in this document, for example `[LRC-SEARCH-001](#lrc-search-001)` once a real finding exists.
 
-Add the full required fields for each real finding; do not invent findings to populate this table.
+| Issue ID | Date observed | Page or journey | Severity | Owning engine | Launch decision | Status | Full record |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| _No findings recorded_ | — | — | — | — | — | — | — |
+
+## Complete per-finding record
+
+The compact index does not replace the complete issue record. Add one complete record under a heading using the stable issue ID when a genuine finding is first registered.
+
+### LRC-<SURFACE>-<NUMBER>
+
+| Field | Record |
+| --- | --- |
+| Issue ID |  |
+| Date observed |  |
+| Exact Git SHA |  |
+| Page or journey |  |
+| URL |  |
+| User role |  |
+| Viewport or device |  |
+| Current behaviour |  |
+| Expected behaviour |  |
+| Evidence reference |  |
+| Severity |  |
+| Owning engine |  |
+| Launch decision |  |
+| Approved implementation branch or worktree |  |
+| Pull request or commit |  |
+| Integrated verification |  |
+| Production verification |  |
+| Status |  |
+| Notes |  |
+
+## Register integrity rules
+
+- Every compact-index row must link to one complete record in this document.
+- A finding is not registered until all fields applicable to its current lifecycle stage are present. Fields that are not yet applicable must remain explicitly blank or be marked `Pending`; they must not be omitted.
+- Evidence references must be sanitized and durable.
+- Status changes must update both the compact index and the complete issue record.
+- No real finding may exist only in informal chat, an engine backlog, or an isolated implementation branch.
+- Engine-backlog linkage does not replace the central finding record or its launch disposition.
+- Do not invent a finding merely to demonstrate this structure.
