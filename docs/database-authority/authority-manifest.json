@@ -1,0 +1,59 @@
+{
+  "authorityVersion": 2,
+  "canonicalMigrationPath": "server/migrations/0000_canonical_launch_baseline.sql",
+  "activeMigrationDirectory": "server/migrations",
+  "archivedMigrationDirectory": "server/migrations/_archived/pre-canonical-baseline",
+  "canonicalDrizzleSchemaRoots": [
+    "drizzle/schema",
+    "drizzle/schema/canonical-model-inventory.json"
+  ],
+  "migrationRunner": "server/migrations/runSqlMigrations.ts",
+  "migrationLedger": "sql_migration_history",
+  "approvedLocalDatabaseName": "listify_local",
+  "localEnvironmentTemplate": ".env.local.example",
+  "machineLocalEnvironmentRelativePath": ".config/property-listify/local.env",
+  "requiredLocalVariables": [
+    "DATABASE_URL",
+    "LOCAL_DEMO_AGENCY_PASSWORD",
+    "JWT_SECRET",
+    "APP_URL",
+    "FRONTEND_URL",
+    "VITE_API_URL",
+    "VITE_API_BASE_URL"
+  ],
+  "approvedLocalHosts": [
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "host.docker.internal",
+    "listify-mysql-local"
+  ],
+  "approvedLocalCommands": [
+    "db:authority:status",
+    "db:authority:bootstrap:local",
+    "db:local:start",
+    "db:local:wait",
+    "db:migrate:local",
+    "db:seed:local",
+    "db:verify:local"
+  ],
+  "destructiveLocalCommands": [
+    "db:reprovision:local",
+    "db:local:destroy",
+    "db:test:rebuild"
+  ],
+  "prohibitedCommandCategories": [
+    "db:push and schema push",
+    "schema generation outside an approved migration task",
+    "manual DDL and retired schema executors",
+    "remote, staging, production, Railway, and TiDB targets"
+  ],
+  "localSeedEntrypoint": "server/scripts/localDemoSeed.ts",
+  "verificationEntrypoints": [
+    "scripts/db-verify-distribution-schema.ts",
+    "server/scripts/verifyLocalDemoSeed.ts"
+  ],
+  "consumerContractEntrypoint": "scripts/databaseAuthorityConsumerContract.ts",
+  "agentEntryContract": "docs/database-authority/00-database-authority-agent-entry.md",
+  "migrationTreeAuthority": "docs/database-authority/migration-tree-authority.json"
+}

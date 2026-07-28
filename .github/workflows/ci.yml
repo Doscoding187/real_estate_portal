@@ -52,15 +52,16 @@ jobs:
       - name: Run isolated database authority security contract
         run: pnpm test:db-authority:static
 
-      - name: Apply canonical SQL migrations
+      - name: Run fresh-schema database consumer contract
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: pnpm db:migrate:test
+          LOCAL_DEMO_AGENCY_PASSWORD: ci-local-demo-password
+        run: pnpm db:authority:consumer-contract
 
-      - name: Run DB Contract Verification
+      - name: Run full database contract verification
         env:
           DATABASE_URL: mysql://root:test_password@127.0.0.1:3306/listify_test
-        run: pnpm run db:verify:ci
+        run: pnpm db:verify:ci
 
   lint-and-typecheck:
     name: Lint & TypeCheck
@@ -195,4 +196,3 @@ jobs:
           name: build-output
           path: dist/
           retention-days: 7
-
