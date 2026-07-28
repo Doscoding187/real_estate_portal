@@ -1,0 +1,100 @@
+/*
+ * PLDS primitive theme authority.
+ *
+ * These variables are the existing runtime colour and radius values moved out
+ * of the entry stylesheet. Tailwind consumes them through the @theme mapping
+ * kept in index.css; this file does not independently generate utilities.
+ */
+:root {
+  --brand-blue: #005ca8;
+  --brand-blue-hover: #004a8a;
+  --conversion: #ff7a00;
+  --conversion-hover: #e66d00;
+  --conversion-foreground: #ffffff;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #111827;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --info: #0284c7;
+  --info-foreground: #ffffff;
+  --surface: #f8fafc;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.235 0.015 65);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: var(--brand-blue);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.235 0.015 65);
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: oklch(0.95 0.03 250);
+  --accent-foreground: var(--foreground);
+  --border: #e2e8f0;
+  --input: var(--border);
+  --radius: 0.65rem;
+  --ring: var(--primary);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
+
+  --chart-1: oklch(0.72 0.14 250);
+  --chart-2: oklch(0.62 0.19 250);
+  --chart-3: oklch(0.52 0.2 250);
+  --chart-4: oklch(0.42 0.18 250);
+  --chart-5: oklch(0.35 0.15 250);
+
+  --sidebar: oklch(0.985 0.001 286);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+.dark {
+  --brand-blue: #38bdf8;
+  --brand-blue-hover: #7dd3fc;
+  --primary: var(--brand-blue);
+  --primary-foreground: #0f172a;
+  --conversion: #fb923c;
+  --conversion-hover: #fdba74;
+  --conversion-foreground: #111827;
+  --surface: #0f172a;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.85 0.005 65);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.85 0.005 65);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.85 0.005 65);
+  --secondary: oklch(0.24 0.006 286.033);
+  --secondary-foreground: oklch(0.7 0.005 65);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.92 0.005 65);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.488 0.243 264.376);
+  --chart-1: var(--color-blue-300);
+  --chart-2: var(--color-blue-500);
+  --chart-3: var(--color-blue-600);
+  --chart-4: var(--color-blue-700);
+  --chart-5: var(--color-blue-800);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.85 0.005 65);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.488 0.243 264.376);
+}

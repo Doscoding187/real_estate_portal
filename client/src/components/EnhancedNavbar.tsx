@@ -480,7 +480,7 @@ export function EnhancedNavbar() {
       className="sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur"
       aria-label="Main platform navigation"
     >
-      <div className="mx-auto flex min-h-16 max-w-screen-2xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[var(--plds-nav-height)] max-w-screen-2xl items-center gap-3 px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
           className="shrink-0 text-lg font-bold tracking-tight text-primary sm:text-xl"
@@ -608,14 +608,14 @@ export function EnhancedNavbar() {
         <div className="ml-auto hidden items-center gap-2 lg:flex">
           <Link
             href="/distribution-network"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-primary/30 px-3 text-sm font-semibold text-primary hover:bg-primary/5"
+            className="inline-flex h-[var(--plds-nav-action-height)] items-center gap-2 rounded-md border border-primary/30 px-3 text-sm font-semibold text-primary hover:bg-primary/5"
           >
             <Briefcase className="size-4" aria-hidden="true" />
             Referrals
           </Link>
           <Link
             href="/advertise"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            className="inline-flex h-[var(--plds-nav-action-height)] items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Megaphone className="size-4" aria-hidden="true" />
             Advertise with us
@@ -623,7 +623,7 @@ export function EnhancedNavbar() {
           {navigationUser ? (
             <AccountLink
               user={navigationUser}
-              className="inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-semibold text-foreground hover:bg-muted"
+              className="inline-flex h-[var(--plds-nav-action-height)] items-center gap-2 rounded-md px-2 text-sm font-semibold text-foreground hover:bg-muted"
             >
               <User className="size-4" aria-hidden="true" />
               {accountLabel}
@@ -631,7 +631,7 @@ export function EnhancedNavbar() {
           ) : (
             <Link
               href="/login"
-              className="inline-flex h-9 items-center rounded-md px-3 text-sm font-semibold text-foreground hover:bg-muted"
+              className="inline-flex h-[var(--plds-nav-action-height)] items-center rounded-md px-3 text-sm font-semibold text-foreground hover:bg-muted"
             >
               Log in
             </Link>
@@ -667,7 +667,7 @@ export function EnhancedNavbar() {
       {mobileMenuOpen ? (
         <div
           id="main-platform-mobile-menu"
-          className="max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-border bg-background p-4 lg:hidden"
+          className="max-h-[calc(100vh_-_var(--plds-nav-height))] overflow-y-auto border-t border-border bg-background p-4 lg:hidden"
         >
           <div className="grid gap-1">
             {MOBILE_LINKS.map(({ icon: Icon, ...link }) => (

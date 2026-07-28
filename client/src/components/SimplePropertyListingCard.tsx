@@ -73,7 +73,7 @@ export function SimplePropertyListingCard({
   return (
     <Link
       href={href || `/property/${id}`}
-      className="group relative block w-full max-w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg"
+      className="group relative block w-full max-w-[var(--plds-listing-card-max-width)] overflow-hidden rounded-[var(--plds-listing-card-radius)] border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg"
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-sky-50" />
@@ -118,7 +118,7 @@ export function SimplePropertyListingCard({
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-[var(--plds-listing-card-padding)]">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
           {listingType === 'rent' ? 'Monthly rental' : 'Property listing'}
         </div>

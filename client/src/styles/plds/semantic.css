@@ -1,0 +1,12 @@
+/* PLDS semantic layout relationships retained from the active runtime entry. */
+:root {
+  --space-xs: clamp(0.25rem, 0.5vw, 0.5rem);
+  --space-sm: clamp(0.5rem, 0.8vw, 0.75rem);
+  --space-md: clamp(0.75rem, 1.2vw, 1rem);
+  --space-lg: clamp(1rem, 1.8vw, 1.5rem);
+  --space-xl: clamp(1.5rem, 2.5vw, 2rem);
+
+  --content-rail-width: 1240px;
+  --content-padding-mobile: 0.875rem;
+  --content-padding-desktop: 2rem;
+}

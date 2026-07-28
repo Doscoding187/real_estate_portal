@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -8,14 +8,35 @@ function readRepoFile(relativePath: string) {
 }
 
 describe('FPE-S1A foundation authority', () => {
-  it('keeps index.css as the global runtime token entry and does not import the dormant theme', () => {
+  it('keeps index.css as the global runtime entry for the canonical PLDS layers', () => {
     const entry = readRepoFile('client/src/main.tsx');
     const tokens = readRepoFile('client/src/index.css');
 
     expect(entry).toContain("import './index.css'");
     expect(entry).not.toContain("import './styles/theme.css'");
-    expect(tokens).toContain('--primary:');
-    expect(tokens).toContain('--content-rail-width:');
+    expect(tokens).toContain("@import './styles/plds/theme.css'");
+    expect(tokens).toContain("@import './styles/plds/semantic.css'");
+    expect(tokens).toContain("@import './styles/plds/components.css'");
+    expect(readRepoFile('client/src/styles/plds/theme.css')).toContain('--primary:');
+    expect(readRepoFile('client/src/styles/plds/semantic.css')).toContain('--content-rail-width:');
+    expect(readRepoFile('client/src/styles/plds/components.css')).toContain('--plds-nav-height:');
+    expect(existsSync('client/src/globals.css')).toBe(false);
+    expect(existsSync('client/src/styles/theme.css')).toBe(false);
+  });
+
+  it('keeps the four PLDS pilots on component-scoped values without changing responsive ownership', () => {
+    expect(readRepoFile('client/src/components/EnhancedNavbar.tsx')).toContain('--plds-nav-height');
+    expect(readRepoFile('client/src/components/EnhancedHero.tsx')).toContain(
+      '--plds-home-hero-search-max-width',
+    );
+    expect(readRepoFile('client/src/components/SimplePropertyListingCard.tsx')).toContain(
+      '--plds-listing-card-max-width',
+    );
+
+    const field = readRepoFile('client/src/components/ui/field.tsx');
+    expect(field).toContain('--plds-field-group-gap');
+    expect(field).toContain('@container/field-group');
+    expect(field).toContain('@md/field-group:flex-row');
   });
 
   it('keeps foundation components inside the accepted primitive authority without engine imports', () => {
