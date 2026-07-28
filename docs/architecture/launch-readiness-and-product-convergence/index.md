@@ -2,9 +2,9 @@
 
 | Field | Current authority |
 | --- | --- |
-| Programme status | **Stage 1 — launch-readiness governance authority in review** |
+| Programme status | **Stage 1 — launch-readiness governance authority merged, post-merge verified, and complete. Stage 2A — local environment-authority audit complete and under architectural review in this branch. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
 | Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | Stage 1 only. This documentation slice does not authorise runtime, environment, deployment, database, media, frontend, backend, or feature changes. |
+| Current authorised stage | Stage 2A documentation closure only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, or feature changes. |
 
 ## Authority roles
 
@@ -16,7 +16,7 @@
 
 Broad feature and engine implementation is paused while launch convergence is established. Security, data-integrity, and severe operational-risk work remain subject to separately approved bounded slices.
 
-No canonical launch candidate exists yet. A future candidate will be short-lived, acceptance-specific, and tied to one exact Git SHA; it is not a permanent `release/launch-candidate` branch.
+No canonical integrated local preview or launch candidate exists yet. A future candidate will be short-lived, acceptance-specific, and tied to one exact Git SHA; it is not a permanent `release/launch-candidate` branch. Stages 3–6 remain unauthorised.
 
 ## Documents in this authority slice
 
@@ -35,6 +35,6 @@ No canonical launch candidate exists yet. A future candidate will be short-lived
 5. **Stage 5 — media authority:** establish an explicit separation between local/development and production media storage.
 6. **Stage 6 — acceptance candidate and promotion:** create a short-lived candidate, conduct integrated acceptance, and promote the exact approved SHA through the controlled production sequence.
 
-## Progression to Stage 2
+## Progression beyond Stage 2A
 
-Stage 2 is authorised only when Edward accepts this Stage 1 authority structure and ChatGPT approves a bounded Stage 2 implementation scope. That scope must address local environment linkage and proof only; it must not create a canonical launch candidate, alter deployment authority, or broaden into feature work.
+Stage 2B requires a separately approved scope to define the complete local-environment authority contract and implement non-mutating diagnostics. It must not repair worktree links, create a canonical launch candidate, alter deployment authority, or broaden into feature work.
