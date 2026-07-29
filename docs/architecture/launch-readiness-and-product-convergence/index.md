@@ -31,6 +31,7 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 9. [GME-A — GitHub Merge Gate Current-State Audit and Target Contract](08-github-merge-gate-enforcement-audit.md)
 10. [GME-B1 — Disabled GitHub Merge Gate staging and readback](09-github-merge-gate-enforcement-execution.md)
 11. [GME-B2 — Active GitHub Merge Gate enforcement](10-github-merge-gate-active-enforcement.md)
+12. [GME-B2 — Controlled merge gate probe verification (in progress)](11-github-merge-gate-probe-verification.md)
 
 ## Ordered programme stages
 

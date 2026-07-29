@@ -8,6 +8,14 @@
 
 Activation and rollback-drill prerequisite: ruleset `19965838` is Active with effective controls present; the complete Disabled rollback returned effective rules to `[]`, and the exact Active payload restored them. Controlled probes below remain pending.
 
+## Activation and rollback prerequisite evidence
+
+| Claim | Mechanism | Sequence | Evidence | Boundary |
+| --- | --- | --- | --- | --- |
+| The Active ruleset and rollback path are verified prerequisites for these probes. | `PUT /repos/Doscoding187/real_estate_portal/rulesets/19965838` using API version `2022-11-28`, followed by exact ruleset and effective-rule readbacks. | Active PUT → Active readback → Disabled PUT → empty effective rules → Active PUT → restored effective rules. | Active digest `e46b0d22d7b8617ce2d652930a60e67198cfc040638c99e66a6023ab0d736706`; Disabled digest `7ddc2ceecf5b09afcc510b330cb913bae12638cfef9044530eb6410348ea3209`; all three PUTs returned HTTP 200; normalized readbacks matched; `main` remained `1ab5f635…`; repository merge settings were unchanged. Detailed record: [document 10](10-github-merge-gate-active-enforcement.md). | This proves activation and rollback only. Conversation, intentional-failure and strict-base probes remain incomplete. |
+
+The initial pending-check observation recorded PR #428 at head `833bd189…` against base `1ab5f635…`: required contexts were pending, GitHub reported the PR blocked, no merge was attempted, and all six ordinary checks later passed. This is pending-check evidence only; it does not prove the remaining probes.
+
 ## Pending probe matrix
 
 | Probe | Mechanism | Expected sequence | Evidence | Boundary |
