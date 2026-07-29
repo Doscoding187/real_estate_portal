@@ -1,6 +1,6 @@
 # GME-B1 — Disabled GitHub Merge Gate Staging and Readback
 
-GME-B1 operational staging and governance closure are complete through PR #425, merge `ba0bc7fbf0faa1c190f5ff9710270c41e1fb884b`, tree-equivalence verification, detached post-merge verification and control synchronization. Ruleset `19965838` remains Disabled and non-enforcing. GME-B2 remains separately unauthorized.
+GME-B1 operational staging and governance closure completed through PR #425, merge `ba0bc7fbf0faa1c190f5ff9710270c41e1fb884b`, tree-equivalence verification, detached post-merge verification and control synchronization. GME-B1 originally established ruleset `19965838` in Disabled state. GME-B2 subsequently activated the exact approved payload and completed the Active-to-Disabled-to-Active rollback drill. The ruleset is currently Active; controlled probe verification remains incomplete and GME-B2 remains in progress.
 
 ## Purpose and scope
 
