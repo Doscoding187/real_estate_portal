@@ -1,10 +1,10 @@
 # Property Listify Launch Readiness and Product Convergence
 
-| Field | Current authority |
-| --- | --- |
-| Programme status | **GME-B2 is complete through PR #428 merge, detached verification, closure publication and control synchronization. The Worktree Lifecycle Reconciliation Audit report is complete as a read-only evidence stage and found no presently qualified retirement candidates. Controlled Worktree Retirement remains blocked pending founder disposition review and separate authorization. Stage 2B remains blocked and separately unauthorized.** |
-| Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | **Post-GME-B2 worktree reconciliation.** Control `main` equals `origin/main` at `1a27213310e635c39dc9924f5b0d0fd269d7cb22`. The audit found zero qualified retirement candidates. Founder Worktree Disposition and Candidate Qualification Review is required next; retirement and Stage 2B have not begun. |
+| Field                    | Current authority                                                                                                                                                                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Programme status         | **GME-B2 and the Worktree Lifecycle Reconciliation Audit are complete. Founder disposition review deferred broad retirement and identified six launch-domain worktrees for conditional future review. Stage 2B is authorized as a bounded local-environment contract and non-mutating-diagnostics implementation.** |
+| Purpose                  | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression.                                                                                                                                                                            |
+| Current authorised stage | **Stage 2B implementation.** Control `main` equals `origin/main` at `36e77e7f7da6532cd789fbdb588ccc6ccb708717`. Broad retirement is deferred until after MVP; the six launch-domain worktrees remain preserved and do not block Stage 2B.                                                                           |
 
 ## Authority roles
 
@@ -31,6 +31,7 @@ No existing worktree or branch may be deleted, pruned, moved, repaired, reset, r
 11. [GME-B2 — Active GitHub Merge Gate enforcement](10-github-merge-gate-active-enforcement.md)
 12. [GME-B2 — Controlled merge gate probe verification](11-github-merge-gate-probe-verification.md)
 13. [Worktree Lifecycle Reconciliation Audit](12-worktree-lifecycle-reconciliation-audit.md)
+14. [Local-environment authority contract and diagnostics](13-local-environment-authority-contract-and-diagnostics.md)
 
 ## Canonical programme stages
 
@@ -50,7 +51,7 @@ Stage 2B is a separately authorized slice to define the complete local-environme
 3. **Worktree Lifecycle Reconciliation Audit:** complete as document 12; strictly read-only against existing worktrees and branches.
 4. **Founder Worktree Disposition and Candidate Qualification Review:** required because the audit found zero qualified retirement candidates; this is a read-only disposition review and does not alter worktrees or branches.
 5. **Controlled Worktree Retirement:** separately authorized named batches only; not begun.
-6. **Stage 2B:** separately authorized environment-contract and non-mutating-diagnostics slice; remains blocked.
+6. **Stage 2B:** authorized environment-contract and non-mutating-diagnostics slice; implementation in progress.
 7. **Stages 3–6:** separately unauthorized.
 
 No stage above may broaden into feature work or alter deployment authority without its own approval.
