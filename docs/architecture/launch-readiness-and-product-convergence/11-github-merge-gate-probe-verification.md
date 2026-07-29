@@ -38,13 +38,13 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| A failed required check blocked merge eligibility. | Active strict required-check rule on `19965838`. | Failure commit `69c6839b2e61843d70c4dc6a8864b0d3d23035f6` added one isolated client test; CI ran; Unit & Integration Tests failed. | Run `30476107598`, job `90658458432`, step `Run tests`; synthetic merge `6ccf1817e0a60cc50dcf53ba0ecc15c175080410`; assertion expected `GME-B2-EXPECTED-PASS` but received `GME-B2-FAILURE-PROBE`; merge state `BLOCKED`; unresolved count zero. | No merge attempt, no production source change, and only one temporary file caused the failure. |
+| The intentional probe produced a deterministic failure in a required check. | One isolated temporary Vitest file and the required Unit & Integration Tests context. | Failure commit `69c6839b2e61843d70c4dc6a8864b0d3d23035f6` added one isolated client test; workflow `30476107598` ran; job `90658458432` failed in `Run tests`; the commit was then reverted exactly. | Failed workflow, job, assertion and synthetic merge `6ccf1817e0a60cc50dcf53ba0ecc15c175080410` are durably identified; expected `GME-B2-EXPECTED-PASS` but received `GME-B2-FAILURE-PROBE`. | The original contemporaneous merge-state payload was not retained. Historical attribution of `BLOCKED` solely to this failed check is partial/bounded. Required-check enforcement is independently proven by the committed clean pending-check observation. |
 
 ### Exact revert and fresh-source recovery
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Reverting the exact failure commit removed the test and required fresh source-pair checks. | `git revert --no-edit 69c6839b2e61843d70c4dc6a8864b0d3d23035f6`. | Revert `886fc948a5d0bbdbad9b06e55258dbdd5106c676` pushed; recovery synthetic merge `e52e6cc89b60e5359bdcf82c683b479b201603fb`; workflow `30477349193` ran. | All six recovery checks passed; temporary file absent; PR returned to `CLEAN`/`MERGEABLE`. | History retains failure and revert; no document or PR-body update occurred in the probe run. |
+| The exact revert removed the failure and triggered fresh successful checks for the new source pair. | Normal `git revert`, GitHub synthetic-merge checks and exact tree comparison. | Revert `886fc948a5d0bbdbad9b06e55258dbdd5106c676` removed the test; recovery workflow `30477349193` ran; required checks passed; recovered tree equals the pre-probe tree. | Revert identity, recovery workflow, successful required checks, temporary-test absence and tree `071b71710c0a2b2b166b68211c7a3d0bbe178841` are durably preserved. | The complete contemporaneous historical `CLEAN/MERGEABLE` payload was not retained. Historical merge-state recovery is partial/bounded; current-head eligibility is independently proven by final successful checks and current clean PR state. |
 
 ### Tree restoration
 
@@ -66,11 +66,13 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 | Rollback | Passed |
 | Pending checks | Passed through clean, independently isolated re-observation |
 | Head-change invalidation | Passed |
-| Intentional failed check | Passed |
+| Intentional failed-check execution | Passed |
+| Historical failed-check isolated BLOCKED attribution | Partial/bounded; contemporaneous payload not retained |
 | Exact revert | Passed |
-| Fresh-source recovery | Passed |
+| Fresh required-check rerun | Passed |
 | Unresolved conversation | Passed through durable independently isolated before/after snapshots |
 | Tree restoration | Passed |
+| Historical recovery CLEAN/MERGEABLE snapshot | Partial/bounded; contemporaneous payload not retained |
 | Merge-method configuration | Passed by exact readback |
 | Merge-method behavior | Pending authorized final merge |
 | Strict base advance | Partial/bounded; independent stale-base blocking was not isolated |
