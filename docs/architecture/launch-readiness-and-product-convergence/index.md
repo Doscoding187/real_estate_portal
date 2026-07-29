@@ -2,9 +2,9 @@
 
 | Field | Current authority |
 | --- | --- |
-| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. Evidence Contract Review Closure, GME-A, GME-B1 and the rollback-contract correction are complete. GME-B2 activation and rollback, clean pending-check blocking, conversation-resolution blocking and clearance, intentional failed-check blocking, exact revert, fresh-source recovery, and tree restoration are complete. Strict-base evidence is bounded/partial. PR #428 merge and post-merge verification remain pending; GME-B2 is not complete. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
+| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. Evidence Contract Review Closure, GME-A, GME-B1 and the rollback-contract correction are complete. GME-B2 activation and rollback, clean pending-check blocking, intentional failed-check blocking, exact revert, fresh-source recovery, and tree restoration are complete; historical conversation evidence is retained while durable before/after conversation snapshots remain pending. Strict-base evidence is bounded/partial, and merge-method behavior remains pending the authorized final merge. PR #428 merge and post-merge verification remain pending; GME-B2 is not complete. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
 | Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | GME-B2 active enforcement and controlled probe verification is in final review preparation. The exact ruleset is Active; functional probes passed, strict-base evidence is bounded, and PR #428 merge plus post-merge verification remain pending. Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement, and Stage 2B remain blocked. |
+| Current authorised stage | GME-B2 active enforcement and controlled probe verification is in final closure. The exact ruleset is Active; durable conversation re-observation and the authorized merge-commit behavior proof remain pending, strict-base evidence is bounded, and PR #428 merge plus post-merge verification remain pending. Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement, and Stage 2B remain blocked. |
 
 ## Authority roles
 
@@ -47,7 +47,7 @@ Documents 09 and 10 remain phase-specific execution records for Disabled staging
 ## Governed sequence beyond Stage 2A
 
 1. **Evidence Contract Review Closure:** complete through PR #423 and its post-merge verification.
-2. **GitHub Merge Gate Enforcement:** GME-A, GME-B1 and the rollback-contract correction are complete. GME-B2 activation and functional probes passed, including the clean pending-check re-observation; strict-base evidence is bounded/partial, and PR #428 merge plus post-merge verification remain pending.
+2. **GitHub Merge Gate Enforcement:** GME-A, GME-B1 and the rollback-contract correction are complete. GME-B2 activation and functional probes passed except that durable conversation before/after evidence remains pending; merge-only configuration is verified by exact readback, while eligible-PR behavior awaits the authorized final merge. Strict-base evidence is bounded/partial, and PR #428 merge plus post-merge verification remain pending.
 3. **Worktree Lifecycle Reconciliation Audit:** may begin only after the Evidence Contract Review Closure is merged and post-merge verified, GME-B is completed and verified, and Edward separately approves its bounded read-only scope.
 4. **Controlled Worktree Retirement:** a separately approved mutating procedure for named, preserved worktrees only.
 5. **Stage 2B:** a separately approved complete local-environment authority contract and non-mutating diagnostics slice.

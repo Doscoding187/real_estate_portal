@@ -4,7 +4,7 @@
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Activation and rollback, pending-check blocking, conversation blocking and clearance, intentional failed-check blocking, exact revert, fresh-source recovery, and tree restoration passed. | Active ruleset `19965838`, bounded PR observations, one isolated client test, normal revert, and exact tree comparison. | Activate and drill rollback; observe pending checks; create/resolve one COMMENT thread; commit and revert one failing test; await fresh checks; compare trees. | Records below. | Strict-base isolation is partial/bounded; final PR merge and post-merge verification remain pending. |
+| Activation and rollback, pending-check blocking, intentional failed-check blocking, exact revert, fresh-source recovery, and tree restoration passed. The historical conversation observation is retained; durable before/after conversation snapshots are pending. | Active ruleset `19965838`, bounded PR observations, one isolated client test, normal revert, and exact tree comparison. | Activate and drill rollback; observe pending checks; create/resolve one COMMENT thread; commit and revert one failing test; await fresh checks; compare trees; capture durable conversation states. | Records below. | Strict-base isolation is partial/bounded; final PR merge and post-merge verification remain pending. |
 
 GME-B2 enforcement is active and the functional probes completed, but GME-B2 is not governance-complete until PR #428 merges and post-merge verification passes.
 
@@ -32,7 +32,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| An unresolved conversation blocked merge eligibility and resolution cleared the blocker. | Active pull-request rule requiring resolved conversations. | Baseline head `6dc26934…`, synthetic merge `9b752f531…`; one inline COMMENT was created, observed unresolved, then resolved. | Review `4810709816`; thread `PRRT_kwDOQQWnOM6U1cl1`; comment `3676285542`; line 9; merge state `BLOCKED` then `CLEAN`; all six checks passed. | No merge attempt, no `REQUEST_CHANGES`, no approval requirement, and genuine review threads were not used. |
+| Historical observation indicates an unresolved conversation blocked merge eligibility and resolution cleared the blocker; durable before/after state capture remains pending. | Active pull-request rule requiring resolved conversations. | Baseline head `6dc26934…`, synthetic merge `9b752f531…`; one inline COMMENT was created, observed unresolved, then resolved. | Review `4810709816`; thread `PRRT_kwDOQQWnOM6U1cl1`; comment `3676285542`; line 9; historical merge state `BLOCKED` then `CLEAN`; all six checks passed. | Historical object identity and result are retained, but immutable before/after payloads are not; one clean durable re-observation is required before promotion to Passed. |
 
 ### Intentional failed required check
 
@@ -56,7 +56,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Merge-only, deletion, and non-fast-forward controls are active. | Ruleset and effective-rule readback. | Read ruleset `19965838` before and after probes. | Empty bypass actors; zero approvals; resolved conversations; `allowed_merge_methods: ["merge"]`; four checks with App ID `15368`; deletion and non-fast-forward rules. | No destructive deletion, force-push, or direct-push attempt was made. |
+| The Active ruleset configures merge-commit-only promotion. | Ruleset and effective-rule readback. | Read ruleset `19965838` and effective `main` rules before and after probes. | Empty bypass actors; zero approvals; resolved conversations; `allowed_merge_methods: ["merge"]`; four checks with App ID `15368`; deletion and non-fast-forward rules. | Configuration is verified. Eligible-PR behavior remains pending and will be proven only by the authorized final merge of PR #428; no squash, rebase, destructive deletion, force-push, or direct-push attempt is authorized. |
 
 ## Probe matrix
 
@@ -69,8 +69,10 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 | Intentional failed check | Passed |
 | Exact revert | Passed |
 | Fresh-source recovery | Passed |
-| Unresolved conversation | Passed |
+| Unresolved conversation | Historical observation retained; durable re-observation pending |
 | Tree restoration | Passed |
+| Merge-method configuration | Passed by exact readback |
+| Merge-method behavior | Pending authorized final merge |
 | Strict base advance | Partial/bounded; independent stale-base blocking was not isolated |
 | Merge-only/readback boundaries | Verified by readback; no destructive attempt |
 | Final PR merge | Pending |
@@ -80,4 +82,4 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 If active behavior differs from the accepted contract, submit the complete Disabled payload, verify empty effective rules, close probe PRs without merge, and stop. No enforcement malfunction was observed during these probes.
 
-PR #428 is the GME-B2 closure vehicle. GME-B2 becomes governance-complete only when this exact accepted head is merged through the Active merge-only ruleset and the detached post-merge verification report is published on PR #428. Before both events, GME-B2 remains incomplete.
+PR #428 is the GME-B2 closure vehicle. Conversation enforcement becomes durably proven when committed before/after snapshots record one unresolved conversation with all checks successful and `BLOCKED`, followed by zero unresolved conversations and `CLEAN` on the unchanged source pair. Merge-method behavior becomes proven when GitHub accepts PR #428 through the ordinary merge-commit method under the Active ruleset. GME-B2 becomes governance-complete when both proofs and detached post-merge verification are recorded in the PR #428 closure record.
