@@ -1,6 +1,6 @@
 # GME-B1 — Disabled GitHub Merge Gate Staging and Readback
 
-Operational staging succeeded: the approved Disabled ruleset was created and read back successfully, and remains non-enforcing. Governance closure remains pending PR #425 review, merge, tree-equivalence proof, post-merge verification and control synchronization.
+GME-B1 operational staging and governance closure are complete through PR #425, merge `ba0bc7fbf0faa1c190f5ff9710270c41e1fb884b`, tree-equivalence verification, detached post-merge verification and control synchronization. Ruleset `19965838` remains Disabled and non-enforcing. GME-B2 remains separately unauthorized.
 
 ## Purpose and scope
 
@@ -76,16 +76,36 @@ The payload passed JSON shape validation and was accepted by the current GitHub 
 
 Edward is the sole rollback authority. The prepared operations are:
 
+Ruleset updates use the complete-representation operation below, with `Accept: application/vnd.github+json`, the approved current API version, and repository-administration authority:
+
 ```text
-Disable: PATCH /repos/Doscoding187/real_estate_portal/rulesets/19965838
-         body {"enforcement":"disabled"}
-Delete:  DELETE /repos/Doscoding187/real_estate_portal/rulesets/19965838
-Verify:  GET .../rulesets/19965838
-         GET .../rulesets?includes_parents=true
-         GET .../rules/branches/main
-         GET .../branches/main/protection
-         GET .../repos/Doscoding187/real_estate_portal
+PUT /repos/Doscoding187/real_estate_portal/rulesets/19965838
+HTTP 200 expected; read the response body and then perform the exact GET readbacks.
 ```
+
+The activation payload is the complete accepted candidate payload with only `enforcement: "active"`; the Disabled rollback payload is the same complete payload with `enforcement: "disabled"`. Every other field remains present and unchanged:
+
+```json
+{
+  "name": "property-listify-main-merge-gate",
+  "target": "branch",
+  "enforcement": "disabled",
+  "bypass_actors": [],
+  "conditions": {"ref_name": {"include": ["refs/heads/main"], "exclude": []}},
+  "rules": [
+    {"type": "deletion"},
+    {"type": "non_fast_forward"},
+    {"type": "pull_request", "parameters": {"allowed_merge_methods": ["merge"], "dismiss_stale_reviews_on_push": false, "require_code_owner_review": false, "require_last_push_approval": false, "required_approving_review_count": 0, "required_review_thread_resolution": true}},
+    {"type": "required_status_checks", "parameters": {"do_not_enforce_on_create": false, "required_status_checks": [{"context": "DB Contract Verification", "integration_id": 15368}, {"context": "Lint & TypeCheck", "integration_id": 15368}, {"context": "Unit & Integration Tests", "integration_id": 15368}, {"context": "Build Application", "integration_id": 15368}], "strict_required_status_checks_policy": true}}
+  ]
+}
+```
+
+Delete remains `DELETE /repos/Doscoding187/real_estate_portal/rulesets/19965838` as last-resort recovery only, when disabling is impossible or the named ruleset is structurally corrupt. It is not routine rollback. Every update or recovery must read back the ruleset, all rulesets, effective `main` rules, classic protection and repository settings.
+
+| Claim | Mechanism | Sequence | Evidence | Boundary |
+| --- | --- | --- | --- | --- |
+| The rollback authority required a complete PUT representation rather than the former partial PATCH example. | GitHub repository-ruleset update contract and the prior execution document. | Identify the old PATCH text; replace it with complete active/disabled PUT payloads; preserve the named delete recovery. | The prior text used `PATCH ... {"enforcement":"disabled"}`; this correction documents `PUT .../19965838`, expected HTTP 200 and full payload equality. | No ruleset mutation occurred in this correction; activation and rollback behavior remain untested until GME-B2. |
 
 Rollback evidence must record the named ruleset ID, response status, normalized ruleset state, effective active rules, classic protection response and unchanged repository merge settings. No rollback was executed because readback matched.
 
@@ -95,4 +115,4 @@ Activation requires separate authorization, a fresh before-state, exact ruleset 
 
 ## Current programme position
 
-GME-A is complete. GME-B1 operational staging and readback succeeded, but GME-B1 governance closure remains pending PR #425 review, merge, tree-equivalence proof, post-merge verification and control synchronization. GME-B2 activation and probe verification remains unauthorized until that closure is complete and separately accepted by Edward. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
+GME-A and GME-B1 are complete. PR #425 supplied the Disabled ruleset staging, merge, tree-equivalence verification, detached post-merge verification and control synchronization. Ruleset `19965838` remains Disabled and non-enforcing; effective active rules remain empty. GME-B2 activation and probe verification remains unauthorized. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
