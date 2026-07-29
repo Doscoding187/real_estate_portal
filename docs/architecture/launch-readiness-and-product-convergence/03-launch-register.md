@@ -5,6 +5,7 @@
 | Status | **Established by Stage 1; no findings are recorded in this initial register** |
 | Scope | Central launch disposition and verification register. It is not an implementation backlog. |
 | Candidate status | No canonical candidate exists yet; SHA fields remain mandatory once one exists. |
+| Evidence method | [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md) governs material technical claims and their boundaries; this register remains the sole launch-disposition authority. |
 
 ## Stable issue identifiers
 
@@ -38,7 +39,7 @@ Do not reuse identifiers. A corrected finding retains its original ID and gains 
 
 ## Compact register index
 
-This index is for navigation and programme oversight. Its **Full record** column must link to the matching complete record in this document, for example `[LRC-SEARCH-001](#lrc-search-001)` once a real finding exists.
+This index is for navigation and programme oversight. Its **Full record** column must link to the matching complete record in this document once a real finding exists; the expected anchor form is `#lrc-search-001`.
 
 | Issue ID | Date observed | Page or journey | Severity | Owning engine | Launch decision | Status | Full record |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -80,4 +81,5 @@ The compact index does not replace the complete issue record. Add one complete r
 - Status changes must update both the compact index and the complete issue record.
 - No real finding may exist only in informal chat, an engine backlog, or an isolated implementation branch.
 - Engine-backlog linkage does not replace the central finding record or its launch disposition.
+- A material technical assertion referenced by a finding must use the [authority claim record](07-authority-evidence-record-templates.md#authority-claim-record) or an equivalent record that preserves its mechanism, sequence, evidence, and boundary.
 - Do not invent a finding merely to demonstrate this structure.

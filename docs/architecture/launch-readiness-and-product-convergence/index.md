@@ -2,9 +2,9 @@
 
 | Field | Current authority |
 | --- | --- |
-| Programme status | **Stage 1 — launch-readiness governance authority merged, post-merge verified, and complete. Stage 2A — merged, but in review closure because actionable findings remained unresolved at merge. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
+| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. The Evidence Sequence and Provenance Contract is the current governance slice in this branch; it is not accepted until reviewed and merged. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
 | Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | Stage 2A review closure only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, or feature changes. Stage 2B remains unauthorised. |
+| Current authorised stage | Evidence Sequence and Provenance Contract governance slice only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, or feature changes. Worktree Lifecycle Reconciliation Audit follows this contract. Stage 2B remains unauthorised. |
 
 ## Authority roles
 
@@ -16,7 +16,7 @@
 
 Broad feature and engine implementation is paused while launch convergence is established. Security, data-integrity, and severe operational-risk work remain subject to separately approved bounded slices.
 
-No canonical integrated local preview or launch candidate exists yet. A future candidate will be short-lived, acceptance-specific, and tied to one exact Git SHA; it is not a permanent `release/launch-candidate` branch. Stages 3–6 remain unauthorised.
+No canonical integrated local preview or launch candidate exists yet. A future candidate will be short-lived, acceptance-specific, and tied to an exact commit and Git tree identity; it is not a permanent `release/launch-candidate` branch. Stages 2B and 3–6 remain unauthorised.
 
 ## Documents in this authority slice
 
@@ -25,6 +25,9 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 3. [Manual audit and triage method](02-manual-audit-and-triage-method.md)
 4. [Central launch register](03-launch-register.md)
 5. [Engine backlog authority](04-engine-backlog-authority.md)
+6. [Local preview environment-authority audit](05-local-preview-environment-authority-audit.md)
+7. [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md)
+8. [Authority evidence record templates](07-authority-evidence-record-templates.md)
 
 ## Ordered programme stages
 
@@ -37,4 +40,4 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 
 ## Progression beyond Stage 2A
 
-Stage 2B requires a separately approved scope to define the complete local-environment authority contract and implement non-mutating diagnostics. It must not repair worktree links, create a canonical launch candidate, alter deployment authority, or broaden into feature work.
+The Worktree Lifecycle Reconciliation Audit must apply the Evidence Sequence and Provenance Contract after that contract is accepted. Stage 2B then requires a separately approved scope to define the complete local-environment authority contract and implement non-mutating diagnostics. Neither slice may repair worktree links, create a canonical launch candidate, alter deployment authority, or broaden into feature work.
