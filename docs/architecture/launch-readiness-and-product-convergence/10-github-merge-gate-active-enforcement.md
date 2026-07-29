@@ -25,4 +25,4 @@ GME-B1 and its rollback-contract correction were prerequisites. The exact rulese
 
 ## Boundaries
 
-No direct push, force push, deletion, workflow change, repository-wide merge-setting change or product/runtime change is authorized by this record. Non-destructive functional probes subsequently passed, with pending-check evidence now requiring a clean independent re-observation; no destructive attempt was made. PR #428 merge and post-merge verification remain pending, so GME-B2 remains incomplete.
+No direct push, force push, deletion, workflow change, repository-wide merge-setting change or product/runtime change is authorized by this record. Non-destructive functional probes subsequently passed, including the clean pending-check re-observation recorded in document 11; no destructive attempt was made. PR #428 merge and post-merge verification remain pending, so GME-B2 remains incomplete.

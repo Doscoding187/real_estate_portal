@@ -20,7 +20,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| The original pending-check observation is partially recovered; an independently captured merge-state response is still required. | Active strict required-status-check evaluation and GitHub Actions checkout evidence. | PR head `833bd18910693009ae42a96aa8a446c4446d9d6b` opened against base `1ab5f6358a8ece846a9412a68fe019bd030b936f`; run `30452044461` (run 1054), jobs `90576181918`, `90576536534`, `90576536613`, `90577240662`, synthetic ref `refs/remotes/pull/428/merge`, synthetic SHA `694613d29e05ecd5e066361e96866610c3de01ef`, checkout `2026-07-29T12:33:37.6176140Z`, detached HEAD confirmed `2026-07-29T12:33:37.9297136Z`. | Workflow/job and checkout identities are recovered exactly. | The contemporaneous merge-state payload and timestamp were not durably preserved; this historical observation is contextual evidence, not a complete standalone enforcement record. Clean re-observation is pending. |
+| Pending required checks blocked PR #428 in a clean, independently isolated observation. | Active strict required-status-check evaluation and GitHub GraphQL/API readbacks. | After evidence-gap correction `2e8dbef1…` was published and all five review threads were resolved, capture at `2026-07-29T19:02:10Z` recorded head `2e8dbef1174c458afd195333d8be2b04f19a8fec`, base `13a645b8697a1152ddf9ba3a8f9fe1c6c1a73820`, potential synthetic merge `6b2419b2ac4f726d6560a4a19d7cfd07762f2444`, and pending run `30482533905`; the pending DB Contract Verification check was job `90679991987`. | GraphQL snapshot `/tmp/gme-b2-pending-check-2026-07-29T19-02-10Z.json`, SHA-256 `0ef24149f7cb95ebfadba21158be347a052a0f54edd835aeaf7d8210be51efbf`; jobs snapshot `/tmp/gme-b2-pending-jobs-30482533905.json`, SHA-256 `e58592721a655e67c6d329c26db76ec5bb2c3e3c29b275c6072101abed1954f2`; `mergeStateStatus: BLOCKED`; check rollup `PENDING`; unresolved-thread count zero; no merge attempt; Vercel was pending and DB Contract Verification in progress. | No merge attempt, no `REQUEST_CHANGES`, no unresolved conversation or other review blocker contributed. This clean re-observation independently proves pending-check blocking; later checks may complete normally. |
 
 ### Source/base advancement
 
@@ -64,7 +64,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 | --- | --- |
 | Activation | Passed |
 | Rollback | Passed |
-| Pending checks | Historical observation partially recovered; clean, independently isolated re-observation pending |
+| Pending checks | Passed through clean, independently isolated re-observation |
 | Head-change invalidation | Passed |
 | Intentional failed check | Passed |
 | Exact revert | Passed |
