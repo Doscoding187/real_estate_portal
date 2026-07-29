@@ -20,7 +20,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Pending required checks blocked PR #428. | Active strict required-status-check evaluation. | PR head `833bd189…` opened against base `1ab5f635…`; required contexts remained pending; merge state was inspected; checks later completed. | GitHub reported blocked while checks were pending; no merge was attempted. | Pending-check evidence only; it does not prove other probes. |
+| The original pending-check observation is partially recovered; an independently captured merge-state response is still required. | Active strict required-status-check evaluation and GitHub Actions checkout evidence. | PR head `833bd18910693009ae42a96aa8a446c4446d9d6b` opened against base `1ab5f6358a8ece846a9412a68fe019bd030b936f`; run `30452044461` (run 1054), jobs `90576181918`, `90576536534`, `90576536613`, `90577240662`, synthetic ref `refs/remotes/pull/428/merge`, synthetic SHA `694613d29e05ecd5e066361e96866610c3de01ef`, checkout `2026-07-29T12:33:37.6176140Z`, detached HEAD confirmed `2026-07-29T12:33:37.9297136Z`. | Workflow/job and checkout identities are recovered exactly. | The contemporaneous merge-state payload and timestamp were not durably preserved; this historical observation is contextual evidence, not a complete standalone enforcement record. Clean re-observation is pending. |
 
 ### Source/base advancement
 
@@ -64,7 +64,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 | --- | --- |
 | Activation | Passed |
 | Rollback | Passed |
-| Pending checks | Passed |
+| Pending checks | Historical observation partially recovered; clean, independently isolated re-observation pending |
 | Head-change invalidation | Passed |
 | Intentional failed check | Passed |
 | Exact revert | Passed |
