@@ -2,9 +2,9 @@
 
 | Field | Authority |
 | --- | --- |
-| Status | **PR #422 merged this initial contract with unresolved actionable findings. This review-closure correction is proposed authority until reviewed and merged.** |
+| Status | **Evidence Sequence and Provenance Contract established through PR #422 and corrected through PR #423. PR #423 is merged, tree-equivalent, post-merge verified, synchronized, and its historical review findings are closed. This contract is current repository authority.** |
 | Purpose | Make every material authority claim traceable from mechanism through evidence, limitation, and authorised action. |
-| Does not authorise | Stage 2B, environment reconciliation, a canonical preview, candidate creation, worktree retirement, runtime changes, or deployment changes. |
+| Does not authorise | GME-B until separately approved; the Worktree Lifecycle Reconciliation Audit until GME-B is completed and verified plus Edward separately approves its bounded read-only scope; Controlled Worktree Retirement; Stage 2B; environment reconciliation; a canonical preview or candidate; runtime changes; or deployment changes. |
 
 ## 1. Permanent authority rule
 
