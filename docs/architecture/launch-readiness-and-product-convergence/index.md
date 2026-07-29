@@ -33,6 +33,8 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 11. [GME-B2 — Active GitHub Merge Gate enforcement](10-github-merge-gate-active-enforcement.md)
 12. [GME-B2 — Controlled merge gate probe verification (final review preparation)](11-github-merge-gate-probe-verification.md)
 
+Documents 09 and 10 remain phase-specific execution records for Disabled staging and Active activation/rollback respectively; document 11 and this index govern the current GME-B2 probe and closure status.
+
 ## Ordered programme stages
 
 1. **Stage 1 — governance authority:** establish this documentation authority and its central register.
