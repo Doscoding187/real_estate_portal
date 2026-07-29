@@ -2,9 +2,9 @@
 
 | Field | Current authority |
 | --- | --- |
-| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. The Evidence Sequence and Provenance Contract entered `main` through PR #422, but its review closure is incomplete because actionable findings were unresolved at merge. This corrective review-closure slice is the current authority work. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
+| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. Evidence Contract Review Closure is complete through PR #423. GME-A — GitHub Merge Gate Current-State Audit and Target Contract is the active governance slice. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
 | Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | Evidence Contract Review Closure only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, feature changes, worktree inventory, retirement, or GitHub-rule changes. GitHub Merge Gate Enforcement follows this closure; Stage 2B remains unauthorised. |
+| Current authorised stage | GME-A — GitHub Merge Gate Current-State Audit and Target Contract only. It does not authorise GitHub-rule, branch-protection, merge-method, permission, workflow, environment, runtime, deployment, database, media, frontend, backend, feature, worktree-inventory, or retirement changes. GME-B enforcement remains unauthorised; Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement, and Stage 2B remain blocked. |
 
 ## Authority roles
 
@@ -28,6 +28,7 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 6. [Local preview environment-authority audit](05-local-preview-environment-authority-audit.md)
 7. [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md)
 8. [Authority evidence record templates](07-authority-evidence-record-templates.md)
+9. [GME-A — GitHub Merge Gate Current-State Audit and Target Contract](08-github-merge-gate-enforcement-audit.md)
 
 ## Ordered programme stages
 
@@ -40,8 +41,8 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 
 ## Governed sequence beyond Stage 2A
 
-1. **Evidence Contract Review Closure:** correct and verify the incomplete PR #422 authority in `main`.
-2. **GitHub Merge Gate Enforcement:** inspect and, only if separately approved, enforce the technical conditions required for review resolution, current-source checks, merge methods, and bypass handling.
+1. **Evidence Contract Review Closure:** complete through PR #423 and its post-merge verification.
+2. **GitHub Merge Gate Enforcement:** GME-A is the current read-only audit and target-contract slice; GME-B may enforce settings only after separate approval and probe preparation.
 3. **Worktree Lifecycle Reconciliation Audit:** a separately approved read-only inventory and classification using the corrected contract.
 4. **Controlled Worktree Retirement:** a separately approved mutating procedure for named, preserved worktrees only.
 5. **Stage 2B:** a separately approved complete local-environment authority contract and non-mutating diagnostics slice.
