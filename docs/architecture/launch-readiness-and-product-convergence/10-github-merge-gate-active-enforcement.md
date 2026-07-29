@@ -4,7 +4,7 @@
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Activation and the rollback drill for ruleset `19965838` succeeded. | GitHub repository-ruleset API using complete PUT payloads. | Disabled baseline; Active PUT; Active readback; Disabled PUT; empty effective rules; Active PUT; Active readback. | Active digest `e46b0d22d7b8617ce2d652930a60e67198cfc040638c99e66a6023ab0d736706`; Disabled digest `7ddc2ceecf5b09afcc510b330cb913bae12638cfef9044530eb6410348ea3209`; each PUT returned HTTP 200. | This activation record proves activation and rollback only. Functional probe evidence subsequently passed and is recorded in document 11. PR #428 merge and post-merge verification remain pending, so this record alone does not prove GME-B2 complete. |
+| Activation and the rollback drill for ruleset `19965838` succeeded. | GitHub repository-ruleset API using complete PUT payloads. | Disabled baseline; Active PUT; Active readback; Disabled PUT; empty effective rules; Active PUT; Active readback. | Active digest `e46b0d22d7b8617ce2d652930a60e67198cfc040638c99e66a6023ab0d736706`; Disabled digest `7ddc2ceecf5b09afcc510b330cb913bae12638cfef9044530eb6410348ea3209`; each PUT returned HTTP 200. | This activation record proves activation and rollback. Functional probes, PR #428 merge behavior and detached post-merge verification subsequently passed and are recorded in document 11; no destructive probe was performed. |
 
 GME-B1 and its rollback-contract correction were prerequisites. The exact ruleset is now Active; effective controls are present. The controlled rollback returned the same ruleset to Disabled with empty effective rules, then reactivated the exact payload. `main` remained `1ab5f635…` throughout.
 
@@ -25,4 +25,4 @@ GME-B1 and its rollback-contract correction were prerequisites. The exact rulese
 
 ## Boundaries
 
-No direct push, force push, deletion, workflow change, repository-wide merge-setting change or product/runtime change is authorized by this record. Non-destructive functional probes subsequently passed, including the clean pending-check re-observation recorded in document 11; no destructive attempt was made. PR #428 merge and post-merge verification remain pending, so GME-B2 remains incomplete.
+No direct push, force push, deletion, workflow change, repository-wide merge-setting change or product/runtime change is authorized by this record. Activation and rollback passed; non-destructive functional probes are recorded in document 11, and PR #428 merge behavior plus detached post-merge verification passed. GME-B2 is complete through the closure record in document 11. No destructive attempt was made.

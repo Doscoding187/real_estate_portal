@@ -4,9 +4,15 @@
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Activation and rollback, pending-check blocking, conversation blocking and clearance, intentional failed-check blocking, exact revert, fresh-source recovery, and tree restoration passed. | Active ruleset `19965838`, bounded PR observations, one isolated client test, normal revert, exact tree comparison, and committed before/after conversation snapshots. | Activate and drill rollback; observe pending checks; create/resolve one COMMENT thread; commit and revert one failing test; await fresh checks; compare trees; capture durable conversation states. | Records below. | Strict-base isolation is partial/bounded; merge-method behavior, final PR merge and post-merge verification remain pending. |
+| Activation and rollback, pending-check blocking, conversation blocking and clearance, intentional failed-check blocking, exact revert, fresh-source recovery, tree restoration, ordinary merge-commit behavior and detached post-merge verification passed. | Active ruleset `19965838`, bounded PR observations, one isolated client test, normal revert, exact tree comparison, committed before/after conversation snapshots, and PR #428 merge/tree/parent evidence. | Activate and drill rollback; observe pending checks; create/resolve one COMMENT thread; commit and revert one failing test; await fresh checks; compare trees; capture durable states; merge PR #428 normally; verify detached post-merge state and synchronize control. | Records below and the post-merge closure record. | Strict-base isolation remains partial/bounded; historical failed-check attribution and historical recovery CLEAN/MERGEABLE capture remain partial/bounded. |
 
-GME-B2 enforcement is active and the functional probes completed, but GME-B2 is not governance-complete until PR #428 merges and post-merge verification passes.
+GME-B2 enforcement is active and governance-complete through PR #428 merge, detached post-merge verification, closure publication and control synchronization.
+
+## Post-merge closure record
+
+| Claim | Mechanism | Sequence | Evidence | Boundary |
+| --- | --- | --- | --- | --- |
+| GME-B2 is governance-complete through PR #428 merge, detached post-merge verification, closure publication and control synchronization. | Ordinary GitHub pull-request merge under Active ruleset `19965838`, exact commit/tree/parent readback, detached verification and control-worktree `--ff-only` synchronization. | Accepted base `13a645b8697a1152ddf9ba3a8f9fe1c6c1a73820` → reviewed head `7b047530d04c7b92b593e5cec5b024af381b744a` → merge commit `1a27213310e635c39dc9924f5b0d0fd269d7cb22` → detached verification → closure publication → synchronized control. | PR #428 closure comment [`issuecomment-5123300616`](https://github.com/Doscoding187/real_estate_portal/issues/428#issuecomment-5123300616); first parent `13a645b8697a1152ddf9ba3a8f9fe1c6c1a73820`; second parent `7b047530d04c7b92b593e5cec5b024af381b744a`; accepted-head and merge tree `bbd45bc2fe517c10d57ea0e2dbcfd86af36bbe3b`; exact eight-file scope; four JSON snapshots parsed and hashes matched; detached post-merge verification passed; ruleset `19965838` remained Active and exact; production deployment `dpl_3WDixt8yWYz1GSi5uFfoV2Egztck4` was `READY`; control synchronized to `1a27213310e635c39dc9924f5b0d0fd269d7cb22`. | Strict-base evidence remains partial/bounded. Historical failed-check isolated BLOCKED attribution and historical recovery CLEAN/MERGEABLE capture remain partial/bounded because contemporaneous payloads were not retained. |
 
 ## Activation and rollback prerequisite
 
@@ -56,7 +62,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| The Active ruleset configures merge-commit-only promotion. | Ruleset and effective-rule readback. | Read ruleset `19965838` and effective `main` rules before and after probes. | Empty bypass actors; zero approvals; resolved conversations; `allowed_merge_methods: ["merge"]`; four checks with App ID `15368`; deletion and non-fast-forward rules. | Configuration is verified. Eligible-PR behavior remains pending and will be proven only by the authorized final merge of PR #428; no squash, rebase, destructive deletion, force-push, or direct-push attempt is authorized. |
+| The Active ruleset configures merge-commit-only promotion. | Ruleset and effective-rule readback. | Read ruleset `19965838` and effective `main` rules before and after probes. | Empty bypass actors; zero approvals; resolved conversations; `allowed_merge_methods: ["merge"]`; four checks with App ID `15368`; deletion and non-fast-forward rules. | Configuration is verified. Eligible-PR behavior passed through the ordinary merge-commit method used by PR #428; no squash, rebase, destructive deletion, force-push, or direct-push attempt is authorized. |
 
 ## Probe matrix
 
@@ -74,14 +80,15 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 | Tree restoration | Passed |
 | Historical recovery CLEAN/MERGEABLE snapshot | Partial/bounded; contemporaneous payload not retained |
 | Merge-method configuration | Passed by exact readback |
-| Merge-method behavior | Pending authorized final merge |
+| Merge-method behavior | Passed through ordinary PR #428 merge commit |
 | Strict base advance | Partial/bounded; independent stale-base blocking was not isolated |
 | Merge-only/readback boundaries | Verified by readback; no destructive attempt |
-| Final PR merge | Pending |
-| Post-merge verification | Pending |
+| Final PR merge | Passed |
+| Post-merge verification | Passed |
+| Control synchronization | Passed |
 
 ## Rollback boundary
 
 If active behavior differs from the accepted contract, submit the complete Disabled payload, verify empty effective rules, close probe PRs without merge, and stop. No enforcement malfunction was observed during these probes.
 
-PR #428 is the GME-B2 closure vehicle. Conversation enforcement becomes durably proven when committed before/after snapshots record one unresolved conversation with all checks successful and `BLOCKED`, followed by zero unresolved conversations and `CLEAN` on the unchanged source pair. Merge-method behavior becomes proven when GitHub accepts PR #428 through the ordinary merge-commit method under the Active ruleset. GME-B2 becomes governance-complete when both proofs and detached post-merge verification are recorded in the PR #428 closure record.
+PR #428 is the completed GME-B2 closure vehicle. Conversation enforcement is durably proven by the committed before/after snapshots recording one unresolved conversation with all checks successful and `BLOCKED`, followed by zero unresolved conversations and `CLEAN` on the unchanged source pair. Merge-method behavior passed through the ordinary merge-commit method under the Active ruleset. GME-B2 is governance-complete through the closure record above.
