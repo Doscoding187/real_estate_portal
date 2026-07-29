@@ -1,6 +1,6 @@
 # GME-B1 — Disabled GitHub Merge Gate Staging and Readback
 
-GME-B1 operational staging and governance closure completed through PR #425, merge `ba0bc7fbf0faa1c190f5ff9710270c41e1fb884b`, tree-equivalence verification, detached post-merge verification and control synchronization. GME-B1 originally established ruleset `19965838` in Disabled state. GME-B2 subsequently activated the exact approved payload and completed the Active-to-Disabled-to-Active rollback drill. The ruleset is currently Active; controlled probe verification remains incomplete and GME-B2 remains in progress.
+GME-B1 operational staging and governance closure completed through PR #425, merge `ba0bc7fbf0faa1c190f5ff9710270c41e1fb884b`, tree-equivalence verification, detached post-merge verification and control synchronization. GME-B1 originally established ruleset `19965838` in Disabled state. GME-B2 subsequently activated the exact approved payload and completed the Active-to-Disabled-to-Active rollback drill. The ruleset is currently Active. GME-B2 functional probe verification subsequently passed and is recorded in document 11. PR #428 merge and post-merge verification remain pending, so GME-B2 is not yet governance-complete.
 
 ## Purpose and scope
 
@@ -105,7 +105,7 @@ Delete remains `DELETE /repos/Doscoding187/real_estate_portal/rulesets/19965838`
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| The rollback authority required a complete PUT representation rather than the former partial PATCH example. | GitHub repository-ruleset update contract and the prior execution document. | Identify the old PATCH text; replace it with complete active/disabled PUT payloads; preserve the named delete recovery. | The prior text used `PATCH ... {"enforcement":"disabled"}`; this correction documents `PUT .../19965838`, expected HTTP 200 and full payload equality. | No ruleset mutation occurred in this correction; activation and rollback behavior remain untested until GME-B2. |
+| The rollback authority required a complete PUT representation rather than the former partial PATCH example. | GitHub repository-ruleset update contract and the prior execution document. | Identify the old PATCH text; replace it with complete active/disabled PUT payloads; preserve the named delete recovery. | The prior text used `PATCH ... {"enforcement":"disabled"}`; this correction documents `PUT .../19965838`, expected HTTP 200 and full payload equality. | No ruleset mutation occurred in this correction; later activation and rollback evidence is recorded in document 10. |
 
 Rollback evidence must record the named ruleset ID, response status, normalized ruleset state, effective active rules, classic protection response and unchanged repository merge settings. No rollback was executed because readback matched.
 
@@ -115,4 +115,4 @@ Activation requires separate authorization, a fresh before-state, exact ruleset 
 
 ## Current programme position
 
-GME-A and GME-B1 are complete. GME-B2 subsequently activated the exact approved payload and completed the Active-to-Disabled-to-Active rollback drill. Ruleset `19965838` is currently Active and effective controls are present. Controlled probe verification remains incomplete; GME-B2 is in progress. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
+GME-A and GME-B1 are complete. GME-B2 subsequently activated the exact approved payload and completed the Active-to-Disabled-to-Active rollback drill. Ruleset `19965838` is currently Active and effective controls are present. Functional controlled probes passed, including the clean pending-check re-observation recorded in document 11; strict-base evidence remains bounded/partial. PR #428 merge and post-merge verification remain pending, so GME-B2 is not yet complete. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
