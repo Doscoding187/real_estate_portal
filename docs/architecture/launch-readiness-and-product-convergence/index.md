@@ -2,9 +2,9 @@
 
 | Field | Current authority |
 | --- | --- |
-| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. Evidence Contract Review Closure is complete through PR #423. GME-A — GitHub Merge Gate Current-State Audit and Target Contract is the active governance slice. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
+| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. Evidence Contract Review Closure and GME-A are complete. GME-B1 Disabled staging and readback is the active implementation slice. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
 | Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | GME-A — GitHub Merge Gate Current-State Audit and Target Contract only. It does not authorise GitHub-rule, branch-protection, merge-method, permission, workflow, environment, runtime, deployment, database, media, frontend, backend, feature, worktree-inventory, or retirement changes. GME-B enforcement remains unauthorised; Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement, and Stage 2B remain blocked. |
+| Current authorised stage | GME-B1 — Disabled GitHub Merge Gate staging and readback only. It does not authorise activation, probes, GitHub-rule changes beyond the named Disabled ruleset, branch-protection, merge-method, permission, workflow, environment, runtime, deployment, database, media, frontend, backend, feature, worktree-inventory, or retirement changes. GME-B2 enforcement remains unauthorised; Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement, and Stage 2B remain blocked. |
 
 ## Authority roles
 
@@ -29,6 +29,7 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 7. [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md)
 8. [Authority evidence record templates](07-authority-evidence-record-templates.md)
 9. [GME-A — GitHub Merge Gate Current-State Audit and Target Contract](08-github-merge-gate-enforcement-audit.md)
+10. [GME-B1 — Disabled GitHub Merge Gate staging and readback](09-github-merge-gate-enforcement-execution.md)
 
 ## Ordered programme stages
 
@@ -42,7 +43,7 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 ## Governed sequence beyond Stage 2A
 
 1. **Evidence Contract Review Closure:** complete through PR #423 and its post-merge verification.
-2. **GitHub Merge Gate Enforcement:** GME-A is the current read-only audit and target-contract slice; GME-B may enforce settings only after GME-A is merged and post-merge verified, separate approval, and completed probe preparation.
+2. **GitHub Merge Gate Enforcement:** GME-A is complete; GME-B1 Disabled staging and readback is complete; GME-B2 activation and probe verification remains separately unauthorized.
 3. **Worktree Lifecycle Reconciliation Audit:** may begin only after the Evidence Contract Review Closure is merged and post-merge verified, GME-B is completed and verified, and Edward separately approves its bounded read-only scope.
 4. **Controlled Worktree Retirement:** a separately approved mutating procedure for named, preserved worktrees only.
 5. **Stage 2B:** a separately approved complete local-environment authority contract and non-mutating diagnostics slice.
