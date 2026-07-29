@@ -2,8 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync, readlinkSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
+import { loadAuthorityManifest, validateAuthorityManifest } from './databaseAuthorityStatus';
 
-export const CONTRACT_VERSION = 'stage2b-1';
+export const CONTRACT_VERSION = 'stage2b-2';
 
 export const VARIABLE_CLASSIFICATIONS = [
   'TRACKED_SAFE_DEFAULT',
@@ -85,14 +86,20 @@ const CONTRACT_GROUPS: readonly ContractGroup[] = [
     'A shared, remote, or production value could expose data or credentials.',
   ),
   group(
+    ['APP_URL', 'FRONTEND_URL', 'VITE_API_URL', 'VITE_API_BASE_URL'],
+    'REQUIRED_MACHINE_LOCAL_NON_SECRET',
+    '~/.config/property-listify/local.env',
+    true,
+    false,
+    'The local runtime must fail closed or remain unavailable.',
+    'No routing fallback is accepted for the canonical local contract.',
+    'Wrong routing can send local requests to shared or production services.',
+  ),
+  group(
     [
-      'APP_URL',
-      'FRONTEND_URL',
       'BASE_URL',
       'NEXT_PUBLIC_APP_URL',
       'API_URL',
-      'VITE_API_URL',
-      'VITE_API_BASE_URL',
       'VITE_APP_URL',
       'VITE_ASSETS_BASE_URL',
       'VITE_APP_TITLE',
@@ -422,38 +429,78 @@ export function inspectEnvironmentPath(
 export type CentralInspection = {
   state: 'MISSING' | 'REGULAR_FILE' | 'SYMLINK' | 'NON_FILE_PATH' | 'UNREADABLE';
   permissions: 'SAFE_0600' | 'UNSAFE' | 'UNKNOWN';
+  ownership: 'OWNER_CURRENT_USER' | 'OWNER_MISMATCH' | 'OWNER_UNAVAILABLE';
   parsed: ParsedEnvironment;
 };
 
-export function inspectCentralAuthority(path: string): CentralInspection {
+type CanonicalAuthorityManifest = ReturnType<typeof loadAuthorityManifest>;
+
+export function inspectCentralAuthority(
+  path: string,
+  options: { effectiveUid?: () => number | undefined } = {},
+): CentralInspection {
   let fileStat;
   try {
     fileStat = lstatSync(path, { throwIfNoEntry: false });
   } catch {
-    return { state: 'UNREADABLE', permissions: 'UNKNOWN', parsed: parseEnvironmentText('') };
+    return {
+      state: 'UNREADABLE',
+      permissions: 'UNKNOWN',
+      ownership: 'OWNER_UNAVAILABLE',
+      parsed: parseEnvironmentText(''),
+    };
   }
   if (!fileStat)
-    return { state: 'MISSING', permissions: 'UNKNOWN', parsed: parseEnvironmentText('') };
+    return {
+      state: 'MISSING',
+      permissions: 'UNKNOWN',
+      ownership: 'OWNER_UNAVAILABLE',
+      parsed: parseEnvironmentText(''),
+    };
   if (fileStat.isSymbolicLink())
-    return { state: 'SYMLINK', permissions: 'UNKNOWN', parsed: parseEnvironmentText('') };
+    return {
+      state: 'SYMLINK',
+      permissions: 'UNKNOWN',
+      ownership: 'OWNER_UNAVAILABLE',
+      parsed: parseEnvironmentText(''),
+    };
   if (!fileStat.isFile())
-    return { state: 'NON_FILE_PATH', permissions: 'UNKNOWN', parsed: parseEnvironmentText('') };
+    return {
+      state: 'NON_FILE_PATH',
+      permissions: 'UNKNOWN',
+      ownership: 'OWNER_UNAVAILABLE',
+      parsed: parseEnvironmentText(''),
+    };
   try {
     const mode = statSync(path).mode & 0o777;
+    const effectiveUid = options.effectiveUid ?? process.geteuid;
+    const currentUid = effectiveUid?.();
+    const ownership =
+      typeof currentUid === 'number' && typeof fileStat.uid === 'number'
+        ? fileStat.uid === currentUid
+          ? 'OWNER_CURRENT_USER'
+          : 'OWNER_MISMATCH'
+        : 'OWNER_UNAVAILABLE';
     return {
       state: 'REGULAR_FILE',
       permissions: mode === 0o600 ? 'SAFE_0600' : 'UNSAFE',
+      ownership,
       parsed: parseEnvironmentText(readFileSync(path, 'utf8')),
     };
   } catch {
-    return { state: 'UNREADABLE', permissions: 'UNKNOWN', parsed: parseEnvironmentText('') };
+    return {
+      state: 'UNREADABLE',
+      permissions: 'UNKNOWN',
+      ownership: 'OWNER_UNAVAILABLE',
+      parsed: parseEnvironmentText(''),
+    };
   }
 }
 
 export type DiagnosticResult = {
   contractVersion: string;
   timestamp: string;
-  repositoryRoot: string;
+  repositoryRoot: string | null;
   requestedTarget: string;
   environmentPath: PathInspection;
   centralAuthority: {
@@ -461,6 +508,7 @@ export type DiagnosticResult = {
     inspection: {
       state: CentralInspection['state'];
       permissions: CentralInspection['permissions'];
+      ownership: CentralInspection['ownership'];
       names: string[];
       duplicateNames: string[];
       malformedEntryCount: number;
@@ -468,6 +516,7 @@ export type DiagnosticResult = {
     unknownNames: string[];
     deprecatedNames: string[];
     prohibitedLocalNames: string[];
+    testOnlyNames: string[];
     missingRequiredNames: string[];
     emptyNames: string[];
     duplicateNames: string[];
@@ -486,9 +535,13 @@ export type DiagnosticResult = {
   warnings: string[];
   boundaryNotes: string[];
   exitCode: DiagnosticExitCode;
+  targetClassification: 'SUPPORTED' | 'UNSUPPORTED';
 };
 
-function classifyDatabaseTarget(raw: string | undefined) {
+function classifyDatabaseTarget(
+  raw: string | undefined,
+  manifest: CanonicalAuthorityManifest | null,
+) {
   if (!raw)
     return {
       classification: 'unknown' as const,
@@ -500,16 +553,12 @@ function classifyDatabaseTarget(raw: string | undefined) {
     const url = new URL(raw);
     const host = url.hostname.toLowerCase() || '(none)';
     const database = decodeURIComponent(url.pathname.replace(/^\//, '')) || '(none)';
-    const localHost = new Set([
-      'localhost',
-      '127.0.0.1',
-      '::1',
-      'host.docker.internal',
-      'listify-mysql-local',
-    ]).has(host);
-    if (localHost && database === 'listify_local')
+    const approvedHosts = new Set(manifest?.approvedLocalHosts ?? []);
+    const localDatabase = manifest?.approvedLocalDatabaseName ?? 'listify_local';
+    const localHost = approvedHosts.has(host);
+    if (url.protocol === 'mysql:' && localHost && url.pathname === `/${localDatabase}`)
       return { classification: 'local' as const, approved: true, host, database };
-    if (localHost && database === 'listify_test')
+    if (url.protocol === 'mysql:' && localHost && url.pathname === '/listify_test')
       return { classification: 'test' as const, approved: true, host, database };
     if (/prod|railway|tidb/i.test(host) || database === 'listify_property_sa')
       return { classification: 'production' as const, approved: false, host, database };
@@ -547,24 +596,128 @@ function readWorktreeEnvironment(
   }
 }
 
+function emptyCentralAuthority(path: string) {
+  return {
+    path,
+    inspection: {
+      state: 'UNREADABLE' as const,
+      permissions: 'UNKNOWN' as const,
+      ownership: 'OWNER_UNAVAILABLE' as const,
+      names: [],
+      duplicateNames: [],
+      malformedEntryCount: 0,
+    },
+    unknownNames: [],
+    deprecatedNames: [],
+    prohibitedLocalNames: [],
+    testOnlyNames: [],
+    missingRequiredNames: [],
+    emptyNames: [],
+    duplicateNames: [],
+    malformedEntryCount: 0,
+  };
+}
+
+function unsupportedDiagnosticResult(
+  requestedTarget: string,
+  centralPath: string,
+  now: () => Date,
+): DiagnosticResult {
+  return {
+    contractVersion: CONTRACT_VERSION,
+    timestamp: now().toISOString(),
+    repositoryRoot: null,
+    requestedTarget,
+    environmentPath: { state: 'UNKNOWN', readable: false },
+    centralAuthority: emptyCentralAuthority(centralPath),
+    variableSummary: emptySummary(),
+    databaseTarget: {
+      classification: 'unknown',
+      approved: false,
+      host: '(unknown)',
+      database: '(unknown)',
+    },
+    completeApplicationCompliance: false,
+    stage3Eligibility: false,
+    blockers: ['Requested target could not be resolved as a supported Git worktree.'],
+    warnings: [],
+    boundaryNotes: [
+      'Target resolution failed before any environment file was read.',
+      'Values are never printed; no files, links, permissions, services, databases, or providers were modified or connected.',
+    ],
+    exitCode: 2,
+    targetClassification: 'UNSUPPORTED',
+  };
+}
+
+function validateCanonicalManifest(manifest: CanonicalAuthorityManifest, repositoryRoot: string) {
+  validateAuthorityManifest(manifest, repositoryRoot);
+  if (!Array.isArray(manifest.requiredLocalVariables) || !manifest.requiredLocalVariables.length) {
+    throw new Error('requiredLocalVariables is missing or empty');
+  }
+  if (!Array.isArray(manifest.approvedLocalHosts) || !manifest.approvedLocalHosts.length) {
+    throw new Error('approvedLocalHosts is missing or empty');
+  }
+  if (manifest.approvedLocalDatabaseName !== 'listify_local') {
+    throw new Error('approvedLocalDatabaseName is not listify_local');
+  }
+  const requiredAuthorityNames = [
+    'DATABASE_URL',
+    'LOCAL_DEMO_AGENCY_PASSWORD',
+    'JWT_SECRET',
+    'APP_URL',
+    'FRONTEND_URL',
+    'VITE_API_URL',
+    'VITE_API_BASE_URL',
+  ];
+  if (requiredAuthorityNames.some(name => !manifest.requiredLocalVariables.includes(name))) {
+    throw new Error('canonical required local-variable authority contradicts Stage 2B');
+  }
+  if (manifest.requiredLocalVariables.some(name => !contractForName(name))) {
+    throw new Error('canonical required local-variable authority contains an unclassified name');
+  }
+}
+
 export function runEnvironmentAuthorityDiagnostic(
   requestedTarget = process.cwd(),
-  options: { centralPath?: string; now?: () => Date; repositoryRoot?: string } = {},
+  options: {
+    centralPath?: string;
+    now?: () => Date;
+    repositoryRoot?: string;
+    manifestRoot?: string;
+    effectiveUid?: () => number | undefined;
+    manifestLoader?: (root: string) => CanonicalAuthorityManifest;
+  } = {},
 ): DiagnosticResult {
-  const repositoryRoot = resolve(
-    options.repositoryRoot ??
-      execFileSync('git', ['rev-parse', '--show-toplevel'], {
-        cwd: requestedTarget,
-        encoding: 'utf8',
-      }).trim(),
-  );
+  const now = options.now ?? (() => new Date());
   const centralPath = resolve(
     options.centralPath ?? join(homedir(), '.config', 'property-listify', 'local.env'),
   );
+  let repositoryRoot: string;
+  try {
+    repositoryRoot = resolve(
+      options.repositoryRoot ??
+        execFileSync('git', ['rev-parse', '--show-toplevel'], {
+          cwd: requestedTarget,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim(),
+    );
+  } catch {
+    return unsupportedDiagnosticResult(requestedTarget, centralPath, now);
+  }
   const environmentPath = inspectEnvironmentPath(repositoryRoot, centralPath);
-  const central = inspectCentralAuthority(centralPath);
+  const central = inspectCentralAuthority(centralPath, { effectiveUid: options.effectiveUid });
   const worktree = readWorktreeEnvironment(repositoryRoot, environmentPath, centralPath);
   const source = central.parsed;
+  let manifest: CanonicalAuthorityManifest | null = null;
+  let manifestError = false;
+  try {
+    manifest = options.manifestLoader?.(repositoryRoot) ?? loadAuthorityManifest(repositoryRoot);
+    validateCanonicalManifest(manifest, options.manifestRoot ?? repositoryRoot);
+  } catch {
+    manifestError = true;
+  }
   const summary = emptySummary();
   const names = [...new Set([...source.names, ...worktree.names])];
   for (const name of names)
@@ -587,20 +740,24 @@ export function runEnvironmentAuthorityDiagnostic(
       }),
     ),
   ].sort();
-  const required = ENVIRONMENT_VARIABLE_CONTRACT.filter(variable => variable.required);
-  const missingRequiredNames = required
-    .filter(variable => !source.values[variable.name])
-    .map(variable => variable.name);
+  const required = manifest?.requiredLocalVariables ?? [];
+  const missingRequiredNames = required.filter(name => !source.values[name]);
   const emptyNames = source.names
     .filter(name => source.values[name] === '')
     .filter((name, index, all) => all.indexOf(name) === index)
     .sort();
-  const databaseTarget = classifyDatabaseTarget(source.values.DATABASE_URL);
+  const databaseTarget = classifyDatabaseTarget(source.values.DATABASE_URL, manifest);
   const blockers: string[] = [];
   const warnings: string[] = [];
+  const testOnlyNames = [
+    ...new Set(source.names.filter(name => contractForName(name)?.classification === 'TEST_ONLY')),
+  ].sort();
+  if (manifestError) blockers.push('Canonical authority manifest is unavailable or malformed.');
   if (central.state !== 'REGULAR_FILE') blockers.push(`Central authority is ${central.state}.`);
   if (central.permissions !== 'SAFE_0600')
     blockers.push('Central authority is not a regular file with mode 0600.');
+  if (central.ownership !== 'OWNER_CURRENT_USER')
+    blockers.push(`Central authority ownership is ${central.ownership}.`);
   if (central.parsed.malformedEntries)
     blockers.push(
       `Central authority has ${central.parsed.malformedEntries} malformed assignment(s).`,
@@ -611,6 +768,10 @@ export function runEnvironmentAuthorityDiagnostic(
     );
   if (missingRequiredNames.length)
     blockers.push(`Required names are missing: ${missingRequiredNames.join(', ')}.`);
+  if (testOnlyNames.length)
+    blockers.push(
+      `TEST_ONLY names are prohibited in central authority: ${testOnlyNames.join(', ')}.`,
+    );
   if (unknownNames.length)
     warnings.push(
       `Unknown names require evidence before central-authority adoption: ${unknownNames.join(', ')}.`,
@@ -648,6 +809,7 @@ export function runEnvironmentAuthorityDiagnostic(
       inspection: {
         state: central.state,
         permissions: central.permissions,
+        ownership: central.ownership,
         names: [...new Set(source.names)].sort(),
         duplicateNames: central.parsed.duplicateNames,
         malformedEntryCount: central.parsed.malformedEntries,
@@ -655,6 +817,7 @@ export function runEnvironmentAuthorityDiagnostic(
       unknownNames,
       deprecatedNames,
       prohibitedLocalNames,
+      testOnlyNames,
       missingRequiredNames,
       emptyNames,
       duplicateNames: central.parsed.duplicateNames,
@@ -671,6 +834,11 @@ export function runEnvironmentAuthorityDiagnostic(
       'No file, symlink, permission, service, database, or provider state was changed or connected by this diagnostic.',
       'Database-target eligibility is reported separately from complete-application compliance.',
     ],
-    exitCode: blockers.length ? (environmentPath.state === 'UNKNOWN' ? 2 : 1) : 0,
+    exitCode: blockers.length
+      ? ['UNKNOWN', 'UNREADABLE'].includes(environmentPath.state)
+        ? 2
+        : 1
+      : 0,
+    targetClassification: 'SUPPORTED',
   };
 }

@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   lstatSync,
@@ -8,18 +9,24 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { loadAuthorityManifest } from '../../scripts/databaseAuthorityStatus';
 import {
   inspectEnvironmentPath,
   parseEnvironmentText,
   runEnvironmentAuthorityDiagnostic,
 } from '../../scripts/localEnvironmentAuthorityContract';
 
+const canonicalManifest = loadAuthorityManifest(process.cwd());
 const requiredValues = [
   'DATABASE_URL=mysql://local:local@127.0.0.1:3307/listify_local',
   'LOCAL_DEMO_AGENCY_PASSWORD=fixture-only-secret',
   'JWT_SECRET=fixture-only-jwt-secret-which-is-not-output',
+  'APP_URL=http://localhost:3009',
+  'FRONTEND_URL=http://localhost:3009',
+  'VITE_API_URL=http://localhost:5000',
+  'VITE_API_BASE_URL=http://localhost:5000',
 ].join('\n');
 
 function fixture() {
@@ -28,6 +35,20 @@ function fixture() {
   mkdirSync(join(root, 'machine'), { recursive: true });
   writeFileSync(central, `${requiredValues}\nAPP_ENV=development\n`, { mode: 0o600 });
   return { root, central };
+}
+
+function diagnose(
+  root: string,
+  central: string,
+  options: Parameters<typeof runEnvironmentAuthorityDiagnostic>[1] = {},
+) {
+  return runEnvironmentAuthorityDiagnostic(root, {
+    centralPath: central,
+    repositoryRoot: root,
+    manifestRoot: process.cwd(),
+    manifestLoader: () => canonicalManifest,
+    ...options,
+  });
 }
 
 describe('local environment authority diagnostics', () => {
@@ -43,12 +64,11 @@ describe('local environment authority diagnostics', () => {
   it('classifies a canonical link and reports Stage 3 eligibility only for a complete contract', () => {
     const { root, central } = fixture();
     symlinkSync(central, join(root, '.env.local'));
-    const result = runEnvironmentAuthorityDiagnostic(root, {
-      centralPath: central,
-      repositoryRoot: root,
+    const result = diagnose(root, central, {
       now: () => new Date('2026-07-30T00:00:00.000Z'),
     });
     expect(result.environmentPath.state).toBe('CANONICAL_LINK');
+    expect(result.centralAuthority.inspection.ownership).toBe('OWNER_CURRENT_USER');
     expect(result.databaseTarget).toMatchObject({ classification: 'local', approved: true });
     expect(result.completeApplicationCompliance).toBe(true);
     expect(result.stage3Eligibility).toBe(true);
@@ -79,51 +99,122 @@ describe('local environment authority diagnostics', () => {
     expect(readFileSync(central, 'utf8')).toContain('DATABASE_URL=');
   });
 
-  it('reports production names, unknown names, malformed entries, and missing required names by name only', () => {
+  it.each(['LISTIFY_E2E_DATABASE_URL', 'LOCAL_SEED_ALLOWED'] as const)(
+    'blocks TEST_ONLY central name %s without exposing its value',
+    name => {
+      const { root, central } = fixture();
+      writeFileSync(central, `${requiredValues}\n${name}=fixture-only-test-value\n`, {
+        mode: 0o600,
+      });
+      const result = diagnose(root, central);
+      expect(result.centralAuthority.testOnlyNames).toContain(name);
+      expect(result.completeApplicationCompliance).toBe(false);
+      expect(result.stage3Eligibility).toBe(false);
+      expect(result.blockers).toContain(
+        `TEST_ONLY names are prohibited in central authority: ${name}.`,
+      );
+      expect(result.exitCode).toBe(1);
+      expect(JSON.stringify(result)).not.toContain('fixture-only-test-value');
+    },
+  );
+
+  it.each(['APP_URL', 'FRONTEND_URL', 'VITE_API_URL', 'VITE_API_BASE_URL'] as const)(
+    'requires canonical routing name %s from the manifest',
+    name => {
+      const { root, central } = fixture();
+      const contents = requiredValues
+        .split('\n')
+        .filter(line => !line.startsWith(`${name}=`))
+        .join('\n');
+      writeFileSync(central, contents, { mode: 0o600 });
+      const result = diagnose(root, central);
+      expect(result.centralAuthority.missingRequiredNames).toContain(name);
+      expect(result.completeApplicationCompliance).toBe(false);
+      expect(result.stage3Eligibility).toBe(false);
+      expect(result.exitCode).toBe(1);
+    },
+  );
+
+  it('fails closed when the canonical manifest is malformed or unavailable', () => {
     const { root, central } = fixture();
-    writeFileSync(
-      central,
-      'DATABASE_URL=mysql://remote:secret@railway.example/listify_property_sa\nPROD_RESET_ENABLED=true\nUNKNOWN_NAME=value\nmalformed\n',
-      { mode: 0o600 },
-    );
-    const result = runEnvironmentAuthorityDiagnostic(root, {
-      centralPath: central,
-      repositoryRoot: root,
+    const malformed = diagnose(root, central, {
+      manifestLoader: () => ({ ...canonicalManifest, requiredLocalVariables: ['DATABASE_URL'] }),
     });
-    expect(result.centralAuthority.prohibitedLocalNames).toContain('PROD_RESET_ENABLED');
-    expect(result.centralAuthority.unknownNames).toContain('UNKNOWN_NAME');
-    expect(result.centralAuthority.missingRequiredNames).toContain('JWT_SECRET');
-    expect(result.centralAuthority.malformedEntryCount).toBe(1);
-    expect(JSON.stringify(result)).not.toContain('secret');
-    expect(result.exitCode).toBe(1);
+    const unavailable = diagnose(root, central, {
+      manifestLoader: () => {
+        throw new Error('fixture manifest unavailable');
+      },
+    });
+    expect(malformed.blockers).toContain(
+      'Canonical authority manifest is unavailable or malformed.',
+    );
+    expect(unavailable.blockers).toContain(
+      'Canonical authority manifest is unavailable or malformed.',
+    );
+    expect(malformed.exitCode).toBe(1);
+    expect(unavailable.exitCode).toBe(1);
   });
 
-  it('distinguishes an approved local database target from complete application compliance', () => {
+  it.each([
+    ['mysql://local:local@127.0.0.1:3307/listify_local', 'local', true],
+    ['mysql://local:local@127.0.0.1:3307/listify_test', 'test', true],
+    ['https://127.0.0.1/listify_local', 'unknown', false],
+    ['postgres://127.0.0.1/listify_local', 'unknown', false],
+    ['mysql://127.0.0.1/not_listify_local', 'unknown', false],
+    ['mysql://127.0.0.1/listify_local/extra', 'unknown', false],
+    ['mysql://remote.example/listify_local', 'unknown', false],
+    ['not-a-url', 'unknown', false],
+  ] as const)('classifies database target %s safely', (databaseUrl, classification, approved) => {
     const { root, central } = fixture();
-    writeFileSync(central, `${requiredValues}\n`, { mode: 0o600 });
-    const result = runEnvironmentAuthorityDiagnostic(root, {
-      centralPath: central,
-      repositoryRoot: root,
-    });
-    expect(result.databaseTarget.approved).toBe(true);
-    expect(result.completeApplicationCompliance).toBe(false);
-    expect(result.stage3Eligibility).toBe(false);
-    expect(result.blockers.some(blocker => blocker.includes('Worktree environment path'))).toBe(
-      true,
-    );
+    const contents = requiredValues
+      .split('\n')
+      .map(line => (line.startsWith('DATABASE_URL=') ? `DATABASE_URL=${databaseUrl}` : line))
+      .join('\n');
+    writeFileSync(central, contents, { mode: 0o600 });
+    const result = diagnose(root, central);
+    expect(result.databaseTarget).toMatchObject({ classification, approved });
+    expect(JSON.stringify(result)).not.toContain('local:local');
   });
 
-  it('produces stable JSON for a fixed clock and never reads the process environment as a fixture', () => {
+  it('reports owner state conservatively without changing filesystem metadata', () => {
     const { root, central } = fixture();
-    const options = {
-      centralPath: central,
-      repositoryRoot: root,
+    const current = diagnose(root, central, { effectiveUid: () => process.geteuid?.() });
+    const mismatch = diagnose(root, central, {
+      effectiveUid: () => (process.geteuid?.() ?? 0) + 1,
+    });
+    const unavailable = diagnose(root, central, { effectiveUid: () => undefined });
+    expect(current.centralAuthority.inspection.ownership).toBe('OWNER_CURRENT_USER');
+    expect(mismatch.centralAuthority.inspection.ownership).toBe('OWNER_MISMATCH');
+    expect(unavailable.centralAuthority.inspection.ownership).toBe('OWNER_UNAVAILABLE');
+    expect(mismatch.completeApplicationCompliance).toBe(false);
+    expect(unavailable.completeApplicationCompliance).toBe(false);
+    expect(mismatch.exitCode).toBe(1);
+    expect(unavailable.exitCode).toBe(1);
+  });
+
+  it('returns sanitized exit-2 output for an unsupported worktree target', () => {
+    const target = mkdtempSync(join(tmpdir(), 'listify-stage2b-not-git-'));
+    const result = runEnvironmentAuthorityDiagnostic(target, {
       now: () => new Date('2026-07-30T00:00:00.000Z'),
-    };
-    const first = runEnvironmentAuthorityDiagnostic(root, options);
-    const second = runEnvironmentAuthorityDiagnostic(root, options);
-    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    expect(JSON.stringify(first)).not.toContain('fixture-only-secret');
+    });
+    expect(result.targetClassification).toBe('UNSUPPORTED');
+    expect(result.repositoryRoot).toBeNull();
+    expect(result.stage3Eligibility).toBe(false);
+    expect(result.exitCode).toBe(2);
+    expect(JSON.stringify(result)).not.toContain('Error:');
+    expect(JSON.stringify(result)).not.toContain('fixture-only');
+  });
+
+  it('returns exit 2 without a stack trace through the CLI for an unsupported target', () => {
+    const target = mkdtempSync(join(tmpdir(), 'listify-stage2b-cli-not-git-'));
+    const result = spawnSync(
+      resolve('node_modules/.bin/tsx'),
+      ['scripts/localEnvironmentAuthorityStatus.ts', '--worktree', target, '--json'],
+      { cwd: process.cwd(), encoding: 'utf8' },
+    );
+    expect(result.status).toBe(2);
+    expect(result.stderr).not.toContain(' at ');
+    expect(() => JSON.parse(result.stdout)).not.toThrow();
   });
 
   it('does not alter fixture files or links during a diagnostic', () => {
@@ -136,7 +227,7 @@ describe('local environment authority diagnostics', () => {
       central: readFileSync(central, 'utf8'),
       mode: lstatSync(localPath).mode,
     };
-    runEnvironmentAuthorityDiagnostic(root, { centralPath: central, repositoryRoot: root });
+    diagnose(root, central);
     expect(readFileSync(localPath, 'utf8')).toBe(before.env);
     expect(readFileSync(central, 'utf8')).toBe(before.central);
     expect(lstatSync(localPath).mode).toBe(before.mode);

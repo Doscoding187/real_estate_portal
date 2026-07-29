@@ -3,7 +3,7 @@
 | Field            | Current authority                                                                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Stage            | **Stage 2B — bounded implementation only**                                                                                                                         |
-| Contract version | `stage2b-1`                                                                                                                                                        |
+| Contract version | `stage2b-2`                                                                                                                                                        |
 | Scope            | Consumer inventory, name-only contract, read-only diagnostics, focused tests, and documentation                                                                    |
 | Exclusions       | No environment reconciliation, symlink repair, service start, migration, seed, provider connection, preview creation, worktree inspection, or product feature work |
 
@@ -15,7 +15,7 @@
 
 **Sequence:** Consumer references and tracked templates were searched; existing database-authority utilities were read; the contract and diagnostic were implemented; synthetic fixtures tested path states and name validation; the control worktree was inspected once after tests.
 
-**Evidence:** The focused diagnostic suite passes 11 tests. The control result is `REGULAR_FILE_CONFLICT` for `.env.local`, central authority `REGULAR_FILE` with `SAFE_0600`, nine central names, approved local database target `listify_local`, no malformed or duplicate names, and no emitted values.
+**Evidence:** The focused diagnostic suite passes 26 tests. The control result is `REGULAR_FILE_CONFLICT` for `.env.local`, central authority `REGULAR_FILE` with `SAFE_0600` and `OWNER_CURRENT_USER`, nine central names, approved local database target `listify_local`, no malformed, duplicate, test-only, or prohibited names, and no emitted values.
 
 **Boundary:** This establishes a diagnostic and decision contract. It does not reconcile any environment file, create a link, start a service, connect to a database, create a preview, or establish Stage 3 readiness.
 
@@ -76,9 +76,11 @@ The proposed complete machine-local authority remains:
 
 `~/.config/property-listify/local.env`
 
-It must be a regular file with mode `0600`, owned by the local user, and contain only names permitted by the contract. `.env.local` is intended to be an ignored symbolic link to that exact path for a worktree that is later approved for complete local preview use.
+It must be a regular file with mode `0600`, owned by the current effective user, and contain only names permitted by the contract. Ownership states are `OWNER_CURRENT_USER`, `OWNER_MISMATCH`, and `OWNER_UNAVAILABLE`; mismatch or unavailable ownership is a conservative compliance blocker. `.env.local` is intended to be an ignored symbolic link to that exact path for a worktree that is later approved for complete local preview use.
 
 The contract does not authorize copying the control worktree’s regular file into the central authority. Existing regular files, incorrect links, and missing links are preserved until a separate founder-approved reconciliation decision.
+
+The required local-variable set is loaded from `docs/database-authority/authority-manifest.json` through the existing typed manifest loader and validator. Stage 2B validates that the manifest retains the canonical database, credential, and four routing requirements; it extends that authority and does not replace or weaken it. A missing, malformed, or contradictory manifest is a known compliance failure.
 
 ## 6. Central-file structural contract
 
@@ -86,6 +88,7 @@ The diagnostic checks, without printing values:
 
 - path existence and regular-file type;
 - mode exactly `0600`;
+- ownership equal to the current effective UID where supported;
 - blank and comment handling;
 - assignment-name syntax;
 - duplicate names;
@@ -129,13 +132,15 @@ Exit semantics:
 - `1`: known compliance failure, such as a missing link or prohibited name;
 - `2`: unsupported or indeterminate target/state.
 
-The diagnostic makes no database or provider connection. Database-target compliance is a name-only URL classification; it is not a connectivity or migration check.
+Unsupported or indeterminate worktree resolution is caught and returned as a sanitized result with `targetClassification: UNSUPPORTED`, `stage3Eligibility: false`, and exit `2`; no stack trace is emitted.
+
+The diagnostic makes no database or provider connection. Database-target compliance is a name-only URL classification; it is not a connectivity or migration check. An approved local target requires protocol `mysql:`, an approved local host, and exact pathname `/listify_local`; an approved test target requires protocol `mysql:`, an approved local host, and exact pathname `/listify_test`. Other protocols, extra path segments, malformed URLs, and remote hosts are not approved.
 
 ## 9. Database-target versus complete-application compliance
 
 An approved local database target means only that `DATABASE_URL` parses to an approved local host and `listify_local` or `listify_test` database. It does not prove that frontend routing, authentication, media, mail, payments, cache, flags, or other integrations are complete.
 
-Complete-application compliance additionally requires the central structural contract, no unknown/deprecated/prohibited names, required local names, and a safe worktree environment state. Stage 3 eligibility requires complete-application compliance and `CANONICAL_LINK`.
+Complete-application compliance additionally requires a valid canonical manifest, all manifest-declared required names, no unknown/deprecated/test-only/prohibited names, current ownership, an approved exact database target, and a safe worktree environment state. Stage 3 eligibility requires complete-application compliance and `CANONICAL_LINK`.
 
 ## 10. Stage 3 eligibility rules
 
@@ -145,7 +150,7 @@ Stage 3 remains unauthorized. A future status result may identify structural eli
 2. assignments are syntactically valid and non-duplicated;
 3. required names are present;
 4. no unknown, deprecated, test-only, or locally prohibited names remain in central authority;
-5. the database target is approved local/test;
+5. ownership is current and the database target is approved by the exact MySQL/local-path invariant;
 6. the requested worktree has a canonical link;
 7. no preservation conflict remains unresolved.
 
@@ -165,6 +170,11 @@ The focused suite `server/__tests__/localEnvironmentAuthorityStatus.test.ts` pas
 
 - canonical, missing, regular-file, incorrect-link, broken-link, and non-file states;
 - malformed assignments and duplicate names;
+- test-only central names and canonical manifest-derived required routing names;
+- malformed or unavailable canonical manifests;
+- exact MySQL local/test target invariants and rejected protocols, paths, and hosts;
+- current, mismatched, and unavailable central-file ownership;
+- unsupported Git targets with sanitized exit code `2`;
 - missing required names;
 - unknown, deprecated, test-only, and production-prohibited names;
 - approved local target versus complete-application compliance;
@@ -180,7 +190,7 @@ The focused suite `server/__tests__/localEnvironmentAuthorityStatus.test.ts` pas
 
 **Sequence:** Central and worktree metadata were read; names were parsed; database-target classification was performed without connecting; sanitized JSON was scanned for sensitive-value patterns.
 
-**Evidence:** Exit code `1`; `.env.local` state `REGULAR_FILE_CONFLICT`; central authority `REGULAR_FILE`, `SAFE_0600`, nine names; zero unknown, deprecated, prohibited, duplicate, or malformed names; database target `local`, approved, host `127.0.0.1`, database `listify_local`; complete-application compliance `false`; Stage 3 eligibility `false`. The only blocker is the preserved regular-file conflict, with a warning that reconciliation was not performed.
+**Evidence:** Exit code `1`; target `SUPPORTED`; `.env.local` state `REGULAR_FILE_CONFLICT`; central authority `REGULAR_FILE`, `SAFE_0600`, `OWNER_CURRENT_USER`, nine names; zero unknown, deprecated, test-only, prohibited, duplicate, or malformed names; database target `local`, approved, host `127.0.0.1`, database `listify_local`; complete-application compliance `false`; Stage 3 eligibility `false`. The only blocker is the preserved regular-file conflict, with a warning that reconciliation was not performed.
 
 **Boundary:** This result does not authorize replacing the control file, creating a link, starting a service, checking migration state, or creating a preview.
 

@@ -26,9 +26,10 @@ function main() {
     console.log(`Contract version: ${result.contractVersion}`);
     console.log(`Repository root: ${result.repositoryRoot}`);
     console.log(`Requested target: ${result.requestedTarget}`);
+    console.log(`Target classification: ${result.targetClassification}`);
     console.log(`Worktree environment: ${result.environmentPath.state}`);
     console.log(
-      `Central authority: ${result.centralAuthority.inspection.state} (${result.centralAuthority.inspection.permissions})`,
+      `Central authority: ${result.centralAuthority.inspection.state} (${result.centralAuthority.inspection.permissions}, ${result.centralAuthority.inspection.ownership})`,
     );
     console.log(
       `Database target: ${result.databaseTarget.classification} (${result.databaseTarget.approved ? 'approved' : 'not approved'})`,
@@ -47,6 +48,7 @@ function main() {
     console.log(
       `Prohibited local names: ${result.centralAuthority.prohibitedLocalNames.join(', ') || 'none'}`,
     );
+    console.log(`Test-only names: ${result.centralAuthority.testOnlyNames.join(', ') || 'none'}`);
     console.log(`Blockers: ${result.blockers.join(' | ') || 'none'}`);
     console.log(`Warnings: ${result.warnings.join(' | ') || 'none'}`);
     console.log(
