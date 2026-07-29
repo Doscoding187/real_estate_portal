@@ -27,14 +27,14 @@ Use for every material technical, repository, platform, or operational claim.
 
 | Field | Record |
 | --- | --- |
-| Finding |  |
+| Claim/Finding | Exact proposition or observed defect. |
 | Severity |  |
 | Mechanism |  |
 | Sequence |  |
 | Evidence |  |
 | Impact |  |
 | Boundary |  |
-| Decision |  |
+| Decision/status |  |
 | Required correction |  |
 | Validation method |  |
 
@@ -42,12 +42,16 @@ Use for every material technical, repository, platform, or operational claim.
 
 | Field | Record |
 | --- | --- |
-| Base | Branch and SHA. |
-| Head | Current branch and exact SHA. |
-| Tree | Current head tree SHA. |
+| PR head | Branch and exact head SHA. |
+| Base | Branch and exact base SHA. |
+| PR-head tree | Current head tree SHA. |
 | Scope | Commit count, authorised file list, additions/deletions, and GitHub-patch confirmation. |
 | Review state | Current-head threads, change requests, and reviewer coverage. |
-| Current-head checks | Check/job name, associated SHA, status, and conclusion. |
+| Tested identity | Raw head, synthetic merge, or another explicit source. |
+| Tested ref and SHA | Exact checkout ref and SHA used by the workflow/job. |
+| Source head/base pair | PR-head SHA and base SHA that generated the tested identity, where applicable. |
+| Workflow execution | Event, workflow name, run, attempt, check/job, status, and conclusion. |
+| Invalidation condition | Any head/base change, rerun condition, or other identity change requiring fresh checks. |
 | Remaining blockers |  |
 | Merge authorization | Method, expected-head condition, approving authority, and result. |
 
@@ -55,10 +59,11 @@ Use for every material technical, repository, platform, or operational claim.
 
 | Field | Record |
 | --- | --- |
-| Accepted head | Commit SHA and accepted tree SHA. |
+| Accepted PR head | Commit SHA and accepted PR-head tree SHA. |
 | Merge commit | SHA and title. |
 | Parents | First parent and accepted PR-head parent. |
-| Tree equality | Accepted-head tree versus merged-main tree; pass/fail. |
+| Governed PR tree equality | Accepted PR-head tree versus merged-main tree; pass/fail. |
+| Candidate acceptance, when applicable | Candidate commit/tree, exact environment, Edward approval, and promoted-main tree; do not substitute PR review evidence. |
 | Scope | PR-attributable file list, statistics, and diff-check result. |
 | Detached verification | Path, exact detached SHA, content checks, and clean result. |
 | Control synchronization | Starting SHA, fast-forward result, ending SHA, and clean result. |
