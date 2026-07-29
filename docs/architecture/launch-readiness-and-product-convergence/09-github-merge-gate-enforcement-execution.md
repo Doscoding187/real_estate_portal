@@ -115,4 +115,4 @@ Activation requires separate authorization, a fresh before-state, exact ruleset 
 
 ## Current programme position
 
-GME-A and GME-B1 are complete. PR #425 supplied the Disabled ruleset staging, merge, tree-equivalence verification, detached post-merge verification and control synchronization. Ruleset `19965838` remains Disabled and non-enforcing; effective active rules remain empty. GME-B2 activation and probe verification remains unauthorized. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
+GME-A and GME-B1 are complete. GME-B2 subsequently activated the exact approved payload and completed the Active-to-Disabled-to-Active rollback drill. Ruleset `19965838` is currently Active and effective controls are present. Controlled probe verification remains incomplete; GME-B2 is in progress. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
