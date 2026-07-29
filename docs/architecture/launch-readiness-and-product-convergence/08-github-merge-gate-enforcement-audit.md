@@ -32,8 +32,40 @@ The initiating problem is not that review comments existed; it is that PRs #419,
 
 ## 2. Access and evidence capability
 
+### Claim record: authentication and repository permission
+
+| Field | Record |
+| --- | --- |
+| Claim | At inspection, the authenticated account was `Doscoding187` and its repository permission was `admin` for public `Doscoding187/real_estate_portal`. |
+| Mechanism | GitHub CLI authentication state and read-only repository/collaborator metadata APIs. |
+| Sequence | The authenticated session was identified first; repository metadata and the viewer's collaborator permission were then read without changing token scope or repository state. |
+| Evidence | `gh auth status` and read-only repository/collaborator-permission API responses, 2026-07-29. |
+| Boundary | Authentication and current permission do not prove that a particular future mutation will be permitted after a ruleset is active. |
+
+### Claim record: readable and blocked GitHub authority surfaces
+
+| Field | Record |
+| --- | --- |
+| Claim | The session could read the listed repository, PR, workflow, check, protection, ruleset, and deploy-key evidence surfaces; webhook and App-installation enumeration remained unresolved by this session. |
+| Mechanism | Read-only `gh` REST/GraphQL requests and repository/workflow inspection; no authentication scope was changed. |
+| Sequence | Each endpoint was requested read-only. Successful responses were recorded as observed; the webhook endpoint returned a missing `admin:repo_hook` scope requirement and the installation endpoint returned `401` requiring a GitHub App JWT. |
+| Evidence | Read-only API responses recorded during GME-A, including successful metadata/ruleset/protection/PR/workflow/check/deploy-key reads and the two access errors. |
+| Boundary | A `403`, `404`, or `401` identifies the observed access limitation only; it does not prove the hidden resource is absent or that no integration exists. |
+
+### Claim record: deploy-key and integration/bypass evidence
+
+| Field | Record |
+| --- | --- |
+| Claim | No repository deploy key was returned at inspection; GitHub Actions and Vercel integrations were observed, but their branch-bypass authority is unknown. |
+| Mechanism | Read-only deploy-key API plus observed check and Git-sourced deployment metadata. |
+| Sequence | The deploy-key endpoint was read; recent check/deployment records were then inspected; no key, App, or integration was created or tested for write access. |
+| Evidence | Deploy-key API returned `[]`; GitHub Actions app `15368` check records; Vercel Git-sourced preview/production records. |
+| Boundary | Repository deploy-key absence does not prove account credentials, GitHub Apps, webhooks, or platform integrations lack repository-write or bypass capability. |
+
+The results below are governed by the three complete records above; each row is an observed result or access limitation, not an independent unstated authority claim.
+
 | Concern | Result | Evidence | Boundary |
-| --- | --- | --- |
+| --- | --- | --- | --- |
 | Authenticated account | **Verified:** `Doscoding187`. | `gh auth status`, 2026-07-29. | Token scopes do not prove every GitHub App or webhook capability. |
 | Repository and permission | **Verified:** public `Doscoding187/real_estate_portal`; viewer permission is `admin`. | Repository and collaborator-permission APIs. | It does not prove a particular mutation is currently permitted by a future ruleset. |
 | Readable authority surfaces | **Verified:** repository metadata, classic protection response, rulesets, effective rules, PRs, threads, workflow source, Actions jobs/logs, deploy keys, and check-run apps. | Read-only GitHub APIs and repository inspection. | Readability is not authority to modify settings. |
@@ -43,8 +75,20 @@ The initiating problem is not that review comments existed; it is that PRs #419,
 
 ## 3. Current repository merge configuration
 
+### Claim record: repository merge configuration
+
+| Field | Record |
+| --- | --- |
+| Claim | At inspection, repository-level merge and related settings had the values shown below, including all three merge methods allowed and auto-merge/update-branch disabled. |
+| Mechanism | Read-only repository metadata API and relevant repository configuration fields. |
+| Sequence | Repository metadata was read once during GME-A; the returned configuration fields were compared with current workflows and PR observations without changing a setting. |
+| Evidence | Read-only repository API response recorded on 2026-07-29; code-scanning endpoint response and workflow source for the security-analysis row. |
+| Boundary | These are present-state repository settings. They do not prove historical settings, branch-level enforcement, API/UI capability on every plan, or a future ruleset result. |
+
+The following rows are governed by that complete configuration record.
+
 | Setting | Current state | Evidence | Boundary |
-| --- | --- | --- |
+| --- | --- | --- | --- |
 | Default branch | **Verified:** `main`. | Repository API. | No branch rule is implied. |
 | Visibility / state | **Verified:** public; not archived or disabled. | Repository API. | Public visibility does not prove rule availability beyond the current plan. |
 | Merge commits | **Verified:** allowed. | `allow_merge_commit: true`. | No branch rule currently requires this method. |
@@ -62,17 +106,49 @@ The initiating problem is not that review comments existed; it is that PRs #419,
 
 ### Classic branch protection
 
-**Verified absent.** `GET /branches/main/protection` returned GitHub's explicit `404 Branch not protected`; branch metadata reports `protected: false`. Consequently there are no classic requirements for reviews, conversations, status checks, administrator inclusion, push restrictions, force-push blocking, deletion blocking, signatures, linear history, merge queue, required deployments, or branch locking.
+### Claim record: current classic branch-protection state
+
+| Field | Record |
+| --- | --- |
+| Claim | At inspection, no classic branch protection applied to `main`. |
+| Mechanism | GitHub REST branch-protection endpoints and branch metadata. |
+| Sequence | The authenticated owner requested classic protection for `main`, then relevant classic-protection subresources and branch metadata, all read-only. |
+| Evidence | `GET /branches/main/protection` returned `404 Branch not protected`; related required-status/review/restriction endpoints also returned that condition; branch metadata reported `protected: false`. |
+| Boundary | This proves the observed current state only. It does not reconstruct protection at an earlier merge timestamp or test a direct update, force push, deletion, or administrator bypass. |
+
+Consequently, no classic requirements were observed for reviews, conversations, status checks, administrator inclusion, push restrictions, force-push blocking, deletion blocking, signatures, linear history, merge queue, required deployments, or branch locking.
 
 ### Repository rulesets
 
-**Verified absent.** `GET /rulesets?includes_parents=true` returned `[]`; the effective-rules endpoint for `main` also returned `[]`. There are no active, disabled, evaluate-only, inherited, or bypass-actor entries to aggregate at inspection time.
+### Claim record: current repository-ruleset and effective-rule state
+
+| Field | Record |
+| --- | --- |
+| Claim | At inspection, no repository ruleset or effective rule applied to `main`. |
+| Mechanism | GitHub repository-ruleset listing and effective-branch-rule APIs. |
+| Sequence | The authenticated owner listed repository rulesets including parents, then requested the rules effective on `main`, without creating, enabling, disabling, or changing a ruleset. |
+| Evidence | `GET /rulesets?includes_parents=true` returned `[]`; the effective-rules endpoint for `main` returned `[]`. |
+| Boundary | Empty current responses do not independently prove whether a historical rule was absent, disabled, changed later, inherited differently, or bypassed at a past merge. |
+
+There were no active, disabled, evaluate-only, inherited, or bypass-actor entries to aggregate at inspection time.
 
 ### Effective conclusion
 
-No classic protection and no ruleset are layered on `main`. GitHub displays reviews and checks, but does not technically require resolution, current checks, a pull request, or a particular merge method. This explains the initiating failures; it does not prove the precise merge-button presentation observed by every actor.
+No classic protection and no ruleset are currently layered on `main`. GitHub displays reviews and checks, but no current technical rule requires resolution, current checks, a pull request, or a particular merge method. This present-state result supports the need for technical enforcement; it does not prove the complete historical configuration or the precise merge-button presentation observed by every actor.
 
 ## 5. Bypass and administrator model
+
+### Claim record: bypass and administrator authority
+
+| Field | Record |
+| --- | --- |
+| Claim | Current evidence supports only an **Inferred** absence of branch-rule blocking for the repository owner; it does not directly prove any actor's destructive or bypass capability. |
+| Mechanism | Current repository permission, classic-protection/ruleset/effective-rule inspection, deploy-key inspection, and observed integration metadata. |
+| Sequence | The owner permission and protection surfaces were read first; deploy-key and integration evidence were then inspected; no direct push, force push, branch deletion, merge, or bypass test was attempted. |
+| Evidence | Admin permission; current `main` protection and ruleset claim records; deploy-key API response; GitHub Actions and Vercel check/deployment records. |
+| Boundary | Current empty rule evidence is not a destructive-operation test, historical-bypass proof, or proof of App/account/webhook write authority. |
+
+The actor results below are governed by that complete record.
 
 | Actor | Mechanism | Can bypass current `main` protections | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
@@ -91,11 +167,11 @@ Target principle: no routine bypass actor. Emergency recovery must be performed 
 
 | Field | Record |
 | --- | --- |
-| Claim | PR #422 merged while two actionable P2 conversations were unresolved because GitHub had no active technical rule requiring conversation resolution or blocking review state. |
-| Mechanism | PR #422 review threads; GitHub review state; absent classic protection and rulesets. |
+| Claim | PR #422 merged despite two unresolved actionable conversations; no effective merge gate prevented that merge for the merging actor at that time. |
+| Mechanism | PR merge result, unresolved review-thread state, actor permission, and whatever branch/ruleset enforcement or bypass state applied at merge time. |
 | Sequence | Automated `COMMENTED` review and two P2 threads were created at 07:26 UTC; CI completed; PR #422 merged at 07:33 UTC with one source commit; the corrective replies and thread resolutions occurred later through PR #423 closure. |
-| Evidence | PR #422 metadata (`b6b4af…`, one commit, merge `c77766e…`, merge time), thread timestamps, and current accepted contract history; current protection/ruleset API results. |
-| Boundary | P2 is reviewer severity, not a native blocking review state. This record does not prove whether GitHub showed a warning or whether any administrator bypass UI was used. |
+| Evidence | PR #422 head, merge timestamp and merge result; thread timestamps and unresolved state at merge; PR #423 corrective history; current branch-protection and ruleset inspection. |
+| Boundary | The merge proves that no effective gate stopped that actor at that time. Current empty protection proves present state only and does not by itself prove whether historical protection was absent, disabled, changed later, or bypassed. P2 is reviewer severity, not a native blocking review state. |
 
 | PR | Observed result | Governance implication |
 | --- | --- | --- |
@@ -108,6 +184,18 @@ Target principle: no routine bypass actor. Emergency recovery must be performed 
 `COMMENTED` reviews and P2 labels do not count as a `REQUEST_CHANGES` review. No required approving-review rule exists. Draft, pending/failed checks, review requests, auto-merge, and merge-button availability were displayed by GitHub but not enforced by any current `main` rule.
 
 ## 7. CI and required-check inventory
+
+### Claim record: current required-check candidate inventory
+
+| Field | Record |
+| --- | --- |
+| Claim | The four named `CI Pipeline` jobs are the only current baseline candidates safe to evaluate as required checks; no workflow display-name or path-filtered/external context is recommended initially. |
+| Mechanism | Workflow YAML triggers and default checkout configuration, recent PR check rollups/logs, and check-run app identity. |
+| Sequence | GME-A read each candidate workflow source, then inspected recent PR rollups and the observed PR #423 synthetic checkout logs before comparing path-filter and source-identity behaviour. |
+| Evidence | `.github/workflows/ci.yml`, `.github/workflows/frontend-build.yml`, PR #419–#423 rollups, PR #423 run `30434404278` checkout logs, and GitHub Actions app `15368` records. |
+| Boundary | These are observed names and recent executions, not applied required contexts. Exact selectors, expected-App pinning, skipped/cancelled semantics, and universal availability remain GME-B readback/probe work. |
+
+The inventory rows below are governed by that complete record.
 
 | Check/job | Workflow/app | Trigger and filters | Tested identity | Stable name / recent reliability | Safe to require |
 | --- | --- | --- | --- | --- | --- |
@@ -135,9 +223,21 @@ GitHub documents that a required workflow check uses the job name, not the workf
 | Evidence | Run `30434404278`, attempt 1; checkout logs for all four jobs; workflow source; job/check metadata. |
 | Boundary | This proves PR #423's source pair only. A head or base change creates a new synthetic identity and invalidates the result; it does not prove all future workflows use this checkout strategy. |
 
-Strict required status checks are recommended because they force a fresh merge result after a base change. This creates predictable re-runs after concurrent `main` merges, including documentation-only PRs. The trade-off is additional CI time, especially Unit & Integration Tests; it is preferable to merging an untested head/base combination.
+Strict required status checks block an out-of-date pull request after `main` advances. Existing `pull_request` workflows do not necessarily rerun merely because the base branch advances. Fresh checks are expected only after the PR branch is updated with current `main`, unless a separately verified workflow trigger causes execution. That update creates a new PR head and new synthetic head/base identity, invalidating all prior synthetic-merge evidence. The trade-off is additional CI time, especially Unit & Integration Tests; it is preferable to merging an untested head/base combination.
 
 ## 9. Solo-founder review constraint
+
+### Claim record: solo-founder review feasibility
+
+| Field | Record |
+| --- | --- |
+| Claim | Current evidence supports resolved-conversation and current-check controls, but does not evidence an independent qualifying human reviewer for a required-approval rule. |
+| Mechanism | Direct collaborator/permission inspection, current review records, and GitHub review-rule semantics. |
+| Sequence | GME-A identified the current direct collaborator/admin, then inspected recent `COMMENTED` automated reviews and compared them with GitHub approval-rule requirements. |
+| Evidence | Collaborator API returned `Doscoding187` as direct admin; PR #419–#424 review metadata; GitHub review/ruleset documentation. |
+| Boundary | This does not prove no future reviewer can be added or that every GitHub plan handles approval actors identically. It supports the stated initial target only. |
+
+The feasibility rows below are governed by that complete record.
 
 | Control | Feasibility | Decision | Reason |
 | --- | --- | --- | --- |
@@ -154,14 +254,43 @@ Review quality remains required by programme authority, but technical enforcemen
 
 ## 10. Proposed target contract for `main`
 
-The proposed mechanism is **one repository branch ruleset**, not a new classic protection rule, to avoid accidental rule layering. Proposed name: `property-listify-main-merge-gate`. Target: the default branch / exact `main` ref, with no exclusion. Enforcement becomes active only in GME-B after recorded before-state and probe readiness.
+### Claim record: proposed `main` merge-gate target
+
+| Field | Record |
+| --- | --- |
+| Claim | The candidate GME-B target is one disabled, exact-`main` repository branch ruleset that supplies merge-gate controls without changing repository-wide merge capabilities initially. |
+| Mechanism | A future GitHub repository ruleset pull-request rule, required-status-check rule, and ref-protection rules; existing repository merge settings remain unchanged in initial GME-B. |
+| Sequence | GME-B must capture before-state, verify check selectors, create the candidate in Disabled state, read it back completely, prepare rollback/probes, then activate only the verified named ruleset. |
+| Evidence | GME-A current-state APIs, workflow source/check evidence, GitHub ruleset documentation, and the Evidence Contract requirements. |
+| Boundary | This is a proposed contract, not applied configuration or verified API syntax. Exact schema fields, plan capability, expected-App selectors, and effective behaviour remain pending GME-B readback and probe evidence. |
+
+The proposed mechanism is **one repository branch ruleset**, not a new classic protection rule, to avoid accidental rule layering. The candidate begins Disabled; Active enforcement may not precede complete payload readback and rollback preparation.
+
+### Candidate ruleset specification — proposed, not applied
+
+| Area | Candidate value | Evidence status / boundary |
+| --- | --- | --- |
+| Name | `property-listify-main-merge-gate` | Proposed identity. |
+| Target | Branch; exact `main` ref or a verified default-branch selector. | Exact condition field is **Pending GME-B readback**. |
+| Exclusions | None. | Must be confirmed in disabled payload readback. |
+| Initial enforcement | Disabled. | Active rules take effect immediately; Disabled staging is the baseline. |
+| Baseline bypass actors | None. | Any hidden/default bypass is a failed readback condition. |
+| Pull-request approvals | `required_approving_review_count: 0`; `dismiss_stale_reviews_on_push: false`; `require_code_owner_review: false`; `require_last_push_approval: false`. | Proposed fields; exact API/UI syntax **Pending GME-B readback**. |
+| Conversation resolution | `required_review_thread_resolution: true`. | Proposed field; exact API/UI syntax **Pending GME-B readback**. |
+| Allowed merge methods | `allowed_merge_methods: ["merge"]`. | Proposed inside the `main` pull-request rule; exact selector **Pending GME-B readback**. |
+| Required contexts | `DB Contract Verification`, `Lint & TypeCheck`, `Unit & Integration Tests`, `Build Application`. | Context names are observed; all must be selected and read back exactly in GME-B. |
+| Expected check source | GitHub Actions App `15368`. | Pin only after current selector/API readback proves source support for every context. |
+| Strict/current policy | Enabled; old evidence invalid after either source identity changes; after base advancement, fresh execution follows an authorised branch update unless another trigger is separately proven. | Exact API field is **Pending GME-B readback**. |
+| Ref protections | Block deletion and non-fast-forward updates; do not enable linear history. | Exact fields are **Pending GME-B readback**; linear history would conflict with merge commits. |
+
+Repository-level merge settings remain initially unchanged: merge commits, squash merges, and rebase merges stay allowed. The `main` pull-request rule alone must allow only merge commits for PRs targeting `main`; other branches retain current repository-level options. Linear history remains disabled so merge-commit parent/tree verification remains possible.
 
 | Rule | Current state | Proposed state | Evidence / benefit | Risk and prerequisite | Decision |
 | --- | --- | --- | --- | --- | --- |
 | Pull request required | Absent | Require PR before updating `main`; approval count `0`; require all conversations resolved. | Blocks routine direct updates and unresolved-thread merges. | Must confirm ruleset supports zero approvals plus conversation resolution. | **Recommend now** |
 | Required checks | Absent | Strict/up-to-date checks: DB Contract Verification, Lint & TypeCheck, Unit & Integration Tests, Build Application. | Unfiltered workflow and observed stable names. | Pin GitHub Actions `15368`; verify a docs-only probe emits all four. | **Recommend now** |
-| Current source pair | Absent | Strict status policy; each head/base change requires fresh synthetic merge checks. | Matches the evidence contract. | Adds CI reruns after concurrent `main` changes. | **Recommend now** |
-| Merge method | All three allowed | Require merge commits; retain only merge commits at repository level; disable squash and rebase. | Preserves parent/tree verification model. | Repository-wide setting; validate no other approved workflow depends on squash/rebase. | **Recommend after GME-B readback** |
+| Current source pair | Absent | Strict status policy; each changed head/base pair requires fresh synthetic-merge evidence. | Matches the evidence contract. | After base advancement, the PR branch must be updated before fresh checks are expected; this adds CI time. | **Recommend now** |
+| Merge method | All three allowed repository-wide | `main` pull-request rule allows `merge` only; repository settings remain unchanged initially. | Preserves parent/tree verification while limiting scope to `main`. | Verify `allowed_merge_methods` selector/API field and merge UI in GME-B. | **Recommend after GME-B readback** |
 | Linear history | Absent | Disabled. | Merge commits are required. | None; must not be accidentally enabled. | **Recommend now** |
 | Force push | Not blocked | Block non-fast-forward updates. | Prevents history replacement. | Confirm effective rule output after activation. | **Recommend now** |
 | Branch deletion | Not blocked | Block deletion of `main`. | Prevents accidental branch loss. | Confirm effective rule output after activation. | **Recommend now** |
@@ -179,23 +308,27 @@ The proposed mechanism is **one repository branch ruleset**, not a new classic p
 ### Implementation sequence — do not execute in GME-A
 
 1. Re-read repository settings, classic protection, rulesets, effective `main` rules, merge methods, and check contexts; save sanitized before-state JSON and screenshots/URLs where available.
-2. Confirm the four GitHub Actions contexts and app `15368` are selectable as required checks and that a documentation-only probe would emit all four.
-3. Confirm exact ruleset API/UI fields against current GitHub documentation; create only `property-listify-main-merge-gate` targeting `main`, initially with the approved controls above and no implicit bypass actor.
-4. Change repository merge settings only if separately included in the approved GME-B change set: merge commits enabled; squash/rebase disabled; auto-merge remains disabled.
-5. Read back the ruleset, effective branch rules, repository merge settings, and bypass list. Stop if classic protection unexpectedly layers with the target.
-6. Run the approved probe plan. Promote the ruleset from proposed to verified only after probe evidence and a clean rollback path are recorded.
+2. Verify the four exact GitHub Actions contexts and expected source identity `15368`; confirm that a documentation-only baseline probe emits all four.
+3. Create only `property-listify-main-merge-gate` in **Disabled** state, targeting only `main`, using the candidate contract and no bypass actor. Do not change repository-wide merge settings.
+4. Read back its ruleset ID, name, target, conditions, enforcement, bypass actors, every rule, and every parameter.
+5. Stop unless readback proves: only `main` is targeted; no exclusion or hidden bypass exists; approval count is zero; conversation resolution is required; `merge` is the only method allowed for `main`; all four check contexts/sources are exact; strict policy is enabled; deletion and non-fast-forward protections exist; and linear history is absent.
+6. Prepare a disposable probe branch and PR, rollback payload or exact UI/API reversal, and before-state evidence.
+7. Activate the already verified named ruleset, then immediately read back Active and effective rules.
+8. Execute only the separately authorised probes. If observed behaviour differs from this contract, disable only the named ruleset, capture the failed observation and restored state, and stop.
+
+If Evaluate mode is available, GME-B may consider it only after capability proof. Disabled staging remains the baseline and Active enforcement takes effect immediately, so it may not precede payload readback and rollback preparation.
 
 ### Controlled probe strategy — design only
 
-Use a disposable documentation-only probe branch and PR. Never push directly to `main`.
+Use a disposable baseline documentation-only probe branch and PR. Never push directly to `main`.
 
 | Probe | Safe method | Expected evidence |
 | --- | --- | --- |
 | Unresolved conversation | Add a normal inline discussion to the probe; inspect merge state before and after resolution. | Unresolved conversation blocks; resolved conversation removes that blocker. |
 | Pending check | Inspect while the unfiltered CI pipeline is running. | Merge is unavailable until all four required jobs complete. |
-| Failed check | In a disposable unmerged probe commit, introduce a narrowly reversible test/build failure; never merge it. | Failed named job blocks merge; reverting/removing the probe failure restores eligibility. |
+| Failed-check subprobe | Only with explicit GME-B authority, add a narrowly scoped probe-only failing test or equivalent temporary source file; never merge that failing commit; revert it in a follow-up commit. | The named failed required job blocks eligibility; the follow-up creates fresh synthetic-merge evidence, restores all successful checks, and leaves no intentional failure in the final probe diff. |
 | Head change | Add a harmless follow-up documentation commit after checks pass. | New PR head and synthetic merge SHA require fresh checks. |
-| Base change | Keep probe open while a separately authorised harmless PR advances `main`, or use an authorised update-branch action. | New base produces a new source pair and fresh checks under strict mode. |
+| Base change | Keep probe open after initial checks; advance `main` only through a separately authorised harmless PR; record the probe as behind/blocked; merge fresh `origin/main` into the probe branch with an ordinary merge commit and push it. | Record old head/base/synthetic SHA, then new probe head/base/synthetic SHA and fresh checks. Strict policy makes old source-pair evidence stale; base advancement alone does not promise an automatic workflow rerun. |
 | Merge method | Inspect available merge controls for a passing probe. | Only merge-commit promotion is offered. |
 | Force/deletion | Read effective rules and ruleset evidence only. | No destructive command is attempted. |
 
@@ -206,7 +339,7 @@ Use a disposable documentation-only probe branch and PR. Never push directly to 
 | Every PR unmergeable | Stop normal merges; identify missing/incorrect rule or context. | Edward may alter/disable only the named ruleset after recording failing PR, source pair, effective rules, and before-state. | Correct rule; re-run probe; reactivate only after verification. |
 | Required check never appears | Do not add workaround status. | Edward may remove that exact required context after evidence of path/trigger mismatch. | Replace only with a proven unfiltered context. |
 | Vercel outage | Keep Vercel supplemental; do not make it a baseline requirement. | No rollback needed unless later required. | Restore after separate availability evidence. |
-| Synthetic checks stale | Update/rebase through approved PR workflow; wait for new source-pair checks. | No rule rollback: stale evidence is expected behaviour. | Record new head/base/ref/SHA. |
+| Synthetic checks stale | Update the open PR branch with fresh `origin/main` using an authorised ordinary merge commit; wait for new source-pair checks. | No rule rollback: stale evidence is expected behaviour. | Record old and new head/base/ref/SHA. |
 | Owner lockout / emergency | Use documented owner-controlled ruleset rollback, never a direct `main` push. | Edward records incident, exact settings, reason, affected SHA, and recovery PR. | Reapply the proven ruleset and post-incident verification. |
 | App/API failure or layered conflict | Stop; read effective rules and classic protection before editing further. | Edward may revert the named GME-B setting only with captured API/UI evidence. | Remove conflict, rerun probe, and document the restored effective state. |
 

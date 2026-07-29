@@ -42,8 +42,8 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 ## Governed sequence beyond Stage 2A
 
 1. **Evidence Contract Review Closure:** complete through PR #423 and its post-merge verification.
-2. **GitHub Merge Gate Enforcement:** GME-A is the current read-only audit and target-contract slice; GME-B may enforce settings only after separate approval and probe preparation.
-3. **Worktree Lifecycle Reconciliation Audit:** a separately approved read-only inventory and classification using the corrected contract.
+2. **GitHub Merge Gate Enforcement:** GME-A is the current read-only audit and target-contract slice; GME-B may enforce settings only after GME-A is merged and post-merge verified, separate approval, and completed probe preparation.
+3. **Worktree Lifecycle Reconciliation Audit:** may begin only after the Evidence Contract Review Closure is merged and post-merge verified, GME-B is completed and verified, and Edward separately approves its bounded read-only scope.
 4. **Controlled Worktree Retirement:** a separately approved mutating procedure for named, preserved worktrees only.
 5. **Stage 2B:** a separately approved complete local-environment authority contract and non-mutating diagnostics slice.
 
