@@ -2,9 +2,9 @@
 
 | Field | Current authority |
 | --- | --- |
-| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. The Evidence Sequence and Provenance Contract is the current governance slice in this branch; it is not accepted until reviewed and merged. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
+| Programme status | **Stage 1 — launch-readiness governance authority complete. Stage 2A — local environment-authority audit and review closure complete. The Evidence Sequence and Provenance Contract entered `main` through PR #422, but its review closure is incomplete because actionable findings were unresolved at merge. This corrective review-closure slice is the current authority work. Environment linkage has not been repaired, and the complete local-environment authority contract is not yet established.** |
 | Purpose | Establish one durable place for launch decisions, manual findings, and the evidence needed before implementation or release progression. |
-| Current authorised stage | Evidence Sequence and Provenance Contract governance slice only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, or feature changes. Worktree Lifecycle Reconciliation Audit follows this contract. Stage 2B remains unauthorised. |
+| Current authorised stage | Evidence Contract Review Closure only. It does not authorise environment repair, runtime, deployment, database, media, frontend, backend, feature changes, worktree inventory, retirement, or GitHub-rule changes. GitHub Merge Gate Enforcement follows this closure; Stage 2B remains unauthorised. |
 
 ## Authority roles
 
@@ -38,6 +38,12 @@ No canonical integrated local preview or launch candidate exists yet. A future c
 5. **Stage 5 — media authority:** establish an explicit separation between local/development and production media storage.
 6. **Stage 6 — acceptance candidate and promotion:** create a short-lived candidate, conduct integrated acceptance, and promote the exact approved SHA through the controlled production sequence.
 
-## Progression beyond Stage 2A
+## Governed sequence beyond Stage 2A
 
-The Worktree Lifecycle Reconciliation Audit must apply the Evidence Sequence and Provenance Contract after that contract is accepted. Stage 2B then requires a separately approved scope to define the complete local-environment authority contract and implement non-mutating diagnostics. Neither slice may repair worktree links, create a canonical launch candidate, alter deployment authority, or broaden into feature work.
+1. **Evidence Contract Review Closure:** correct and verify the incomplete PR #422 authority in `main`.
+2. **GitHub Merge Gate Enforcement:** inspect and, only if separately approved, enforce the technical conditions required for review resolution, current-source checks, merge methods, and bypass handling.
+3. **Worktree Lifecycle Reconciliation Audit:** a separately approved read-only inventory and classification using the corrected contract.
+4. **Controlled Worktree Retirement:** a separately approved mutating procedure for named, preserved worktrees only.
+5. **Stage 2B:** a separately approved complete local-environment authority contract and non-mutating diagnostics slice.
+
+No slice above may repair worktree links, create a canonical launch candidate, alter deployment authority, or broaden into feature work unless its own approval expressly authorises that action.

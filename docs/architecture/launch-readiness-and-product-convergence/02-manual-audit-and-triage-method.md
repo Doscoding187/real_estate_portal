@@ -12,6 +12,18 @@ Edward audits pages as parts of complete user journeys, rather than as isolated 
 
 Each finding records its URL or journey, user role, viewport/device, expected result, actual result, and evidence reference. Evidence may be a reproducible test note, screenshot, video, console/network capture, or other durable sanitized record.
 
+### Evidence contract for material findings
+
+The [Evidence Sequence and Provenance Contract](06-evidence-sequence-and-provenance-contract.md) applies to every material technical finding. Use the [authority claim record](07-authority-evidence-record-templates.md#authority-claim-record) and [audit finding record](07-authority-evidence-record-templates.md#audit-finding-record), or an equivalent structured record, to make all five fields explicit and traceable:
+
+1. Claim/Finding.
+2. Mechanism.
+3. Sequence.
+4. Evidence.
+5. Boundary.
+
+Surrounding prose may satisfy a field only when the field remains explicit, identifiable, and traceable to the same finding. A genuinely non-sequential claim records `Sequence: Not applicable` and explains why. A material finding missing any field must not enter the [central launch register](03-launch-register.md), receive a launch decision, or authorize implementation.
+
 ## Severity
 
 | Level | Meaning |
@@ -42,15 +54,21 @@ Page or journey:
 URL:
 User role:
 Viewport or device:
+Claim/Finding:
+Mechanism:
+Sequence: (or `Not applicable` with reason)
 Expected result:
 Actual result:
-Evidence reference:
+Evidence: (source identity, sanitized reference, and freshness where material)
+Boundary: (what this evidence does not prove or authorize)
+Impact:
 Severity: L0 | L1 | L2 | L3
 Owning engine or platform authority:
-Proposed launch decision:
+Decision/status:
+Required correction:
+Validation method:
 Approved bounded implementation slice:
 Integrated verification:
 Production verification:
-Status:
 Notes:
 ```

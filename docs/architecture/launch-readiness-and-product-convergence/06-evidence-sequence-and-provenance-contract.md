@@ -2,7 +2,7 @@
 
 | Field | Authority |
 | --- | --- |
-| Status | **Current governance slice. Proposed repository authority until this document is reviewed and merged.** |
+| Status | **PR #422 merged this initial contract with unresolved actionable findings. This review-closure correction is proposed authority until reviewed and merged.** |
 | Purpose | Make every material authority claim traceable from mechanism through evidence, limitation, and authorised action. |
 | Does not authorise | Stage 2B, environment reconciliation, a canonical preview, candidate creation, worktree retirement, runtime changes, or deployment changes. |
 
@@ -44,14 +44,27 @@ Useful optional fields are authority owner, evidence timestamp, commit/tree iden
 
 ## 2. Initiating case study and governance implication
 
-The PR #419–#421 review cycle is the initiating case study, not a substitute for this permanent method.
+The PR #419–#422 review cycle is the initiating case study, not a substitute for this permanent method.
 
 | Repository evidence | Supported lesson | Boundary |
 | --- | --- | --- |
-| PR #419 merged with one source commit and later review findings. | A merged PR is not proof that every actionable finding was corrected. | This record does not itself prove the final audit wording in later `main`. |
+| PR #419 merged with one source commit while three actionable review threads remained unresolved. | Known current-head review evidence must block merge; passing checks and technical mergeability do not override it. | This record does not itself prove the final audit wording in later `main`. |
 | PR #420 merged with final head `cf728f…` and no separately authorised corrective commit. | Discussed corrective work must be proven in the current PR head and GitHub patch before merge consideration. | CI on an unchanged head cannot prove an uncommitted correction. |
 | PR #421 added a second corrective commit `13b8adf…`; its merge commit was `3cae0178…` and the accepted and merged trees were verified equal. | A different merge-commit SHA is acceptable only when accepted-head and promoted-tree identity are proven equal. | Tree equality does not prove hosted environment correctness or product acceptance. |
+| PR #422 merged with final head `b6b4af…`, one source commit, and two unresolved non-outdated P2 threads. | Documentation alone does not technically enforce merge authority; a later GitHub Merge Gate Enforcement slice is required before the worktree audit. | This record does not prove current GitHub ruleset or branch-protection enforcement. |
+| PR #422 CI Pipeline run `30431380874` used the `pull_request` event; its checkout logs show `refs/pull/422/merge` at `cd573dc…`, generated from head `b6b4af…` and base `3cae017…`. | API run metadata, PR-head identity, and actual checkout identity are distinct evidence and must all be recorded. | This observed run does not prove that every workflow or future PR uses the same checkout strategy. |
+| Existing Git integration created Vercel preview `dpl_6cSGHRSd9evrv5c1FbHBnBvmdfLd` for PR head `b6b4af…` and production deployment `dpl_2ziTndDNXh66gS95SWRyFoaRNGUH` for merge `c77766e…`; no manual deployment or deployment-configuration change occurred. | Automatic preview and automatic production deployment are platform evidence and must be recorded separately from manual deployment/configuration changes. | `READY` does not prove Railway, hosted-environment correctness, complete runtime correctness, or product acceptance. |
 | The Stage 2A status command implementation and observed sanitized run were inspected separately from filesystem inspection. | Internal classification and connection gating must be distinguished from later human-visible output; each filesystem fact must retain its own evidence source. | One command run does not inherit filesystem checks it does not perform. |
+
+### Claim record: PR #422 CI provenance
+
+| Field | Record |
+| --- | --- |
+| Claim | PR #422 CI success was evidence for its synthetic merge source pair, not direct execution of the raw PR-head SHA. |
+| Mechanism | `pull_request` workflows with default `actions/checkout@v4` checkout; GitHub Actions CI Pipeline run `30431380874`. |
+| Sequence | GitHub generated the pull-request merge ref from head `b6b4af…` and base `3cae017…`; each recorded job checked out `refs/pull/422/merge` at `cd573dc…`; checks then completed. |
+| Evidence | Workflow source, run metadata, and checkout logs for run `30431380874`; all four jobs logged the same synthetic checkout identity. |
+| Boundary | This proves the observed workflow/source pair only. It does not prove all workflows or future PRs use the same ref, nor that the checks resolved review findings. |
 
 ## 3. Evidence classes
 
@@ -144,18 +157,26 @@ The PR readiness record must prove all of the following:
 3. GitHub patch contains the authorised correction.
 4. No unresolved actionable review thread on the current head.
 5. No current-head change request.
-6. Required checks completed successfully on the current head SHA.
+6. Required checks completed successfully against the exact source identity each workflow actually tested.
 7. Required local worktrees are clean.
 8. Merge method is authorised.
 9. Expected head is used as a merge condition where supported.
 
-Green CI alone is insufficient. A previously reviewed or passing SHA cannot validate a later head, and a correction discussed in chat cannot substitute for a commit visible in the current GitHub patch.
+For a pull-request workflow using GitHub's synthetic merge ref, record the tested merge ref and SHA together with the PR-head SHA and base SHA that generated it. For a workflow explicitly checking out the head, record the head SHA as the tested identity. Record the workflow event, workflow name, run, attempt, check/job, status, and conclusion. A change to either source identity invalidates the previous synthetic-merge result and requires a new tested merge identity and checks.
+
+Green CI alone is insufficient. A previously reviewed or passing source pair cannot validate a changed head or base, and a correction discussed in chat cannot substitute for a commit visible in the current GitHub patch.
 
 ### After merge
 
 Post-merge closure requires merge commit and parent verification; accepted-head tree versus merged-main tree equality; PR-attributable scope verification; detached verification at the exact merge commit; clean fast-forward synchronization of the control worktree; historical-thread closure only after final merged evidence; automatic-deployment observation where applicable; and temporary-verifier cleanup.
 
-Different commit SHAs are acceptable only under the release rule: accepted candidate tree SHA equals resulting `main` tree SHA. Any tree difference invalidates acceptance and requires a new acceptance cycle.
+### Governed pull-request preservation rule
+
+For an ordinary governed pull request, record the accepted PR-head commit and tree, merge commit, and merged-`main` tree at that merge commit. The accepted PR-head tree must equal the merged-`main` tree under the preservation-based merge rule. A tree difference invalidates the reviewed PR authority and requires renewed review.
+
+### Launch-candidate promotion rule
+
+For a launch candidate, record the accepted candidate commit and tree, exact environment, and Edward's founder-acceptance evidence separately from PR review evidence. The accepted candidate tree must equal the promoted-`main` tree. Any tree difference requires a new candidate acceptance cycle. This related integrity mechanism does not turn ordinary PR review into founder launch acceptance.
 
 ## 8. Future candidate and deployment evidence
 
@@ -163,9 +184,21 @@ No candidate is created by this document. Before a future canonical-preview or l
 
 Keep Vercel and Railway evidence separate. A Vercel deployment may prove the frontend deployment record; it does not prove Railway/backend deployment authority or hosted binding correctness.
 
-## 9. Future worktree-retirement evidence
+## 9. Worktree reconciliation and controlled retirement
 
-No worktree inventory or deletion is authorised by this document. A worktree may be classified safe to retire only when a retirement record proves its exact path and registration, branch/detached state, HEAD, clean tracked state, no staged changes, no untracked files, no unique commits requiring preservation, branch containment or accepted PR promotion, PR state, no active operational purpose, no recovery designation, and no other worktree dependency.
+### Worktree Lifecycle Reconciliation Audit
+
+The Worktree Lifecycle Reconciliation Audit may begin only after all three prerequisites are satisfied:
+
+1. This Evidence Contract Review Closure is merged and post-merge verified.
+2. The GitHub Merge Gate Enforcement slice is completed and its resulting authority is verified.
+3. Edward separately approves a bounded read-only audit scope.
+
+After those gates, the audit may inventory worktrees, inspect repository and filesystem state, classify them, identify preservation requirements, and recommend retain, investigate, recovery-required, or safe-to-propose categories. It may not remove worktrees, delete branches, discard changes, alter environment files or links, or perform retirement.
+
+### Controlled Worktree Retirement
+
+A later mutating phase may classify a named worktree safe to retire only when a retirement record proves its exact path and registration, branch/detached state, HEAD, clean tracked state, no staged changes, no untracked files, no unique commits requiring preservation, branch containment or accepted PR promotion, PR state, no active operational purpose, no recovery designation, and no other worktree dependency. It also requires a separately approved procedure naming exact targets, preservation evidence, removal commands, local/remote branch-deletion policy, recovery/rollback, and post-removal verification.
 
 Merged PR alone, clean tracked state alone, and branch containment alone are each insufficient. Retirement audit and deletion are separate authorisation phases.
 
@@ -182,11 +215,14 @@ This contract is the initial authority. Wider propagation needs a separate appro
 | Audit templates | **Required before Stage 2B** | Variable classification requires direct evidence and boundaries per finding. |
 | Candidate-acceptance templates | **Required before candidate creation** | Candidate commit/tree and human acceptance must be recorded before promotion. |
 | Deployment-verification templates | **Required before Stage 4** | Platform, backend, tree, and smoke evidence must remain separate. |
-| Worktree-retirement procedure | **Required before Worktree Lifecycle Reconciliation Audit execution** | Retirement must apply this record model before any worktree is classified or removed. |
+| GitHub Merge Gate Enforcement | **Required before Worktree Lifecycle Reconciliation Audit** | PR #422 proved that documented gates do not establish technical enforcement by themselves. |
+| Worktree-retirement procedure | **Required before Controlled Worktree Retirement execution** | Retirement must apply this record model before any worktree is removed. |
 | Optional engine-specific templates | **Deferred** | No real engine finding yet requires them. |
 
-## 11. Use and validation
+## 11. Merge-enforcement boundary, use, and validation
 
-Use the reusable records in [Authority evidence record templates](07-authority-evidence-record-templates.md). A material existing-behaviour statement in an audit must have a mechanism, evidence source, and boundary; use a claim record when those details are not visible in surrounding text.
+This contract defines the required merge authority but does not by itself technically block a manual merge. GitHub rulesets or branch protection are **Partial** or **Unknown** until a dedicated GitHub Merge Gate Enforcement audit verifies required checks, required conversation resolution, stale-review handling where applicable, force-push/deletion controls for `main`, permitted merge methods, administrator bypass behaviour, and current head/base source-pair freshness. That enforcement slice must complete before the Worktree Lifecycle Reconciliation Audit begins.
+
+Use the reusable records in [Authority evidence record templates](07-authority-evidence-record-templates.md). Every material existing-behaviour statement in an audit exposes all five fields—Claim, Mechanism, Sequence, Evidence, and Boundary—either inline in a structured surrounding record or in the authority-claim template. `Sequence: Not applicable` is permitted only with an explicit reason; it must never be silently omitted.
 
 This contract does not supersede the [database authority entry contract](../../database-authority/00-database-authority-agent-entry.md), launch-register disposition, or an approved security/data-integrity procedure. It controls how their claims are evidenced, bounded, and promoted into a decision.
