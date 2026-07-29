@@ -188,7 +188,13 @@ Keep Vercel and Railway evidence separate. A Vercel deployment may prove the fro
 
 ### Worktree Lifecycle Reconciliation Audit
 
-After this corrected contract is merged and verified, a separately approved read-only audit may inventory worktrees, inspect repository and filesystem state, classify them, identify preservation requirements, and recommend retain, investigate, recovery-required, or safe-to-propose categories. It may not remove worktrees, delete branches, discard changes, alter environment files or links, or perform retirement.
+The Worktree Lifecycle Reconciliation Audit may begin only after all three prerequisites are satisfied:
+
+1. This Evidence Contract Review Closure is merged and post-merge verified.
+2. The GitHub Merge Gate Enforcement slice is completed and its resulting authority is verified.
+3. Edward separately approves a bounded read-only audit scope.
+
+After those gates, the audit may inventory worktrees, inspect repository and filesystem state, classify them, identify preservation requirements, and recommend retain, investigate, recovery-required, or safe-to-propose categories. It may not remove worktrees, delete branches, discard changes, alter environment files or links, or perform retirement.
 
 ### Controlled Worktree Retirement
 
