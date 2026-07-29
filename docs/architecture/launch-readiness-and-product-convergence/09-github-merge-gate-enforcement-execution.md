@@ -1,5 +1,7 @@
 # GME-B1 — Disabled GitHub Merge Gate Staging and Readback
 
+Operational staging succeeded: the approved Disabled ruleset was created and read back successfully, and remains non-enforcing. Governance closure remains pending PR #425 review, merge, tree-equivalence proof, post-merge verification and control synchronization.
+
 ## Purpose and scope
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
@@ -93,4 +95,4 @@ Activation requires separate authorization, a fresh before-state, exact ruleset 
 
 ## Current programme position
 
-GME-A is complete. GME-B1 Disabled staging and readback is complete and documented; GME-B2 activation and probe verification remains unauthorized. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
+GME-A is complete. GME-B1 operational staging and readback succeeded, but GME-B1 governance closure remains pending PR #425 review, merge, tree-equivalence proof, post-merge verification and control synchronization. GME-B2 activation and probe verification remains unauthorized until that closure is complete and separately accepted by Edward. The Worktree Lifecycle Reconciliation Audit, Controlled Worktree Retirement and Stage 2B remain blocked. No canonical integrated preview or launch candidate exists.
