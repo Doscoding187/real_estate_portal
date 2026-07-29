@@ -4,7 +4,7 @@
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Activation and rollback, pending-check blocking, intentional failed-check blocking, exact revert, fresh-source recovery, and tree restoration passed. The historical conversation observation is retained; durable before/after conversation snapshots are pending. | Active ruleset `19965838`, bounded PR observations, one isolated client test, normal revert, and exact tree comparison. | Activate and drill rollback; observe pending checks; create/resolve one COMMENT thread; commit and revert one failing test; await fresh checks; compare trees; capture durable conversation states. | Records below. | Strict-base isolation is partial/bounded; final PR merge and post-merge verification remain pending. |
+| Activation and rollback, pending-check blocking, conversation blocking and clearance, intentional failed-check blocking, exact revert, fresh-source recovery, and tree restoration passed. | Active ruleset `19965838`, bounded PR observations, one isolated client test, normal revert, exact tree comparison, and committed before/after conversation snapshots. | Activate and drill rollback; observe pending checks; create/resolve one COMMENT thread; commit and revert one failing test; await fresh checks; compare trees; capture durable conversation states. | Records below. | Strict-base isolation is partial/bounded; merge-method behavior, final PR merge and post-merge verification remain pending. |
 
 GME-B2 enforcement is active and the functional probes completed, but GME-B2 is not governance-complete until PR #428 merges and post-merge verification passes.
 
@@ -32,7 +32,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 
 | Claim | Mechanism | Sequence | Evidence | Boundary |
 | --- | --- | --- | --- | --- |
-| Historical observation indicates an unresolved conversation blocked merge eligibility and resolution cleared the blocker; durable before/after state capture remains pending. | Active pull-request rule requiring resolved conversations. | Baseline head `6dc26934…`, synthetic merge `9b752f531…`; one inline COMMENT was created, observed unresolved, then resolved. | Review `4810709816`; thread `PRRT_kwDOQQWnOM6U1cl1`; comment `3676285542`; line 9; historical merge state `BLOCKED` then `CLEAN`; all six checks passed. | Historical object identity and result are retained, but immutable before/after payloads are not; one clean durable re-observation is required before promotion to Passed. |
+| An unresolved conversation blocked merge eligibility and resolution cleared the blocker on an unchanged source pair. | Active pull-request rule requiring resolved conversations. | Boundary-correction head `5feb9f8138e1d40b997226e312b6648e570ad033`, synthetic merge `cf380ec91d6c1983873e7806e28e68bcb3a93076`; one remaining inline COMMENT thread was observed with all six checks successful, then resolved without changing the head. | Before snapshot [conversation BLOCKED](evidence/gme-b2-conversation-blocked-2026-07-29T19-56-59Z.json), captured `2026-07-29T19:56:59Z`, SHA-256 `716e4a0fd3dbf729d75905a59f9c6e5d5eca29c5bcbfda614dea1d3b2e53c04a`; after snapshot [conversation CLEAN](evidence/gme-b2-conversation-clean-2026-07-29T19-57-42Z.json), captured `2026-07-29T19:57:42Z`, SHA-256 `4316f0b3a2d4ce88746ab1acf3315929e227ec78f2e8389b3079dd5900f71778`; thread `PRRT_kwDOQQWnOM6U4rH6`; unresolved count one then zero; all six checks successful; no `REQUEST_CHANGES`. | No merge attempt, no source mutation, no approval requirement, and no other unresolved conversation contributed. |
 
 ### Intentional failed required check
 
@@ -69,7 +69,7 @@ GME-B2 enforcement is active and the functional probes completed, but GME-B2 is 
 | Intentional failed check | Passed |
 | Exact revert | Passed |
 | Fresh-source recovery | Passed |
-| Unresolved conversation | Historical observation retained; durable re-observation pending |
+| Unresolved conversation | Passed through durable independently isolated before/after snapshots |
 | Tree restoration | Passed |
 | Merge-method configuration | Passed by exact readback |
 | Merge-method behavior | Pending authorized final merge |
