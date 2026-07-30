@@ -87,7 +87,9 @@ describe('Main Platform Navigation authority', () => {
   });
 
   it('uses semantic links and keyboard-capable menu primitives without nested controls', () => {
-    expect(nav).toContain('NavigationMenuTrigger');
+    expect(nav).toContain('aria-controls="public-navbar-mega-panel"');
+    expect(nav).toContain('aria-expanded={desktopMenuValue ===');
+    expect(nav).toContain("if (event.key === 'Escape')");
     expect(nav).toContain('aria-label="Main platform navigation"');
     expect(nav).toContain('aria-expanded={mobileMenuOpen}');
     expect(nav).toContain("event.key === 'Escape'");

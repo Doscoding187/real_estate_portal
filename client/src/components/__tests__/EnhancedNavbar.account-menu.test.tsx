@@ -28,6 +28,15 @@ vi.mock('@/components/LocationAutosuggest', () => ({
   LocationAutosuggest: () => <input aria-label="Location search" />,
 }));
 
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    locationPages: {
+      getPopularCities: { useQuery: () => ({ data: [], isLoading: false, isError: false }) },
+      getCityData: { useQuery: () => ({ data: undefined, isLoading: false, isError: false }) },
+    },
+  },
+}));
+
 const mockUseAuth = useAuth as ReturnType<typeof vi.fn>;
 const mockUseLocation = useLocation as ReturnType<typeof vi.fn>;
 

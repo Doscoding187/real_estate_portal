@@ -3,14 +3,13 @@ import type { LucideIcon } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import {
   Briefcase,
-  Calculator,
+  ChevronDown,
   ChevronRight,
   Home,
   Key,
   Lightbulb,
   LogIn,
   LogOut,
-  MapPin,
   Megaphone,
   Menu,
   TrendingUp,
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/_core/hooks/useAuth';
-import { LocationAutosuggest } from '@/components/LocationAutosuggest';
+import { CityDiscoveryMenu } from '@/components/CityDiscoveryMenu';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -31,15 +30,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from '@/components/ui/navigation-menu';
 import { cityToNavLink, FALLBACK_CITY_LINKS } from '@/lib/locationDataAdapter';
+import '@/styles/enhanced-navbar.css';
 import {
   getAccountDisplayName,
   getAccountInitials,
@@ -69,17 +61,6 @@ export type NavigationUser = PublicNavigationUser;
 export function getMainPlatformAccountHref(user: NavigationUser) {
   return getCanonicalAccountDestination(user) ?? '/login?mode=signin';
 }
-
-type LocationSelection = {
-  citySlug?: string;
-  name?: string;
-  provinceSlug?: string;
-  slug?: string;
-  type?: string;
-};
-
-const navigationTriggerClassName =
-  'h-10 bg-transparent px-2.5 text-sm font-semibold text-foreground hover:bg-primary/5 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 data-[state=open]:bg-primary/10 data-[state=open]:text-primary data-[active=true]:bg-primary/10 data-[active=true]:text-primary';
 
 const menuPresentation: Record<
   PublicNavigationMenu['id'],
@@ -129,8 +110,7 @@ const menuPresentation: Record<
   },
 };
 
-const popularCities = FALLBACK_CITY_LINKS.filter(link => link.type === 'city').slice(0, 6);
-const popularPlaces = FALLBACK_CITY_LINKS.filter(link => link.type === 'suburb').slice(0, 6);
+// Fallback links remain available to the rent menu and as a safe discovery fallback.
 
 const rentCityFallbackLinks = FALLBACK_CITY_LINKS.filter(
   link =>
@@ -152,22 +132,6 @@ const rentCityFallbackLinks = FALLBACK_CITY_LINKS.filter(
     activeHref: link.href,
   }));
 
-function locationHref(location: LocationSelection): string {
-  const { citySlug, provinceSlug, slug, type } = location;
-
-  if (type === 'suburb' && provinceSlug && citySlug && slug) {
-    return `/property-for-sale/${provinceSlug}/${citySlug}/${slug}`;
-  }
-  if (type === 'city' && provinceSlug && (slug || citySlug)) {
-    return `/property-for-sale/${provinceSlug}/${slug || citySlug}`;
-  }
-  if (type === 'province' && (provinceSlug || slug)) {
-    return `/property-for-sale/${provinceSlug || slug}`;
-  }
-
-  return PUBLIC_CITY_ENTRY.href;
-}
-
 function isPathActive(pathname: string, href?: string) {
   if (!href) return false;
   const basePath = href.split('?')[0];
@@ -186,27 +150,21 @@ function MenuLink({
   const active = isPathActive(pathname, item.activeHref ?? item.href);
 
   return (
-    <NavigationMenuLink asChild active={active}>
-      <Link
-        href={item.href}
-        onClick={onNavigate}
-        aria-current={active ? 'page' : undefined}
-        className="group flex min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-      >
-        <span className="min-w-0 truncate">{item.label}</span>
-        <span className="flex shrink-0 items-center gap-2">
-          {item.authRequired ? (
-            <span className="hidden text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80 sm:inline">
-              Sign in required
-            </span>
-          ) : null}
-          <ChevronRight
-            className="size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5"
-            aria-hidden="true"
-          />
-        </span>
-      </Link>
-    </NavigationMenuLink>
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
+      className="public-navbar__menu-link group"
+    >
+      <span className="public-navbar__menu-link-label">{item.label}</span>
+      <span className="public-navbar__menu-link-trailing">
+        {item.authRequired ? <span className="public-navbar__menu-auth-label">Sign in</span> : null}
+        <ChevronRight
+          className="size-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </span>
+    </Link>
   );
 }
 
@@ -220,11 +178,9 @@ function MenuSection({
   onNavigate: () => void;
 }) {
   return (
-    <section aria-label={group.label}>
-      <h3 className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-        {group.label}
-      </h3>
-      <div className="space-y-1">
+    <section aria-label={group.label} className="public-navbar__menu-section">
+      <h3 className="public-navbar__section-heading">{group.label}</h3>
+      <div className="public-navbar__menu-section-list">
         {group.items.map(item => (
           <MenuLink key={item.id} item={item} pathname={pathname} onNavigate={onNavigate} />
         ))}
@@ -250,29 +206,31 @@ function MegaMenu({
       ? [{ label: 'Popular rental cities', items: rentCityFallbackLinks }]
       : []),
   ];
+  const contentLight = groups.length < 3;
 
   return (
-    <div className="flex max-h-[min(72vh,620px)] w-[min(92vw,1040px)] overflow-y-auto overflow-x-hidden rounded-xl bg-popover shadow-xl ring-1 ring-border/80">
-      <aside className="hidden w-60 shrink-0 flex-col justify-between border-r border-border bg-muted/35 p-5 md:flex">
+    <div
+      className={`public-navbar__mega-grid${contentLight ? ' public-navbar__mega-grid--content-light' : ''}`}
+    >
+      <aside className="public-navbar__menu-intro">
         <div>
-          <span className="mb-4 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <span className="public-navbar__menu-icon">
             <Icon className="size-5" aria-hidden="true" />
           </span>
-          <h2 className="text-base font-bold text-foreground">{presentation.title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {presentation.description}
-          </p>
+          <p className="public-navbar__menu-kicker">{menu.label}</p>
+          <h2 className="public-navbar__menu-title">{presentation.title}</h2>
+          <p className="public-navbar__menu-description">{presentation.description}</p>
         </div>
         <Link
           href={menu.feature.href}
           onClick={onNavigate}
-          className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="public-navbar__menu-feature-link"
         >
           {presentation.cta}
           <ChevronRight className="size-4" aria-hidden="true" />
         </Link>
       </aside>
-      <div className="grid min-w-0 flex-1 grid-cols-1 gap-5 p-5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="public-navbar__menu-groups">
         {groups.map(group => (
           <MenuSection
             key={group.label}
@@ -282,84 +240,25 @@ function MegaMenu({
           />
         ))}
       </div>
-      <aside className="hidden w-48 shrink-0 flex-col justify-between border-l border-border bg-muted/20 p-5 xl:flex">
-        <div>
-          <span className="mb-3 flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Calculator className="size-5" aria-hidden="true" />
-          </span>
-          <h2 className="text-sm font-bold text-foreground">Keep moving</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Continue through the public journey that fits your property goals.
-          </p>
-        </div>
-        <Link
-          href={menu.feature.href}
-          onClick={onNavigate}
-          className="mt-6 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-        >
-          {presentation.cta}
-          <ChevronRight className="size-4" aria-hidden="true" />
-        </Link>
-      </aside>
-    </div>
-  );
-}
-
-function CityMenu({ onNavigate }: { onNavigate: (href: string) => void }) {
-  return (
-    <div className="w-[min(92vw,700px)] max-w-[calc(100vw-1rem)] p-5">
-      <LocationAutosuggest
-        placeholder="Search a city, suburb, or area"
-        onSelect={location => onNavigate(locationHref(location))}
-      />
-      <div className="mt-5 grid gap-6 sm:grid-cols-2">
-        <section aria-label="Popular cities">
-          <h2 className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-            Popular cities
-          </h2>
-          <div className="grid gap-1">
-            {popularCities.map(city => (
-              <NavigationMenuLink key={city.href} asChild>
-                <Link
-                  href={city.href}
-                  onClick={() => onNavigate(city.href)}
-                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                >
-                  <MapPin className="size-4 text-primary" aria-hidden="true" />
-                  {city.label}
-                </Link>
-              </NavigationMenuLink>
-            ))}
+      {!contentLight ? (
+        <aside className="public-navbar__menu-action">
+          <div>
+            <p className="public-navbar__menu-kicker">Start here</p>
+            <h2 className="public-navbar__menu-action-title">{menu.feature.label}</h2>
+            <p className="public-navbar__menu-action-copy">
+              Follow the primary {menu.label.toLowerCase()} journey and keep your next step clear.
+            </p>
           </div>
-        </section>
-        <section aria-label="Popular places">
-          <h2 className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-            Popular places
-          </h2>
-          <div className="grid gap-1">
-            {popularPlaces.length > 0 ? (
-              popularPlaces.map(place => (
-                <NavigationMenuLink key={place.href} asChild>
-                  <Link
-                    href={place.href}
-                    onClick={() => onNavigate(place.href)}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                  >
-                    <MapPin className="size-4 text-primary" aria-hidden="true" />
-                    {place.label}
-                  </Link>
-                </NavigationMenuLink>
-              ))
-            ) : (
-              <p className="px-3 py-2 text-sm text-muted-foreground">Search to find a suburb.</p>
-            )}
-          </div>
-        </section>
-      </div>
-      <div className="mt-5 flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-        <MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
-        Choose a location to refine the property journey for that area.
-      </div>
+          <Link
+            href={menu.feature.href}
+            onClick={onNavigate}
+            className="public-navbar__menu-action-link"
+          >
+            {presentation.cta}
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </Link>
+        </aside>
+      ) : null}
     </div>
   );
 }
@@ -562,6 +461,7 @@ export function EnhancedNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuToggleRef = useRef<HTMLButtonElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  const desktopMenuCloseTimerRef = useRef<number | null>(null);
   const mobileMenuWasOpen = useRef(false);
 
   useEffect(() => {
@@ -597,111 +497,185 @@ export function EnhancedNavbar() {
     };
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    if (!desktopMenuValue) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDesktopMenuValue('');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [desktopMenuValue]);
+
   const closeMobileMenu = () => setMobileMenuOpen(false);
-  const closeDesktopMenu = () => setDesktopMenuValue('');
+
+  const cancelDesktopMenuClose = () => {
+    if (desktopMenuCloseTimerRef.current !== null) {
+      window.clearTimeout(desktopMenuCloseTimerRef.current);
+      desktopMenuCloseTimerRef.current = null;
+    }
+  };
+
+  const openDesktopMenu = (menuValue: string) => {
+    cancelDesktopMenuClose();
+    setDesktopMenuValue(menuValue);
+  };
+
+  const closeDesktopMenu = () => {
+    cancelDesktopMenuClose();
+    setDesktopMenuValue('');
+  };
+
+  const scheduleDesktopMenuClose = () => {
+    cancelDesktopMenuClose();
+
+    desktopMenuCloseTimerRef.current = window.setTimeout(() => {
+      desktopMenuCloseTimerRef.current = null;
+      setDesktopMenuValue('');
+    }, 220);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (desktopMenuCloseTimerRef.current !== null) {
+        window.clearTimeout(desktopMenuCloseTimerRef.current);
+      }
+    };
+  }, []);
+
   const navigateFromCity = (href: string) => {
     closeDesktopMenu();
     setLocation(href);
   };
   const currentPath = pathname.split('?')[0];
   const activeNavigationOwner = getPublicNavigationActiveOwner(currentPath);
+  const activeDesktopMenu = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === desktopMenuValue);
+  const hasDesktopMenu = desktopMenuValue === 'city' || Boolean(activeDesktopMenu);
+  const desktopPanelLabel =
+    desktopMenuValue === 'city' ? 'City' : (activeDesktopMenu?.label ?? 'Public');
 
   return (
     <nav
       ref={navRef}
       data-public-navbar="true"
-      className="sticky top-0 z-50 border-b border-border bg-background/95 shadow-sm backdrop-blur"
+      className="public-navbar"
       aria-label="Main platform navigation"
     >
-      <div className="mx-auto flex min-h-[var(--plds-nav-height)] min-w-0 max-w-screen-2xl items-center gap-3 px-4 sm:px-6 lg:px-8">
-        <Link
-          href="/"
-          className="shrink-0 text-lg font-bold tracking-tight text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:text-xl"
-        >
+      <div className="public-navbar__shell">
+        <Link href="/" className="public-navbar__brand" onClick={closeDesktopMenu}>
           Property Listify
         </Link>
 
-        <NavigationMenu
-          className="hidden min-w-0 flex-1 xl:flex"
-          viewport={false}
-          value={desktopMenuValue}
-          onValueChange={setDesktopMenuValue}
-          delayDuration={100}
-          skipDelayDuration={300}
+        <div
+          className="public-navbar__desktop-nav"
+          aria-label="Primary public journeys"
+          onMouseLeave={scheduleDesktopMenuClose}
         >
-          <NavigationMenuList className="justify-center gap-0">
-            <NavigationMenuItem value="city">
-              <NavigationMenuTrigger
-                className={navigationTriggerClassName}
+          <ul className="public-navbar__desktop-nav-list">
+            <li className="public-navbar__desktop-nav-item">
+              <button
+                id="public-navbar-trigger-city"
+                type="button"
+                className="public-navbar__desktop-trigger"
+                data-open={desktopMenuValue === 'city'}
                 data-active={activeNavigationOwner === 'city'}
+                aria-expanded={desktopMenuValue === 'city'}
+                aria-controls="public-navbar-mega-panel"
+                onMouseEnter={() => openDesktopMenu('city')}
+                onClick={() => setDesktopMenuValue(current => (current === 'city' ? '' : 'city'))}
               >
                 City
-              </NavigationMenuTrigger>
-              <NavigationMenuContent className="left-1/2 z-[60] -translate-x-1/2 p-2">
-                <CityMenu onNavigate={navigateFromCity} />
-              </NavigationMenuContent>
-            </NavigationMenuItem>
+                <ChevronDown
+                  className="public-navbar__desktop-trigger-chevron"
+                  aria-hidden="true"
+                />
+              </button>
+            </li>
+
             {PUBLIC_NAVIGATION_MENUS.map(menu => (
-              <NavigationMenuItem key={menu.id} value={menu.id}>
-                <NavigationMenuTrigger
-                  className={navigationTriggerClassName}
+              <li key={menu.id} className="public-navbar__desktop-nav-item">
+                <button
+                  id={`public-navbar-trigger-${menu.id}`}
+                  type="button"
+                  className="public-navbar__desktop-trigger"
+                  data-open={desktopMenuValue === menu.id}
                   data-active={activeNavigationOwner === menu.id}
+                  aria-expanded={desktopMenuValue === menu.id}
+                  aria-controls="public-navbar-mega-panel"
+                  onMouseEnter={() => openDesktopMenu(menu.id)}
+                  onClick={() =>
+                    setDesktopMenuValue(current => (current === menu.id ? '' : menu.id))
+                  }
                 >
                   {menu.label}
                   {menu.id === 'explore' ? (
-                    <span className="ml-1 rounded bg-primary px-1 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
-                      NEW
-                    </span>
+                    <span className="public-navbar__new-badge">NEW</span>
                   ) : null}
-                </NavigationMenuTrigger>
-                <NavigationMenuContent className="left-1/2 z-[60] -translate-x-1/2 p-2">
-                  <MegaMenu menu={menu} pathname={currentPath} onNavigate={closeDesktopMenu} />
-                </NavigationMenuContent>
-              </NavigationMenuItem>
+                  <ChevronDown
+                    className="public-navbar__desktop-trigger-chevron"
+                    aria-hidden="true"
+                  />
+                </button>
+              </li>
             ))}
-          </NavigationMenuList>
-        </NavigationMenu>
+          </ul>
+        </div>
 
-        <div className="ml-auto hidden items-center gap-2 xl:flex">
+        <div className="public-navbar__desktop-actions">
           <Link
             href={PUBLIC_NAVIGATION_ACTIONS.referrals.href}
-            className="inline-flex h-[var(--plds-nav-action-height)] items-center gap-2 rounded-md border border-primary/35 px-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="public-navbar__action-link public-navbar__action-link--secondary"
+            data-active={isPathActive(currentPath, PUBLIC_NAVIGATION_ACTIONS.referrals.activeHref)}
             aria-current={
               isPathActive(currentPath, PUBLIC_NAVIGATION_ACTIONS.referrals.activeHref)
                 ? 'page'
                 : undefined
             }
+            onClick={closeDesktopMenu}
           >
             <Briefcase className="size-4" aria-hidden="true" />
             {PUBLIC_NAVIGATION_ACTIONS.referrals.label}
           </Link>
+
           <Link
             href={PUBLIC_NAVIGATION_ACTIONS.advertise.href}
-            className="inline-flex h-[var(--plds-nav-action-height)] items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="public-navbar__action-link public-navbar__action-link--primary"
+            data-active={isPathActive(currentPath, PUBLIC_NAVIGATION_ACTIONS.advertise.activeHref)}
             aria-current={
               isPathActive(currentPath, PUBLIC_NAVIGATION_ACTIONS.advertise.activeHref)
                 ? 'page'
                 : undefined
             }
+            onClick={closeDesktopMenu}
           >
             <Megaphone className="size-4" aria-hidden="true" />
             {PUBLIC_NAVIGATION_ACTIONS.advertise.label}
           </Link>
-          <AccountMenu user={user} logout={logout} />
+
+          <AccountMenu user={user} logout={logout} onNavigate={closeDesktopMenu} />
         </div>
 
-        <div className="ml-auto flex items-center gap-1 xl:hidden">
+        <div className="public-navbar__mobile-actions">
           <AccountMenu user={user} logout={logout} />
           <Button
             ref={mobileMenuToggleRef}
             type="button"
             variant="ghost"
             size="icon"
-            onClick={() => setMobileMenuOpen(open => !open)}
+            onClick={() => {
+              closeDesktopMenu();
+              setMobileMenuOpen(open => !open);
+            }}
             aria-expanded={mobileMenuOpen}
             aria-controls="main-platform-mobile-menu"
             aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            className="focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             {mobileMenuOpen ? (
               <X className="size-5" aria-hidden="true" />
@@ -712,20 +686,43 @@ export function EnhancedNavbar() {
         </div>
       </div>
 
-      {desktopMenuValue ? (
-        <button
-          type="button"
-          aria-label="Close open navigation menu"
-          className="fixed inset-x-0 bottom-0 top-[var(--plds-nav-height)] z-40 hidden cursor-default bg-slate-950/10 xl:block"
-          onClick={closeDesktopMenu}
-        />
+      {hasDesktopMenu ? (
+        <div className="public-navbar__mega-layer">
+          <button
+            type="button"
+            className="public-navbar__mega-backdrop"
+            aria-label="Close open navigation menu"
+            onMouseEnter={scheduleDesktopMenuClose}
+            onClick={closeDesktopMenu}
+          />
+
+          <div className="public-navbar__mega-positioner">
+            <div
+              id="public-navbar-mega-panel"
+              className={`public-navbar__mega-panel${
+                desktopMenuValue === 'city' ? ' public-navbar__mega-panel--city' : ''
+              }`}
+              role="region"
+              aria-label={`${desktopPanelLabel} navigation`}
+              onMouseEnter={cancelDesktopMenuClose}
+              onMouseLeave={scheduleDesktopMenuClose}
+            >
+              {desktopMenuValue === 'city' ? (
+                <CityDiscoveryMenu onNavigate={navigateFromCity} />
+              ) : activeDesktopMenu ? (
+                <MegaMenu
+                  menu={activeDesktopMenu}
+                  pathname={currentPath}
+                  onNavigate={closeDesktopMenu}
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {mobileMenuOpen ? (
-        <div
-          id="main-platform-mobile-menu"
-          className="max-h-[calc(100vh_-_var(--plds-nav-height))] overflow-y-auto border-t border-border bg-background px-4 pb-8 pt-4 shadow-lg xl:hidden"
-        >
+        <div id="main-platform-mobile-menu" className="public-navbar__mobile-drawer px-4 pb-8 pt-4">
           <div className="space-y-4">
             <section aria-labelledby="mobile-public-journeys-heading">
               <h2
@@ -738,9 +735,11 @@ export function EnhancedNavbar() {
                 <MobileDestinationLink item={PUBLIC_CITY_ENTRY} onNavigate={closeMobileMenu} />
               </div>
             </section>
+
             {PUBLIC_NAVIGATION_MENUS.map(menu => (
               <MobileAudienceSection key={menu.id} menu={menu} onNavigate={closeMobileMenu} />
             ))}
+
             <section
               className="border-t border-border pt-4"
               aria-labelledby="mobile-partners-heading"
@@ -762,6 +761,7 @@ export function EnhancedNavbar() {
                 />
               </div>
             </section>
+
             <section className="border-t border-border pt-4" aria-label="Account access">
               <AccountMenu user={user} logout={logout} onNavigate={closeMobileMenu} mobile />
             </section>
