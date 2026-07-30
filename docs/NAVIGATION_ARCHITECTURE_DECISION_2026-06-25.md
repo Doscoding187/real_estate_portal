@@ -40,6 +40,26 @@ Examples already migrated:
 - `client/src/pages/AgentPublicProfile.tsx`
 - `client/src/pages/SubscriptionPlans.tsx`
 
+### EnhancedNavbar public gateway authority
+
+`EnhancedNavbar` remains the canonical public marketing gateway rendered by
+`HomeLayout`. Its launch-visible menu destinations are represented by the
+small `client/src/lib/publicNavigation.ts` authority, which keeps destination
+labels, owning engines, capability status, and account requirements together
+without moving engine business logic into the navbar.
+
+The same authority provides the reusable role-aware account destination
+resolver. The profile trigger owns public account entry; unauthenticated users
+see sign-in and registration modes on `/login`, while authenticated users are
+sent to the manager, admin, developer, agency, agent, service, referral, or
+prospect destination appropriate to their identity precedence.
+
+Launch-visible policy is conservative: only launch-ready, correctly gated,
+or explicitly limited-but-valid destinations render globally. Placeholder,
+broken, obsolete, and materially misleading destinations stay out of the
+public menu. `ListingNavbar`, workspace shells, legacy `Navbar`, and SEO/location
+navigation remain specialized authorities.
+
 ### `ListingNavbar`
 
 Search, listing, development browsing, comparison, and location-style experiences should keep `ListingNavbar`.
