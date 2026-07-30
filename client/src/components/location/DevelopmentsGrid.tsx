@@ -28,7 +28,7 @@ export function DevelopmentsGrid({ developments, locationName }: DevelopmentsGri
               Explore the latest residential projects and investment opportunities.
             </p>
           </div>
-          <Link href="/developments">
+          <Link href="/new-developments">
             <Button variant="outline" className="group">
               View All Developments
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />

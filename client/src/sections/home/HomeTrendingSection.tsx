@@ -225,7 +225,7 @@ export function HomeTrendingSection({
               activeHeroTab === 'rent'
                 ? '/property-to-rent'
                 : activeHeroTab === 'developments'
-                  ? '/developments'
+                  ? '/new-developments'
                   : '/property-for-sale'
             }
             className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"

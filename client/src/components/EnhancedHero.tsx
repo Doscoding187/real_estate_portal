@@ -407,14 +407,15 @@ export function EnhancedHero({
         if (filters.developmentStatus) params.set('status', filters.developmentStatus);
         if (filters.priceMin) params.set('minPrice', filters.priceMin);
         if (filters.priceMax) params.set('maxPrice', filters.priceMax);
-        setLocation(`/developments?${params.toString()}`);
+        const queryString = params.toString();
+        setLocation(queryString ? `/new-developments?${queryString}` : '/new-developments');
         break;
       }
 
       case 'plot': {
         const url = generatePropertyUrl({
           listingType: 'sale',
-          propertyType: 'land',
+          propertyType: 'plot',
           city: searchQuery || undefined,
           minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
           maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
