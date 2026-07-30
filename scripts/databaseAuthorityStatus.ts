@@ -120,6 +120,10 @@ export function classifyDatabaseTarget(
   }
   const database = pathname.replace(/^\//, '') || '(none)';
   const runtime = String(env.APP_ENV ?? env.NODE_ENV ?? '').toLowerCase();
+  const runtimeModes = [env.APP_ENV, env.NODE_ENV]
+    .filter((mode): mode is string => Boolean(mode))
+    .map(mode => mode.toLowerCase());
+  const unsafeRuntimeMode = runtimeModes.some(mode => mode === 'production' || mode === 'staging');
   const localHost = manifest.approvedLocalHosts
     .map(approvedHost => approvedHost.replace(/^\[|\]$/g, '').toLowerCase())
     .includes(host);
@@ -127,8 +131,8 @@ export function classifyDatabaseTarget(
     url.protocol === 'mysql:' &&
     localHost &&
     database === manifest.approvedLocalDatabaseName &&
-    runtime !== 'production' &&
-    runtime !== 'staging'
+    !unsafeRuntimeMode &&
+    runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {
     return { classification: 'local', approved: true, host, database, url };
   }
@@ -136,8 +140,8 @@ export function classifyDatabaseTarget(
     url.protocol === 'mysql:' &&
     localHost &&
     database === 'listify_test' &&
-    runtime !== 'production' &&
-    runtime !== 'staging'
+    !unsafeRuntimeMode &&
+    runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {
     return { classification: 'test', approved: true, host, database, url };
   }

@@ -75,6 +75,17 @@ describe('local environment authority diagnostics', () => {
     expect(JSON.stringify(result)).not.toContain('fixture-only');
   });
 
+  it('does not read a noncanonical symlink target', () => {
+    const { root, central } = fixture();
+    const outside = join(root, 'machine', 'outside.env');
+    writeFileSync(outside, 'SECRET_SENTINEL=must-not-be-read\n');
+    symlinkSync(outside, join(root, '.env.local'));
+    const result = diagnose(root, central);
+    expect(result.environmentPath.state).toBe('INCORRECT_LINK');
+    expect(JSON.stringify(result)).not.toContain('SECRET_SENTINEL');
+    expect(JSON.stringify(result)).not.toContain('must-not-be-read');
+  });
+
   it.each([
     ['missing', 'MISSING'],
     ['regular file', 'REGULAR_FILE_CONFLICT'],
@@ -117,6 +128,40 @@ describe('local environment authority diagnostics', () => {
       expect(JSON.stringify(result)).not.toContain('fixture-only-test-value');
     },
   );
+
+  it('rejects placeholder and unsafe values for canonical required names', () => {
+    const { root, central } = fixture();
+    const contents = requiredValues
+      .replace('JWT_SECRET=fixture-only-jwt-secret-which-is-not-output', 'JWT_SECRET=changeme')
+      .replace('APP_URL=http://localhost:3009', 'APP_URL=https://example.com')
+      .replace(
+        'LOCAL_DEMO_AGENCY_PASSWORD=fixture-only-secret',
+        'LOCAL_DEMO_AGENCY_PASSWORD=placeholder',
+      )
+      .concat('\n');
+    writeFileSync(central, contents, { mode: 0o600 });
+    const result = diagnose(root, central);
+    expect(result.completeApplicationCompliance).toBe(false);
+    expect(result.stage3Eligibility).toBe(false);
+    expect(result.blockers.join('\n')).toContain('Required names have invalid values:');
+    expect(result.blockers.join('\n')).toContain('APP_URL');
+    expect(result.blockers.join('\n')).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
+    expect(result.blockers.join('\n')).toContain('JWT_SECRET');
+    expect(result.exitCode).toBe(1);
+    expect(JSON.stringify(result)).not.toContain('changeme');
+  });
+
+  it('returns exit 1 for unknown and deprecated central names', () => {
+    const { root, central } = fixture();
+    writeFileSync(central, `${requiredValues}\nUNKNOWN_FIXTURE_NAME=safe\nDB_HOST=localhost\n`, {
+      mode: 0o600,
+    });
+    const result = diagnose(root, central);
+    expect(result.completeApplicationCompliance).toBe(false);
+    expect(result.exitCode).toBe(1);
+    expect(result.warnings.join('\n')).toContain('UNKNOWN_FIXTURE_NAME');
+    expect(result.warnings.join('\n')).toContain('DB_HOST');
+  });
 
   it.each(['APP_URL', 'FRONTEND_URL', 'VITE_API_URL', 'VITE_API_BASE_URL'] as const)(
     'requires canonical routing name %s from the manifest',
@@ -187,6 +232,18 @@ describe('local environment authority diagnostics', () => {
       expect(result.stage3Eligibility).toBe(false);
       expect(result.exitCode).toBe(1);
     }
+  });
+
+  it('rejects contradictory runtime modes', () => {
+    const { root, central } = fixture();
+    writeFileSync(central, `${requiredValues}\nAPP_ENV=development\nNODE_ENV=production\n`, {
+      mode: 0o600,
+    });
+    const result = diagnose(root, central);
+    expect(result.databaseTarget.approved).toBe(false);
+    expect(result.completeApplicationCompliance).toBe(false);
+    expect(result.stage3Eligibility).toBe(false);
+    expect(result.exitCode).toBe(1);
   });
 
   it('normalizes an approved bracketed IPv6 database host', () => {

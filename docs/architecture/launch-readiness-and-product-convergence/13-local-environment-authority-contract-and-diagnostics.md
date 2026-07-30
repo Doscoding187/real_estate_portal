@@ -15,7 +15,7 @@
 
 **Sequence:** Consumer references and tracked templates were searched; existing database-authority utilities were read; the contract and diagnostic were implemented; synthetic fixtures tested path states and name validation; the control worktree was inspected once after tests.
 
-**Evidence:** The focused diagnostic suite passes 28 tests. The control result is `REGULAR_FILE_CONFLICT` for `.env.local`, central authority `REGULAR_FILE` with `SAFE_0600` and `OWNER_CURRENT_USER`, nine central names, approved local database target `listify_local`, no malformed, duplicate, test-only, or prohibited names, and no emitted values.
+**Evidence:** The focused diagnostic suite passes 32 tests. The control result is `REGULAR_FILE_CONFLICT` for `.env.local`, central authority `REGULAR_FILE` with `SAFE_0600` and `OWNER_CURRENT_USER`, nine central names, approved local database target `listify_local`, no malformed, duplicate, test-only, or prohibited names, and no emitted values.
 
 **Boundary:** This establishes a diagnostic and decision contract. It does not reconcile any environment file, create a link, start a service, connect to a database, create a preview, or establish Stage 3 readiness.
 
@@ -166,13 +166,14 @@ The implementation does not print or serialize parsed values. It emits only vari
 
 ## 13. Test evidence
 
-The focused suite `server/__tests__/localEnvironmentAuthorityStatus.test.ts` passes 28 tests covering:
+The focused suite `server/__tests__/localEnvironmentAuthorityStatus.test.ts` passes 32 tests covering:
 
 - canonical, missing, regular-file, incorrect-link, broken-link, and non-file states;
 - malformed assignments and duplicate names;
 - test-only central names and canonical manifest-derived required routing names;
 - malformed or unavailable canonical manifests;
-- exact MySQL local/test target invariants and rejected protocols, paths, hosts, and runtime modes, including bracketed IPv6 normalization;
+- exact MySQL local/test target invariants and rejected protocols, paths, hosts, and runtime modes, including bracketed IPv6 normalization and contradictory modes;
+- canonical required-value validation, unknown/deprecated exit status, and noncanonical symlink non-following;
 - current, mismatched, and unavailable central-file ownership;
 - unsupported Git targets with sanitized exit code `2`;
 - missing required names;

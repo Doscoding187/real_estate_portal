@@ -7,6 +7,7 @@ import {
   loadAuthorityManifest,
   validateAuthorityManifest,
 } from './databaseAuthorityStatus';
+import { requiredLocalVariableStates } from './localEnvironmentAuthority';
 
 export const CONTRACT_VERSION = 'stage2b-2';
 
@@ -581,9 +582,9 @@ function readWorktreeEnvironment(
   pathInspection: PathInspection,
   centralPath: string,
 ) {
-  if (!pathInspection.readable) return parseEnvironmentText('');
-  const environmentPath =
-    pathInspection.state === 'CANONICAL_LINK' ? centralPath : join(root, '.env.local');
+  if (!pathInspection.readable || pathInspection.state !== 'CANONICAL_LINK')
+    return parseEnvironmentText('');
+  const environmentPath = centralPath;
   try {
     return parseEnvironmentText(readFileSync(environmentPath, 'utf8'));
   } catch {
@@ -737,6 +738,11 @@ export function runEnvironmentAuthorityDiagnostic(
   ].sort();
   const required = manifest?.requiredLocalVariables ?? [];
   const missingRequiredNames = required.filter(name => !source.values[name]);
+  const canonicalRequiredStates = requiredLocalVariableStates(source.values);
+  const invalidRequiredNames = required.filter(name => {
+    const state = canonicalRequiredStates[name as keyof typeof canonicalRequiredStates];
+    return state ? state !== 'configured' : !source.values[name];
+  });
   const emptyNames = source.names
     .filter(name => source.values[name] === '')
     .filter((name, index, all) => all.indexOf(name) === index)
@@ -766,6 +772,8 @@ export function runEnvironmentAuthorityDiagnostic(
     );
   if (missingRequiredNames.length)
     blockers.push(`Required names are missing: ${missingRequiredNames.join(', ')}.`);
+  if (invalidRequiredNames.length)
+    blockers.push(`Required names have invalid values: ${invalidRequiredNames.join(', ')}.`);
   if (testOnlyNames.length)
     blockers.push(
       `TEST_ONLY names are prohibited in central authority: ${testOnlyNames.join(', ')}.`,
@@ -832,11 +840,12 @@ export function runEnvironmentAuthorityDiagnostic(
       'No file, symlink, permission, service, database, or provider state was changed or connected by this diagnostic.',
       'Database-target eligibility is reported separately from complete-application compliance.',
     ],
-    exitCode: blockers.length
-      ? ['UNKNOWN', 'UNREADABLE'].includes(environmentPath.state)
-        ? 2
-        : 1
-      : 0,
+    exitCode:
+      blockers.length || unknownNames.length || deprecatedNames.length
+        ? ['UNKNOWN', 'UNREADABLE'].includes(environmentPath.state)
+          ? 2
+          : 1
+        : 0,
     targetClassification: 'SUPPORTED',
   };
 }
