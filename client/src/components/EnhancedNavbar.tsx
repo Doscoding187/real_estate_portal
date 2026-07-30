@@ -45,6 +45,7 @@ import {
   getAccountInitials,
   getAccountRoleLabel,
   getCanonicalAccountDestination,
+  getPublicNavigationActiveOwner,
   getVisiblePublicNavigationGroups,
   PUBLIC_CITY_ENTRY,
   PUBLIC_NAVIGATION_ACTIONS,
@@ -603,12 +604,7 @@ export function EnhancedNavbar() {
     setLocation(href);
   };
   const currentPath = pathname.split('?')[0];
-
-  const menuIsActive = (menu: PublicNavigationMenu) =>
-    isPathActive(currentPath, menu.feature.activeHref) ||
-    menu.groups.some(group =>
-      group.items.some(item => isPathActive(currentPath, item.activeHref ?? item.href)),
-    );
+  const activeNavigationOwner = getPublicNavigationActiveOwner(currentPath);
 
   return (
     <nav
@@ -637,7 +633,7 @@ export function EnhancedNavbar() {
             <NavigationMenuItem value="city">
               <NavigationMenuTrigger
                 className={navigationTriggerClassName}
-                data-active={isPathActive(currentPath, PUBLIC_CITY_ENTRY.activeHref)}
+                data-active={activeNavigationOwner === 'city'}
               >
                 City
               </NavigationMenuTrigger>
@@ -649,7 +645,7 @@ export function EnhancedNavbar() {
               <NavigationMenuItem key={menu.id} value={menu.id}>
                 <NavigationMenuTrigger
                   className={navigationTriggerClassName}
-                  data-active={menuIsActive(menu)}
+                  data-active={activeNavigationOwner === menu.id}
                 >
                   {menu.label}
                   {menu.id === 'explore' ? (

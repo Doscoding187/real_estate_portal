@@ -46,6 +46,8 @@ export type PublicNavigationMenu = {
   groups: PublicNavigationGroup[];
 };
 
+export type PublicNavigationActiveOwner = 'city' | PublicNavigationMenu['id'];
+
 const destination = (
   item: Omit<PublicNavigationDestination, 'desktopVisible' | 'mobileVisible'> & {
     desktopVisible?: boolean;
@@ -601,6 +603,39 @@ export const PUBLIC_NAVIGATION_ACTIONS = {
   }),
 } as const;
 
+/**
+ * Top-level ownership is deliberately independent from child-link membership.
+ * The order resolves the two intentional overlaps: location pages belong to
+ * City, and professional acquisition routes belong to Professionals.
+ */
+export const PUBLIC_NAVIGATION_ACTIVE_ROUTES: Record<PublicNavigationActiveOwner, string[]> = {
+  city: ['/property-for-sale/'],
+  professionals: [
+    '/agents',
+    '/developers',
+    '/distribution-network',
+    '/advertise/sell/',
+    '/advertise/services',
+  ],
+  services: ['/services'],
+  buyers: ['/property-for-sale', '/new-developments'],
+  renters: ['/property-to-rent'],
+  sellers: ['/advertise', '/tools/property-valuation'],
+  insights: ['/insights', '/guides'],
+  explore: ['/explore'],
+};
+
+const PUBLIC_NAVIGATION_ACTIVE_OWNER_ORDER: PublicNavigationActiveOwner[] = [
+  'city',
+  'professionals',
+  'services',
+  'buyers',
+  'renters',
+  'sellers',
+  'insights',
+  'explore',
+];
+
 const VISIBLE_CAPABILITIES = new Set<PublicNavigationCapabilityStatus>([
   'LAUNCH_READY',
   'AUTH_GATED',
@@ -629,6 +664,50 @@ export function getVisiblePublicNavigationGroups(
     .filter(group => group.items.length > 0);
 }
 
+function matchesActiveRoute(pathname: string, routePrefix: string) {
+  if (routePrefix.endsWith('/')) return pathname.startsWith(routePrefix);
+  return pathname === routePrefix || pathname.startsWith(`${routePrefix}/`);
+}
+
+export function getPublicNavigationActiveOwner(
+  pathname: string,
+): PublicNavigationActiveOwner | null {
+  const currentPath = pathname.split('?')[0] || '/';
+
+  for (const owner of PUBLIC_NAVIGATION_ACTIVE_OWNER_ORDER) {
+    if (
+      PUBLIC_NAVIGATION_ACTIVE_ROUTES[owner].some(route => matchesActiveRoute(currentPath, route))
+    ) {
+      return owner;
+    }
+  }
+
+  return null;
+}
+
+export function getSafeNextPath(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) {
+    return null;
+  }
+
+  if (
+    value.includes('\\') ||
+    Array.from(value).some(character => {
+      const code = character.charCodeAt(0);
+      return code < 0x20 || code === 0x7f;
+    })
+  ) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(value, 'http://property-listify.local');
+    return parsed.origin === 'http://property-listify.local' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getCanonicalAccountDestination(user: PublicNavigationUser): string | null {
   if (!user) return null;
   const role = normalizeRole(user.role);
@@ -643,6 +722,10 @@ export function getCanonicalAccountDestination(user: PublicNavigationUser): stri
     return '/distribution/partner/overview';
   }
   return '/user/dashboard';
+}
+
+export function getLoginRedirectPath(user: PublicNavigationUser, nextPath: unknown): string {
+  return getSafeNextPath(nextPath) ?? getCanonicalAccountDestination(user) ?? '/user/dashboard';
 }
 
 export function getAccountDisplayName(user: PublicNavigationUser) {

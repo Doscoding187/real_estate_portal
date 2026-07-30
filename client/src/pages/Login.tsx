@@ -46,6 +46,7 @@ import {
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
 import { apiFetch, ApiError } from '@/lib/api';
+import { getLoginRedirectPath, getSafeNextPath } from '@/lib/publicNavigation';
 import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
@@ -237,11 +238,7 @@ export default function Login() {
   const search = useSearch();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
   const prefersReducedMotion = useReducedMotion();
-  const nextParam = searchParams.get('next');
-  const safeNextPath =
-    typeof nextParam === 'string' && nextParam.startsWith('/') && !nextParam.startsWith('//')
-      ? nextParam
-      : null;
+  const safeNextPath = getSafeNextPath(searchParams.get('next'));
 
   const [selectedRole, setSelectedRole] = useState<RoleCard | null>(null);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -314,18 +311,7 @@ export default function Login() {
       setShowResendVerification(false);
       toast.success('Welcome back!');
 
-      const role = result.user?.role;
-      let redirectPath = safeNextPath || '/user/dashboard';
-
-      if (!safeNextPath) {
-        if (role === 'super_admin') redirectPath = '/admin/overview';
-        else if (role === 'property_developer') redirectPath = '/developer/dashboard';
-        else if (role === 'agency_admin') redirectPath = '/agency/overview';
-        else if (role === 'service_provider') redirectPath = '/service/dashboard';
-        else if (result.user?.hasManagerIdentity) redirectPath = '/distribution/manager';
-        else if (result.user?.hasReferrerIdentity) redirectPath = '/distribution/partner/overview';
-        else if (role === 'agent') redirectPath = '/agent/select-package';
-      }
+      const redirectPath = getLoginRedirectPath(result.user, safeNextPath);
 
       await new Promise(resolve => setTimeout(resolve, 250));
       window.location.href = redirectPath;
