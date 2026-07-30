@@ -176,6 +176,35 @@ describe('local environment authority diagnostics', () => {
     expect(JSON.stringify(result)).not.toContain('local:local');
   });
 
+  it('rejects local database targets when the runtime mode is production or staging', () => {
+    for (const runtime of ['production', 'staging']) {
+      const { root, central } = fixture();
+      const contents = `${requiredValues}\nAPP_ENV=${runtime}\n`;
+      writeFileSync(central, contents, { mode: 0o600 });
+      const result = diagnose(root, central);
+      expect(result.databaseTarget.approved).toBe(false);
+      expect(result.completeApplicationCompliance).toBe(false);
+      expect(result.stage3Eligibility).toBe(false);
+      expect(result.exitCode).toBe(1);
+    }
+  });
+
+  it('normalizes an approved bracketed IPv6 database host', () => {
+    const { root, central } = fixture();
+    const contents = requiredValues
+      .split('\n')
+      .map(line =>
+        line.startsWith('DATABASE_URL=')
+          ? 'DATABASE_URL=mysql://local:local@[::1]:3307/listify_local'
+          : line,
+      )
+      .join('\n');
+    writeFileSync(central, contents, { mode: 0o600 });
+    const result = diagnose(root, central);
+    expect(result.databaseTarget).toMatchObject({ classification: 'local', approved: true });
+    expect(JSON.stringify(result)).not.toContain('local:local');
+  });
+
   it('reports owner state conservatively without changing filesystem metadata', () => {
     const { root, central } = fixture();
     const current = diagnose(root, central, { effectiveUid: () => process.geteuid?.() });

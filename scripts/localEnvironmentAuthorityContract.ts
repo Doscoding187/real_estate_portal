@@ -2,7 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync, readlinkSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
-import { loadAuthorityManifest, validateAuthorityManifest } from './databaseAuthorityStatus';
+import {
+  classifyDatabaseTarget as classifyCanonicalDatabaseTarget,
+  loadAuthorityManifest,
+  validateAuthorityManifest,
+} from './databaseAuthorityStatus';
 
 export const CONTRACT_VERSION = 'stage2b-2';
 
@@ -541,6 +545,7 @@ export type DiagnosticResult = {
 function classifyDatabaseTarget(
   raw: string | undefined,
   manifest: CanonicalAuthorityManifest | null,
+  environment: Record<string, string | undefined>,
 ) {
   if (!raw)
     return {
@@ -549,30 +554,20 @@ function classifyDatabaseTarget(
       host: '(unset)',
       database: '(unset)',
     };
-  try {
-    const url = new URL(raw);
-    const host = url.hostname.toLowerCase() || '(none)';
-    const database = decodeURIComponent(url.pathname.replace(/^\//, '')) || '(none)';
-    const approvedHosts = new Set(manifest?.approvedLocalHosts ?? []);
-    const localDatabase = manifest?.approvedLocalDatabaseName ?? 'listify_local';
-    const localHost = approvedHosts.has(host);
-    if (url.protocol === 'mysql:' && localHost && url.pathname === `/${localDatabase}`)
-      return { classification: 'local' as const, approved: true, host, database };
-    if (url.protocol === 'mysql:' && localHost && url.pathname === '/listify_test')
-      return { classification: 'test' as const, approved: true, host, database };
-    if (/prod|railway|tidb/i.test(host) || database === 'listify_property_sa')
-      return { classification: 'production' as const, approved: false, host, database };
-    if (/stag/i.test(host) || database === 'listify_staging')
-      return { classification: 'staging' as const, approved: false, host, database };
-    return { classification: 'unknown' as const, approved: false, host, database };
-  } catch {
+  if (!manifest)
     return {
       classification: 'unknown' as const,
       approved: false,
-      host: '(invalid)',
-      database: '(invalid)',
+      host: '(unknown)',
+      database: '(unknown)',
     };
-  }
+  const target = classifyCanonicalDatabaseTarget(raw, manifest, environment);
+  return {
+    classification: target.classification,
+    approved: target.approved,
+    host: target.host,
+    database: target.database,
+  };
 }
 
 function emptySummary() {
@@ -746,7 +741,10 @@ export function runEnvironmentAuthorityDiagnostic(
     .filter(name => source.values[name] === '')
     .filter((name, index, all) => all.indexOf(name) === index)
     .sort();
-  const databaseTarget = classifyDatabaseTarget(source.values.DATABASE_URL, manifest);
+  const databaseTarget = classifyDatabaseTarget(source.values.DATABASE_URL, manifest, {
+    APP_ENV: source.values.APP_ENV,
+    NODE_ENV: source.values.NODE_ENV,
+  });
   const blockers: string[] = [];
   const warnings: string[] = [];
   const testOnlyNames = [

@@ -15,7 +15,7 @@
 
 **Sequence:** Consumer references and tracked templates were searched; existing database-authority utilities were read; the contract and diagnostic were implemented; synthetic fixtures tested path states and name validation; the control worktree was inspected once after tests.
 
-**Evidence:** The focused diagnostic suite passes 26 tests. The control result is `REGULAR_FILE_CONFLICT` for `.env.local`, central authority `REGULAR_FILE` with `SAFE_0600` and `OWNER_CURRENT_USER`, nine central names, approved local database target `listify_local`, no malformed, duplicate, test-only, or prohibited names, and no emitted values.
+**Evidence:** The focused diagnostic suite passes 28 tests. The control result is `REGULAR_FILE_CONFLICT` for `.env.local`, central authority `REGULAR_FILE` with `SAFE_0600` and `OWNER_CURRENT_USER`, nine central names, approved local database target `listify_local`, no malformed, duplicate, test-only, or prohibited names, and no emitted values.
 
 **Boundary:** This establishes a diagnostic and decision contract. It does not reconcile any environment file, create a link, start a service, connect to a database, create a preview, or establish Stage 3 readiness.
 
@@ -134,7 +134,7 @@ Exit semantics:
 
 Unsupported or indeterminate worktree resolution is caught and returned as a sanitized result with `targetClassification: UNSUPPORTED`, `stage3Eligibility: false`, and exit `2`; no stack trace is emitted.
 
-The diagnostic makes no database or provider connection. Database-target compliance is a name-only URL classification; it is not a connectivity or migration check. An approved local target requires protocol `mysql:`, an approved local host, and exact pathname `/listify_local`; an approved test target requires protocol `mysql:`, an approved local host, and exact pathname `/listify_test`. Other protocols, extra path segments, malformed URLs, and remote hosts are not approved.
+The diagnostic makes no database or provider connection. Database-target compliance is a name-only URL classification; it is not a connectivity or migration check. An approved local target requires protocol `mysql:`, an approved local host, a non-production/non-staging runtime mode, and exact pathname `/listify_local`; an approved test target requires protocol `mysql:`, an approved local host, a non-production/non-staging runtime mode, and exact pathname `/listify_test`. Approved host comparison normalizes bracketed IPv6 notation (for example `[::1]` to `::1`) against the canonical manifest. Other protocols, extra path segments, malformed URLs, and remote hosts are not approved.
 
 ## 9. Database-target versus complete-application compliance
 
@@ -166,13 +166,13 @@ The implementation does not print or serialize parsed values. It emits only vari
 
 ## 13. Test evidence
 
-The focused suite `server/__tests__/localEnvironmentAuthorityStatus.test.ts` passes 11 tests covering:
+The focused suite `server/__tests__/localEnvironmentAuthorityStatus.test.ts` passes 28 tests covering:
 
 - canonical, missing, regular-file, incorrect-link, broken-link, and non-file states;
 - malformed assignments and duplicate names;
 - test-only central names and canonical manifest-derived required routing names;
 - malformed or unavailable canonical manifests;
-- exact MySQL local/test target invariants and rejected protocols, paths, and hosts;
+- exact MySQL local/test target invariants and rejected protocols, paths, hosts, and runtime modes, including bracketed IPv6 normalization;
 - current, mismatched, and unavailable central-file ownership;
 - unsupported Git targets with sanitized exit code `2`;
 - missing required names;
