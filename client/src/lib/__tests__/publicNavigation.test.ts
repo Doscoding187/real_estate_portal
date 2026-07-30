@@ -45,6 +45,25 @@ describe('public navigation authority', () => {
     expect(visibleItems.some(item => item.capability === 'BROKEN')).toBe(false);
   });
 
+  it('does not expose the token-only saved-search action route globally', () => {
+    const renters = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'renters');
+    expect(renters).toBeDefined();
+
+    for (const surface of ['desktop', 'mobile'] as const) {
+      const visibleItems = getVisiblePublicNavigationGroups(renters!, surface).flatMap(
+        group => group.items,
+      );
+      expect(visibleItems.length).toBeGreaterThan(0);
+      expect(visibleItems.map(item => item.href)).not.toContain('/saved-search/manage');
+    }
+
+    const allDestinations = PUBLIC_NAVIGATION_MENUS.flatMap(menu => [
+      menu.feature,
+      ...menu.groups.flatMap(group => group.items),
+    ]);
+    expect(allDestinations.map(item => item.href)).not.toContain('/saved-search/manage');
+  });
+
   it.each([
     [{ role: 'agent', hasManagerIdentity: true }, '/distribution/manager'],
     [{ role: 'admin' }, '/admin/overview'],

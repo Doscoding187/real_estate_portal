@@ -205,15 +205,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             capability: 'LIMITED_BUT_VALID',
             activeHref: '/property-to-rent',
           }),
-          destination({
-            id: 'renters-saved-searches',
-            label: 'Saved searches',
-            href: '/saved-search/manage',
-            owner: 'prospect-engine',
-            capability: 'AUTH_GATED',
-            authRequired: true,
-            activeHref: '/saved-search/manage',
-          }),
         ],
       },
       {

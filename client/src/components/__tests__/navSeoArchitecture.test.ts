@@ -62,6 +62,7 @@ describe('Main Platform Navigation authority', () => {
     expect(authority).not.toContain('propertyType=industrial');
     expect(authority).not.toContain('propertyType=student');
     expect(authority).not.toContain('propertyType=land');
+    expect(authority).not.toContain('/saved-search/manage');
     expect(nav).not.toContain('href="#"');
     expect(nav).not.toContain('@ts-nocheck');
   });
