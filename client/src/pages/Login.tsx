@@ -273,8 +273,18 @@ export default function Login() {
     if (mode === 'signin' || mode === 'sign-in' || mode === 'login') {
       closeRegister();
       setSignInOpen(true);
+      return;
     }
-  }, [searchParams]);
+
+    if (mode === 'register' || mode === 'signup') {
+      setSignInOpen(false);
+      const visitorRole = roles.find(role => role.role === 'visitor');
+      if (visitorRole) {
+        registerForm.reset({ ...registerForm.getValues(), role: visitorRole.role });
+        setSelectedRole(visitorRole);
+      }
+    }
+  }, [registerForm, searchParams]);
 
   const closeRegister = () => {
     setSelectedRole(null);

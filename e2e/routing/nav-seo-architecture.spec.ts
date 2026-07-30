@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-const DESKTOP_NAVIGATION_BREAKPOINT = 1024;
+const DESKTOP_NAVIGATION_BREAKPOINT = 1280;
 
 function hasDesktopNavigation(page: Page) {
   return (page.viewportSize()?.width ?? 0) >= DESKTOP_NAVIGATION_BREAKPOINT;
@@ -61,6 +61,31 @@ test.describe('Homepage nav SEO architecture', () => {
     }
   });
 
+  test('Professionals nav keeps launch-visible professional journeys operational', async ({
+    page,
+  }) => {
+    test.skip(
+      !hasDesktopNavigation(page),
+      'Professionals mega-menu is intentionally desktop-only below xl.',
+    );
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Professionals' }).click();
+
+    for (const href of [
+      '/agents',
+      '/developers',
+      '/services',
+      '/distribution-network',
+      '/advertise/sell/agents',
+      '/advertise/sell/developers',
+      '/advertise/services',
+    ]) {
+      await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
+    }
+
+    await expect(page.locator('nav a[href="/advertise/sell/agencies"]')).toHaveCount(0);
+  });
+
   test('insight and guide nav keeps users inside content engines', async ({ page }) => {
     test.skip(
       !hasDesktopNavigation(page),
@@ -108,14 +133,14 @@ test.describe('Homepage nav SEO architecture', () => {
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     for (const [label, href] of [
-      ['Buy Property', '/property-for-sale'],
-      ['Rent Property', '/property-to-rent'],
-      ['New Developments', '/new-developments'],
-      ['Explore', '/explore/home'],
-      ['Services', '/services'],
+      ['City', '/property-for-sale'],
+      ['Browse properties for sale', '/property-for-sale'],
+      ['Browse rental properties', '/property-to-rent'],
+      ['New developments', '/new-developments'],
+      ['Explore Property Listify', '/explore/home'],
+      ['Browse property services', '/services'],
       ['Referrals', '/distribution-network'],
-      ['Advertise', '/advertise'],
-      ['Log in', '/login'],
+      ['Advertise & Partner', '/advertise'],
     ]) {
       await expect(page.getByRole('link', { name: label, exact: true })).toHaveAttribute(
         'href',
@@ -123,7 +148,19 @@ test.describe('Homepage nav SEO architecture', () => {
       );
     }
 
-    await page.getByRole('link', { name: 'Buy Property', exact: true }).click();
+    const accountTrigger = page.getByRole('button', { name: 'Open account menu' }).first();
+    await accountTrigger.click();
+    await expect(page.getByRole('menuitem', { name: 'Log in' })).toHaveAttribute(
+      'href',
+      '/login?mode=signin',
+    );
+    await expect(page.getByRole('menuitem', { name: 'Create account' })).toHaveAttribute(
+      'href',
+      '/login?mode=register',
+    );
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('link', { name: 'Browse properties for sale', exact: true }).click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 });
