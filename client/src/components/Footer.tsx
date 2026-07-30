@@ -72,7 +72,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/developments"
+                  href="/new-developments"
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>

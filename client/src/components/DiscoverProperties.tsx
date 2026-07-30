@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from 'lucide-react';
-import { CITY_PROVINCE_MAP } from '../lib/locationUtils';
+import { buildDiscoverBrowseHref, buildDiscoverCardHref } from '@/lib/publicDiscoveryRoutes';
 import { Button } from '@/components/ui/button';
 
 interface PropertyType {
@@ -145,28 +145,26 @@ export function DiscoverProperties({
   const filteredProperties = propertyTypes.filter(p => p.listingType === listingType);
   const mobileSectionCopy: Record<
     'sale' | 'rent' | 'developments',
-    { title: string; description: string; href: string; cta: string }
+    { title: string; description: string; cta: string }
   > = {
     sale: {
       title: 'Properties for Sale',
       description: `Explore apartments, houses, and townhomes for sale in ${selectedCity}.`,
-      href: '/properties?action=sale',
       cta: 'View Sale Listings',
     },
     rent: {
       title: 'Properties for Rent',
       description: `Browse apartments, cottages, and flexible rentals now available in ${selectedCity}.`,
-      href: '/properties?action=rent',
       cta: 'View Rental Listings',
     },
     developments: {
       title: 'New Developments',
       description: `See the newest off-plan and ready-to-move developments in ${selectedCity}.`,
-      href: '/developments',
       cta: 'View Developments',
     },
   };
   const mobileActiveCopy = mobileSectionCopy[listingType];
+  const mobileActiveHref = buildDiscoverBrowseHref(listingType, selectedCity);
 
   const handleSaleClick = () => {
     setSaleExpanded(!saleExpanded);
@@ -196,41 +194,7 @@ export function DiscoverProperties({
   };
 
   const handleCardClick = (propertyType: string, listingType: 'sale' | 'rent' | 'developments') => {
-    // For developments, navigate to developments page
-    if (listingType === 'developments') {
-      // Map property type to development filter
-      const typeMap: Record<string, string> = {
-        'Ready to Move': 'ready_to_move',
-        'New Launch': 'new_launch',
-        'Affordable Housing': 'affordable',
-        'Luxury Projects': 'luxury',
-      };
-      const filter = typeMap[propertyType] || '';
-      window.location.assign(`/developments${filter ? `?type=${filter}` : ''}`);
-    } else {
-      // For sale/rent, navigate to properties page with filters
-      // Use helper to construct hierarchical URL if possible
-      const action = listingType === 'sale' ? 'sale' : 'rent';
-      const citySlug = selectedCity.toLowerCase().replace(/\s+/g, '-');
-
-      // Use shared map to lookup province
-      const provinceSlug = CITY_PROVINCE_MAP[citySlug];
-
-      let url = '';
-      if (provinceSlug) {
-        url = `/${provinceSlug}/${citySlug}?listingType=${action}`;
-      } else {
-        url = `/properties?city=${selectedCity}&listingType=${action}`;
-      }
-
-      if (propertyType && propertyType !== 'All') {
-        // Map display names to url values if needed, otherwise slugify
-        const typeSlug = propertyType.toLowerCase().replace(/\s+/g, '-');
-        url += `&propertyType=${typeSlug}`;
-      }
-
-      window.location.assign(url);
-    }
+    window.location.assign(buildDiscoverCardHref(propertyType, listingType, selectedCity));
   };
 
   return (
@@ -299,7 +263,7 @@ export function DiscoverProperties({
           <div className="pt-4">
             <p className="text-sm text-slate-600 leading-relaxed">{mobileActiveCopy.description}</p>
             <a
-              href={mobileActiveCopy.href}
+              href={mobileActiveHref}
               className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors group"
             >
               {mobileActiveCopy.cta}
@@ -341,7 +305,7 @@ export function DiscoverProperties({
                       Explore apartments, houses, and townhomes for sale in {selectedCity}.
                     </p>
                     <a
-                      href="/properties?action=sale"
+                      href={buildDiscoverBrowseHref('sale', selectedCity)}
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Sale Listings
@@ -381,7 +345,7 @@ export function DiscoverProperties({
                       {selectedCity}.
                     </p>
                     <a
-                      href="/properties?action=rent"
+                      href={buildDiscoverBrowseHref('rent', selectedCity)}
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Rental Listings
@@ -420,7 +384,7 @@ export function DiscoverProperties({
                       See the newest off-plan and ready-to-move developments in {selectedCity}.
                     </p>
                     <a
-                      href="/developments"
+                      href={buildDiscoverBrowseHref('developments', selectedCity)}
                       className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
                     >
                       View Developments

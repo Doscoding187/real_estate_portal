@@ -382,7 +382,7 @@ function Router() {
           <Route
             path="/developments"
             component={() => {
-              window.location.replace('/new-developments');
+              window.location.replace(`/new-developments${window.location.search}`);
               return null;
             }}
           />

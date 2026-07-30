@@ -37,7 +37,7 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
               Projects buyers are actively viewing in this area
             </p>
           </div>
-          <Link href="/developments">
+          <Link href="/new-developments">
             <Button variant="outline" className="group hidden md:flex">
               View All Developments
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -84,7 +84,7 @@ export function DevelopmentsSlider({ developments, locationName }: DevelopmentsS
         </div>
 
         <div className="mt-8 md:hidden text-center">
-          <Link href="/developments">
+          <Link href="/new-developments">
             <Button variant="outline" className="group w-full">
               View All Developments
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
