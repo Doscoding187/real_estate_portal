@@ -163,6 +163,28 @@ describe('local environment authority diagnostics', () => {
     expect(result.warnings.join('\n')).toContain('DB_HOST');
   });
 
+  it('treats catalogued unknown-pending names as unknown', () => {
+    const { root, central } = fixture();
+    writeFileSync(central, `${requiredValues}\nAPI_SECRET=safe\n`, { mode: 0o600 });
+    const result = diagnose(root, central);
+    expect(result.centralAuthority.unknownNames).toContain('API_SECRET');
+    expect(result.completeApplicationCompliance).toBe(false);
+    expect(result.exitCode).toBe(1);
+  });
+
+  it('matches runtime dotenv comment semantics before validating values', () => {
+    const { root, central } = fixture();
+    const contents = requiredValues.replace(
+      'JWT_SECRET=fixture-only-jwt-secret-which-is-not-output',
+      'JWT_SECRET=short#abcdefghijklmnopqrstuvwxyz123456789',
+    );
+    writeFileSync(central, contents, { mode: 0o600 });
+    const result = diagnose(root, central);
+    expect(result.completeApplicationCompliance).toBe(false);
+    expect(result.stage3Eligibility).toBe(false);
+    expect(result.exitCode).toBe(1);
+  });
+
   it.each(['APP_URL', 'FRONTEND_URL', 'VITE_API_URL', 'VITE_API_BASE_URL'] as const)(
     'requires canonical routing name %s from the manifest',
     name => {
@@ -207,6 +229,7 @@ describe('local environment authority diagnostics', () => {
     ['postgres://127.0.0.1/listify_local', 'unknown', false],
     ['mysql://127.0.0.1/not_listify_local', 'unknown', false],
     ['mysql://127.0.0.1/listify_local/extra', 'unknown', false],
+    ['mysql://127.0.0.1/%6cistify_local', 'unknown', false],
     ['mysql://remote.example/listify_local', 'unknown', false],
     ['not-a-url', 'unknown', false],
   ] as const)('classifies database target %s safely', (databaseUrl, classification, approved) => {

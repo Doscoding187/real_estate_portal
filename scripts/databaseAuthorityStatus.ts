@@ -130,7 +130,7 @@ export function classifyDatabaseTarget(
   if (
     url.protocol === 'mysql:' &&
     localHost &&
-    database === manifest.approvedLocalDatabaseName &&
+    url.pathname === `/${manifest.approvedLocalDatabaseName}` &&
     !unsafeRuntimeMode &&
     runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {
@@ -139,7 +139,7 @@ export function classifyDatabaseTarget(
   if (
     url.protocol === 'mysql:' &&
     localHost &&
-    database === 'listify_test' &&
+    url.pathname === '/listify_test' &&
     !unsafeRuntimeMode &&
     runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {

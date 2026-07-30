@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync, readlinkSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
+import { parse as parseDotenv } from 'dotenv';
 import {
   classifyDatabaseTarget as classifyCanonicalDatabaseTarget,
   loadAuthorityManifest,
@@ -376,7 +377,8 @@ export function parseEnvironmentText(text: string): ParsedEnvironment {
     const [, name, rawValue] = match;
     if (name in values) duplicateNames.add(name);
     names.push(name);
-    values[name] = rawValue.trim().replace(/^(['"])(.*)\1$/, '$2');
+    const parsed = parseDotenv(rawLine);
+    values[name] = parsed[name] ?? rawValue.trim().replace(/^(['"])(.*)\1$/, '$2');
   }
 
   return { names, duplicateNames: [...duplicateNames].sort(), malformedEntries, values };
@@ -719,7 +721,14 @@ export function runEnvironmentAuthorityDiagnostic(
   for (const name of names)
     summary[contractForName(name)?.classification ?? 'UNKNOWN_PENDING_EVIDENCE'] += 1;
 
-  const unknownNames = [...new Set(source.names.filter(name => !contractForName(name)))].sort();
+  const unknownNames = [
+    ...new Set(
+      source.names.filter(name => {
+        const classification = contractForName(name)?.classification;
+        return !classification || classification === 'UNKNOWN_PENDING_EVIDENCE';
+      }),
+    ),
+  ].sort();
   const deprecatedNames = [
     ...new Set(
       source.names.filter(name => contractForName(name)?.classification === 'DEPRECATED_OR_STALE'),
