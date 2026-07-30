@@ -8,7 +8,7 @@ import {
   resolveCentralLocalEnvironment,
 } from './localEnvironmentAuthority';
 
-type AuthorityManifest = {
+export type AuthorityManifest = {
   authorityVersion: number;
   canonicalMigrationPath: string;
   activeMigrationDirectory: string;
@@ -111,23 +111,37 @@ export function classifyDatabaseTarget(
   } catch {
     return { classification: 'unknown', approved: false, host: '(invalid)', database: '(invalid)' };
   }
-  const host = url.hostname.toLowerCase() || '(none)';
-  const database = decodeURIComponent(url.pathname.replace(/^\//, '')) || '(none)';
+  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase() || '(none)';
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    return { classification: 'unknown', approved: false, host: '(invalid)', database: '(invalid)' };
+  }
+  const database = pathname.replace(/^\//, '') || '(none)';
   const runtime = String(env.APP_ENV ?? env.NODE_ENV ?? '').toLowerCase();
-  const localHost = manifest.approvedLocalHosts.includes(host);
+  const runtimeModes = [env.APP_ENV, env.NODE_ENV]
+    .filter((mode): mode is string => Boolean(mode))
+    .map(mode => mode.toLowerCase());
+  const unsafeRuntimeMode = runtimeModes.some(mode => mode === 'production' || mode === 'staging');
+  const localHost = manifest.approvedLocalHosts
+    .map(approvedHost => approvedHost.replace(/^\[|\]$/g, '').toLowerCase())
+    .includes(host);
   if (
+    url.protocol === 'mysql:' &&
     localHost &&
-    database === manifest.approvedLocalDatabaseName &&
-    runtime !== 'production' &&
-    runtime !== 'staging'
+    url.pathname === `/${manifest.approvedLocalDatabaseName}` &&
+    !unsafeRuntimeMode &&
+    runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {
     return { classification: 'local', approved: true, host, database, url };
   }
   if (
+    url.protocol === 'mysql:' &&
     localHost &&
-    database === 'listify_test' &&
-    runtime !== 'production' &&
-    runtime !== 'staging'
+    url.pathname === '/listify_test' &&
+    !unsafeRuntimeMode &&
+    runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {
     return { classification: 'test', approved: true, host, database, url };
   }
