@@ -579,19 +579,14 @@ function emptySummary() {
   ) as Record<VariableClassification, number>;
 }
 
-function readWorktreeEnvironment(
-  root: string,
-  pathInspection: PathInspection,
-  centralPath: string,
-) {
-  if (!pathInspection.readable || pathInspection.state !== 'CANONICAL_LINK')
+function readWorktreeEnvironment(pathInspection: PathInspection, central: CentralInspection) {
+  if (
+    !pathInspection.readable ||
+    pathInspection.state !== 'CANONICAL_LINK' ||
+    central.state !== 'REGULAR_FILE'
+  )
     return parseEnvironmentText('');
-  const environmentPath = centralPath;
-  try {
-    return parseEnvironmentText(readFileSync(environmentPath, 'utf8'));
-  } catch {
-    return parseEnvironmentText('');
-  }
+  return central.parsed;
 }
 
 function emptyCentralAuthority(path: string) {
@@ -706,7 +701,7 @@ export function runEnvironmentAuthorityDiagnostic(
   }
   const environmentPath = inspectEnvironmentPath(repositoryRoot, centralPath);
   const central = inspectCentralAuthority(centralPath, { effectiveUid: options.effectiveUid });
-  const worktree = readWorktreeEnvironment(repositoryRoot, environmentPath, centralPath);
+  const worktree = readWorktreeEnvironment(environmentPath, central);
   const source = central.parsed;
   let manifest: CanonicalAuthorityManifest | null = null;
   let manifestError = false;
@@ -851,7 +846,7 @@ export function runEnvironmentAuthorityDiagnostic(
     ],
     exitCode:
       blockers.length || unknownNames.length || deprecatedNames.length
-        ? ['UNKNOWN', 'UNREADABLE'].includes(environmentPath.state)
+        ? ['UNKNOWN', 'UNREADABLE', 'BROKEN_LINK'].includes(environmentPath.state)
           ? 2
           : 1
         : 0,

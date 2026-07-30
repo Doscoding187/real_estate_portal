@@ -86,6 +86,36 @@ describe('local environment authority diagnostics', () => {
     expect(JSON.stringify(result)).not.toContain('must-not-be-read');
   });
 
+  it('does not read a canonical link to a non-regular central target', () => {
+    const { root } = fixture();
+    const centralDirectory = join(root, 'machine', 'central-directory');
+    mkdirSync(centralDirectory);
+    const localPath = join(root, '.env.local');
+    symlinkSync(centralDirectory, localPath);
+    const before = lstatSync(centralDirectory);
+    const result = diagnose(root, centralDirectory);
+    const after = lstatSync(centralDirectory);
+    expect(result.environmentPath.state).toBe('CANONICAL_LINK');
+    expect(result.centralAuthority.inspection.state).toBe('NON_FILE_PATH');
+    expect(result.stage3Eligibility).toBe(false);
+    expect(JSON.stringify(result)).not.toContain('fixture-only');
+    expect(after.mode).toBe(before.mode);
+  });
+
+  it('returns exit 2 for a broken canonical link without mutation', () => {
+    const { root, central } = fixture();
+    const localPath = join(root, '.env.local');
+    symlinkSync(join(root, 'machine', 'missing.env'), localPath);
+    const before = lstatSync(localPath);
+    const result = diagnose(root, central);
+    const after = lstatSync(localPath);
+    expect(result.environmentPath.state).toBe('BROKEN_LINK');
+    expect(result.stage3Eligibility).toBe(false);
+    expect(result.exitCode).toBe(2);
+    expect(JSON.stringify(result)).not.toContain('fixture-only');
+    expect(after.mode).toBe(before.mode);
+  });
+
   it.each([
     ['missing', 'MISSING'],
     ['regular file', 'REGULAR_FILE_CONFLICT'],
