@@ -9,6 +9,7 @@ import { useLocation } from 'wouter';
 import { Building2, Home, Image, Megaphone, UserPlus, Plus, Zap, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 interface QuickAction {
   id: string;
@@ -77,10 +78,19 @@ interface QuickActionsProps {
 
 export function QuickActions({ className }: QuickActionsProps) {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
 
   // Fetch subscription to check tier limits
   const { data: subscription } = trpc.developer.getSubscription.useQuery();
+  const explorePublishingQuery = trpc.explore.getPublishingEligibility.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const visibleActions = QUICK_ACTIONS.filter(
+    action => action.id !== 'upload-media' || explorePublishingQuery.data?.allowed === true,
+  );
 
   const isActionDisabled = (action: QuickAction): boolean => {
     if (!action.requiresTier) return false;
@@ -122,7 +132,7 @@ export function QuickActions({ className }: QuickActionsProps) {
 
       {/* Actions Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {QUICK_ACTIONS.map(action => {
+        {visibleActions.map(action => {
           const Icon = action.icon;
           const disabled = isActionDisabled(action);
           const isHovered = hoveredAction === action.id;

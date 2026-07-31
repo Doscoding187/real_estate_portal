@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   cityToNavLink,
   popularCitiesToNavLinks,
+  resolveLocationMenuCities,
   FALLBACK_CITY_LINKS,
   type NavLocationLink,
 } from '@/lib/locationDataAdapter';
@@ -211,6 +212,65 @@ describe('popularCitiesToNavLinks', () => {
     expect(result[0].listingCount).toBe(1240);
     expect(result[1].listingCount).toBe(980);
     expect(result[2].listingCount).toBe(760);
+  });
+});
+
+describe('resolveLocationMenuCities', () => {
+  const popular = [
+    { name: 'Johannesburg', slug: 'johannesburg', provinceSlug: 'gauteng', listingCount: 12 },
+  ];
+  const featured = [
+    { name: 'Launch City', slug: 'launch-city', provinceSlug: 'gauteng' },
+  ];
+
+  it('uses valid data-driven popular cities before featured launch cities', () => {
+    const result = resolveLocationMenuCities({
+      popularCities: popular,
+      featuredLaunchCities: featured,
+    });
+
+    expect(result.source).toBe('popular');
+    expect(result.heading).toBe('Popular cities');
+    expect(result.cities.map(city => city.label)).toEqual(['Johannesburg']);
+  });
+
+  it('uses valid centrally supplied featured cities when popular data is empty', () => {
+    const result = resolveLocationMenuCities({
+      popularCities: [],
+      featuredLaunchCities: featured,
+    });
+
+    expect(result.source).toBe('featured');
+    expect(result.heading).toBe('Featured cities');
+    expect(result.cities[0]).toMatchObject({
+      label: 'Launch City',
+      href: '/property-for-sale/gauteng/launch-city',
+    });
+  });
+
+  it('returns an honest empty resolution when neither source is eligible', () => {
+    const result = resolveLocationMenuCities({ popularCities: [], featuredLaunchCities: [] });
+
+    expect(result).toEqual({ cities: [], heading: 'Find a location', source: 'empty' });
+  });
+
+  it('does not call a city popular without positive inventory evidence', () => {
+    const result = resolveLocationMenuCities({
+      popularCities: [{ name: 'Empty City', slug: 'empty-city', provinceSlug: 'gauteng', listingCount: 0 }],
+    });
+
+    expect(result.source).toBe('empty');
+    expect(result.heading).toBe('Find a location');
+  });
+
+  it('rejects malformed featured launch entries rather than inventing a route', () => {
+    const result = resolveLocationMenuCities({
+      popularCities: [],
+      featuredLaunchCities: [{ name: 'Unknown', slug: 'unknown' }],
+    });
+
+    expect(result.source).toBe('empty');
+    expect(result.cities).toEqual([]);
   });
 });
 

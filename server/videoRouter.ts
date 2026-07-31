@@ -1,7 +1,29 @@
 import { router, publicProcedure, protectedProcedure } from './_core/trpc';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { getDb } from './db';
+import { requireUser } from './_core/requireUser';
+import {
+  getExplorePublishingAccessMessage,
+  getExplorePublishingEligibility,
+} from './services/explorePublishingEligibilityService';
+
+async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
+  const db = await getDb();
+  if (!db) {
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  }
+  const eligibility = await getExplorePublishingEligibility(db, requireUser(ctx));
+  if (!eligibility.allowed) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: getExplorePublishingAccessMessage(eligibility),
+    });
+  }
+  return eligibility;
+}
 
 const s3 = new S3Client({
   region: process.env.AWS_REGION || 'eu-north-1',
@@ -22,7 +44,8 @@ export const videoRouter = router({
         fileType: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      await requireExplorePublisher(ctx);
       if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
         throw new Error('Video upload is not configured. Please contact support.');
       }

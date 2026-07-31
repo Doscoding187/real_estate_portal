@@ -239,3 +239,44 @@ export function popularCitiesToNavLinks(
 
   return result;
 }
+
+export type LocationMenuCitySource = 'popular' | 'featured' | 'empty';
+
+export type LocationMenuCityResolution = {
+  cities: NavLocationLink[];
+  heading: 'Popular cities' | 'Featured cities' | 'Find a location';
+  source: LocationMenuCitySource;
+};
+
+export type ResolveLocationMenuCitiesOptions = {
+  featuredLaunchCities?: unknown;
+  limit?: number;
+  popularCities: unknown;
+};
+
+/**
+ * Resolve the Location menu from governed data sources in product order.
+ *
+ * The component deliberately does not own a city list. Dynamic inventory
+ * remains authoritative; a future centrally governed launch-market catalogue
+ * can be supplied as `featuredLaunchCities` without changing presentation.
+ */
+export function resolveLocationMenuCities({
+  featuredLaunchCities,
+  limit = 6,
+  popularCities,
+}: ResolveLocationMenuCitiesOptions): LocationMenuCityResolution {
+  const popular = popularCitiesToNavLinks(popularCities, { limit }).filter(
+    city => city.listingCount !== undefined && city.listingCount > 0,
+  );
+  if (popular.length > 0) {
+    return { cities: popular, heading: 'Popular cities', source: 'popular' };
+  }
+
+  const featured = popularCitiesToNavLinks(featuredLaunchCities, { limit });
+  if (featured.length > 0) {
+    return { cities: featured, heading: 'Featured cities', source: 'featured' };
+  }
+
+  return { cities: [], heading: 'Find a location', source: 'empty' };
+}

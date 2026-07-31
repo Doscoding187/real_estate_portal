@@ -1,8 +1,34 @@
 import { z } from 'zod';
+import { TRPCError } from '@trpc/server';
 import { publicProcedure, protectedProcedure, router } from './_core/trpc';
+import { getDb } from './db';
 import { exploreFeedService } from './services/exploreFeedService';
 import { exploreInteractionService } from './services/exploreInteractionService';
 import { requireUser } from './_core/requireUser';
+import {
+  assertExploreReferenceOwnership,
+  ExplorePublishingAuthorizationError,
+  getExplorePublishingAccessMessage,
+  getExplorePublishingEligibility,
+} from './services/explorePublishingEligibilityService';
+import { exploreContent } from '../drizzle/schema';
+
+async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
+  const db = await getDb();
+  if (!db) {
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  }
+
+  const eligibility = await getExplorePublishingEligibility(db, requireUser(ctx));
+  if (!eligibility.allowed) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: getExplorePublishingAccessMessage(eligibility),
+    });
+  }
+
+  return { db, eligibility };
+}
 
 /**
  * Explore Shorts tRPC Router
@@ -223,6 +249,14 @@ export const exploreRouter = router({
     return exploreFeedService.getTopics();
   }),
 
+  getPublishingEligibility: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    }
+    return getExplorePublishingEligibility(db, requireUser(ctx));
+  }),
+
   // Upload new explore short
   uploadShort: protectedProcedure
     .input(
@@ -233,102 +267,30 @@ export const exploreRouter = router({
         highlights: z.array(z.string()).max(4).optional(),
         listingId: z.number().optional(),
         developmentId: z.number().optional(),
-        attributeToAgency: z.boolean().default(true), // NEW: Agency attribution opt-out
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const { db } = await import('./db');
-      const { exploreContent, agents, developers } = await import('../drizzle/schema');
-      const { eq } = await import('drizzle-orm');
-
-      // Get user's agent or developer ID and detect agency affiliation
-      // Requirements 10.1, 10.2, 10.4: Auto-detect and populate agency attribution, respect opt-out
-      let agentId: number | null = null;
-      let developerId: number | null = null;
-      let agencyId: number | null = null;
-      let creatorType: 'user' | 'agent' | 'developer' | 'agency' = 'user';
-
-      if (requireUser(ctx).role === 'agent') {
-        const agent = await db
-          .select({
-            id: agents.id,
-            agencyId: agents.agencyId,
-          })
-          .from(agents)
-          .where(eq(agents.userId, requireUser(ctx).id))
-          .limit(1);
-
-        if (agent[0]) {
-          agentId = agent[0].id;
-          creatorType = 'agent';
-
-          // Only attribute to agency if agent opted in and has an agency
-          // Requirements 10.4: Allow agents to opt-out of agency attribution
-          if (input.attributeToAgency && agent[0].agencyId) {
-            agencyId = agent[0].agencyId;
-            console.log(`[ExploreUpload] Agent ${agentId} uploading with agency ${agencyId}`);
-          } else {
-            console.log(
-              `[ExploreUpload] Agent ${agentId} uploading without agency attribution (opted out or no agency)`,
-            );
-          }
+      const { db, eligibility } = await requireExplorePublisher(ctx);
+      try {
+        await assertExploreReferenceOwnership(db, eligibility, input);
+      } catch (error) {
+        if (error instanceof ExplorePublishingAuthorizationError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
         }
-      } else if (requireUser(ctx).role === 'property_developer') {
-        const developer = await db
-          .select()
-          .from(developers)
-          .where(eq(developers.userId, requireUser(ctx).id))
-          .limit(1);
-        developerId = developer[0]?.id || null;
-        creatorType = 'developer';
-
-        console.log(`[ExploreUpload] Developer ${developerId} uploading`);
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'The selected property reference is not available for this publisher.',
+        });
       }
 
-      // Validate agency attribution
-      // Requirements 10.5, 4.4: Prevent invalid agency attribution
-      if (agencyId) {
-        // Verify agency exists
-        const { agencies } = await import('../drizzle/schema');
-        const agencyRecord = await db
-          .select()
-          .from(agencies)
-          .where(eq(agencies.id, agencyId))
-          .limit(1);
-
-        if (!agencyRecord[0]) {
-          throw new Error(`Agency with ID ${agencyId} does not exist`);
-        }
-
-        // Verify agent belongs to agency
-        if (agentId) {
-          const agentRecord = await db
-            .select({ agencyId: agents.agencyId })
-            .from(agents)
-            .where(eq(agents.id, agentId))
-            .limit(1);
-
-          if (agentRecord[0]?.agencyId !== agencyId) {
-            throw new Error(`Agent ${agentId} does not belong to agency ${agencyId}`);
-          }
-        }
-      }
-
-      // Log attribution decision
-      console.log(`[ExploreUpload] Agency attribution decision:`, {
-        userId: requireUser(ctx).id,
-        agentId,
-        developerId,
-        agencyId,
-      });
-
-      // Create the explore content (unified system - no more exploreShorts)
+      // Submission is deliberately non-public. A later approved publication
+      // authority must activate it before the public feed can discover it.
       const result = await db.insert(exploreContent).values({
         contentType: 'video',
         referenceId: input.listingId || input.developmentId || 0,
-        creatorId: requireUser(ctx).id,
-        creatorType,
-        agencyId,
+        creatorId: eligibility.creatorId,
+        creatorType: eligibility.creatorType,
+        agencyId: eligibility.agencyId,
         title: input.title,
         description: input.caption || null,
         videoUrl: input.mediaUrls[0] || null,
@@ -337,21 +299,21 @@ export const exploreRouter = router({
           highlights: input.highlights?.filter(h => h.trim()) || [],
           listingId: input.listingId,
           developmentId: input.developmentId,
-          agentId,
-          developerId,
+          agentId: eligibility.agentId,
+          developerId: eligibility.developerId,
           mediaUrls: input.mediaUrls,
         },
-        isActive: 1,
+        isActive: 0,
         isFeatured: 0,
       });
 
       return {
         success: true,
         shortId: Number(result.insertId),
-        contentId: Number(result.insertId), // Return both for compatibility
+        contentId: Number(result.insertId),
+        publicationState: 'inactive' as const,
       };
     }),
 });
 
 export type ExploreRouter = typeof exploreRouter;
-

@@ -17,6 +17,7 @@ import { PersonalizedContentBlock } from '@/components/explore-discovery/Persona
 import { TrendingVideosSection } from '@/components/explore-discovery/TrendingVideosSection';
 import { WelcomeOverlay } from '@/components/explore-discovery/WelcomeOverlay';
 import { OnboardingTooltip } from '@/components/explore-discovery/OnboardingTooltip';
+import { ExplorePlatformBridge } from '@/components/ExplorePlatformBridge';
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 import { usePersonalizedContent } from '@/hooks/usePersonalizedContent';
 import { useExploreIntent } from '@/hooks/useExploreIntent';
@@ -362,8 +363,9 @@ export default function ExploreHome() {
           {/* Title and View Mode Toggle */}
           <div className="flex items-center justify-between gap-4 mb-3">
             <div className="min-w-0">
+              <ExplorePlatformBridge />
               <motion.h1
-                className="text-3xl font-bold"
+                className="mt-2 text-3xl font-bold"
                 style={{
                   color: designTokens.colors.text.primary,
                   fontWeight: designTokens.typography.fontWeight.bold,
@@ -395,23 +397,23 @@ export default function ExploreHome() {
               aria-label="Explore view selection"
             >
               <motion.button
-                onClick={() => setLocation('/explore/home')}
+                onClick={() => setLocation('/explore')}
                 className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all"
                 style={{
                   backgroundColor:
-                    location === '/explore/home' ? designTokens.colors.bg.primary : 'transparent',
+                    location === '/explore' ? designTokens.colors.bg.primary : 'transparent',
                   color:
-                    location === '/explore/home'
+                    location === '/explore'
                       ? designTokens.colors.text.primary
                       : designTokens.colors.text.secondary,
-                  boxShadow: location === '/explore/home' ? designTokens.shadows.sm : 'none',
+                  boxShadow: location === '/explore' ? designTokens.shadows.sm : 'none',
                   fontWeight: designTokens.typography.fontWeight.medium,
                 }}
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
                 role="tab"
-                aria-selected={location === '/explore/home'}
+                aria-selected={location === '/explore'}
                 aria-label="Home"
               >
                 <Grid3x3 className="w-4 h-4" aria-hidden="true" />

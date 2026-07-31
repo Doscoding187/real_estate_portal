@@ -401,7 +401,9 @@ function Router() {
           <Route path="/agent/success" component={() => <RegistrationSuccess role="agent" />} />
 
           {/* Explore routes */}
-          <Route path="/explore/home" component={ExploreHome} />
+          <Route path="/explore/home">
+            <Redirect to="/explore" />
+          </Route>
           <Route path="/explore/shorts" component={ExploreShorts} />
           <Route path="/explore/upload" component={ExploreUpload} />
           <Route path="/explore/create">
@@ -430,7 +432,7 @@ function Router() {
 
           {/* Explore Entry Rule (MUST be after the specific routes) */}
           <Route path="/explore">
-            <Redirect to="/explore/home" />
+            <ExploreHome />
           </Route>
 
           {/* Partner Profile */}

@@ -33,22 +33,30 @@ export function useAuth(options?: UseAuthOptions) {
   });
 
   const logout = useCallback(async () => {
+    let logoutSucceeded = false;
+
     try {
       await logoutMutation.mutateAsync();
+      logoutSucceeded = true;
     } catch (error: unknown) {
       if (error instanceof TRPCClientError && error.data?.code === 'UNAUTHORIZED') {
+        // An expired session is already logged out from the server's perspective.
+        logoutSucceeded = true;
         return;
       }
       throw error;
     } finally {
-      // Clear cached user and invalidate the no-input query
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
+      if (logoutSucceeded) {
+        // Clear cached user and invalidate the no-input query only after the server
+        // accepted logout. A failed request must not falsely present the user as signed out.
+        utils.auth.me.setData(undefined, null);
+        await utils.auth.me.invalidate();
 
-      // Clear brand emulation context on logout
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('publisher-context');
-        localStorage.removeItem('brandEmulation');
+        // Clear brand emulation context on logout
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('publisher-context');
+          localStorage.removeItem('brandEmulation');
+        }
       }
     }
   }, [logoutMutation, utils]);

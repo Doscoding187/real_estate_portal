@@ -7,6 +7,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { Eye, Video, TrendingUp, Users, ArrowRight } from 'lucide-react';
 import { useLocation } from 'wouter';
 
@@ -17,12 +18,18 @@ function metricNumber(value: unknown) {
 
 export function AgencyExploreOverview() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
 
   // Fetch aggregate metrics for the agency
   // Note: This would need a new endpoint for agency-level aggregation
   // For now, we'll use placeholder data
   const { data: metrics, isLoading } = trpc.exploreAnalytics.getAggregatedMetrics.useQuery({
     period: 'month',
+  });
+  const publishingEligibility = trpc.explore.getPublishingEligibility.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   if (isLoading) {
@@ -52,7 +59,9 @@ export function AgencyExploreOverview() {
           <p className="text-sm text-muted-foreground mb-4">
             Encourage your agents to upload videos to Explore to start tracking performance.
           </p>
-          <Button onClick={() => setLocation('/explore/upload')}>Upload to Explore</Button>
+          {publishingEligibility.data?.allowed === true ? (
+            <Button onClick={() => setLocation('/explore/upload')}>Upload to Explore</Button>
+          ) : null}
         </CardContent>
       </Card>
     );

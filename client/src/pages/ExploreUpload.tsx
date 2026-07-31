@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import {
   Upload,
@@ -8,7 +8,6 @@ import {
   Plus,
   Sparkles,
   CheckCircle,
-  Eye,
   ArrowLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { getAccountAuthHref } from '@/lib/publicNavigation';
 import { trpc } from '@/lib/trpc';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -36,7 +36,7 @@ interface UploadedMedia {
 
 export default function ExploreUpload() {
   const [, setLocation] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [title, setTitle] = useState('');
@@ -47,20 +47,46 @@ export default function ExploreUpload() {
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [returnPath, setReturnPath] = useState('/agent/dashboard');
-  const [attributeToAgency, setAttributeToAgency] = useState(true);
+  const publishingEligibility = trpc.explore.getPublishingEligibility.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
   // Upload mutations - using presigned URL for S3 upload
   const getPresignedUrl = trpc.video.getPresignedUrl.useMutation();
   const uploadMutation = trpc.explore.uploadShort.useMutation();
 
-  // Check if user is an agent (for agency attribution UI)
-  // Requirements 10.3: Show agency attribution status
-  const isAgent = user?.role === 'agent';
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation(getAccountAuthHref('signin', '/explore/upload'));
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
 
-  // Redirect if not authenticated
-  if (!isAuthenticated) {
-    setLocation('/login');
-    return null;
+  if (authLoading || (isAuthenticated && publishingEligibility.isLoading)) {
+    return <div className="min-h-screen bg-background" aria-busy="true" />;
+  }
+
+  if (!isAuthenticated) return null;
+
+  if (publishingEligibility.data?.allowed !== true) {
+    const submissionsAreNotOpen =
+      publishingEligibility.data?.reason === 'publisher_submissions_not_open';
+    return (
+      <main className="min-h-screen bg-background px-6 py-16">
+        <div className="mx-auto max-w-lg rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+          <h1 className="text-xl font-semibold text-foreground">Explore publishing access required</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {submissionsAreNotOpen
+              ? 'Publisher submissions are not yet open.'
+              : 'Your account is not approved to publish to Explore.'}
+          </p>
+          <Button className="mt-5" variant="outline" onClick={() => setLocation('/explore')}>
+            Back to Explore
+          </Button>
+        </div>
+      </main>
+    );
   }
 
   // Determine return path based on user role
@@ -202,7 +228,6 @@ export default function ExploreUpload() {
             ? highlights.filter(h => h.trim())
             : undefined,
         listingId: selectedListingId || undefined,
-        attributeToAgency, // NEW: Pass agency attribution preference
       });
 
       // Reset form
@@ -241,7 +266,7 @@ export default function ExploreUpload() {
             Upload to Explore
           </h1>
           <p className="text-muted-foreground text-lg">
-            Share your property content with thousands of potential buyers
+            Save private editorial content for Explore
           </p>
         </div>
 
@@ -400,74 +425,6 @@ export default function ExploreUpload() {
               </CardContent>
             </Card>
 
-            {/* Agency Attribution - Only shown for agents */}
-            {/* Requirements 10.3, 10.4: Show agency attribution status and opt-out option */}
-            {isAgent && (
-              <Card className="border-blue-200 bg-blue-50/50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-900">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                      />
-                    </svg>
-                    Agency Attribution
-                  </CardTitle>
-                  <CardDescription className="text-blue-700">
-                    Your content will be attributed to your agency
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-blue-200">
-                      <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                        {(
-                          user?.firstName?.charAt(0) ||
-                          (user as any)?.name?.charAt(0) ||
-                          user?.email?.charAt(0) ||
-                          'A'
-                        ).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">Your Agency</p>
-                        <p className="text-sm text-gray-600">
-                          This content will help build your agency's brand presence
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
-                      <input
-                        type="checkbox"
-                        id="attributeToAgency"
-                        checked={attributeToAgency}
-                        onChange={e => setAttributeToAgency(e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label
-                        htmlFor="attributeToAgency"
-                        className="text-sm text-gray-700 cursor-pointer"
-                      >
-                        Attribute this content to my agency
-                      </label>
-                    </div>
-
-                    {!attributeToAgency && (
-                      <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          <strong>Note:</strong> Content will be attributed to you individually, not
-                          your agency.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Submit Button */}
             <div className="flex gap-4">
               <Button
@@ -483,7 +440,7 @@ export default function ExploreUpload() {
                 disabled={isUploading || mediaFiles.length === 0 || !title.trim()}
                 className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               >
-                {isUploading ? 'Uploading...' : 'Publish to Explore'}
+                {isUploading ? 'Saving...' : 'Save private editorial content'}
               </Button>
             </div>
           </div>
@@ -497,24 +454,13 @@ export default function ExploreUpload() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-green-100 to-emerald-100">
               <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
-            <DialogTitle className="text-center text-2xl">Upload Successful!</DialogTitle>
+            <DialogTitle className="text-center text-2xl">Content saved privately</DialogTitle>
             <DialogDescription className="text-center text-base">
-              Your content has been published to Explore and is now live for everyone to see.
+              Your content is inactive and is not visible in Explore.
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-3 mt-4">
-            <Button
-              onClick={() => {
-                setShowSuccessModal(false);
-                window.open('/explore', '_blank');
-              }}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              View on Explore
-            </Button>
-
             <Button
               variant="outline"
               onClick={() => {

@@ -7,8 +7,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { db } from '../db';
-import { exploreContent, properties, developments, agents, developers } from '../../drizzle/schema';
+import { exploreContent, properties, developments } from '../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
+import type { ExplorePublishingEligibility } from './explorePublishingEligibilityService';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -120,41 +121,11 @@ export async function generateVideoUploadUrls(
 }
 
 /**
- * Detect agent's agency affiliation (best-effort)
- */
-async function detectAgencyAffiliation(creatorId: number): Promise<{
-  agencyId: number | null;
-  agentId: number | null;
-  creatorType: 'user' | 'agent' | 'developer' | 'agency';
-}> {
-  const agentRecord = await db
-    .select({ id: agents.id, agencyId: agents.agencyId, userId: agents.userId })
-    .from(agents)
-    .where(eq(agents.userId, creatorId))
-    .limit(1);
-
-  if (agentRecord[0]) {
-    return { agencyId: agentRecord[0].agencyId, agentId: agentRecord[0].id, creatorType: 'agent' };
-  }
-
-  const developerRecord = await db
-    .select({ id: developers.id })
-    .from(developers)
-    .where(eq(developers.userId, creatorId))
-    .limit(1);
-
-  if (developerRecord[0]) {
-    return { agencyId: null, agentId: null, creatorType: 'developer' };
-  }
-
-  return { agencyId: null, agentId: null, creatorType: 'user' };
-}
-
-/**
- * Create a video entry in explore_content
+ * Create a non-public Explore submission. Publisher attribution is derived by
+ * the canonical eligibility resolver before this boundary is reached.
  */
 export async function createExploreVideo(
-  creatorId: number,
+  publisher: Extract<ExplorePublishingEligibility, { allowed: true }>,
   videoUrl: string,
   thumbnailUrl: string,
   metadata: VideoMetadata,
@@ -169,8 +140,6 @@ export async function createExploreVideo(
 
   const dv = validateVideoDuration(duration);
   if (!dv.valid) throw new Error(dv.error);
-
-  const affiliation = await detectAgencyAffiliation(creatorId);
 
   // Extract location & price info
   let locationLat: number | null = null;
@@ -212,9 +181,9 @@ export async function createExploreVideo(
       contentType: 'video',
       videoFormat: 'short', // change to 'walkthrough', 'ad', etc. when needed
       referenceId: metadata.propertyId ?? metadata.developmentId ?? null,
-      creatorId,
-      creatorType: affiliation.creatorType,
-      agencyId: affiliation.agencyId,
+      creatorId: publisher.creatorId,
+      creatorType: publisher.creatorType,
+      agencyId: publisher.agencyId,
       title: metadata.title,
       description: metadata.description ?? null,
       videoUrl,
@@ -233,7 +202,7 @@ export async function createExploreVideo(
       priceMax,
       viewCount: 0,
       engagementScore: 0,
-      isActive: true,
+      isActive: false,
       isFeatured: false,
     })
     .returning({ id: exploreContent.id });

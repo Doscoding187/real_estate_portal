@@ -4,7 +4,7 @@
  * Requirements: 8.1, 8.2, 8.4, 8.6
  */
 
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import {
   generateVideoUploadUrls,
@@ -14,8 +14,36 @@ import {
   updateVideoAnalytics,
   type VideoMetadata,
 } from '../services/exploreVideoService';
+import { getDb } from '../db';
+import {
+  assertExploreReferenceOwnership,
+  ExplorePublishingAuthorizationError,
+  getExplorePublishingAccessMessage,
+  getExplorePublishingEligibility,
+} from '../services/explorePublishingEligibilityService';
 
 const router = Router();
+
+async function requireExplorePublisher(req: Request, res: Response) {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return null;
+  }
+
+  const db = await getDb();
+  if (!db) {
+    res.status(503).json({ error: 'Publishing is temporarily unavailable' });
+    return null;
+  }
+
+  const eligibility = await getExplorePublishingEligibility(db, req.user);
+  if (!eligibility.allowed) {
+    res.status(403).json({ error: getExplorePublishingAccessMessage(eligibility) });
+    return null;
+  }
+
+  return eligibility;
+}
 
 // Validation schemas
 const generateUploadUrlSchema = z.object({
@@ -63,10 +91,8 @@ const updateAnalyticsSchema = z.object({
  */
 router.post('/generate-upload-url', async (req, res) => {
   try {
-    // Check authentication
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
+    const publisher = await requireExplorePublisher(req, res);
+    if (!publisher) return;
 
     // Validate request body
     const validation = generateUploadUrlSchema.safeParse(req.body);
@@ -78,7 +104,7 @@ router.post('/generate-upload-url', async (req, res) => {
     }
 
     const { filename, contentType } = validation.data;
-    const creatorId = req.user.id;
+    const creatorId = publisher.creatorId;
 
     // Generate presigned URLs
     const result = await generateVideoUploadUrls(creatorId, filename, contentType);
@@ -103,10 +129,8 @@ router.post('/generate-upload-url', async (req, res) => {
  */
 router.post('/create', async (req, res) => {
   try {
-    // Check authentication
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
+    const publisher = await requireExplorePublisher(req, res);
+    if (!publisher) return;
 
     // Validate request body
     const validation = createVideoSchema.safeParse(req.body);
@@ -118,7 +142,20 @@ router.post('/create', async (req, res) => {
     }
 
     const { videoUrl, thumbnailUrl, duration, metadata } = validation.data;
-    const creatorId = req.user.id;
+
+    const db = await getDb();
+    if (!db) return res.status(503).json({ error: 'Publishing is temporarily unavailable' });
+    try {
+      await assertExploreReferenceOwnership(db, publisher, {
+        propertyId: metadata.propertyId,
+        developmentId: metadata.developmentId,
+      });
+    } catch (error) {
+      if (error instanceof ExplorePublishingAuthorizationError) {
+        return res.status(403).json({ error: error.message });
+      }
+      throw error;
+    }
 
     // Validate metadata
     const metadataValidation = validateVideoMetadata(metadata);
@@ -139,12 +176,12 @@ router.post('/create', async (req, res) => {
     }
 
     // Create video record
-    const result = await createExploreVideo(creatorId, videoUrl, thumbnailUrl, metadata, duration);
+    const result = await createExploreVideo(publisher, videoUrl, thumbnailUrl, metadata, duration);
 
     res.json({
       success: true,
       data: result,
-      message: 'Video uploaded successfully and will be available in Explore feed',
+      message: 'Video saved as inactive editorial content.',
     });
   } catch (error: any) {
     console.error('[ExploreVideoUpload] Create video error:', error);

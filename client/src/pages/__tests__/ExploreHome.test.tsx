@@ -1,3 +1,4 @@
+import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ExploreHome from '../ExploreHome';
@@ -9,6 +10,15 @@ const { usePersonalizedContentMock, setLocationMock } = vi.hoisted(() => ({
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/', setLocationMock],
+  Link: ({
+    href,
+    children,
+    ...props
+  }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; children: ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@/components/explore-discovery/LifestyleCategorySelector', () => ({
@@ -118,6 +128,10 @@ describe('ExploreHome', () => {
     render(<ExploreHome />);
 
     expect(screen.getByLabelText(/explore navigation/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to Property Listify' })).toHaveAttribute(
+      'href',
+      '/',
+    );
     expect(screen.getByRole('tab', { name: /shorts/i })).toBeInTheDocument();
     expect(screen.getByTestId('trending-videos-section')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'For You', level: 3 })).toBeInTheDocument();

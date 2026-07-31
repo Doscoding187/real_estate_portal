@@ -9,12 +9,13 @@ function readRepoFile(relativePath: string) {
 describe('Main Platform Navigation authority', () => {
   const nav = readRepoFile('client/src/components/EnhancedNavbar.tsx');
   const authority = readRepoFile('client/src/lib/publicNavigation.ts');
+  const app = readRepoFile('client/src/App.tsx');
   const login = readRepoFile('client/src/pages/Login.tsx');
   const navSeoSpec = readRepoFile('e2e/routing/nav-seo-architecture.spec.ts');
 
   it('restores the canonical desktop platform menu breadth', () => {
     for (const label of [
-      'City',
+      'Locations',
       'For Buyers',
       'For Renters',
       'For Sellers',
@@ -39,16 +40,8 @@ describe('Main Platform Navigation authority', () => {
       '/new-developments',
       '/agents',
       '/developers',
-      '/explore/home',
-      '/explore/feed',
-      '/explore/map',
-      '/explore/upload',
-      '/explore/shorts',
-      '/services/home-loans',
-      '/services/property-valuation',
-      '/services/legal-services',
-      '/services/home-insurance',
-      '/services/interior-design',
+      '/explore',
+      '/services',
       '/distribution-network',
       '/advertise',
       '/insights/market-trends',
@@ -56,6 +49,9 @@ describe('Main Platform Navigation authority', () => {
     ]) {
       expect(authority).toContain(href);
     }
+
+    expect(authority).toContain('SERVICE_CATEGORIES');
+    expect(authority).toContain('toServiceCategorySlug');
 
     expect(authority).not.toContain('propertyType=office');
     expect(authority).not.toContain('propertyType=retail');
@@ -68,9 +64,9 @@ describe('Main Platform Navigation authority', () => {
   });
 
   it('uses canonical location authority and preserves mobile account access', () => {
-    expect(nav).toContain('FALLBACK_CITY_LINKS');
-    expect(nav).toContain('cityToNavLink');
-    expect(nav).toContain("transactionType: 'rent'");
+    expect(nav).toContain('RenterMegaMenu');
+    expect(nav).toContain('InsightsMegaMenu');
+    expect(nav).not.toContain('rentCityFallbackLinks');
     expect(nav).toContain('Open account menu');
     expect(nav).toContain('Create account');
     expect(nav).toContain('main-platform-mobile-menu');
@@ -87,13 +83,28 @@ describe('Main Platform Navigation authority', () => {
   });
 
   it('uses semantic links and keyboard-capable menu primitives without nested controls', () => {
-    expect(nav).toContain('NavigationMenuTrigger');
+    expect(nav).toContain('aria-controls="public-navbar-mega-panel"');
+    expect(nav).toContain('aria-expanded={desktopMenuValue ===');
+    expect(nav).toContain("if (event.key === 'Escape')");
     expect(nav).toContain('aria-label="Main platform navigation"');
     expect(nav).toContain('aria-expanded={mobileMenuOpen}');
     expect(nav).toContain("event.key === 'Escape'");
     expect(nav).toContain('focus()');
     expect(nav).not.toContain('<Link href="/advertise">\n                  <button');
     expect(nav).not.toContain('<Link href="/explore/home">\n                  <button');
+  });
+
+  it('treats Explore as a canonical direct entry rather than a public mega menu', () => {
+    expect(authority).toContain("navbarPresentation: 'direct-link'");
+    expect(authority).toContain("href: '/explore'");
+    expect(nav).toContain("menu.navbarPresentation === 'direct-link'");
+    expect(nav).toContain('public-navbar__desktop-direct-link');
+  });
+
+  it('normalizes the Explore root without a redirect loop', () => {
+    expect(app).toContain('<Route path="/explore/home">\n            <Redirect to="/explore" />');
+    expect(app).toContain('<Route path="/explore">\n            <ExploreHome />');
+    expect(app).not.toContain('<Redirect to="/explore/home" />');
   });
 
   it('separates desktop mega-menu and narrow drawer coverage at the lg breakpoint', () => {
