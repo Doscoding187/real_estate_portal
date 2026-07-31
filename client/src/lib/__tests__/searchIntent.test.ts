@@ -31,7 +31,9 @@ describe('search intent location serialization', () => {
       },
     };
 
-    expect(generateIntentUrl(intent)).toBe('/property-for-sale?locations=alberton&locations=gauteng');
+    expect(generateIntentUrl(intent)).toBe(
+      '/property-for-sale?locations=alberton&locations=gauteng',
+    );
   });
 
   it('derives single locations query params into geography for result pages', () => {
@@ -46,5 +48,37 @@ describe('search intent location serialization', () => {
       city: 'alberton',
     });
     expect(result.filters.locations).toEqual(['alberton']);
+  });
+
+  it('preserves direct Rent route interpretation and basic query filters', () => {
+    const result = resolveSearchIntent(
+      '/property-to-rent?city=johannesburg&minPrice=5000&propertyType=apartment',
+      {},
+      new URLSearchParams('city=johannesburg&minPrice=5000&propertyType=apartment'),
+    );
+
+    expect(result.transactionType).toBe('to-rent');
+    expect(result.geography).toMatchObject({ level: 'city', city: 'johannesburg' });
+    expect(result.filters).toMatchObject({
+      listingType: 'rent',
+      minPrice: 5000,
+      propertyType: 'apartment',
+    });
+  });
+
+  it('keeps direct province SEO paths while query-based province results stay on SRP', () => {
+    const seoIntent = resolveSearchIntent(
+      '/property-for-sale/gauteng',
+      { province: 'gauteng' },
+      new URLSearchParams(),
+    );
+    expect(generateIntentUrl(seoIntent)).toBe('/property-for-sale/gauteng');
+
+    const resultsIntent = resolveSearchIntent(
+      '/property-for-sale?province=gauteng',
+      {},
+      new URLSearchParams('province=gauteng'),
+    );
+    expect(generateIntentUrl(resultsIntent)).toBe('/property-for-sale?province=gauteng');
   });
 });

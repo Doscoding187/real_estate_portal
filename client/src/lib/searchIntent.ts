@@ -9,6 +9,7 @@ import { PROVINCE_SLUGS } from './locationUtils';
 
 export type TransactionType = 'for-sale' | 'to-rent' | 'developments';
 export type GeographyLevel = 'province' | 'city' | 'locality' | 'development' | 'country';
+export type SearchRouteMode = 'seo' | 'results';
 
 export interface GeographyIntent {
   level: GeographyLevel;
@@ -29,6 +30,12 @@ export interface SearchIntent {
   geography: GeographyIntent;
   filters: Record<string, any>; // The query params refing the search
   defaults: SearchDefaults;
+  /**
+   * Controls the destination shape without changing search meaning.
+   * SEO pages remain the default for direct path-based province routes;
+   * hero submissions explicitly target the results authority.
+   */
+  routeMode?: SearchRouteMode;
 }
 
 /**
@@ -64,6 +71,11 @@ export function resolveSearchIntent(
 
   const queryProvince = searchParams.get('province');
   const queryCity = searchParams.get('city');
+  const queryLocationId = searchParams.get('locationId');
+  const queryLocationIds = searchParams
+    .getAll('locationIds')
+    .map(value => value.trim())
+    .filter(Boolean);
   const querySuburbs = searchParams
     .getAll('suburb')
     .map(value => value.trim().toLowerCase())
@@ -86,6 +98,8 @@ export function resolveSearchIntent(
     if (!geography.city && !geography.suburb) geography.level = 'province';
     geography.province = queryProvince.toLowerCase();
   }
+
+  if (queryLocationId?.trim()) geography.locationId = queryLocationId.trim();
 
   // Fallback to path params if no query params for geography
   // This handles SEO page routes like /property-for-sale/gauteng
@@ -129,9 +143,14 @@ export function resolveSearchIntent(
   const filters: Record<string, any> = {};
 
   // Explicitly handle array parameters
-  const locations = searchParams.getAll('locations') || searchParams.getAll('locations[]');
-  if (locations && locations.length > 0) {
-    filters.locations = locations;
+  const locations = searchParams.getAll('locations');
+  const legacyLocations = searchParams.getAll('locations[]');
+  const normalizedLocations = locations.length > 0 ? locations : legacyLocations;
+  if (normalizedLocations.length > 0) {
+    filters.locations = normalizedLocations;
+  }
+  if (queryLocationIds.length > 0) {
+    filters.locationIds = queryLocationIds;
   }
 
   if (querySuburbs.length > 1) {
@@ -140,8 +159,13 @@ export function resolveSearchIntent(
     filters.suburb = querySuburbs[0];
   }
 
-  if (!geography.province && !geography.city && !geography.suburb && locations.length === 1) {
-    const [locationSlug] = locations;
+  if (
+    !geography.province &&
+    !geography.city &&
+    !geography.suburb &&
+    normalizedLocations.length === 1
+  ) {
+    const [locationSlug] = normalizedLocations;
     if (PROVINCE_SLUGS.includes(locationSlug.toLowerCase())) {
       geography.level = 'province';
       geography.province = locationSlug.toLowerCase();
@@ -153,9 +177,32 @@ export function resolveSearchIntent(
 
   searchParams.forEach((value, key) => {
     // Skip geography keys - they're handled above
-    if (key === 'province' || key === 'city' || key === 'suburb') return;
+    if (
+      key === 'province' ||
+      key === 'city' ||
+      key === 'suburb' ||
+      key === 'locationId' ||
+      key === 'locationIds'
+    )
+      return;
     // Skip array keys handled explicitly
     if (key === 'locations' || key === 'locations[]') return;
+
+    if (
+      [
+        'minPrice',
+        'maxPrice',
+        'minBedrooms',
+        'maxBedrooms',
+        'minBathrooms',
+        'minArea',
+        'maxArea',
+      ].includes(key)
+    ) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed) && parsed >= 0) filters[key] = parsed;
+      return;
+    }
 
     filters[key] = value;
   });
@@ -171,6 +218,10 @@ export function resolveSearchIntent(
       propertyCategory: 'residential',
       sort: 'relevance',
     },
+    routeMode:
+      path.split('?')[0] === '/property-for-sale' || path.split('?')[0] === '/property-to-rent'
+        ? 'results'
+        : 'seo',
   };
 }
 
@@ -199,9 +250,7 @@ export function generateIntentUrl(intent: SearchIntent): string {
   const queryParams = new URLSearchParams();
   const normalizedSuburbs = (() => {
     if (Array.isArray(filters.suburb)) {
-      return filters.suburb
-        .map(value => String(value).trim().toLowerCase())
-        .filter(Boolean);
+      return filters.suburb.map(value => String(value).trim().toLowerCase()).filter(Boolean);
     }
 
     if (typeof filters.suburb === 'string' && filters.suburb.trim()) {
@@ -241,6 +290,10 @@ export function generateIntentUrl(intent: SearchIntent): string {
     }
   });
 
+  if (geography.locationId && geography.level !== 'province' && !queryParams.has('locationId')) {
+    queryParams.set('locationId', geography.locationId);
+  }
+
   if (normalizedSuburbs.length > 0) {
     queryParams.delete('suburb');
     normalizedSuburbs.forEach(suburb => queryParams.append('suburb', suburb));
@@ -272,8 +325,16 @@ export function generateIntentUrl(intent: SearchIntent): string {
     return `${basePath}${queryString ? `?${queryString}` : ''}`;
   }
 
-  // Province-only search → Path-based SEO page
+  // Province-only search → path-based SEO page by default. Hero submissions
+  // explicitly target the results authority so they remain usable when the
+  // SEO catalog page is not populated in the active environment.
   if (geography.province && geography.level === 'province') {
+    if (intent.routeMode === 'results') {
+      queryParams.set('province', geography.province);
+      const queryString = queryParams.toString();
+      return `${basePath}${queryString ? `?${queryString}` : ''}`;
+    }
+
     const queryString = queryParams.toString();
     return `${basePath}/${geography.province}${queryString ? `?${queryString}` : ''}`;
   }

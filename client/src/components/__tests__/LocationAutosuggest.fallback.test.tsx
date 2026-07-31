@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { useLocationSearchQuery } = vi.hoisted(() => ({
@@ -42,7 +42,7 @@ describe('LocationAutosuggest database fallback', () => {
     });
   });
 
-  it('keeps location search available and returns a navigable hierarchy without Google Places', () => {
+  it('keeps location search available and returns a navigable hierarchy without Google Places', async () => {
     const onSelect = vi.fn();
     render(<LocationAutosuggest placeholder="City, Suburb, or Area" onSelect={onSelect} />);
 
@@ -51,10 +51,12 @@ describe('LocationAutosuggest database fallback', () => {
 
     fireEvent.change(input, { target: { value: 'San' } });
 
-    expect(useLocationSearchQuery).toHaveBeenLastCalledWith(
-      { query: 'San', type: 'all', limit: 10 },
-      expect.objectContaining({ enabled: true }),
-    );
+    await waitFor(() => {
+      expect(useLocationSearchQuery).toHaveBeenLastCalledWith(
+        { query: 'San', type: 'all', limit: 10 },
+        expect.objectContaining({ enabled: true }),
+      );
+    });
     fireEvent.click(screen.getByText('Sandton'));
 
     expect(onSelect).toHaveBeenCalledWith({
@@ -64,6 +66,29 @@ describe('LocationAutosuggest database fallback', () => {
       type: 'suburb',
       provinceSlug: 'gauteng',
       citySlug: 'johannesburg',
+      canonicalPath: '/property-for-sale?suburb=sandton&city=johannesburg&province=gauteng',
     });
+  });
+
+  it('supports semantic keyboard autocomplete selection', async () => {
+    const onSelect = vi.fn();
+    render(<LocationAutosuggest onSelect={onSelect} />);
+
+    const input = screen.getByRole('combobox', { name: 'Search by city, suburb, or area' });
+    fireEvent.change(input, { target: { value: 'San' } });
+
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Sandton/ })).toBeInTheDocument(),
+    );
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: '12',
+        slug: 'sandton',
+        type: 'suburb',
+      }),
+    );
   });
 });

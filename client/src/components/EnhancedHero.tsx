@@ -18,9 +18,7 @@ import {
   Briefcase,
   Users,
   Search,
-  Mic,
   MapPinned,
-  Loader2,
   Key,
   Building,
   ShieldCheck,
@@ -28,9 +26,18 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
+import {
+  getHomepageHeroJourneys,
+  normalizePublicHeroJourney,
+  type PublicHeroJourneyKey,
+} from '@/lib/publicNavigation';
+import {
+  buildBuySearchUrl,
+  buildPropertySearchUrl,
+  BUY_PROPERTY_TYPE_OPTIONS,
+  getPriceRangeError,
+} from '@/lib/heroJourneySearch';
 import { LocationAutosuggest } from './LocationAutosuggest';
-import { trpc } from '@/lib/trpc';
-import { normalizeLocationKey, getProvinceForCity, isProvinceSearch } from '@/lib/locationUtils';
 import { LocationNode } from '@/types/location';
 import { VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED } from '@/const';
 import { getSearchDiscoverySuggestions } from '@/lib/searchDiscovery';
@@ -55,24 +62,30 @@ export interface EnhancedHeroProps {
   onTabChange?: (tab: string) => void;
 }
 
-const HERO_CATEGORIES = [
-  { id: 'buy', label: 'Buy', mobileLabel: 'Buy', icon: Home },
-  { id: 'rental', label: 'Rental', mobileLabel: 'Rent', icon: Key },
-  { id: 'projects', label: 'Developments', mobileLabel: 'Developments', icon: Building2 },
-  { id: 'pg', label: 'Shared Living', mobileLabel: 'Shared', icon: Users },
-  { id: 'plot', label: 'Plots & Land', mobileLabel: 'Plots & Land', icon: MapPinned },
-  { id: 'commercial', label: 'Commercial', mobileLabel: 'Commercial', icon: Briefcase },
-  { id: 'agents', label: 'Agents', mobileLabel: 'Agents', icon: Users },
-] as const;
+const JOURNEY_ICONS: Record<PublicHeroJourneyKey, any> = {
+  buy: Home,
+  rent: Key,
+  developments: Building2,
+  shared_living: Users,
+  plot_land: MapPinned,
+  commercial: Briefcase,
+  find_agent: Users,
+};
+
+const HERO_CATEGORIES = getHomepageHeroJourneys().map(journey => ({
+  ...journey,
+  id: journey.key,
+  icon: JOURNEY_ICONS[journey.key],
+}));
 
 const INTENT_HELPER_COPY: Record<string, string> = {
   buy: 'Search homes for sale by suburb, city, or province.',
-  rental: 'Find rentals by area, budget, and property type.',
-  projects: 'Search new developments by city, suburb, developer, or project name.',
-  pg: 'Find shared living options that match your lifestyle and budget.',
-  plot: 'Explore land and plots across South Africa.',
+  rent: 'Find rentals by area, budget, and property type.',
+  developments: 'Search new developments by city, suburb, developer, or project name.',
+  shared_living: 'Find shared living options that match your lifestyle and budget.',
+  plot_land: 'Explore land and plots across South Africa.',
   commercial: 'Find offices, retail spaces, industrial property, and commercial opportunities.',
-  agents: 'Find trusted agents and property professionals.',
+  find_agent: 'Find trusted agents and property professionals.',
 };
 
 const TRUST_ITEMS = [
@@ -105,8 +118,6 @@ export function EnhancedHero({
 
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
-  // computed for backward compatibility in single-select logic
-  const selectedLocation = selectedLocations.length === 1 ? selectedLocations[0] : null;
   const hasActiveSearchInput = searchQuery.trim().length > 0 || selectedLocations.length > 0;
 
   // Search Discovery Engine — foundation mode
@@ -118,6 +129,7 @@ export function EnhancedHero({
 
   // Filter panel state
   const [showFilters, setShowFilters] = useState(false);
+  const [priceRangeError, setPriceRangeError] = useState<string | null>(null);
 
   // Filter values
   const [filters, setFilters] = useState({
@@ -171,7 +183,7 @@ export function EnhancedHero({
         'Farms & Smallholdings': ['Farm', 'Smallholding', 'Game Farm', 'Lifestyle Farm'],
       },
     },
-    rental: {
+    rent: {
       intents: ['Residential', 'Commercial', 'Shared Living'],
       propertyTypes: {
         Residential: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Room', 'Studio'],
@@ -185,7 +197,7 @@ export function EnhancedHero({
       },
       leaseTerms: ['Month-to-month', '6 months', '12 months', '24+ months'],
     },
-    projects: {
+    developments: {
       types: [
         'Full Title',
         'Sectional Title',
@@ -197,13 +209,13 @@ export function EnhancedHero({
       ],
       statuses: ['Off-Plan', 'Under Construction', 'Completed', 'Launching Soon'],
     },
-    plot: {
+    plot_land: {
       types: ['Residential', 'Commercial', 'Agricultural', 'Industrial'],
     },
     commercial: {
       useTypes: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Medical', 'Mixed-Use'],
     },
-    pg: {
+    shared_living: {
       roomTypes: ['Room in Apartment', 'Room in House', 'Co-Living', 'Student Accommodation'],
       genderOptions: ['Male Only', 'Female Only', 'Mixed'],
     },
@@ -213,7 +225,7 @@ export function EnhancedHero({
 
   const handleCategoryClick = (categoryId: string) => {
     handleTabChange(categoryId);
-    if (categoryId === 'agents') {
+    if (categoryId === 'find_agent') {
       setLocation('/agents');
       setShowFilters(false);
     } else {
@@ -223,240 +235,60 @@ export function EnhancedHero({
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+
+    if (key === 'priceMin' || key === 'priceMax') {
+      const nextMin = key === 'priceMin' ? value : filters.priceMin;
+      const nextMax = key === 'priceMax' ? value : filters.priceMax;
+      setPriceRangeError(getPriceRangeError(nextMin, nextMax) || null);
+    }
   };
 
-  // --- LIVE COUNT LOGIC ---
-  const countQueryFilters = useMemo(() => {
-    // Construct filters based on current selection to get live count
-    const activeFilters: any = {};
-
-    // Location
-    if (selectedLocation) {
-      if (selectedLocation.type === 'city') activeFilters.city = selectedLocation.name;
-      if (selectedLocation.type === 'suburb') activeFilters.suburb = [selectedLocation.name];
-      if (selectedLocation.provinceSlug) activeFilters.province = selectedLocation.provinceSlug; // Heuristic
-    }
-
-    // Active Tab Filters
-    if (activeTab === 'buy') {
-      activeFilters.listingType = 'sale';
-      if (filters.propertyTypes.length > 0)
-        activeFilters.propertyType = filters.propertyTypes.map(t => t.toLowerCase());
-      if (filters.priceMin) activeFilters.minPrice = parseInt(filters.priceMin);
-      if (filters.priceMax) activeFilters.maxPrice = parseInt(filters.priceMax);
-    } else if (activeTab === 'rental') {
-      activeFilters.listingType = 'rent';
-      if (filters.propertyTypes.length > 0)
-        activeFilters.propertyType = filters.propertyTypes.map(t => t.toLowerCase());
-      if (filters.budgetMin) activeFilters.minPrice = parseInt(filters.budgetMin);
-      if (filters.budgetMax) activeFilters.maxPrice = parseInt(filters.budgetMax);
-    }
-
-    return activeFilters;
-  }, [activeTab, filters, selectedLocation]);
-
-  // Fetch count
-  const { data: countData, isLoading: isCountLoading } = trpc.properties.getFilterCounts.useQuery(
-    { filters: countQueryFilters },
-    {
-      enabled: !!selectedLocation || !!filters.propertyIntent || !!filters.priceMax, // Only fetch if user has interacted
-      staleTime: 30000,
-    },
-  );
-
-  const resultCount = countData?.total || 0;
-
   const handleSearch = () => {
-    console.log(
-      '[handleSearch] Called. selectedLocation:',
-      selectedLocation,
-      'searchQuery:',
-      searchQuery,
-      'activeTab:',
-      activeTab,
-    );
+    const effectiveJourney = normalizePublicHeroJourney(activeTab);
 
-    // Intelligent Routing Logic
-    // We utilize the structured location data from LocationAutosuggest directly.
-
-    // Default to 'buy' if no tab selected
-    const effectiveTab = activeTab || 'buy';
-
-    if (effectiveTab === 'buy' || effectiveTab === 'rental') {
-      const listingType = effectiveTab === 'rental' ? 'rent' : 'sale';
-
-      // 1. Single or Multi Selection Logic
-      if (selectedLocations.length > 0) {
-        console.log('[handleSearch] selectedLocations:', selectedLocations);
-
-        const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-        const params = new URLSearchParams();
-
-        // CASE A: Single Location (Preserve SEO structure)
-        if (selectedLocations.length === 1) {
-          const loc = selectedLocations[0];
-          const isProvince = loc.type === 'province';
-
-          // Province -> SEO Discovery
-          if (isProvince) {
-            const provinceSlug = normalizeLocationKey(loc.name);
-            setLocation(`${root}/${provinceSlug}`);
-            return;
-          }
-
-          // City/Suburb -> SEO Path
-          const locationSlug = normalizeLocationKey(loc.name);
-          const resolvedProvince = loc.provinceSlug || getProvinceForCity(loc.name);
-
-          if (loc.type === 'suburb') {
-            params.set('suburb', locationSlug);
-            if (loc.citySlug) params.set('city', normalizeLocationKey(loc.citySlug));
-          } else {
-            params.set('city', locationSlug);
-          }
-          if (resolvedProvince) params.set('province', resolvedProvince);
-        }
-        // CASE B: Multi-Location (Canonical Query Params)
-        else {
-          selectedLocations.forEach(loc => {
-            params.append('locations[]', loc.slug);
-          });
-          // Note: We don't set 'city'/'province' params here to avoid conflict.
-          // The backend should derive context from the slugs.
-        }
-
-        // Common Filters
-        // Add price filters
-        if (activeTab === 'buy') {
-          if (filters.priceMin) params.set('minPrice', filters.priceMin);
-          if (filters.priceMax) params.set('maxPrice', filters.priceMax);
-        } else {
-          if (filters.budgetMin) params.set('minPrice', filters.budgetMin);
-          if (filters.budgetMax) params.set('maxPrice', filters.budgetMax);
-        }
-
-        if (filters.propertyTypes.length > 0) {
-          params.set('propertyType', filters.propertyTypes[0].toLowerCase());
-        }
-
-        const queryString = params.toString();
-        setLocation(`${root}?${queryString}`);
-        return;
-      }
-
-      // 2. Text Search Fallback (no structured location selected)
-      // CRITICAL: Check if text matches a province BEFORE treating as city
-      if (searchQuery) {
-        const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-
-        // Check if the text input is actually a province
-        const matchedProvince = isProvinceSearch(searchQuery);
-        if (matchedProvince) {
-          // Province search → SEO discovery page (path-based)
-          setLocation(`${root}/${matchedProvince}`);
-          return;
-        }
-
-        // Not a province → treat as city search (query-based SRP)
-        const citySlug = normalizeLocationKey(searchQuery);
-        const province = getProvinceForCity(searchQuery);
-
-        const params = new URLSearchParams();
-        params.set('city', citySlug);
-        if (province) params.set('province', province);
-
-        setLocation(`${root}?${params.toString()}`);
-        return;
-      }
-
-      // 3. No location selected - go to base transaction root
-      const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-      setLocation(root);
+    if (effectiveJourney === 'find_agent') {
+      setLocation('/agents');
       return;
     }
 
-    // Fallback Routing for Empty Searches or Special Categories
-    switch (activeTab) {
-      case 'buy': {
-        const url = generatePropertyUrl({
-          listingType: 'sale',
-          propertyType: filters.propertyTypes[0]?.toLowerCase(),
-          minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
-          maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
-        });
-        setLocation(url);
-        break;
+    if (effectiveJourney === 'buy') {
+      const nextPriceRangeError = getPriceRangeError(filters.priceMin, filters.priceMax);
+      if (nextPriceRangeError) {
+        setPriceRangeError(nextPriceRangeError);
+        setShowFilters(true);
+        return;
       }
 
-      case 'rental': {
-        const url = generatePropertyUrl({
-          listingType: 'rent',
-          propertyType: filters.propertyTypes[0]?.toLowerCase(),
-          minPrice: filters.budgetMin ? parseInt(filters.budgetMin) : undefined,
-          maxPrice: filters.budgetMax ? parseInt(filters.budgetMax) : undefined,
-          furnished: filters.furnished,
-        });
-        setLocation(url);
-        break;
-      }
-
-      case 'projects': {
-        const params = new URLSearchParams();
-        if (searchQuery) params.set('search', searchQuery);
-        if (filters.developmentType) params.set('type', filters.developmentType);
-        if (filters.developmentStatus) params.set('status', filters.developmentStatus);
-        if (filters.priceMin) params.set('minPrice', filters.priceMin);
-        if (filters.priceMax) params.set('maxPrice', filters.priceMax);
-        const queryString = params.toString();
-        setLocation(queryString ? `/new-developments?${queryString}` : '/new-developments');
-        break;
-      }
-
-      case 'plot': {
-        const url = generatePropertyUrl({
-          listingType: 'sale',
-          propertyType: 'plot',
-          city: searchQuery || undefined,
-          minPrice: filters.priceMin ? parseInt(filters.priceMin) : undefined,
-          maxPrice: filters.priceMax ? parseInt(filters.priceMax) : undefined,
-        });
-        setLocation(url);
-        break;
-      }
-
-      case 'commercial': {
-        const url = generatePropertyUrl({
-          listingType: filters.saleOrRent as 'sale' | 'rent',
-          propertyType: 'commercial',
-          city: searchQuery || undefined,
-        });
-        setLocation(url);
-        break;
-      }
-
-      case 'pg': {
-        const url = generatePropertyUrl({
-          listingType: 'rent',
-          propertyType: 'shared_living',
-          city: searchQuery || undefined,
-          minPrice: filters.budgetMin ? parseInt(filters.budgetMin) : undefined,
-          maxPrice: filters.budgetMax ? parseInt(filters.budgetMax) : undefined,
-        });
-        setLocation(url);
-        break;
-      }
-
-      case 'agents':
-        setLocation('/agents');
-        break;
-
-      default: {
-        const url = generatePropertyUrl({
-          city: searchQuery || undefined,
-        });
-        setLocation(url);
-      }
+      setPriceRangeError(null);
+      setLocation(
+        buildBuySearchUrl({
+          searchQuery,
+          selectedLocations,
+          propertyType: filters.propertyTypes[0],
+          minPrice: filters.priceMin,
+          maxPrice: filters.priceMax,
+        }),
+      );
+      return;
     }
+
+    // Rent remains compatible with its existing route authority while its
+    // dedicated journey is completed in the next implementation slice.
+    if (effectiveJourney === 'rent') {
+      setLocation(
+        buildPropertySearchUrl({
+          transactionType: 'to-rent',
+          searchQuery,
+          selectedLocations,
+          propertyType: filters.propertyTypes[0],
+          minPrice: filters.budgetMin,
+          maxPrice: filters.budgetMax,
+        }),
+      );
+      return;
+    }
+
+    setLocation('/');
   };
 
   // --- SMART SHORTCUTS ---
@@ -491,10 +323,8 @@ export function EnhancedHero({
   };
 
   const isNavigationMode = heroMode === 'province' || heroMode === 'city';
-  const normalizedActiveTab = String(activeTab || '')
-    .trim()
-    .toLowerCase();
-  const effectiveIntent = normalizedActiveTab || 'buy';
+  const normalizedActiveTab = normalizePublicHeroJourney(activeTab);
+  const effectiveIntent = normalizedActiveTab;
   const intentHelperCopy = INTENT_HELPER_COPY[effectiveIntent] || INTENT_HELPER_COPY.buy;
 
   return (
@@ -548,7 +378,9 @@ export function EnhancedHero({
                 return (
                   <button
                     key={category.id}
+                    type="button"
                     onClick={() => handleCategoryClick(category.id)}
+                    aria-pressed={isActive}
                     className={`relative flex min-w-[3.7rem] flex-col items-center justify-center gap-0.5 rounded-2xl border px-1.5 py-1.5 text-[0.58rem] font-semibold transition-all ${
                       isActive
                         ? 'border-blue-100 bg-white text-blue-700 shadow-sm'
@@ -581,7 +413,9 @@ export function EnhancedHero({
                 return (
                   <button
                     key={category.id}
+                    type="button"
                     onClick={() => handleCategoryClick(category.id)}
+                    aria-pressed={isActive}
                     className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-200 sm:px-5 sm:text-sm whitespace-nowrap flex-shrink-0 ${
                       isActive
                         ? 'bg-blue-700 text-white shadow-md shadow-blue-700/20'
@@ -617,7 +451,13 @@ export function EnhancedHero({
 
               <div className="p-4 sm:p-6">
                 {/* Main Search Row */}
-                <div className="flex flex-col gap-2 md:flex-row sm:gap-4">
+                <form
+                  className="flex flex-col gap-2 md:flex-row sm:gap-4"
+                  onSubmit={event => {
+                    event.preventDefault();
+                    handleSearch();
+                  }}
+                >
                   {/* Unified Search Input */}
                   <div className="flex-1 relative group">
                     <LocationAutosuggest
@@ -633,80 +473,84 @@ export function EnhancedHero({
                         setSearchQuery(value);
                       }}
                       onSelect={loc => {
-                        // Optimistic Search Query Update (shows last selected name temporarily if needed, but pills handle UX)
                         setSearchQuery('');
 
                         setSelectedLocations(prev => {
-                          // 1. Prevent Duplicates
-                          if (prev.some(p => p.slug === loc.slug)) return prev;
+                          const isSameLocation = (candidate: LocationNode) =>
+                            candidate.id === loc.id ||
+                            (candidate.slug === loc.slug &&
+                              candidate.type === loc.type &&
+                              candidate.provinceSlug === loc.provinceSlug &&
+                              candidate.citySlug === loc.citySlug);
 
-                          // 2. Hierarchy / Conflict Handling (Property24 style)
-                          // "Prevent selecting a child if parent is already selected" or vice versa
-                          // Case A: User creates specific list (e.g. Sea Point + Green Point).
-                          // Case B: User selects Province (Western Cape). Should we remove cities?
-                          // For V1, we append unique locations.
+                          if (prev.some(isSameLocation)) return prev;
+
+                          // A province selection is already broader than any
+                          // child location in that province. Conversely, a
+                          // province selection replaces its selected children
+                          // so the URL cannot represent contradictory scopes.
+                          if (loc.type === 'province') {
+                            return [
+                              loc,
+                              ...prev.filter(
+                                candidate =>
+                                  candidate.provinceSlug !== loc.slug &&
+                                  candidate.slug !== loc.slug,
+                              ),
+                            ];
+                          }
+
+                          if (
+                            prev.some(
+                              candidate =>
+                                candidate.type === 'province' &&
+                                candidate.slug === loc.provinceSlug,
+                            )
+                          ) {
+                            return prev;
+                          }
 
                           return [...prev, loc];
                         });
                       }}
                       onSubmit={handleSearch}
-                      maxLocations={5}
+                      maxLocations={1}
                       discoverySuggestions={discoverySuggestions}
                       onDiscoveryNavigate={(path: string) => {
                         setLocation(path);
                       }}
                     />
 
-                    {/* Action Buttons (Voice/Location) */}
+                    {/* Search action. Optional location and voice features are intentionally deferred. */}
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1.5 z-10">
                       <Button
-                        onClick={handleSearch}
+                        type="submit"
                         size="icon"
-                        className={`h-8 w-8 rounded-lg shadow-sm transition-all sm:hidden ${
+                        className={`h-10 w-10 rounded-lg shadow-sm transition-all sm:hidden ${
                           hasActiveSearchInput
                             ? 'bg-blue-600 text-white hover:bg-blue-700'
                             : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                         }`}
-                        title="Search"
+                        aria-label="Search"
                       >
                         <Search className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hidden h-8 w-8 rounded-lg hover:bg-blue-50 hover:text-blue-700 sm:inline-flex"
-                        title="Use current location"
-                      >
-                        <MapPinned className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg hover:bg-blue-50 hover:text-blue-700"
-                        title="Voice search"
-                      >
-                        <Mic className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
 
                   {/* Search Button */}
                   <Button
-                    onClick={handleSearch}
+                    type="submit"
                     className="hidden h-11 min-w-[120px] rounded-xl bg-blue-700 px-6 text-sm font-semibold text-white shadow-md shadow-blue-700/20 transition-all hover:bg-blue-800 hover:shadow-lg sm:inline-flex sm:h-12 sm:min-w-[132px] sm:px-7 sm:text-base"
                     size="lg"
                   >
-                    {isCountLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <div className="flex flex-col items-center leading-none">
-                        <span className="flex items-center gap-2">
-                          <Search className="h-4 w-4" /> Search
-                        </span>
-                      </div>
-                    )}
+                    <div className="flex flex-col items-center leading-none">
+                      <span className="flex items-center gap-2">
+                        <Search className="h-4 w-4" /> Search
+                      </span>
+                    </div>
                   </Button>
-                </div>
+                </form>
 
                 {/* FOOTER: Navigation Pills ONLY (Quick Searches hidden per request) */}
                 {isNavigationMode && (
@@ -729,36 +573,21 @@ export function EnhancedHero({
                 )}
 
                 {/* Dynamic Filter Panel */}
-                {showFilters && activeTab !== 'agents' && (
+                {showFilters && activeTab !== 'find_agent' && (
                   <div className="mt-5 border-t border-slate-100 pt-5 animate-in slide-in-from-top-2 duration-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       {/* BUY FILTERS */}
                       {activeTab === 'buy' && (
                         <>
-                          <div className="space-y-2">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Property Category
-                            </Label>
-                            <Select
-                              value={filters.propertyIntent}
-                              onValueChange={val => handleFilterChange('propertyIntent', val)}
+                          {priceRangeError && (
+                            <p
+                              id="buy-price-range-error"
+                              role="alert"
+                              className="md:col-span-2 text-sm font-medium text-rose-700"
                             >
-                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                                <SelectValue placeholder="Any Category" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">Any Category</SelectItem>
-                                {filterConfig.buy.intents.map(intent => (
-                                  <SelectItem key={intent} value={intent}>
-                                    {intent}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-[10px] text-muted-foreground">
-                              Choose the main type of property you’re looking for
+                              {priceRangeError}
                             </p>
-                          </div>
+                          )}
 
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -773,17 +602,9 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {(filters.propertyIntent &&
-                                filterConfig.buy.propertyTypes[
-                                  filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                                ]
-                                  ? filterConfig.buy.propertyTypes[
-                                      filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
-                                    ]
-                                  : Object.values(filterConfig.buy.propertyTypes).flat()
-                                ).map((type: string) => (
-                                  <SelectItem key={type} value={type}>
-                                    {type}
+                                {BUY_PROPERTY_TYPE_OPTIONS.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -798,7 +619,13 @@ export function EnhancedHero({
                               value={filters.priceMin}
                               onValueChange={val => handleFilterChange('priceMin', val)}
                             >
-                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                              <SelectTrigger
+                                aria-describedby={
+                                  priceRangeError ? 'buy-price-range-error' : undefined
+                                }
+                                aria-invalid={Boolean(priceRangeError)}
+                                className="h-10 bg-gray-50/50 border-gray-200"
+                              >
                                 <SelectValue placeholder="No Min" />
                               </SelectTrigger>
                               <SelectContent>
@@ -819,7 +646,13 @@ export function EnhancedHero({
                               value={filters.priceMax}
                               onValueChange={val => handleFilterChange('priceMax', val)}
                             >
-                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                              <SelectTrigger
+                                aria-describedby={
+                                  priceRangeError ? 'buy-price-range-error' : undefined
+                                }
+                                aria-invalid={Boolean(priceRangeError)}
+                                className="h-10 bg-gray-50/50 border-gray-200"
+                              >
                                 <SelectValue placeholder="No Max" />
                               </SelectTrigger>
                               <SelectContent>
@@ -835,7 +668,7 @@ export function EnhancedHero({
                       )}
 
                       {/* RENTAL FILTERS */}
-                      {activeTab === 'rental' && (
+                      {activeTab === 'rent' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -850,7 +683,7 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {Object.values(filterConfig.rental.propertyTypes)
+                                {Object.values(filterConfig.rent.propertyTypes)
                                   .flat()
                                   .map((type: string) => (
                                     <SelectItem key={type} value={type}>
@@ -874,7 +707,7 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Term</SelectItem>
-                                {filterConfig.rental.leaseTerms.map(term => (
+                                {filterConfig.rent.leaseTerms.map(term => (
                                   <SelectItem key={term} value={term}>
                                     {term}
                                   </SelectItem>
@@ -917,7 +750,7 @@ export function EnhancedHero({
                       )}
 
                       {/* DEVELOPMENTS FILTERS */}
-                      {activeTab === 'projects' && (
+                      {activeTab === 'developments' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -932,7 +765,7 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {filterConfig.projects.types.map(type => (
+                                {filterConfig.developments.types.map(type => (
                                   <SelectItem key={type} value={type}>
                                     {type}
                                   </SelectItem>
@@ -954,7 +787,7 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Status</SelectItem>
-                                {filterConfig.projects.statuses.map(status => (
+                                {filterConfig.developments.statuses.map(status => (
                                   <SelectItem key={status} value={status}>
                                     {status}
                                   </SelectItem>
@@ -992,7 +825,7 @@ export function EnhancedHero({
                       )}
 
                       {/* PLOT & LAND FILTERS */}
-                      {activeTab === 'plot' && (
+                      {activeTab === 'plot_land' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1007,7 +840,7 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {filterConfig.plot.types.map(type => (
+                                {filterConfig.plot_land.types.map(type => (
                                   <SelectItem key={type} value={type}>
                                     {type}
                                   </SelectItem>
@@ -1112,7 +945,7 @@ export function EnhancedHero({
                       )}
 
                       {/* SHARED LIVING FILTERS */}
-                      {activeTab === 'pg' && (
+                      {activeTab === 'shared_living' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1127,7 +960,7 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Room</SelectItem>
-                                {filterConfig.pg.roomTypes.map(type => (
+                                {filterConfig.shared_living.roomTypes.map(type => (
                                   <SelectItem key={type} value={type}>
                                     {type}
                                   </SelectItem>
@@ -1149,7 +982,7 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any</SelectItem>
-                                {filterConfig.pg.genderOptions.map(opt => (
+                                {filterConfig.shared_living.genderOptions.map(opt => (
                                   <SelectItem key={opt} value={opt}>
                                     {opt}
                                   </SelectItem>

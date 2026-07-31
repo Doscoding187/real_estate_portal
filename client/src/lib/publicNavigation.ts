@@ -75,6 +75,167 @@ const destination = (
   ...item,
 });
 
+export type PublicHeroJourneyKey =
+  | 'buy'
+  | 'rent'
+  | 'developments'
+  | 'shared_living'
+  | 'plot_land'
+  | 'commercial'
+  | 'find_agent';
+
+export type PublicHeroJourneyKind = 'property-search' | 'direct-navigation';
+
+export interface PublicHeroJourneyDefinition {
+  key: PublicHeroJourneyKey;
+  label: string;
+  mobileLabel: string;
+  kind: PublicHeroJourneyKind;
+  destination: string;
+  homepageVisible: boolean;
+  homepageEnabled: boolean;
+  supportedFields: readonly string[];
+}
+
+/**
+ * Canonical public journey authority shared by the hero and public navigation.
+ * Menu copy can remain audience-specific, but route meaning and stable intent
+ * keys must come from this registry.
+ */
+export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
+  {
+    key: 'buy',
+    label: 'Buy',
+    mobileLabel: 'Buy',
+    kind: 'property-search',
+    destination: '/property-for-sale',
+    homepageVisible: true,
+    homepageEnabled: true,
+    supportedFields: ['location', 'propertyType', 'minPrice', 'maxPrice'],
+  },
+  {
+    key: 'rent',
+    label: 'Rent',
+    mobileLabel: 'Rent',
+    kind: 'property-search',
+    destination: '/property-to-rent',
+    homepageVisible: false,
+    homepageEnabled: false,
+    supportedFields: ['location', 'propertyType', 'minPrice', 'maxPrice'],
+  },
+  {
+    key: 'developments',
+    label: 'Developments',
+    mobileLabel: 'Developments',
+    kind: 'property-search',
+    destination: '/new-developments',
+    homepageVisible: false,
+    homepageEnabled: false,
+    supportedFields: ['location', 'developmentType', 'developmentStatus', 'minPrice', 'maxPrice'],
+  },
+  {
+    key: 'shared_living',
+    label: 'Shared Living',
+    mobileLabel: 'Shared Living',
+    kind: 'property-search',
+    destination: '/property-to-rent',
+    homepageVisible: false,
+    homepageEnabled: false,
+    supportedFields: ['location', 'roomType', 'minPrice', 'maxPrice'],
+  },
+  {
+    key: 'plot_land',
+    label: 'Plots & Land',
+    mobileLabel: 'Plots & Land',
+    kind: 'property-search',
+    destination: '/property-for-sale',
+    homepageVisible: false,
+    homepageEnabled: false,
+    supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
+  },
+  {
+    key: 'commercial',
+    label: 'Commercial',
+    mobileLabel: 'Commercial',
+    kind: 'property-search',
+    destination: '/property-for-sale',
+    homepageVisible: false,
+    homepageEnabled: false,
+    supportedFields: ['location', 'saleOrRent', 'commercialUseType'],
+  },
+  {
+    key: 'find_agent',
+    label: 'Find an Agent',
+    mobileLabel: 'Find an Agent',
+    kind: 'direct-navigation',
+    destination: '/agents',
+    homepageVisible: true,
+    homepageEnabled: false,
+    supportedFields: [],
+  },
+];
+
+export const DEFAULT_PUBLIC_HERO_JOURNEY: Exclude<PublicHeroJourneyKey, 'find_agent'> = 'buy';
+
+const PUBLIC_HERO_JOURNEY_BY_KEY = new Map(
+  PUBLIC_HERO_JOURNEYS.map(journey => [journey.key, journey]),
+);
+
+const PUBLIC_HERO_JOURNEY_ALIASES: Record<string, PublicHeroJourneyKey> = {
+  buy: 'buy',
+  rent: 'rent',
+  rental: 'rent',
+  developments: 'developments',
+  projects: 'developments',
+  shared: 'shared_living',
+  'shared-living': 'shared_living',
+  shared_living: 'shared_living',
+  pg: 'shared_living',
+  plot: 'plot_land',
+  plots: 'plot_land',
+  'plots-land': 'plot_land',
+  plot_land: 'plot_land',
+  commercial: 'commercial',
+  agents: 'find_agent',
+  find_agent: 'find_agent',
+  'find-an-agent': 'find_agent',
+};
+
+export function getPublicHeroJourney(key: PublicHeroJourneyKey) {
+  return (
+    PUBLIC_HERO_JOURNEY_BY_KEY.get(key) ||
+    PUBLIC_HERO_JOURNEY_BY_KEY.get(DEFAULT_PUBLIC_HERO_JOURNEY)!
+  );
+}
+
+export function getHomepageHeroJourneys(): readonly PublicHeroJourneyDefinition[] {
+  return PUBLIC_HERO_JOURNEYS.filter(journey => journey.homepageVisible);
+}
+
+export function isHomepageHeroJourneyEnabled(key: PublicHeroJourneyKey): boolean {
+  return getPublicHeroJourney(key).homepageEnabled;
+}
+
+export function normalizePublicHeroJourney(raw: string | null | undefined): PublicHeroJourneyKey {
+  const normalized = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+
+  return PUBLIC_HERO_JOURNEY_ALIASES[normalized] || DEFAULT_PUBLIC_HERO_JOURNEY;
+}
+
+export function parseHomepageJourney(search: string): PublicHeroJourneyKey {
+  const params = new URLSearchParams(search.startsWith('?') ? search : `?${search}`);
+  return normalizePublicHeroJourney(params.get('intent'));
+}
+
+export function buildHomepageJourneyUrl(key: PublicHeroJourneyKey): string {
+  const journey = getPublicHeroJourney(key);
+  if (journey.kind === 'direct-navigation') return journey.destination;
+  return `/?intent=${encodeURIComponent(journey.key)}`;
+}
+
 /**
  * Services category navigation is derived from the marketplace catalog so that
  * desktop and mobile public navigation cannot drift from the routes consumed
@@ -132,7 +293,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
     feature: destination({
       id: 'buyers-all',
       label: 'Browse properties for sale',
-      href: '/property-for-sale',
+      href: getPublicHeroJourney('buy').destination,
       owner: 'property-search',
       capability: 'LAUNCH_READY',
       activeHref: '/property-for-sale',
@@ -190,7 +351,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           destination({
             id: 'buyers-developments',
             label: 'New developments',
-            href: '/new-developments',
+            href: getPublicHeroJourney('developments').destination,
             owner: 'development-engine',
             capability: 'LAUNCH_READY',
             activeHref: '/new-developments',
@@ -198,7 +359,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           destination({
             id: 'buyers-plots',
             label: 'Plots and land',
-            href: '/property-for-sale?propertyType=plot',
+            href: `${getPublicHeroJourney('plot_land').destination}?propertyType=plot`,
             owner: 'property-search',
             capability: 'LIMITED_BUT_VALID',
             activeHref: '/property-for-sale',
@@ -206,7 +367,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           destination({
             id: 'buyers-commercial',
             label: 'Commercial property',
-            href: '/property-for-sale?propertyType=commercial',
+            href: `${getPublicHeroJourney('commercial').destination}?propertyType=commercial`,
             owner: 'property-search',
             capability: 'LIMITED_BUT_VALID',
             activeHref: '/property-for-sale',
@@ -236,7 +397,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           destination({
             id: 'buyers-agents',
             label: 'Find an estate agent',
-            href: '/agents',
+            href: getPublicHeroJourney('find_agent').destination,
             owner: 'agent-directory',
             capability: 'LAUNCH_READY',
             activeHref: '/agents',
@@ -251,7 +412,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
     feature: destination({
       id: 'renters-all',
       label: 'Browse all rentals',
-      href: '/property-to-rent',
+      href: getPublicHeroJourney('rent').destination,
       owner: 'rental-search',
       capability: 'LAUNCH_READY',
       activeHref: '/property-to-rent',
@@ -310,7 +471,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             id: 'renters-shared-living',
             label: 'Rooms and shared living',
             footerLabel: 'Explore shared living',
-            href: '/property-to-rent?propertyType=shared_living',
+            href: `${getPublicHeroJourney('shared_living').destination}?propertyType=shared_living`,
             owner: 'rental-search',
             capability: 'LIMITED_BUT_VALID',
             activeHref: '/property-to-rent',

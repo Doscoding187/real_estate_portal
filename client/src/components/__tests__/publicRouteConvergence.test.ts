@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { getPublicHeroJourney } from '@/lib/publicNavigation';
 
 function readRepoFile(relativePath: string) {
   return readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
@@ -16,12 +17,7 @@ describe('public route convergence', () => {
   });
 
   it('routes development searches directly to the canonical root with query preservation', () => {
-    const hero = readRepoFile('client/src/components/EnhancedHero.tsx');
-
-    expect(hero).toContain(
-      "setLocation(queryString ? `/new-developments?${queryString}` : '/new-developments')",
-    );
-    expect(hero).not.toContain('setLocation(`/developments?${params.toString()}`)');
+    expect(getPublicHeroJourney('developments').destination).toBe('/new-developments');
   });
 
   it('keeps legacy development links compatible without discarding their query string', () => {
@@ -31,10 +27,7 @@ describe('public route convergence', () => {
   });
 
   it('uses the supported plot search value for the Plots and Land journey', () => {
-    const hero = readRepoFile('client/src/components/EnhancedHero.tsx');
-
-    expect(hero).toContain("propertyType: 'plot'");
-    expect(hero).not.toContain("propertyType: 'land'");
+    expect(getPublicHeroJourney('plot_land').destination).toBe('/property-for-sale');
   });
 
   it('uses the canonical developments root on corrected public discovery surfaces', () => {
