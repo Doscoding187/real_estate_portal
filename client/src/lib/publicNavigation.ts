@@ -1,4 +1,9 @@
 import { normalizeRole } from '@/_core/roles';
+import {
+  SERVICE_CATEGORIES,
+  toServiceCategorySlug,
+  type ServiceCategory,
+} from '@/features/services/catalog';
 
 export type PublicNavigationCapabilityStatus =
   | 'LAUNCH_READY'
@@ -25,6 +30,7 @@ export type PublicNavigationUser =
 export type PublicNavigationDestination = {
   id: string;
   label: string;
+  footerLabel?: string;
   href: string;
   owner: string;
   capability: PublicNavigationCapabilityStatus;
@@ -40,13 +46,23 @@ export type PublicNavigationGroup = {
 };
 
 export type PublicNavigationMenu = {
-  id: 'buyers' | 'renters' | 'sellers' | 'professionals' | 'insights' | 'explore' | 'services';
+  id:
+    | 'buyers'
+    | 'renters'
+    | 'sellers'
+    | 'professionals'
+    | 'insights'
+    | 'explore'
+    | 'services'
+    | 'advertise';
   label: string;
   feature: PublicNavigationDestination;
   groups: PublicNavigationGroup[];
+  navbarPresentation?: 'mega-menu' | 'direct-link';
+  actionItemIds?: string[];
 };
 
-export type PublicNavigationActiveOwner = 'city' | PublicNavigationMenu['id'];
+export type PublicNavigationActiveOwner = 'city' | 'referrals' | PublicNavigationMenu['id'];
 
 const destination = (
   item: Omit<PublicNavigationDestination, 'desktopVisible' | 'mobileVisible'> & {
@@ -57,6 +73,56 @@ const destination = (
   desktopVisible: true,
   mobileVisible: true,
   ...item,
+});
+
+/**
+ * Services category navigation is derived from the marketplace catalog so that
+ * desktop and mobile public navigation cannot drift from the routes consumed
+ * by the Services engine.
+ */
+export const SERVICE_CATEGORY_DESTINATIONS = SERVICE_CATEGORIES.map(category =>
+  destination({
+    id: `services-${category.value}`,
+    label: category.label,
+    href: `/services/${toServiceCategorySlug(category.value)}`,
+    owner: 'services-engine',
+    capability: 'LAUNCH_READY',
+    activeHref: '/services',
+  }),
+);
+
+const serviceCategoryDestinationByValue = SERVICE_CATEGORY_DESTINATIONS.reduce(
+  (destinations, item) => {
+    const category = item.id.replace('services-', '') as ServiceCategory;
+    destinations[category] = item;
+    return destinations;
+  },
+  {} as Record<ServiceCategory, PublicNavigationDestination>,
+);
+
+function serviceCategoryDestinations(...categories: ServiceCategory[]) {
+  return categories.map(category => serviceCategoryDestinationByValue[category]);
+}
+
+const ADVERTISE_HUB_HREF = '/advertise';
+
+const advertiseHubDestination = destination({
+  id: 'advertise-home',
+  label: 'Explore all opportunities',
+  footerLabel: 'Explore all advertising and partnership opportunities',
+  href: ADVERTISE_HUB_HREF,
+  owner: 'advertising-engine',
+  capability: 'LAUNCH_READY',
+  activeHref: ADVERTISE_HUB_HREF,
+});
+
+const advertiseActionDestination = destination({
+  id: 'advertise-partner',
+  label: 'Advertise & Partner',
+  href: ADVERTISE_HUB_HREF,
+  owner: 'advertising-engine',
+  capability: 'LAUNCH_READY',
+  activeHref: ADVERTISE_HUB_HREF,
 });
 
 export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
@@ -71,9 +137,31 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
       capability: 'LAUNCH_READY',
       activeHref: '/property-for-sale',
     }),
+    actionItemIds: ['buyers-developments'],
     groups: [
       {
-        label: 'Residential',
+        label: 'Know your buying power',
+        items: [
+          destination({
+            id: 'buyers-affordability',
+            label: 'Check my buying power',
+            href: '/tools/affordability-calculator',
+            owner: 'content-engine',
+            capability: 'LIMITED_BUT_VALID',
+            activeHref: '/tools',
+          }),
+          destination({
+            id: 'buyers-guidance',
+            label: 'Read the buying guide',
+            href: '/guides/buying-property',
+            owner: 'content-engine',
+            capability: 'LIMITED_BUT_VALID',
+            activeHref: '/guides',
+          }),
+        ],
+      },
+      {
+        label: 'Find a property',
         items: [
           destination({
             id: 'buyers-houses',
@@ -85,7 +173,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           }),
           destination({
             id: 'buyers-apartments',
-            label: 'Apartments / flats',
+            label: 'Apartments and flats',
             href: '/property-for-sale?propertyType=apartment',
             owner: 'property-search',
             capability: 'LAUNCH_READY',
@@ -107,19 +195,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             capability: 'LAUNCH_READY',
             activeHref: '/new-developments',
           }),
-        ],
-      },
-      {
-        label: 'Commercial and land',
-        items: [
-          destination({
-            id: 'buyers-commercial',
-            label: 'Commercial property',
-            href: '/property-for-sale?propertyType=commercial',
-            owner: 'property-search',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/property-for-sale',
-          }),
           destination({
             id: 'buyers-plots',
             label: 'Plots and land',
@@ -128,11 +203,36 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             capability: 'LIMITED_BUT_VALID',
             activeHref: '/property-for-sale',
           }),
+          destination({
+            id: 'buyers-commercial',
+            label: 'Commercial property',
+            href: '/property-for-sale?propertyType=commercial',
+            owner: 'property-search',
+            capability: 'LIMITED_BUT_VALID',
+            activeHref: '/property-for-sale',
+          }),
         ],
       },
       {
-        label: 'Professionals',
+        label: 'Shortlist and connect',
         items: [
+          destination({
+            id: 'buyers-saved',
+            label: 'Saved properties',
+            href: '/favorites',
+            owner: 'property-search',
+            capability: 'AUTH_GATED',
+            authRequired: true,
+            activeHref: '/favorites',
+          }),
+          destination({
+            id: 'buyers-compare',
+            label: 'Compare properties',
+            href: '/compare',
+            owner: 'property-search',
+            capability: 'LAUNCH_READY',
+            activeHref: '/compare',
+          }),
           destination({
             id: 'buyers-agents',
             label: 'Find an estate agent',
@@ -140,14 +240,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'agent-directory',
             capability: 'LAUNCH_READY',
             activeHref: '/agents',
-          }),
-          destination({
-            id: 'buyers-guidance',
-            label: 'Buying guidance',
-            href: '/guides/buying-property',
-            owner: 'content-engine',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/guides',
           }),
         ],
       },
@@ -158,15 +250,37 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
     label: 'For Renters',
     feature: destination({
       id: 'renters-all',
-      label: 'Browse rental properties',
+      label: 'Browse all rentals',
       href: '/property-to-rent',
       owner: 'rental-search',
       capability: 'LAUNCH_READY',
       activeHref: '/property-to-rent',
     }),
+    actionItemIds: ['renters-shared-living'],
     groups: [
       {
-        label: 'Residential',
+        label: 'Know your rental options',
+        items: [
+          destination({
+            id: 'renters-budget-search',
+            label: 'Find rentals in my budget',
+            href: '/property-to-rent',
+            owner: 'rental-search',
+            capability: 'LAUNCH_READY',
+            activeHref: '/property-to-rent',
+          }),
+          destination({
+            id: 'renters-guidance',
+            label: 'Read the renting guide',
+            href: '/guides/renting-property',
+            owner: 'content-engine',
+            capability: 'LIMITED_BUT_VALID',
+            activeHref: '/guides',
+          }),
+        ],
+      },
+      {
+        label: 'Find a rental',
         items: [
           destination({
             id: 'renters-apartments',
@@ -185,21 +299,25 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             activeHref: '/property-to-rent',
           }),
           destination({
+            id: 'renters-townhouses',
+            label: 'Townhouses',
+            href: '/property-to-rent?propertyType=townhouse',
+            owner: 'rental-search',
+            capability: 'LAUNCH_READY',
+            activeHref: '/property-to-rent',
+          }),
+          destination({
             id: 'renters-shared-living',
-            label: 'Shared living',
+            label: 'Rooms and shared living',
+            footerLabel: 'Explore shared living',
             href: '/property-to-rent?propertyType=shared_living',
             owner: 'rental-search',
             capability: 'LIMITED_BUT_VALID',
             activeHref: '/property-to-rent',
           }),
-        ],
-      },
-      {
-        label: 'Broader search',
-        items: [
           destination({
             id: 'renters-commercial',
-            label: 'Commercial rentals',
+            label: 'Commercial property to rent',
             href: '/property-to-rent?propertyType=commercial',
             owner: 'rental-search',
             capability: 'LIMITED_BUT_VALID',
@@ -208,15 +326,32 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
         ],
       },
       {
-        label: 'Rental guidance',
+        label: 'Manage and connect',
         items: [
           destination({
-            id: 'renters-guidance',
-            label: 'Rental guidance',
-            href: '/guides/renting-property',
-            owner: 'content-engine',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/guides',
+            id: 'renters-saved',
+            label: 'Saved rentals',
+            href: '/favorites',
+            owner: 'property-search',
+            capability: 'AUTH_GATED',
+            authRequired: true,
+            activeHref: '/favorites',
+          }),
+          destination({
+            id: 'renters-compare',
+            label: 'Compare rentals',
+            href: '/compare',
+            owner: 'property-search',
+            capability: 'LAUNCH_READY',
+            activeHref: '/compare',
+          }),
+          destination({
+            id: 'renters-agents',
+            label: 'Find a letting agent',
+            href: '/agents',
+            owner: 'agent-directory',
+            capability: 'LAUNCH_READY',
+            activeHref: '/agents',
           }),
         ],
       },
@@ -446,10 +581,11 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
   {
     id: 'explore',
     label: 'Explore',
+    navbarPresentation: 'direct-link',
     feature: destination({
       id: 'explore-home',
-      label: 'Explore Property Listify',
-      href: '/explore/home',
+      label: 'Explore',
+      href: '/explore',
       owner: 'explore-engine',
       capability: 'LAUNCH_READY',
       activeHref: '/explore',
@@ -484,20 +620,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           }),
         ],
       },
-      {
-        label: 'Create',
-        items: [
-          destination({
-            id: 'explore-upload',
-            label: 'Upload content',
-            href: '/explore/upload',
-            owner: 'explore-engine',
-            capability: 'AUTH_GATED',
-            authRequired: true,
-            activeHref: '/explore',
-          }),
-        ],
-      },
     ],
   },
   {
@@ -505,7 +627,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
     label: 'Services',
     feature: destination({
       id: 'services-home',
-      label: 'Browse property services',
+      label: 'Browse all property services',
       href: '/services',
       owner: 'services-engine',
       capability: 'LAUNCH_READY',
@@ -513,52 +635,79 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
     }),
     groups: [
       {
-        label: 'Property finance',
+        label: 'Home and move',
+        items: serviceCategoryDestinations(
+          'home_improvement',
+          'moving',
+          'inspection_compliance',
+        ),
+      },
+      {
+        label: 'Transaction and property support',
+        items: serviceCategoryDestinations('finance_legal', 'insurance', 'media_marketing'),
+      },
+    ],
+  },
+  {
+    id: 'advertise',
+    label: 'Advertise & Partner',
+    feature: advertiseHubDestination,
+    groups: [
+      {
+        label: 'Grow property supply',
         items: [
           destination({
-            id: 'services-home-loans',
-            label: 'Home loan guidance',
-            href: '/services/home-loans',
-            owner: 'services-engine',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/services',
+            id: 'advertise-agents',
+            label: 'Agents',
+            href: '/advertise/sell/agents',
+            owner: 'advertising-engine',
+            capability: 'LAUNCH_READY',
+            activeHref: ADVERTISE_HUB_HREF,
           }),
           destination({
-            id: 'services-valuation',
-            label: 'Property valuation guidance',
-            href: '/services/property-valuation',
-            owner: 'services-engine',
+            id: 'advertise-agencies',
+            label: 'Agencies',
+            href: '/advertise/sell/agencies',
+            owner: 'advertising-engine',
             capability: 'LIMITED_BUT_VALID',
-            activeHref: '/services',
+            activeHref: ADVERTISE_HUB_HREF,
           }),
           destination({
-            id: 'services-insurance',
-            label: 'Home insurance guidance',
-            href: '/services/home-insurance',
-            owner: 'services-engine',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/services',
+            id: 'advertise-developers',
+            label: 'Property developers',
+            href: '/advertise/sell/developers',
+            owner: 'advertising-engine',
+            capability: 'LAUNCH_READY',
+            activeHref: ADVERTISE_HUB_HREF,
           }),
         ],
       },
       {
-        label: 'Professional support',
+        label: 'Finance and services partnerships',
         items: [
           destination({
-            id: 'services-legal',
-            label: 'Legal services guidance',
-            href: '/services/legal-services',
-            owner: 'services-engine',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/services',
+            id: 'advertise-banks',
+            label: 'Banks',
+            href: '/advertise/finance/banks',
+            owner: 'advertising-engine',
+            capability: 'LAUNCH_READY',
+            activeHref: ADVERTISE_HUB_HREF,
           }),
           destination({
-            id: 'services-interior',
-            label: 'Interior design guidance',
-            href: '/services/interior-design',
-            owner: 'services-engine',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/services',
+            id: 'advertise-originators',
+            label: 'Bond originators',
+            href: '/advertise/finance/originators',
+            owner: 'advertising-engine',
+            capability: 'LAUNCH_READY',
+            activeHref: ADVERTISE_HUB_HREF,
+          }),
+          destination({
+            id: 'advertise-services',
+            label: 'Service businesses',
+            href: '/advertise/services',
+            owner: 'advertising-engine',
+            capability: 'LAUNCH_READY',
+            activeHref: ADVERTISE_HUB_HREF,
           }),
         ],
       },
@@ -584,40 +733,36 @@ export const PUBLIC_NAVIGATION_ACTIONS = {
     capability: 'LAUNCH_READY',
     activeHref: '/distribution-network',
   }),
-  advertise: destination({
-    id: 'advertise-partner',
-    label: 'Advertise & Partner',
-    href: '/advertise',
-    owner: 'advertising-engine',
-    capability: 'LAUNCH_READY',
-    activeHref: '/advertise',
-  }),
+  advertise: advertiseActionDestination,
 } as const;
 
 /**
  * Top-level ownership is deliberately independent from child-link membership.
- * The order resolves the two intentional overlaps: location pages belong to
- * City, and professional acquisition routes belong to Professionals.
+ * The order resolves intentional overlaps: location pages belong to City,
+ * public distribution routes belong to Referrals, and professional acquisition
+ * routes belong to Professionals. Authenticated distribution routes are not
+ * included here and remain owned by their engine-local navigation.
  */
 export const PUBLIC_NAVIGATION_ACTIVE_ROUTES: Record<PublicNavigationActiveOwner, string[]> = {
   city: ['/property-for-sale/'],
+  referrals: ['/distribution-network'],
+  advertise: ['/advertise'],
   professionals: [
     '/agents',
     '/developers',
-    '/distribution-network',
-    '/advertise/sell/',
-    '/advertise/services',
   ],
   services: ['/services'],
   buyers: ['/property-for-sale', '/new-developments'],
   renters: ['/property-to-rent'],
-  sellers: ['/advertise', '/tools/property-valuation'],
+  sellers: ['/tools/property-valuation'],
   insights: ['/insights', '/guides'],
   explore: ['/explore'],
 };
 
 const PUBLIC_NAVIGATION_ACTIVE_OWNER_ORDER: PublicNavigationActiveOwner[] = [
   'city',
+  'referrals',
+  'advertise',
   'professionals',
   'services',
   'buyers',
@@ -699,6 +844,21 @@ export function getSafeNextPath(value: unknown): string | null {
   }
 }
 
+export function getAccountAuthHref(
+  mode: 'signin' | 'register',
+  nextPath: unknown,
+): string {
+  const params = new URLSearchParams({ mode });
+  const safeNextPath = getSafeNextPath(nextPath);
+
+  // Never send an auth page back to itself, and never accept an external next path.
+  if (safeNextPath && safeNextPath !== '/login' && !safeNextPath.startsWith('/login?')) {
+    params.set('next', safeNextPath);
+  }
+
+  return `/login?${params.toString()}`;
+}
+
 export function getCanonicalAccountDestination(user: PublicNavigationUser): string | null {
   if (!user) return null;
   const role = normalizeRole(user.role);
@@ -725,14 +885,21 @@ export function getAccountDisplayName(user: PublicNavigationUser) {
 }
 
 export function getAccountInitials(user: PublicNavigationUser) {
-  const name = getAccountDisplayName(user);
+  if (!user) return null;
+
+  const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
+    || user.name
+    || user.email?.split('@')[0]
+    || '';
+  if (!name) return null;
+
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map(part => part[0]?.toUpperCase())
     .join('');
-  return initials || 'PL';
+  return initials || null;
 }
 
 export function getAccountRoleLabel(user: PublicNavigationUser) {
@@ -754,6 +921,28 @@ export function getAccountRoleLabel(user: PublicNavigationUser) {
       return 'Referral partner';
     default:
       return 'Property Listify member';
+  }
+}
+
+export function getAccountWorkspaceLabel(user: PublicNavigationUser) {
+  if (!user) return 'Open member dashboard';
+  if (user.hasManagerIdentity) return 'Open distribution manager workspace';
+
+  switch (normalizeRole(user.role)) {
+    case 'super_admin':
+      return 'Open administrator workspace';
+    case 'property_developer':
+      return 'Open developer workspace';
+    case 'agency_admin':
+      return 'Open agency workspace';
+    case 'agent':
+      return 'Open agent workspace';
+    case 'service_provider':
+      return 'Open service provider workspace';
+    case 'referrer':
+      return 'Open referral partner workspace';
+    default:
+      return 'Open member dashboard';
   }
 }
 

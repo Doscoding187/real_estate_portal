@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, MapPin, RefreshCw, RotateCcw, Settings2, Sparkles, WalletCards } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ExplorePlatformBridge } from '@/components/ExplorePlatformBridge';
 import VideoCard from '@/components/explore/VideoCard';
 import { DiscoveryFeedProvider, useDiscoveryFeed } from '../providers/DiscoveryFeedProvider';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -51,6 +52,7 @@ function getDiscoveryBadgeLabel(itemType: string, raw: Record<string, any>): str
 
 interface DiscoveryVideoViewportProps {
   overlay?: ReactNode;
+  platformBridge?: ReactNode;
   emptyTitle?: string;
   emptyCopy?: string;
   background?: string;
@@ -59,6 +61,7 @@ interface DiscoveryVideoViewportProps {
 
 export function DiscoveryVideoViewport({
   overlay,
+  platformBridge,
   emptyTitle = 'No discovery items yet',
   emptyCopy = 'Adjust your discovery mode or category and try again.',
   background = 'linear-gradient(135deg, #06121f 0%, #102c47 48%, #0f766e 100%)',
@@ -131,7 +134,11 @@ export function DiscoveryVideoViewport({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center" style={{ backgroundColor: designTokens.colors.bg.dark }}>
+      <div
+        className="relative flex h-screen items-center justify-center"
+        style={{ backgroundColor: designTokens.colors.bg.dark }}
+      >
+        {platformBridge}
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin" style={{ color: designTokens.colors.text.inverse }} />
           <p className="text-sm" style={{ color: designTokens.colors.text.inverse }}>
@@ -145,9 +152,10 @@ export function DiscoveryVideoViewport({
   if (error && videos.length === 0) {
     return (
       <div
-        className="flex h-screen items-center justify-center px-6 text-center"
+        className="relative flex h-screen items-center justify-center px-6 text-center"
         style={{ backgroundColor: designTokens.colors.bg.dark }}
       >
+        {platformBridge}
         <div className="max-w-md">
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5">
             <RotateCcw className="h-7 w-7" style={{ color: designTokens.colors.text.inverse }} />
@@ -175,8 +183,12 @@ export function DiscoveryVideoViewport({
 
   if (videos.length === 0) {
     return (
-      <div className="flex h-screen items-center justify-center px-6 text-center" style={{ backgroundColor: designTokens.colors.bg.dark }}>
-        <div>
+    <div
+      className="relative flex h-screen items-center justify-center px-6 text-center"
+      style={{ backgroundColor: designTokens.colors.bg.dark }}
+    >
+      {platformBridge}
+      <div>
           <h2 className="mb-3 text-2xl font-semibold" style={{ color: designTokens.colors.text.inverse }}>
             {emptyTitle}
           </h2>
@@ -198,6 +210,7 @@ export function DiscoveryVideoViewport({
       variants={getVariants(pageVariants)}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_38%)]" />
+      {platformBridge}
       {overlay}
 
       {showMetaChips ? (
@@ -300,8 +313,13 @@ export default function DiscoveryFeedScreen() {
   return (
     <DiscoveryFeedProvider mode="feed">
       <DiscoveryVideoViewport
+        platformBridge={
+          <div className="absolute left-4 top-4 z-40">
+            <ExplorePlatformBridge variant="immersive" showExploreReturn />
+          </div>
+        }
         overlay={
-          <div className="absolute left-4 right-4 top-4 z-30 space-y-3">
+          <div className="absolute left-4 right-4 top-16 z-30 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl">
                 Discovery feed

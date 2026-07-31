@@ -246,6 +246,12 @@ export default function AgentMarketingHub() {
   }, [activeTab]);
 
   const marketingLocked = !statusLoading && !status?.entitlements?.canPublishListings;
+  const explorePublishingQuery = trpc.explore.getPublishingEligibility.useQuery(undefined, {
+    enabled: Boolean(user) && !marketingLocked,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const canPublishToExplore = explorePublishingQuery.data?.allowed === true;
 
   const profileQuery = trpc.agent.getMyProfileOnboarding.useQuery(undefined, {
     enabled: Boolean(user) && !marketingLocked,
@@ -415,13 +421,15 @@ export default function AgentMarketingHub() {
                 >
                   Manage listings
                 </Button>
-                <Button
-                  onClick={() => setLocation('/explore/upload')}
-                  className={agentPageStyles.primaryButton}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload to Explore
-                </Button>
+                {canPublishToExplore ? (
+                  <Button
+                    onClick={() => setLocation('/explore/upload')}
+                    className={agentPageStyles.primaryButton}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload to Explore
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -511,13 +519,15 @@ export default function AgentMarketingHub() {
                           These numbers come from your live Explore analytics, not sample content.
                         </p>
                       </div>
-                      <Button
-                        onClick={() => setLocation('/explore/upload')}
-                        className={agentPageStyles.primaryButton}
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload new video
-                      </Button>
+                      {canPublishToExplore ? (
+                        <Button
+                          onClick={() => setLocation('/explore/upload')}
+                          className={agentPageStyles.primaryButton}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload new video
+                        </Button>
+                      ) : null}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-5">
@@ -617,9 +627,15 @@ export default function AgentMarketingHub() {
                     ) : (
                       <EmptyState
                         title="No Explore analytics yet"
-                        description="Upload your first Explore video to start seeing real views, completion rate, and engagement data here."
-                        actionLabel="Upload to Explore"
-                        onAction={() => setLocation('/explore/upload')}
+                        description={
+                          canPublishToExplore
+                            ? 'Upload your first Explore video to start seeing real views, completion rate, and engagement data here.'
+                            : 'Explore analytics will appear once approved publisher content is available.'
+                        }
+                        actionLabel={canPublishToExplore ? 'Upload to Explore' : undefined}
+                        onAction={
+                          canPublishToExplore ? () => setLocation('/explore/upload') : undefined
+                        }
                       />
                     )}
                   </CardContent>

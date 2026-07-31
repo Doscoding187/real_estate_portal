@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { getMainPlatformAccountHref } from '@/components/EnhancedNavbar';
-import { getCanonicalAccountDestination } from '@/lib/publicNavigation';
+import {
+  getAccountAuthHref,
+  getAccountWorkspaceLabel,
+  getCanonicalAccountDestination,
+} from '@/lib/publicNavigation';
 
 describe('Main Platform Navigation account routing', () => {
   it('routes manager identities before every role destination', () => {
@@ -30,5 +34,27 @@ describe('Main Platform Navigation account routing', () => {
     expect(getCanonicalAccountDestination({ role: 'visitor' })).toBe('/user/dashboard');
     expect(getCanonicalAccountDestination(null)).toBeNull();
     expect(getMainPlatformAccountHref(null)).toBe('/login?mode=signin');
+  });
+
+  it.each([
+    ['super_admin', 'Open administrator workspace'],
+    ['property_developer', 'Open developer workspace'],
+    ['agency_admin', 'Open agency workspace'],
+    ['agent', 'Open agent workspace'],
+    ['service_provider', 'Open service provider workspace'],
+    ['referrer', 'Open referral partner workspace'],
+    ['visitor', 'Open member dashboard'],
+  ])('uses governed workspace wording for %s', (role, label) => {
+    expect(getAccountWorkspaceLabel({ role })).toBe(label);
+  });
+
+  it('preserves only safe same-origin return paths for auth links', () => {
+    expect(getAccountAuthHref('signin', '/property-for-sale?city=Cape%20Town')).toBe(
+      '/login?mode=signin&next=%2Fproperty-for-sale%3Fcity%3DCape%2520Town',
+    );
+    expect(getAccountAuthHref('register', 'https://example.com/phishing')).toBe(
+      '/login?mode=register',
+    );
+    expect(getAccountAuthHref('signin', '/login?mode=signin')).toBe('/login?mode=signin');
   });
 });

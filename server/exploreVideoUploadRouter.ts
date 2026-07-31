@@ -5,6 +5,7 @@
  */
 
 import { router, protectedProcedure } from './_core/trpc';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import {
   generateVideoUploadUrls,
@@ -14,11 +15,33 @@ import {
   updateVideoAnalytics,
 } from './services/exploreVideoService';
 import { requireUser } from './_core/requireUser';
+import { getDb } from './db';
+import {
+  assertExploreReferenceOwnership,
+  ExplorePublishingAuthorizationError,
+  getExplorePublishingAccessMessage,
+  getExplorePublishingEligibility,
+} from './services/explorePublishingEligibilityService';
 import {
   processUploadedVideo,
   updateTranscodedUrls,
   type TranscodedVideo,
 } from './services/videoProcessingService';
+
+async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
+  const db = await getDb();
+  if (!db) {
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  }
+  const eligibility = await getExplorePublishingEligibility(db, requireUser(ctx));
+  if (!eligibility.allowed) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: getExplorePublishingAccessMessage(eligibility),
+    });
+  }
+  return { db, eligibility };
+}
 
 export const exploreVideoUploadRouter = router({
   /**
@@ -35,8 +58,12 @@ export const exploreVideoUploadRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const creatorId = requireUser(ctx).id;
-      const result = await generateVideoUploadUrls(creatorId, input.filename, input.contentType);
+      const { eligibility: publisher } = await requireExplorePublisher(ctx);
+      const result = await generateVideoUploadUrls(
+        publisher.creatorId,
+        input.filename,
+        input.contentType,
+      );
 
       return {
         success: true,
@@ -72,7 +99,18 @@ export const exploreVideoUploadRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const creatorId = requireUser(ctx).id;
+      const { db, eligibility: publisher } = await requireExplorePublisher(ctx);
+      try {
+        await assertExploreReferenceOwnership(db, publisher, {
+          propertyId: input.metadata.propertyId,
+          developmentId: input.metadata.developmentId,
+        });
+      } catch (error) {
+        if (error instanceof ExplorePublishingAuthorizationError) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: error.message });
+        }
+        throw error;
+      }
 
       // Validate metadata
       const metadataValidation = validateVideoMetadata(input.metadata);
@@ -88,7 +126,7 @@ export const exploreVideoUploadRouter = router({
 
       // Create video record
       const result = await createExploreVideo(
-        creatorId,
+        publisher,
         input.videoUrl,
         input.thumbnailUrl,
         input.metadata,
@@ -105,8 +143,7 @@ export const exploreVideoUploadRouter = router({
       return {
         success: true,
         data: result,
-        message:
-          'Video uploaded successfully and is being processed. It will be available in Explore feed within 5 minutes.',
+        message: 'Video saved as inactive editorial content.',
       };
     }),
 
@@ -253,4 +290,3 @@ export const exploreVideoUploadRouter = router({
       };
     }),
 });
-

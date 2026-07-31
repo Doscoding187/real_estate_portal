@@ -12,6 +12,7 @@ import { SlidersHorizontal, MapPin } from 'lucide-react';
 import { MapHybridView } from '@/components/explore-discovery/MapHybridView';
 import { LifestyleCategorySelector } from '@/components/explore-discovery/LifestyleCategorySelector';
 import { ResponsiveFilterPanel } from '@/components/explore-discovery/ResponsiveFilterPanel';
+import { ExplorePlatformBridge } from '@/components/ExplorePlatformBridge';
 import { useExploreCommonState } from '@/hooks/useExploreCommonState';
 
 export default function ExploreMap() {
@@ -40,6 +41,7 @@ export default function ExploreMap() {
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <div className="flex items-center gap-3">
+          <ExplorePlatformBridge showExploreReturn />
           <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-full">
             <MapPin className="w-4 h-4 text-indigo-600" />
             <span className="text-sm font-medium text-indigo-900">Map View</span>

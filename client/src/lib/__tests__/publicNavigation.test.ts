@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getAccountAuthHref,
   getCanonicalAccountDestination,
   getLoginRedirectPath,
   getPublicNavigationActiveOwner,
@@ -64,6 +65,96 @@ describe('public navigation authority', () => {
     expect(allDestinations.map(item => item.href)).not.toContain('/saved-search/manage');
   });
 
+  it('keeps renter discovery limited to the filters and journeys the search supports', () => {
+    const renters = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'renters');
+    expect(renters).toBeDefined();
+
+    const visibleItems = getVisiblePublicNavigationGroups(renters!, 'desktop').flatMap(
+      group => group.items,
+    );
+    expect(visibleItems.map(item => item.href)).toEqual(
+      expect.arrayContaining([
+        '/property-to-rent?propertyType=apartment',
+        '/property-to-rent?propertyType=house',
+        '/property-to-rent?propertyType=townhouse',
+        '/property-to-rent?propertyType=shared_living',
+        '/property-to-rent?propertyType=commercial',
+        '/favorites',
+        '/compare',
+        '/agents',
+      ]),
+    );
+    expect(visibleItems.some(item => item.href.includes('propertyType=student'))).toBe(false);
+    expect(visibleItems.some(item => item.href.includes('short-term'))).toBe(false);
+    expect(visibleItems.some(item => /alert|enquir/i.test(item.label))).toBe(false);
+  });
+
+  it('keeps Explore as one canonical public entry rather than a public menu of modes or publishing actions', () => {
+    const explore = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'explore');
+    expect(explore).toBeDefined();
+    expect(explore?.navbarPresentation).toBe('direct-link');
+    expect(explore?.feature).toMatchObject({
+      label: 'Explore',
+      href: '/explore',
+      activeHref: '/explore',
+    });
+    expect(explore?.groups.flatMap(group => group.items).some(item => item.href === '/explore/upload')).toBe(
+      false,
+    );
+  });
+
+  it('derives Services navigation from the six canonical marketplace categories', () => {
+    const services = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'services');
+    expect(services).toBeDefined();
+    expect(services?.feature.href).toBe('/services');
+
+    const items = services?.groups.flatMap(group => group.items) ?? [];
+    expect(items.map(item => item.label)).toEqual([
+      'Home Improvement',
+      'Moving Services',
+      'Inspection & Compliance',
+      'Finance & Legal',
+      'Insurance',
+      'Media & Marketing',
+    ]);
+    expect(items.map(item => item.href)).toEqual([
+      '/services/home-improvement',
+      '/services/moving',
+      '/services/inspection-compliance',
+      '/services/finance-legal',
+      '/services/insurance',
+      '/services/media-marketing',
+    ]);
+    expect(items.every(item => item.owner === 'services-engine')).toBe(true);
+  });
+
+  it('keeps Advertise & Partner limited to the governed commercial audiences', () => {
+    const advertise = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'advertise');
+    expect(advertise).toBeDefined();
+    expect(advertise?.feature.href).toBe('/advertise');
+
+    const items = advertise?.groups.flatMap(group => group.items) ?? [];
+    expect(items.map(item => item.label)).toEqual([
+      'Agents',
+      'Agencies',
+      'Property developers',
+      'Banks',
+      'Bond originators',
+      'Service businesses',
+    ]);
+    expect(items.map(item => item.href)).toEqual([
+      '/advertise/sell/agents',
+      '/advertise/sell/agencies',
+      '/advertise/sell/developers',
+      '/advertise/finance/banks',
+      '/advertise/finance/originators',
+      '/advertise/services',
+    ]);
+    expect(items.some(item => /distribution|referral|dashboard|commission/i.test(item.href))).toBe(
+      false,
+    );
+  });
+
   it.each([
     [{ role: 'agent', hasManagerIdentity: true }, '/distribution/manager'],
     [{ role: 'admin' }, '/admin/overview'],
@@ -102,6 +193,21 @@ describe('public navigation authority', () => {
     );
   });
 
+  it('builds the canonical sign-in href for Explore upload with an encoded internal next path', () => {
+    expect(getAccountAuthHref('signin', '/explore/upload')).toBe(
+      '/login?mode=signin&next=%2Fexplore%2Fupload',
+    );
+  });
+
+  it.each([
+    'https://example.com/explore/upload',
+    '//example.com/explore/upload',
+    '/\\\\example.com/explore/upload',
+    '/login?next=/explore/upload',
+  ])('does not forward unsafe or looping auth next path %s', nextPath => {
+    expect(getAccountAuthHref('signin', nextPath)).toBe('/login?mode=signin');
+  });
+
   it('fails closed to the visitor dashboard when the login response has no user', () => {
     expect(getLoginRedirectPath(null, null)).toBe('/user/dashboard');
   });
@@ -123,8 +229,17 @@ describe('public navigation authority', () => {
     ['/insights/market-trends', 'insights'],
     ['/guides/buying-property', 'insights'],
     ['/explore/feed', 'explore'],
-    ['/advertise', 'sellers'],
-    ['/distribution-network', 'professionals'],
+    ['/advertise', 'advertise'],
+    ['/advertise/sell/agents', 'advertise'],
+    ['/advertise/sell/agencies', 'advertise'],
+    ['/advertise/finance/banks', 'advertise'],
+    ['/advertise/finance/originators', 'advertise'],
+    ['/advertise/services', 'advertise'],
+    ['/distribution-network', 'referrals'],
+    ['/distribution-network/apply', 'referrals'],
+    ['/distribution-network/login', 'referrals'],
+    ['/distribution/partner/overview', null],
+    ['/distribution/partner/submit', null],
   ])('assigns %s to one explicit top-level owner: %s', (pathname, owner) => {
     expect(getPublicNavigationActiveOwner(pathname)).toBe(owner);
   });

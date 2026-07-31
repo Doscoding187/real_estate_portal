@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { ExplorePlatformBridge } from '@/components/ExplorePlatformBridge';
 import { designTokens } from '@/lib/design-tokens';
+import { trpc } from '@/lib/trpc';
 import { buttonVariants } from '@/lib/animations/exploreAnimations';
 import { DiscoveryFeedProvider } from '../providers/DiscoveryFeedProvider';
 import { useDiscoveryStore } from '../store/useDiscoveryStore';
@@ -21,6 +23,12 @@ const SHORTS_CHANNELS = [
 export default function DiscoveryShortsScreen() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const publishingEligibility = trpc.explore.getPublishingEligibility.useQuery(undefined, {
+    enabled: isAuthenticated,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const canPublish = publishingEligibility.data?.allowed === true;
   const query = useDiscoveryStore(state => state.query);
   const setQuery = useDiscoveryStore(state => state.setQuery);
 
@@ -54,27 +62,13 @@ export default function DiscoveryShortsScreen() {
               }}
             >
               <div className="flex items-center justify-between p-4 pointer-events-auto">
-                <motion.button
-                  onClick={() => setLocation('/explore/home')}
-                  variants={buttonVariants}
-                  whileHover="hover"
-                  whileTap="tap"
-                  className="p-3 rounded-full text-white shadow-xl"
-                  style={{
-                    background: designTokens.colors.glass.bgDark,
-                    backdropFilter: designTokens.colors.glass.backdrop,
-                    border: `1px solid ${designTokens.colors.glass.borderDark}`,
-                  }}
-                  aria-label="Back to explore"
-                >
-                  <ArrowLeft className="w-6 h-6" />
-                </motion.button>
+                <ExplorePlatformBridge variant="immersive" showExploreReturn />
 
                 <div className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-medium text-white backdrop-blur-xl">
                   Discovery shorts
                 </div>
 
-                {isAuthenticated ? (
+                {canPublish ? (
                   <motion.button
                     onClick={() => setLocation('/explore/upload')}
                     variants={buttonVariants}
