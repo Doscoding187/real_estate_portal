@@ -25,7 +25,15 @@ describe('FPE-S1A foundation authority', () => {
   });
 
   it('keeps the four PLDS pilots on component-scoped values without changing responsive ownership', () => {
-    expect(readRepoFile('client/src/components/EnhancedNavbar.tsx')).toContain('--plds-nav-height');
+    const navbar = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+    const navbarStyles = readRepoFile('client/src/styles/enhanced-navbar.css');
+
+    expect(navbar).toContain("import '@/styles/enhanced-navbar.css'");
+    expect(navbarStyles).toMatch(
+      /\.public-navbar__shell\s*\{[\s\S]*?min-height:\s*var\(--plds-nav-height\)/,
+    );
+    expect(navbarStyles).toMatch(/@media\s*\(min-width:\s*1280px\)/);
+    expect(navbarStyles).toMatch(/@media\s*\(max-width:\s*1279px\)/);
     expect(readRepoFile('client/src/components/EnhancedHero.tsx')).toContain(
       '--plds-home-hero-search-max-width',
     );
