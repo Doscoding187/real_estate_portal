@@ -7,10 +7,16 @@ import {
   getPublicNavigationActiveOwner,
   getSafeNextPath,
   getVisiblePublicNavigationGroups,
+  PUBLIC_CITY_ENTRY,
   PUBLIC_NAVIGATION_MENUS,
 } from '@/lib/publicNavigation';
 
 describe('public navigation authority', () => {
+  it('labels the location discovery entry Locations across public surfaces', () => {
+    expect(PUBLIC_CITY_ENTRY.label).toBe('Locations');
+    expect(PUBLIC_CITY_ENTRY.href).toBe('/property-for-sale');
+  });
+
   it('exposes only supported search query values', () => {
     const hrefs = PUBLIC_NAVIGATION_MENUS.flatMap(menu =>
       menu.groups.flatMap(group => group.items.map(item => item.href)),
@@ -244,7 +250,7 @@ describe('public navigation authority', () => {
     expect(getPublicNavigationActiveOwner(pathname)).toBe(owner);
   });
 
-  it('gives location pages to City without activating Buyers as well', () => {
-    expect(getPublicNavigationActiveOwner('/property-for-sale/gauteng/johannesburg')).toBe('city');
+  it('gives location pages to Locations without activating Buyers as well', () => {
+    expect(getPublicNavigationActiveOwner('/property-for-sale/gauteng/johannesburg')).toBe('locations');
   });
 });

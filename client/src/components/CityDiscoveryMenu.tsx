@@ -3,7 +3,7 @@ import { ChevronRight, MapPin } from 'lucide-react';
 import { Link } from 'wouter';
 
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
-import { FALLBACK_CITY_LINKS, popularCitiesToNavLinks, type NavLocationLink } from '@/lib/locationDataAdapter';
+import { resolveLocationMenuCities, type NavLocationLink } from '@/lib/locationDataAdapter';
 import { trpc } from '@/lib/trpc';
 import { PUBLIC_CITY_ENTRY } from '@/lib/publicNavigation';
 
@@ -19,7 +19,6 @@ type CityDiscoveryMenuProps = {
   onNavigate: (href: string) => void;
 };
 
-const FALLBACK_CITIES = FALLBACK_CITY_LINKS.filter(link => link.type === 'city').slice(0, 6);
 const COUNT_FORMATTER = new Intl.NumberFormat('en-ZA');
 
 function formatListingCount(count: unknown): string | null {
@@ -85,13 +84,20 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
       refetchOnWindowFocus: false,
     },
   );
-  const cities = useMemo(() => {
-    const dynamicCities = popularCitiesToNavLinks(popularCitiesQuery.data, { limit: 6 });
-    return popularCitiesQuery.isError ? FALLBACK_CITIES : dynamicCities;
-  }, [popularCitiesQuery.data, popularCitiesQuery.isError]);
+  const cityResolution = useMemo(
+    () =>
+      resolveLocationMenuCities({
+        popularCities: popularCitiesQuery.data,
+        limit: 6,
+      }),
+    [popularCitiesQuery.data],
+  );
+  const { cities } = cityResolution;
   const [activeCityHref, setActiveCityHref] = useState<string | null>(null);
   const [activeSuburbSlug, setActiveSuburbSlug] = useState<string | null>(null);
-  const activeCity = cities.find(city => city.href === activeCityHref) ?? cities[0];
+  const activeCity = popularCitiesQuery.isLoading
+    ? undefined
+    : cities.find(city => city.href === activeCityHref) ?? cities[0];
 
   useEffect(() => {
     if (activeCity && activeCity.href !== activeCityHref) {
@@ -118,6 +124,8 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
   const cityName = city?.name ?? activeCity?.label ?? 'Choose a location';
   const cityHref = activeCity?.href ?? PUBLIC_CITY_ENTRY.href;
   const cityCount = cityData?.stats?.totalListings;
+  const cityColumnLabel = cityResolution.heading;
+  const areaColumnLabel = activeCity ? `Areas in ${cityName}` : 'Areas and suburbs';
 
   const activateCity = (cityLink: NavLocationLink) => {
     if (cityLink.href === activeCityHref) return;
@@ -133,8 +141,8 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
   return (
     <div className="public-navbar__city-panel">
       <div className="public-navbar__city-grid">
-        <section aria-label="Popular cities" className="public-navbar__city-column">
-          <h2 className="public-navbar__section-heading">Popular cities</h2>
+        <section aria-label={cityColumnLabel} className="public-navbar__city-column">
+          <h2 className="public-navbar__section-heading">{cityColumnLabel}</h2>
           <div className="public-navbar__menu-section-list" aria-live="polite">
             {popularCitiesQuery.isLoading ? (
               Array.from({ length: 6 }, (_, index) => (
@@ -151,23 +159,23 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
                 />
               ))
             ) : (
-              <p className="public-navbar__city-empty">No popular cities are available yet.</p>
+              <>
+                <p className="public-navbar__city-empty">No featured cities are available yet.</p>
+                <p className="public-navbar__city-status">Search for your city, suburb or area.</p>
+              </>
             )}
           </div>
-          {popularCitiesQuery.isError ? (
-            <p className="public-navbar__city-status">Showing browseable cities while inventory refreshes.</p>
-          ) : null}
         </section>
 
-        <section aria-label={`Areas in ${cityName}`} className="public-navbar__city-column">
-          <h2 className="public-navbar__section-heading">Areas in {cityName}</h2>
+        <section aria-label={areaColumnLabel} className="public-navbar__city-column">
+          <h2 className="public-navbar__section-heading">{areaColumnLabel}</h2>
           <div className="public-navbar__menu-section-list" aria-live="polite">
-            {cityDataQuery.isLoading ? (
+            {!activeCity ? (
+              <p className="public-navbar__city-empty">Choose a city to see its suburbs and areas.</p>
+            ) : cityDataQuery.isLoading ? (
               Array.from({ length: 5 }, (_, index) => (
                 <div key={index} className="public-navbar__city-skeleton" aria-hidden="true" />
               ))
-            ) : cityDataQuery.isError ? (
-              <p className="public-navbar__city-empty">Unable to load popular areas right now.</p>
             ) : suburbs.length > 0 ? (
               suburbs.slice(0, 6).map(suburb => {
                 const href = suburbHref(suburb);
@@ -187,8 +195,10 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
                   </Link>
                 );
               })
+            ) : cityDataQuery.isError ? (
+              <p className="public-navbar__city-empty">Unable to load areas right now.</p>
             ) : (
-              <p className="public-navbar__city-empty">No active areas available yet.</p>
+              <p className="public-navbar__city-empty">No active areas are available for this city yet.</p>
             )}
           </div>
         </section>

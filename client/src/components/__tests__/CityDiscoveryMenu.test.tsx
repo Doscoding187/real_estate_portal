@@ -108,23 +108,26 @@ describe('CityDiscoveryMenu', () => {
     );
   });
 
-  it('keeps stable loading placeholders and honest failure fallbacks', () => {
+  it('keeps all three columns visible while location data loads or fails', () => {
     popularCitiesQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     cityDataQuery.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     const { rerender } = renderMenu();
-    expect(screen.getAllByRole('heading', { name: /Popular cities|Areas in/ })).toHaveLength(2);
-    expect(document.querySelectorAll('.public-navbar__city-skeleton')).toHaveLength(11);
+    expect(screen.getByRole('heading', { name: 'Find a location' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Areas and suburbs' })).toBeInTheDocument();
+    expect(document.querySelectorAll('.public-navbar__city-skeleton')).toHaveLength(6);
+    expect(screen.getByRole('textbox', { name: 'Location search' })).toBeInTheDocument();
 
     popularCitiesQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
     cityDataQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true });
     rerender(<CityDiscoveryMenu onNavigate={vi.fn()} />);
-    expect(screen.getByText('Showing browseable cities while inventory refreshes.')).toBeInTheDocument();
-    expect(screen.getAllByText('Live listing count unavailable').length).toBeGreaterThan(0);
-    expect(screen.queryByText('0 active listings')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Johannesburg' }).textContent).toBe('Johannesburg');
+    expect(screen.getByRole('heading', { name: 'Find a location' })).toBeInTheDocument();
+    expect(screen.getByText('No featured cities are available yet.')).toBeInTheDocument();
+    expect(screen.getByText('Search for your city, suburb or area.')).toBeInTheDocument();
+    expect(screen.getByText('Choose a city to see its suburbs and areas.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Johannesburg' })).not.toBeInTheDocument();
   });
 
-  it('reports an honest empty area state while keeping the city browse action usable', () => {
+  it('renders a truthful area empty state when city data has no active suburbs', () => {
     cityDataQuery.mockReturnValue({
       data: { city: cityData.johannesburg.city, stats: { totalListings: 0 }, suburbs: [] },
       isLoading: false,
@@ -132,7 +135,8 @@ describe('CityDiscoveryMenu', () => {
     });
     renderMenu();
 
-    expect(screen.getByText('No active areas available yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Sandton' })).not.toBeInTheDocument();
+    expect(screen.getByText('No active areas are available for this city yet.')).toBeInTheDocument();
     expect(screen.getByText('No active listings')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /View all properties in Johannesburg/ })).toHaveAttribute(
       'href',
@@ -140,17 +144,19 @@ describe('CityDiscoveryMenu', () => {
     );
   });
 
-  it('keeps a successful empty popular-city response honest and search available', () => {
+  it('keeps the empty state when a successful popular-city response is empty', () => {
     popularCitiesQuery.mockReturnValue({ data: [], isLoading: false, isError: false });
     cityDataQuery.mockReturnValue({ data: undefined, isLoading: false, isError: false });
     renderMenu();
 
-    expect(screen.getByText('No popular cities are available yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Johannesburg' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Find a location' })).toBeInTheDocument();
+    expect(screen.getByText('No featured cities are available yet.')).toBeInTheDocument();
+    expect(screen.getByText('Choose a city to see its suburbs and areas.')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Location search' })).toBeInTheDocument();
-    expect(screen.getByText('Choose a city to see live inventory')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Browse all locations' })).toHaveAttribute(
-      'href',
-      '/property-for-sale',
+    expect(cityDataQuery).toHaveBeenCalledWith(
+      { provinceSlug: '', citySlug: '' },
+      expect.objectContaining({ enabled: false }),
     );
   });
 });

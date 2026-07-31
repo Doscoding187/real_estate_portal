@@ -3,6 +3,9 @@
   --public-navbar-ink: var(--foreground);
   --public-navbar-muted: var(--muted-foreground);
   --public-navbar-panel-width: min(1120px, calc(100vw - 48px));
+  --plds-nav-shell-max-width: 108rem;
+  --plds-nav-surface-z-index: 60;
+  --plds-nav-mega-layer-z-index: 1;
 
   /*
    * Public navigation component tokens.
@@ -58,7 +61,7 @@
   --plds-nav-journey-proposition-inset: 0.875rem;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: var(--plds-nav-surface-z-index);
   isolation: isolate;
   width: 100%;
   overflow: visible;
@@ -71,10 +74,10 @@
 
 .public-navbar__shell {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(0, auto) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
-  width: min(100%, 1536px);
+  width: min(100%, var(--plds-nav-shell-max-width));
   min-height: var(--plds-nav-height);
   margin-inline: auto;
   padding-inline: var(--public-navbar-gutter);
@@ -359,7 +362,7 @@
   position: absolute;
   inset-inline: 0;
   top: 100%;
-  z-index: 40;
+  z-index: var(--plds-nav-mega-layer-z-index);
   pointer-events: none;
 }
 
@@ -384,6 +387,8 @@
 }
 
 .public-navbar__mega-panel {
+  position: relative;
+  z-index: 1;
   width: var(--public-navbar-panel-width);
   max-height: min(calc(100vh - 6rem), 640px);
   overflow-x: hidden;
@@ -635,7 +640,7 @@
   outline-offset: 2px;
 }
 
-@media (min-width: 1240px) {
+@media (min-width: 1280px) {
   .public-navbar__desktop-nav,
   .public-navbar__desktop-actions {
     display: flex;
@@ -647,9 +652,12 @@
   }
 }
 
-@media (min-width: 1240px) and (max-width: 1399px) {
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .public-navbar {
+    --plds-nav-journey-panel-width: min(1060px, calc(100vw - 32px));
+  }
+
   .public-navbar__shell {
-    grid-template-columns: minmax(145px, 1fr) minmax(0, auto) minmax(260px, 1fr);
     gap: 0.5rem;
   }
 
@@ -681,16 +689,6 @@
     width: min(1080px, calc(100vw - 32px));
   }
 
-  .public-navbar__mega-panel--buyers,
-  .public-navbar__mega-panel--renters,
-  .public-navbar__mega-panel--sellers,
-  .public-navbar__mega-panel--professionals,
-  .public-navbar__mega-panel--insights,
-  .public-navbar__mega-panel--services,
-  .public-navbar__mega-panel--advertise {
-    width: min(1060px, calc(100vw - 32px));
-  }
-
   .public-navbar__journey-column,
   .public-navbar__journey-footer {
     --plds-nav-journey-column-padding-x: 1.25rem;
@@ -702,7 +700,7 @@
 
 }
 
-@media (max-width: 1239px) {
+@media (max-width: 1279px) {
   .public-navbar__shell {
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: var(--plds-nav-height);

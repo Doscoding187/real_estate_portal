@@ -684,7 +684,7 @@ export function EnhancedNavbar() {
   const advertiseMenu = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'advertise');
   const hasDesktopMenu = desktopMenuValue === 'city' || Boolean(activeDesktopMenu);
   const desktopPanelLabel =
-    desktopMenuValue === 'city' ? 'City' : (activeDesktopMenu?.label ?? 'Public');
+    desktopMenuValue === 'city' ? PUBLIC_CITY_ENTRY.label : (activeDesktopMenu?.label ?? 'Public');
 
   return (
     <nav
@@ -710,13 +710,13 @@ export function EnhancedNavbar() {
                 type="button"
                 className="public-navbar__desktop-trigger"
                 data-open={desktopMenuValue === 'city'}
-                data-active={activeNavigationOwner === 'city'}
+                data-active={activeNavigationOwner === 'locations'}
                 aria-expanded={desktopMenuValue === 'city'}
                 aria-controls="public-navbar-mega-panel"
                 onMouseEnter={() => handleDesktopMenuMouseEnter('city')}
                 onClick={() => toggleDesktopMenu('city')}
               >
-                City
+                {PUBLIC_CITY_ENTRY.label}
                 <ChevronDown
                   className="public-navbar__desktop-trigger-chevron"
                   aria-hidden="true"

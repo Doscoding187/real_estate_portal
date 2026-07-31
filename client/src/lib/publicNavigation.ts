@@ -62,7 +62,7 @@ export type PublicNavigationMenu = {
   actionItemIds?: string[];
 };
 
-export type PublicNavigationActiveOwner = 'city' | 'referrals' | PublicNavigationMenu['id'];
+export type PublicNavigationActiveOwner = 'locations' | 'referrals' | PublicNavigationMenu['id'];
 
 const destination = (
   item: Omit<PublicNavigationDestination, 'desktopVisible' | 'mobileVisible'> & {
@@ -717,7 +717,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
 
 export const PUBLIC_CITY_ENTRY: PublicNavigationDestination = destination({
   id: 'city-entry',
-  label: 'City',
+  label: 'Locations',
   href: '/property-for-sale',
   owner: 'location-engine',
   capability: 'LAUNCH_READY',
@@ -738,13 +738,13 @@ export const PUBLIC_NAVIGATION_ACTIONS = {
 
 /**
  * Top-level ownership is deliberately independent from child-link membership.
- * The order resolves intentional overlaps: location pages belong to City,
+ * The order resolves intentional overlaps: location pages belong to Locations,
  * public distribution routes belong to Referrals, and professional acquisition
  * routes belong to Professionals. Authenticated distribution routes are not
  * included here and remain owned by their engine-local navigation.
  */
 export const PUBLIC_NAVIGATION_ACTIVE_ROUTES: Record<PublicNavigationActiveOwner, string[]> = {
-  city: ['/property-for-sale/'],
+  locations: ['/property-for-sale/'],
   referrals: ['/distribution-network'],
   advertise: ['/advertise'],
   professionals: [
@@ -760,7 +760,7 @@ export const PUBLIC_NAVIGATION_ACTIVE_ROUTES: Record<PublicNavigationActiveOwner
 };
 
 const PUBLIC_NAVIGATION_ACTIVE_OWNER_ORDER: PublicNavigationActiveOwner[] = [
-  'city',
+  'locations',
   'referrals',
   'advertise',
   'professionals',

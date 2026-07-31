@@ -7,7 +7,7 @@ function readRepoFile(path: string) {
 }
 
 describe('EnhancedNavbar menu design-system contract', () => {
-  it('defines semantic menu tokens for shared audience and City navigation', () => {
+  it('defines semantic menu tokens for shared audience and Locations navigation', () => {
     const css = readRepoFile('client/src/styles/enhanced-navbar.css');
 
     expect(css).toContain('--plds-nav-menu-panel-padding');
@@ -18,9 +18,13 @@ describe('EnhancedNavbar menu design-system contract', () => {
     expect(css).toContain('--plds-nav-journey-panel-width');
     expect(css).toContain('--plds-nav-journey-column-padding-x');
     expect(css).toContain('--plds-nav-journey-footer-height');
+    expect(css).toContain('--plds-nav-shell-max-width: 108rem');
+    expect(css).toContain('--plds-nav-surface-z-index: 60');
+    expect(css).toContain('--plds-nav-mega-layer-z-index: 1');
+    expect(css).toContain('--plds-nav-journey-panel-width: min(1060px, calc(100vw - 32px))');
   });
 
-  it('uses the shared tokens for audience and City menu primitives', () => {
+  it('uses the shared tokens for audience and Locations menu primitives', () => {
     const css = readRepoFile('client/src/styles/enhanced-navbar.css');
 
     expect(css).toContain('font-size: var(--plds-nav-menu-kicker-size)');
@@ -168,17 +172,40 @@ describe('EnhancedNavbar menu design-system contract', () => {
     expect(navbar).toContain("Logging out…");
   });
 
-  it('keeps City as a compact three-zone discovery menu', () => {
+  it('keeps Locations as a compact three-zone discovery menu', () => {
     const css = readRepoFile('client/src/styles/enhanced-navbar.css');
     const navbar = readRepoFile('client/src/components/CityDiscoveryMenu.tsx');
+    const locationAdapter = readRepoFile('client/src/lib/locationDataAdapter.ts');
 
     expect(css).toContain(
       'grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(17rem, 1.35fr)',
     );
     expect(navbar).toContain('public-navbar__city-grid');
     expect(navbar).toContain('public-navbar__city-discovery');
-    expect(navbar).toContain('Popular cities');
-    expect(navbar).toContain('Areas in');
+    expect(navbar).toContain('resolveLocationMenuCities');
+    expect(locationAdapter).toContain("heading: 'Find a location'");
+    expect(navbar).toContain('Areas and suburbs');
+    expect(navbar).toContain('No featured cities are available yet.');
+    expect(navbar).not.toContain('FALLBACK_CITY_LINKS');
+  });
+
+  it('keeps the navbar surface above page-local navigation without an arbitrary global z-index', () => {
+    const css = readRepoFile('client/src/styles/enhanced-navbar.css');
+
+    expect(css).toContain('z-index: var(--plds-nav-surface-z-index)');
+    expect(css).toContain('z-index: var(--plds-nav-mega-layer-z-index)');
+    expect(css).toContain('.public-navbar__mega-panel {\n  position: relative;\n  z-index: 1;');
+    expect(css).not.toContain('z-index: 9999');
+  });
+
+  it('keeps the shared three-column journey grid and full-width footer authority', () => {
+    const css = readRepoFile('client/src/styles/enhanced-navbar.css');
+
+    expect(css).toContain(
+      '.public-navbar__journey-columns {\n  display: grid;\n  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr) minmax(0, 0.96fr);',
+    );
+    expect(css).toContain('.public-navbar__journey-footer {');
+    expect(css).toContain('min-height: var(--plds-nav-journey-footer-height)');
   });
 
   it('uses one shared visual authority for equivalent journey menus and states', () => {
@@ -218,5 +245,44 @@ describe('EnhancedNavbar menu design-system contract', () => {
     expect(css).toContain('.public-navbar__account-menu-content');
     expect(navbar).toContain('aria-current={active ? \'page\' : undefined}');
     expect(navbar).toContain('className="public-navbar__mobile-destination-link"');
+  });
+
+  it('keeps the desktop navbar in three governed left, centre and right zones', () => {
+    const css = readRepoFile('client/src/styles/enhanced-navbar.css');
+    const navbar = readRepoFile('client/src/components/EnhancedNavbar.tsx');
+
+    expect(css).toContain(
+      'grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr)',
+    );
+    expect(css).not.toContain(
+      'grid-template-columns: minmax(160px, 1fr) minmax(0, auto) minmax(280px, 1fr)',
+    );
+    expect(css).not.toContain(
+      'grid-template-columns: minmax(145px, 1fr) minmax(0, auto) minmax(260px, 1fr)',
+    );
+    expect(css).toContain('.public-navbar__brand {\n  justify-self: start;');
+    expect(css).toContain('.public-navbar__desktop-nav {\n  justify-self: center;');
+    expect(css).toContain('.public-navbar__desktop-actions {\n  justify-self: end;');
+    expect(css).toContain('@media (min-width: 1280px)');
+    expect(css).toContain('@media (min-width: 1280px) and (max-width: 1535px)');
+    expect(css).toContain('@media (max-width: 1279px)');
+    expect(css).not.toContain('@media (min-width: 1240px)');
+    expect(css).not.toContain('@media (min-width: 1536px)');
+    expect(css).toContain(
+      '.public-navbar__account-trigger {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 2.5rem;\n  height: 2.5rem;\n  flex: 0 0 auto;',
+    );
+    expect(css).toContain(
+      '.public-navbar__shell {\n    grid-template-columns: minmax(0, 1fr) auto;',
+    );
+
+    const shell = navbar.indexOf('<div className="public-navbar__shell">');
+    const brand = navbar.indexOf('className="public-navbar__brand"', shell);
+    const desktopNav = navbar.indexOf('className="public-navbar__desktop-nav"', shell);
+    const desktopActions = navbar.indexOf('className="public-navbar__desktop-actions"', shell);
+
+    expect(shell).toBeGreaterThanOrEqual(0);
+    expect(brand).toBeGreaterThan(shell);
+    expect(desktopNav).toBeGreaterThan(brand);
+    expect(desktopActions).toBeGreaterThan(desktopNav);
   });
 });

@@ -15,7 +15,7 @@ describe('Main Platform Navigation authority', () => {
 
   it('restores the canonical desktop platform menu breadth', () => {
     for (const label of [
-      'City',
+      'Locations',
       'For Buyers',
       'For Renters',
       'For Sellers',
