@@ -6,4 +6,5 @@ export interface LocationNode {
   provinceSlug?: string;
   citySlug?: string; // Helpful for context
   parentSlug?: string;
+  canonicalPath?: string;
 }

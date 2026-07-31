@@ -57,7 +57,6 @@ import {
   generateBreadcrumbs,
   generatePageTitle,
   generateMetaDescription,
-  generatePropertyUrl,
   SearchFilters,
   unslugify,
 } from '@/lib/urlUtils';
@@ -252,15 +251,24 @@ export default function SearchResults({
     [backendSortOption, blendFetchLimit, filters, normalizedLocationSlugs],
   );
 
-  const { data: propertySearchResults, isLoading: isPropertySearchLoading } =
-    trpc.properties.search.useQuery(propertyQueryInput, {
-      enabled: shouldFetchManualListings,
-    });
-  const { data: developmentListingResults, isLoading: isDevelopmentSearchLoading } =
-    trpc.properties.searchDevelopmentListings.useQuery(developmentListingQueryInput, {
-      enabled: shouldFetchDevelopmentListings,
-    });
+  const {
+    data: propertySearchResults,
+    isLoading: isPropertySearchLoading,
+    error: propertySearchError,
+  } = trpc.properties.search.useQuery(propertyQueryInput, {
+    enabled: shouldFetchManualListings,
+    retry: false,
+  });
+  const {
+    data: developmentListingResults,
+    isLoading: isDevelopmentSearchLoading,
+    error: developmentSearchError,
+  } = trpc.properties.searchDevelopmentListings.useQuery(developmentListingQueryInput, {
+    enabled: shouldFetchDevelopmentListings,
+    retry: false,
+  });
   const isLoading = isPropertySearchLoading || isDevelopmentSearchLoading;
+  const hasSearchError = Boolean(propertySearchError || developmentSearchError);
   const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
     filters: {
       city: filters.city,
@@ -557,6 +565,19 @@ export default function SearchResults({
                 {isLoading ? (
                   <div className="flex items-center justify-center py-20">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  </div>
+                ) : hasSearchError ? (
+                  <div
+                    role="alert"
+                    className="mx-auto max-w-2xl border border-rose-200 bg-rose-50 px-6 py-14 text-center"
+                  >
+                    <h2 className="text-lg font-semibold text-rose-950">Search unavailable</h2>
+                    <p className="mt-2 text-sm text-rose-800">
+                      We could not load property results right now. Please try again shortly.
+                    </p>
+                    <Button className="mt-5" onClick={() => window.location.reload()}>
+                      Try again
+                    </Button>
                   </div>
                 ) : hasRenderableResults ? (
                   <>

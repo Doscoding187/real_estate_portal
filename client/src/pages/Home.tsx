@@ -1,7 +1,14 @@
-import { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useEffect, useState } from 'react';
+import { useLocation, useSearch } from 'wouter';
 import { HomeLayout } from '@/layouts/HomeLayout';
 import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
+import {
+  buildHomepageJourneyUrl,
+  isHomepageHeroJourneyEnabled,
+  normalizePublicHeroJourney,
+  parseHomepageJourney,
+  type PublicHeroJourneyKey,
+} from '@/lib/publicNavigation';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { HomeDesktopView } from '@/pages/home/HomeDesktopView';
 import { HomeMobileView } from '@/pages/home/HomeMobileView';
@@ -17,10 +24,33 @@ import { VITE_APP_LOGO } from '@/const';
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const isMobile = useIsMobile();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
-  const [activeHeroTab, setActiveHeroTab] = useState<HeroTab | null>(null);
-  const effectiveHeroTab = activeHeroTab ?? 'buy';
+  const queryString = search;
+  const rawIntent = new URLSearchParams(queryString).get('intent');
+  const activeJourney = parseHomepageJourney(queryString);
+  const requestedJourney = normalizePublicHeroJourney(rawIntent);
+
+  useEffect(() => {
+    if (rawIntent === null) return;
+
+    if (requestedJourney === 'find_agent') {
+      setLocation('/agents', { replace: true });
+      return;
+    }
+
+    if (
+      !isHomepageHeroJourneyEnabled(requestedJourney) ||
+      rawIntent.trim().toLowerCase() !== requestedJourney
+    ) {
+      setLocation(buildHomepageJourneyUrl('buy'), { replace: true });
+    }
+  }, [rawIntent, requestedJourney, setLocation]);
+
+  const effectiveHeroTab: HeroTab = isHomepageHeroJourneyEnabled(activeJourney)
+    ? (activeJourney as HeroTab)
+    : 'buy';
   const { data: popularCitiesData } = trpc.locationPages.getPopularCities.useQuery({
     limit: 12,
   });
@@ -38,28 +68,14 @@ export default function Home() {
   ];
 
   const handleTabChange = (tab: string) => {
-    const normalizedTab = normalizeHeroUiTab(tab);
-    if (normalizedTab === 'agents') {
-      setLocation('/agents');
-      return;
-    }
-    setActiveHeroTab(normalizedTab);
+    const normalizedTab: PublicHeroJourneyKey = normalizeHeroUiTab(tab);
+    const nextLocation = buildHomepageJourneyUrl(normalizedTab);
+    const currentLocation = `${window.location.pathname}${window.location.search}`;
+    if (currentLocation === nextLocation) return;
+    setLocation(nextLocation);
   };
 
-  const heroTabValue =
-    activeHeroTab === null
-      ? undefined
-      : activeHeroTab === 'buy'
-        ? 'buy'
-        : activeHeroTab === 'rent'
-          ? 'rental'
-          : activeHeroTab === 'developments'
-            ? 'projects'
-            : activeHeroTab === 'shared_living'
-              ? 'pg'
-              : activeHeroTab === 'plot_land'
-                ? 'plot'
-                : 'commercial';
+  const heroTabValue = effectiveHeroTab;
   const homeCanonicalUrl = toAbsoluteUrl('/');
   const homeDescription =
     'Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify.';
