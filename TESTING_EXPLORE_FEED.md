@@ -8,47 +8,21 @@ This guide will walk you through testing all features of the Explore Feed system
 
 ---
 
-## ⚙️ Setup Instructions
+## ⚙️ Current setup authority
 
-### Step 1: Run Database Migrations
+The setup instructions that formerly appeared in this historical guide are
+superseded. Do not run its manual SQL, Workbench, legacy migration, or seed
+steps. For local/demo data use the guarded canonical lifecycle:
 
-Open **MySQL Workbench** and run the following scripts in order:
-
-1. **Create Tables**:
-   ```sql
-   -- File: migrations/create-explore-feed-tables.sql
-   -- This creates: videos, videoLikes, provinces, cities, suburbs, notifications, etc.
-   ```
-
-2. **Seed Data**:
-   ```sql
-   -- File: migrations/seed-explore-feed-data.sql
-   -- This populates provinces, cities, suburbs, and sample videos
-   ```
-
-### Step 2: Verify Database Setup
-
-Run this query to verify tables were created:
-
-```sql
-USE real_estate_portal;
-
-SELECT 'Videos' AS TableName, COUNT(*) AS RecordCount FROM videos
-UNION ALL
-SELECT 'Provinces', COUNT(*) FROM provinces
-UNION ALL
-SELECT 'Cities', COUNT(*) FROM cities
-UNION ALL
-SELECT 'Suburbs', COUNT(*) FROM suburbs;
+```sh
+pnpm db:authority:bootstrap:local
+pnpm db:authority:check
 ```
 
-You should see:
-- Videos: 5-6 sample videos
-- Provinces: 9 South African provinces
-- Cities: 6-7 major cities
-- Suburbs: 6+ suburbs
+The supported schema and diagnostic authorities are documented in
+[`docs/database-authority/database-change-protocol.md`](docs/database-authority/database-change-protocol.md).
 
-### Step 3: Start the Development Server
+### Start the Development Server
 
 ```powershell
 # Navigate to project directory
@@ -144,10 +118,8 @@ Email: agent@test.com
 Password: agent123
 ```
 
-If this account doesn't exist, create it and run:
-```bash
-tsx set-admin.ts agent@test.com
-```
+If a local test account is missing, use the canonical guarded local/test
+lifecycle. Do not run ad-hoc account administration utilities.
 
 ### 1. Access Video Upload
 

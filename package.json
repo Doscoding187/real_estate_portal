@@ -41,6 +41,8 @@
     "db:verify:distribution": "tsx scripts/db-verify-distribution-schema.ts",
     "db:verify:ci": "tsx scripts/db-contract-verify.ts --format=json",
     "db:authority:status": "tsx scripts/databaseAuthorityStatus.ts",
+    "db:authority:utilities": "tsx scripts/databaseUtilityAuthorityCheck.ts",
+    "db:authority:check": "tsx scripts/databaseAuthorityCheck.ts",
     "env:authority:status": "tsx scripts/localEnvironmentAuthorityStatus.ts",
     "db:authority:bootstrap:local": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityBootstrapLocal.ts",
     "db:authority:consumer-contract": "cross-env NODE_ENV=test APP_ENV=test tsx scripts/databaseAuthorityConsumerContract.ts",

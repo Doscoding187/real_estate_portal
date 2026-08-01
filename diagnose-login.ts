@@ -45,7 +45,7 @@ async function diagnoseLogin() {
       console.log('⚠️  No users found in database');
       console.log('💡 You need to create a user first. Run one of these:');
       console.log('   - Register via the UI at /login');
-      console.log('   - Run: pnpm tsx create-test-user.ts');
+      console.log('   - Use the canonical guarded local demo lifecycle: pnpm db:authority:bootstrap:local');
       return;
     }
 

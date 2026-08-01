@@ -17,6 +17,4 @@ seed-*.ts
 check-*.ts
 fix-schema.ts
 generate-hash.ts
-set-admin.ts
-update-properties-sa.ts
 verify-explore-feed.ts

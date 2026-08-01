@@ -15,7 +15,7 @@ async function checkProperties() {
     
     if (allProperties.length === 0) {
       console.log('❌ No properties found. You need to run a seed script.');
-      console.log('\nRun: npm run tsx seed-data.ts');
+      console.log('\nRun: pnpm db:verify:local-demo after the canonical local demo lifecycle');
       return;
     }
 

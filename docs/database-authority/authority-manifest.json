@@ -54,6 +54,9 @@
     "server/scripts/verifyLocalDemoSeed.ts"
   ],
   "consumerContractEntrypoint": "scripts/databaseAuthorityConsumerContract.ts",
+  "staticAuthorityCheck": "scripts/databaseAuthorityCheck.ts",
   "agentEntryContract": "docs/database-authority/00-database-authority-agent-entry.md",
-  "migrationTreeAuthority": "docs/database-authority/migration-tree-authority.json"
+  "databaseChangeProtocol": "docs/database-authority/database-change-protocol.md",
+  "migrationTreeAuthority": "docs/database-authority/migration-tree-authority.json",
+  "residualUtilityAuthority": "docs/database-authority/residual-utility-authority.json"
 }

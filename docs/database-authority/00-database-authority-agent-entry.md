@@ -18,11 +18,16 @@ instructions.
 | Schema/demo verification | `scripts/db-verify-distribution-schema.ts`, `server/scripts/verifyLocalDemoSeed.ts` | Keep |
 | Authority classification | `docs/database-authority/migration-tree-authority.json` | Keep |
 | Operating manifest and commands | `authority-manifest.json`, `db:authority:*` | Extend |
+| Database change workflow | `database-change-protocol.md` | Keep and follow |
 | CI consumer proof | `db:authority:consumer-contract` | Extend |
 
 The machine-readable companion is
 [`authority-manifest.json`](authority-manifest.json). It points to authority;
 it does not replace it.
+
+The canonical change workflow is
+[`database-change-protocol.md`](database-change-protocol.md). Normal schema
+evolution follows that protocol and does not reopen the programme.
 
 ## Rules
 

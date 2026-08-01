@@ -51,7 +51,7 @@ describe('database canonical model authority', () => {
     const runtimeCapabilities = readRepoFile(
       'server/services/runtimeSchemaCapabilities.ts',
     );
-    const cleanupScript = readRepoFile('cleanup-production-data.ts');
+    expect(existsSync(path.join(ROOT, 'cleanup-production-data.ts'))).toBe(false);
 
     expect(schemaIndex).not.toContain(
       "export * from './economicActors';",
@@ -68,9 +68,6 @@ describe('database canonical model authority', () => {
       expect(runtimeCapabilities).not.toContain(authorityName);
     }
 
-    expect(cleanupScript).not.toContain(
-      'DELETE FROM agent_profiles',
-    );
   });
 
   it('retires inactive analytics and affordability models while preserving recent searches', () => {

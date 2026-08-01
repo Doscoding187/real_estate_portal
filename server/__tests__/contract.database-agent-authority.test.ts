@@ -36,6 +36,13 @@ describe('database authority agent entry contract', () => {
     expect(manifest.consumerContractEntrypoint).toBe(
       'scripts/databaseAuthorityConsumerContract.ts',
     );
+    expect(manifest.residualUtilityAuthority).toBe(
+      'docs/database-authority/residual-utility-authority.json',
+    );
+    expect(manifest.staticAuthorityCheck).toBe('scripts/databaseAuthorityCheck.ts');
+    expect(manifest.databaseChangeProtocol).toBe(
+      'docs/database-authority/database-change-protocol.md',
+    );
   });
 
   it('classifies only exact approved local and test targets as safe', () => {
@@ -108,6 +115,10 @@ describe('database authority agent entry contract', () => {
       'utf8',
     );
     const index = readFileSync(resolve(ROOT, 'docs/database-authority/index.md'), 'utf8');
+    const protocol = readFileSync(
+      resolve(ROOT, 'docs/database-authority/database-change-protocol.md'),
+      'utf8',
+    );
 
     expect(entry.split('\n').length).toBeLessThanOrEqual(250);
     expect(entry).toContain(
@@ -118,14 +129,23 @@ describe('database authority agent entry contract', () => {
     expect(entry).toContain('admin@listify.local');
     expect(entry).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
     expect(index.indexOf('Agent Entry Contract')).toBeLessThan(index.indexOf('Machine Manifest'));
+    expect(index).toContain('Database Change Protocol');
+    expect(protocol).toContain('Exceptional repair/backfill contract');
+    expect(protocol).toContain('Reopening criteria');
   });
 
   it('keeps full and fresh database verification layers in CI without exposing local values', () => {
     const ci = readFileSync(resolve(ROOT, '.github/workflows/ci.yml'), 'utf8');
     const status = readFileSync(resolve(ROOT, 'scripts/databaseAuthorityStatus.ts'), 'utf8');
+    const aggregate = readFileSync(resolve(ROOT, 'scripts/databaseAuthorityCheck.ts'), 'utf8');
 
     expect(ci).toContain('pnpm db:verify:ci');
     expect(ci).toContain('pnpm db:authority:consumer-contract');
+    expect(ci).toContain('pnpm db:authority:check');
+    expect(aggregate).toContain("['test:db-authority:static']");
+    expect(aggregate).toContain("['db:authority:utilities']");
+    expect(aggregate).toContain("['schema:sanity']");
+    expect(aggregate).not.toMatch(/dotenv|mysql2|createConnection|db:migrate|db:seed|db:authority:status/);
     expect(status).toContain('Required Local Variables:');
     expect(status).not.toContain('console.log(process.env.DATABASE_URL)');
     expect(status).not.toContain('console.log(process.env.LOCAL_DEMO_AGENCY_PASSWORD)');

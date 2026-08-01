@@ -59,6 +59,7 @@ async function main() {
     assert.ok(prospect?.id && otherProspect?.id && agencyA.id && managerA?.id && agentA?.id, 'Deterministic Agency A and prospect fixtures are required.');
 
     const suffix = `${process.pid}-${Date.now()}`;
+    const disposablePasswordHash = randomUUID();
     const [agencyBResult] = await connection.execute<mysql.ResultSetHeader>(
       `INSERT INTO agencies (name, slug, description, email, city, province, subscriptionPlan, subscriptionStatus, isVerified)
        VALUES (?, ?, 'Cross-agency disposable proof fixture', ?, 'Johannesburg', 'Gauteng', 'professional', 'active', 1)`,
@@ -67,14 +68,14 @@ async function main() {
     const agencyBId = Number(agencyBResult.insertId);
     const [managerBResult] = await connection.execute<mysql.ResultSetHeader>(
       `INSERT INTO users (openId, email, passwordHash, name, firstName, lastName, loginMethod, emailVerified, role, agencyId, isSubaccount, onboarding_complete, onboarding_step, subscription_tier, subscription_status)
-       VALUES (?, ?, 'not-used-by-this-verifier', 'Agency B Manager', 'Agency', 'B', 'email', 1, 'agency_admin', ?, 0, 1, 0, 'professional', 'active')`,
-      [`prospect-journey-manager-b-${suffix}`, `manager-b-${suffix}@listify.local`, agencyBId],
+        VALUES (?, ?, ?, 'Agency B Manager', 'Agency', 'B', 'email', 1, 'agency_admin', ?, 0, 1, 0, 'professional', 'active')`,
+       [`prospect-journey-manager-b-${suffix}`, `manager-b-${suffix}@listify.local`, disposablePasswordHash, agencyBId],
     );
     const managerBId = Number(managerBResult.insertId);
     const [agentBUserResult] = await connection.execute<mysql.ResultSetHeader>(
       `INSERT INTO users (openId, email, passwordHash, name, firstName, lastName, loginMethod, emailVerified, role, agencyId, isSubaccount, onboarding_complete, onboarding_step, subscription_tier, subscription_status)
-       VALUES (?, ?, 'not-used-by-this-verifier', 'Agency B Agent', 'Agent', 'B', 'email', 1, 'agent', ?, 1, 1, 0, 'professional', 'active')`,
-      [`prospect-journey-agent-b-${suffix}`, `agent-b-${suffix}@listify.local`, agencyBId],
+        VALUES (?, ?, ?, 'Agency B Agent', 'Agent', 'B', 'email', 1, 'agent', ?, 1, 1, 0, 'professional', 'active')`,
+       [`prospect-journey-agent-b-${suffix}`, `agent-b-${suffix}@listify.local`, disposablePasswordHash, agencyBId],
     );
     const agentBUserId = Number(agentBUserResult.insertId);
     const [agentBResult] = await connection.execute<mysql.ResultSetHeader>(
