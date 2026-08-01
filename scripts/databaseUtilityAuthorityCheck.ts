@@ -69,9 +69,12 @@ const STANDALONE_EXECUTION_SIGNAL =
 const RUNTIME_MUTATION_SIGNAL =
   /\b(?:INSERT\s+INTO|UPDATE\s+\w+|DELETE\s+FROM|ALTER\s+TABLE|CREATE\s+TABLE|DROP\s+TABLE|TRUNCATE\s+TABLE)\b|\.(?:insert|update|delete)\s*\(/i;
 const TOP_LEVEL_MUTATION_SIGNAL =
-  /^(?:await\s+)?[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?\.(?:query|execute|insert|update|delete)\s*\(/m;
+  /^(?:await\s+)?(?:db|database|drizzleDb|_db|connection|mysql|pool)\.(?:query|execute|insert|update|delete)\s*\(/m;
 const STANDALONE_MAIN_SIGNAL =
   /\b(?:async\s+)?function\s+main\s*\(|\bmain\s*\(\s*\)\s*;?/i;
+const CANONICAL_DATABASE_HELPER_IMPORT =
+  /(?:from\s+|import\s*\(|require\s*\()\s*['"](?:(?:\.\.\/)+server\/(?:db|db-connection)|(?:\.\.\/)+(?:db|db-connection)|\.\/(?:db|db-connection)|(?:\.\/)?server\/(?:db|db-connection))(?:\.[^'"]*)?['"]/i;
+const CANONICAL_ORM_MUTATION = /\.(?:insert|update|delete)\s*\(/i;
 const PACKAGE_SCRIPT_PATH =
   /(?:^|[\s;&|])(?:tsx|ts-node|node|bash|sh|powershell|pwsh)\s+(?:\.\/)?([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*\.(?:ts|tsx|js|mjs|cjs|ps1|sh))(?=$|[\s"';&|])/g;
 
@@ -123,7 +126,7 @@ function isUtilityPath(path: string, inventory: ResidualUtilityAuthority): boole
   return inDeclaredUtilityBoundary;
 }
 
-function hasRuntimeOperationalEvidence(
+function hasOperationalEvidence(
   path: string,
   source: string,
   packageScriptEntrypoints: Set<string>,
@@ -131,25 +134,36 @@ function hasRuntimeOperationalEvidence(
   const operationalName = OPERATIONAL_PATH_SIGNAL.test(path);
   const packageScriptExposure = packageScriptEntrypoints.has(path);
   const hasDirectClient = DIRECT_DATABASE_CLIENT_CONSTRUCTION.test(source);
+  const hasCanonicalHelper = CANONICAL_DATABASE_HELPER_IMPORT.test(source);
   const hasAmbientTarget = AMBIENT_TARGET_SELECTION.test(source);
   const hasStandaloneExecution =
     STANDALONE_EXECUTION_SIGNAL.test(source) || STANDALONE_MAIN_SIGNAL.test(source);
   const hasTopLevelMutation = TOP_LEVEL_MUTATION_SIGNAL.test(source);
   const hasMutation = RUNTIME_MUTATION_SIGNAL.test(source);
+  const hasCanonicalMutation = hasCanonicalHelper && CANONICAL_ORM_MUTATION.test(source);
   const strongOperationalEvidence =
-    hasDirectClient || hasAmbientTarget || hasStandaloneExecution || hasTopLevelMutation;
+    hasDirectClient ||
+    hasAmbientTarget ||
+    hasStandaloneExecution ||
+    hasTopLevelMutation;
 
-  if ((operationalName || packageScriptExposure) && strongOperationalEvidence) {
+  if (
+    (operationalName || packageScriptExposure) &&
+    (strongOperationalEvidence || (packageScriptExposure && hasCanonicalMutation))
+  ) {
     return true;
   }
 
-  if (hasStandaloneExecution && (hasDirectClient || hasAmbientTarget || hasTopLevelMutation)) {
+  if (
+    hasStandaloneExecution &&
+    (hasDirectClient || hasCanonicalMutation || hasAmbientTarget || hasTopLevelMutation)
+  ) {
     return true;
   }
 
   if (hasDirectClient && hasAmbientTarget && hasMutation) return true;
 
-  return hasTopLevelMutation && (hasDirectClient || hasAmbientTarget);
+  return hasTopLevelMutation && (hasDirectClient || hasCanonicalMutation || hasAmbientTarget);
 }
 
 function isPotentialUtilityPath(
@@ -162,29 +176,33 @@ function isPotentialUtilityPath(
   if (matchesExcludedPath(path, inventory.scope.excluded)) return false;
   if (isCanonicalSchemaOrMigrationPath(path)) return false;
   if (isUtilityPath(path, inventory)) return true;
-  const isRuntimePath = inventory.scope.runtimeAndSchemaRoots.some(root =>
-    matchesPathPattern(path, root),
-  );
-  if (isRuntimePath) {
-    return hasRuntimeOperationalEvidence(path, source, packageScriptEntrypoints);
-  }
-  if (packageScriptEntrypoints.has(path)) return true;
-  return OPERATIONAL_PATH_SIGNAL.test(path);
+  return hasOperationalEvidence(path, source, packageScriptEntrypoints);
 }
 
 export function databaseCapabilitySignals(source: string): string[] {
   const client = DATABASE_CAPABILITY_SIGNALS[0][1].test(source);
   const execution = DATABASE_CAPABILITY_SIGNALS[1][1].test(source);
   const sql = DATABASE_CAPABILITY_SIGNALS[2][1].test(source);
-  if (!client && !(execution && sql)) return [];
-  return DATABASE_CAPABILITY_SIGNALS.flatMap(([name, pattern], index) => {
+  const canonicalHelper = CANONICAL_DATABASE_HELPER_IMPORT.test(source);
+  const ormMutation = canonicalHelper && CANONICAL_ORM_MUTATION.test(source);
+  if (!client && !(execution && sql) && !ormMutation) return [];
+
+  const signals = DATABASE_CAPABILITY_SIGNALS.flatMap(([name, pattern], index) => {
     if (index === 2 && !sql) return [];
     return pattern.test(source) ? [name] : [];
   });
+  if (canonicalHelper) signals.push('canonical database helper');
+  if (ormMutation) signals.push('ORM mutation API');
+  return signals;
 }
 
-function approvedPaths(inventory: ResidualUtilityAuthority): Set<string> {
-  return new Set(Object.values(inventory.approvedAuthority).flat());
+function approvedAuthorityGroup(
+  inventory: ResidualUtilityAuthority,
+  path: string,
+): AuthorityGroupName | null {
+  return (
+    AUTHORITY_GROUPS.find(group => inventory.approvedAuthority[group].includes(path)) ?? null
+  );
 }
 
 function sortedWithoutDuplicates(values: string[]): boolean {
@@ -295,7 +313,15 @@ export function classifyUtilitySource(
   if (inventory.retiredUtilities.includes(path)) {
     return { path, status: 'retired', signals };
   }
-  if (approvedPaths(inventory).has(path)) {
+  const authorityGroup = approvedAuthorityGroup(inventory, path);
+  if (authorityGroup === 'readOnlyEvidence' && packageScriptEntrypoints.has(path)) {
+    return {
+      path,
+      status: 'unclassified',
+      signals: [...signals, 'read-only evidence is exposed through package.json'],
+    };
+  }
+  if (authorityGroup) {
     return { path, status: 'approved', signals };
   }
   return { path, status: 'unclassified', signals };

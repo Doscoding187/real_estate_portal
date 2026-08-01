@@ -24,6 +24,7 @@
       ".sh"
     ],
     "excluded": [
+      "e2e/**",
       "scripts/__tests__/**",
       "server/__tests__/**",
       "server/tests/**",
