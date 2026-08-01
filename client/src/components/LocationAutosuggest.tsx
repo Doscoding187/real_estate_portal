@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { MapPin, Loader2, X, Compass } from 'lucide-react';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { CITY_PROVINCE_MAP, PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
@@ -23,6 +23,21 @@ interface DatabaseLocationSuggestion {
   type: 'province' | 'city' | 'suburb';
   provinceName?: string;
   cityName?: string;
+}
+
+function getCanonicalBuyLocationPath(location: {
+  type: 'province' | 'city' | 'suburb' | 'area';
+  slug: string;
+  provinceSlug?: string;
+  citySlug?: string;
+}) {
+  const province = location.provinceSlug ? `&province=${location.provinceSlug}` : '';
+  if (location.type === 'province') return `/property-for-sale/${location.slug}`;
+  if (location.type === 'suburb' || location.type === 'area') {
+    const city = location.citySlug ? `&city=${location.citySlug}` : '';
+    return `/property-for-sale?suburb=${location.slug}${city}${province}`;
+  }
+  return `/property-for-sale?city=${location.slug}${province}`;
 }
 
 interface LocationAutosuggestProps {
@@ -61,30 +76,46 @@ export function LocationAutosuggest({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const predictionRequestSequence = useRef(0);
+  const listboxId = useId();
 
   const { isLoaded, isLoading: isGoogleMapsLoading } = useGoogleMaps();
-  const normalizedQuery = query.trim();
-  const { data: databaseLocations, isLoading: isDatabaseSearchLoading } =
-    trpc.location.searchLocations.useQuery(
-      {
-        query: normalizedQuery,
-        type: 'all',
-        limit: 10,
-      },
-      {
-        // The catalog remains searchable when Places is not configured or
-        // temporarily unavailable. Google remains the preferred rich lookup.
-        enabled: !isLoaded && normalizedQuery.length >= 2,
-      },
-    );
+  const {
+    data: databaseLocations,
+    isLoading: isDatabaseSearchLoading,
+    error: databaseSearchError,
+  } = trpc.location.searchLocations.useQuery(
+    {
+      query: debouncedQuery,
+      type: 'all',
+      limit: 10,
+    },
+    {
+      // The catalog remains searchable when Places is not configured or
+      // temporarily unavailable. Google remains the preferred rich lookup.
+      enabled: !isLoaded && debouncedQuery.length >= 2,
+    },
+  );
   const databaseSuggestions: DatabaseLocationSuggestion[] = !isLoaded
-    ? ((databaseLocations as DatabaseLocationSuggestion[] | undefined) || [])
+    ? (databaseLocations as DatabaseLocationSuggestion[] | undefined) || []
     : [];
   const suggestionCount = predictions.length + databaseSuggestions.length;
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery) {
+      setDebouncedQuery('');
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setDebouncedQuery(trimmedQuery), 180);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
 
   // Initialize autocomplete service
   useEffect(() => {
@@ -108,20 +139,23 @@ export function LocationAutosuggest({
 
   // Fetch predictions from Google Places API
   useEffect(() => {
-    if (!query || query.length < 1 || !autocompleteService.current) {
+    const requestSequence = ++predictionRequestSequence.current;
+    if (!debouncedQuery || debouncedQuery.length < 1 || !autocompleteService.current) {
       setPredictions([]);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
 
     const request = {
-      input: query,
+      input: debouncedQuery,
       componentRestrictions: { country: 'za' }, // Restrict to South Africa
       types: ['geocode'],
     };
 
     autocompleteService.current.getPlacePredictions(request, (results, status) => {
+      if (requestSequence !== predictionRequestSequence.current) return;
       setIsLoading(false);
       if (status === google.maps.places.PlacesServiceStatus.OK && results) {
         setPredictions(results);
@@ -129,7 +163,7 @@ export function LocationAutosuggest({
         setPredictions([]);
       }
     });
-  }, [query]);
+  }, [debouncedQuery]);
 
   const handlePredictionSelect = (prediction: PlacePrediction) => {
     // Check max limit
@@ -196,6 +230,12 @@ export function LocationAutosuggest({
         type: locationType as any,
         provinceSlug,
         citySlug,
+        canonicalPath: getCanonicalBuyLocationPath({
+          type: locationType as LocationNode['type'],
+          slug,
+          provinceSlug,
+          citySlug,
+        }),
       });
     }
   };
@@ -218,11 +258,7 @@ export function LocationAutosuggest({
           ? slugify(location.provinceName)
           : undefined;
     const citySlug =
-      location.type === 'city'
-        ? slug
-        : location.cityName
-          ? slugify(location.cityName)
-          : undefined;
+      location.type === 'city' ? slug : location.cityName ? slugify(location.cityName) : undefined;
 
     onSelect({
       id: String(location.id),
@@ -231,6 +267,12 @@ export function LocationAutosuggest({
       type: location.type,
       provinceSlug,
       citySlug,
+      canonicalPath: getCanonicalBuyLocationPath({
+        type: location.type,
+        slug,
+        provinceSlug,
+        citySlug,
+      }),
     });
   };
 
@@ -266,6 +308,7 @@ export function LocationAutosuggest({
 
     if (e.key === 'Escape') {
       setShowSuggestions(false);
+      setSelectedIndex(-1);
       return;
     }
 
@@ -324,8 +367,18 @@ export function LocationAutosuggest({
         {/* The actual Input - borderless */}
         <input
           ref={inputRef}
+          id={`${listboxId}-input`}
           type="text"
           autoComplete="off"
+          role="combobox"
+          aria-label="Search by city, suburb, or area"
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-expanded={showSuggestions}
+          aria-activedescendant={
+            selectedIndex >= 0 ? `${listboxId}-option-${selectedIndex}` : undefined
+          }
+          aria-busy={isLoading || isDatabaseSearchLoading}
           // Disable input if limit reached (optional, P24 behavior allows typing but no selecting? Let's keep typing allowed for UX)
           // readOnly={isLimitReached}
           placeholder={
@@ -339,7 +392,7 @@ export function LocationAutosuggest({
             setSelectedIndex(-1);
             if (onChange) onChange(newValue);
           }}
-          onFocus={() => query.length >= 1 && setShowSuggestions(true)}
+          onFocus={() => query.trim().length >= 1 && setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
           className="flex-1 bg-transparent border-0 outline-none placeholder:text-muted-foreground min-w-[120px] h-8 text-sm"
         />
@@ -354,116 +407,149 @@ export function LocationAutosuggest({
         </div>
       </div>
 
+      <div role="status" aria-live="polite" className="sr-only">
+        {isLoading || isDatabaseSearchLoading
+          ? 'Loading location suggestions'
+          : databaseSearchError
+            ? 'Location suggestions are unavailable. You can continue with free text.'
+            : suggestionCount > 0
+              ? `${suggestionCount} location suggestions available`
+              : debouncedQuery.length >= 2
+                ? 'No locations found'
+                : ''}
+      </div>
+
       {/* Suggestions Dropdown */}
       {showSuggestions &&
         !isLimitReached &&
         (predictions.length > 0 ||
           databaseSuggestions.length > 0 ||
           (discoverySuggestions?.length ?? 0) > 0) && (
-        <div className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-200">
-          {/* Search Discovery Engine — static/fallback suggestions */}
-          {discoverySuggestions && discoverySuggestions.length > 0 && (
-            <>
-              <div className="px-4 pt-2.5 pb-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                Discover
-              </div>
-              {discoverySuggestions.map((s) => (
-                <div
-                  key={`disc-${s.canonicalPath}`}
-                  onClick={() => onDiscoveryNavigate?.(s.canonicalPath)}
-                  className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-blue-50"
-                >
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                    <Compass className="h-4 w-4 text-emerald-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm text-gray-900 truncate">{s.label}</div>
-                    <div className="text-xs text-gray-500 truncate capitalize">{s.type}</div>
-                  </div>
-                  <div className="text-xs text-emerald-600 font-medium whitespace-nowrap">
-                    {s.source}
-                  </div>
+          <div
+            id={listboxId}
+            role="listbox"
+            aria-label="Location suggestions"
+            className="absolute z-[9999] top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-200"
+          >
+            {/* Search Discovery Engine — static/fallback suggestions */}
+            {discoverySuggestions && discoverySuggestions.length > 0 && (
+              <>
+                <div className="px-4 pt-2.5 pb-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  Discover
                 </div>
-              ))}
-              {(predictions.length > 0 || databaseSuggestions.length > 0) && (
-                <div className="mx-3 my-1 border-t border-slate-100" />
-              )}
-            </>
-          )}
+                {discoverySuggestions.map(s => (
+                  <div
+                    key={`disc-${s.canonicalPath}`}
+                    role="option"
+                    tabIndex={-1}
+                    onClick={() => onDiscoveryNavigate?.(s.canonicalPath)}
+                    className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-blue-50"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                      <Compass className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900 truncate">{s.label}</div>
+                      <div className="text-xs text-gray-500 truncate capitalize">{s.type}</div>
+                    </div>
+                    <div className="text-xs text-emerald-600 font-medium whitespace-nowrap">
+                      {s.source}
+                    </div>
+                  </div>
+                ))}
+                {(predictions.length > 0 || databaseSuggestions.length > 0) && (
+                  <div className="mx-3 my-1 border-t border-slate-100" />
+                )}
+              </>
+            )}
 
-          {/* Database-backed catalog fallback when Google Places is unavailable. */}
-          {databaseSuggestions.map((location, index) => {
-            const suggestionIndex = predictions.length + index;
-            const context = [location.cityName, location.provinceName]
-              .filter(Boolean)
-              .join(', ');
-            return (
-              <div
-                key={`database-${location.type}-${location.id}`}
-                onClick={() => handleDatabaseLocationSelect(location)}
-                onMouseEnter={() => setSelectedIndex(suggestionIndex)}
-                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                  suggestionIndex === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-100">
-                  <MapPin className="h-4 w-4 text-emerald-700" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm text-gray-900 truncate">{location.name}</div>
-                  <div className="text-xs text-gray-500 truncate">
-                    {[location.type, context].filter(Boolean).join(' - ')}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Google Places predictions */}
-          {predictions.map((prediction, index) => {
-            const locationType = getLocationType(prediction.types);
-            return (
-              <div
-                key={prediction.place_id}
-                onClick={() => handlePredictionSelect(prediction)}
-                onMouseEnter={() => setSelectedIndex(index)}
-                className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                  index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
-                }`}
-              >
+            {/* Database-backed catalog fallback when Google Places is unavailable. */}
+            {databaseSuggestions.map((location, index) => {
+              const suggestionIndex = predictions.length + index;
+              const context = [location.cityName, location.provinceName].filter(Boolean).join(', ');
+              return (
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    locationType === 'city' ? 'bg-blue-100' : 'bg-gray-100'
+                  key={`database-${location.type}-${location.id}`}
+                  id={`${listboxId}-option-${suggestionIndex}`}
+                  role="option"
+                  aria-selected={suggestionIndex === selectedIndex}
+                  tabIndex={-1}
+                  onClick={() => handleDatabaseLocationSelect(location)}
+                  onMouseEnter={() => setSelectedIndex(suggestionIndex)}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                    suggestionIndex === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                   }`}
                 >
-                  <MapPin
-                    className={`h-4 w-4 ${
-                      locationType === 'city' ? 'text-blue-600' : 'text-gray-600'
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-100">
+                    <MapPin className="h-4 w-4 text-emerald-700" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-gray-900 truncate">
+                      {location.name}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {[location.type, context].filter(Boolean).join(' - ')}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Google Places predictions */}
+            {predictions.map((prediction, index) => {
+              const locationType = getLocationType(prediction.types);
+              return (
+                <div
+                  key={prediction.place_id}
+                  id={`${listboxId}-option-${index}`}
+                  role="option"
+                  aria-selected={index === selectedIndex}
+                  tabIndex={-1}
+                  onClick={() => handlePredictionSelect(prediction)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                    index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      locationType === 'city' ? 'bg-blue-100' : 'bg-gray-100'
                     }`}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm text-gray-900 truncate">
-                    {prediction.structured_formatting.main_text}
+                  >
+                    <MapPin
+                      className={`h-4 w-4 ${
+                        locationType === 'city' ? 'text-blue-600' : 'text-gray-600'
+                      }`}
+                    />
                   </div>
-                  <div className="text-xs text-gray-500 truncate">
-                    {prediction.structured_formatting.secondary_text}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-gray-900 truncate">
+                      {prediction.structured_formatting.main_text}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {prediction.structured_formatting.secondary_text}
+                    </div>
                   </div>
+                  <div className="text-xs text-gray-400 capitalize">{locationType}</div>
                 </div>
-                <div className="text-xs text-gray-400 capitalize">{locationType}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
       {/* No results or limit message */}
       {showSuggestions &&
         !isLoading &&
         !isDatabaseSearchLoading &&
-        (predictions.length === 0 && databaseSuggestions.length === 0 && query.length >= 2 ? (
+        (predictions.length === 0 &&
+        databaseSuggestions.length === 0 &&
+        debouncedQuery.length >= 2 ? (
           <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-            <p className="text-sm text-gray-500 text-center">No locations found</p>
+            <p className="text-sm text-gray-500 text-center">
+              {databaseSearchError
+                ? 'Location suggestions are unavailable. You can continue with free text.'
+                : 'No locations found'}
+            </p>
           </div>
         ) : null)}
     </div>
