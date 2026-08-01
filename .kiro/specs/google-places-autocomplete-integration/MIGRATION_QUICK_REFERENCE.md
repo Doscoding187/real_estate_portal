@@ -97,7 +97,7 @@ UPDATE suburbs SET slug = NULL, seo_title = NULL, seo_description = NULL;
 ## Key Files
 
 - **Migration Guide**: `TASK_19_MIGRATION_GUIDE.md`
-- **Schema Reference**: `SCHEMA_QUICK_REFERENCE.md`
+- **Schema reference**: Use the canonical Database Authority documents.
 - **Design Doc**: `design.md`
 - **Requirements**: `requirements.md`
 

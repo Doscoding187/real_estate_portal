@@ -414,7 +414,8 @@ it('should follow neighbourhood', async () => {
 
 For issues or questions:
 1. Check `EXPLORE_API_ENDPOINTS_COMPLETE.md` for detailed documentation
-2. Review `EXPLORE_DISCOVERY_ENGINE_PROGRESS.md` for implementation status
+2. Review the active discovery implementation under `server/domains/discovery/`
+   for current behaviour; historical progress reports are not authority.
 3. See `server/exploreApiRouter.ts` for source code
 
 ---

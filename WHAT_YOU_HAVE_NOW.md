@@ -141,7 +141,7 @@ All in **one real estate platform**! 🏠
 |----------|----------------|
 | `EXPLORE_MIGRATION_SUCCESS.md` | Migration results |
 | `EXPLORE_READY_TO_TEST.md` | Testing guide |
-| `EXPLORE_FEATURE_GUIDE.md` | Complete feature overview |
+| Active Explore routes and discovery source | Current feature behaviour |
 | `EXPLORE_API_QUICK_REFERENCE.md` | API documentation |
 
 ---

@@ -105,7 +105,8 @@ Should return: `200 OK` with JSON data
 
 ## 📚 Documentation
 
-- **Feature Guide**: `EXPLORE_FEATURE_GUIDE.md`
+- **Feature guidance**: verify current behaviour from the active Explore routes
+  and source implementation.
 - **Testing Guide**: `EXPLORE_READY_TO_TEST.md`
 - **API Reference**: `EXPLORE_API_QUICK_REFERENCE.md`
 - **Migration Guide**: `RUN_TIDB_MIGRATION_NOW.md`

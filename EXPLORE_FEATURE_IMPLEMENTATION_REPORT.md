@@ -611,7 +611,8 @@ All endpoints tested and working:
 ## 7. Documentation Created
 
 ### 7.1 User Guides
-- `EXPLORE_FEATURE_GUIDE.md` - Comprehensive feature guide
+- Current Explore behaviour must be verified from the active routes and
+  discovery implementation; the historical feature guide was retired.
 - `EXPLORE_READY_TO_TEST.md` - Testing instructions
 - `WHAT_YOU_HAVE_NOW.md` - Quick overview
 

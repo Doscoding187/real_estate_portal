@@ -365,4 +365,5 @@ For issues or questions:
 - [Google Places Integration Design](./design.md)
 - [Requirements Document](./requirements.md)
 - [Task List](./tasks.md)
-- [Schema Quick Reference](./SCHEMA_QUICK_REFERENCE.md)
+- Schema details are governed by the canonical Database Authority documents;
+  the historical quick reference was retired.

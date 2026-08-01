@@ -1,5 +1,9 @@
 # Explore Discovery Engine Database Schema Tests
 
+> **Historical test documentation — not database authority.** Do not execute
+> legacy migration commands named in historical material. Database setup for
+> tests must use the canonical test lifecycle and migration README.
+
 ## Overview
 
 This directory contains unit tests for the Explore Discovery Engine database schema. The tests verify:
@@ -14,17 +18,9 @@ This directory contains unit tests for the Explore Discovery Engine database sch
 
 ### Prerequisites
 
-1. **Database Connection**: Set the `DATABASE_URL` environment variable to your MySQL database connection string:
-   ```bash
-   export DATABASE_URL="mysql://user:password@host:port/database"
-   ```
-
-2. **Run Migration**: Ensure the Explore Discovery Engine migration has been executed:
-   ```bash
-   npm run db:migrate
-   # or
-   node scripts/run-explore-discovery-migration.ts
-   ```
+1. **Database setup**: Use the canonical test lifecycle and migration README;
+   do not set connection strings manually and do not run a feature-specific
+   migration runner from this document.
 
 ### Execute Tests
 
@@ -85,9 +81,8 @@ npm test -- server/services/__tests__/exploreDiscoverySchema.test.ts
 
 ## Test Behavior
 
-- **Without DATABASE_URL**: Tests will be skipped with a warning message
-- **With DATABASE_URL but no migration**: Tests will fail with table not found errors
-- **With DATABASE_URL and migration**: All tests will execute and verify schema integrity
+- The canonical test lifecycle owns target selection, schema setup, and demo
+  data. This document does not authorize direct database access.
 
 ## Cleanup
 
@@ -103,7 +98,5 @@ These tests validate the following requirements from the Explore Discovery Engin
 
 ## Related Files
 
-- Migration: `drizzle/migrations/create-explore-discovery-engine.sql`
-- Schema: `drizzle/schema.ts`
-- Design Document: `.kiro/specs/explore-discovery-engine/design.md`
-- Requirements: `.kiro/specs/explore-discovery-engine/requirements.md`
+- Runtime schema authority: `drizzle/schema/`
+- Database setup authority: `docs/database-authority/00-database-authority-agent-entry.md`

@@ -203,6 +203,5 @@ After deploying fixes:
 
 ## Related Documentation
 
-- [Explore Discovery Engine Progress](EXPLORE_DISCOVERY_ENGINE_PROGRESS.md)
 - [Explore Quick Reference](EXPLORE_QUICK_REFERENCE.md)
 - [Task 2 Complete](. kiro/specs/explore-discovery-engine/TASK_2_COMPLETE.md)
