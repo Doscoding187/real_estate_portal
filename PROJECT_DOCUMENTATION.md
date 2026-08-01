@@ -220,7 +220,7 @@ is `pnpm db:migrate:test`; all use
 `server/migrations/README.md`. `db:push` and direct `drizzle-kit`
 execution are not operational migration authority.
 
-Populate the database with sample data by executing `DATABASE_URL="$DATABASE_URL" npx tsx seed-data.ts`. This script inserts 12 sample properties with images into the database.
+Populate only the approved local/demo database through `pnpm db:seed:local`. Ad-hoc production or ambient-target seed utilities are prohibited.
 
 Start the development server using `pnpm dev`. The application will be available at the configured port (typically 3000), and you can access it through your web browser.
 

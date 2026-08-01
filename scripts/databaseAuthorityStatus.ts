@@ -27,8 +27,11 @@ export type AuthorityManifest = {
   localSeedEntrypoint: string;
   verificationEntrypoints: string[];
   consumerContractEntrypoint: string;
+  staticAuthorityCheck: string;
   agentEntryContract: string;
+  databaseChangeProtocol: string;
   migrationTreeAuthority: string;
+  residualUtilityAuthority: string;
 };
 
 const MANIFEST_PATH = 'docs/database-authority/authority-manifest.json';
@@ -36,6 +39,7 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   'db:authority:status',
   'db:authority:bootstrap:local',
   'db:authority:consumer-contract',
+  'db:authority:check',
 ] as const;
 
 export function loadAuthorityManifest(root = process.cwd()): AuthorityManifest {
@@ -53,8 +57,11 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.localSeedEntrypoint,
     ...manifest.verificationEntrypoints,
     manifest.consumerContractEntrypoint,
+    manifest.staticAuthorityCheck,
     manifest.agentEntryContract,
+    manifest.databaseChangeProtocol,
     manifest.migrationTreeAuthority,
+    manifest.residualUtilityAuthority,
   ];
   const missingPaths = paths.filter(path => !existsSync(resolve(root, path)));
   const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {

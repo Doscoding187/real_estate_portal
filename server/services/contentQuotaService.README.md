@@ -1,5 +1,10 @@
 # Content Quota Service
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 Tracks progress toward launch content quotas and provides detailed reporting on content inventory for the Explore Partner Marketplace cold start.
 
 ## Requirements

@@ -169,4 +169,4 @@ Your Explore feature is **fully functional** and ready to use. The backend infra
 
 ---
 
-**Need help?** Check the detailed guide: `EXPLORE_FEATURE_GUIDE.md`
+**Need help?** Check the active Explore routes and discovery implementation.

@@ -1,5 +1,10 @@
 # Quality Scoring Service
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 ## Overview
 
 The Quality Scoring Service calculates and maintains quality scores for all content in the Explore Partner Marketplace. Quality scores influence content visibility in feeds and help partners understand content performance.

@@ -1,5 +1,10 @@
 # Partner Boost Campaign Service
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 ## Overview
 
 The Partner Boost Campaign Service manages paid promotion campaigns for partner content in the Explore Partner Marketplace system. It handles campaign creation, activation, budget tracking, and ensures compliance with content hierarchy rules.

@@ -18,11 +18,16 @@ instructions.
 | Schema/demo verification | `scripts/db-verify-distribution-schema.ts`, `server/scripts/verifyLocalDemoSeed.ts` | Keep |
 | Authority classification | `docs/database-authority/migration-tree-authority.json` | Keep |
 | Operating manifest and commands | `authority-manifest.json`, `db:authority:*` | Extend |
+| Database change workflow | `database-change-protocol.md` | Keep and follow |
 | CI consumer proof | `db:authority:consumer-contract` | Extend |
 
 The machine-readable companion is
 [`authority-manifest.json`](authority-manifest.json). It points to authority;
 it does not replace it.
+
+The canonical change workflow is
+[`database-change-protocol.md`](database-change-protocol.md). Normal schema
+evolution follows that protocol and does not reopen the programme.
 
 ## Rules
 
@@ -38,6 +43,11 @@ it does not replace it.
 - A stale seed, fixture, test helper or runtime query must be reconciled to the canonical schema. The canonical schema must not be changed merely to satisfy a stale consumer.
 - Never use `db:push`, schema generation, manual DDL, or retired schema
   executors unless an approved task explicitly creates a new migration.
+- Files under `.kiro/specs/**` and retired legacy setup guides are historical
+  evidence only; they cannot authorize migrations, seeds, repairs, backfills,
+  manual SQL, or production database operations. Current commands come only
+  from this entry contract, the manifest, the Database Change Protocol, and
+  `server/migrations/README.md`.
 - Never reconstruct or print `DATABASE_URL`, credentials, passwords, tokens,
   or complete database URLs. Existing destructive commands retain their exact
   acknowledgement requirements.

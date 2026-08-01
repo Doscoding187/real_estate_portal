@@ -174,4 +174,21 @@ describe('database residual utility authority', () => {
       }
     }
   });
+
+  it('retains the cross-agency fixture only through the guarded disposable runner', () => {
+    const verifier = read('scripts/verify-prospect-journey-cross-agency.ts');
+    const manifest = JSON.parse(
+      read('docs/database-authority/migration-tree-authority.json'),
+    ) as {
+      manualUtilityAuthority: { localTestSeedOrFixtureUtilities: string[] };
+    };
+
+    expect(verifier).toContain("const DATABASE = 'listify_prospect_journey_e2e'");
+    expect(verifier).toContain("['localhost', '127.0.0.1', '::1'].includes(url.hostname)");
+    expect(verifier).toMatch(/INSERT INTO agencies/);
+    expect(verifier).not.toMatch(/\b(?:CREATE|ALTER|DROP|TRUNCATE)\b/i);
+    expect(manifest.manualUtilityAuthority.localTestSeedOrFixtureUtilities).toContain(
+      'scripts/verify-prospect-journey-cross-agency.ts',
+    );
+  });
 });

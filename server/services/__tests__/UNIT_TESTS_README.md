@@ -1,5 +1,9 @@
 # Explore Agency Content Attribution - Unit Tests
 
+> **Historical test documentation — not database authority.** Do not execute
+> legacy migration commands named in historical material. Database setup for
+> tests must use the canonical test lifecycle and migration README.
+
 ## Overview
 
 This directory contains comprehensive unit tests for the Explore Agency Content Attribution feature. The tests verify all core functionality including agency feed generation, metrics aggregation, creator type validation, and foreign key constraints.
@@ -111,17 +115,9 @@ This file contains 18 unit tests organized into 7 test suites:
 
 ### Prerequisites
 
-1. **Database Connection**: Set the `DATABASE_URL` environment variable to your MySQL database connection string:
-   ```bash
-   export DATABASE_URL="mysql://user:password@host:port/database"
-   ```
-
-2. **Run Migration**: Ensure the agency attribution migration has been executed:
-   ```bash
-   npm run db:migrate
-   # or
-   node scripts/run-agency-attribution-migration.ts
-   ```
+1. **Database setup**: Use the canonical test lifecycle and migration README;
+   do not set connection strings manually and do not run a feature-specific
+   migration runner from this document.
 
 ### Execute Tests
 
@@ -142,9 +138,8 @@ npm test -- server/services/__tests__/ --run
 
 ### Test Behavior
 
-- **Without DATABASE_URL**: Tests will skip gracefully with a warning message
-- **With DATABASE_URL but no migration**: Tests will fail with table not found errors
-- **With DATABASE_URL and migration**: All tests will execute and verify functionality
+- The canonical test lifecycle owns target selection, schema setup, and demo
+  data. This document does not authorize direct database access.
 
 ## Test Data Management
 
@@ -184,11 +179,7 @@ These tests validate the following requirements from the Explore Agency Content 
 
 - **Service Implementation**: `server/services/exploreFeedService.ts`
 - **Agency Service**: `server/services/exploreAgencyService.ts`
-- **Migration**: `drizzle/migrations/add-agency-attribution.sql`
-- **Rollback**: `drizzle/migrations/rollback-agency-attribution.sql`
-- **Design Document**: `.kiro/specs/explore-agency-content-attribution/design.md`
-- **Requirements**: `.kiro/specs/explore-agency-content-attribution/requirements.md`
-- **Tasks**: `.kiro/specs/explore-agency-content-attribution/tasks.md`
+- **Database setup authority**: `docs/database-authority/00-database-authority-agent-entry.md`
 
 ## Test Maintenance
 
@@ -202,12 +193,12 @@ When updating the agency attribution feature:
 ## Troubleshooting
 
 ### Tests Skip with "Database not available"
-- **Cause**: DATABASE_URL environment variable not set
-- **Solution**: Set DATABASE_URL to your database connection string
+- **Cause**: The approved test lifecycle was not prepared
+- **Solution**: Use the canonical test lifecycle and migration README.
 
 ### Tests Fail with "Tables not found"
 - **Cause**: Migration not run
-- **Solution**: Run `node scripts/run-agency-attribution-migration.ts`
+- **Solution**: Use the canonical test lifecycle and migration README.
 
 ### Tests Fail with Foreign Key Errors
 - **Cause**: Foreign key constraints may not be enabled in your MySQL configuration

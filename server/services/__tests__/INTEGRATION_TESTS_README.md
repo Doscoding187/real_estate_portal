@@ -1,5 +1,9 @@
 # Integration Tests for Explore Agency Content Attribution
 
+> **Historical test documentation — not database authority.** Do not execute
+> legacy migration commands named in historical material. Database setup for
+> tests must use the canonical test lifecycle and migration README.
+
 ## Overview
 
 This directory contains integration tests for the Explore Agency Content Attribution feature. These tests verify the complete end-to-end functionality including:
@@ -14,17 +18,9 @@ This directory contains integration tests for the Explore Agency Content Attribu
 
 ### Prerequisites
 
-1. **Database Connection**: Set the `DATABASE_URL` environment variable to your MySQL database connection string:
-   ```bash
-   export DATABASE_URL="mysql://user:password@host:port/database"
-   ```
-
-2. **Run Migration**: Ensure the Agency Attribution migration has been executed:
-   ```bash
-   npm run db:migrate
-   # or
-   node scripts/run-agency-attribution-migration.ts
-   ```
+1. **Database setup**: Use the canonical test lifecycle and migration README;
+   do not set connection strings manually and do not run a feature-specific
+   migration runner from this document.
 
 ### Execute Tests
 
@@ -107,9 +103,8 @@ Tests database schema:
 
 ## Test Behavior
 
-- **Without DATABASE_URL**: Tests will be skipped with a warning message
-- **With DATABASE_URL but no migration**: Tests will fail with table/column not found errors
-- **With DATABASE_URL and migration**: All tests will execute and verify functionality
+- The canonical test lifecycle owns target selection, schema setup, and demo
+  data. This document does not authorize direct database access.
 
 ## Cleanup
 
@@ -123,7 +118,7 @@ These integration tests validate the following requirements from the Agency Cont
 - **Requirement 2.1-2.5**: Agency feed filtering and caching
 - **Requirement 3.1-3.4**: Agency analytics integration
 - **Requirement 4.1-4.3**: Multi-table agency support
-- **Requirement 7.5**: Migration and rollback capability
+- **Requirement 7.5**: Schema integrity is verified through the canonical test lifecycle
 - **Requirement 8.1-8.3**: API endpoint functionality
 - **Security**: Permission enforcement for analytics access
 
@@ -131,20 +126,17 @@ These integration tests validate the following requirements from the Agency Cont
 
 - Unit Tests: `server/services/__tests__/exploreAgencyAttribution.test.ts`
 - Service Tests: `server/services/__tests__/exploreAgencyService.test.ts`
-- Migration: `drizzle/migrations/add-agency-attribution.sql`
-- Rollback: `drizzle/migrations/rollback-agency-attribution.sql`
-- Design Document: `.kiro/specs/explore-agency-content-attribution/design.md`
-- Requirements: `.kiro/specs/explore-agency-content-attribution/requirements.md`
+- Database setup authority: `docs/database-authority/00-database-authority-agent-entry.md`
 
 ## Troubleshooting
 
 ### Tests are skipped
-- Ensure `DATABASE_URL` environment variable is set
-- Verify database is accessible
+- Prepare the approved canonical test lifecycle; do not configure a database
+  connection manually.
 
 ### Column not found errors
-- Run the migration: `node scripts/run-agency-attribution-migration.ts`
-- Verify migration completed successfully
+- Use the canonical test lifecycle and migration README.
+- Verify the canonical test lifecycle completed successfully
 
 ### Foreign key constraint errors
 - Ensure `agencies` table exists
