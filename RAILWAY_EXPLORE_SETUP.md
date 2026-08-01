@@ -1,6 +1,6 @@
-# Retired Railway Explore Setup Guide
+# Superseded Railway Explore Setup Guide
 
-> **Retired.** This guide is historical evidence only and is not operational database authority. None of its historical hosting, migration, seed, or manual database instructions may be used.
+> **Superseded.** This guide is historical evidence only and is not operational database authority. None of its historical hosting, migration, seed, or manual database instructions may be used.
 
 Production migrations use the canonical migration runner. Production seed
 authority is none. Manual SQL and feature-specific migration runners are

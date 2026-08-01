@@ -1,6 +1,6 @@
-# Retired Database Setup Guide
+# Superseded Database Setup Guide
 
-> **Retired.** This historical guide is not operational database authority.
+> **Superseded.** This historical guide is not operational database authority.
 > Its Docker, manual SQL, seed, and direct database setup instructions must
 > not be used.
 

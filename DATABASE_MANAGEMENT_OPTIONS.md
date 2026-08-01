@@ -1,6 +1,6 @@
-# Retired Database Management Options
+# Superseded Database Management Options
 
-> **Retired.** This historical guide is not operational database authority.
+> **Superseded.** This historical guide is not operational database authority.
 > Its manual SQL, local database setup, credential examples, and alternative
 > migration instructions must not be used.
 
