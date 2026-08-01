@@ -152,14 +152,14 @@ Side-by-side before/after comparisons:
 ## Visual Changes
 
 ### ExploreHome
-![Before/After](./client/src/lib/testing/visual-documentation/comparisons/explore-home-comparison.png)
+Before/After comparison artifact: `explore-home-comparison.png` (not committed in this worktree)
 
 ### Key Interactions
-![Card Hover](./client/src/lib/testing/visual-documentation/gifs/card-hover-animation.gif)
-![Filter Panel](./client/src/lib/testing/visual-documentation/gifs/filter-panel-slide.gif)
+Card hover artifact: `card-hover-animation.gif` (not committed in this worktree)
+Filter panel artifact: `filter-panel-slide.gif` (not committed in this worktree)
 
 ### Demo Video
-[Watch Demo](./client/src/lib/testing/visual-documentation/videos/smooth-video-playback.mp4)
+Demo artifact: `smooth-video-playback.mp4` (not committed in this worktree)
 ```
 
 ### In Documentation

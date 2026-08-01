@@ -1,4 +1,10 @@
 # Senior Developer Implementation Report
+
+> **Historical implementation evidence — not operational authority.** The
+> schema examples and rollback references in this report are not instructions
+> for database operations. Current database work must follow the Database
+> Authority entry contract, Database Change Protocol, and canonical migration
+> README.
 ## Database Optimization & Security Enhancement Project
 
 **Date:** 2025-11-05  

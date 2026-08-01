@@ -58,7 +58,9 @@ export function getExploreDataMode(): ExploreDataMode {
 
   const rawMode = env.VITE_EXPLORE_MOCK_MODE ?? env.VITE_EXPLORE_PLACEHOLDER_MODE;
   if (rawMode == null || String(rawMode).trim() === '') {
-    return 'mock';
+    // The live discovery router is the default in development as well as
+    // production. Mock content is an explicit, opt-in preview mode.
+    return 'trpc';
   }
 
   return normalizeMode(rawMode);

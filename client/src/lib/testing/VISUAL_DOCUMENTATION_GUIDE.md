@@ -602,14 +602,14 @@ Side-by-side before/after comparisons for each page.
 ## Visual Changes
 
 ### ExploreHome
-![Before/After](./visual-documentation/comparisons/explore-home-comparison.png)
+Before/After comparison artifact: `explore-home-comparison.png` (not committed in this worktree)
 
 ### Key Interactions
-![Card Hover](./visual-documentation/gifs/card-hover-animation.gif)
-![Filter Panel](./visual-documentation/gifs/filter-panel-slide.gif)
+Card hover artifact: `card-hover-animation.gif` (not committed in this worktree)
+Filter panel artifact: `filter-panel-slide.gif` (not committed in this worktree)
 
 ### Demo Video
-[Watch Demo](./visual-documentation/videos/smooth-video-playback.mp4)
+Demo artifact: `smooth-video-playback.mp4` (not committed in this worktree)
 ```
 
 ### In Documentation

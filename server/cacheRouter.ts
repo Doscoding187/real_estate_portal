@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { publicProcedure, protectedProcedure, router } from './_core/trpc';
+import { publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { redisCache } from './lib/redis';
 import { getCacheStats } from './services/cacheIntegrationService';
 
@@ -36,12 +36,7 @@ export const cacheRouter = router({
   /**
    * Clear all cache (admin only)
    */
-  clearAll: protectedProcedure.mutation(async ({ ctx }) => {
-    // TODO: Add admin role check
-    // if (ctx.user.role !== 'admin') {
-    //   throw new Error('Unauthorized: Admin access required');
-    // }
-
+  clearAll: superAdminProcedure.mutation(async () => {
     try {
       await redisCache.delByPattern('explore:*');
 
@@ -58,18 +53,13 @@ export const cacheRouter = router({
   /**
    * Clear specific cache pattern (admin only)
    */
-  clearPattern: protectedProcedure
+  clearPattern: superAdminProcedure
     .input(
       z.object({
         pattern: z.string(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      // TODO: Add admin role check
-      // if (ctx.user.role !== 'admin') {
-      //   throw new Error('Unauthorized: Admin access required');
-      // }
-
+    .mutation(async ({ input }) => {
       try {
         await redisCache.delByPattern(`explore:${input.pattern}:*`);
 

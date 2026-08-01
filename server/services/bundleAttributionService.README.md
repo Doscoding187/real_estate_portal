@@ -1,5 +1,10 @@
 # Bundle Attribution Service
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 ## Overview
 
 The Bundle Attribution Service tracks user engagements with bundle partners to measure bundle effectiveness and attribute conversions back to the bundle that introduced the partner. This enables data-driven decisions about bundle composition and partner performance.

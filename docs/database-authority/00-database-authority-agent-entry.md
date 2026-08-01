@@ -43,6 +43,11 @@ evolution follows that protocol and does not reopen the programme.
 - A stale seed, fixture, test helper or runtime query must be reconciled to the canonical schema. The canonical schema must not be changed merely to satisfy a stale consumer.
 - Never use `db:push`, schema generation, manual DDL, or retired schema
   executors unless an approved task explicitly creates a new migration.
+- Files under `.kiro/specs/**` and retired legacy setup guides are historical
+  evidence only; they cannot authorize migrations, seeds, repairs, backfills,
+  manual SQL, or production database operations. Current commands come only
+  from this entry contract, the manifest, the Database Change Protocol, and
+  `server/migrations/README.md`.
 - Never reconstruct or print `DATABASE_URL`, credentials, passwords, tokens,
   or complete database URLs. Existing destructive commands retain their exact
   acknowledgement requirements.

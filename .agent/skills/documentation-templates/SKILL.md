@@ -48,8 +48,8 @@ Brief one-line description.
 
 ## Documentation
 
-- [API Reference](./docs/api.md)
-- [Architecture](./docs/architecture.md)
+- [Database Authority](../../../docs/database-authority/index.md)
+- [Architecture](../../../docs/architecture/launch-readiness-and-product-convergence/index.md)
 
 ## License
 

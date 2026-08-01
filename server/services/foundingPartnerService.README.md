@@ -1,5 +1,10 @@
 # Founding Partner Service
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 ## Overview
 
 The Founding Partner Service manages the Early Partner Program, which provides special benefits to the first 15 partners who enroll during the pre-launch phase. This service tracks enrollment, content commitments, and benefit eligibility.

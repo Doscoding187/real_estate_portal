@@ -1,5 +1,12 @@
 # Explore Discovery Engine - Implementation Progress
 
+> **Historical implementation evidence — not operational authority.** This
+> progress report records superseded implementation work. Do not execute any
+> migration, seed, repair, backfill, rollback, SQL, or deployment instruction
+> named here. Current database work must follow the [Database Authority entry contract](docs/database-authority/00-database-authority-agent-entry.md),
+> [Database Change Protocol](docs/database-authority/database-change-protocol.md),
+> and [canonical migration README](server/migrations/README.md).
+
 ## Overview
 
 This document tracks the implementation progress of the Explore Discovery Engine, a next-generation property discovery platform combining TikTok-style video feeds, intelligent recommendations, and neighbourhood storytelling.

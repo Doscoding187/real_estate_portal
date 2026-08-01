@@ -1,5 +1,12 @@
 # Explore Agency Content Attribution - Spec Complete ✅
 
+> **Historical implementation evidence — not operational authority.** This
+> specification does not authorize its legacy migration runner, rollback SQL,
+> seed, or deployment instructions. Current database work must follow the
+> [Database Authority entry contract](docs/database-authority/00-database-authority-agent-entry.md),
+> [Database Change Protocol](docs/database-authority/database-change-protocol.md),
+> and [canonical migration README](server/migrations/README.md).
+
 ## Overview
 
 A comprehensive specification for adding agency-level content attribution to the Explore feed system has been created and is ready for implementation.
@@ -44,19 +51,8 @@ A comprehensive specification for adding agency-level content attribution to the
    - Deployment
    - Optional data backfill
 
-4. **QUICK_START.md** - Quick reference guide
-   - Implementation steps
-   - Key files
-   - Testing commands
-   - Common use cases
-   - Rollback instructions
-
-5. **IMPLEMENTATION_SUMMARY.md** - Executive summary
-   - Problem statement
-   - Solution overview
-   - Key features
-   - Implementation phases
-   - Success metrics
+4. Historical quick-start and implementation-summary runbooks were removed;
+   their design and implementation history remains in Git.
 
 6. **ARCHITECTURE_DIAGRAM.md** - Visual documentation
    - System overview diagram
@@ -148,7 +144,7 @@ When agents upload content, their agency is automatically attributed (with opt-o
 ## Implementation Phases
 
 ### Phase 1: Database (Week 1)
-- Run migration
+- Use the canonical Database Change Protocol and migration README
 - Update schema types
 - Verify changes
 
@@ -172,12 +168,10 @@ When agents upload content, their agency is automatically attributed (with opt-o
 
 ## Quick Start
 
-### 1. Run Migration
-```bash
-npm run migration:agency-attribution
-# or
-tsx scripts/run-agency-attribution-migration.ts
-```
+### 1. Database change authority
+Use the canonical Database Change Protocol and migration README. The legacy
+feature-specific migration runner described in this historical specification
+is not an approved command.
 
 ### 2. Update Types
 ```bash
@@ -199,16 +193,10 @@ npm test -- agency-attribution
 ├── requirements.md                    # Requirements & acceptance criteria
 ├── design.md                          # Technical design
 ├── tasks.md                           # Implementation tasks
-├── QUICK_START.md                     # Quick reference
-├── IMPLEMENTATION_SUMMARY.md          # Executive summary
 └── ARCHITECTURE_DIAGRAM.md            # Visual documentation
 
-drizzle/migrations/
-├── add-agency-attribution.sql         # Forward migration
-└── rollback-agency-attribution.sql    # Rollback script
-
-scripts/
-└── run-agency-attribution-migration.ts # Migration runner
+Legacy feature-specific migration and deployment artifacts are retired; any
+future schema change must use the canonical migration authority.
 
 Root:
 ├── EXPLORE_CONTENT_SOURCING_ANALYSIS.md # Problem analysis
@@ -255,7 +243,7 @@ Root:
 
 1. **Review Spec** - Review with stakeholders
 2. **Approve Design** - Get technical approval
-3. **Run Migration** - Execute database changes
+3. **Database authority** - Follow the canonical Database Change Protocol
 4. **Implement Backend** - Build services and APIs
 5. **Build Frontend** - Create components
 6. **Test** - Run all test suites
@@ -280,7 +268,8 @@ For questions:
 - [x] Testing strategy defined
 - [x] Documentation complete
 
-**Next**: Begin Phase 1 - Database Migration
+**Next**: Any future database change must begin with the canonical Database
+Change Protocol; the historical feature-specific runner is retired.
 
 ---
 

@@ -1,4 +1,11 @@
-# Definitive Schema Strategy for Concurrent Platform Development
+# Historical Schema Strategy for Concurrent Platform Development
+
+> **Superseded governance guidance — not operational authority.** This
+> historical strategy may contain schema examples, manual SQL, or legacy
+> workflow references. Current schema changes must follow the [Database
+> Authority entry contract](database-authority/00-database-authority-agent-entry.md),
+> [Database Change Protocol](database-authority/database-change-protocol.md),
+> and [canonical migration README](../server/migrations/README.md).
 
 > **Version 1.0** - Authoritative Schema Discipline for Real Estate Portal
 > This document is the **source of truth** for database schema, migrations, and feature evolution.

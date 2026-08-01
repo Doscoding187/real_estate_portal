@@ -1,5 +1,12 @@
 # Explore Feature - Comprehensive Codebase Documentation
 
+> **Historical implementation evidence — not operational authority.** This
+> report documents feature architecture only. Do not execute feature-specific
+> migration or seed utilities named below. Current database work must follow
+> the [Database Authority entry contract](docs/database-authority/00-database-authority-agent-entry.md),
+> [Database Change Protocol](docs/database-authority/database-change-protocol.md),
+> and [canonical migration README](server/migrations/README.md).
+
 ## Executive Summary
 
 The Explore Feature is a next-generation property discovery engine that transforms traditional property browsing into an engaging, personalized content experience. It combines:
@@ -1074,8 +1081,8 @@ pnpm test -- --grep "explore"
 # Check Explore components
 pnpm lint client/src/components/explore-discovery/
 
-# Run database migrations
-pnpm tsx scripts/run-explore-discovery-migration.ts
+# Database changes
+# Use the canonical Database Change Protocol and migration README.
 ```
 
 ---

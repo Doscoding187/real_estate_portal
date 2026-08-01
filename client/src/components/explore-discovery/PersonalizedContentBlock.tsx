@@ -104,7 +104,10 @@ function getItemStat(item: DiscoveryItem, data: any) {
     return views ? `${views} views` : 'Watch now';
   }
   if (item.type === 'neighbourhood') {
-    return formatCompactPrice(Number(data?.avgPropertyPrice || 0));
+    const averagePrice = Number(data?.avgPropertyPrice);
+    return Number.isFinite(averagePrice) && averagePrice > 0
+      ? formatCompactPrice(averagePrice)
+      : 'Explore area';
   }
   return data?.data?.value || 'Open';
 }
@@ -168,7 +171,9 @@ export function PersonalizedContentBlock({
         : item.type === 'property'
           ? [data?.city, data?.province].filter(Boolean).join(', ') || data?.location || 'South Africa'
           : item.type === 'neighbourhood'
-            ? `${data?.propertyCount || 0} active listings`
+            ? typeof data?.propertyCount === 'number' && Number.isFinite(data.propertyCount)
+              ? `${data.propertyCount} active listings`
+              : 'Local market snapshot'
             : data?.description || 'Open section';
 
     const statLine = getItemStat(item, data);

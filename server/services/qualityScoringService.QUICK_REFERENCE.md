@@ -1,5 +1,10 @@
 # Quality Scoring Service - Quick Reference
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 ## At a Glance
 
 The Quality Scoring Service calculates and maintains quality scores (0-100) for all content, influencing feed visibility and partner notifications.

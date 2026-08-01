@@ -1,5 +1,9 @@
 # Explore Agency Content Attribution - Unit Tests
 
+> **Historical test documentation — not database authority.** Do not execute
+> legacy migration commands named in historical material. Database setup for
+> tests must use the canonical test lifecycle and migration README.
+
 ## Overview
 
 This directory contains comprehensive unit tests for the Explore Agency Content Attribution feature. The tests verify all core functionality including agency feed generation, metrics aggregation, creator type validation, and foreign key constraints.
@@ -116,12 +120,8 @@ This file contains 18 unit tests organized into 7 test suites:
    export DATABASE_URL="mysql://user:password@host:port/database"
    ```
 
-2. **Run Migration**: Ensure the agency attribution migration has been executed:
-   ```bash
-   npm run db:migrate
-   # or
-   node scripts/run-agency-attribution-migration.ts
-   ```
+2. **Database setup**: Use the canonical test lifecycle and migration README;
+   this document does not authorize a feature-specific migration runner.
 
 ### Execute Tests
 
@@ -207,7 +207,7 @@ When updating the agency attribution feature:
 
 ### Tests Fail with "Tables not found"
 - **Cause**: Migration not run
-- **Solution**: Run `node scripts/run-agency-attribution-migration.ts`
+- **Solution**: Use the canonical test lifecycle and migration README.
 
 ### Tests Fail with Foreign Key Errors
 - **Cause**: Foreign key constraints may not be enabled in your MySQL configuration

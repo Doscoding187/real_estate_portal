@@ -1,5 +1,10 @@
 # Troubleshooting: Server Won't Start
 
+> **Historical troubleshooting guidance — not database authority.** Do not
+> connect manually, execute SQL, or run feature-specific seed or migration
+> utilities from this document. Use the Database Authority entry contract,
+> supported diagnostics, and approved local/test lifecycle.
+
 ## Common Issues and Solutions
 
 ### Issue 1: "Cannot find module 'bcryptjs'"
@@ -56,11 +61,8 @@ Get-Process -Name node -ErrorAction SilentlyContinue
 - Database exists
 - Credentials are correct
 
-**Test connection:**
-```bash
-# Try connecting to your database manually
-mysql -u username -p -h localhost database_name
-```
+**Test connection:** Use the supported diagnostic authority; this document
+does not authorize a manual database client connection.
 
 ---
 
@@ -170,4 +172,3 @@ Server running on http://localhost:3000/
 
 If you see this, the server is running! Open your browser and go to:
 - **http://localhost:3000**
-

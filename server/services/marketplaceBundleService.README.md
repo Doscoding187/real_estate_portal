@@ -1,5 +1,10 @@
 # Marketplace Bundle Service
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 ## Overview
 
 The Marketplace Bundle Service manages curated collections of partners grouped by category to help users find all the services they need in one place. For example, a "First-Time Buyer Bundle" includes partners for Finance, Legal, Inspection, and Insurance.

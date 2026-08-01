@@ -4,7 +4,7 @@
  * Requirements: 2.3, 8.6, 14.1
  */
 
-import { router, protectedProcedure } from './_core/trpc';
+import { router, protectedProcedure, superAdminProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { exploreAnalyticsService } from './services/exploreAnalyticsService';
 import { requireUser } from './_core/requireUser';
@@ -158,12 +158,7 @@ export const exploreAnalyticsRouter = router({
    * Trigger batch update of engagement scores
    * Admin only - should be called periodically
    */
-  batchUpdateEngagementScores: protectedProcedure.mutation(async ({ ctx }) => {
-    // TODO: Add admin check
-    // if (requireUser(ctx).role !== 'admin') {
-    //   throw new Error('Unauthorized');
-    // }
-
+  batchUpdateEngagementScores: superAdminProcedure.mutation(async () => {
     await exploreAnalyticsService.batchUpdateEngagementScores();
 
     return {
@@ -172,4 +167,3 @@ export const exploreAnalyticsRouter = router({
     };
   }),
 });
-

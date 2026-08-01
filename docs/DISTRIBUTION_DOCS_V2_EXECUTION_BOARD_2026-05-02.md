@@ -10,11 +10,11 @@
 - Dependencies: None
 
 Tasks:
-1. `DISTDOC-102` Create `development_documents` in [distribution.ts](/c:/Dev/real_estate_portal_clone/drizzle/schema/distribution.ts) and SQL migration in `server/migrations/*`.
+1. `DISTDOC-102` Create `development_documents` in [distribution.ts](../drizzle/schema/distribution.ts) and SQL migration in `server/migrations/*`.
 - Risk: Medium
 - Dependency: None
 
-2. `DISTDOC-103` Create `application_requirements` in [distribution.ts](/c:/Dev/real_estate_portal_clone/drizzle/schema/distribution.ts) and SQL migration.
+2. `DISTDOC-103` Create `application_requirements` in [distribution.ts](../drizzle/schema/distribution.ts) and SQL migration.
 - Risk: Medium
 - Dependency: `DISTDOC-102`
 
@@ -76,7 +76,7 @@ Acceptance criteria:
 - Dependencies: None
 
 Tasks:
-1. `DISTDOC-121` Update [db-verify-distribution-schema.ts](/c:/Dev/real_estate_portal_clone/scripts/db-verify-distribution-schema.ts) to include runtime-critical tables (`distribution_deal_events` included).
+1. `DISTDOC-121` Update [db-verify-distribution-schema.ts](../scripts/db-verify-distribution-schema.ts) to include runtime-critical tables (`distribution_deal_events` included).
 - Risk: Medium
 - Dependency: None
 
@@ -127,7 +127,7 @@ Acceptance criteria:
 - Dependencies: `DISTDOC-201`, `DISTDOC-115` (hard gate)
 
 Tasks:
-1. `DISTDOC-211` Add document bank + requirement endpoints in [distributionRouter.ts](/c:/Dev/real_estate_portal_clone/server/distributionRouter.ts).
+1. `DISTDOC-211` Add document bank + requirement endpoints in [distributionRouter.ts](../server/distributionRouter.ts).
 2. `DISTDOC-212` Rebase manager checklist endpoints to service layer and dual-write legacy + V2 in one transaction.
 3. `DISTDOC-213` Replace referrer pipeline completeness source with readiness service.
 4. `DISTDOC-214` Keep event metadata for audit/timeline only; remove readiness fallback logic.
@@ -150,7 +150,7 @@ Acceptance criteria:
 - Dependencies: `DISTDOC-211`
 
 Tasks:
-1. `DISTDOC-302` Refactor [PartnerDevelopmentOnboardingDrawer.tsx](/c:/Dev/real_estate_portal_clone/client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx) into:
+1. `DISTDOC-302` Refactor [PartnerDevelopmentOnboardingDrawer.tsx](../client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx) into:
 - Development Document Bank
 - Application Requirements
 
@@ -178,8 +178,8 @@ Acceptance criteria:
 - Dependencies: `DISTDOC-212`
 
 Tasks:
-1. `DISTDOC-402` Update [ManagerDealChecklistPanel.tsx](/c:/Dev/real_estate_portal_clone/client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx) for new statuses incl. `pending_review` and `waived`.
-2. `DISTDOC-403` Update [ManagerDealChecklistPage.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/distribution/ManagerDealChecklistPage.tsx) bulk actions to align with service transition rules.
+1. `DISTDOC-402` Update [ManagerDealChecklistPanel.tsx](../client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx) for new statuses incl. `pending_review` and `waived`.
+2. `DISTDOC-403` Update [ManagerDealChecklistPage.tsx](../client/src/pages/distribution/ManagerDealChecklistPage.tsx) bulk actions to align with service transition rules.
 3. `DISTDOC-404` Add explicit auto-satisfied visibility:
 - `status=verified`
 - `verified_by=SYSTEM`
@@ -202,9 +202,9 @@ Acceptance criteria:
 - Dependencies: `DISTDOC-213`
 
 Tasks:
-1. `DISTDOC-502` Update [PartnerSubmitReferralPage.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/distribution/PartnerSubmitReferralPage.tsx) to display grouped requirements by provider/requiredness.
-2. `DISTDOC-503` Update [PartnerReferralDetailPage.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/distribution/PartnerReferralDetailPage.tsx) with per-requirement statuses and rejection messaging.
-3. `DISTDOC-504` Update [ReferrerDashboard.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/ReferrerDashboard.tsx) to show upload vs verification readiness separately.
+1. `DISTDOC-502` Update [PartnerSubmitReferralPage.tsx](../client/src/pages/distribution/PartnerSubmitReferralPage.tsx) to display grouped requirements by provider/requiredness.
+2. `DISTDOC-503` Update [PartnerReferralDetailPage.tsx](../client/src/pages/distribution/PartnerReferralDetailPage.tsx) with per-requirement statuses and rejection messaging.
+3. `DISTDOC-504` Update [ReferrerDashboard.tsx](../client/src/pages/ReferrerDashboard.tsx) to show upload vs verification readiness separately.
 
 Acceptance criteria:
 1. No ambiguous single “documents complete” label remains.

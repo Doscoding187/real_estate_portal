@@ -1,5 +1,9 @@
 # Explore Discovery Engine Database Schema Tests
 
+> **Historical test documentation — not database authority.** Do not execute
+> legacy migration commands named in historical material. Database setup for
+> tests must use the canonical test lifecycle and migration README.
+
 ## Overview
 
 This directory contains unit tests for the Explore Discovery Engine database schema. The tests verify:
@@ -19,12 +23,8 @@ This directory contains unit tests for the Explore Discovery Engine database sch
    export DATABASE_URL="mysql://user:password@host:port/database"
    ```
 
-2. **Run Migration**: Ensure the Explore Discovery Engine migration has been executed:
-   ```bash
-   npm run db:migrate
-   # or
-   node scripts/run-explore-discovery-migration.ts
-   ```
+2. **Database setup**: Use the canonical test lifecycle and migration README;
+   this document does not authorize a feature-specific migration runner.
 
 ### Execute Tests
 

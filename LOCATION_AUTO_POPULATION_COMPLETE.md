@@ -1,5 +1,9 @@
 # ✅ Location Auto-Population - Integration Complete!
 
+> **Historical implementation evidence — not operational authority.** The
+> seed utility references in this report are historical only. Local/demo data
+> uses the approved guarded lifecycle; production seed authority is `none`.
+
 ## 🎉 What Was Done
 
 Successfully integrated the location auto-population system into your real estate portal!

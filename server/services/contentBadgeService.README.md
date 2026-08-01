@@ -1,5 +1,10 @@
 # Content Badge Service
 
+> **Code reference only.** The schema examples below are historical
+> documentation and are not executable migration authority. Use the
+> [Database Authority entry contract](../../docs/database-authority/00-database-authority-agent-entry.md)
+> and [migration README](../migrations/README.md) for current database work.
+
 ## Overview
 
 The Content Badge Service determines and manages content type badges for the Explore Partner Marketplace feed. It provides visual indicators that help users instantly understand what type of content they're viewing.

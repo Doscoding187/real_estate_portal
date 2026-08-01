@@ -495,4 +495,4 @@ describe('Underperformance Notifications', () => {
 
 - [Quality Scoring Service README](./qualityScoringService.README.md)
 - [Visibility Reduction Guide](./qualityScoringService.VISIBILITY_GUIDE.md)
-- [Partner Analytics Dashboard](../../docs/partner-analytics.md)
+- [Partner analytics router](../partnerAnalyticsRouter.ts)

@@ -1,5 +1,12 @@
 # 🎯 Explore Feature - What You Have Built
 
+> **Historical implementation evidence — not operational authority.** Do not
+> execute feature-specific migration or seed utilities named in this guide.
+> Current database work must follow the [Database Authority entry contract](docs/database-authority/00-database-authority-agent-entry.md),
+> [Database Change Protocol](docs/database-authority/database-change-protocol.md),
+> and [canonical migration README](server/migrations/README.md). Local/demo
+> data is governed only by the approved local/test lifecycle.
+
 ## 📱 Your Explore Pages (Frontend UI)
 
 You have **3 complete Explore pages** with different viewing experiences:
@@ -150,10 +157,8 @@ To see content in Explore, you need:
 3. **Property images** ✅ (From your AWS S3)
 
 ### Quick Test Data
-Run this to add sample explore content:
-```bash
-npx tsx scripts/seed-explore-shorts-sample.ts
-```
+Use the approved guarded local/test lifecycle for local or demo data. This
+guide does not authorize a feature-specific seed utility.
 
 ---
 
@@ -185,7 +190,8 @@ npx tsx scripts/seed-explore-shorts-sample.ts
 
 ### "No content showing"
 - Check if you have properties in the database
-- Run the seed script to add sample data
+- Use only the approved guarded local/test lifecycle for local or demo data;
+  this historical guide does not authorize a seed script
 - Check browser console for API errors
 
 ### "API returns 500 error"

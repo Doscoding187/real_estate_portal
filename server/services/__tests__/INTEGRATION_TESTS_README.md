@@ -1,5 +1,9 @@
 # Integration Tests for Explore Agency Content Attribution
 
+> **Historical test documentation — not database authority.** Do not execute
+> legacy migration commands named in historical material. Database setup for
+> tests must use the canonical test lifecycle and migration README.
+
 ## Overview
 
 This directory contains integration tests for the Explore Agency Content Attribution feature. These tests verify the complete end-to-end functionality including:
@@ -19,12 +23,8 @@ This directory contains integration tests for the Explore Agency Content Attribu
    export DATABASE_URL="mysql://user:password@host:port/database"
    ```
 
-2. **Run Migration**: Ensure the Agency Attribution migration has been executed:
-   ```bash
-   npm run db:migrate
-   # or
-   node scripts/run-agency-attribution-migration.ts
-   ```
+2. **Database setup**: Use the canonical test lifecycle and migration README;
+   this document does not authorize a feature-specific migration runner.
 
 ### Execute Tests
 
@@ -143,7 +143,7 @@ These integration tests validate the following requirements from the Agency Cont
 - Verify database is accessible
 
 ### Column not found errors
-- Run the migration: `node scripts/run-agency-attribution-migration.ts`
+- Use the canonical test lifecycle and migration README.
 - Verify migration completed successfully
 
 ### Foreign key constraint errors

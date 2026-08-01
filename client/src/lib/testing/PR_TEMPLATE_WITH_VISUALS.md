@@ -14,7 +14,7 @@ This PR refines the Explore feature frontend to achieve world-class production q
 
 **Before/After Comparison:**
 
-![ExploreHome Comparison](./client/src/lib/testing/visual-documentation/comparisons/explore-home-comparison.png)
+**ExploreHome Comparison:** `explore-home-comparison.png` (artifact not committed in this worktree)
 
 **Key Improvements:**
 - Modern, clean design with subtle shadows
@@ -28,7 +28,7 @@ This PR refines the Explore feature frontend to achieve world-class production q
 
 **Before/After Comparison:**
 
-![ExploreFeed Comparison](./client/src/lib/testing/visual-documentation/comparisons/explore-feed-comparison.png)
+**ExploreFeed Comparison:** `explore-feed-comparison.png` (artifact not committed in this worktree)
 
 **Key Improvements:**
 - Updated filter panel with modern chip-style filters
@@ -42,7 +42,7 @@ This PR refines the Explore feature frontend to achieve world-class production q
 
 **Before/After Comparison:**
 
-![ExploreShorts Comparison](./client/src/lib/testing/visual-documentation/comparisons/explore-shorts-comparison.png)
+**ExploreShorts Comparison:** `explore-shorts-comparison.png` (artifact not committed in this worktree)
 
 **Key Improvements:**
 - Glass overlay controls for video
@@ -56,7 +56,7 @@ This PR refines the Explore feature frontend to achieve world-class production q
 
 **Before/After Comparison:**
 
-![ExploreMap Comparison](./client/src/lib/testing/visual-documentation/comparisons/explore-map-comparison.png)
+**ExploreMap Comparison:** `explore-map-comparison.png` (artifact not committed in this worktree)
 
 **Key Improvements:**
 - Modern map markers with animations
@@ -70,7 +70,7 @@ This PR refines the Explore feature frontend to achieve world-class production q
 
 ### Card Hover Animation
 
-![Card Hover](./client/src/lib/testing/visual-documentation/gifs/card-hover-animation.gif)
+**Card Hover:** `card-hover-animation.gif` (artifact not committed in this worktree)
 
 Subtle lift animation (2px translateY) with shadow depth change on hover.
 
@@ -78,7 +78,7 @@ Subtle lift animation (2px translateY) with shadow depth change on hover.
 
 ### Filter Panel Slide
 
-![Filter Panel](./client/src/lib/testing/visual-documentation/gifs/filter-panel-slide.gif)
+**Filter Panel:** `filter-panel-slide.gif` (artifact not committed in this worktree)
 
 Smooth slide-in animation for filter panel with backdrop blur.
 
@@ -86,7 +86,7 @@ Smooth slide-in animation for filter panel with backdrop blur.
 
 ### Mobile Bottom Sheet
 
-![Bottom Sheet](./client/src/lib/testing/visual-documentation/gifs/bottom-sheet-drag.gif)
+**Bottom Sheet:** `bottom-sheet-drag.gif` (artifact not committed in this worktree)
 
 Drag-to-close functionality with snap points for mobile filters.
 
@@ -94,7 +94,7 @@ Drag-to-close functionality with snap points for mobile filters.
 
 ### Map Pin Animation
 
-![Map Pin](./client/src/lib/testing/visual-documentation/gifs/map-pin-bounce.gif)
+**Map Pin:** `map-pin-bounce.gif` (artifact not committed in this worktree)
 
 Animated map pin with bounce effect on selection.
 
@@ -102,7 +102,7 @@ Animated map pin with bounce effect on selection.
 
 ### Video Buffering
 
-![Video Buffering](./client/src/lib/testing/visual-documentation/gifs/video-buffering.gif)
+**Video Buffering:** `video-buffering.gif` (artifact not committed in this worktree)
 
 Smooth buffering indicator with spinner animation.
 
@@ -112,7 +112,7 @@ Smooth buffering indicator with spinner animation.
 
 ### 1. Smooth Video Playback
 
-[Watch Video](./client/src/lib/testing/visual-documentation/videos/smooth-video-playback.mp4)
+**Watch Video:** `smooth-video-playback.mp4` (artifact not committed in this worktree)
 
 Demonstrates:
 - Auto-play when video enters viewport (50% threshold)
@@ -124,7 +124,7 @@ Demonstrates:
 
 ### 2. Map/Feed Synchronization
 
-[Watch Video](./client/src/lib/testing/visual-documentation/videos/map-feed-synchronization.mp4)
+**Watch Video:** `map-feed-synchronization.mp4` (artifact not committed in this worktree)
 
 Demonstrates:
 - Throttled map pan updates (250ms)
@@ -137,7 +137,7 @@ Demonstrates:
 
 ### 3. Filter Interactions
 
-[Watch Video](./client/src/lib/testing/visual-documentation/videos/filter-interactions.mp4)
+**Watch Video:** `filter-interactions.mp4` (artifact not committed in this worktree)
 
 Demonstrates:
 - Filter panel opening/closing
@@ -149,7 +149,7 @@ Demonstrates:
 
 ### 4. Card Animations
 
-[Watch Video](./client/src/lib/testing/visual-documentation/videos/card-animations.mp4)
+**Watch Video:** `card-animations.mp4` (artifact not committed in this worktree)
 
 Demonstrates:
 - Hover lift animation (2px translateY)
