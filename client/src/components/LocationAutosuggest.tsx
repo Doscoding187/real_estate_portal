@@ -339,11 +339,11 @@ export function LocationAutosuggest({
   const showPlaceholder = selectedLocations.length === 0;
 
   return (
-    <div ref={wrapperRef} className={`relative group cursor-text ${className}`}>
+    <div ref={wrapperRef} className={`relative z-30 group cursor-text ${className}`}>
       {/* Container simulating Input look and feel */}
       <div
         onClick={handleWrapperClick}
-        className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1 ${inputClassName}`}
+        className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 focus-within:ring-offset-0 ${inputClassName}`}
       >
         {/* Render Pills */}
         {selectedLocations.map((loc, index) => (
@@ -394,7 +394,7 @@ export function LocationAutosuggest({
           }}
           onFocus={() => query.trim().length >= 1 && setShowSuggestions(true)}
           onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent border-0 outline-none placeholder:text-muted-foreground min-w-[120px] h-8 text-sm"
+          className="flex-1 min-w-[120px] h-8 !border-0 !bg-transparent text-sm !outline-none !shadow-none placeholder:text-muted-foreground focus:!border-0 focus:!outline-none focus:ring-0 focus:!shadow-none focus-visible:!border-0 focus-visible:!outline-none focus-visible:ring-0 focus-visible:!shadow-none"
         />
 
         {/* Right Icon */}

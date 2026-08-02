@@ -328,7 +328,7 @@ export function EnhancedHero({
   const intentHelperCopy = INTENT_HELPER_COPY[effectiveIntent] || INTENT_HELPER_COPY.buy;
 
   return (
-    <div className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-white to-white text-slate-900">
+    <div className="relative z-10 overflow-visible border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-white to-white text-slate-900">
       {backgroundImage ? (
         <div className="absolute inset-0 z-0">
           <img
@@ -433,9 +433,9 @@ export function EnhancedHero({
 
         {/* Search Card */}
         <div className="mx-auto w-full max-w-[var(--plds-home-hero-search-max-width)]">
-          <Card className="overflow-hidden rounded-[var(--plds-home-hero-search-radius)] border border-slate-200 bg-white shadow-xl shadow-slate-200/70 sm:rounded-2xl">
+          <Card className="relative z-20 overflow-visible rounded-[var(--plds-home-hero-search-radius)] border border-slate-200 bg-white shadow-xl shadow-slate-200/70 sm:rounded-2xl">
             <CardContent className="p-0">
-              <div className="bg-gradient-to-r from-blue-700 to-cyan-600 px-4 py-4 text-white sm:px-6">
+              <div className="rounded-t-[var(--plds-home-hero-search-radius)] bg-gradient-to-r from-blue-700 to-cyan-600 px-4 py-4 text-white sm:rounded-t-2xl sm:px-6">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.12em]">
@@ -463,7 +463,7 @@ export function EnhancedHero({
                     <LocationAutosuggest
                       placeholder="Search by city, suburb, or area..."
                       className="w-full"
-                      inputClassName="h-11 w-full rounded-xl border border-slate-200 bg-white pl-4 pr-20 text-[15px] shadow-sm transition-colors hover:border-blue-300 focus:border-blue-600 sm:h-12 sm:pr-24 sm:text-base"
+                      inputClassName="h-11 w-full rounded-xl bg-white pl-4 pr-20 text-[15px] shadow-sm transition-colors hover:border-blue-300 sm:h-12 sm:pr-24 sm:text-base"
                       showIcon={false}
                       selectedLocations={selectedLocations}
                       onRemove={index => {
@@ -522,7 +522,7 @@ export function EnhancedHero({
                     />
 
                     {/* Search action. Optional location and voice features are intentionally deferred. */}
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1.5 z-10">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1.5 z-40">
                       <Button
                         type="submit"
                         size="icon"
