@@ -16,9 +16,10 @@ The independently verified implementation is:
 - `server/lib/performanceOptimization.ts` provides cache wrapping,
   invalidation, cache headers and image URL helpers. These are code surfaces,
   not proof of a production performance result.
-- `server/routes/cacheMonitoring.ts` exposes cache statistics and clearing
-  routes, but its source still contains a TODO for admin authentication on
-  clearing routes. It is not an approved operational control surface.
+- `server/cacheRouter.ts` is the active cache tRPC router. Its `getStats` and
+  `health` procedures are public read-only queries, while `clearAll` and
+  `clearPattern` use `superAdminProcedure`. The deleted Express route at
+  `server/routes/cacheMonitoring.ts` is not part of the active inventory.
 
 No Redis credentials, environment values, deployment commands, manual SQL,
 feature-specific migrations, seeds, repairs or rollback commands belong here.

@@ -30,7 +30,7 @@ interface UsePersonalizedContentOptions {
 export function usePersonalizedContent(options: UsePersonalizedContentOptions = {}) {
   const [sections, setSections] = useState<PersonalizedSection[]>([]);
   const useMockData = isExploreMockMode();
-  const allowPlacementMock = import.meta.env.DEV;
+  const allowPlacementMock = useMockData;
   const categoryKey = options.categoryId
     ? (['property', 'renovation', 'finance', 'investment', 'services'][options.categoryId - 1] ?? undefined)
     : undefined;
