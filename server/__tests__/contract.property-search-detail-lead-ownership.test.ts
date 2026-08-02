@@ -64,6 +64,10 @@ vi.mock('../services/brandLeadService', () => ({
   },
 }));
 
+vi.mock('../services/publicLeadCaptureService', () => ({
+  capturePublicLead: mockCaptureBrandLead,
+}));
+
 vi.mock('../services/agentOsEventService', () => ({
   recordAgentOsEventForAgentId: mockRecordAgentOsEventForAgentId,
 }));
@@ -194,6 +198,7 @@ describe('single-property search-detail-lead ownership contract', () => {
     });
 
     mockLeadSelect
+      .mockImplementationOnce(() => limitQuery([]))
       .mockImplementationOnce(() =>
         limitQuery([
           {
@@ -217,9 +222,16 @@ describe('single-property search-detail-lead ownership contract', () => {
       update: mockLeadUpdate,
     });
     mockCaptureBrandLead.mockResolvedValue({
+      success: true,
       leadId: 999,
+      route: 'direct',
       delivered: true,
       deliveryMethod: 'crm_export',
+      deliveryStatus: 'delivered',
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 33,
       brandLeadStatus: 'delivered_subscriber',
       message: 'Lead captured',
     });
@@ -272,21 +284,26 @@ describe('single-property search-detail-lead ownership contract', () => {
       leadType: 'viewing_request',
       leadSource: 'property_detail',
       sourceSurface: 'property_detail_contact_modal',
+      captureRequestId: 'lead-request-property-ownership',
+      consent: {
+        accepted: true,
+        version: '2026-08-02',
+        source: 'property_ownership_contract',
+      },
     });
 
     expect(lead).toMatchObject({
       success: true,
-      leadId: 808,
+      leadId: 999,
       route: 'direct',
     });
-    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
-    expect(mockLeadValues).toHaveBeenCalledWith(
+    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
       expect.objectContaining({
         propertyId: 501,
-        developerBrandProfileId: null,
-        agentId: 33,
-        agencyId: 44,
-        source: 'property_detail_contact_modal',
+        developerBrandProfileId: 999,
+        agentId: 999,
+        agencyId: 999,
+        sourceSurface: 'property_detail_contact_modal',
         leadSource: 'property_detail',
         leadType: 'viewing_request',
       }),
@@ -431,7 +448,8 @@ describe('single-property search-detail-lead ownership contract', () => {
     });
     mockGetListingById.mockResolvedValueOnce({
       id: 9003,
-      status: 'pending_review',
+      status: 'published',
+      approvalStatus: 'pending',
       title: 'Unreviewed Edited Title',
       description: 'Unreviewed edited description.',
       action: 'sell',

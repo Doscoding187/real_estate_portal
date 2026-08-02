@@ -40,6 +40,25 @@ type LeadItem = {
   updatedAt?: string;
   lastActivityAt: string | null;
   contact: { name?: string; phone?: string; email?: string };
+  message?: string | null;
+  inventory?: {
+    propertyId?: string | null;
+    developmentId?: string | null;
+    unitId?: string | null;
+    unitName?: string | null;
+    unitPriceFrom?: string | number | null;
+  };
+  consent?: {
+    capturedAt: string | null;
+    version: string | null;
+    source: string | null;
+  };
+  delivery?: {
+    status: string;
+    attempts: unknown;
+    lastAttemptAt: string | null;
+    lastError: string | null;
+  };
   source: { channel: string; utmSource?: string; utmCampaign?: string };
   stage: string;
   allowedTransitions?: string[];
@@ -105,6 +124,28 @@ function slaBadgeClass(status: 'ok' | 'warning' | 'breach'): string {
   if (status === 'breach') return 'bg-rose-100 text-rose-700 border-rose-200';
   if (status === 'warning') return 'bg-amber-100 text-amber-700 border-amber-200';
   return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+}
+
+function deliveryBadgeClass(status?: string | null): string {
+  if (status === 'delivered') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+  if (status === 'failed') return 'bg-rose-100 text-rose-700 border-rose-200';
+  if (status === 'attention_required') return 'bg-amber-100 text-amber-700 border-amber-200';
+  return 'bg-sky-100 text-sky-700 border-sky-200';
+}
+
+function deliveryLabel(status?: string | null): string {
+  if (status === 'delivered') return 'Delivered';
+  if (status === 'failed') return 'Delivery failed';
+  if (status === 'attention_required') return 'Recipient follow-up needed';
+  return 'Delivery pending';
+}
+
+function deliveryAttemptCount(attempts: unknown): number {
+  if (!Array.isArray(attempts)) return 0;
+  return attempts.reduce((highest, attempt) => {
+    const count = Number((attempt as { attemptCount?: unknown })?.attemptCount || 0);
+    return Math.max(highest, Number.isFinite(count) ? count : 0);
+  }, 0);
 }
 
 export default function LeadsManager() {
@@ -590,6 +631,20 @@ export default function LeadsManager() {
                           <span>•</span>
                           <span>{formatRelative(lead.lastActivityAt || lead.createdAt)}</span>
                           <Badge className={slaBadgeClass(lead.sla.status)}>{lead.sla.status}</Badge>
+                          <Badge className={deliveryBadgeClass(lead.delivery?.status)}>
+                            {deliveryLabel(lead.delivery?.status)}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 text-xs">
+                          <Badge
+                            className={
+                              lead.consent?.capturedAt
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                : 'bg-amber-100 text-amber-700 border-amber-200'
+                            }
+                          >
+                            {lead.consent?.capturedAt ? 'Consent recorded' : 'Consent evidence missing'}
+                          </Badge>
                         </div>
                       </button>
                     ))}
@@ -664,6 +719,62 @@ export default function LeadsManager() {
                       <span>{selectedLead.owner.ownerName || selectedLead.owner.ownerType}</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                  <div className="border rounded-md p-3 space-y-1">
+                    <p className="font-medium">Inventory context</p>
+                    <p className="text-muted-foreground">
+                      Development #{selectedLead.inventory?.developmentId || selectedLead.developmentId || '-'}
+                    </p>
+                    {selectedLead.inventory?.propertyId ? (
+                      <p className="text-muted-foreground">
+                        Property #{selectedLead.inventory.propertyId}
+                      </p>
+                    ) : null}
+                    {selectedLead.inventory?.unitName || selectedLead.inventory?.unitId ? (
+                      <p className="text-muted-foreground">
+                        Unit {selectedLead.inventory.unitName || selectedLead.inventory.unitId}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="border rounded-md p-3 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">Recipient delivery</span>
+                      <Badge className={deliveryBadgeClass(selectedLead.delivery?.status)}>
+                        {deliveryLabel(selectedLead.delivery?.status)}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground">
+                      {deliveryAttemptCount(selectedLead.delivery?.attempts)} attempt(s)
+                      {selectedLead.delivery?.lastAttemptAt
+                        ? ` · last ${formatRelative(selectedLead.delivery.lastAttemptAt)}`
+                        : ''}
+                    </p>
+                    {selectedLead.delivery?.lastError ? (
+                      <p className="text-rose-700">{selectedLead.delivery.lastError}</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {selectedLead.message ? (
+                  <div className="border rounded-md p-3 text-sm">
+                    <p className="font-medium">Prospect message</p>
+                    <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{selectedLead.message}</p>
+                  </div>
+                ) : null}
+
+                <div className="border rounded-md p-3 text-sm">
+                  <p className="font-medium">Consent evidence</p>
+                  {selectedLead.consent?.capturedAt ? (
+                    <p className="mt-1 text-muted-foreground">
+                      Recorded {formatRelative(selectedLead.consent.capturedAt)} · version{' '}
+                      {selectedLead.consent.version || 'unspecified'} ·{' '}
+                      {selectedLead.consent.source || 'unspecified source'}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-amber-700">No consent evidence recorded.</p>
+                  )}
                 </div>
 
                 <div className="space-y-2 border rounded-md p-3">

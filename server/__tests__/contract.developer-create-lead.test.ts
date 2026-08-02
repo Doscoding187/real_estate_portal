@@ -58,6 +58,12 @@ describe('developer.createLead contract', () => {
       utmMedium: 'cpc',
       utmCampaign: 'launch',
       affordabilityData,
+      captureRequestId: 'lead-request-developer-contract',
+      consent: {
+        accepted: true,
+        version: '2026-08-02',
+        source: 'developer_contract_test',
+      },
     });
 
     expect(result).toMatchObject({
@@ -86,6 +92,29 @@ describe('developer.createLead contract', () => {
       utmMedium: 'cpc',
       utmCampaign: 'launch',
       affordabilityData,
+      captureRequestId: 'lead-request-developer-contract',
+      consent: {
+        accepted: true,
+        version: '2026-08-02',
+        source: 'developer_contract_test',
+      },
     });
+  });
+
+  it('rejects a development enquiry without consent and an idempotency key', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await expect(
+      caller.developer.createLead({
+        developmentId: 77,
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
   });
 });

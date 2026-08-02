@@ -55,7 +55,7 @@ describe('database final closure residual executor authority', () => {
 
     const manual = manifest.manualUtilityAuthority;
 
-    expect(manifest.version).toBe(6);
+    expect(manifest.version).toBe(7);
     expect(manual.directSchemaCandidateClasses['deferred schema executor']).toEqual([]);
     expect(manual.deferredGap3Utilities).toEqual([]);
 
@@ -107,7 +107,10 @@ describe('database final closure residual executor authority', () => {
       .map(entry => entry.name)
       .sort();
 
-    expect(activeSqlFiles).toEqual(['0000_canonical_launch_baseline.sql']);
+    expect(activeSqlFiles).toEqual([
+      '0000_canonical_launch_baseline.sql',
+      '0001_public_search_to_lead_reliability.sql',
+    ]);
   });
 
   it('retains launch Explore compatibility separately from future cutover', () => {

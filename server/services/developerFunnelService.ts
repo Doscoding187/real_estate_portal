@@ -1,8 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { and, asc, desc, eq, gt, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import { db } from '../db';
 import {
   developments,
+  developerBrandProfiles,
+  developers,
   distributionAgentAccess,
   distributionIdentities,
   distributionPrograms,
@@ -18,6 +20,7 @@ import {
   type SlaStatus,
   isLeadTransitionAllowed,
 } from '../../shared/developerFunnel';
+import { parseDeliveryAttempts } from './leadDeliveryService';
 
 type LeadRow = typeof leads.$inferSelect;
 type LeadStageRow = Pick<LeadRow, 'status' | 'funnelStage' | 'lostReason'>;
@@ -427,6 +430,7 @@ export async function getOwnedDevelopmentHomeLeadSummary(params: {
   const boundary = getDevelopmentHomeRangeBoundary(params.range, params.now);
   const periodCondition = and(
     eq(leads.developmentId, params.developmentId),
+    ne(leads.deliveryStatus, 'attention_required'),
     gte(leads.createdAt, boundary.from),
     lte(leads.createdAt, boundary.to),
   );
@@ -567,6 +571,26 @@ function normalizeLeadRow(
       phone: lead.phone || undefined,
       email: lead.email || undefined,
     },
+    message: lead.message || null,
+    inventory: {
+      propertyId: lead.propertyId ? String(lead.propertyId) : null,
+      developmentId: lead.developmentId ? String(lead.developmentId) : null,
+      unitId: lead.unitId || null,
+      unitName: lead.unitName || null,
+      unitPriceFrom: lead.unitPriceFrom || null,
+    },
+    consent: {
+      capturedAt: lead.consentCapturedAt || null,
+      version: lead.consentVersion || null,
+      source: lead.consentSource || null,
+    },
+    delivery: {
+      status: lead.deliveryStatus,
+      attempts: parseDeliveryAttempts(lead.deliveryAttempts),
+      lastAttemptAt: lead.deliveryLastAttemptAt || null,
+      lastError: lead.deliveryLastError || null,
+      providerReference: lead.deliveryProviderReference || null,
+    },
     source: {
       channel: getCanonicalLeadSource(lead),
       utmSource: lead.utmSource || undefined,
@@ -601,8 +625,25 @@ async function getDeveloperLeadRow(developerId: number, leadId: number) {
     })
     .from(leads)
     .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .innerJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(developerBrandProfiles, eq(developments.developerBrandProfileId, developerBrandProfiles.id))
     .leftJoin(users, eq(leads.assignedTo, users.id))
-    .where(and(eq(developments.developerId, developerId), eq(leads.id, leadId)))
+    .where(
+      and(
+        eq(developments.developerId, developerId),
+        eq(developments.devOwnerType, 'developer'),
+        eq(developers.status, 'approved'),
+        ne(leads.deliveryStatus, 'attention_required'),
+        or(
+          isNull(developerBrandProfiles.id),
+          and(
+            eq(developerBrandProfiles.ownerType, 'developer'),
+            eq(developerBrandProfiles.linkedDeveloperAccountId, developers.id),
+          ),
+        )!,
+        eq(leads.id, leadId),
+      ),
+    )
     .limit(1);
 
   if (!row?.lead) {
@@ -616,7 +657,19 @@ async function getDeveloperLeadRow(developerId: number, leadId: number) {
 }
 
 export async function listDeveloperLeads(params: FunnelListParams) {
-  const conditions: any[] = [eq(developments.developerId, params.developerId)];
+  const conditions: any[] = [
+    eq(developments.developerId, params.developerId),
+    eq(developments.devOwnerType, 'developer'),
+    eq(developers.status, 'approved'),
+    ne(leads.deliveryStatus, 'attention_required'),
+    or(
+      isNull(developerBrandProfiles.id),
+      and(
+        eq(developerBrandProfiles.ownerType, 'developer'),
+        eq(developerBrandProfiles.linkedDeveloperAccountId, developers.id),
+      ),
+    )!,
+  ];
 
   if (params.developmentId) {
     conditions.push(eq(leads.developmentId, params.developmentId));
@@ -658,6 +711,8 @@ export async function listDeveloperLeads(params: FunnelListParams) {
     })
     .from(leads)
     .innerJoin(developments, eq(leads.developmentId, developments.id))
+    .innerJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(developerBrandProfiles, eq(developments.developerBrandProfileId, developerBrandProfiles.id))
     .leftJoin(users, eq(leads.assignedTo, users.id))
     .where(and(...conditions))
     .orderBy(desc(leads.createdAt));

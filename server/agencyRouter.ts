@@ -730,11 +730,12 @@ async function requireAgencyLead(
           .select({ id: agents.id })
           .from(agents)
           .where(
-            and(
-              eq(agents.id, lead.agentId),
-              eq(agents.agencyId, agencyId),
-              eq(agents.userId, user.id),
-            ),
+              and(
+                eq(agents.id, lead.agentId),
+                eq(agents.agencyId, agencyId),
+                eq(agents.userId, user.id),
+                eq(agents.status, 'approved'),
+              ),
           )
           .limit(1)
       : [];
@@ -4215,11 +4216,23 @@ export const agencyRouter = router({
         });
       }
 
+      const [agency] = await db
+        .select({ isVerified: agencies.isVerified })
+        .from(agencies)
+        .where(eq(agencies.id, user.agencyId))
+        .limit(1);
+      if (Number(agency?.isVerified || 0) !== 1) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only verified agencies can access operational leads.',
+        });
+      }
+
       const filters = input || { status: 'all' as const, limit: 50 };
       const conditions: SQL[] = [eq(leads.agencyId, user.agencyId)];
 
       if (user.role === 'agent') {
-        conditions.push(eq(agents.userId, user.id));
+        conditions.push(eq(agents.userId, user.id), eq(agents.status, 'approved'));
       }
 
       if (filters.status && filters.status !== 'all') {

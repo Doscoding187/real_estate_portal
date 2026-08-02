@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:migrate",
     "testCommand": "pnpm db:migrate:test",
@@ -251,6 +251,11 @@
       "path": "server/migrations/0000_canonical_launch_baseline.sql",
       "classification": "canonical active",
       "purpose": "The sole executable launch baseline."
+    },
+    {
+      "path": "server/migrations/0001_public_search_to_lead_reliability.sql",
+      "classification": "canonical active",
+      "purpose": "Bounded additive consent, idempotency, and lead-delivery state for the public search-to-lead journey."
     },
     {
       "path": "server/migrations/_archived/**",

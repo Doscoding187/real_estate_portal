@@ -1,114 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockInsert, mockValues, mockGetBrandProfileById, mockIncrementLeadCountAsync } =
-  vi.hoisted(() => ({
-    mockInsert: vi.fn(),
-    mockValues: vi.fn(),
-    mockGetBrandProfileById: vi.fn(),
-    mockIncrementLeadCountAsync: vi.fn(),
-  }));
-
-vi.mock('../../db', () => ({
-  db: {
-    insert: mockInsert,
+const { mockCapturePublicLead, mockDb } = vi.hoisted(() => ({
+  mockCapturePublicLead: vi.fn(),
+  mockDb: {
+    select: vi.fn(),
   },
 }));
 
-vi.mock('../developerBrandProfileService', () => ({
-  developerBrandProfileService: {
-    getBrandProfileById: mockGetBrandProfileById,
-    incrementLeadCountAsync: mockIncrementLeadCountAsync,
-  },
+vi.mock('../../db', () => ({ db: mockDb }));
+
+vi.mock('../publicLeadCaptureService', () => ({
+  capturePublicLead: mockCapturePublicLead,
 }));
 
 import { brandLeadService } from '../brandLeadService';
 
-describe('brandLeadService capture contract', () => {
+const consent = { accepted: true as const, version: '2026-08-02', source: 'brand-contract' };
+
+describe('brandLeadService compatibility contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal('setImmediate', vi.fn());
-
-    mockInsert.mockReturnValue({ values: mockValues });
-    mockValues.mockResolvedValue([{ insertId: 987 }]);
-    mockGetBrandProfileById.mockResolvedValue({
-      id: 13,
-      brandName: 'Demo Developer',
-      isSubscriber: 0,
-      publicContactEmail: null,
-      isContactVerified: 0,
-    });
-  });
-
-  it('stores source surface, lead source, unit, UTM, and affordability data on brand leads', async () => {
-    const affordabilityData = {
-      monthlyIncome: 65000,
-      monthlyExpenses: 12000,
-      monthlyDebts: 3000,
-      availableDeposit: 150000,
-      maxAffordable: 1400000,
-      calculatedAt: '2026-07-04T10:00:00.000Z',
-    };
-
-    const result = await brandLeadService.captureBrandLead({
-      developerBrandProfileId: 13,
-      developmentId: 77,
-      unitId: 'unit-1',
-      unitName: 'Type A',
-      unitPriceFrom: 1299000,
-      unitBedrooms: 3,
-      unitBathrooms: 2,
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      phone: '0820000000',
-      message: 'Please send details.',
-      leadSource: 'development_full_qualification',
-      sourceSurface: 'development_qualification_page',
-      referrerUrl: 'https://property-listify.test/development/cosmopolitan',
-      utmSource: 'google',
-      utmMedium: 'cpc',
-      utmCampaign: 'launch',
-      affordabilityData,
-    });
-
-    expect(result).toMatchObject({
+    mockCapturePublicLead.mockResolvedValue({
+      success: true,
       leadId: 987,
+      route: 'brand',
       delivered: false,
-      deliveryMethod: 'none',
+      deliveryStatus: 'attention_required',
+      deliveryMethod: 'manual',
+      deliveryAttemptId: 'attempt-987',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
+      recipientType: 'manual',
+      recipientId: null,
       brandLeadStatus: 'captured',
+      message: 'Your enquiry has been recorded.',
     });
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        developerBrandProfileId: 13,
-        developmentId: 77,
-        unitId: 'unit-1',
-        unitName: 'Type A',
-        unitPriceFrom: 1299000,
-        unitBedrooms: 3,
-        unitBathrooms: 2,
-        source: 'development_qualification_page',
-        leadSource: 'development_full_qualification',
-        referrerUrl: 'https://property-listify.test/development/cosmopolitan',
-        utmSource: 'google',
-        utmMedium: 'cpc',
-        utmCampaign: 'launch',
-        affordabilityData,
-        funnelStage: 'affordability',
-        qualificationStatus: 'pending',
-      }),
-    );
   });
 
-  it('captures unclaimed platform brand leads for manual Property Listify operations', async () => {
-    mockGetBrandProfileById.mockResolvedValueOnce({
-      id: 13,
-      brandName: 'Seeded Developer',
-      ownerType: 'platform',
-      linkedDeveloperAccountId: null,
-      isSubscriber: 0,
-      publicContactEmail: 'public-sales@example.com',
-      isContactVerified: 1,
-    });
-
+  it('adapts legacy brand callers to the canonical public lead authority', async () => {
     const result = await brandLeadService.captureBrandLead({
       developerBrandProfileId: 13,
       developmentId: 77,
@@ -116,92 +45,64 @@ describe('brandLeadService capture contract', () => {
       unitName: 'Type A',
       name: 'Jane Doe',
       email: 'jane@example.com',
-      leadSource: 'development_detail_info',
-      sourceSurface: 'unit_floor_plan_dialog_unit-1_info',
+      message: 'Please send details.',
+      sourceSurface: 'development_qualification_page',
+      leadSource: 'development_full_qualification',
+      captureRequestId: 'brand-capture-001',
+      consent,
     });
 
     expect(result).toMatchObject({
       leadId: 987,
       delivered: false,
       deliveryMethod: 'manual',
+      deliveryStatus: 'attention_required',
       brandLeadStatus: 'captured',
     });
-    expect(mockValues).toHaveBeenCalledWith(
+    expect(mockCapturePublicLead).toHaveBeenCalledWith(
       expect.objectContaining({
         developerBrandProfileId: 13,
         developmentId: 77,
-        unitId: 'unit-1',
-        unitName: 'Type A',
-        source: 'unit_floor_plan_dialog_unit-1_info',
-        leadSource: 'development_detail_info',
-        brandLeadStatus: 'captured',
-        leadDeliveryMethod: 'manual',
+        captureRequestId: 'brand-capture-001',
+        consent,
+        source: 'development_qualification_page',
+        sourceSurface: 'development_qualification_page',
+        leadSource: 'development_full_qualification',
+        leadType: 'inquiry',
       }),
     );
+    expect(mockDb.select).not.toHaveBeenCalled();
   });
 
-  it('uses subscriber routing for claimed developer-managed brands', async () => {
-    const affordabilityData = {
-      monthlyIncome: 65000,
-      monthlyExpenses: 12000,
-      monthlyDebts: 3000,
-      availableDeposit: 150000,
-      maxAffordable: 1400000,
-      calculatedAt: '2026-07-04T10:00:00.000Z',
-    };
-    mockGetBrandProfileById.mockResolvedValueOnce({
-      id: 13,
-      brandName: 'Claimed Developer',
-      ownerType: 'developer',
-      linkedDeveloperAccountId: 7,
-      isSubscriber: 1,
-      publicContactEmail: 'sales@example.com',
-      isContactVerified: 1,
+  it('does not reinterpret platform custody as external delivery', async () => {
+    mockCapturePublicLead.mockResolvedValueOnce({
+      success: true,
+      leadId: 988,
+      route: 'brand',
+      delivered: false,
+      deliveryStatus: 'attention_required',
+      deliveryMethod: 'manual',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
+      recipientType: 'manual',
+      recipientId: null,
+      brandLeadStatus: 'captured',
+      message: 'Property Listify will review the request.',
     });
 
     const result = await brandLeadService.captureBrandLead({
       developerBrandProfileId: 13,
-      developmentId: 77,
-      unitId: 'unit-1',
-      unitName: 'Type A',
-      unitPriceFrom: 1299000,
-      unitBedrooms: 3,
-      unitBathrooms: 2,
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      leadSource: 'development_full_qualification',
-      sourceSurface: 'development_qualification_page',
-      utmSource: 'google',
-      utmMedium: 'cpc',
-      utmCampaign: 'launch',
-      affordabilityData,
+      name: 'Sam Buyer',
+      email: 'sam@example.com',
+      captureRequestId: 'brand-capture-002',
+      consent,
     });
 
     expect(result).toMatchObject({
-      leadId: 987,
-      delivered: true,
-      deliveryMethod: 'crm_export',
-      brandLeadStatus: 'delivered_subscriber',
+      leadId: 988,
+      delivered: false,
+      deliveryMethod: 'manual',
+      brandLeadStatus: 'captured',
     });
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        developerBrandProfileId: 13,
-        developmentId: 77,
-        unitId: 'unit-1',
-        unitName: 'Type A',
-        unitPriceFrom: 1299000,
-        unitBedrooms: 3,
-        unitBathrooms: 2,
-        source: 'development_qualification_page',
-        leadSource: 'development_full_qualification',
-        utmSource: 'google',
-        utmMedium: 'cpc',
-        utmCampaign: 'launch',
-        affordabilityData,
-        brandLeadStatus: 'delivered_subscriber',
-        leadDeliveryMethod: 'crm_export',
-        funnelStage: 'affordability',
-      }),
-    );
   });
 });

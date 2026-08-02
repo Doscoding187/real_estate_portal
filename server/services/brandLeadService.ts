@@ -17,6 +17,14 @@ import { leads, developerBrandProfiles } from '../../drizzle/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { developerBrandProfileService } from './developerBrandProfileService';
 import { EmailService } from '../_core/emailService';
+import { ENV } from '../_core/env';
+import { capturePublicLead } from './publicLeadCaptureService';
+import {
+  appendLeadDeliveryRetryAttempt,
+  claimLeadDeliveryAttempt,
+  updateLeadDeliveryAttempt,
+  type LeadDeliveryStatus,
+} from './leadDeliveryService';
 
 // ============================================================================
 // Types
@@ -51,12 +59,20 @@ export interface CaptureBrandLeadInput {
   utmMedium?: string;
   utmCampaign?: string;
   affordabilityData?: AffordabilityData;
+  captureRequestId?: string;
+  consent?: {
+    accepted: true;
+    version: string;
+    source?: string;
+  };
 }
 
 export interface LeadRoutingResult {
   leadId: number;
   delivered: boolean;
   deliveryMethod: 'email' | 'crm_export' | 'manual' | 'none';
+  deliveryStatus: LeadDeliveryStatus;
+  deliveryAttemptId?: string;
   brandLeadStatus: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber' | 'claimed';
   message: string;
 }
@@ -66,115 +82,30 @@ export interface LeadRoutingResult {
 // ============================================================================
 
 /**
- * Capture a lead and associate with brand profile
- * This is the main entry point for brand lead capture
+ * Compatibility adapter for older internal callers.
+ *
+ * Public brand capture is owned by publicLeadCaptureService. Keeping this
+ * adapter avoids a second persistence authority while allowing existing
+ * non-router callers to converge without fabricating customer ownership.
  */
 async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRoutingResult> {
-  // Get brand profile to determine routing
-  const brandProfile = await developerBrandProfileService.getBrandProfileById(
-    input.developerBrandProfileId,
-  );
-
-  if (!brandProfile) {
-    throw new Error('Brand profile not found');
-  }
-
-  // Determine lead status based on brand subscription
-  let brandLeadStatus: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber' | 'claimed';
-  let deliveryMethod: 'email' | 'crm_export' | 'manual' | 'none' = 'none';
-
-  const isUnclaimedPlatformBrand =
-    brandProfile.ownerType === 'platform' && !brandProfile.linkedDeveloperAccountId;
-
-  if (isUnclaimedPlatformBrand) {
-    brandLeadStatus = 'captured';
-    deliveryMethod = 'manual';
-  } else if (brandProfile.isSubscriber) {
-    // Subscriber gets direct access
-    brandLeadStatus = 'delivered_subscriber';
-    deliveryMethod = 'crm_export'; // Will appear in their dashboard
-  } else if (brandProfile.publicContactEmail && brandProfile.isContactVerified) {
-    // Non-subscriber with verified email gets external delivery
-    brandLeadStatus = 'delivered_unsubscribed';
-    deliveryMethod = 'email';
-  } else if (brandProfile.publicContactEmail) {
-    // Non-subscriber with unverified email - still attempt delivery
-    brandLeadStatus = 'delivered_unsubscribed';
-    deliveryMethod = 'email';
-  } else {
-    // No email available - capture only
-    brandLeadStatus = 'captured';
-    deliveryMethod = 'none';
-  }
-
-  // Insert lead
-  const [result] = await db.insert(leads).values({
-    developerBrandProfileId: input.developerBrandProfileId,
-    developmentId: input.developmentId || null,
-    propertyId: input.propertyId || null,
-    unitId: input.unitId || null,
-    unitName: input.unitName || null,
-    unitPriceFrom: input.unitPriceFrom ?? null,
-    unitBedrooms: input.unitBedrooms ?? null,
-    unitBathrooms: input.unitBathrooms ?? null,
-    name: input.name,
-    email: input.email,
-    phone: input.phone || null,
-    message: input.message || null,
+  const result = await capturePublicLead({
+    ...input,
     leadType: 'inquiry',
-    status: 'new',
-    source: input.sourceSurface || input.leadSource || 'property_listify',
-    leadSource: input.leadSource || input.sourceSurface || 'property_listify',
-    referrerUrl: input.referrerUrl || null,
-    utmSource: input.utmSource || null,
-    utmMedium: input.utmMedium || null,
-    utmCampaign: input.utmCampaign || null,
-    affordabilityData: input.affordabilityData ? (input.affordabilityData as any) : null,
-    brandLeadStatus,
-    leadDeliveryMethod: deliveryMethod,
-    funnelStage: input.affordabilityData ? 'affordability' : 'interest',
-    qualificationStatus: 'pending',
-  });
-
-  const leadId = result.insertId;
-
-  // Route lead asynchronously (don't block response)
-  // In production, this would be an event/queue
-  setImmediate(async () => {
-    try {
-      if (deliveryMethod === 'email' && brandProfile.publicContactEmail) {
-        await routeLeadToEmail(leadId, brandProfile, input);
-      }
-
-      // Increment counters asynchronously (Refinement #3)
-      await developerBrandProfileService.incrementLeadCountAsync(input.developerBrandProfileId);
-    } catch (error) {
-      console.error('Error in async lead processing:', error);
-    }
+    source: input.sourceSurface || input.leadSource || 'brand_profile',
+    sourceSurface: input.sourceSurface || 'brand_profile',
+    leadSource: input.leadSource || 'brand_profile',
   });
 
   return {
-    leadId,
-    delivered: deliveryMethod === 'email' || deliveryMethod === 'crm_export',
-    deliveryMethod,
-    brandLeadStatus,
-    message: getLeadCaptureMessage(brandLeadStatus),
+    leadId: result.leadId,
+    delivered: result.delivered === true,
+    deliveryMethod: result.deliveryMethod,
+    deliveryStatus: result.deliveryStatus,
+    deliveryAttemptId: result.deliveryAttemptId,
+    brandLeadStatus: result.brandLeadStatus || 'captured',
+    message: result.message || 'Your enquiry has been received.',
   };
-}
-
-/**
- * Get user-friendly message for lead capture result
- */
-function getLeadCaptureMessage(status: string): string {
-  switch (status) {
-    case 'delivered_subscriber':
-      return 'Your enquiry has been sent to the developer. They will contact you shortly.';
-    case 'delivered_unsubscribed':
-      return 'Your enquiry has been forwarded to the developer.';
-    case 'captured':
-    default:
-      return 'Your enquiry has been received. We will connect you with the developer.';
-  }
 }
 
 // ============================================================================
@@ -196,6 +127,13 @@ async function routeLeadToEmail(
 ): Promise<boolean> {
   if (!brandProfile.publicContactEmail) {
     console.warn(`No email for brand profile, cannot route lead ${leadId}`);
+    return false;
+  }
+
+  // Email-only delivery is a commercial side effect. A console log from the
+  // generic development fallback is not delivery evidence.
+  if (!ENV.resendApiKey) {
+    console.warn(`Resend is not configured; lead ${leadId} remains undelivered.`);
     return false;
   }
 
@@ -226,6 +164,68 @@ async function routeLeadToEmail(
     console.error('Failed to route lead via email:', error);
     return false;
   }
+}
+
+async function retryBrandLeadDelivery(leadId: number) {
+  const [lead] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+  if (!lead?.developerBrandProfileId || lead.leadDeliveryMethod !== 'email') {
+    return { success: false as const, status: lead?.deliveryStatus || 'attention_required' };
+  }
+
+  const profile = await developerBrandProfileService.getBrandProfileById(
+    lead.developerBrandProfileId,
+  );
+  if (
+    !profile?.publicContactEmail ||
+    profile.ownerType === 'platform' ||
+    !profile.linkedDeveloperAccountId
+  ) {
+    return { success: false as const, status: 'attention_required' as const };
+  }
+
+  const attempt = await appendLeadDeliveryRetryAttempt({
+    leadId,
+    deliveryKey: `brand:${lead.developerBrandProfileId}`,
+  });
+  if (!attempt) {
+    return { success: false as const, status: lead.deliveryStatus };
+  }
+
+  const claimedAttempt = await claimLeadDeliveryAttempt({
+    leadId,
+    attemptId: attempt.id,
+  });
+  if (!claimedAttempt) {
+    return { success: false as const, status: lead.deliveryStatus };
+  }
+
+  const delivered = await routeLeadToEmail(
+    leadId,
+    profile,
+    {
+      developerBrandProfileId: lead.developerBrandProfileId,
+      developmentId: lead.developmentId || undefined,
+      propertyId: lead.propertyId || undefined,
+      unitId: lead.unitId || undefined,
+      unitName: lead.unitName || undefined,
+      name: lead.name,
+      email: lead.email,
+      phone: lead.phone || undefined,
+      message: lead.message || undefined,
+    },
+  );
+  const updated = await updateLeadDeliveryAttempt({
+    leadId,
+    attemptId: attempt.id,
+    status: delivered ? 'delivered' : 'failed',
+    error: delivered ? null : 'The configured email provider did not accept the lead notification.',
+  });
+
+  return {
+    success: delivered,
+    status: updated?.status || (delivered ? 'delivered' : 'failed'),
+    attemptId: attempt.id,
+  };
 }
 
 // ============================================================================
@@ -330,6 +330,7 @@ export const brandLeadService = {
 
   // Lead routing
   routeLeadToEmail,
+  retryBrandLeadDelivery,
 
   // Lead visibility (Refinement #4)
   canViewDashboardLeads,

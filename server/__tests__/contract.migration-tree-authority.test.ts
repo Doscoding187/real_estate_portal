@@ -7,6 +7,8 @@ const ROOT = process.cwd();
 const MANIFEST_PATH = 'docs/database-authority/migration-tree-authority.json';
 const CANONICAL_RUNNER = 'server/migrations/runSqlMigrations.ts';
 const CANONICAL_SQL = 'server/migrations/0000_canonical_launch_baseline.sql';
+const CANONICAL_INCREMENTAL_SQL =
+  'server/migrations/0001_public_search_to_lead_reliability.sql';
 const APPROVED_DIAGNOSTIC_EXECUTABLES = new Set([
   'scripts/db-verify-distribution-schema.ts',
   'scripts/schema-sanity-check.mjs',
@@ -353,7 +355,7 @@ describe('migration tree authority', () => {
     const activeSql = manifest.classifications
       .filter(entry => entry.classification === 'canonical active')
       .map(entry => entry.path);
-    expect(activeSql).toEqual([CANONICAL_SQL]);
+    expect(activeSql).toEqual([CANONICAL_SQL, CANONICAL_INCREMENTAL_SQL]);
   });
 
   it('keeps canonical discovery top-level and archives non-executable', () => {
@@ -366,7 +368,10 @@ describe('migration tree authority', () => {
 
     expect(manifest.canonicalAuthority.runner).toBe(CANONICAL_RUNNER);
     expect(manifest.canonicalAuthority.activeSqlDirectory).toBe('server/migrations');
-    expect(activeSql).toEqual(['0000_canonical_launch_baseline.sql']);
+    expect(activeSql).toEqual([
+      '0000_canonical_launch_baseline.sql',
+      '0001_public_search_to_lead_reliability.sql',
+    ]);
     expect(runner).toContain('const migrationsDir = options?.migrationsDir ?? __dirname;');
     expect(runner).toContain('readdirSync(migrationsDir)');
     expect(runner).not.toMatch(/readdirSync\([^\n]+recursive\s*:/);

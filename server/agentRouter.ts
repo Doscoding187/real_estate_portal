@@ -487,7 +487,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, userId))
+        .where(and(eq(agents.userId, userId), eq(agents.status, 'approved')))
         .limit(1);
       const agentId = agentRecord?.id ?? null;
 
@@ -682,7 +682,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -728,9 +728,21 @@ export const agentRouter = router({
         id: number;
         name: string;
         email: string;
-        phone: string;
+        phone: string | null;
+        message: string | null;
         status: string;
         source: string;
+        consent: {
+          capturedAt: string | null;
+          version: string | null;
+          source: string | null;
+        };
+        delivery: {
+          status: string;
+          attempts: unknown;
+          lastAttemptAt: string | null;
+          lastError: string | null;
+        };
         notes: string | null;
         nextFollowUp: string | Date | null;
         createdAt: string | Date;
@@ -782,8 +794,20 @@ export const agentRouter = router({
           name: lead.name,
           email: lead.email,
           phone: lead.phone,
+          message: lead.message,
           status: lead.status,
           source: lead.leadSource || lead.source || 'web',
+          consent: {
+            capturedAt: lead.consentCapturedAt || null,
+            version: lead.consentVersion || null,
+            source: lead.consentSource || null,
+          },
+          delivery: {
+            status: lead.deliveryStatus,
+            attempts: lead.deliveryAttempts,
+            lastAttemptAt: lead.deliveryLastAttemptAt || null,
+            lastError: lead.deliveryLastError || null,
+          },
           notes: lead.notes,
           nextFollowUp: lead.nextFollowUp,
           createdAt: lead.createdAt || new Date(),
@@ -819,7 +843,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1327,7 +1351,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1382,7 +1406,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select({ id: agents.id })
         .from(agents)
-        .where(eq(agents.userId, user.id))
+        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1443,7 +1467,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select({ id: agents.id })
         .from(agents)
-        .where(eq(agents.userId, user.id))
+        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1530,7 +1554,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select({ id: agents.id })
         .from(agents)
-        .where(eq(agents.userId, user.id))
+        .where(and(eq(agents.userId, user.id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1621,7 +1645,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1694,7 +1718,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1754,7 +1778,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -1840,7 +1864,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, userId))
+        .where(and(eq(agents.userId, userId), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -2037,7 +2061,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {
@@ -2096,7 +2120,7 @@ export const agentRouter = router({
       const [agentRecord] = await db
         .select()
         .from(agents)
-        .where(eq(agents.userId, requireUser(ctx).id))
+        .where(and(eq(agents.userId, requireUser(ctx).id), eq(agents.status, 'approved')))
         .limit(1);
 
       if (!agentRecord) {

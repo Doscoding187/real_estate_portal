@@ -40,8 +40,10 @@ export const prospectIdentities = mysqlTable(
   table => [unique('uq_prospect_identities_user').on(table.userId)],
 );
 
-export const leads = mysqlTable('leads', {
-  id: int().autoincrement().primaryKey(),
+export const leads = mysqlTable(
+  'leads',
+  {
+    id: int().autoincrement().primaryKey(),
   propertyId: int('propertyId').references(() => properties.id, { onDelete: 'set null' }),
   developmentId: int('developmentId').references(() => developments.id, { onDelete: 'set null' }),
   agencyId: int('agencyId').references(() => agencies.id, { onDelete: 'set null' }),
@@ -114,17 +116,36 @@ export const leads = mysqlTable('leads', {
     'delivered_subscriber',
     'claimed',
   ]).default('captured'),
-  leadDeliveryMethod: mysqlEnum('lead_delivery_method', [
-    'email',
-    'crm_export',
-    'manual',
-    'none',
-  ]).default('email'),
-  prospectIdentityId: varchar('prospect_identity_id', { length: 36 }).references(
-    () => prospectIdentities.id,
-    { onDelete: 'set null' },
-  ),
-});
+    leadDeliveryMethod: mysqlEnum('lead_delivery_method', [
+      'email',
+      'crm_export',
+      'manual',
+      'none',
+    ]).default('email'),
+    captureRequestId: varchar('capture_request_id', { length: 128 }),
+    consentCapturedAt: timestamp('consent_captured_at', { mode: 'string' }),
+    consentVersion: varchar('consent_version', { length: 64 }),
+    consentSource: varchar('consent_source', { length: 100 }),
+    deliveryStatus: mysqlEnum('delivery_status', [
+      'pending',
+      'delivered',
+      'failed',
+      'attention_required',
+    ])
+      .default('pending')
+      .notNull(),
+    deliveryAttempts: json('delivery_attempts'),
+    deliveryLastAttemptAt: timestamp('delivery_last_attempt_at', { mode: 'string' }),
+    deliveryNextAttemptAt: timestamp('delivery_next_attempt_at', { mode: 'string' }),
+    deliveryLastError: text('delivery_last_error'),
+    deliveryProviderReference: varchar('delivery_provider_reference', { length: 255 }),
+    prospectIdentityId: varchar('prospect_identity_id', { length: 36 }).references(
+      () => prospectIdentities.id,
+      { onDelete: 'set null' },
+    ),
+  },
+  table => [unique('uq_leads_capture_request').on(table.captureRequestId)],
+);
 
 export const leadActivities = mysqlTable('lead_activities', {
   id: int().autoincrement().primaryKey(),

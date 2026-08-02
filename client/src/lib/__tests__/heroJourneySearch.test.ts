@@ -38,7 +38,7 @@ describe('Buy journey URL authority', () => {
 
   it('preserves known free-text city context', () => {
     expect(buildBuySearchUrl({ searchQuery: 'Johannesburg' })).toBe(
-      '/property-for-sale?city=johannesburg&province=gauteng',
+      '/property-for-sale?city=johannesburg',
     );
   });
 

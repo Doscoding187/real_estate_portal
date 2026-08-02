@@ -43,6 +43,17 @@ interface Lead {
   status: string;
   message: string | null;
   source: string | null;
+  consent?: {
+    capturedAt: string | null;
+    version: string | null;
+    source: string | null;
+  };
+  delivery?: {
+    status: string;
+    attempts: unknown;
+    lastAttemptAt: string | null;
+    lastError: string | null;
+  };
   notes?: string | null;
   nextFollowUp?: string | null;
   createdAt: string;
@@ -171,6 +182,47 @@ function getNextStage(stageId: PipelineStageId): PipelineStageId | null {
 function isReadinessComplete(readiness?: LeadReadiness) {
   const value = readiness || DEFAULT_READINESS;
   return value.viewingCompleted && value.feedbackLogged && value.affordabilityConfirmed;
+}
+
+function getDeliveryMeta(status?: string | null) {
+  switch (status) {
+    case 'delivered':
+      return {
+        label: 'Delivered',
+        className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      };
+    case 'failed':
+      return {
+        label: 'Delivery failed',
+        className: 'border-rose-200 bg-rose-50 text-rose-700',
+      };
+    case 'attention_required':
+      return {
+        label: 'Recipient follow-up needed',
+        className: 'border-amber-200 bg-amber-50 text-amber-700',
+      };
+    default:
+      return {
+        label: 'Delivery pending',
+        className: 'border-sky-200 bg-sky-50 text-sky-700',
+      };
+  }
+}
+
+function getDeliveryAttemptCount(attempts: unknown) {
+  const parsed = typeof attempts === 'string' ? (() => {
+    try {
+      return JSON.parse(attempts);
+    } catch {
+      return null;
+    }
+  })() : attempts;
+
+  if (!Array.isArray(parsed)) return 0;
+  return parsed.reduce((highest, attempt) => {
+    const count = Number((attempt as { attemptCount?: unknown })?.attemptCount || 0);
+    return Math.max(highest, Number.isFinite(count) ? count : 0);
+  }, 0);
 }
 
 interface LeadPipelineProps {
@@ -786,6 +838,45 @@ export function LeadPipeline({ className, propertyId }: LeadPipelineProps) {
                     <span className="font-medium">Lead message:</span> {selectedLead.message}
                   </div>
                 ) : null}
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                    <p className="font-medium text-gray-900">Consent evidence</p>
+                    {selectedLead.consent?.capturedAt ? (
+                      <>
+                        <p className="mt-1 text-gray-600">
+                          Recorded {parseDatabaseTimestamp(selectedLead.consent.capturedAt).toLocaleString()}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Version {selectedLead.consent.version || 'unspecified'} ·{' '}
+                          {selectedLead.consent.source || 'unspecified source'}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-amber-700">No consent evidence recorded.</p>
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium text-gray-900">Recipient delivery</p>
+                      <Badge
+                        variant="outline"
+                        className={getDeliveryMeta(selectedLead.delivery?.status).className}
+                      >
+                        {getDeliveryMeta(selectedLead.delivery?.status).label}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {getDeliveryAttemptCount(selectedLead.delivery?.attempts)} attempt(s)
+                      {selectedLead.delivery?.lastAttemptAt
+                        ? ` · last ${parseDatabaseTimestamp(selectedLead.delivery.lastAttemptAt).toLocaleString()}`
+                        : ''}
+                    </p>
+                    {selectedLead.delivery?.lastError ? (
+                      <p className="mt-1 text-xs text-rose-700">{selectedLead.delivery.lastError}</p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -1118,6 +1209,25 @@ function LeadCard({
               {SOURCE_LABELS[lead.source || ''] || lead.source}
             </Badge>
           )}
+
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant="outline"
+              className={`text-xs ${getDeliveryMeta(lead.delivery?.status).className}`}
+            >
+              {getDeliveryMeta(lead.delivery?.status).label}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={
+                lead.consent?.capturedAt
+                  ? 'border-emerald-200 bg-emerald-50 text-xs text-emerald-700'
+                  : 'border-amber-200 bg-amber-50 text-xs text-amber-700'
+              }
+            >
+              {lead.consent?.capturedAt ? 'Consent recorded' : 'Consent evidence missing'}
+            </Badge>
+          </div>
 
           {nextStage === 'offer' ? (
             <div

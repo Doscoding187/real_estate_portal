@@ -5,7 +5,7 @@ import { TRPCError } from '@trpc/server';
 import { developerBrandProfileService } from './services/developerBrandProfileService';
 import { brandLeadService } from './services/brandLeadService';
 import { developments, properties, developerBrandProfiles, leads } from '../drizzle/schema';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import { developmentService } from './services/developmentService';
 
 /**
@@ -556,6 +556,52 @@ export const superAdminPublisherRouter = router({
         );
         return [];
       }
+    }),
+
+  /**
+   * Platform custody queue. This is deliberately super-admin-only: a
+   * platform-curated lead has no customer organization recipient until an
+   * explicit verified relationship exists.
+   */
+  getPlatformManagedLeads: superAdminProcedure
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(200).default(50),
+        offset: z.number().int().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      const dbConn = await db.getDb();
+      if (!dbConn) return [];
+
+      const rows = await dbConn
+        .select({
+          lead: leads,
+          property: properties,
+          development: developments,
+          brand: developerBrandProfiles,
+        })
+        .from(leads)
+        .leftJoin(properties, eq(leads.propertyId, properties.id))
+        .leftJoin(developments, eq(leads.developmentId, developments.id))
+        .leftJoin(developerBrandProfiles, eq(leads.developerBrandProfileId, developerBrandProfiles.id))
+        .where(
+          and(
+            eq(leads.deliveryStatus, 'attention_required'),
+            isNull(leads.agentId),
+            isNull(leads.agencyId),
+          ),
+        )
+        .orderBy(desc(leads.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return rows.map(row => ({
+        ...row.lead,
+        property: row.property,
+        development: row.development,
+        brand: row.brand,
+      }));
     }),
 
   /**
