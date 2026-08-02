@@ -1,5 +1,9 @@
 # 🔍 Diagnosing Console Errors
 
+> **Historical troubleshooting documentation — not database authority.** Do
+> not execute seed, migration, repair, or cleanup utilities named here. Use
+> the approved local/test lifecycle and supported diagnostics.
+
 ## Common Console Error Types
 
 When you see 2383+ console issues, they usually fall into these categories:
@@ -103,10 +107,7 @@ To help diagnose, please share:
 
 ### 2. Missing Explore Data
 **Error**: "Cannot read property of undefined"
-**Fix**: Run seed script:
-```bash
-npx tsx scripts/seed-explore-shorts-sample.ts
-```
+**Fix**: Use the approved guarded local/test lifecycle for local or demo data.
 
 ### 3. Google Maps API
 **Error**: "Google Maps JavaScript API error"

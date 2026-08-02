@@ -12,6 +12,7 @@ import {
   getExplorePublishingEligibility,
 } from './services/explorePublishingEligibilityService';
 import { exploreContent } from '../drizzle/schema';
+import { getUserFavorites } from './db';
 
 async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
   const db = await getDb();
@@ -167,7 +168,7 @@ export const exploreRouter = router({
       return { success: true };
     }),
 
-  // Save property
+  // Legacy save path. Property saves are owned by properties.toggleFavorite.
   saveProperty: protectedProcedure
     .input(
       z
@@ -179,13 +180,15 @@ export const exploreRouter = router({
           message: 'Either contentId or shortId must be provided',
         }),
     )
-    .mutation(async ({ input, ctx }) => {
-      const resolvedContentId = input.contentId ?? input.shortId!;
-      await exploreInteractionService.saveProperty(resolvedContentId, requireUser(ctx).id);
-      return { success: true };
+    .mutation(async () => {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Explore property saves are not available in the legacy Explore workflow. Use properties.toggleFavorite.',
+      });
     }),
 
-  // Saved properties (stubbed for compile)
+  // Saved properties use the canonical property-favorites workflow.
   getSavedProperties: protectedProcedure
     .input(
       z.object({
@@ -193,11 +196,20 @@ export const exploreRouter = router({
         offset: z.number().min(0).default(0),
       }),
     )
-    .query(async () => {
+    .query(async ({ ctx, input }) => {
+      const saved = await getUserFavorites(requireUser(ctx).id);
+      const start = input.offset;
+      const end = start + input.limit;
+
       return {
         data: {
-          items: [] as any[],
-          total: 0,
+          items: saved.slice(start, end).map(item => ({
+            id: item.id,
+            propertyId: item.propertyId,
+            property: item.property,
+            savedAt: item.createdAt,
+          })),
+          total: saved.length,
         },
       };
     }),
@@ -240,7 +252,7 @@ export const exploreRouter = router({
     return exploreFeedService.getCategories();
   }),
 
-  getFollowedItems: publicProcedure.query(async () => {
+  getFollowedItems: protectedProcedure.query(async () => {
     return { items: { neighbourhoods: [], creators: [] } };
   }),
 

@@ -8,22 +8,22 @@
   - `document_code`, `document_label`
   - optional `template_file_url` / `template_file_name`
   - `is_required`, `is_active`, `sort_order`
-  - Source: [distribution.ts](/c:/Dev/real_estate_portal_clone/drizzle/schema/distribution.ts:340)
+  - Source: [distribution.ts](../drizzle/schema/distribution.ts#L340)
 - Deal-level checklist state is stored in `distribution_deal_documents` with:
   - `deal_id`, `development_required_document_id`, `status`
   - file submitted fields + review fields
-  - Source: [distribution.ts](/c:/Dev/real_estate_portal_clone/drizzle/schema/distribution.ts:625)
+  - Source: [distribution.ts](../drizzle/schema/distribution.ts#L625)
 - Event/audit stream is modeled as `distribution_deal_events` (router depends on it heavily for snapshots/timeline).
-  - Source: [distribution.ts](/c:/Dev/real_estate_portal_clone/drizzle/schema/distribution.ts:698), [distributionRouter.ts](/c:/Dev/real_estate_portal_clone/server/distributionRouter.ts:1073)
+  - Source: [distribution.ts](../drizzle/schema/distribution.ts#L698), [distributionRouter.ts](../server/distributionRouter.ts#L1073)
 - Admin configuration UI already mixes three concepts in one editor:
   - developer application templates (required)
   - supporting files (optional)
   - buyer application docs
-  - Source: [PartnerDevelopmentOnboardingDrawer.tsx](/c:/Dev/real_estate_portal_clone/client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx:1437)
+  - Source: [PartnerDevelopmentOnboardingDrawer.tsx](../client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx#L1437)
 
 ### Core diagnosis
 - `documentsComplete` for pipeline is currently derived from referral snapshot checklist booleans parsed from event metadata, not from `distribution_deal_documents`.
-  - Source: [distributionRouter.ts](/c:/Dev/real_estate_portal_clone/server/distributionRouter.ts:1061), [distributionRouter.ts](/c:/Dev/real_estate_portal_clone/server/distributionRouter.ts:7309)
+  - Source: [distributionRouter.ts](../server/distributionRouter.ts#L1061), [distributionRouter.ts](../server/distributionRouter.ts#L7309)
 - Manager checklist and referrer checklist therefore can diverge by design.
 - The current schema conflates:
   - reusable development assets
@@ -186,7 +186,7 @@ Current UI already has three sections in onboarding drawer; split into two expli
 - optionally link an existing development document
 
 Affected component:
-- [PartnerDevelopmentOnboardingDrawer.tsx](/c:/Dev/real_estate_portal_clone/client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx:1437)
+- [PartnerDevelopmentOnboardingDrawer.tsx](../client/src/components/admin/distribution/PartnerDevelopmentOnboardingDrawer.tsx#L1437)
 
 ### Manager
 - Checklist panel shows per requirement:
@@ -197,8 +197,8 @@ Affected component:
 - Keep bulk verify actions only for eligible statuses.
 
 Affected components:
-- [ManagerDealChecklistPage.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/distribution/ManagerDealChecklistPage.tsx:215)
-- [ManagerDealChecklistPanel.tsx](/c:/Dev/real_estate_portal_clone/client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx:70)
+- [ManagerDealChecklistPage.tsx](../client/src/pages/distribution/ManagerDealChecklistPage.tsx#L215)
+- [ManagerDealChecklistPanel.tsx](../client/src/components/distribution/manager/ManagerDealChecklistPanel.tsx#L70)
 
 ### Referrer/Partner
 - Separate labels and KPIs:
@@ -211,9 +211,9 @@ Affected components:
   - explicit manager verification feedback and rejection reason
 
 Affected components:
-- [PartnerSubmitReferralPage.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/distribution/PartnerSubmitReferralPage.tsx:454)
-- [PartnerReferralDetailPage.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/distribution/PartnerReferralDetailPage.tsx:130)
-- [ReferrerDashboard.tsx](/c:/Dev/real_estate_portal_clone/client/src/pages/ReferrerDashboard.tsx:71)
+- [PartnerSubmitReferralPage.tsx](../client/src/pages/distribution/PartnerSubmitReferralPage.tsx#L454)
+- [PartnerReferralDetailPage.tsx](../client/src/pages/distribution/PartnerReferralDetailPage.tsx#L130)
+- [ReferrerDashboard.tsx](../client/src/pages/ReferrerDashboard.tsx#L71)
 
 ## 7) Tests Needed to Prevent Drift
 

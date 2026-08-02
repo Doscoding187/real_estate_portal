@@ -218,4 +218,4 @@ When adding animations:
 
 - [Full Guide](./REDUCED_MOTION_GUIDE.md)
 - [Demo Page](../../pages/ReducedMotionDemo.tsx)
-- [Tests](../__tests__/ReducedMotion.test.tsx)
+- [Tests](./__tests__/ReducedMotion.test.tsx)

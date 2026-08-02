@@ -45,7 +45,7 @@ export function FollowButton({
     onUnfollowSuccess,
   });
 
-  const { isFollowing, isLoading, toggleFollow } =
+  const { isFollowing, isAvailable, isLoading, toggleFollow } =
     type === 'creator' ? creatorHook : neighbourhoodHook;
 
   // Size classes
@@ -83,7 +83,7 @@ export function FollowButton({
         e.stopPropagation();
         toggleFollow();
       }}
-      disabled={isLoading}
+      disabled={isLoading || !isAvailable}
       className={`
         ${sizeClasses[size]}
         ${variantClasses[variant]}
@@ -93,10 +93,10 @@ export function FollowButton({
         transition-all duration-200
         ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
       `}
-      aria-label={isFollowing ? `Unfollow ${type}` : `Follow ${type}`}
+      aria-label={isAvailable ? (isFollowing ? `Unfollow ${type}` : `Follow ${type}`) : `${type} following unavailable`}
     >
       {showIcon && <Icon size={iconSizes[size]} />}
-      <span>{isFollowing ? 'Following' : 'Follow'}</span>
+      <span>{isAvailable ? (isFollowing ? 'Following' : 'Follow') : 'Unavailable'}</span>
     </button>
   );
 }

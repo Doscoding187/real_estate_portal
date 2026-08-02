@@ -390,5 +390,5 @@ This implementation satisfies **Requirement 10.1**:
 - [Skeleton Loaders Component](./SkeletonLoaders.tsx)
 - [Error States Component](./ErrorStates.tsx)
 - [Error Boundary Component](./AdvertiseErrorBoundary.tsx)
-- [Accessibility Guide](./ACCESSIBILITY_QUICK_REFERENCE.md)
-- [Performance Optimization](./TASK_12_PERFORMANCE_COMPLETE.md)
+- [Accessibility implementation](./ACCESSIBILITY_IMPLEMENTATION.md)
+- [Performance optimizer](./PerformanceOptimizer.tsx)

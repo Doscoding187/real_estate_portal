@@ -228,7 +228,7 @@ animate={{
 
 - [Design Tokens](../lib/design-tokens.ts)
 - [Animation Variants](../lib/animations/exploreAnimations.ts)
-- [ShortsContainer](../components/explore/ShortsContainer.tsx)
+- [Current Shorts screen](../domains/discovery/screens/DiscoveryShortsScreen.tsx)
 - [SwipeEngine](../components/explore/SwipeEngine.tsx)
 - [useVideoPlayback](../hooks/useVideoPlayback.ts)
 

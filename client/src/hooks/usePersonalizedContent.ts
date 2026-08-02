@@ -30,7 +30,7 @@ interface UsePersonalizedContentOptions {
 export function usePersonalizedContent(options: UsePersonalizedContentOptions = {}) {
   const [sections, setSections] = useState<PersonalizedSection[]>([]);
   const useMockData = isExploreMockMode();
-  const allowPlacementMock = import.meta.env.DEV;
+  const allowPlacementMock = useMockData;
   const categoryKey = options.categoryId
     ? (['property', 'renovation', 'finance', 'investment', 'services'][options.categoryId - 1] ?? undefined)
     : undefined;
@@ -116,23 +116,51 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       type: 'video',
       data: item,
     });
+    const asFiniteNumber = (value: unknown): number | undefined => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
+
+    const getSourceMetadata = (item: any): Record<string, any> =>
+      item?.metadata && typeof item.metadata === 'object' ? item.metadata : {};
+
     const toPropertyDiscoveryItem = (item: any): DiscoveryItem => {
-      const city = item?.location?.city || 'Johannesburg';
-      const suburb = item?.location?.suburb || city;
-      const province = item?.location?.province || 'Gauteng';
-      const basePrice = 900000 + (Number(item?.id || 0) % 8) * 250000;
-      const bedrooms = 1 + (Number(item?.id || 0) % 5);
-      const bathrooms = 1 + (Number(item?.id || 0) % 4);
-      const size = 70 + (Number(item?.id || 0) % 7) * 35;
+      const source = getSourceMetadata(item);
+      const listing = source?.listing ?? source?.property ?? {};
+      const city = item?.location?.city || source?.location?.city;
+      const suburb = item?.location?.suburb || source?.location?.suburb || city;
+      const province = item?.location?.province || source?.location?.province;
+      const propertyId =
+        item?.linkedListingId ||
+        item?.listingId ||
+        source?.linkedListingId ||
+        source?.listingId ||
+        source?.propertyId;
+      const price = [source?.price, source?.priceMin, listing?.price, listing?.priceMin]
+        .map(asFiniteNumber)
+        .find(value => value !== undefined);
+      const priceMax = [source?.priceMax, listing?.priceMax]
+        .map(asFiniteNumber)
+        .find(value => value !== undefined);
+      const bedrooms = [source?.bedrooms, source?.beds, listing?.bedrooms, listing?.beds]
+        .map(asFiniteNumber)
+        .find(value => value !== undefined);
+      const bathrooms = [source?.bathrooms, source?.baths, listing?.bathrooms, listing?.baths]
+        .map(asFiniteNumber)
+        .find(value => value !== undefined);
+      const size = [source?.size, source?.floorSize, listing?.size, listing?.floorSize]
+        .map(asFiniteNumber)
+        .find(value => value !== undefined);
+
       return {
-        id: Number(`${item.id}1`),
+        id: item.id,
         type: 'property',
         data: {
-          id: item?.linkedListingId || item.id,
-          title: item?.title || 'Featured Listing',
-          priceMin: basePrice,
-          priceMax: basePrice + 300000,
-          location: [suburb, city, province].filter(Boolean).join(', '),
+          id: propertyId || item.id,
+          title: item?.title || source?.title || 'Featured Listing',
+          priceMin: price,
+          priceMax,
+          location: [suburb, city, province].filter(Boolean).join(', ') || undefined,
           city,
           province,
           beds: bedrooms,
@@ -140,33 +168,42 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
           size,
           imageUrl: item?.thumbnailUrl || item?.mediaUrl,
           thumbnailUrl: item?.thumbnailUrl || item?.mediaUrl,
-          propertyType: item?.category === 'investment' ? 'Investment' : 'Residential',
+          propertyType: source?.propertyType || listing?.propertyType,
           isSaved: false,
         },
       };
     };
     const toNeighbourhoodDiscoveryItem = (item: any): DiscoveryItem => {
-      const city = item?.location?.city || 'Johannesburg';
-      const suburb = item?.location?.suburb || city;
-      const avgPrice = 850000 + (Number(item?.id || 0) % 6) * 280000;
+      const source = getSourceMetadata(item);
+      const city = item?.location?.city || source?.location?.city;
+      const suburb = item?.location?.suburb || source?.location?.suburb || city;
+      const propertyCount = [source?.propertyCount, source?.stats?.propertyCount]
+        .map(asFiniteNumber)
+        .find(value => value !== undefined);
+      const avgPrice = [source?.avgPropertyPrice, source?.averagePropertyPrice]
+        .map(asFiniteNumber)
+        .find(value => value !== undefined);
+      const priceChange = asFiniteNumber(source?.priceChange);
+      const followerCount = asFiniteNumber(source?.followerCount);
       return {
-        id: Number(`${item.id}2`),
+        id: item.id,
         type: 'neighbourhood',
         data: {
-          id: Number(`${item.id}2`),
+          id: source?.locationId || item.id,
           name: suburb,
           city,
           heroBannerUrl: item?.thumbnailUrl || item?.mediaUrl,
           imageUrl: item?.thumbnailUrl || item?.mediaUrl,
-          propertyCount: Math.max(25, Number(item?.stats?.views || 0) % 300),
+          propertyCount,
           avgPropertyPrice: avgPrice,
-          priceChange: (Number(item?.stats?.shares || 0) % 9) - 2,
-          followerCount: Math.max(120, Number(item?.stats?.saves || 0) * 3),
-          highlights: ['Lifestyle', 'Schools', 'Transport'],
+          priceChange,
+          followerCount,
+          highlights: Array.isArray(source?.highlights) ? source.highlights : undefined,
         },
       };
     };
     const toInsightDiscoveryItem = (item: any, index: number): DiscoveryItem => {
+      const source = getSourceMetadata(item);
       const category = String(item?.category || '').toLowerCase();
       const insightType =
         category === 'investment'
@@ -174,7 +211,7 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
           : category === 'finance'
             ? 'price-analysis'
             : 'investment-tip';
-      const city = item?.location?.city || 'Johannesburg';
+      const city = item?.location?.city || source?.location?.city || 'your area';
       return {
         id: Number(`${item.id}3${index}`),
         type: 'insight',
@@ -193,9 +230,9 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
           imageUrl: item?.thumbnailUrl || item?.mediaUrl,
           insightType,
           data: {
-            value: `${Math.max(4, Number(item?.stats?.shares || 0) + 3)}%`,
-            change: (Number(item?.stats?.saves || 0) % 8) - 3,
-            label: `${city} weekly signal`,
+            value: source?.insightValue ?? source?.value,
+            change: source?.priceChange ?? source?.change,
+            label: source?.insightLabel ?? source?.label,
           },
         },
       };

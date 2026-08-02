@@ -4,6 +4,16 @@ import { vi } from 'vitest';
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     properties: {
+      toggleFavorite: {
+        useMutation: vi.fn(() => ({
+          mutate: vi.fn(),
+          mutateAsync: vi.fn(async () => ({ favorited: true })),
+          isPending: false,
+          isLoading: false,
+          error: null,
+          reset: vi.fn(),
+        })),
+      },
       search: {
         useQuery: vi.fn(() => ({
           data: [],

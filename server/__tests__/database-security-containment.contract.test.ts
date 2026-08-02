@@ -81,7 +81,6 @@ describe('database security containment contract', () => {
   it('keeps retained deployment documentation free of database connection literals', () => {
     const documents = [
       'DEPLOYMENT.md',
-      'EXPLORE_DISCOVERY_MIGRATION_GUIDE.md',
     ];
 
     const connectionPattern =

@@ -7,15 +7,19 @@ import { useState, useCallback } from 'react';
 import { trpc } from '../lib/trpc';
 
 interface UseSavePropertyOptions {
-  contentId: number;
-  propertyId?: number;
+  propertyId: number;
+  /**
+   * Retained for legacy component compatibility. Property saves are persisted
+   * through the canonical properties favorites workflow, not Explore
+   * engagement records.
+   */
+  contentId?: number;
   initialSaved?: boolean;
   onSaveSuccess?: () => void;
   onUnsaveSuccess?: () => void;
 }
 
 export function useSaveProperty({
-  contentId,
   propertyId,
   initialSaved = false,
   onSaveSuccess,
@@ -24,9 +28,9 @@ export function useSaveProperty({
   const [isSaved, setIsSaved] = useState(initialSaved);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const toggleSaveMutation = trpc.explore.saveProperty.useMutation({
-    onSuccess: () => {
-      const nextSaved = !isSaved;
+  const toggleSaveMutation = trpc.properties.toggleFavorite.useMutation({
+    onSuccess: data => {
+      const nextSaved = data.favorited;
       setIsSaved(nextSaved);
 
       // Trigger animation
@@ -52,8 +56,8 @@ export function useSaveProperty({
   });
 
   const toggleSave = useCallback(() => {
-    toggleSaveMutation.mutate({ contentId, shortId: propertyId });
-  }, [contentId, propertyId, toggleSaveMutation]);
+    toggleSaveMutation.mutate({ propertyId });
+  }, [propertyId, toggleSaveMutation]);
 
   return {
     isSaved,

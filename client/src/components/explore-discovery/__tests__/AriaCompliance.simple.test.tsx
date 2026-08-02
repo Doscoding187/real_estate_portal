@@ -18,6 +18,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // Mock TRPC
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    properties: {
+      toggleFavorite: {
+        useMutation: vi.fn(() => ({
+          mutate: vi.fn(),
+          mutateAsync: vi.fn(async () => ({ favorited: true })),
+          isPending: false,
+          isLoading: false,
+          error: null,
+          reset: vi.fn(),
+        })),
+      },
+    },
     explore: {
       saveProperty: {
         useMutation: vi.fn(() => ({

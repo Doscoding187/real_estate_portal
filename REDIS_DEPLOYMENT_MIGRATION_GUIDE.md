@@ -1,19 +1,30 @@
-# Redis and Cache Operational Context
+# Redis and Cache Implementation Note
 
-> **Historical guide retired.** This file no longer authorizes Redis
-> provisioning, deployment, environment configuration, package installation,
-> database changes, or cache repairs. The former commands and credential
-> examples were removed; Git history retains the historical guide.
+> **Current code reference — not a deployment runbook.** This file replaces a
+> historical Redis setup guide whose environment, deployment, rollback and
+> database instructions were not independently verified.
 
-The current cache implementation is represented by:
+The independently verified implementation is:
 
-- [`server/lib/redis.ts`](server/lib/redis.ts), including its guarded Redis
-  client and local in-memory fallback;
-- [`server/services/cacheIntegrationService.ts`](server/services/cacheIntegrationService.ts),
-  which owns cache usage for supported services; and
-- [`server/cacheRouter.ts`](server/cacheRouter.ts), whose administrative
-  operations are subject to the current authorization implementation.
+- `server/lib/redis.ts` owns the `redisCache` singleton, `CacheTTL` values and
+  Explore cache-key builders. It reads `REDIS_URL` at runtime and falls back to
+  an in-memory cache when Redis is absent or unavailable.
+- `server/lib/cache.ts` provides a separate in-memory TTL cache. The current
+  discovery cache adapter at
+  `server/domains/discovery/caching/discoveryCache.ts` uses that adapter, so
+  Redis and discovery-cache authority are not assumed to be interchangeable.
+- `server/lib/performanceOptimization.ts` provides cache wrapping,
+  invalidation, cache headers and image URL helpers. These are code surfaces,
+  not proof of a production performance result.
+- `server/cacheRouter.ts` is the active cache tRPC router. Its `getStats` and
+  `health` procedures are public read-only queries, while `clearAll` and
+  `clearPattern` use `superAdminProcedure`. The deleted Express route at
+  `server/routes/cacheMonitoring.ts` is not part of the active inventory.
 
-Redis deployment and environment configuration require an approved deployment
-workstream and the current environment authority. They must not be inferred
-from this historical document.
+No Redis credentials, environment values, deployment commands, manual SQL,
+feature-specific migrations, seeds, repairs or rollback commands belong here.
+Database changes follow the [Database Authority entry contract](docs/database-authority/00-database-authority-agent-entry.md),
+[Database Change Protocol](docs/database-authority/database-change-protocol.md),
+and [canonical migration README](server/migrations/README.md). Any future
+Redis deployment procedure must be rebuilt from the validated deployment
+authority and current runtime configuration.

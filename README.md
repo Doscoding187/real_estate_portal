@@ -307,9 +307,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ### Documentation
 
-- [API Reference](./docs/api.md)
-- [Database Schema](./docs/schema.md)
-- [Deployment Guide](./docs/deployment.md)
+- [Architecture and launch-readiness authority](./docs/architecture/launch-readiness-and-product-convergence/index.md)
+- [Database Authority](./docs/database-authority/index.md)
+- [Railway release procedure](./docs/railway-release-procedure.md)
 
 ### Issues & Bugs
 

@@ -288,33 +288,18 @@ router.post(
 
 /**
  * POST /api/explore/save/:propertyId
- * Save property to favorites (best-effort)
+ * Legacy save boundary. Property saves are owned by properties.toggleFavorite.
  */
 router.post(
   '/save/:propertyId',
   requireAuth,
   rateLimit(100, 60000),
-  async (req: Request, res: Response) => {
-    try {
-      const { propertyId } = req.params;
-      const userId = req.user!.id;
-
-      await exploreInteractionService.saveProperty(Number(propertyId), userId);
-
-      res.json({ success: true, propertyId: Number(propertyId) });
-    } catch (err) {
-      console.error('[Explore API] Failed to save property:', err);
-
-      res.status(500).json({
-        error: 'Failed to save property',
-        details:
-          process.env.NODE_ENV !== 'production'
-            ? err instanceof Error
-              ? err.message
-              : String(err)
-            : undefined,
-      });
-    }
+  async (_req: Request, res: Response) => {
+    return res.status(410).json({
+      error: 'Explore property saves are unavailable in the legacy workflow.',
+      code: 'CAPABILITY_UNAVAILABLE',
+      message: 'Use the canonical properties.toggleFavorite workflow.',
+    });
   },
 );
 

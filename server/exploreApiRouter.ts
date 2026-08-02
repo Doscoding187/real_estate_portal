@@ -1,13 +1,15 @@
 /**
- * Explore API Router (STUBBED)
+ * Explore API Router (legacy compatibility boundary)
  *
  * V3 Explore tables are not exported from schema:
  * - exploreDiscoveryVideos, exploreNeighbourhoods, exploreCategories
  * - exploreNeighbourhoodFollows, exploreCreatorFollows
  * - exploreSavedProperties, exploreEngagements
  *
- * All V3 endpoints are stubbed to return empty/default values.
- * Legacy V1/V2 endpoints using exploreContent are preserved.
+ * V3 endpoints that have no canonical persistence are explicitly unavailable;
+ * they must not report successful no-op responses. The routed Explore feed
+ * uses the discovery domain. Legacy V1/V2 endpoints using exploreContent are
+ * retained only where they still have a real implementation.
  */
 
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
@@ -64,6 +66,13 @@ async function verifyAgencyAccess(userId: number, agencyId: number): Promise<voi
   });
 }
 
+function retiredExploreCapability(capability: string): TRPCError {
+  return new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: `${capability} is not available in the canonical Explore workflow. Use the discovery router or an approved convergence workstream.`,
+  });
+}
+
 export const exploreApiRouter = router({
   /**
    * Get personalized feed - V1/V2 (preserved)
@@ -88,7 +97,10 @@ export const exploreApiRouter = router({
         return { success: true, data: feed };
       } catch (error) {
         console.error('[exploreApiRouter] getFeed error:', error);
-        return { success: true, data: { items: [], hasMore: false } };
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Legacy Explore feed is unavailable; use discovery.getFeed.',
+        });
       }
     }),
 
@@ -106,11 +118,7 @@ export const exploreApiRouter = router({
       }),
     )
     .query(async () => {
-      // STUB: V3 tables not available
-      console.debug(
-        '[exploreApiRouter] getDiscoveryVideos called but disabled (V3 tables not exported)',
-      );
-      return { success: true, data: { items: [], nextCursor: null } };
+      throw retiredExploreCapability('Explore discovery videos');
     }),
 
   /**
@@ -126,11 +134,7 @@ export const exploreApiRouter = router({
       }),
     )
     .query(async () => {
-      // STUB: V3 tables not available
-      console.debug(
-        '[exploreApiRouter] getNeighbourhoods called but disabled (V3 tables not exported)',
-      );
-      return { success: true, data: [] };
+      throw retiredExploreCapability('Explore neighbourhood follows');
     }),
 
   /**
@@ -138,9 +142,7 @@ export const exploreApiRouter = router({
    * exploreCategories table not available
    */
   getCategories: publicProcedure.query(async () => {
-    // STUB: V3 tables not available
-    console.debug('[exploreApiRouter] getCategories called but disabled (V3 tables not exported)');
-    return { success: true, data: [] };
+    throw retiredExploreCapability('Explore category discovery');
   }),
 
   /**
@@ -154,11 +156,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      // STUB: V3 tables not available
-      console.debug(
-        '[exploreApiRouter] followNeighbourhood called but disabled (V3 tables not exported)',
-      );
-      return { success: false, message: 'Feature temporarily disabled' };
+      throw retiredExploreCapability('Neighbourhood follows');
     }),
 
   /**
@@ -171,10 +169,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      console.debug(
-        '[exploreApiRouter] unfollowNeighbourhood called but disabled (V3 tables not exported)',
-      );
-      return { success: false, message: 'Feature temporarily disabled' };
+      throw retiredExploreCapability('Neighbourhood follows');
     }),
 
   /**
@@ -189,10 +184,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      console.debug(
-        '[exploreApiRouter] followCreator called but disabled (V3 tables not exported)',
-      );
-      return { success: false, message: 'Feature temporarily disabled' };
+      throw retiredExploreCapability('Creator follows');
     }),
 
   /**
@@ -206,10 +198,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      console.debug(
-        '[exploreApiRouter] unfollowCreator called but disabled (V3 tables not exported)',
-      );
-      return { success: false, message: 'Feature temporarily disabled' };
+      throw retiredExploreCapability('Creator follows');
     }),
 
   /**
@@ -223,8 +212,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      console.debug('[exploreApiRouter] saveProperty called but disabled (V3 tables not exported)');
-      return { success: false, message: 'Feature temporarily disabled' };
+      throw retiredExploreCapability('Explore property saves');
     }),
 
   /**
@@ -237,10 +225,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      console.debug(
-        '[exploreApiRouter] unsaveProperty called but disabled (V3 tables not exported)',
-      );
-      return { success: false, message: 'Feature temporarily disabled' };
+      throw retiredExploreCapability('Explore property saves');
     }),
 
   /**
@@ -254,10 +239,7 @@ export const exploreApiRouter = router({
       }),
     )
     .query(async () => {
-      console.debug(
-        '[exploreApiRouter] getSavedProperties called but disabled (V3 tables not exported)',
-      );
-      return { success: true, data: { items: [], nextCursor: null } };
+      throw retiredExploreCapability('Explore saved properties');
     }),
 
   /**
@@ -273,23 +255,8 @@ export const exploreApiRouter = router({
         seed: z.string().optional(),
       }),
     )
-    .query(async ({ input }) => {
-      return {
-        success: true,
-        data: {
-          shorts: [],
-          feedType: 'agency',
-          hasMore: false,
-          offset: input.offset ?? 0,
-          metadata: {
-            agencyName: 'Agency',
-            agencyLogo: null,
-            isVerified: false,
-            totalContent: 0,
-            includeAgentContent: input.includeAgentContent ?? true,
-          },
-        },
-      };
+    .query(async () => {
+      throw retiredExploreCapability('Agency Explore feeds');
     }),
 
   /**
@@ -305,15 +272,8 @@ export const exploreApiRouter = router({
         seed: z.string().optional(),
       }),
     )
-    .query(async ({ input }) => {
-      return {
-        success: true,
-        data: {
-          videos: [],
-          hasMore: false,
-          nextOffset: (input.offset ?? 0) + (input.limit ?? 0),
-        },
-      };
+    .query(async () => {
+      throw retiredExploreCapability('Legacy video feeds');
     }),
 
   /**
@@ -322,12 +282,7 @@ export const exploreApiRouter = router({
   toggleCreatorFollow: protectedProcedure
     .input(z.object({ creatorId: z.number().int() }))
     .mutation(async () => {
-      return {
-        success: true,
-        data: {
-          following: true,
-        },
-      };
+      throw retiredExploreCapability('Creator follows');
     }),
 
   /**
@@ -336,12 +291,7 @@ export const exploreApiRouter = router({
   toggleNeighbourhoodFollow: protectedProcedure
     .input(z.object({ neighbourhoodId: z.number().int() }))
     .mutation(async () => {
-      return {
-        success: true,
-        data: {
-          following: true,
-        },
-      };
+      throw retiredExploreCapability('Neighbourhood follows');
     }),
 
   /**
@@ -355,12 +305,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      return {
-        success: true,
-        data: {
-          saved: true,
-        },
-      };
+      throw retiredExploreCapability('Explore property saves');
     }),
 
   /**
@@ -375,13 +320,7 @@ export const exploreApiRouter = router({
         .optional(),
     )
     .query(async () => {
-      return {
-        success: true,
-        data: {
-          creators: [],
-          neighbourhoods: [],
-        },
-      };
+      throw retiredExploreCapability('Followed Explore items');
     }),
   /**
    * Track engagement - V3 (STUBBED)
@@ -396,10 +335,7 @@ export const exploreApiRouter = router({
       }),
     )
     .mutation(async () => {
-      console.debug(
-        '[exploreApiRouter] trackEngagement called but disabled (V3 tables not exported)',
-      );
-      return { success: true };
+      throw retiredExploreCapability('Legacy Explore engagement tracking');
     }),
 
   /**
@@ -449,8 +385,10 @@ export const exploreApiRouter = router({
         return { success: true, data: recommendations };
       } catch (error) {
         console.error('[exploreApiRouter] getRecommendations error:', error);
-        return { success: true, data: [] };
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Legacy Explore recommendations are unavailable; use discovery.getFeed.',
+        });
       }
     }),
 });
-
