@@ -181,7 +181,7 @@ await contentBadgeService.updateContentBadge('content-789', false);
 await contentBadgeService.updateContentBadge('short-456', true);
 ```
 
-### Example 5: Batch Update for Backfilling
+### Example 5: Batch Update for an Approved Application Operation
 
 ```typescript
 const contentIds = ['id1', 'id2', 'id3', 'id4', 'id5'];
@@ -376,7 +376,9 @@ The service handles errors gracefully:
 
 1. **Always determine badge before rendering:** Call `getBadgeForContent()` to get complete config
 2. **Update badges on content creation:** Call `updateContentBadge()` when creating new content
-3. **Use batch updates for backfilling:** Use `batchUpdateContentBadges()` for multiple items
+3. **Use batch updates only for an approved application operation:** Use
+   `batchUpdateContentBadges()` for multiple items. This document does not
+   authorize data backfills or database repairs.
 4. **Handle multi-category content:** Trust the service's priority order
 5. **Cache badge configs in frontend:** Badge configs are static and can be cached
 

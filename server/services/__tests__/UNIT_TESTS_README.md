@@ -115,13 +115,9 @@ This file contains 18 unit tests organized into 7 test suites:
 
 ### Prerequisites
 
-1. **Database Connection**: Set the `DATABASE_URL` environment variable to your MySQL database connection string:
-   ```bash
-   export DATABASE_URL="mysql://user:password@host:port/database"
-   ```
-
-2. **Database setup**: Use the canonical test lifecycle and migration README;
-   this document does not authorize a feature-specific migration runner.
+1. **Database setup**: Use the canonical test lifecycle and migration README;
+   do not set connection strings manually and do not run a feature-specific
+   migration runner from this document.
 
 ### Execute Tests
 
@@ -142,9 +138,8 @@ npm test -- server/services/__tests__/ --run
 
 ### Test Behavior
 
-- **Without DATABASE_URL**: Tests will skip gracefully with a warning message
-- **With DATABASE_URL but no migration**: Tests will fail with table not found errors
-- **With DATABASE_URL and migration**: All tests will execute and verify functionality
+- The canonical test lifecycle owns target selection, schema setup, and demo
+  data. This document does not authorize direct database access.
 
 ## Test Data Management
 
@@ -184,11 +179,7 @@ These tests validate the following requirements from the Explore Agency Content 
 
 - **Service Implementation**: `server/services/exploreFeedService.ts`
 - **Agency Service**: `server/services/exploreAgencyService.ts`
-- **Migration**: `drizzle/migrations/add-agency-attribution.sql`
-- **Rollback**: `drizzle/migrations/rollback-agency-attribution.sql`
-- **Design Document**: `.kiro/specs/explore-agency-content-attribution/design.md`
-- **Requirements**: `.kiro/specs/explore-agency-content-attribution/requirements.md`
-- **Tasks**: `.kiro/specs/explore-agency-content-attribution/tasks.md`
+- **Database setup authority**: `docs/database-authority/00-database-authority-agent-entry.md`
 
 ## Test Maintenance
 
@@ -202,8 +193,8 @@ When updating the agency attribution feature:
 ## Troubleshooting
 
 ### Tests Skip with "Database not available"
-- **Cause**: DATABASE_URL environment variable not set
-- **Solution**: Set DATABASE_URL to your database connection string
+- **Cause**: The approved test lifecycle was not prepared
+- **Solution**: Use the canonical test lifecycle and migration README.
 
 ### Tests Fail with "Tables not found"
 - **Cause**: Migration not run
