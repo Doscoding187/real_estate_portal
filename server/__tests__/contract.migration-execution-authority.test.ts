@@ -253,7 +253,10 @@ describe('migration execution authority', () => {
     expect(runner).toContain('readdirSync(migrationsDir)');
     expect(runner).not.toMatch(/readdirSync\([^\n]+recursive\s*:/);
     expect(runner).toContain(".filter(file => file.endsWith('.sql'))");
-    expect(activeSqlFiles).toEqual(['0000_canonical_launch_baseline.sql']);
+    expect(activeSqlFiles).toEqual([
+      '0000_canonical_launch_baseline.sql',
+      '0001_public_search_to_lead_reliability.sql',
+    ]);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(runner).toContain("const MIGRATION_HISTORY_TABLE = 'sql_migration_history'");
