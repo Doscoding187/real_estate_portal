@@ -207,6 +207,57 @@ describe('truthful layered readiness', () => {
     expect(report.applicationReady).toBe(false);
   });
 
+  it('fails closed when attempt-state authority is missing despite exact head and schema', async () => {
+    const value = fixture();
+    const connection = new ReadinessConnection(value.authority.context.databaseName);
+    connection.tables = new Set(['widgets', 'sql_migration_history']);
+    connection.history.push({ filename: value.filename, checksum: value.checksum });
+
+    const report = await assessAuthorizedDatabaseReadiness({
+      authority: value.authority,
+      connection,
+      manifest: value.manifest,
+      root: value.root,
+    });
+    expect(report.layers.processLiveness.state).toBe('ready');
+    expect(report.layers.targetConnectivity.state).toBe('ready');
+    expect(report.layers.migrationHead.code).toBe('manifest-head-ready');
+    expect(report.layers.structuralSchema.state).toBe('ready');
+    expect(report.layers.incompleteAttemptState).toMatchObject({
+      state: 'not-ready',
+      code: 'migration-attempt-authority-missing',
+    });
+    expect(report.layers.incompleteAttemptState.detail).toContain('sql_migration_attempts');
+    expect(report.layers.incompleteAttemptState.detail).not.toContain(
+      'No running, failed, or blocked migration attempt exists',
+    );
+    expect(report.layers.release).toMatchObject({
+      state: 'not-ready',
+      code: 'release-blocked-by-migration-attempt-authority',
+    });
+    expect(report.applicationReady).toBe(false);
+  });
+
+  it('reports attempt history without successful history as incoherent authority', async () => {
+    const value = fixture();
+    const connection = new ReadinessConnection(value.authority.context.databaseName);
+    connection.tables = new Set(['widgets', 'sql_migration_attempts']);
+
+    const report = await assessAuthorizedDatabaseReadiness({
+      authority: value.authority,
+      connection,
+      manifest: value.manifest,
+      root: value.root,
+    });
+    expect(report.layers.migrationHead.code).toBe('migration-ledger-missing');
+    expect(report.layers.incompleteAttemptState).toMatchObject({
+      state: 'not-ready',
+      code: 'migration-control-authority-incoherent',
+    });
+    expect(report.layers.incompleteAttemptState.detail).toContain('sql_migration_history');
+    expect(report.applicationReady).toBe(false);
+  });
+
   it('reports core readiness only at exact head with no attempts and required schema', async () => {
     const value = fixture();
     const connection = new ReadinessConnection(value.authority.context.databaseName);

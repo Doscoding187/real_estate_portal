@@ -107,7 +107,7 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
   >();
   historyTablePresent = false;
   attemptTablePresent = false;
-  applicationTableCount = 0;
+  applicationTableCount: number | null = 0;
   failStatement?: RegExp;
   failFailureUpdate = false;
   ended = false;
@@ -140,7 +140,9 @@ class FakeMigrationConnection implements AuthoritySqlConnection {
       )];
     }
     if (statement.startsWith('SELECT COUNT(*)')) {
-      return [[{ count_value: this.applicationTableCount }]];
+      return this.applicationTableCount === null
+        ? [[]]
+        : [[{ count_value: this.applicationTableCount }]];
     }
     if (statement.includes('GET_LOCK')) return [[{ lock_status: 1 }]];
     if (statement.includes('CONNECTION_ID()') && statement.includes('IS_USED_LOCK')) {
@@ -231,6 +233,7 @@ describe('manifest migration planning and durable attempts', () => {
     const { authority, authorization } = authorityFor('plan');
     const connection = new FakeMigrationConnection(authority.context.databaseName);
     connection.historyTablePresent = true;
+    connection.attemptTablePresent = true;
     connection.history.set(fixture.entries[0].filename, fixture.entries[0].checksum);
 
     const result = await runSqlMigrations({
@@ -283,7 +286,88 @@ describe('manifest migration planning and durable attempts', () => {
         lockOwnerConnectionId: '314',
       }),
     ]);
+    expect(connection.historyTablePresent).toBe(true);
+    expect(connection.attemptTablePresent).toBe(true);
   });
+
+  it.each([
+    ['plan', true, false, 'successful history table'],
+    ['apply', true, false, 'successful history table'],
+    ['plan', false, true, 'attempt-state table'],
+    ['apply', false, true, 'attempt-state table'],
+  ] as const)(
+    'blocks %s when migration control-table presence is incoherent',
+    async (mode, historyTablePresent, attemptTablePresent, expectedDiagnostic) => {
+      const fixture = migrationFixture();
+      const { authority, authorization } = authorityFor(mode);
+      const connection = new FakeMigrationConnection(authority.context.databaseName);
+      connection.historyTablePresent = historyTablePresent;
+      connection.attemptTablePresent = attemptTablePresent;
+      if (historyTablePresent) {
+        connection.history.set(fixture.entries[0].filename, fixture.entries[0].checksum);
+        connection.applicationTableCount = 1;
+      }
+
+      await expect(
+        runSqlMigrations({
+          mode,
+          migrationsDir: fixture.root,
+          manifestPath: fixture.manifestPath,
+          authority,
+          authorization,
+          acceptedOldHead: historyTablePresent ? fixture.entries[0].filename : null,
+          expectedNewHead: fixture.entries[1].filename,
+          connectionFactory: async () => connection,
+        }),
+      ).rejects.toThrow(expectedDiagnostic);
+
+      expect(
+        connection.calls.some(call =>
+          /^(CREATE TABLE IF NOT EXISTS|INSERT INTO|UPDATE |ALTER TABLE|CREATE TABLE canonical_widget)/.test(
+            call.statement,
+          ),
+        ),
+      ).toBe(false);
+      expect(connection.historyTablePresent).toBe(historyTablePresent);
+      expect(connection.attemptTablePresent).toBe(attemptTablePresent);
+    },
+  );
+
+  it.each([
+    ['non-empty', 1, 'both control tables are absent'],
+    ['ambiguous', null, 'freshness could not be proven'],
+  ] as const)(
+    'refuses %s targets with both control tables absent before establishment mutation',
+    async (_label, applicationTableCount, expectedDiagnostic) => {
+      const fixture = migrationFixture(false);
+      const { authority, authorization } = authorityFor('apply');
+      const connection = new FakeMigrationConnection(authority.context.databaseName);
+      connection.applicationTableCount = applicationTableCount;
+
+      await expect(
+        runSqlMigrations({
+          mode: 'apply',
+          migrationsDir: fixture.root,
+          manifestPath: fixture.manifestPath,
+          authority,
+          authorization,
+          acceptedOldHead: null,
+          expectedNewHead: fixture.entries[0].filename,
+          connectionFactory: async () => connection,
+        }),
+      ).rejects.toThrow(expectedDiagnostic);
+
+      expect(
+        connection.calls.some(call =>
+          /^(CREATE TABLE IF NOT EXISTS|INSERT INTO|UPDATE |CREATE TABLE canonical_widget)/.test(
+            call.statement,
+          ),
+        ),
+      ).toBe(false);
+      expect(connection.historyTablePresent).toBe(false);
+      expect(connection.attemptTablePresent).toBe(false);
+    },
+  );
 
   it('blocks ordinary apply when an incomplete attempt exists', async () => {
     const fixture = migrationFixture();

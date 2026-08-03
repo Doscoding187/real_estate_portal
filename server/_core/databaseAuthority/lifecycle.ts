@@ -1,4 +1,7 @@
-import type { AuthorizedDatabaseOperation } from './authorization';
+import {
+  assertAuthorizedDatabaseOperation,
+  type AuthorizedDatabaseOperation,
+} from './authorization';
 import {
   createLocalLifecycleAdminConnection,
   type AuthoritySqlConnection,
@@ -100,6 +103,7 @@ export async function createOwnedWorktreeDatabase(input: {
   connectAdmin?: typeof createLocalLifecycleAdminConnection;
 }): Promise<WorktreeLifecycleEvidence> {
   const { authority, decision } = input;
+  assertAuthorizedDatabaseOperation(authority, decision, ['database-create']);
   assertOwnedDisposableTarget(authority);
   const identity = identityFromAuthority(authority);
   const existingProfile = readWorktreeDatabaseProfile(identity, input.profileRoot);
@@ -145,6 +149,7 @@ export async function disposeOwnedWorktreeDatabase(input: {
   connectAdmin?: typeof createLocalLifecycleAdminConnection;
 }): Promise<WorktreeLifecycleEvidence> {
   const { authority, decision } = input;
+  assertAuthorizedDatabaseOperation(authority, decision, ['database-dispose']);
   assertOwnedDisposableTarget(authority);
   const identity = identityFromAuthority(authority);
   const profile = readWorktreeDatabaseProfile(identity, input.profileRoot);

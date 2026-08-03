@@ -91,6 +91,8 @@ type DatabaseMigrationState = {
   applicationTableCount: number;
 };
 
+type MigrationControlState = 'coherent' | 'fresh-establishment';
+
 function planHash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
@@ -227,13 +229,77 @@ async function readDatabaseMigrationState(
     'SELECT COUNT(*) AS count_value FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name NOT IN (?, ?)',
     [manifest.document.historyTable, manifest.document.attemptTable],
   );
+  const rawApplicationTableCount = rowValue(countRows[0] ?? {}, 'count_value');
+  const applicationTableCount = Number(rawApplicationTableCount);
+  if (
+    rawApplicationTableCount === undefined ||
+    !Number.isSafeInteger(applicationTableCount) ||
+    applicationTableCount < 0
+  ) {
+    throw new Error(
+      'Migration control verification blocked: application-table freshness could not be proven.',
+    );
+  }
   return {
     historyTablePresent,
     attemptTablePresent,
     applied,
     incompleteAttempts,
-    applicationTableCount: Number(rowValue(countRows[0] ?? {}, 'count_value') ?? 0),
+    applicationTableCount,
   };
+}
+
+function assertMigrationControlState(input: {
+  state: DatabaseMigrationState;
+  manifest: ValidatedMigrationManifest;
+  acceptedOldHead?: string | null;
+  allowFreshEstablishment: boolean;
+}): MigrationControlState {
+  const { state, manifest } = input;
+  if (state.historyTablePresent && !state.attemptTablePresent) {
+    throw new Error(
+      `Migration control state is incoherent: successful history table ${manifest.document.historyTable} exists but attempt-state table ${manifest.document.attemptTable} is missing; reviewed recovery is required.`,
+    );
+  }
+  if (!state.historyTablePresent && state.attemptTablePresent) {
+    throw new Error(
+      `Migration control state is incoherent: attempt-state table ${manifest.document.attemptTable} exists but successful history table ${manifest.document.historyTable} is missing; reviewed recovery is required.`,
+    );
+  }
+  if (state.historyTablePresent && state.attemptTablePresent) {
+    return 'coherent';
+  }
+  if (!input.allowFreshEstablishment) {
+    throw new Error(
+      'Migration establishment blocked: both control tables must exist after establishment.',
+    );
+  }
+  if (
+    state.applicationTableCount !== 0 ||
+    state.applied.length !== 0 ||
+    state.incompleteAttempts.length !== 0
+  ) {
+    throw new Error(
+      `Migration establishment blocked: both control tables are absent but ${state.applicationTableCount} application table(s) exist; reviewed recovery is required.`,
+    );
+  }
+  const rootMigration = manifest.orderedMigrations[0];
+  if (
+    !rootMigration ||
+    rootMigration.sequence !== 0 ||
+    rootMigration.parent !== null ||
+    rootMigration.kind !== 'establishment'
+  ) {
+    throw new Error(
+      'Migration establishment blocked: the validated manifest does not begin with an establishment root.',
+    );
+  }
+  if (input.acceptedOldHead !== undefined && input.acceptedOldHead !== null) {
+    throw new Error(
+      'Migration establishment blocked: a fresh target requires an explicitly empty accepted old head.',
+    );
+  }
+  return 'fresh-establishment';
 }
 
 export function buildMigrationPlan(input: {
@@ -610,6 +676,12 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
       lockAcquired = true;
     }
     const initialState = await readDatabaseMigrationState(connection, manifest);
+    const initialControlState = assertMigrationControlState({
+      state: initialState,
+      manifest,
+      acceptedOldHead: options.acceptedOldHead,
+      allowFreshEstablishment: true,
+    });
     const plan = buildMigrationPlan({
       manifest,
       targetFingerprintHash: authority.context.targetFingerprintHash,
@@ -624,8 +696,16 @@ export async function runSqlMigrations(options: SqlMigrationOptions = {}) {
       return { mode, plan, lock: null, applied: [] as string[] };
     }
 
-    await ensureControlTables(connection, manifest);
+    if (initialControlState === 'fresh-establishment') {
+      await ensureControlTables(connection, manifest);
+    }
     const lockedState = await readDatabaseMigrationState(connection, manifest);
+    assertMigrationControlState({
+      state: lockedState,
+      manifest,
+      acceptedOldHead: plan.acceptedOldHead,
+      allowFreshEstablishment: false,
+    });
     const lockedPlan = buildMigrationPlan({
       manifest,
       targetFingerprintHash: authority.context.targetFingerprintHash,

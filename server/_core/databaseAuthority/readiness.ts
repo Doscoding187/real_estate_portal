@@ -179,14 +179,32 @@ export async function assessAuthorizedDatabaseReadiness(input: {
       error instanceof Error ? error.message : 'Migration lineage is invalid.',
     );
   }
-  const incompleteAttemptState =
-    incompleteAttempts.length === 0
-      ? layer('ready', 'no-incomplete-attempts', 'No running, failed, or blocked migration attempt exists.')
-      : layer(
-          'not-ready',
-          'incomplete-migration-attempt',
-          `Attempt ${incompleteAttempts[0].attemptId} for ${incompleteAttempts[0].fileName} requires reviewed recovery.`,
-        );
+  let incompleteAttemptState: ReadinessLayer;
+  if (attemptPresent && !historyPresent) {
+    incompleteAttemptState = layer(
+      'not-ready',
+      'migration-control-authority-incoherent',
+      `Attempt-state table ${manifest.document.attemptTable} exists while successful history table ${manifest.document.historyTable} is missing; reviewed recovery is required.`,
+    );
+  } else if (!attemptPresent) {
+    incompleteAttemptState = layer(
+      'not-ready',
+      'migration-attempt-authority-missing',
+      `Attempt-state table ${manifest.document.attemptTable} is missing, so the absence of running, failed, or blocked attempts cannot be proven.`,
+    );
+  } else if (incompleteAttempts.length === 0) {
+    incompleteAttemptState = layer(
+      'ready',
+      'no-incomplete-attempts',
+      'No running, failed, or blocked migration attempt exists.',
+    );
+  } else {
+    incompleteAttemptState = layer(
+      'not-ready',
+      'incomplete-migration-attempt',
+      `Attempt ${incompleteAttempts[0].attemptId} for ${incompleteAttempts[0].fileName} requires reviewed recovery.`,
+    );
+  }
 
   const requiredTables = inventoryTables(root);
   const missingTables = requiredTables.filter(table => !tables.has(table));
@@ -214,6 +232,14 @@ export async function assessAuthorizedDatabaseReadiness(input: {
     incompleteAttemptState.state === 'ready' &&
     structuralSchema.state === 'ready' &&
     requiredData.state !== 'not-ready';
+  const separatelyEvaluatedLayers = notEvaluatedLayers();
+  if (incompleteAttemptState.state === 'not-ready') {
+    separatelyEvaluatedLayers.release = layer(
+      'not-ready',
+      'release-blocked-by-migration-attempt-authority',
+      'Release readiness is blocked until migration attempt-state authority is coherent and clear.',
+    );
+  }
 
   return {
     reportVersion: 1,
@@ -228,7 +254,7 @@ export async function assessAuthorizedDatabaseReadiness(input: {
       incompleteAttemptState,
       structuralSchema,
       requiredData,
-      ...notEvaluatedLayers(),
+      ...separatelyEvaluatedLayers,
     },
   };
 }

@@ -10,6 +10,7 @@ import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { resolveDatabaseAuthority } from '../context';
 import { createOwnedWorktreeDatabase, disposeOwnedWorktreeDatabase } from '../lifecycle';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
+import { readWorktreeDatabaseProfile } from '../worktreeProfile';
 
 const roots: string[] = [];
 
@@ -111,6 +112,101 @@ describe('owned disposable worktree lifecycle', () => {
     });
     expect(disposed).toMatchObject({ operation: 'dispose', changed: true });
     expect(connection.schemas).not.toContain(gitIdentity.expectedWorktreeDatabase);
+  });
+
+  it('binds create and dispose to authentic decisions for the exact lifecycle action', async () => {
+    const gitIdentity = identity('listify-lifecycle-operation-binding');
+    const profileRoot = join(gitIdentity.worktreePath, 'profiles');
+    const connection = new LifecycleConnection();
+    const databaseUrl = `mysql://owner:private@127.0.0.1:3307/${gitIdentity.expectedWorktreeDatabase}`;
+    const createAuthority = resolveDatabaseAuthority({
+      operation: 'database-create',
+      cwd: gitIdentity.worktreePath,
+      gitIdentity,
+      explicitDatabaseUrl: databaseUrl,
+      credentialClass: 'lifecycle-admin',
+      processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
+    });
+    const createDecision = authorizeDatabaseOperation(createAuthority, { root: process.cwd() });
+    await createOwnedWorktreeDatabase({
+      authority: createAuthority,
+      decision: createDecision,
+      profileRoot,
+      connectAdmin: async () => connection,
+    });
+    connection.statements = [];
+
+    let rejectedFactoryCalls = 0;
+    await expect(
+      disposeOwnedWorktreeDatabase({
+        authority: createAuthority,
+        decision: createDecision,
+        profileRoot,
+        connectAdmin: async () => {
+          rejectedFactoryCalls += 1;
+          return connection;
+        },
+      }),
+    ).rejects.toThrow('authorization is absent or mismatched');
+    expect(rejectedFactoryCalls).toBe(0);
+    expect(connection.statements.some(statement => statement.startsWith('DROP DATABASE'))).toBe(
+      false,
+    );
+    expect(connection.schemas).toContain(gitIdentity.expectedWorktreeDatabase);
+    expect(readWorktreeDatabaseProfile(gitIdentity, profileRoot)).not.toBeNull();
+
+    const disposeAuthority = resolveDatabaseAuthority({
+      operation: 'database-dispose',
+      cwd: gitIdentity.worktreePath,
+      gitIdentity,
+      explicitDatabaseUrl: databaseUrl,
+      credentialClass: 'lifecycle-admin',
+      processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
+    });
+    expect(() => authorizeDatabaseOperation(disposeAuthority, { root: process.cwd() })).toThrow(
+      'exact acknowledgement',
+    );
+    const disposeDecision = authorizeDatabaseOperation(disposeAuthority, {
+      root: process.cwd(),
+      acknowledgement: expectedDatabaseAcknowledgement(disposeAuthority.context),
+    });
+
+    await expect(
+      createOwnedWorktreeDatabase({
+        authority: disposeAuthority,
+        decision: disposeDecision,
+        profileRoot,
+        connectAdmin: async () => {
+          rejectedFactoryCalls += 1;
+          return connection;
+        },
+      }),
+    ).rejects.toThrow('authorization is absent or mismatched');
+    expect(rejectedFactoryCalls).toBe(0);
+
+    const forgedDecision = { ...createDecision, decisionId: 'forged' } as typeof createDecision;
+    await expect(
+      createOwnedWorktreeDatabase({
+        authority: createAuthority,
+        decision: forgedDecision,
+        profileRoot,
+        connectAdmin: async () => {
+          rejectedFactoryCalls += 1;
+          return connection;
+        },
+      }),
+    ).rejects.toThrow('authorization is absent or mismatched');
+    expect(rejectedFactoryCalls).toBe(0);
+    expect(readWorktreeDatabaseProfile(gitIdentity, profileRoot)).not.toBeNull();
+
+    const disposed = await disposeOwnedWorktreeDatabase({
+      authority: disposeAuthority,
+      decision: disposeDecision,
+      profileRoot,
+      connectAdmin: async () => connection,
+    });
+    expect(disposed).toMatchObject({ operation: 'dispose', changed: true });
+    expect(readWorktreeDatabaseProfile(gitIdentity, profileRoot)).toBeNull();
   });
 
   it('refuses another worktree database and an unprofiled pre-existing database', async () => {
