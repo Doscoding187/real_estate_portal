@@ -1,11 +1,10 @@
 #!/usr/bin/env tsx
-import mysql from 'mysql2/promise';
-import { assertDatabaseTargetMatchesRuntime } from '../server/_core/databaseTarget';
-import { loadAppRuntimeEnv } from '../server/_core/runtimeBootstrap';
-
-const { runtimeEnv } = loadAppRuntimeEnv({ cwd: process.cwd() });
-
-const DATABASE_URL = process.env.DATABASE_URL;
+import {
+  authorizeDatabaseOperation,
+  protectedDatabaseApprovalFromEnvironment,
+} from '../server/_core/databaseAuthority/authorization';
+import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
+import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
 
 const REQUIRED_TABLES = [
   'distribution_brand_partnerships',
@@ -43,30 +42,30 @@ const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
 ];
 
 async function main() {
-  if (!DATABASE_URL) {
-    console.error('[db:verify:distribution] DATABASE_URL is required');
-    process.exit(1);
-  }
-
-  const target = assertDatabaseTargetMatchesRuntime(DATABASE_URL, runtimeEnv);
-  console.log('[db:verify:distribution] Target:', target.fingerprint);
-
-  const connection = await mysql.createConnection(DATABASE_URL);
+  const authority = resolveDatabaseAuthority({ operation: 'verification' });
+  const decision = authorizeDatabaseOperation(authority, {
+    approval: protectedDatabaseApprovalFromEnvironment(authority),
+  });
+  const connection = await createAuthoritySqlConnection(authority, decision);
+  console.log(
+    '[db:verify:distribution] Authorized target:',
+    authority.context.targetFingerprintHash.slice(0, 16),
+  );
   const failures: string[] = [];
 
   try {
     for (const table of REQUIRED_TABLES) {
-      const [rows] = await connection.query<any[]>('SHOW TABLES LIKE ?', [table]);
+      const [rows] = (await connection.query('SHOW TABLES LIKE ?', [table])) as [any[]];
       if (rows.length === 0) {
         failures.push(`Missing table: ${table}`);
       }
     }
 
     for (const check of REQUIRED_COLUMNS) {
-      const [rows] = await connection.query<any[]>(
+      const [rows] = (await connection.query(
         'SHOW COLUMNS FROM ?? LIKE ?',
         [check.table, check.column],
-      );
+      )) as [any[]];
       if (rows.length === 0) {
         failures.push(`Missing column: ${check.table}.${check.column}`);
       }

@@ -91,7 +91,7 @@ describe('database final closure residual executor authority', () => {
     }
   });
 
-  it('keeps one directly executable canonical migration', () => {
+  it('keeps executable migration membership manifest-authoritative', () => {
     const manifest = JSON.parse(
       read('docs/database-authority/' + 'migration-tree-authority.json'),
     ) as {
@@ -106,11 +106,14 @@ describe('database final closure residual executor authority', () => {
       .filter(entry => entry.isFile() && entry.name.endsWith('.sql'))
       .map(entry => entry.name)
       .sort();
+    const executionManifest = JSON.parse(read('server/migrations/manifest.json')) as {
+      expectedHead: string;
+      migrations: Array<{ filename: string }>;
+    };
+    const manifestFiles = executionManifest.migrations.map(entry => entry.filename);
 
-    expect(activeSqlFiles).toEqual([
-      '0000_canonical_launch_baseline.sql',
-      '0001_public_search_to_lead_reliability.sql',
-    ]);
+    expect(activeSqlFiles).toEqual([...manifestFiles].sort());
+    expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
   });
 
   it('retains launch Explore compatibility separately from future cutover', () => {

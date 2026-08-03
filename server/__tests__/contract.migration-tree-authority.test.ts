@@ -6,9 +6,6 @@ import { describe, expect, it } from 'vitest';
 const ROOT = process.cwd();
 const MANIFEST_PATH = 'docs/database-authority/migration-tree-authority.json';
 const CANONICAL_RUNNER = 'server/migrations/runSqlMigrations.ts';
-const CANONICAL_SQL = 'server/migrations/0000_canonical_launch_baseline.sql';
-const CANONICAL_INCREMENTAL_SQL =
-  'server/migrations/0001_public_search_to_lead_reliability.sql';
 const APPROVED_DIAGNOSTIC_EXECUTABLES = new Set([
   'scripts/db-verify-distribution-schema.ts',
   'scripts/schema-sanity-check.mjs',
@@ -355,7 +352,13 @@ describe('migration tree authority', () => {
     const activeSql = manifest.classifications
       .filter(entry => entry.classification === 'canonical active')
       .map(entry => entry.path);
-    expect(activeSql).toEqual([CANONICAL_SQL, CANONICAL_INCREMENTAL_SQL]);
+    const executionManifest = JSON.parse(read('server/migrations/manifest.json')) as {
+      migrations: Array<{ filename: string }>;
+    };
+    const manifestPaths = executionManifest.migrations.map(
+      entry => `server/migrations/${entry.filename}`,
+    );
+    expect(activeSql).toEqual(manifestPaths);
   });
 
   it('keeps canonical discovery top-level and archives non-executable', () => {
@@ -364,18 +367,19 @@ describe('migration tree authority', () => {
     const activeSql = readdirSync(migrationsDirectory)
       .filter(file => file.endsWith('.sql'))
       .sort();
+    const executionManifest = JSON.parse(read('server/migrations/manifest.json')) as {
+      expectedHead: string;
+      migrations: Array<{ filename: string }>;
+    };
+    const manifestFiles = executionManifest.migrations.map(entry => entry.filename);
     const runner = read(CANONICAL_RUNNER);
 
     expect(manifest.canonicalAuthority.runner).toBe(CANONICAL_RUNNER);
     expect(manifest.canonicalAuthority.activeSqlDirectory).toBe('server/migrations');
-    expect(activeSql).toEqual([
-      '0000_canonical_launch_baseline.sql',
-      '0001_public_search_to_lead_reliability.sql',
-    ]);
-    expect(runner).toContain('const migrationsDir = options?.migrationsDir ?? __dirname;');
-    expect(runner).toContain('readdirSync(migrationsDir)');
-    expect(runner).not.toMatch(/readdirSync\([^\n]+recursive\s*:/);
-    expect(runner).toContain(".filter(file => file.endsWith('.sql'))");
+    expect(activeSql).toEqual([...manifestFiles].sort());
+    expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
+    expect(runner).toContain('loadAndValidateMigrationManifest');
+    expect(runner).not.toContain('readdirSync');
     expect(
       manifest.classifications.find(entry => entry.path === 'server/migrations/_archived/**')
         ?.classification,
@@ -433,8 +437,17 @@ describe('migration tree authority', () => {
       ).toEqual([]);
     }
 
-    expect(read('package.json')).toContain('server/migrations/runSqlMigrations.ts');
-    expect(read('package.json')).not.toContain('drizzle-kit');
+    const packageSource = read('package.json');
+    const packageScripts = (JSON.parse(packageSource) as { scripts: Record<string, string> })
+      .scripts;
+    expect(packageScripts['db:migrate:apply']).toContain('databaseAuthorityCli.ts migration:apply');
+    expect(read('scripts/databaseAuthorityCli.ts')).toContain(
+      "from '../server/migrations/runSqlMigrations'",
+    );
+    expect(read('scripts/databaseAuthorityFreshTestApply.ts')).toContain(
+      "from '../server/migrations/runSqlMigrations'",
+    );
+    expect(packageSource).not.toContain('drizzle-kit');
   });
 
   it('contains manual schema executors and keeps diagnostics outside migration authority', () => {
@@ -657,7 +670,9 @@ describe('migration tree authority', () => {
       'pnpm db:verify': 'scripts/db-contract-verify.ts',
       'pnpm db:verify:distribution': 'scripts/db-verify-distribution-schema.ts',
       'pnpm schema:sanity': 'scripts/schema-sanity-check.mjs',
-      'pnpm db:target': 'scripts/print-db-target.ts',
+      'pnpm db:target': 'scripts/databaseAuthorityCli.ts',
+      'pnpm db:schema:congruency': 'scripts/databaseAuthorityCli.ts',
+      'pnpm db:readiness': 'scripts/databaseAuthorityCli.ts',
     });
 
     for (const [command, path] of Object.entries(diagnostics.commands)) {
@@ -668,13 +683,17 @@ describe('migration tree authority', () => {
 
     for (const path of diagnostics.connectedVerifiers) {
       const source = read(path);
-      const guard = source.indexOf('assertDatabaseTargetMatchesRuntime(DATABASE_URL, runtimeEnv)');
-      const connection = source.indexOf('mysql.createConnection(DATABASE_URL)');
+      const resolution = source.indexOf('resolveDatabaseAuthority');
+      const authorization = source.indexOf('authorizeDatabaseOperation');
+      const connection = source.indexOf('createAuthoritySqlConnection');
 
-      expect(source, `Missing runtime loader: ${path}`).toContain('loadAppRuntimeEnv');
-      expect(guard, `Missing target guard: ${path}`).toBeGreaterThan(-1);
-      expect(connection, `Target guard must run before connection: ${path}`).toBeGreaterThan(guard);
-      expect(source, `Missing target disclosure: ${path}`).toContain('target.fingerprint');
+      expect(resolution, `Missing resolved context: ${path}`).toBeGreaterThan(-1);
+      expect(authorization, `Missing operation authorization: ${path}`).toBeGreaterThan(-1);
+      expect(connection, `Missing bounded connection: ${path}`).toBeGreaterThan(-1);
+      expect(source, `Diagnostic imported a raw driver: ${path}`).not.toContain('mysql2/promise');
+      expect(source, `Missing sanitized target evidence: ${path}`).toContain(
+        'targetFingerprintHash',
+      );
       expect(source, `Diagnostic became mutating: ${path}`).not.toMatch(
         /\b(?:CREATE(?:\s+UNIQUE)?\s+(?:TABLE|INDEX)|ALTER\s+TABLE|DROP\s+(?:TABLE|INDEX|DATABASE)|TRUNCATE\s+TABLE|INSERT\s+INTO|DELETE\s+FROM|REPLACE\s+INTO|UPDATE\s+(?:`[^`]+`|[A-Za-z_][\w.]*)\s+SET)\b/i,
       );

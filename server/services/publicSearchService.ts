@@ -1,9 +1,13 @@
-import { blendPublicSearchResults, type PublicSearchBlendSortOption } from '../../shared/publicSearchBlend';
-import type {
-  PropertyFilters,
-  SearchCardResult,
-  SortOption,
-} from '../../shared/types';
+import {
+  blendPublicSearchResults,
+  type PublicSearchBlendSortOption,
+} from '../../shared/publicSearchBlend';
+import {
+  canAdvancePublicSearchPage,
+  normalizePublicSearchPageIndex,
+  normalizePublicSearchPageSize,
+} from '../../shared/publicSearchPagination';
+import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
 import { locationResolver, type ResolvedLocation } from './locationResolverService';
 import { propertySearchService } from './propertySearchService';
@@ -69,14 +73,16 @@ export interface PublicSearchInventoryResult {
 function hasLocationIntent(input: PublicSearchInventoryInput): boolean {
   return Boolean(
     input.locationId ||
-      input.province ||
-      input.city ||
-      input.suburb?.length ||
-      input.locations?.length,
+    input.province ||
+    input.city ||
+    input.suburb?.length ||
+    input.locations?.length,
   );
 }
 
-function toLocationContext(location: ResolvedLocation): NonNullable<PublicSearchInventoryResult['locationContext']> {
+function toLocationContext(
+  location: ResolvedLocation,
+): NonNullable<PublicSearchInventoryResult['locationContext']> {
   const selected = location.suburb || location.city || location.province;
   return {
     type: location.level,
@@ -98,9 +104,13 @@ function toLocationContext(location: ResolvedLocation): NonNullable<PublicSearch
   };
 }
 
-function emptyLocationResult(input: PublicSearchInventoryInput, status: 'unresolved' | 'ambiguous', message: string) {
-  const page = Math.max(0, Math.floor(input.page ?? 0));
-  const pageSize = Math.max(1, Math.min(50, Math.floor(input.pageSize ?? 12)));
+function emptyLocationResult(
+  input: PublicSearchInventoryInput,
+  status: 'unresolved' | 'ambiguous',
+  message: string,
+) {
+  const page = normalizePublicSearchPageIndex(input.page);
+  const pageSize = normalizePublicSearchPageSize(input.pageSize);
   return {
     cards: [],
     total: 0,
@@ -154,7 +164,10 @@ function buildPublicFilters(
   };
 }
 
-function buildDevelopmentFilters(input: PublicSearchInventoryInput, location: ResolvedLocation | null) {
+function buildDevelopmentFilters(
+  input: PublicSearchInventoryInput,
+  location: ResolvedLocation | null,
+) {
   return {
     province: location?.province.slug || input.province,
     city: location?.city?.slug || input.city,
@@ -176,8 +189,8 @@ function sourceSort(sortOption: PublicSearchBlendSortOption): SortOption {
 
 export class PublicSearchService {
   async searchInventory(input: PublicSearchInventoryInput): Promise<PublicSearchInventoryResult> {
-    const page = Math.max(0, Math.min(100, Math.floor(input.page ?? 0)));
-    const pageSize = Math.max(1, Math.min(50, Math.floor(input.pageSize ?? 12)));
+    const page = normalizePublicSearchPageIndex(input.page);
+    const pageSize = normalizePublicSearchPageSize(input.pageSize);
     const sortOption: PublicSearchBlendSortOption = input.sortOption || 'relevance';
     const sourceSortOption = sourceSort(sortOption);
 
@@ -186,7 +199,13 @@ export class PublicSearchService {
     let locationMessage: string | undefined;
 
     if (hasLocationIntent(input)) {
-      if (!input.province && !input.city && !input.suburb?.length && !input.locationId && (input.locations?.length || 0) > 1) {
+      if (
+        !input.province &&
+        !input.city &&
+        !input.suburb?.length &&
+        !input.locationId &&
+        (input.locations?.length || 0) > 1
+      ) {
         return emptyLocationResult(
           input,
           'ambiguous',
@@ -197,7 +216,9 @@ export class PublicSearchService {
       const resolution = await locationResolver.resolvePublicLocation({
         locationId: input.locationId,
         provinceSlug: input.province,
-        citySlug: input.city || (!input.province && !input.suburb?.length ? input.locations?.[0] : undefined),
+        citySlug:
+          input.city ||
+          (!input.province && !input.suburb?.length ? input.locations?.[0] : undefined),
         suburbSlug: input.suburb?.[0],
       });
 
@@ -205,7 +226,8 @@ export class PublicSearchService {
         return emptyLocationResult(
           input,
           resolution.status === 'ambiguous' ? 'ambiguous' : 'unresolved',
-          resolution.message || 'We could not match that location. Choose a canonical result and try again.',
+          resolution.message ||
+            'We could not match that location. Choose a canonical result and try again.',
         );
       }
 
@@ -223,7 +245,12 @@ export class PublicSearchService {
 
     const [manualResults, developmentResults] = await Promise.all([
       manualEnabled
-        ? propertySearchService.searchProperties(filters, sourceSortOption, sourcePage, sourcePageSize)
+        ? propertySearchService.searchProperties(
+            filters,
+            sourceSortOption,
+            sourcePage,
+            sourcePageSize,
+          )
         : null,
       developmentEnabled
         ? developmentDerivedListingService.searchListings(
@@ -252,9 +279,10 @@ export class PublicSearchService {
         : manualEnabled
           ? manualCards
           : developmentCards;
-    const cards = manualEnabled && developmentEnabled
-      ? blended.slice(page * pageSize, page * pageSize + pageSize)
-      : blended;
+    const cards =
+      manualEnabled && developmentEnabled
+        ? blended.slice(page * pageSize, page * pageSize + pageSize)
+        : blended;
     const manualTotal = manualResults?.total || 0;
     const developmentTotal = developmentResults?.total || 0;
     const total = manualTotal + developmentTotal;
@@ -265,7 +293,7 @@ export class PublicSearchService {
       total,
       page,
       pageSize,
-      hasMore: page * pageSize + pageSize < total,
+      hasMore: canAdvancePublicSearchPage(page, total, pageSize),
       locationContext,
       locationState,
       locationMessage,

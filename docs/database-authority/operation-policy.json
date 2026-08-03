@@ -1,0 +1,173 @@
+{
+  "policyVersion": 1,
+  "denyTargetClasses": [
+    "unknown",
+    "shared-remote"
+  ],
+  "protectedTargetClasses": [
+    "staging",
+    "production"
+  ],
+  "operations": {
+    "runtime-connect": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test", "staging", "production"],
+      "credentialClasses": ["runtime", "local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "read-only-connect": {
+      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "credentialClasses": ["read-only", "runtime", "local-owner", "test-owner", "migration"],
+      "ownership": "registered-local-worktree",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "migration-plan": {
+      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test"],
+      "credentialClasses": ["read-only", "migration", "local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-plan-and-heads"
+    },
+    "migration-apply": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["migration", "local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-plan-attempt-and-result"
+    },
+    "reference-seed": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "foundation-seed": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "demo-seed": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "scenario-seed": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "test-fixture": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "verification": {
+      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "credentialClasses": ["read-only", "runtime", "migration", "local-owner", "test-owner"],
+      "ownership": "registered-local-worktree",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "browser-verification": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test", "staging"],
+      "credentialClasses": ["runtime", "local-owner", "test-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-result"
+    },
+    "readiness": {
+      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "credentialClasses": ["read-only", "runtime", "migration", "local-owner", "test-owner"],
+      "ownership": "registered-local-worktree",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-layer-results"
+    },
+    "diagnostics": {
+      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "credentialClasses": ["read-only", "migration", "local-owner", "test-owner"],
+      "ownership": "registered-local-worktree",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-full-diagnostics"
+    },
+    "reset": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["lifecycle-admin"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "exact-target",
+      "evidence": "sanitized-context-and-destructive-result"
+    },
+    "rebuild": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["lifecycle-admin"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "exact-target",
+      "evidence": "sanitized-context-and-destructive-result"
+    },
+    "database-create": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["lifecycle-admin"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "none",
+      "evidence": "sanitized-context-and-lifecycle-result"
+    },
+    "database-dispose": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["lifecycle-admin"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "exact-target",
+      "evidence": "sanitized-context-and-destructive-result"
+    },
+    "lifecycle-admin": {
+      "allowedTargetClasses": ["disposable-worktree", "disposable-test"],
+      "credentialClasses": ["lifecycle-admin"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "exact-target",
+      "evidence": "sanitized-context-and-lifecycle-result"
+    },
+    "release-plan": {
+      "allowedTargetClasses": ["staging", "production"],
+      "credentialClasses": ["read-only", "migration"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-release-plan"
+    },
+    "release-apply": {
+      "allowedTargetClasses": ["staging", "production"],
+      "credentialClasses": ["migration"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "sanitized-release-attempt-and-result"
+    }
+  }
+}

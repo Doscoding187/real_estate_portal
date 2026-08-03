@@ -152,6 +152,9 @@ export async function executeTestRebuildCommandSequence(
 }
 
 async function main() {
+  throw new Error(
+    'testDbWorkflow direct execution is retired; fixed local test databases do not prove worktree ownership.',
+  );
   dotenv.config({ path: resolve(process.cwd(), '.env.test'), override: true });
   if (process.argv[2] !== 'rebuild') {
     throw new Error('Usage: tsx scripts/testDbWorkflow.ts rebuild');

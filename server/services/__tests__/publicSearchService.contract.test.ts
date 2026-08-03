@@ -25,6 +25,7 @@ vi.mock('../developmentDerivedListingService', () => ({
 }));
 
 import { publicSearchService } from '../publicSearchService';
+import { PUBLIC_SEARCH_MAX_PAGE_INDEX } from '../../../shared/publicSearchPagination';
 
 const resolvedLocation = {
   status: 'resolved' as const,
@@ -128,5 +129,27 @@ describe('publicSearchService contract', () => {
     });
     expect(result.cards).toHaveLength(2);
     expect(result.sourceCounts).toEqual({ manual: 3, development: 2 });
+  });
+
+  it('keeps the final accepted page reachable but never advertises an invalid next page', async () => {
+    mockSearchProperties.mockResolvedValueOnce({ cards: [], total: 50_000 });
+    mockSearchListings.mockResolvedValueOnce({ cards: [], total: 50_000 });
+
+    const result = await publicSearchService.searchInventory({
+      page: PUBLIC_SEARCH_MAX_PAGE_INDEX,
+      pageSize: 12,
+    });
+
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.anything(),
+      'date_desc',
+      1,
+      (PUBLIC_SEARCH_MAX_PAGE_INDEX + 1) * 12,
+    );
+    expect(result).toMatchObject({
+      page: PUBLIC_SEARCH_MAX_PAGE_INDEX,
+      total: 100_000,
+      hasMore: false,
+    });
   });
 });

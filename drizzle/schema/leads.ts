@@ -122,6 +122,10 @@ export const leads = mysqlTable(
       'manual',
       'none',
     ]).default('email'),
+    prospectIdentityId: varchar('prospect_identity_id', { length: 36 }).references(
+      () => prospectIdentities.id,
+      { onDelete: 'set null' },
+    ),
     captureRequestId: varchar('capture_request_id', { length: 128 }),
     consentCapturedAt: timestamp('consent_captured_at', { mode: 'string' }),
     consentVersion: varchar('consent_version', { length: 64 }),
@@ -139,10 +143,6 @@ export const leads = mysqlTable(
     deliveryNextAttemptAt: timestamp('delivery_next_attempt_at', { mode: 'string' }),
     deliveryLastError: text('delivery_last_error'),
     deliveryProviderReference: varchar('delivery_provider_reference', { length: 255 }),
-    prospectIdentityId: varchar('prospect_identity_id', { length: 36 }).references(
-      () => prospectIdentities.id,
-      { onDelete: 'set null' },
-    ),
   },
   table => [unique('uq_leads_capture_request').on(table.captureRequestId)],
 );

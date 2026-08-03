@@ -1,4 +1,4 @@
-import { assertDatabaseTargetMatchesRuntime, getDatabaseFingerprint } from './databaseTarget';
+import { resolveDatabaseAuthority } from './databaseAuthority/context';
 import type { AppRuntimeEnv } from './runtimeBootstrap';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
 
@@ -111,26 +111,35 @@ function databaseCheck(env: EnvLike, runtimeEnv: AppRuntimeEnv) {
   }
 
   try {
-    const target = assertDatabaseTargetMatchesRuntime(databaseUrl, runtimeEnv);
+    const authority = resolveDatabaseAuthority({
+      operation: 'release-plan',
+      explicitDatabaseUrl: databaseUrl,
+      processEnv: env,
+      credentialClass: 'read-only',
+    });
+    const expectedTargetClass =
+      runtimeEnv === 'production'
+        ? 'production'
+        : runtimeEnv === 'staging'
+          ? 'staging'
+          : null;
+    if (!expectedTargetClass || authority.context.targetClass !== expectedTargetClass) {
+      throw new Error(
+        `Database release context refused: ${runtimeEnv} requires an exact ${expectedTargetClass ?? 'protected'} target class.`,
+      );
+    }
     return makeCheck({
       id: 'database-target',
       level: 'required',
       ok: true,
-      message: `Database target is ${target.fingerprint}.`,
+      message: `Database target is ${authority.context.targetFingerprint}.`,
     });
   } catch (error) {
-    let fingerprint = 'unparseable';
-    try {
-      fingerprint = getDatabaseFingerprint(databaseUrl).fingerprint;
-    } catch {
-      // Keep the unparseable fallback.
-    }
-
     return makeCheck({
       id: 'database-target',
       level: 'required',
       ok: false,
-      message: `${(error as Error).message} (${fingerprint})`,
+      message: error instanceof Error ? error.message : 'Database release context is invalid.',
     });
   }
 }

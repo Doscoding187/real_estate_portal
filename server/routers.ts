@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PUBLIC_SEARCH_MAX_PAGE_INDEX } from '../shared/publicSearchPagination';
 import { getSessionCookieOptions } from './_core/cookies';
 import { COOKIE_NAME } from '../shared/const';
 import type { User } from './_core/context';
@@ -572,7 +573,7 @@ const appRouterConfig = {
           sortOption: z
             .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc'])
             .default('relevance'),
-          page: z.number().int().min(0).max(100).default(0),
+          page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
           pageSize: z.number().int().min(1).max(50).default(12),
         }),
       )

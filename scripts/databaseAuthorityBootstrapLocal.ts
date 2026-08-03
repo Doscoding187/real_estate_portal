@@ -14,9 +14,11 @@ import {
 const BOOTSTRAP_STEPS = [
   ['pnpm', ['db:local:start']],
   ['pnpm', ['db:local:wait']],
-  ['pnpm', ['db:migrate:local']],
-  ['pnpm', ['db:seed:local']],
-  ['pnpm', ['db:verify:local']],
+  ['pnpm', ['db:worktree:create']],
+  ['pnpm', ['db:migrate:plan']],
+  ['pnpm', ['db:migrate:apply']],
+  ['pnpm', ['db:schema:congruency']],
+  ['pnpm', ['db:readiness']],
 ] as const;
 
 export function localBootstrapCommandSequence() {
@@ -44,6 +46,9 @@ function runStep(command: string, args: readonly string[], databaseUrl: string) 
 }
 
 async function main() {
+  throw new Error(
+    'The legacy listify_local bootstrap is retired; use pnpm db:worktree:create followed by pnpm db:migrate:apply.',
+  );
   const manifest = loadAuthorityManifest();
   validateAuthorityManifest(manifest);
   const centralPath = resolveCentralLocalEnvironment();

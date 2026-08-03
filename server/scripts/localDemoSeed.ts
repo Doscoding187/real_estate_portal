@@ -2162,7 +2162,14 @@ export async function runSeedTransaction(
   }
 }
 
+async function refuseRetiredDirectExecution(): Promise<void> {
+  throw new Error(
+    'localDemoSeed direct execution is retired until data roles use operation-specific Database Authority v3 connections.',
+  );
+}
+
 async function main() {
+  await refuseRetiredDirectExecution();
   const action = (process.argv[2] || 'seed') as SeedAction;
   const target = (process.argv[3] ||
     (process.env.NODE_ENV === 'test' ? 'test' : 'local')) as SeedTarget;

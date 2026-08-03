@@ -97,6 +97,9 @@ async function verifyBaselineResult(databaseUrl: string) {
 }
 
 async function main() {
+  throw new Error(
+    'Listing Performance E2E database lifecycle is retired pending the worktree lifecycle adapter.',
+  );
   const databaseUrl = dedicatedDatabaseUrl();
   const env = {
     ...process.env,

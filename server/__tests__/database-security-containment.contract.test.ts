@@ -94,32 +94,41 @@ describe('database security containment contract', () => {
     }
   });
 
-  it('keeps runtime and canonical migrations on the shared TLS authority', () => {
+  it('keeps runtime and canonical migrations on the bounded shared TLS authority', () => {
     const runtimeConnection = readRepoFile(
       'server/db-connection.ts',
     );
     const migrationRunner = readRepoFile(
       'server/migrations/runSqlMigrations.ts',
     );
+    const connectionAuthority = readRepoFile(
+      'server/_core/databaseAuthority/connectionAuthority.ts',
+    );
 
     expect(runtimeConnection).toContain(
+      'createAuthorityRuntimePool',
+    );
+    expect(runtimeConnection).toContain(
+      'resolveDatabaseAuthority',
+    );
+    expect(runtimeConnection).toContain(
+      'authorizeDatabaseOperation',
+    );
+    expect(runtimeConnection).not.toContain(
+      'mysql.createPool',
+    );
+    expect(runtimeConnection).not.toContain(
       'buildMysqlConnectionSecurityConfig',
-    );
-    expect(runtimeConnection).toContain(
-      "import { resolveAppRuntimeEnv } from './_core/runtimeBootstrap';",
-    );
-    expect(runtimeConnection).toContain(
-      'const runtimeEnv = resolveAppRuntimeEnv(process.env);',
-    );
-    expect(runtimeConnection).not.toContain(
-      'process.env.APP_ENV ||',
-    );
-    expect(runtimeConnection).not.toContain(
-      'runtimeEnv as any',
     );
 
     expect(migrationRunner).toContain(
+      'createAuthoritySqlConnection',
+    );
+    expect(connectionAuthority).toContain(
       'buildMysqlConnectionSecurityConfig',
+    );
+    expect(connectionAuthority).toContain(
+      'verifySelectedTarget',
     );
 
     expect(runtimeConnection).not.toContain(
@@ -130,6 +139,9 @@ describe('database security containment contract', () => {
     );
     expect(migrationRunner).not.toContain(
       'let sslConfig: Record<string, unknown> = { rejectUnauthorized: false }',
+    );
+    expect(connectionAuthority).not.toContain(
+      'rejectUnauthorized: false',
     );
   });
 

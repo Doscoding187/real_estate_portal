@@ -62,6 +62,11 @@ import {
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import type { SearchCardResult } from '@/../../shared/types';
+import {
+  canAdvancePublicSearchPage,
+  getPublicSearchReachablePageCount,
+  PUBLIC_SEARCH_MAX_PAGE_INDEX,
+} from '@/../../shared/publicSearchPagination';
 
 export default function SearchResults({
   province: propProvince,
@@ -206,36 +211,35 @@ export default function SearchResults({
   // One server-authoritative request owns source selection, blending, counts,
   // pagination and location resolution. The browser receives only the page it
   // is allowed to render.
-  const publicSearchQueryInput = useMemo(
-    () => {
-      const publicPropertyTypes = new Set([
-        'apartment',
-        'house',
-        'villa',
-        'plot',
-        'commercial',
-        'townhouse',
-        'cluster_home',
-        'farm',
-        'shared_living',
-      ]);
-      const propertyType =
-        typeof filters.propertyType === 'string' && publicPropertyTypes.has(filters.propertyType)
-          ? (filters.propertyType as
-              | 'apartment'
-              | 'house'
-              | 'villa'
-              | 'plot'
-              | 'commercial'
-              | 'townhouse'
-              | 'cluster_home'
-              | 'farm'
-              | 'shared_living')
-          : undefined;
-      const numericFilter = (value: unknown) =>
-        typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  const publicSearchQueryInput = useMemo(() => {
+    const publicPropertyTypes = new Set([
+      'apartment',
+      'house',
+      'villa',
+      'plot',
+      'commercial',
+      'townhouse',
+      'cluster_home',
+      'farm',
+      'shared_living',
+    ]);
+    const propertyType =
+      typeof filters.propertyType === 'string' && publicPropertyTypes.has(filters.propertyType)
+        ? (filters.propertyType as
+            | 'apartment'
+            | 'house'
+            | 'villa'
+            | 'plot'
+            | 'commercial'
+            | 'townhouse'
+            | 'cluster_home'
+            | 'farm'
+            | 'shared_living')
+        : undefined;
+    const numericFilter = (value: unknown) =>
+      typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
-      return {
+    return {
       city: filters.city,
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
@@ -259,10 +263,8 @@ export default function SearchResults({
       sortOption: sortBy,
       page,
       pageSize: limit,
-      };
-    },
-    [filters, limit, normalizedLocationSlugs, page, sortBy],
-  );
+    };
+  }, [filters, limit, normalizedLocationSlugs, page, sortBy]);
 
   const {
     data: publicSearchResults,
@@ -276,7 +278,8 @@ export default function SearchResults({
   // same public inventory authority as the returned cards and total.
   const filterCounts = undefined;
 
-  const renderedResults: SearchCardResult[] = (publicSearchResults?.cards ?? []) as SearchCardResult[];
+  const renderedResults: SearchCardResult[] = (publicSearchResults?.cards ??
+    []) as SearchCardResult[];
   const resultTotal = publicSearchResults?.total ?? 0;
   const locationContext = publicSearchResults?.locationContext;
   const locationMessage = publicSearchResults?.locationMessage;
@@ -456,7 +459,8 @@ export default function SearchResults({
 
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
-  const totalPages = resultCount > 0 ? Math.max(1, Math.ceil(resultCount / limit)) : 0;
+  const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
+  const canAdvancePage = canAdvancePublicSearchPage(page, resultCount, limit);
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
@@ -628,8 +632,10 @@ export default function SearchResults({
                           </span>
                           <Button
                             variant="outline"
-                            disabled={(page + 1) * limit >= resultCount}
-                            onClick={() => setPage(p => p + 1)}
+                            disabled={!canAdvancePage}
+                            onClick={() =>
+                              setPage(p => Math.min(PUBLIC_SEARCH_MAX_PAGE_INDEX, p + 1))
+                            }
                           >
                             Next
                           </Button>

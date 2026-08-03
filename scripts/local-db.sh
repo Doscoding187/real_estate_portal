@@ -350,12 +350,10 @@ case "${1:-help}" in
   wait) wait_for_tcp ;;
   status) wait_for_tcp ;;
   stop) stop ;;
-  destroy) destroy ;;
-  test:rebuild) rebuild_test_database ;;
-  listing-performance-e2e:reset) reset_listing_performance_e2e ;;
-  listing-performance-e2e:drop) drop_listing_performance_e2e ;;
-  prospect-journey-e2e:reset) reset_prospect_journey_e2e ;;
-  prospect-journey-e2e:drop) drop_prospect_journey_e2e ;;
+  destroy|test:rebuild|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop)
+    echo "Database Authority v3 retired this direct destructive action; use the owned worktree lifecycle command." >&2
+    exit 1
+    ;;
   *)
     cat <<EOF
 Usage: bash scripts/local-db.sh <start|wait|status|stop|destroy|test:rebuild|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop>
@@ -366,8 +364,8 @@ Infrastructure mode:
 All hosts, ports, credentials, directories, and database names are pinned to
 the canonical disposable local/test topology.
 
-test:rebuild is destructive and only accepts the exact disposable listify_test
-database after LISTIFY_TEST_DB_REBUILD_CONFIRM acknowledges the action.
+Destructive database actions are intentionally unavailable through this
+infrastructure script. Use the owned worktree lifecycle authority.
 EOF
     ;;
 esac

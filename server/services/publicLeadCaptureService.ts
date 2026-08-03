@@ -126,7 +126,47 @@ function normalizePhone(value: unknown): string {
 }
 
 function normalizeName(value: unknown): string {
-  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function normalizeMaterialText(value: unknown): string {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .trim();
+}
+
+function normalizeOptionalNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const normalized = Number(value);
+  return Number.isFinite(normalized) ? normalized : null;
+}
+
+function normalizeJsonValue(value: unknown): unknown {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') {
+    try {
+      return normalizeJsonValue(JSON.parse(value));
+    } catch {
+      return value;
+    }
+  }
+  if (Array.isArray(value)) return value.map(normalizeJsonValue);
+  if (typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, entry]) => entry !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entry]) => [key, normalizeJsonValue(entry)]),
+    );
+  }
+  return value;
+}
+
+function jsonValuesMatch(left: unknown, right: unknown): boolean {
+  return JSON.stringify(normalizeJsonValue(left)) === JSON.stringify(normalizeJsonValue(right));
 }
 
 function normalizeLeadSource(value?: string | null): string {
@@ -138,7 +178,11 @@ function normalizeLeadSource(value?: string | null): string {
     return 'web';
   }
 
-  if (normalized === 'property_listify' || normalized === 'property' || normalized === 'property-page') {
+  if (
+    normalized === 'property_listify' ||
+    normalized === 'property' ||
+    normalized === 'property-page'
+  ) {
     return 'property_detail';
   }
 
@@ -177,14 +221,19 @@ function isPublicListingStatus(status: unknown, approvalStatus?: unknown): boole
   return (status === 'approved' || status === 'published') && approvalStatus === 'approved';
 }
 
-function isPublicDevelopment(development: {
-  isPublished?: unknown;
-  approvalStatus?: unknown;
-} | null | undefined): boolean {
+function isPublicDevelopment(
+  development:
+    | {
+        isPublished?: unknown;
+        approvalStatus?: unknown;
+      }
+    | null
+    | undefined,
+): boolean {
   return Boolean(
     development &&
-      Number(development.isPublished || 0) === 1 &&
-      development.approvalStatus === 'approved',
+    Number(development.isPublished || 0) === 1 &&
+    development.approvalStatus === 'approved',
   );
 }
 
@@ -399,7 +448,9 @@ function mapCustodyResolution(
   };
 }
 
-export async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promise<ResolvedLeadOwnership> {
+export async function resolveLeadOwnership(
+  input: PublicLeadCaptureInput,
+): Promise<ResolvedLeadOwnership> {
   const database = await getDb();
   if (!database) throw new Error('Database not available');
 
@@ -435,10 +486,7 @@ export async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promi
       });
     }
 
-    if (
-      requestedDevelopmentId &&
-      Number(property.developmentId || 0) !== requestedDevelopmentId
-    ) {
+    if (requestedDevelopmentId && Number(property.developmentId || 0) !== requestedDevelopmentId) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message: 'The property and development enquiry targets do not match.',
@@ -474,7 +522,11 @@ export async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promi
 
   if (targetKind === 'development' && input.unitId) {
     const [unit] = await database
-      .select({ id: unitTypes.id, developmentId: unitTypes.developmentId, isActive: unitTypes.isActive })
+      .select({
+        id: unitTypes.id,
+        developmentId: unitTypes.developmentId,
+        isActive: unitTypes.isActive,
+      })
       .from(unitTypes)
       .where(eq(unitTypes.id, input.unitId))
       .limit(1);
@@ -497,7 +549,8 @@ export async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promi
     });
   }
 
-  const canonicalBrandId = persistedBrandId || (targetKind === 'brand' ? requestedBrandId : undefined);
+  const canonicalBrandId =
+    persistedBrandId || (targetKind === 'brand' ? requestedBrandId : undefined);
   const brand = canonicalBrandId ? await selectBrand(database, canonicalBrandId) : null;
   const brandReferenceInvalid = Boolean(canonicalBrandId && !brand);
 
@@ -514,7 +567,8 @@ export async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promi
       positiveId(brand?.linkedDeveloperAccountId),
     ].filter((id): id is number => id !== undefined);
     const developerMap = await loadDeveloperCandidates(database, developerIds);
-    const developerId = positiveId(development?.developerId) || positiveId(brand?.linkedDeveloperAccountId);
+    const developerId =
+      positiveId(development?.developerId) || positiveId(brand?.linkedDeveloperAccountId);
     const custody = resolvePublicDevelopmentCustody({
       developerId: development?.developerId,
       developerBrandProfileId: development?.developerBrandProfileId,
@@ -542,10 +596,7 @@ export async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promi
       developer: developerId ? developerMap.get(developerId) : null,
     });
 
-    return mapCustodyResolution(
-      { developerBrandProfileId: brand?.id },
-      custody,
-    );
+    return mapCustodyResolution({ developerBrandProfileId: brand?.id }, custody);
   }
 
   const sourceListingId = positiveId(property?.sourceListingId);
@@ -563,7 +614,10 @@ export async function resolveLeadOwnership(input: PublicLeadCaptureInput): Promi
       .from(listings)
       .where(eq(listings.id, sourceListingId))
       .limit(1);
-    if (!sourceListing || !isPublicListingStatus(sourceListing.status, sourceListing.approvalStatus)) {
+    if (
+      !sourceListing ||
+      !isPublicListingStatus(sourceListing.status, sourceListing.approvalStatus)
+    ) {
       sourceListing = null;
     }
   }
@@ -639,22 +693,49 @@ function isEquivalentReplay(
   const existingBrandId = positiveId(existing.developerBrandProfileId);
   const inputBrandId = positiveId(input.developerBrandProfileId);
 
-  const targetMatches = existingPropertyId
-    ? existingPropertyId === inputPropertyId && existingDevelopmentId === inputDevelopmentId
-    : existingDevelopmentId
-      ? !inputPropertyId && existingDevelopmentId === inputDevelopmentId
-      : !inputPropertyId && !inputDevelopmentId && existingBrandId === inputBrandId;
+  // A property may canonically derive development and brand attribution, and
+  // a development may derive brand attribution. Those server-owned fields are
+  // not part of the submitted identity when the caller omitted them. When the
+  // caller did submit an attribution, it must still match exactly.
+  const targetMatches = inputPropertyId
+    ? existingPropertyId === inputPropertyId &&
+      (!inputDevelopmentId || existingDevelopmentId === inputDevelopmentId) &&
+      (!inputBrandId || existingBrandId === inputBrandId)
+    : inputDevelopmentId
+      ? !existingPropertyId &&
+        existingDevelopmentId === inputDevelopmentId &&
+        (!inputBrandId || existingBrandId === inputBrandId)
+      : inputBrandId
+        ? !existingPropertyId && !existingDevelopmentId && existingBrandId === inputBrandId
+        : false;
 
   const contextMatches =
-    existingBrandId === inputBrandId &&
     normalizeName(existing.name) === normalizeName(input.name) &&
-    normalizePhone(existing.phone) === normalizePhone(input.phone);
+    normalizePhone(existing.phone) === normalizePhone(input.phone) &&
+    normalizeEmail(existing.email) === normalizeEmail(input.email) &&
+    normalizeMaterialText(existing.message) === normalizeMaterialText(input.message) &&
+    coerceLeadType(existing.leadType || undefined) === coerceLeadType(input.leadType) &&
+    normalizeMaterialText(existing.unitId) === normalizeMaterialText(input.unitId) &&
+    normalizeMaterialText(existing.unitName) === normalizeMaterialText(input.unitName) &&
+    normalizeOptionalNumber(existing.unitPriceFrom) ===
+      normalizeOptionalNumber(input.unitPriceFrom) &&
+    normalizeOptionalNumber(existing.unitBedrooms) ===
+      normalizeOptionalNumber(input.unitBedrooms) &&
+    normalizeOptionalNumber(existing.unitBathrooms) ===
+      normalizeOptionalNumber(input.unitBathrooms) &&
+    normalizeMaterialText(existing.referrerUrl) === normalizeMaterialText(input.referrerUrl) &&
+    normalizeMaterialText(existing.utmSource) === normalizeMaterialText(input.utmSource) &&
+    normalizeMaterialText(existing.utmMedium) === normalizeMaterialText(input.utmMedium) &&
+    normalizeMaterialText(existing.utmCampaign) === normalizeMaterialText(input.utmCampaign) &&
+    normalizeMaterialText(existing.consentVersion) ===
+      normalizeMaterialText(input.consent?.version) &&
+    normalizeMaterialText(existing.consentSource) ===
+      normalizeMaterialText(input.consent?.source) &&
+    jsonValuesMatch(existing.affordabilityData, input.affordabilityData);
 
   return (
     targetMatches &&
     contextMatches &&
-    normalizeEmail(existing.email) === normalizeEmail(input.email) &&
-    String(existing.unitId || '') === String(input.unitId || '') &&
     String(existing.source || '') === source &&
     String(existing.leadSource || '') === leadSource
   );
@@ -662,9 +743,7 @@ function isEquivalentReplay(
 
 function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadCaptureResult {
   const deliveryStatus = existing.deliveryStatus || 'pending';
-  const attempts = Array.isArray(existing.deliveryAttempts)
-    ? existing.deliveryAttempts
-    : [];
+  const attempts = Array.isArray(existing.deliveryAttempts) ? existing.deliveryAttempts : [];
   const latestAttempt = attempts.length > 0 ? (attempts[attempts.length - 1] as any) : null;
   const supplyOrigin: PublicSupplyOrigin =
     latestAttempt?.supplyOrigin ||
@@ -680,7 +759,13 @@ function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadC
       : 'verified_customer_recipient');
   const recipientType: PublicLeadCaptureResult['recipientType'] =
     latestAttempt?.recipientType ||
-    (existing.developerBrandProfileId ? 'brand' : existing.agentId ? 'agent' : existing.agencyId ? 'agency' : 'manual');
+    (existing.developerBrandProfileId
+      ? 'brand'
+      : existing.agentId
+        ? 'agent'
+        : existing.agencyId
+          ? 'agency'
+          : 'manual');
   const brandLeadStatus =
     existing.brandLeadStatus === 'captured' ||
     existing.brandLeadStatus === 'delivered_unsubscribed' ||
@@ -709,11 +794,11 @@ function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadC
   };
 }
 
-function deliveryKeyForOwnership(
-  resolved: ResolvedLeadOwnership,
-): string {
-  if (resolved.recipientType === 'agent' && resolved.agentId) return `direct:agent:${resolved.agentId}`;
-  if (resolved.recipientType === 'agency' && resolved.agencyId) return `direct:agency:${resolved.agencyId}`;
+function deliveryKeyForOwnership(resolved: ResolvedLeadOwnership): string {
+  if (resolved.recipientType === 'agent' && resolved.agentId)
+    return `direct:agent:${resolved.agentId}`;
+  if (resolved.recipientType === 'agency' && resolved.agencyId)
+    return `direct:agency:${resolved.agencyId}`;
   if (resolved.recipientType === 'developer' && resolved.developerId) {
     return `direct:developer:${resolved.developerId}`;
   }
@@ -733,7 +818,9 @@ function messageForResolution(resolved: ResolvedLeadOwnership): string {
   return 'Your enquiry has been recorded and requires recipient review.';
 }
 
-export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<PublicLeadCaptureResult> {
+export async function capturePublicLead(
+  input: PublicLeadCaptureInput,
+): Promise<PublicLeadCaptureResult> {
   assertPublicCaptureInput(input);
 
   const database = await getDb();
@@ -867,7 +954,9 @@ export async function capturePublicLead(input: PublicLeadCaptureInput): Promise<
   if (resolved.developerBrandProfileId) {
     void developerBrandProfileService
       .incrementLeadCountAsync(resolved.developerBrandProfileId)
-      .catch(error => console.error('[capturePublicLead] Failed to update brand lead metrics:', error));
+      .catch(error =>
+        console.error('[capturePublicLead] Failed to update brand lead metrics:', error),
+      );
   }
 
   return {

@@ -21,7 +21,12 @@ import {
 import { Phone, Mail, Send, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
-import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
+import {
+  createLeadCaptureRequestId,
+  hasVerifiedPublicLeadRecipient,
+  publicLeadCaptureAcknowledgement,
+  publicLeadConsent,
+} from '@/lib/leadCapture';
 
 interface PropertyContactModalProps {
   isOpen: boolean;
@@ -123,16 +128,9 @@ export function PropertyContactModal({
 
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: result => {
-      const deliveryStatus = 'deliveryStatus' in result ? result.deliveryStatus : undefined;
-      const deliveryMessage =
-        deliveryStatus === 'delivered'
-          ? successMessage
-          : deliveryStatus === 'attention_required'
-            ? 'Your enquiry was received. The listing recipient still needs to follow up.'
-            : 'Your enquiry was received. Recipient delivery is being completed.';
-      toast.success(deliveryMessage);
+      toast.success(publicLeadCaptureAcknowledgement(result, successMessage));
 
-      if (successAction?.type === 'whatsapp') {
+      if (successAction?.type === 'whatsapp' && hasVerifiedPublicLeadRecipient(result)) {
         const whatsappUrl = buildWhatsAppUrl(successAction.phone, successAction.message);
         if (whatsappUrl) {
           window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -313,7 +311,12 @@ export function PropertyContactModal({
             />
             <Label htmlFor="property-enquiry-consent" className="text-xs leading-5 text-slate-600">
               I agree to be contacted about this enquiry. See our{' '}
-              <a className="text-primary underline" href="/legal/privacy" target="_blank" rel="noreferrer">
+              <a
+                className="text-primary underline"
+                href="/legal/privacy"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Privacy Policy
               </a>
               .

@@ -130,6 +130,9 @@ async function recreateDatabase(target: LocalDatabaseTarget) {
 }
 
 async function main() {
+  throw new Error(
+    'localDbWorkflow direct execution is retired; use the Database Authority v3 worktree commands.',
+  );
   loadLocalEnv();
   const action = process.argv[2] ?? 'help';
   if (!['target', 'verify', 'start', 'reprovision'].includes(action)) {
