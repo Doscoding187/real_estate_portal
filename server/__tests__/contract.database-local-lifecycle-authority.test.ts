@@ -74,21 +74,20 @@ describe('database local lifecycle authority', () => {
     }
   });
 
-  it('uses explicit non-destructive, destructive, and demo-reset names', () => {
+  it('routes owned lifecycle commands and retires fixed-database mutation names', () => {
     const scripts = packageScripts();
 
-    expect(scripts['db:prepare:local']).toBe(
-      'cross-env NODE_ENV=development APP_ENV=development tsx scripts/localDbWorkflow.ts start',
-    );
-    expect(scripts['db:reprovision:local']).toBe(
-      'cross-env NODE_ENV=development APP_ENV=development tsx scripts/localDbWorkflow.ts reprovision',
-    );
-    expect(scripts['db:demo:reset:local']).toBe(
-      'cross-env NODE_ENV=development LOCAL_SEED_ALLOWED=true tsx server/scripts/localDemoSeed.ts reset local',
-    );
-    expect(scripts['db:test:rebuild']).toBe(
-      'cross-env NODE_ENV=test APP_ENV=test LISTIFY_TEST_DB_REBUILD_CONFIRM=I_UNDERSTAND_LISTIFY_TEST_WILL_BE_DESTROYED tsx scripts/testDbWorkflow.ts rebuild',
-    );
+    expect(scripts['db:worktree:create']).toContain('databaseAuthorityCli.ts worktree:create');
+    expect(scripts['db:worktree:dispose']).toContain('databaseAuthorityCli.ts worktree:dispose');
+    expect(scripts['db:worktree:ack']).toContain('databaseAuthorityCli.ts worktree:ack');
+    for (const retired of [
+      'db:prepare:local',
+      'db:reprovision:local',
+      'db:demo:reset:local',
+      'db:test:rebuild',
+    ]) {
+      expect(scripts[retired]).toContain('scripts/retiredDatabaseMutation.ts');
+    }
 
     for (const retired of [
       'db:start:local',
@@ -101,7 +100,7 @@ describe('database local lifecycle authority', () => {
     }
   });
 
-  it('pins local infrastructure and destructive paths exactly', () => {
+  it('pins local infrastructure and refuses destructive shell dispatch', () => {
     const shell = read('scripts/local-db.sh');
 
     for (const authority of [
@@ -140,9 +139,12 @@ describe('database local lifecycle authority', () => {
 
     expect(overrideTokens).toEqual(['LISTIFY_LOCAL_DB_MODE']);
     expect(shell).toContain('LISTIFY_TEST_DB_REBUILD_CONFIRM');
+    expect(shell).toContain('Database Authority v3 retired this direct destructive action');
+    expect(shell).not.toContain('destroy) destroy ;;');
+    expect(shell).not.toContain('test:rebuild) rebuild_test_database ;;');
   });
 
-  it('keeps the orchestrator local, guarded, and migration-delegating', () => {
+  it('keeps the legacy orchestrator fail-closed while compatibility exports remain', () => {
     const workflow = read('scripts/localDbWorkflow.ts');
     const hostBlock = workflow.match(
       /const LOCAL_HOSTS = new Set\(\[([\s\S]*?)\]\);/,
@@ -162,6 +164,8 @@ describe('database local lifecycle authority', () => {
       'listify-mysql-local',
       'localhost',
     ]);
+
+    expect(workflow).toContain('localDbWorkflow direct execution is retired');
 
     expect(workflow).toContain(
       "const REPROVISION_ACKNOWLEDGEMENT = 'I_UNDERSTAND_LISTIFY_LOCAL_WILL_BE_DESTROYED'",

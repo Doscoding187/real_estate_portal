@@ -1,153 +1,167 @@
 # Database Change Protocol
 
-**Status:** canonical operating protocol
+**Status:** canonical Database Authority v3 protocol
 **Owner:** Database and Release Engineering
-**Scope:** Property Listify schema changes and approved data-transition work
 
-This protocol is the one supported way for product development to change the
-database. A feature may add or evolve schema through this workflow, but it may
-not introduce a new migration runner, schema executor, seed authority, repair
-utility, account-administration script, backfill mechanism, or local/test
-lifecycle.
+This is the supported path for schema and durable data changes. Product work
+may consume it but may not add another runner, connection authority, target
+guard, ledger, seed executor, repair framework, or lifecycle mechanism.
+Operational migration details are in `server/migrations/README.md`.
 
-## Canonical authority
+## Canonical authorities
 
 | Concern | Authority |
 | --- | --- |
-| Schema ownership | `drizzle/schema/` and `drizzle/schema/canonical-model-inventory.json` |
-| Canonical baseline | `server/migrations/0000_canonical_launch_baseline.sql` |
-| Migration location | Active SQL files in `server/migrations/`; archived migrations are evidence only |
-| Operational migration instructions | [`server/migrations/README.md`](../../server/migrations/README.md) |
-| Migration runner | `server/migrations/runSqlMigrations.ts` |
-| Migration ledger | `sql_migration_history` |
-| Shared/production migration authorization | Database and Release Engineering approval through the canonical `pnpm db:migrate` workflow and target guard |
-| Local migration workflow | `pnpm db:migrate:local` through `scripts/localDbWorkflow.ts` / `scripts/local-db.sh` |
-| Test migration workflow | `pnpm db:migrate:test` through the disposable test workflow |
-| Supported diagnostics | `pnpm db:verify`, `pnpm db:verify:distribution`, `pnpm schema:sanity`, `pnpm db:target` |
-| Production seed authority | None; production and shared-environment seeds are prohibited |
-| Local/demo seed authority | `pnpm db:seed:local` through guarded `server/scripts/localDemoSeed.ts`; test/demo data must use the canonical local/test lifecycle |
-| Exceptional repair/backfill authority | No permanent utility exists. A future operation requires the contract below and a separately approved, bounded implementation |
-| Static authority gate | `pnpm db:authority:check` |
+| Desired model | `drizzle/schema/` |
+| Generated desired evidence | `drizzle/schema/canonical-model-inventory.json` |
+| Immutable baseline | `server/migrations/0000_canonical_launch_baseline.sql` |
+| Active lineage | `server/migrations/manifest.json` |
+| Manifest validation | `server/migrations/migrationManifest.ts` |
+| Plan/apply and attempt state | `server/migrations/runSqlMigrations.ts` |
+| Target, operation, connection | `server/_core/databaseAuthority/` |
+| Operation matrix | `docs/database-authority/operation-policy.json` |
+| Static gate | `pnpm db:authority:check` |
 
-The connected diagnostics and migration commands retain their existing target
-guards. The static authority gate never loads environment files or connects to
-a database.
+The migration ledger reports successful application; it never decides
+repository membership or order. Durable attempt evidence is separate.
 
-## Common workflow
+## Change admission
 
-1. Classify the change as additive, data-transition, or destructive/incompatible.
-2. Update the canonical Drizzle model and canonical model inventory when the
-   schema changes.
-3. Follow the operational migration instructions in [`server/migrations/README.md`](../../server/migrations/README.md), then add the required migration through the canonical migration authority. Do not use `db:push`, manual DDL, an archived migration, or a second runner.
-4. Keep the migration ledger identity/order contract intact.
-5. Add focused contract coverage and proportionate verification evidence.
-6. Run `pnpm db:authority:check` and record its result in the pull request.
-7. Use only the approved local/test workflow for local data and fixtures.
+Before authoring SQL:
 
-The pull request must state whether it changes schema or data, its change
-classification, migration path, transition/repair controls, destructive-change
-handling, rollback or containment evidence, and the static-gate result.
+1. classify the work as additive schema, transactional data transition,
+   exceptional recovery, or destructive/incompatible;
+2. prove the current worktree identity and disposable target;
+3. update the Drizzle desired model where physical application schema changes;
+4. choose the next sequence only through a serialized manifest review against
+   current `origin/main`—never by branch age, PR number, filenames elsewhere,
+   or a database ledger;
+5. declare the parent filename and checksum, statement policy, expected head,
+   target classes, and consumer evidence; and
+6. run the manifest and generated-inventory gates before database application.
 
-## Additive change
+No feature-specific migration is added merely to exercise this protocol.
 
-Examples include a new table, nullable column, compatible index, or compatible
-relationship.
+## Additive incremental DDL
 
-Required evidence is proportionate to the change:
+A normal incremental DDL entry must:
 
-- canonical model and inventory update where applicable;
-- one canonical migration with deterministic identity/order;
-- focused consumer or schema contract coverage;
-- `pnpm db:authority:check` passing.
+- have a strict four-digit lowercase filename identity;
+- be the one next contiguous numeric sequence;
+- contain exactly one independently verifiable DDL statement;
+- remain inside the selected database and use the ordinary expansion subset;
+- use supported MySQL/TiDB syntax and explicit provider normalization;
+- have a manifest checksum and exact parent checksum;
+- include focused precondition, postcondition, and consumer evidence; and
+- preserve forward recovery if application becomes ambiguous.
 
-An additive change does not require a repair utility when existing rows remain
-valid. If existing data must be populated, classify the work as a
-data-transition change instead.
+Do not claim transactional rollback for MySQL/TiDB DDL. Do not combine several
+DDL transitions in one file to simulate atomicity. Database/schema lifecycle,
+cross-schema references, and ordinary destructive/shape-changing DDL fail
+manifest validation; route approved exceptions through the exceptional
+contract.
 
-## Data-transition change
+## Transactional data transition
 
-Examples include populating a new field, normalization, moving data between
-structures, identifier conversion, and a bounded backfill.
+A manifest entry classified `transactional-data` contains DML only. It must
+have bounded selection, deterministic/idempotent behavior, integrity checks,
+and explicit restart semantics. Large or operational backfills do not belong
+in ordinary migrations; they require the exceptional contract below.
 
-The change requires:
+## Planning and application
 
-- a named owner and explicit business or incident purpose;
-- a fixed, approved target classification and target guard before connection
-  creation;
-- bounded record selection and a safe dry-run/report-only mode where practical;
-- idempotency, checkpointing, or explicit restart behaviour;
-- before/after integrity and usage verification;
-- containment, restore, or compensating-action evidence;
-- explicit approval before writes; and
-- retirement of the temporary capability or formal classification as a
-  permanent authority after review.
+`pnpm db:migrate:plan` reports the authorized target hash, accepted old head,
+ordered pending set, expected new head, manifest digest, and plan digest without
+creating locks or control tables.
 
-Do not place an ambient-target backfill in the repository as a convenience
-script. The exceptional contract below governs any future approved operation.
+`pnpm db:migrate:apply` with explicit `--accepted-old-head=<head-or-none>` and
+`--expected-new-head=<manifest-head>` refuses implicit heads, re-resolves and
+authorizes the same target, takes the manifest lock, proves its owner
+connection, rechecks the plan, creates durable
+control tables when needed, records a running attempt with that lock owner,
+applies each statement, records progress, then records success. A
+failed/running/blocked attempt prevents normal continuation.
+
+Generic migration commands accept only local disposable or quarantined
+read-only plan targets. Protected targets use `pnpm db:release:plan` and
+`pnpm db:release:apply`; the latter requires the exact target acknowledgement
+in addition to protected approval evidence.
+
+Never:
+
+- Do not use `db:push` or manual DDL as canonical authority;
+- rewrite an applied SQL file or its manifest checksum;
+- add/remove/edit ledger rows;
+- delete or disguise attempt evidence;
+- silently retry ambiguous DDL;
+- execute archived SQL; or
+- introduce generic down migrations.
 
 ## Destructive or incompatible change
 
-Examples include dropping a column, deleting records, incompatible type
-changes, replacing an active table, or making optional data mandatory.
+Use expand-and-contract:
 
-Use expand-and-contract where applicable:
-
-1. introduce compatible structure;
-2. support old and new application behaviour;
-3. migrate or backfill safely under the data-transition contract;
-4. verify integrity, usage, and restoration evidence;
+1. add compatible structure;
+2. support old and new behavior;
+3. transition data under a separately accepted plan;
+4. prove integrity, usage, and restoration/forward-recovery evidence;
 5. switch canonical reads and writes; and
-6. remove the old structure in a later, bounded migration.
+6. contract in a later explicitly approved migration.
 
-Direct destructive data utilities, production-wide cleanup commands, and
-account bootstrap scripts are not an alternative to this sequence.
+Destructive contraction is protected work and requires a separate approval
+packet before the operation, even if its code can be prepared independently.
 
 ## Exceptional repair/backfill contract
 
-A future production or shared-environment repair is exceptional authority. It
-must be separately approved and record all of the following before execution:
+No generic repair runner exists. A bounded repair, recovery, import, export,
+restore, or backfill requires all of:
 
-- named owner;
-- specific incident or business purpose;
-- fixed intended target and target classification;
-- target guard before connection creation;
-- bounded record selection;
-- dry-run or report-only mode where practical;
-- explicit confirmation immediately before writes;
-- idempotency, checkpointing, or restart behaviour;
-- audit output that identifies scope and result without secrets;
-- before-and-after evidence;
-- containment, restore, or compensating action;
-- approval policy and approver; and
-- post-use retirement or formal permanent-authority classification.
+- owner and incident/business purpose;
+- exact operation and sanitized fingerprint;
+- target class, database name, host, and port;
+- approval reference and actor;
+- bounded record selection and dry-run evidence;
+- idempotency, checkpointing, or explicit restart behavior;
+- expected mutation and data at risk;
+- preservation/backup requirement;
+- containment and forward-recovery plan;
+- before/after integrity proof; and
+- mandatory retirement or formal admission after use.
 
-No generic repair runner is authorized by this protocol. A capability that
-does not satisfy the contract is retired or prohibited. A future break-glass
-recovery operation must be designed as its own named, bounded authority.
+This is the protocol's **Exceptional repair/backfill contract**. Code readiness
+does not grant operation approval.
 
-## Seeds, diagnostics, and lifecycle boundaries
+## Local, test, seed, and fixture boundaries
 
-- Production and shared-environment seed authority is prohibited.
-- Local/demo seed data is retained only through the guarded canonical
-  local/test lifecycle.
-- Disposable E2E fixtures are permitted only with explicit inventory
-  classification, isolated targets, and no schema DDL.
-- The four supported diagnostic commands remain the only supported diagnostic
-  authority. Historical read-only evidence is not an operating instruction.
-- Runtime application queries are ordinary consumers, not migration or repair
-  authority. They must not expose a manually executable destructive surface.
+- The current `listify_local` is quarantined and cannot be mutated.
+- A feature worktree uses its owned `listify_wt_<slug>_<hash>` database on the
+  approved local server.
+- Fixed `listify_test` is permitted only inside an isolated CI service job.
+- Data roles (reference, foundation, demo, scenario, test fixture) remain
+  separate operations. Until their v3 adapters land, legacy mutation commands
+  fail closed.
+- Production/shared seeds are prohibited.
+- Fixtures contain no schema DDL.
+
+## Required pull-request evidence
+
+State:
+
+- manifest old/new head and lineage;
+- schema/data classification;
+- target classes and credential class;
+- plan and attempt evidence;
+- focused negative and positive tests;
+- desired/physical congruency result;
+- readiness and consumer result;
+- destructive/repair handling;
+- disposable databases created/faulted/disposed;
+- protected targets accessed; and
+- `pnpm db:authority:check` plus CI-equivalent results.
 
 ## Reopening criteria
 
-Database Authority is reopened only for:
-
-- a demonstrated migration-ledger bypass;
-- a new unauthorized schema or data-mutation mechanism;
-- material change to the database provider or deployment architecture;
-- failure of the static enforcement model;
-- introduction of a new permanent operational database capability; or
-- discovery of a material P0/P1 authority path outside this defined boundary.
-
-Normal migrations, new tables, new columns, compatible relationships, and
-ordinary schema evolution do not reopen the programme when they use this
-protocol and pass `pnpm db:authority:check`.
+Reopen senior architecture only for a connection/authorization bypass, lineage
+ambiguity, ledger/attempt corruption model, provider change, new permanent
+database capability, failure of worktree ownership, or material P0/P1 finding.
+Ordinary migrations that consume these interfaces do not reopen architecture.

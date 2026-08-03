@@ -1,0 +1,91 @@
+{
+  "inventoryVersion": 1,
+  "canonicalRawConnectionCreator": "server/_core/databaseAuthority/connectionAuthority.ts",
+  "activeBoundedConsumers": [
+    "server/db-connection.ts",
+    "server/migrations/runSqlMigrations.ts",
+    "server/_core/databaseAuthority/lifecycle.ts",
+    "server/_core/databaseAuthority/readiness.ts",
+    "server/_core/launchPreflight.ts",
+    "scripts/databaseAuthorityCli.ts",
+    "scripts/databaseAuthorityConsumerContract.ts",
+    "scripts/databaseAuthorityFreshTestApply.ts",
+    "scripts/db-contract-verify.ts",
+    "scripts/db-verify-distribution-schema.ts"
+  ],
+  "retiredDirectMutationSources": [
+    "scripts/localDbWorkflow.ts",
+    "scripts/run-listing-performance-e2e.ts",
+    "scripts/run-prospect-journey-e2e.ts",
+    "scripts/testDbWorkflow.ts",
+    "server/scripts/localDemoSeed.ts"
+  ],
+  "legacyContainedDirectSources": [
+    "scripts/check-agent-tables.ts",
+    "scripts/check-bluespace-direct.ts",
+    "scripts/check-developer-columns.ts",
+    "scripts/check-developer-profile.ts",
+    "scripts/check-developers-struct.ts",
+    "scripts/check-developers-table.ts",
+    "scripts/check-development-columns-direct.ts",
+    "scripts/check-development-location.ts",
+    "scripts/check-location-data.ts",
+    "scripts/check-properties-schema.ts",
+    "scripts/check-property-indexes.ts",
+    "scripts/check-table-struct.ts",
+    "scripts/check-triggers.ts",
+    "scripts/check-unit-media.ts",
+    "scripts/check-unit-types.ts",
+    "scripts/check-users-schema.ts",
+    "scripts/debug-listings.ts",
+    "scripts/describe-developers-table.ts",
+    "scripts/find-column-global.ts",
+    "scripts/list-all-users.ts",
+    "scripts/list-users-debug.ts",
+    "scripts/save-table-structs.ts",
+    "scripts/test-location-service.ts",
+    "scripts/test-search-raw.ts",
+    "scripts/test-search.ts",
+    "scripts/verify-mission-control-migrations.ts",
+    "scripts/verify-platform-agency.ts",
+    "scripts/verify-prospect-journey-auth.ts",
+    "scripts/verify-prospect-journey-cross-agency.ts",
+    "scripts/verify-prospect-journey-security.ts",
+    "server/scripts/debug-db.ts",
+    "server/scripts/debug_db_connection.ts",
+    "server/scripts/verifyLocalDemoSeed.ts"
+  ],
+  "legacyTargetParsersWithoutRawConnectionCreation": [
+    "scripts/debug-slug.ts",
+    "scripts/print-db-target.ts",
+    "server/_core/databaseTarget.ts",
+    "server/_core/env.ts",
+    "server/scripts/list_developers.ts",
+    "server/scripts/verify-approval-workflow.ts",
+    "server/scripts/verify-get-profile.ts",
+    "server/scripts/verify_brand_link_v2.ts"
+  ],
+  "classificationRules": {
+    "canonical": "Only the canonical creator may import a database driver and create connections for active authority consumers.",
+    "retired-direct-mutation": "Package commands and direct module entrypoints fail before database resolution or connection.",
+    "legacy-contained": "Not reachable from approved package commands; remains prohibited historical or diagnostic source pending deletion/adaptation.",
+    "legacy-target-parser": "Not an authority and not reachable from approved database commands."
+  },
+  "temporaryCompatibility": [
+    {
+      "path": "server/db-connection.ts",
+      "consumer": "application runtime and unit tests",
+      "purpose": "Drizzle runtime adapter plus no-credential in-memory unit double",
+      "authorityBypass": false,
+      "retirementCondition": "Inject the unit database double from test setup and remove the inline adapter after consumer test migration."
+    },
+    {
+      "path": "scripts/databaseAuthorityBootstrapLocal.ts",
+      "consumer": "legacy imports in authority contract tests",
+      "purpose": "Compatibility exports only; direct execution is retired",
+      "authorityBypass": false,
+      "retirementCondition": "Remove after developer documentation and tests use the worktree CLI exclusively."
+    }
+  ],
+  "residualAuthority": "docs/database-authority/residual-utility-authority.json"
+}

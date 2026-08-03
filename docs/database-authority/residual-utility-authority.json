@@ -45,9 +45,12 @@
     "canonicalAndAuthoritySupport": [
       "scripts/databaseAuthorityBootstrapLocal.ts",
       "scripts/databaseAuthorityCheck.ts",
+      "scripts/databaseAuthorityCli.ts",
       "scripts/databaseAuthorityConsumerContract.ts",
+      "scripts/databaseAuthorityFreshTestApply.ts",
       "scripts/databaseAuthorityStatus.ts",
-      "scripts/databaseUtilityAuthorityCheck.ts"
+      "scripts/databaseUtilityAuthorityCheck.ts",
+      "scripts/generateCanonicalModelInventory.ts"
     ],
     "supportedDiagnostics": [
       "scripts/print-db-target.ts",

@@ -1,15 +1,24 @@
 import { drizzle } from 'drizzle-orm/mysql2';
-import mysql from 'mysql2/promise';
 import * as schema from '../drizzle/schema';
-import { assertDatabaseTargetMatchesRuntime } from './_core/databaseTarget';
-import { buildMysqlConnectionSecurityConfig } from './_core/databaseTls';
-import { resolveAppRuntimeEnv } from './_core/runtimeBootstrap';
+import {
+  authorizeDatabaseOperation,
+  protectedDatabaseApprovalFromEnvironment,
+} from './_core/databaseAuthority/authorization';
+import {
+  createAuthorityRuntimePool,
+  type AuthorityRuntimePool,
+} from './_core/databaseAuthority/connectionAuthority';
+import { resolveDatabaseAuthority } from './_core/databaseAuthority/context';
 
 // Connection state
 export let _db: any = null;
+let runtimePool: AuthorityRuntimePool | null = null;
 
 export function resetDb() {
   _db = null;
+  const pool = runtimePool;
+  runtimePool = null;
+  if (pool) void pool.end();
 }
 
 // Lazily create the drizzle instance
@@ -349,58 +358,23 @@ export async function getDb() {
     return _db;
   }
 
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      'DATABASE_URL is missing. Set it in .env.local (dev) or .env.production (prod).',
-    );
-  }
-
-  // Safety Check: Verify Database Environment Separation.
-  // Malformed URLs and protected-environment mismatches fail closed.
-  const runtimeEnv = resolveAppRuntimeEnv(process.env);
-
-  assertDatabaseTargetMatchesRuntime(
-    process.env.DATABASE_URL,
-    runtimeEnv,
-  );
-
   try {
-    // Debug log for connection attempt
-    console.log('[Database] Attempting connection...');
-
-    const connectionSecurity =
-      buildMysqlConnectionSecurityConfig(
-        process.env.DATABASE_URL,
-        runtimeEnv,
-      );
-
-    const poolConnection = mysql.createPool({
-      ...connectionSecurity,
-      connectionLimit: 10,
-      maxIdle: 10,
-      idleTimeout: 60000,
-      enableKeepAlive: true,
-      keepAliveInitialDelay: 0,
+    const authority = resolveDatabaseAuthority({
+      operation: 'runtime-connect',
+      credentialClass: (process.env.DATABASE_CREDENTIAL_CLASS as any) ?? undefined,
     });
-
-    console.log('[Database] Connection pool initialized.');
-
-    // Verify connection and log DB name
-    try {
-      const [rows] = await poolConnection.query('SELECT DATABASE() AS db, @@hostname AS host');
-      const dbInfo = (rows as any)[0];
-      console.log(
-        `[Database] Connected to: ${dbInfo?.db || '(unknown)'} @ ${dbInfo?.host || '(unknown)'}`,
-      );
-    } catch (e) {
-      console.warn('[Database] Connection verified, but failed to read DB name');
-    }
-
-    _db = drizzle(poolConnection, { schema, mode: 'default' });
+    const decision = authorizeDatabaseOperation(authority, {
+      approval: protectedDatabaseApprovalFromEnvironment(authority),
+    });
+    runtimePool = await createAuthorityRuntimePool(authority, decision);
+    _db = drizzle(runtimePool.pool, { schema, mode: 'default' });
+    console.log(
+      `[Database] Authorized runtime target ${authority.context.targetFingerprintHash.slice(0, 16)} is connected.`,
+    );
     return _db;
   } catch (error) {
-    console.error('[Database] Failed to connect:', error);
     _db = null;
-    return null;
+    runtimePool = null;
+    throw error;
   }
 }

@@ -1,150 +1,164 @@
 # Database Authority Agent Entry Contract
 
-Use this operating contract before database analysis or modification. It is the
-first operational authority; detailed audits are evidence, not alternate
-instructions.
+**Status:** Database Authority v3 control-plane entry
 
-## Authority at a glance
+Read this file before any database-bearing work. The machine-readable pointers
+are in `authority-manifest.json`; operation permissions are in
+`operation-policy.json`.
 
-| Concern | Current authority | Keep / extend / retire |
-| --- | --- | --- |
-| Schema establishment | `server/migrations/0000_canonical_launch_baseline.sql` | Keep |
-| Migration execution | `server/migrations/runSqlMigrations.ts` and `sql_migration_history` | Keep |
-| Runtime schema model | `drizzle/schema/` and `canonical-model-inventory.json` | Keep |
-| Historical migrations | `server/migrations/_archived/pre-canonical-baseline/` | Keep as evidence only |
-| Local target guard | `scripts/localDbWorkflow.ts` | Keep |
-| Local MySQL lifecycle | `scripts/local-db.sh` | Keep |
-| Local demo consumer | `server/scripts/localDemoSeed.ts` | Keep and contract-test |
-| Schema/demo verification | `scripts/db-verify-distribution-schema.ts`, `server/scripts/verifyLocalDemoSeed.ts` | Keep |
-| Authority classification | `docs/database-authority/migration-tree-authority.json` | Keep |
-| Operating manifest and commands | `authority-manifest.json`, `db:authority:*` | Extend |
-| Database change workflow | `database-change-protocol.md` | Keep and follow |
-| CI consumer proof | `db:authority:consumer-contract` | Extend |
+## Authority spine
 
-The machine-readable companion is
-[`authority-manifest.json`](authority-manifest.json). It points to authority;
-it does not replace it.
+| Concern | Authority |
+| --- | --- |
+| Immutable target context | `server/_core/databaseAuthority/context.ts` |
+| Operation policy and decision | `authorization.ts`, `operation-policy.json` |
+| Connection creation | `connectionAuthority.ts` |
+| Worktree identity and lifecycle | `worktreeIdentity.ts`, `lifecycle.ts` |
+| Migration membership and lineage | `server/migrations/manifest.json`, `migrationManifest.ts` |
+| Migration planning and application | `runSqlMigrations.ts` |
+| Successful history | `sql_migration_history` |
+| Durable attempt evidence | `sql_migration_attempts` |
+| Desired schema | `drizzle/schema/` |
+| Generated model evidence | `drizzle/schema/canonical-model-inventory.json` |
+| Physical-schema comparison | `schemaCongruency.ts` |
+| Layered readiness | `readiness.ts` |
+| Remaining connection paths | `connection-path-inventory.json` |
 
-The canonical change workflow is
-[`database-change-protocol.md`](database-change-protocol.md). Normal schema
-evolution follows that protocol and does not reopen the programme.
+The credential-bearing URL is private to connection creation. Commands and
+reports may emit a sanitized fingerprint and hash, never credentials or a
+complete URL.
 
-## Rules
-
-- Active migrations are top-level `server/migrations/*.sql`; the canonical
-  launch baseline is `0000_canonical_launch_baseline.sql`.
-- `drizzle/schema/` is the runtime model authority. The migration ledger is
-  `sql_migration_history`.
-- `_archived/pre-canonical-baseline/` is historical evidence only. Never run,
-  scan for runtime authority, or revive it.
-- The only ordinary local target is an approved local host and exactly
-  `listify_local`. Production, staging, Railway, TiDB, and remote databases
-  are excluded.
-- A stale seed, fixture, test helper or runtime query must be reconciled to the canonical schema. The canonical schema must not be changed merely to satisfy a stale consumer.
-- Never use `db:push`, schema generation, manual DDL, or retired schema
-  executors unless an approved task explicitly creates a new migration.
-- Files under `.kiro/specs/**` and retired legacy setup guides are historical
-  evidence only; they cannot authorize migrations, seeds, repairs, backfills,
-  manual SQL, or production database operations. Current commands come only
-  from this entry contract, the manifest, the Database Change Protocol, and
-  `server/migrations/README.md`.
-- Never reconstruct or print `DATABASE_URL`, credentials, passwords, tokens,
-  or complete database URLs. Existing destructive commands retain their exact
-  acknowledgement requirements.
-
-## Approved workflow
-
-Run the read-only orientation command first:
+## Start every database operation
 
 ```sh
 pnpm db:authority:status
+pnpm db:authority:manifest
+pnpm db:authority:context
 ```
 
-For ordinary local product data, then run:
+Status is read-only. In a feature worktree, central local credentials resolve
+to that registered worktree's collision-resistant database identity; they do
+not resolve to `listify_local`.
+
+The current `listify_local` is quarantined evidence. It may receive sanitized,
+read-only diagnostics only. Runtime mutation, migration, seed, fixture, reset,
+rebuild, import, restore, repair, and ledger editing are not authorized.
+
+## Owned local worktree workflow
+
+Start or wait for the one approved local server, then provision this
+worktree's database:
 
 ```sh
-pnpm db:authority:bootstrap:local
+pnpm db:local:start
+pnpm db:local:wait
+pnpm db:worktree:create
+pnpm db:migrate:plan
+pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
+pnpm db:schema:congruency
+pnpm db:readiness
 ```
 
-That thin orchestrator validates the local target, starts/waits for local
-MySQL, applies canonical migrations, seeds the local demo, and verifies the
-distribution schema and demo data. It never generates migrations, pushes a
-schema, destroys the database, or modifies tracked files.
+Provisioning is idempotent only when its mode-0600 ownership profile exactly
+matches the canonical worktree realpath and Git common-directory identity.
+Branch names are labels, not ownership.
 
-The machine-local development authority is `~/.config/property-listify/local.env`
-(resolved from the operating-system home directory, never committed). It must
-be mode `0600`; each worktree’s ignored `.env.local` is a symlink to it. On a
-new worktree bootstrap creates that link. It never overwrites a normal or
-incorrect `.env.local` link: preserve the file, reconcile it into the central
-environment, then replace it with the approved link. Status reports only
-sanitized path, linkage, permission, and variable state.
+Disposal requires the exact acknowledgement emitted by:
 
-## Local demo access
+```sh
+pnpm db:worktree:ack
+pnpm db:worktree:dispose -- --ack=CONFIRM_DATABASE_DISPOSE_<fingerprint-prefix>
+```
 
-| Account | Role |
-| --- | --- |
-| `admin@listify.local` | super administrator |
-| `agency@listify.local` | agency administrator |
-| `developer@listify.local` | property developer |
-| `agent@listify.local` | agency agent |
-| `referrer@listify.local` | referral user |
-| `buyer@listify.local` | buyer/prospect |
+Re-resolve the context immediately before disposal. Never copy an
+acknowledgement between targets or operations.
 
-All six seeded demo accounts use the password supplied through
-`LOCAL_DEMO_AGENCY_PASSWORD`; its value is never tracked or reported.
+## Operation rules
 
-Use only the package commands named by the status report and manifest. Do not
-use `db:reprovision:local`, `db:local:destroy`, or `db:test:rebuild` without
-their existing explicit acknowledgement. Stop and report if status says the
-target is not an approved local or test target.
+- Resolve once and authorize the named operation before connection creation.
+- Explicit caller/process targets outrank worktree, repository, and central
+  fallbacks and may not be overwritten.
+- A child process must inherit and match the parent fingerprint.
+- Unknown and shared-remote targets fail closed.
+- Staging and production require an exact operation/fingerprint approval;
+  release application also requires an exact acknowledgement.
+- Generic migration plan/apply refuses protected targets. Use the explicit
+  `db:release:plan` and `db:release:apply` operation paths.
+- A caller-supplied connection factory is accepted only after a genuine
+  authorization decision and exact selected-database verification.
+- Only `connectionAuthority.ts` may create raw active connections.
 
-When a consumer fails after migration, treat it as consumer drift: compare the
-consumer with the focused canonical model, reconcile it, and run the fresh
-consumer contract. Do not add fallback columns, schema guessing, alternate SQL,
-or legacy writes.
+## Migration rules
 
-## Required scope and evidence
+- `server/migrations/manifest.json` defines active membership, sequence,
+  checksum, parent, statement policy, and expected head.
+- Top-level SQL absent from the manifest and manifest entries absent from disk
+  both fail.
+- Numeric identity must be unique and contiguous. Lineage has one root and one
+  head; cycles, missing parents, and lexical tie-breaking fail.
+- `0000_canonical_launch_baseline.sql` is immutable.
+- Archived SQL is evidence only and can never enter the active plan.
+- An ordinary future DDL migration contains one independently verifiable table
+  or index expansion. Cross-schema/database lifecycle SQL fails; destructive or
+  shape-changing DDL requires the approved exceptional contract.
+- Transactional-data migrations contain DML only.
+- Apply proves the named-lock owner connection and records that owner with each
+  durable attempt.
+- Apply refuses before connection unless the accepted old head and expected new
+  manifest head are explicit. `none` is valid only for a verified fresh target.
+- Plan mode performs no schema, history, attempt, or lock mutation.
+- Apply records a durable running attempt before statements. MySQL/TiDB DDL is
+  not described as transactionally rolled back.
+- Running, failed, or blocked attempts stop ordinary future application until
+  an explicitly reviewed recovery workflow exists.
+- Never edit a ledger, rewrite an applied migration, delete attempt evidence,
+  silently retry ambiguous DDL, or introduce generic down migrations.
 
-Open a separate database-authority PR for any canonical model, baseline,
-incremental migration, migration-runner, ledger, target-guard, or compatibility
-exception change. Read the policy and exception register first. Product work
-that merely changes a consumer stays focused on that consumer and its matching
-schema model.
+No currently unmerged product migration is canonical merely because it exists.
+Adding a manifest entry is a serialized authority decision under the Database
+Change Protocol.
 
-Return: target classification (never URL), commands/tests run, migration ledger
-state, consumer-contract result when relevant, and confirmation that no remote
-target, secret, migration rewrite, or schema push was used. Report the exact
-consumer/schema disagreement when blocked.
+## Schema and readiness rules
 
-## CI consumer contract
+`schema:inventory:check` proves deterministic desired-model evidence.
+`db:schema:congruency` compares normalized Drizzle metadata to physical MySQL
+metadata and excludes only the two runner control tables.
 
-`pnpm db:authority:consumer-contract` requires a fresh disposable local
-`listify_test` MySQL schema. It proves, behaviourally: canonical baseline,
-local demo seed, distribution verification, and demo verification. It detects
-missing seed columns, retired fixture assumptions, incomplete migrations,
-missing demo records, and seed failures. Seed transaction rollback has focused
-unit coverage in `localDemoSeedCanonicalSchema.test.ts`. Its direct entrypoint
-also refuses any runtime other than exactly `NODE_ENV=test` and `APP_ENV=test`.
+`/api/health` proves process liveness only. `/api/readiness` separately reports
+target connectivity, exact manifest head, incomplete attempts, required schema,
+and required data. Consumer/API, browser, release, and full diagnostics remain
+separate layers. A client object, reachable server, or coherent ledger alone is
+not application readiness.
 
-CI runs this contract on every pull request to `main` or `develop` and every
-push to `main`; it is intentionally not path-filtered, so the listed database
-surfaces and their consumers cannot bypass the fresh-schema proof.
+A stale seed, fixture, test helper or runtime query must be reconciled to the canonical schema.
+Do not conceal authority failure with schema guessing, alternate queries,
+catch-and-retry SQL, or empty-success fallbacks.
 
-## Compact prompt header
+## Retired compatibility commands
 
-> Before database analysis or modification: read
-> `docs/database-authority/00-database-authority-agent-entry.md`; run
-> `pnpm db:authority:status`; use only its reported paths and commands; never
-> treat archived migrations as runtime authority; do not use db:push, schema
-> generation, or manual DDL without an approved new-migration task; do not scan
-> the repository unless authority checks fail; reconcile stale consumers to the
-> canonical schema; stop and report an unapproved target.
+Legacy fixed-database seed, reset, rebuild, server-destroy, and E2E lifecycle
+commands fail before connection. Their replacements are continuation packets,
+not permission to invoke source files directly. Compatibility exports remain
+only for existing unit contracts and have explicit retirement conditions in
+`connection-path-inventory.json`.
 
-## Token-efficient boundaries
+## CI and evidence
 
-- Database-independent work: do not scan migrations or schema files.
-- Local product data: run status, then local bootstrap, then continue.
-- Consumer change: read this contract, manifest, consumer, matching canonical
-  model, and focused tests—no full audit.
-- Schema authority change: create a dedicated database-authority branch and do
-  the full migration review.
+Run:
+
+```sh
+pnpm db:authority:check
+pnpm check
+pnpm lint:check
+pnpm test:ci
+pnpm build
+```
+
+CI may use fixed `listify_test` only inside an isolated MySQL service job with
+`CI=true`, `NODE_ENV=test`, and `APP_ENV=test`. That exception is not valid on a
+developer server or across worktrees.
+
+Report the worktree, branch, HEAD, changed files, sanitized target hash/class,
+plan heads, attempt state, schema/readiness evidence, database lifecycle
+events, tests, and final Git status. State explicitly whether any protected or
+remote target was accessed.

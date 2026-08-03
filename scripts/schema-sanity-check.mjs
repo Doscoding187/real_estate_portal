@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 
 function sameValues(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
@@ -17,6 +18,9 @@ async function main() {
   );
   const baselineName = '0000_canonical_launch_baseline.sql';
   const baselinePath = join(migrationsDir, baselineName);
+  const migrationManifest = JSON.parse(
+    await readFile(join(migrationsDir, 'manifest.json'), 'utf8'),
+  );
 
   const inventory = JSON.parse(
     await readFile(inventoryPath, 'utf8'),
@@ -50,7 +54,7 @@ async function main() {
 
   if (
     inventory.authority !==
-    'DBA-S2A canonical launch model inventory'
+    'Database Authority Control Plane generated canonical model inventory'
   ) {
     errors.push('Unexpected canonical inventory authority.');
   }
@@ -102,9 +106,28 @@ async function main() {
     }
   }
 
-  const activeSqlFiles = (await readdir(migrationsDir))
+  const diskSqlFiles = (await readdir(migrationsDir))
     .filter(name => name.endsWith('.sql'))
     .sort();
+  const activeSqlFiles = Array.isArray(migrationManifest.migrations)
+    ? migrationManifest.migrations.map(entry => entry.filename)
+    : [];
+
+  if (!sameValues([...activeSqlFiles].sort(), diskSqlFiles)) {
+    errors.push('Active SQL files do not exactly match migration manifest membership.');
+  }
+
+  for (const entry of migrationManifest.migrations ?? []) {
+    const sql = await readFile(join(migrationsDir, entry.filename), 'utf8');
+    const checksum = createHash('sha256').update(sql).digest('hex');
+    if (checksum !== entry.checksum) {
+      errors.push(`Migration manifest checksum drift: ${entry.filename}.`);
+    }
+  }
+
+  if (migrationManifest.expectedHead !== activeSqlFiles.at(-1)) {
+    errors.push('Migration manifest expectedHead is not the final manifest entry.');
+  }
 
   if (
     activeSqlFiles.length === 0 ||

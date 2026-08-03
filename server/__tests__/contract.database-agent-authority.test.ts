@@ -19,7 +19,7 @@ describe('database authority agent entry contract', () => {
     const manifest = loadAuthorityManifest(ROOT);
 
     expect(() => validateAuthorityManifest(manifest, ROOT)).not.toThrow();
-    expect(manifest.authorityVersion).toBe(2);
+    expect(manifest.authorityVersion).toBe(3);
     expect(manifest.canonicalMigrationPath).toBe(
       'server/migrations/0000_canonical_launch_baseline.sql',
     );
@@ -32,7 +32,9 @@ describe('database authority agent entry contract', () => {
     expect(manifest.localEnvironmentTemplate).toBe('.env.local.example');
     expect(manifest.machineLocalEnvironmentRelativePath).toBe('.config/property-listify/local.env');
     expect(manifest.requiredLocalVariables).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
-    expect(manifest.approvedLocalCommands).toContain('db:authority:bootstrap:local');
+    expect(manifest.approvedLocalCommands).toContain('db:worktree:create');
+    expect(manifest.migrationManifest).toBe('server/migrations/manifest.json');
+    expect(manifest.migrationAttemptLedger).toBe('sql_migration_attempts');
     expect(manifest.consumerContractEntrypoint).toBe(
       'scripts/databaseAuthorityConsumerContract.ts',
     );
@@ -74,15 +76,17 @@ describe('database authority agent entry contract', () => {
     expect(localBootstrapCommandSequence()).toEqual([
       ['pnpm', ['db:local:start']],
       ['pnpm', ['db:local:wait']],
-      ['pnpm', ['db:migrate:local']],
-      ['pnpm', ['db:seed:local']],
-      ['pnpm', ['db:verify:local']],
+      ['pnpm', ['db:worktree:create']],
+      ['pnpm', ['db:migrate:plan']],
+      ['pnpm', ['db:migrate:apply']],
+      ['pnpm', ['db:schema:congruency']],
+      ['pnpm', ['db:readiness']],
     ]);
     expect(consumerContractCommandSequence()).toEqual([
       ['pnpm', ['db:migrate:test']],
-      ['pnpm', ['db:seed:test']],
+      ['pnpm', ['db:schema:congruency']],
       ['pnpm', ['db:verify:distribution']],
-      ['pnpm', ['db:verify:test-demo']],
+      ['pnpm', ['db:readiness']],
     ]);
   });
 
@@ -91,8 +95,8 @@ describe('database authority agent entry contract', () => {
 
     expect(() =>
       assertFreshDisposableTestTarget(
-        'mysql://user:password@127.0.0.1:3307/listify_test',
-        testEnvironment,
+        'mysql://user:password@127.0.0.1:3306/listify_test',
+        { ...testEnvironment, CI: 'true' },
       ),
     ).not.toThrow();
     expect(() =>
@@ -100,9 +104,9 @@ describe('database authority agent entry contract', () => {
         'mysql://user:password@remote.example/listify_test',
         testEnvironment,
       ),
-    ).toThrow('target must be a local listify_test MySQL database');
+    ).toThrow('owned worktree database or isolated CI test database');
     expect(() =>
-      assertFreshDisposableTestTarget('mysql://user:password@127.0.0.1:3307/listify_test', {
+      assertFreshDisposableTestTarget('mysql://user:password@127.0.0.1:3306/listify_test', {
         NODE_ENV: 'production',
         APP_ENV: 'production',
       }),
@@ -125,9 +129,9 @@ describe('database authority agent entry contract', () => {
       'A stale seed, fixture, test helper or runtime query must be reconciled to the canonical schema.',
     );
     expect(entry).toContain('pnpm db:authority:status');
-    expect(entry).toContain('pnpm db:authority:bootstrap:local');
-    expect(entry).toContain('admin@listify.local');
-    expect(entry).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
+    expect(entry).toContain('pnpm db:worktree:create');
+    expect(entry).toContain('sql_migration_attempts');
+    expect(entry).toContain('quarantined evidence');
     expect(index.indexOf('Agent Entry Contract')).toBeLessThan(index.indexOf('Machine Manifest'));
     expect(index).toContain('Database Change Protocol');
     expect(protocol).toContain('Exceptional repair/backfill contract');
@@ -145,6 +149,7 @@ describe('database authority agent entry contract', () => {
     expect(aggregate).toContain("['test:db-authority:static']");
     expect(aggregate).toContain("['db:authority:utilities']");
     expect(aggregate).toContain("['schema:sanity']");
+    expect(aggregate).toContain("['schema:inventory:check']");
     expect(aggregate).not.toMatch(/dotenv|mysql2|createConnection|db:migrate|db:seed|db:authority:status/);
     expect(status).toContain('Required Local Variables:');
     expect(status).not.toContain('console.log(process.env.DATABASE_URL)');

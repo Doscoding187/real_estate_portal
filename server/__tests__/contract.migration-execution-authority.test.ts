@@ -6,22 +6,16 @@ const ROOT = process.cwd();
 const CANONICAL_RUNNER = 'server/migrations/runSqlMigrations.ts';
 const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'db:migrate',
+  'db:migrate:plan',
+  'db:migrate:apply',
   'db:migrate:test',
   'db:migrate:local',
-  'db:prepare:local',
-  'db:reprovision:local',
-  'db:authority:bootstrap:local',
+  'db:release:plan',
+  'db:release:apply',
   'release:predeploy:production',
 ]);
 const APPROVED_TEST_ENTRYPOINTS = new Set([
-  'db:test:rebuild',
   'db:authority:consumer-contract',
-  'test:listing-performance',
-  'test:prospect-journey',
-  'test:prospect-journey:security',
-  'test:prospect-journey:auth',
-  'test:prospect-journey:cross-agency',
-  'test:prospect-journey:setup',
 ]);
 
 type PackageManifest = { scripts: Record<string, string> };
@@ -92,8 +86,24 @@ function resolvePackageScript(
     const absolute = resolve(ROOT, executable);
     if (!existsSync(absolute)) continue;
     const source = readFileSync(absolute, 'utf8');
-    signals.push(...migrationSignals(source));
-    if (source.includes(CANONICAL_RUNNER)) runners.add(CANONICAL_RUNNER);
+    const authorityCliCommand =
+      executable === 'scripts/databaseAuthorityCli.ts'
+        ? command.match(/databaseAuthorityCli\.ts\s+([\w:.-]+)/)?.[1]
+        : null;
+    const authorityCliUsesMigrationRunner =
+      authorityCliCommand !== null &&
+      ['migration:plan', 'migration:apply', 'release:plan', 'release:apply'].includes(
+        authorityCliCommand,
+      );
+    if (executable !== 'scripts/databaseAuthorityCli.ts' || authorityCliUsesMigrationRunner) {
+      signals.push(...migrationSignals(source));
+      if (
+        source.includes(CANONICAL_RUNNER) ||
+        source.includes('migrations/runSqlMigrations')
+      ) {
+        runners.add(CANONICAL_RUNNER);
+      }
+    }
 
     const isReadOnlyLocalWorkflowAction =
       executable === 'scripts/localDbWorkflow.ts' && /\s(?:target|verify)$/.test(command);
@@ -147,9 +157,23 @@ describe('migration execution authority', () => {
     ]);
 
     expect(migrationCapableScripts).toEqual([...approvedScripts].sort());
-    expect(manifest.scripts['db:migrate']).toContain(CANONICAL_RUNNER);
-    expect(manifest.scripts['db:migrate:test']).toContain(CANONICAL_RUNNER);
-    expect(manifest.scripts['db:migrate:local']).toContain(CANONICAL_RUNNER);
+    expect(resolvePackageScript('db:migrate', manifest).runners).toEqual(
+      new Set([CANONICAL_RUNNER]),
+    );
+    expect(resolvePackageScript('db:migrate:test', manifest).runners).toEqual(
+      new Set([CANONICAL_RUNNER]),
+    );
+    expect(resolvePackageScript('db:migrate:local', manifest).runners).toEqual(
+      new Set([CANONICAL_RUNNER]),
+    );
+    expect(manifest.scripts['db:release:plan']).toContain(
+      'databaseAuthorityCli.ts release:plan',
+    );
+    expect(manifest.scripts['db:release:apply']).toContain(
+      'databaseAuthorityCli.ts release:apply',
+    );
+    expect(manifest.scripts['release:predeploy:production']).toContain('db:release:plan');
+    expect(manifest.scripts['release:predeploy:production']).not.toContain('db:migrate');
     expect(manifest.scripts['db:push']).toBeUndefined();
     expect(manifest.scripts['db:generate']).toBeUndefined();
     expect(manifest.scripts['db:reset']).toBeUndefined();
@@ -245,26 +269,32 @@ describe('migration execution authority', () => {
     const activeSqlFiles = readdirSync(migrationsDirectory)
       .filter(file => file.endsWith('.sql'))
       .sort();
+    const executionManifest = JSON.parse(read('server/migrations/manifest.json')) as {
+      historyTable: string;
+      attemptTable: string;
+      expectedHead: string;
+      migrations: Array<{ filename: string }>;
+    };
+    const manifestFiles = executionManifest.migrations.map(entry => entry.filename);
     const archivedSqlFiles = readdirSync(archiveDirectory, { recursive: true })
       .filter(file => String(file).endsWith('.sql'))
       .map(String);
 
-    expect(runner).toContain('const migrationsDir = options?.migrationsDir ?? __dirname;');
-    expect(runner).toContain('readdirSync(migrationsDir)');
-    expect(runner).not.toMatch(/readdirSync\([^\n]+recursive\s*:/);
-    expect(runner).toContain(".filter(file => file.endsWith('.sql'))");
-    expect(activeSqlFiles).toEqual(['0000_canonical_launch_baseline.sql']);
+    expect(runner).toContain('loadAndValidateMigrationManifest');
+    expect(runner).not.toContain('readdirSync');
+    expect(activeSqlFiles).toEqual([...manifestFiles].sort());
+    expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
-    expect(runner).toContain("const MIGRATION_HISTORY_TABLE = 'sql_migration_history'");
-    expect(runner).toContain('leftNumber - rightNumber || left.localeCompare(right)');
-    expect(runner).toContain("createHash('sha256')");
-    expect(runner).toContain('Checksum mismatch for applied SQL migration');
-    expect(runner).toContain('await acquireMigrationLock(connection);');
-    expect(runner.indexOf('await recordMigration(connection, file, checksum')).toBeGreaterThan(
-      runner.indexOf('await connection.execute(statement)'),
+    expect(executionManifest.historyTable).toBe('sql_migration_history');
+    expect(executionManifest.attemptTable).toBe('sql_migration_attempts');
+    expect(runner).toContain('checksum drift');
+    expect(runner).toContain('await acquireMigrationLock(connection, manifest.document.lockName)');
+    expect(runner.indexOf('await recordMigrationSuccess(')).toBeGreaterThan(
+      runner.indexOf('await input.connection.execute(statement)'),
     );
-    expect(runner).toContain('Refusing an implicit upgrade');
+    expect(runner).toContain('accepted old head');
+    expect(runner).toContain('incomplete or failed attempt');
     expect(runner).toContain('process.exit(1)');
     expect(basename(migrationsDirectory)).toBe('migrations');
   });

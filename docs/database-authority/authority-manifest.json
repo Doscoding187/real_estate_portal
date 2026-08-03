@@ -1,5 +1,5 @@
 {
-  "authorityVersion": 2,
+  "authorityVersion": 3,
   "canonicalMigrationPath": "server/migrations/0000_canonical_launch_baseline.sql",
   "activeMigrationDirectory": "server/migrations",
   "archivedMigrationDirectory": "server/migrations/_archived/pre-canonical-baseline",
@@ -8,7 +8,19 @@
     "drizzle/schema/canonical-model-inventory.json"
   ],
   "migrationRunner": "server/migrations/runSqlMigrations.ts",
+  "migrationManifest": "server/migrations/manifest.json",
   "migrationLedger": "sql_migration_history",
+  "migrationAttemptLedger": "sql_migration_attempts",
+  "resolvedContextAuthority": "server/_core/databaseAuthority/context.ts",
+  "operationPolicy": "docs/database-authority/operation-policy.json",
+  "connectionAuthority": "server/_core/databaseAuthority/connectionAuthority.ts",
+  "worktreeLifecycleAuthority": "server/_core/databaseAuthority/lifecycle.ts",
+  "worktreeProfileRelativeDirectory": ".config/property-listify/worktrees",
+  "worktreeDatabasePrefix": "listify_wt_",
+  "schemaCongruencyAuthority": "server/_core/databaseAuthority/schemaCongruency.ts",
+  "readinessAuthority": "server/_core/databaseAuthority/readiness.ts",
+  "connectionPathInventory": "docs/database-authority/connection-path-inventory.json",
+  "continuationPackets": "docs/database-authority/database-authority-continuation-packets.md",
   "approvedLocalDatabaseName": "listify_local",
   "localEnvironmentTemplate": ".env.local.example",
   "machineLocalEnvironmentRelativePath": ".config/property-listify/local.env",
@@ -30,28 +42,32 @@
   ],
   "approvedLocalCommands": [
     "db:authority:status",
-    "db:authority:bootstrap:local",
+    "db:authority:manifest",
+    "db:authority:context",
+    "db:worktree:create",
+    "db:migrate:plan",
+    "db:migrate:apply",
+    "db:readiness",
+    "db:schema:congruency",
     "db:local:start",
-    "db:local:wait",
-    "db:migrate:local",
-    "db:seed:local",
-    "db:verify:local"
+    "db:local:wait"
   ],
   "destructiveLocalCommands": [
-    "db:reprovision:local",
-    "db:local:destroy",
-    "db:test:rebuild"
+    "db:worktree:dispose"
   ],
   "prohibitedCommandCategories": [
     "db:push and schema push",
     "schema generation outside an approved migration task",
     "manual DDL and retired schema executors",
-    "remote, staging, production, Railway, and TiDB targets"
+    "unapproved remote, shared, staging, production, Railway, and TiDB targets",
+    "all mutation of the quarantined current listify_local database"
   ],
   "localSeedEntrypoint": "server/scripts/localDemoSeed.ts",
+  "localDataAuthorityStatus": "retired-pending-operation-specific-data-adapters",
   "verificationEntrypoints": [
+    "scripts/db-contract-verify.ts",
     "scripts/db-verify-distribution-schema.ts",
-    "server/scripts/verifyLocalDemoSeed.ts"
+    "scripts/databaseAuthorityCli.ts"
   ],
   "consumerContractEntrypoint": "scripts/databaseAuthorityConsumerContract.ts",
   "staticAuthorityCheck": "scripts/databaseAuthorityCheck.ts",
