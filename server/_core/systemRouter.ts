@@ -9,6 +9,7 @@ import { getLeadRoutingAudit } from '../services/leadRoutingAuditService';
 import { correctLeadRouting } from '../services/leadRoutingCorrectionService';
 import { getLeadRoutingConversionReport } from '../services/leadRoutingConversionReportService';
 import { savedSearchDeliveryHistory } from '../../drizzle/schema';
+import { assessRuntimeDatabaseReadiness } from './databaseAuthority/readiness';
 
 const deliveryHistoryFilterSchema = z.enum([
   'all',
@@ -153,26 +154,15 @@ export const systemRouter = router({
         .optional(),
     )
     .query(async () => {
-      const db = await getDb();
-      let dbStatus = 'disconnected';
-      let dbError: string | null = null;
-
-      try {
-        if (db) {
-          // Test database connection with a simple query
-          await db.execute('SELECT 1');
-          dbStatus = 'connected';
-        }
-      } catch (error) {
-        dbError = error instanceof Error ? error.message : 'Unknown database error';
-        console.error('[Health Check] Database error:', dbError);
-      }
+      const readiness = await assessRuntimeDatabaseReadiness();
+      const dbStatus = readiness.applicationReady ? 'ready' : 'not_ready';
 
       return {
-        ok: dbStatus === 'connected',
-        status: dbStatus === 'connected' ? 'healthy' : 'unhealthy',
+        ok: readiness.applicationReady,
+        status: readiness.applicationReady ? 'healthy' : 'unhealthy',
         database: dbStatus,
-        error: dbError,
+        targetFingerprintHash: readiness.targetFingerprintHash,
+        layers: readiness.layers,
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
       };

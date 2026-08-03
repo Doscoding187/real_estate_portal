@@ -1,72 +1,62 @@
-# SQL Migration Authority
+# SQL migration authority
 
-`0000_canonical_launch_baseline.sql` is the executable launch bootstrap
-authority for a fresh Property Listify database.
+`manifest.json` is the machine authority for active membership, numeric
+sequence, checksum, parent/checksum ancestry, statement policy, and expected
+head. The runner never chooses order by scanning filenames or by consulting a
+database ledger.
 
-It is generated from `drizzle/schema.ts`, sanitized only by removing Drizzle's
-`--> statement-breakpoint` markers, and validated against
-`drizzle/schema/canonical-model-inventory.json`.
+`0000_canonical_launch_baseline.sql` is the immutable establishment migration
+for a fresh Property Listify database. It creates 180 application tables, no
+views or data, and must never be rewritten. Historical SQL under `_archived/`
+is non-executable evidence.
 
-Baseline contract:
+## Add a future migration
 
-- exactly 180 canonical physical tables
-- no noncanonical physical tables
-- no views
-- no data inserts or backfills
-- no destructive SQL
-- no quoted `CURRENT_TIMESTAMP` literals
-- all foreign-key targets resolve within the baseline
+1. Rebase the dedicated database-authority worktree on current `origin/main`.
+2. Update the canonical Drizzle model and regenerate inventory evidence.
+3. Select the one next contiguous four-digit identity through serialized
+   manifest review—not branch age, PR number, or an existing ledger.
+4. Add one lowercase top-level SQL file and one manifest entry with exact
+   checksum and parent checksum.
+5. For `incremental-ddl`, use exactly one independently verifiable DDL
+   statement. For `transactional-data`, use DML only. Exceptional entries need
+   an explicit approval contract.
+6. Prove malformed identity, duplicate number, membership drift, checksum
+   drift, broken ancestry, cycle, multiple heads, archive execution, and unsafe
+   statement policy all fail.
+7. Run `pnpm db:migrate:plan` against an owned disposable database, then apply,
+   schema congruency, readiness, and focused consumer evidence.
 
-Historical pre-baseline SQL is retained under
-`_archived/pre-canonical-baseline/` for audit reference only. The custom SQL
-runner executes only top-level `.sql` files in this directory.
+Do not add a product migration merely to test future sequencing; use isolated
+manifest fixtures for `0000 -> 0001 -> 0002`.
 
-Future schema changes must be introduced as new top-level incremental SQL
-migrations generated from the accepted canonical model authority.
+## Planning and attempt state
 
-## Migration-tree authority
+`runSqlMigrations.ts` resolves and authorizes the operation before connection.
+Plan mode reports target hash, accepted old head, ordered pending set, expected
+new head, manifest digest, and plan digest without locks or mutation.
 
-`docs/database-authority/migration-tree-authority.json` is the
-machine-readable classification of every tracked migration-related SQL or
-metadata surface. It distinguishes canonical active SQL from archived evidence,
-approved local/test database-user initialization, diagnostics, and legacy
-surfaces retained temporarily until Gap 3 retires or repoints their manual
-utility callers.
+Apply takes the manifest lock and revalidates the plan. It stores successful
+history in `sql_migration_history` and durable running/failed/blocked/succeeded
+evidence in `sql_migration_attempts`. An incomplete attempt blocks normal
+continuation. MySQL/TiDB DDL is not transactionally rolled back; do not delete
+attempt evidence, edit history, silently retry ambiguous DDL, or record partial
+work as success.
 
-Only top-level `server/migrations/*.sql` may become new executable
-migrations. Do not create another migration tree, make `_archived/`
-executable, or present Drizzle journals as the applied production ledger.
-`_archived/` remains historical evidence and is never scanned.
+## Commands
 
-## Manual utility boundary
+```sh
+pnpm db:authority:manifest
+pnpm db:migrate:plan
+pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
+pnpm db:release:plan
+pnpm db:release:apply -- --ack=<exact-release-ack>
+pnpm db:schema:congruency
+pnpm db:readiness
+```
 
-Manual schema-migration wrappers, direct schema-repair scripts, snapshot
-mutators, and direct SQL setup guides are prohibited migration authority. Only
-`server/migrations/runSqlMigrations.ts` may execute canonical migration SQL.
-Read-only diagnostics, controlled data-repair tools, and local/test fixtures
-are separate operational categories; none may replace `pnpm db:migrate`,
-`pnpm db:migrate:test`, or `pnpm db:migrate:local`.
-
-Do not run a database repair without explicit environment, owner, approval,
-and data-safety controls. Temporary legacy SQL and Drizzle metadata remain
-tracked during Gap 3 while their callers are retired; Slice 1 removes callers
-before any dependent SQL is considered for deletion.
-
-## Operational command authority
-
-`pnpm db:migrate` is the only approved production migration command. It checks
-the database target, runs this directory through `runSqlMigrations.ts`, then
-performs the distribution schema verification. `pnpm db:migrate:test` is the
-CI/test-database wrapper for the same runner; `pnpm db:migrate:local` is the
-local-development wrapper for the same runner.
-
-Migration execution is a release operation, not application startup work. Run
-`pnpm release:predeploy:production` before a production deployment; hosted and
-normal server startup use `pnpm start:prod` and must not create, alter, repair,
-or migrate schema.
-
-The runner scans only top-level `NNNN_name.sql` files in this directory. Files
-are ordered by numeric prefix and then complete filename. `_archived/` is never
-scanned. `sql_migration_history` records the complete filename and SHA-256
-checksum after successful execution; changed historical migration content is
-rejected.
+Migration is an explicit operation, never application startup work. Generic
+migration commands reject staging and production. Protected targets require
+the explicit release operation, exact protected-target approval, and release
+evidence; apply additionally requires exact acknowledgement. The current
+`listify_local` is quarantined and cannot be migrated.

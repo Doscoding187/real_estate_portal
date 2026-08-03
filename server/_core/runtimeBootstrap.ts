@@ -62,10 +62,6 @@ export function loadAppRuntimeEnv(options?: { cwd?: string; env?: NodeJS.Process
   const env = options?.env ?? process.env;
   const runtimeEnv = resolveAppRuntimeEnv(env);
 
-  if (env.NODE_ENV !== runtimeEnv) {
-    env.NODE_ENV = runtimeEnv;
-  }
-
   const envPaths = [path.resolve(cwd, '.env')];
   if (runtimeEnv === 'development') {
     envPaths.push(path.resolve(cwd, '.env.local'));
@@ -74,22 +70,51 @@ export function loadAppRuntimeEnv(options?: { cwd?: string; env?: NodeJS.Process
   }
 
   const loadedFiles: string[] = [];
+  const fileValues: Record<string, string> = {};
   for (const envPath of envPaths) {
     if (!fs.existsSync(envPath)) continue;
-    dotenv.config({
-      path: envPath,
-      override: envPath.endsWith('.local') || envPath.endsWith(`.${runtimeEnv}`),
-      processEnv: env,
-    });
+    Object.assign(fileValues, dotenv.parse(fs.readFileSync(envPath, 'utf8')));
     loadedFiles.push(path.basename(envPath));
   }
 
-  if (env.LISTIFY_E2E_DATABASE_URL) {
-    if (runtimeEnv !== 'development' && runtimeEnv !== 'test') {
-      throw new Error('LISTIFY_E2E_DATABASE_URL is permitted only in development or test environments.');
-    }
-    env.DATABASE_URL = env.LISTIFY_E2E_DATABASE_URL;
+  const explicitDatabaseUrl = env.DATABASE_URL;
+  const explicitE2eDatabaseUrl = env.LISTIFY_E2E_DATABASE_URL;
+  if (
+    explicitE2eDatabaseUrl &&
+    runtimeEnv !== 'development' &&
+    runtimeEnv !== 'test'
+  ) {
+    throw new Error('LISTIFY_E2E_DATABASE_URL is permitted only in development or test environments.');
   }
+  if (
+    explicitDatabaseUrl &&
+    explicitE2eDatabaseUrl &&
+    explicitDatabaseUrl !== explicitE2eDatabaseUrl
+  ) {
+    throw new Error(
+      'LISTIFY_E2E_DATABASE_URL disagrees with DATABASE_URL. Pass one explicit target to database authority.',
+    );
+  }
+  for (const [key, value] of Object.entries(fileValues)) {
+    if (key === 'DATABASE_URL' && explicitE2eDatabaseUrl) continue;
+    if (env[key] === undefined) env[key] = value;
+  }
+  if (explicitE2eDatabaseUrl) {
+    env.DATABASE_URL = explicitE2eDatabaseUrl;
+    env.DATABASE_AUTHORITY_DATABASE_URL_SOURCE = 'explicit-process';
+  } else if (explicitDatabaseUrl) {
+    env.DATABASE_AUTHORITY_DATABASE_URL_SOURCE = 'explicit-process';
+  } else if (fileValues.DATABASE_URL) {
+    env.DATABASE_AUTHORITY_DATABASE_URL_SOURCE = 'runtime-bootstrap-file';
+  }
+
+  const finalRuntimeEnv = resolveAppRuntimeEnv(env);
+  if (finalRuntimeEnv !== runtimeEnv) {
+    throw new Error(
+      `Runtime environment changed from ${runtimeEnv} to ${finalRuntimeEnv} after environment loading.`,
+    );
+  }
+  env.NODE_ENV = runtimeEnv;
 
   return {
     runtimeEnv,

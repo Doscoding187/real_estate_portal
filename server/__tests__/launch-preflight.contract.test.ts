@@ -81,6 +81,19 @@ describe('launch preflight contract', () => {
     expect(failedIds).toContain('transactional-email');
   });
 
+  it('does not let production runtime or host naming classify an unknown database as production', () => {
+    const result = runLaunchPreflight({
+      runtimeEnv: 'production',
+      env: productionEnv({
+        DATABASE_URL: 'mysql://listify:secret@db.prod.example.com/unclassified_database',
+      }),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.checks.find(check => check.id === 'database-target')).toMatchObject({
+      ok: false,
+    });
+  });
+
   it('keeps production migration preflight explicit and outside startup', () => {
     const startProduction = readRepoFile('scripts/start-production.ts');
     const packageJson = readRepoFile('package.json');
@@ -93,7 +106,8 @@ describe('launch preflight contract', () => {
       '"launch:preflight": "cross-env NODE_ENV=production APP_ENV=production tsx scripts/launch-preflight.ts"',
     );
     expect(packageJson).toContain(
-      '"release:predeploy:production": "pnpm launch:preflight && cross-env NODE_ENV=production APP_ENV=production pnpm db:migrate"',
+      '"release:predeploy:production": "pnpm launch:preflight && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:plan"',
     );
+    expect(packageJson).toContain('"db:release:apply":');
   });
 });

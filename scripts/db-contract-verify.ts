@@ -10,22 +10,22 @@
  *   pnpm db:verify --format=json # CI-friendly JSON output
  */
 
-import mysql from 'mysql2/promise';
-import { createHash } from 'crypto';
-import { readFile, readdir } from 'fs/promises';
-import { join } from 'path';
-
-import { assertDatabaseTargetMatchesRuntime } from '../server/_core/databaseTarget';
-import { loadAppRuntimeEnv } from '../server/_core/runtimeBootstrap';
+import {
+  authorizeDatabaseOperation,
+  protectedDatabaseApprovalFromEnvironment,
+} from '../server/_core/databaseAuthority/authorization';
+import {
+  createAuthoritySqlConnection,
+  type AuthoritySqlConnection,
+} from '../server/_core/databaseAuthority/connectionAuthority';
+import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
+import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
 import { databaseDefaultMatches } from './db-contract-default-normalization.js';
-
-const { runtimeEnv } = loadAppRuntimeEnv({ cwd: process.cwd() });
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const DATABASE_URL = process.env.DATABASE_URL;
 const FORMAT = process.argv.includes('--format=json') ? 'json' : 'human';
 
 interface ContractCheck {
@@ -166,8 +166,17 @@ const AGENCY_AGENT_MEMBERSHIP_COLUMN_SHAPES = [
 // VERIFICATION FUNCTIONS
 // ============================================================================
 
-async function verifyTableExists(connection: mysql.Connection, tableName: string): Promise<void> {
-  const [rows] = await connection.query<any[]>('SHOW TABLES LIKE ?', [tableName]);
+async function queryRows(
+  connection: AuthoritySqlConnection,
+  statement: string,
+  values: readonly unknown[] = [],
+): Promise<any[]> {
+  const result: any = await connection.query(statement, values);
+  return Array.isArray(result?.[0]) ? result[0] : Array.isArray(result?.rows) ? result.rows : [];
+}
+
+async function verifyTableExists(connection: AuthoritySqlConnection, tableName: string): Promise<void> {
+  const rows = await queryRows(connection, 'SHOW TABLES LIKE ?', [tableName]);
 
   if (rows.length === 0) {
     results.push({
@@ -184,11 +193,11 @@ async function verifyTableExists(connection: mysql.Connection, tableName: string
 }
 
 async function verifyColumns(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
   tableName: string,
   expectedColumns: Array<{ name: string; type: string }>,
 ): Promise<void> {
-  const [columns] = await connection.query<any[]>('SHOW COLUMNS FROM ??', [tableName]);
+  const columns = await queryRows(connection, 'SHOW COLUMNS FROM ??', [tableName]);
 
   const columnMap = new Map(columns.map((col: any) => [col.Field, col.Type]));
 
@@ -218,12 +227,12 @@ async function verifyColumns(
 }
 
 async function verifyEnumValues(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
   tableName: string,
   columnName: string,
   expectedValues: string[],
 ): Promise<void> {
-  const [columns] = await connection.query<any[]>('SHOW COLUMNS FROM ?? WHERE Field = ?', [
+  const columns = await queryRows(connection, 'SHOW COLUMNS FROM ?? WHERE Field = ?', [
     tableName,
     columnName,
   ]);
@@ -277,7 +286,7 @@ async function verifyEnumValues(
 }
 
 async function verifyColumnShapes(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
   tableName: string,
   expectedColumns: Array<{
     name: string;
@@ -287,7 +296,7 @@ async function verifyColumnShapes(
     extraIncludes?: string;
   }>,
 ): Promise<void> {
-  const [columns] = await connection.query<any[]>('SHOW COLUMNS FROM ??', [tableName]);
+  const columns = await queryRows(connection, 'SHOW COLUMNS FROM ??', [tableName]);
   const columnMap = new Map(columns.map((column: any) => [column.Field, column]));
 
   for (const expected of expectedColumns) {
@@ -335,13 +344,14 @@ async function verifyColumnShapes(
 }
 
 async function verifyIndex(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
   tableName: string,
   expectedColumns: string[],
   unique: boolean,
   label: string,
 ): Promise<void> {
-  const [rows] = await connection.query<any[]>(
+  const rows = await queryRows(
+    connection,
     `SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME
      FROM information_schema.STATISTICS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
@@ -378,11 +388,12 @@ async function verifyIndex(
 }
 
 async function verifyPrimaryKey(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
   tableName: string,
   columnName: string,
 ): Promise<void> {
-  const [rows] = await connection.query<any[]>(
+  const rows = await queryRows(
+    connection,
     `SELECT INDEX_NAME, NON_UNIQUE, SEQ_IN_INDEX, COLUMN_NAME
      FROM information_schema.STATISTICS
      WHERE TABLE_SCHEMA = DATABASE()
@@ -409,11 +420,12 @@ async function verifyPrimaryKey(
 }
 
 async function verifyAutoIncrement(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
   tableName: string,
   columnName: string,
 ): Promise<void> {
-  const [rows] = await connection.query<any[]>(
+  const rows = await queryRows(
+    connection,
     `SELECT EXTRA
      FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE()
@@ -433,13 +445,14 @@ async function verifyAutoIncrement(
 }
 
 async function verifyForeignKey(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
   tableName: string,
   columnName: string,
   referencedTable: string,
   deleteRule: string,
 ): Promise<void> {
-  const [rows] = await connection.query<any[]>(
+  const rows = await queryRows(
+    connection,
     `SELECT kcu.CONSTRAINT_NAME, kcu.REFERENCED_TABLE_NAME, kcu.REFERENCED_COLUMN_NAME, rc.DELETE_RULE
      FROM information_schema.KEY_COLUMN_USAGE kcu
      JOIN information_schema.REFERENTIAL_CONSTRAINTS rc
@@ -473,68 +486,16 @@ async function verifyForeignKey(
 }
 
 async function verifyMigrations(
-  connection: mysql.Connection,
+  connection: AuthoritySqlConnection,
+  authorityContextFingerprintHash: string,
 ): Promise<void> {
   try {
-    const migrationsDir = join(
-      process.cwd(),
-      'server',
-      'migrations',
+    const manifest = loadAndValidateMigrationManifest();
+    const activeFiles = manifest.orderedMigrations.map(entry => entry.filename);
+    const historyTables = await queryRows(
+      connection,
+      `SHOW TABLES LIKE '${manifest.document.historyTable}'`,
     );
-
-    const sqlFiles = (await readdir(migrationsDir))
-      .filter(file => file.endsWith('.sql'));
-
-    const validFilePattern =
-      /^\d{4}_[a-zA-Z0-9_]+\.sql$/;
-
-    const malformedFiles = sqlFiles.filter(
-      file => !validFilePattern.test(file),
-    );
-
-    const activeFiles = sqlFiles
-      .filter(file => validFilePattern.test(file))
-      .sort((left, right) => {
-        const leftNumber = Number.parseInt(
-          left.slice(0, 4),
-          10,
-        );
-        const rightNumber = Number.parseInt(
-          right.slice(0, 4),
-          10,
-        );
-
-        return (
-          leftNumber - rightNumber ||
-          left.localeCompare(right)
-        );
-      });
-
-    const canonicalBaseline =
-      '0000_canonical_launch_baseline.sql';
-
-    if (
-      activeFiles.length === 0 ||
-      activeFiles[0] !== canonicalBaseline
-    ) {
-      results.push({
-        name: 'Migrations: Canonical SQL ledger',
-        passed: false,
-        error:
-          `${canonicalBaseline} must be the first ` +
-          'active SQL migration.',
-        details: {
-          activeFiles,
-          malformedFiles,
-        },
-      });
-      return;
-    }
-
-    const [historyTables] =
-      await connection.query<any[]>(
-        "SHOW TABLES LIKE 'sql_migration_history'",
-      );
 
     if (historyTables.length === 0) {
       results.push({
@@ -547,14 +508,18 @@ async function verifyMigrations(
       return;
     }
 
-    const [ledgerRows] =
-      await connection.query<any[]>(
-        `
-          SELECT filename, checksum
-          FROM sql_migration_history
-          ORDER BY filename
-        `,
-      );
+    const ledgerRows = await queryRows(
+      connection,
+      `SELECT filename, checksum FROM \`${manifest.document.historyTable}\` ORDER BY numeric_version, filename`,
+    );
+    const incompleteAttempts = await queryRows(
+      connection,
+      `SELECT attempt_id, migration_filename, state FROM \`${manifest.document.attemptTable}\` WHERE state IN ('running', 'failed', 'blocked') ORDER BY started_at, attempt_id`,
+    );
+    const successfulAttempts = await queryRows(
+      connection,
+      `SELECT attempt_id, migration_filename, target_fingerprint_hash, lock_owner_connection_id, completed_statement_count FROM \`${manifest.document.attemptTable}\` WHERE state = 'succeeded' ORDER BY started_at, attempt_id`,
+    );
 
     const ledger = new Map<string, string>(
       ledgerRows.map(row => [
@@ -579,38 +544,41 @@ async function verifyMigrations(
       recorded: string;
     }> = [];
 
-    for (const file of activeFiles) {
-      const recordedChecksum = ledger.get(file);
+    for (const entry of manifest.orderedMigrations) {
+      const recordedChecksum = ledger.get(entry.filename);
       if (!recordedChecksum) continue;
-
-      const sql = await readFile(
-        join(migrationsDir, file),
-        'utf8',
-      );
-
-      const expectedChecksum = createHash('sha256')
-        .update(sql)
-        .digest('hex');
-
-      if (recordedChecksum !== expectedChecksum) {
+      if (recordedChecksum !== entry.checksum) {
         checksumMismatches.push({
-          filename: file,
-          expected: expectedChecksum,
+          filename: entry.filename,
+          expected: entry.checksum,
           recorded: recordedChecksum,
         });
       }
     }
+    const successfulByMigration = new Map(
+      successfulAttempts.map(row => [String(row.migration_filename), row]),
+    );
+    const missingSuccessfulAttemptEvidence = ledgerRows
+      .map(row => String(row.filename))
+      .filter(file => !successfulByMigration.has(file));
+    const invalidSuccessfulAttemptEvidence = successfulAttempts
+      .filter(
+        row =>
+          String(row.target_fingerprint_hash) !== authorityContextFingerprintHash ||
+          !String(row.lock_owner_connection_id ?? '').trim() ||
+          Number(row.completed_statement_count ?? 0) < 1,
+      )
+      .map(row => String(row.attempt_id));
 
     const passed =
-      malformedFiles.length === 0 &&
       missingLedgerFiles.length === 0 &&
       retiredLedgerFiles.length === 0 &&
-      checksumMismatches.length === 0;
+      checksumMismatches.length === 0 &&
+      incompleteAttempts.length === 0 &&
+      missingSuccessfulAttemptEvidence.length === 0 &&
+      invalidSuccessfulAttemptEvidence.length === 0;
 
     const findings = [
-      malformedFiles.length
-        ? `malformed active files: ${malformedFiles.join(', ')}`
-        : null,
       missingLedgerFiles.length
         ? `missing ledger files: ${missingLedgerFiles.join(', ')}`
         : null,
@@ -622,6 +590,15 @@ async function verifyMigrations(
             .map(item => item.filename)
             .join(', ')}`
         : null,
+      incompleteAttempts.length
+        ? `incomplete migration attempts: ${incompleteAttempts.map(row => row.attempt_id).join(', ')}`
+        : null,
+      missingSuccessfulAttemptEvidence.length
+        ? `missing successful attempt evidence: ${missingSuccessfulAttemptEvidence.join(', ')}`
+        : null,
+      invalidSuccessfulAttemptEvidence.length
+        ? `invalid successful attempt evidence: ${invalidSuccessfulAttemptEvidence.join(', ')}`
+        : null,
     ].filter(Boolean);
 
     results.push({
@@ -632,13 +609,24 @@ async function verifyMigrations(
         : `Canonical migration drift: ${findings.join('; ')}.`,
       details: {
         activeFiles,
+        expectedHead: manifest.document.expectedHead,
+        manifestDigest: manifest.manifestDigest,
         appliedFiles: ledgerRows.map(
           row => String(row.filename),
         ),
-        malformedFiles,
         missingLedgerFiles,
         retiredLedgerFiles,
         checksumMismatches,
+        incompleteAttempts,
+        successfulAttempts: successfulAttempts.map(row => ({
+          attemptId: String(row.attempt_id),
+          migrationFilename: String(row.migration_filename),
+          targetFingerprintHash: String(row.target_fingerprint_hash),
+          lockOwnerConnectionId: String(row.lock_owner_connection_id),
+          completedStatementCount: Number(row.completed_statement_count),
+        })),
+        missingSuccessfulAttemptEvidence,
+        invalidSuccessfulAttemptEvidence,
       },
     });
   } catch (err: any) {
@@ -655,18 +643,18 @@ async function verifyMigrations(
 // ============================================================================
 
 async function main() {
-  if (!DATABASE_URL) {
-    console.error('❌ DATABASE_URL not set in environment');
-    process.exit(1);
+  const authority = resolveDatabaseAuthority({ operation: 'verification' });
+  const decision = authorizeDatabaseOperation(authority, {
+    approval: protectedDatabaseApprovalFromEnvironment(authority),
+  });
+  if (FORMAT === 'human') {
+    console.log('[db:verify] Authorized target:', authority.context.targetFingerprintHash.slice(0, 16));
   }
 
-  const target = assertDatabaseTargetMatchesRuntime(DATABASE_URL, runtimeEnv);
-  if (FORMAT === 'human') console.log('[db:verify] Target:', target.fingerprint);
-
-  let connection: mysql.Connection | null = null;
+  let connection: AuthoritySqlConnection | null = null;
 
   try {
-    connection = await mysql.createConnection(DATABASE_URL);
+    connection = await createAuthoritySqlConnection(authority, decision);
 
     // 1. Verify tables exist
     for (const table of REQUIRED_TABLES) {
@@ -737,7 +725,7 @@ async function main() {
     );
 
     // 5. Verify migrations
-    await verifyMigrations(connection);
+    await verifyMigrations(connection, authority.context.targetFingerprintHash);
 
     // ========================================================================
     // OUTPUT
@@ -751,7 +739,8 @@ async function main() {
         JSON.stringify(
           {
             success: failed.length === 0,
-            target: target.fingerprint,
+            targetFingerprintHash: authority.context.targetFingerprintHash,
+            targetClass: authority.context.targetClass,
             total: results.length,
             passed: passed.length,
             failed: failed.length,
@@ -782,10 +771,10 @@ async function main() {
       }
     }
 
-    process.exit(failed.length > 0 ? 1 : 0);
+    process.exitCode = failed.length > 0 ? 1 : 0;
   } catch (err: any) {
     console.error('❌ Contract verification failed:', err.message);
-    process.exit(1);
+    process.exitCode = 1;
   } finally {
     if (connection) {
       await connection.end();

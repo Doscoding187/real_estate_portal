@@ -1,17 +1,28 @@
 import type express from 'express';
-import { getDb } from '../db-connection';
+import {
+  assessRuntimeDatabaseReadiness,
+  type LayeredDatabaseReadiness,
+} from './databaseAuthority/readiness';
 import { getCacheHealth } from './cache/redis';
 
 export interface ApiHealthResponse {
-  ok: boolean;
+  ok: true;
+  kind: 'liveness';
   env: string;
   build: {
     sha: string;
     builtAt: string | null;
   };
-  db: { ok: boolean };
+}
+
+export interface ApiReadinessResponse {
+  ok: boolean;
+  kind: 'readiness';
+  env: string;
+  build: ApiHealthResponse['build'];
+  db: LayeredDatabaseReadiness;
   cache: { ok: boolean; mode: 'redis' | 'memory' };
-  s3: { ok: boolean };
+  s3: { ok: boolean; required: boolean };
 }
 
 export interface ApiVersionResponse {
@@ -52,15 +63,6 @@ export function isS3Configured(env: NodeJS.ProcessEnv = process.env): boolean {
   return REQUIRED_S3_ENV_KEYS.every(key => hasEnvValue(env[key]));
 }
 
-async function checkDbOk(): Promise<boolean> {
-  try {
-    const db = await getDb();
-    return Boolean(db);
-  } catch {
-    return false;
-  }
-}
-
 async function checkCacheStatus(): Promise<{ ok: boolean; mode: 'redis' | 'memory' }> {
   try {
     const cacheHealth = await getCacheHealth();
@@ -69,40 +71,52 @@ async function checkCacheStatus(): Promise<{ ok: boolean; mode: 'redis' | 'memor
       mode: cacheHealth.metrics.fallback_mode ? 'memory' : 'redis',
     };
   } catch {
-    return {
-      ok: false,
-      mode: 'memory',
-    };
+    return { ok: false, mode: 'memory' };
   }
 }
 
-export async function buildApiHealthResponse(): Promise<ApiHealthResponse> {
-  const [dbOk, cacheStatus] = await Promise.all([checkDbOk(), checkCacheStatus()]);
-  const s3Ok = isS3Configured();
-  const productionCriticalsOk = process.env.NODE_ENV === 'production' ? s3Ok : true;
-
+export function buildApiHealthResponse(): ApiHealthResponse {
   return {
-    ok: dbOk && cacheStatus.ok && productionCriticalsOk,
+    ok: true,
+    kind: 'liveness',
     env: process.env.NODE_ENV || 'development',
     build: {
       sha: resolveBuildSha(),
       builtAt: resolveBuildTime(),
     },
-    db: { ok: dbOk },
-    cache: cacheStatus,
-    s3: { ok: s3Ok },
+  };
+}
+
+export async function buildApiReadinessResponse(): Promise<ApiReadinessResponse> {
+  const [db, cache] = await Promise.all([
+    assessRuntimeDatabaseReadiness(),
+    checkCacheStatus(),
+  ]);
+  const s3Required = process.env.NODE_ENV === 'production';
+  const s3Ok = isS3Configured();
+  return {
+    ok: db.applicationReady && cache.ok && (!s3Required || s3Ok),
+    kind: 'readiness',
+    env: process.env.NODE_ENV || 'development',
+    build: {
+      sha: resolveBuildSha(),
+      builtAt: resolveBuildTime(),
+    },
+    db,
+    cache,
+    s3: { ok: s3Ok, required: s3Required },
   };
 }
 
 export function registerHealthEndpoint(app: express.Express): void {
-  app.get('/api/health', async (_req, res) => {
-    const payload = await buildApiHealthResponse();
+  app.get('/api/health', (_req, res) => {
+    const payload = buildApiHealthResponse();
     res.setHeader('x-build-sha', payload.build.sha);
-    res.status(payload.ok ? 200 : 503).json(payload);
+    res.status(200).json(payload);
   });
 
   app.get('/api/readiness', async (_req, res) => {
-    const payload = await buildApiHealthResponse();
+    const payload = await buildApiReadinessResponse();
     res.setHeader('x-build-sha', payload.build.sha);
     res.status(payload.ok ? 200 : 503).json(payload);
   });

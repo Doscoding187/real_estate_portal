@@ -135,6 +135,9 @@ async function verifyDatabaseAbsent(url: string) {
 }
 
 async function main() {
+  throw new Error(
+    'Prospect Journey E2E database lifecycle is retired pending the worktree lifecycle adapter.',
+  );
   const setupOnly = process.argv.includes('--setup-only');
   const securityOnly = process.argv.includes('--security-only');
   const authOnly = process.argv.includes('--auth-only');

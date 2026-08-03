@@ -5,15 +5,23 @@
 The `server/migrations` directory is the **Source of Truth** for the database schema.
 The `drizzle/schema.ts` file defines the application's view of the data, but the SQL migrations dictate the actual database structure.
 
-## 🚨 Migration Command
+## 🚨 Release commands
 
-To apply migrations in PRODUCTION, you must run:
+First produce the exact protected plan:
 
 ```bash
 pnpm release:predeploy:production
 ```
 
-This runs the production launch preflight and the canonical `pnpm db:migrate` migration chain.
+That command does not mutate the database. A separately approved operator must
+bind the approval and exact acknowledgement to the same target fingerprint,
+artifact, accepted old head, and expected new head before running:
+
+```bash
+pnpm db:release:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<head> --ack=<exact-ack>
+```
+
+Generic `db:migrate:*` commands reject staging and production targets.
 
 ## 🚫 Forbidden Actions
 

@@ -18,6 +18,10 @@ const CHECKS: Check[] = [
     command: 'pnpm',
     args: ['schema:sanity'],
   },
+  {
+    command: 'pnpm',
+    args: ['schema:inventory:check'],
+  },
 ];
 
 function staticOnlyEnvironment(): NodeJS.ProcessEnv {

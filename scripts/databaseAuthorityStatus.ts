@@ -1,6 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import mysql from 'mysql2/promise';
+import {
+  authorizeDatabaseOperation,
+  protectedDatabaseApprovalFromEnvironment,
+} from '../server/_core/databaseAuthority/authorization';
+import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
+import { assessRuntimeDatabaseReadiness } from '../server/_core/databaseAuthority/readiness';
+import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
 import {
   inspectCentralLocalEnvironment,
   inspectWorktreeLink,
@@ -15,7 +21,19 @@ export type AuthorityManifest = {
   archivedMigrationDirectory: string;
   canonicalDrizzleSchemaRoots: string[];
   migrationRunner: string;
+  migrationManifest: string;
   migrationLedger: string;
+  migrationAttemptLedger: string;
+  resolvedContextAuthority: string;
+  operationPolicy: string;
+  connectionAuthority: string;
+  worktreeLifecycleAuthority: string;
+  worktreeProfileRelativeDirectory: string;
+  worktreeDatabasePrefix: string;
+  schemaCongruencyAuthority: string;
+  readinessAuthority: string;
+  connectionPathInventory: string;
+  continuationPackets: string;
   approvedLocalDatabaseName: string;
   localEnvironmentTemplate: string;
   machineLocalEnvironmentRelativePath: string;
@@ -37,9 +55,19 @@ export type AuthorityManifest = {
 const MANIFEST_PATH = 'docs/database-authority/authority-manifest.json';
 const REQUIRED_PACKAGE_SCRIPTS = [
   'db:authority:status',
-  'db:authority:bootstrap:local',
+  'db:authority:manifest',
+  'db:authority:context',
   'db:authority:consumer-contract',
   'db:authority:check',
+  'db:worktree:create',
+  'db:worktree:dispose',
+  'db:migrate:plan',
+  'db:migrate:apply',
+  'db:release:plan',
+  'db:release:ack',
+  'db:release:apply',
+  'db:readiness',
+  'db:schema:congruency',
 ] as const;
 
 export function loadAuthorityManifest(root = process.cwd()): AuthorityManifest {
@@ -53,6 +81,15 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.archivedMigrationDirectory,
     ...manifest.canonicalDrizzleSchemaRoots,
     manifest.migrationRunner,
+    manifest.migrationManifest,
+    manifest.resolvedContextAuthority,
+    manifest.operationPolicy,
+    manifest.connectionAuthority,
+    manifest.worktreeLifecycleAuthority,
+    manifest.schemaCongruencyAuthority,
+    manifest.readinessAuthority,
+    manifest.connectionPathInventory,
+    manifest.continuationPackets,
     manifest.localEnvironmentTemplate,
     manifest.localSeedEntrypoint,
     ...manifest.verificationEntrypoints,
@@ -73,23 +110,34 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     ...manifest.approvedLocalCommands,
     ...manifest.destructiveLocalCommands,
   ].filter(script => !scripts[script]);
-
-  if (
-    missingPaths.length ||
-    missingScripts.length ||
-    manifest.approvedLocalDatabaseName !== 'listify_local' ||
+  const invalid = [
+    manifest.authorityVersion !== 3 ? 'authority version must be 3' : '',
+    manifest.approvedLocalDatabaseName !== 'listify_local'
+      ? 'quarantined local database identity must remain listify_local'
+      : '',
+    manifest.migrationLedger !== 'sql_migration_history'
+      ? 'successful migration history table is inconsistent'
+      : '',
+    manifest.migrationAttemptLedger !== 'sql_migration_attempts'
+      ? 'migration attempt table is inconsistent'
+      : '',
+    manifest.worktreeDatabasePrefix !== 'listify_wt_'
+      ? 'worktree database prefix is inconsistent'
+      : '',
     manifest.machineLocalEnvironmentRelativePath !== '.config/property-listify/local.env'
-  ) {
+      ? 'machine-local environment path is inconsistent'
+      : '',
+    manifest.worktreeProfileRelativeDirectory !== '.config/property-listify/worktrees'
+      ? 'worktree profile directory is inconsistent'
+      : '',
+  ].filter(Boolean);
+
+  if (missingPaths.length || missingScripts.length || invalid.length) {
     throw new Error(
       `Database authority manifest is inconsistent: ${[
         missingPaths.length ? `missing paths: ${missingPaths.join(', ')}` : '',
         missingScripts.length ? `missing scripts: ${missingScripts.join(', ')}` : '',
-        manifest.approvedLocalDatabaseName !== 'listify_local'
-          ? 'local database must be listify_local'
-          : '',
-        manifest.machineLocalEnvironmentRelativePath !== '.config/property-listify/local.env'
-          ? 'machine-local environment path is inconsistent'
-          : '',
+        ...invalid,
       ]
         .filter(Boolean)
         .join('; ')}`,
@@ -105,13 +153,15 @@ type Target = {
   url?: URL;
 };
 
+/** Compatibility-only classifier. New operations must use resolveDatabaseAuthority(). */
 export function classifyDatabaseTarget(
   rawUrl: string | undefined,
   manifest: AuthorityManifest,
   env: NodeJS.ProcessEnv = process.env,
 ): Target {
-  if (!rawUrl)
+  if (!rawUrl) {
     return { classification: 'unknown', approved: false, host: '(unset)', database: '(unset)' };
+  }
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -119,26 +169,24 @@ export function classifyDatabaseTarget(
     return { classification: 'unknown', approved: false, host: '(invalid)', database: '(invalid)' };
   }
   const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase() || '(none)';
-  let pathname: string;
-  try {
-    pathname = decodeURIComponent(url.pathname);
-  } catch {
+  const rawDatabaseName = url.pathname.replace(/^\//, '');
+  if (!/^[A-Za-z0-9_]+$/.test(rawDatabaseName)) {
     return { classification: 'unknown', approved: false, host: '(invalid)', database: '(invalid)' };
   }
-  const database = pathname.replace(/^\//, '') || '(none)';
-  const runtime = String(env.APP_ENV ?? env.NODE_ENV ?? '').toLowerCase();
+  const database = rawDatabaseName;
   const runtimeModes = [env.APP_ENV, env.NODE_ENV]
     .filter((mode): mode is string => Boolean(mode))
     .map(mode => mode.toLowerCase());
-  const unsafeRuntimeMode = runtimeModes.some(mode => mode === 'production' || mode === 'staging');
+  const runtime = runtimeModes[0] ?? '';
+  const unsafeRuntime = runtimeModes.some(mode => mode === 'production' || mode === 'staging');
   const localHost = manifest.approvedLocalHosts
-    .map(approvedHost => approvedHost.replace(/^\[|\]$/g, '').toLowerCase())
+    .map(value => value.replace(/^\[|\]$/g, '').toLowerCase())
     .includes(host);
   if (
     url.protocol === 'mysql:' &&
     localHost &&
-    url.pathname === `/${manifest.approvedLocalDatabaseName}` &&
-    !unsafeRuntimeMode &&
+    database === manifest.approvedLocalDatabaseName &&
+    !unsafeRuntime &&
     runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {
     return { classification: 'local', approved: true, host, database, url };
@@ -146,17 +194,13 @@ export function classifyDatabaseTarget(
   if (
     url.protocol === 'mysql:' &&
     localHost &&
-    url.pathname === '/listify_test' &&
-    !unsafeRuntimeMode &&
+    database === 'listify_test' &&
+    !unsafeRuntime &&
     runtimeModes.every(mode => mode === 'development' || mode === 'test')
   ) {
     return { classification: 'test', approved: true, host, database, url };
   }
-  if (
-    runtime === 'production' ||
-    database === 'listify_property_sa' ||
-    /prod|railway|tidb/i.test(host)
-  ) {
+  if (runtime === 'production' || database === 'listify_property_sa' || /prod|railway|tidb/i.test(host)) {
     return { classification: 'production', approved: false, host, database, url };
   }
   if (runtime === 'staging' || database === 'listify_staging' || /stag/i.test(host)) {
@@ -165,55 +209,29 @@ export function classifyDatabaseTarget(
   return { classification: 'unknown', approved: false, host, database, url };
 }
 
-async function migrationLedgerState(target: Target, ledger: string) {
-  if (!target.approved || !target.url) return 'not queried (target is not approved local or test)';
-  try {
-    const connection = await mysql.createConnection(target.url.toString());
-    try {
-      const [rows] = await connection.query(`SELECT filename FROM \`${ledger}\` ORDER BY filename`);
-      const names = (rows as Array<{ filename: string }>).map(row => row.filename);
-      return names.length
-        ? `applied: ${names.join(', ')}`
-        : 'ledger exists with no applied migrations';
-    } finally {
-      await connection.end();
-    }
-  } catch {
-    return 'unavailable (no schema or local MySQL is not ready)';
-  }
-}
-
 async function main() {
   const manifest = loadAuthorityManifest();
   validateAuthorityManifest(manifest);
+  const lineage = loadAndValidateMigrationManifest();
+  const authority = resolveDatabaseAuthority({ operation: 'readiness' });
+  const authorization = authorizeDatabaseOperation(authority, {
+    approval: protectedDatabaseApprovalFromEnvironment(authority),
+  });
+  const readiness = await assessRuntimeDatabaseReadiness({ authority, authorization });
   const centralPath = resolveCentralLocalEnvironment();
   const central = inspectCentralLocalEnvironment(centralPath);
   const worktreeLink = inspectWorktreeLink(process.cwd(), centralPath);
   const variableStates = requiredLocalVariableStates(central.values);
-  const target = classifyDatabaseTarget(
-    central.values.DATABASE_URL ?? process.env.DATABASE_URL,
-    manifest,
-    {
-      ...process.env,
-      ...central.values,
-    },
-  );
-  const ledgerState = await migrationLedgerState(target, manifest.migrationLedger);
-  const environment = String(
-    central.values.APP_ENV ??
-      central.values.NODE_ENV ??
-      process.env.APP_ENV ??
-      process.env.NODE_ENV ??
-      'unset',
-  );
 
   console.log(`Database Authority Version: ${manifest.authorityVersion}`);
   console.log(`Canonical Baseline: ${manifest.canonicalMigrationPath}`);
-  console.log(`Active Migration Directory: ${manifest.activeMigrationDirectory}`);
-  console.log(`Archived Migration Directory: ${manifest.archivedMigrationDirectory}`);
-  console.log(`Canonical Schema Roots: ${manifest.canonicalDrizzleSchemaRoots.join(', ')}`);
-  console.log(`Current Migration Ledger State: ${ledgerState}`);
-  console.log(`Current Environment: ${environment}`);
+  console.log(`Canonical Manifest: ${manifest.migrationManifest}`);
+  console.log(`Manifest Digest: ${lineage.manifestDigest}`);
+  console.log(`Expected Manifest Head: ${lineage.document.expectedHead}`);
+  console.log(`Current Migration Ledger State: ${readiness.layers.migrationHead.code}`);
+  console.log(`Incomplete Attempt State: ${readiness.layers.incompleteAttemptState.code}`);
+  console.log(`Current Environment: ${authority.context.runtimeMode}`);
+  console.log(`Environment Source: ${authority.context.environmentSource}`);
   console.log(`Central Local Environment: ${central.exists ? 'found' : 'missing'}`);
   console.log(`Resolved Central Path: ${central.path}`);
   console.log(`Central Permissions: ${central.permissions}`);
@@ -223,16 +241,13 @@ async function main() {
       .map(([name, state]) => `${name}=${state}`)
       .join(', ')}`,
   );
-  console.log(`Sanitized Database Host: ${target.host}`);
-  console.log(`Database Name: ${target.database}`);
-  console.log(
-    `Target Classification: ${target.classification}${target.approved ? ' (approved)' : ' (not approved)'}`,
-  );
-  console.log(`Local Demo Seed Credential: ${variableStates.LOCAL_DEMO_AGENCY_PASSWORD}`);
-  console.log('Approved Local Workflow: pnpm db:authority:bootstrap:local');
-  console.log(`Prohibited Operations: ${manifest.prohibitedCommandCategories.join('; ')}`);
+  console.log(`Sanitized Target: ${authority.context.targetFingerprint}`);
+  console.log(`Target Fingerprint Hash: ${authority.context.targetFingerprintHash}`);
+  console.log(`Target Classification: ${authority.context.targetClass}`);
+  console.log(`Worktree Ownership: ${authority.context.worktree.ownershipMatches ? 'exact' : 'not-exact'}`);
+  console.log(`Application Readiness: ${readiness.applicationReady ? 'ready' : 'not-ready'}`);
   console.log(`Authority Contract Path: ${manifest.agentEntryContract}`);
-  console.log(`Consumer Contract Status: ready (${manifest.consumerContractEntrypoint})`);
+  console.log(`Prohibited Operations: ${manifest.prohibitedCommandCategories.join('; ')}`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
