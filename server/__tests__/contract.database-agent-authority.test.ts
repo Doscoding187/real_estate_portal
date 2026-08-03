@@ -154,10 +154,10 @@ describe('database authority agent entry contract', () => {
     expect(dbJob).toContain(
       "    env:\n      CI: 'true'\n      APP_ENV: test\n      NODE_ENV: test\n      DATABASE_CREDENTIAL_CLASS: test-owner",
     );
-    expect(dbJob.match(/\n      CI:/g)).toHaveLength(1);
-    expect(dbJob.match(/\n      APP_ENV:/g)).toHaveLength(1);
-    expect(dbJob.match(/\n      NODE_ENV:/g)).toHaveLength(1);
-    expect(dbJob.match(/\n      DATABASE_CREDENTIAL_CLASS:/g)).toHaveLength(1);
+    expect(dbJob.match(/\n {6}CI:/g)).toHaveLength(1);
+    expect(dbJob.match(/\n {6}APP_ENV:/g)).toHaveLength(1);
+    expect(dbJob.match(/\n {6}NODE_ENV:/g)).toHaveLength(1);
+    expect(dbJob.match(/\n {6}DATABASE_CREDENTIAL_CLASS:/g)).toHaveLength(1);
     expect(dbJob).toContain('MYSQL_DATABASE: listify_test');
     expect(dbJob).toContain('- 3306:3306');
     expect(aggregate).toContain("['test:db-authority:static']");
