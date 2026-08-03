@@ -371,6 +371,33 @@ describe('immutable resolved database context and operation authorization', () =
     ).toThrow('differs from the parent');
   });
 
+  it('accepts a CI child target whose fingerprint matches its parent', () => {
+    const identity = fixtureIdentity();
+    const input = {
+      operation: 'verification' as const,
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/listify_test',
+      processEnv: {
+        CI: 'true',
+        APP_ENV: 'test',
+        NODE_ENV: 'test',
+      },
+    };
+    const parent = resolveDatabaseAuthority(input);
+    const child = resolveDatabaseAuthority({
+      ...input,
+      processEnv: {
+        ...input.processEnv,
+        DATABASE_AUTHORITY_PARENT_FINGERPRINT: parent.context.targetFingerprintHash,
+      },
+    });
+
+    expect(child.context.targetFingerprintHash).toBe(parent.context.targetFingerprintHash);
+    expect(() => authorizeDatabaseOperation(child, { root: process.cwd() })).not.toThrow();
+  });
+
   it('requires exact target acknowledgement for disposal', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

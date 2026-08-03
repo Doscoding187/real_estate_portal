@@ -32,8 +32,11 @@ describeWithDb('Database Isolation', () => {
     console.log(`[Database] Connected to: ${dbName} @ ${host}`);
 
     expect(dbName).toBe(authority.context.databaseName);
-    expect(authority.context.targetFingerprintHash).toBe(
-      process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT,
-    );
+    expect(authority.context.targetFingerprintHash).toMatch(/^[0-9a-f]{64}$/);
+
+    const parentFingerprint = process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT;
+    if (parentFingerprint) {
+      expect(authority.context.targetFingerprintHash).toBe(parentFingerprint);
+    }
   });
 });
