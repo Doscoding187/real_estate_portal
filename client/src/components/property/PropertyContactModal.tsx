@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -20,6 +21,12 @@ import {
 import { Phone, Mail, Send, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import {
+  createLeadCaptureRequestId,
+  hasVerifiedPublicLeadRecipient,
+  publicLeadCaptureAcknowledgement,
+  publicLeadConsent,
+} from '@/lib/leadCapture';
 
 interface PropertyContactModalProps {
   isOpen: boolean;
@@ -61,6 +68,7 @@ interface ContactFormState {
   phone: string;
   inquiryType: InquiryType;
   message: string;
+  consentAccepted: boolean;
 }
 
 export function PropertyContactModal({
@@ -89,7 +97,9 @@ export function PropertyContactModal({
     phone: '',
     inquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
     message: initialMessage || '',
+    consentAccepted: false,
   });
+  const [captureRequestId, setCaptureRequestId] = useState(() => createLeadCaptureRequestId());
 
   const buildWhatsAppUrl = (phone: string, message?: string) => {
     const digits = phone.replace(/[^\d+]/g, '');
@@ -111,14 +121,16 @@ export function PropertyContactModal({
       ...prev,
       inquiryType: intent === 'viewing_request' ? 'viewing' : prev.inquiryType,
       message: initialMessage || '',
+      consentAccepted: false,
     }));
+    setCaptureRequestId(createLeadCaptureRequestId());
   }, [initialMessage, intent, isOpen]);
 
   const createLeadMutation = trpc.leads.create.useMutation({
-    onSuccess: () => {
-      toast.success(successMessage);
+    onSuccess: result => {
+      toast.success(publicLeadCaptureAcknowledgement(result, successMessage));
 
-      if (successAction?.type === 'whatsapp') {
+      if (successAction?.type === 'whatsapp' && hasVerifiedPublicLeadRecipient(result)) {
         const whatsappUrl = buildWhatsAppUrl(successAction.phone, successAction.message);
         if (whatsappUrl) {
           window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -131,7 +143,9 @@ export function PropertyContactModal({
         phone: '',
         inquiryType: 'general',
         message: '',
+        consentAccepted: false,
       });
+      setCaptureRequestId(createLeadCaptureRequestId());
       onClose();
     },
     onError: error => {
@@ -151,6 +165,10 @@ export function PropertyContactModal({
       toast.error('Please fill in all required fields');
       return;
     }
+    if (!formData.consentAccepted) {
+      toast.error('Please agree to be contacted about this enquiry.');
+      return;
+    }
 
     createLeadMutation.mutate({
       propertyId,
@@ -165,6 +183,8 @@ export function PropertyContactModal({
       developerBrandProfileId,
       developmentId,
       affordabilityData,
+      captureRequestId,
+      consent: publicLeadConsent('property_contact_modal'),
     });
   };
 
@@ -282,6 +302,26 @@ export function PropertyContactModal({
               )}
             </div>
           )}
+
+          <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <Checkbox
+              id="property-enquiry-consent"
+              checked={formData.consentAccepted}
+              onCheckedChange={checked => handleChange('consentAccepted', checked === true)}
+            />
+            <Label htmlFor="property-enquiry-consent" className="text-xs leading-5 text-slate-600">
+              I agree to be contacted about this enquiry. See our{' '}
+              <a
+                className="text-primary underline"
+                href="/legal/privacy"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Privacy Policy
+              </a>
+              .
+            </Label>
+          </div>
 
           <div className="flex gap-2 pt-4">
             <Button

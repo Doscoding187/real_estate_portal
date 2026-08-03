@@ -1,7 +1,8 @@
-import { getProvinceForCity, isProvinceSearch, normalizeLocationKey } from './locationUtils';
+import { isProvinceSearch, normalizeLocationKey } from './locationUtils';
 import { type SearchFilters } from './urlUtils';
 import type { LocationNode } from '@/types/location';
 import { generateIntentUrl, type SearchIntent } from './searchIntent';
+import { isCanonicalLocationId } from '../../../shared/locationAuthority';
 
 export const BUY_PROPERTY_TYPE_OPTIONS = [
   { value: 'house', label: 'House' },
@@ -90,7 +91,7 @@ function addStructuredLocation(location: LocationNode, geography: SearchIntent['
     if (provinceSlug) geography.province = provinceSlug;
   }
 
-  if (locationId) geography.locationId = locationId;
+  if (isCanonicalLocationId(locationId)) geography.locationId = locationId;
 }
 
 export function buildPropertySearchUrl({
@@ -119,8 +120,6 @@ export function buildPropertySearchUrl({
       } else {
         geography.level = 'city';
         geography.city = normalizeLocationKey(text);
-        const cityProvince = getProvinceForCity(text);
-        if (cityProvince) geography.province = cityProvince;
       }
     }
   }

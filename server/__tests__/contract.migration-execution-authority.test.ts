@@ -14,9 +14,7 @@ const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'db:release:apply',
   'release:predeploy:production',
 ]);
-const APPROVED_TEST_ENTRYPOINTS = new Set([
-  'db:authority:consumer-contract',
-]);
+const APPROVED_TEST_ENTRYPOINTS = new Set(['db:authority:consumer-contract']);
 
 type PackageManifest = { scripts: Record<string, string> };
 
@@ -97,10 +95,7 @@ function resolvePackageScript(
       );
     if (executable !== 'scripts/databaseAuthorityCli.ts' || authorityCliUsesMigrationRunner) {
       signals.push(...migrationSignals(source));
-      if (
-        source.includes(CANONICAL_RUNNER) ||
-        source.includes('migrations/runSqlMigrations')
-      ) {
+      if (source.includes(CANONICAL_RUNNER) || source.includes('migrations/runSqlMigrations')) {
         runners.add(CANONICAL_RUNNER);
       }
     }
@@ -166,12 +161,8 @@ describe('migration execution authority', () => {
     expect(resolvePackageScript('db:migrate:local', manifest).runners).toEqual(
       new Set([CANONICAL_RUNNER]),
     );
-    expect(manifest.scripts['db:release:plan']).toContain(
-      'databaseAuthorityCli.ts release:plan',
-    );
-    expect(manifest.scripts['db:release:apply']).toContain(
-      'databaseAuthorityCli.ts release:apply',
-    );
+    expect(manifest.scripts['db:release:plan']).toContain('databaseAuthorityCli.ts release:plan');
+    expect(manifest.scripts['db:release:apply']).toContain('databaseAuthorityCli.ts release:apply');
     expect(manifest.scripts['release:predeploy:production']).toContain('db:release:plan');
     expect(manifest.scripts['release:predeploy:production']).not.toContain('db:migrate');
     expect(manifest.scripts['db:push']).toBeUndefined();
@@ -273,7 +264,13 @@ describe('migration execution authority', () => {
       historyTable: string;
       attemptTable: string;
       expectedHead: string;
-      migrations: Array<{ filename: string }>;
+      migrations: Array<{
+        sequence: number;
+        filename: string;
+        checksum: string;
+        parent: string | null;
+        parentChecksum: string | null;
+      }>;
     };
     const manifestFiles = executionManifest.migrations.map(entry => entry.filename);
     const archivedSqlFiles = readdirSync(archiveDirectory, { recursive: true })
@@ -284,6 +281,14 @@ describe('migration execution authority', () => {
     expect(runner).not.toContain('readdirSync');
     expect(activeSqlFiles).toEqual([...manifestFiles].sort());
     expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
+    const baseline = executionManifest.migrations.find(entry => entry.sequence === 0);
+    const incremental = executionManifest.migrations.find(entry => entry.sequence === 1);
+    expect(incremental).toMatchObject({
+      filename: '0001_public_search_to_lead_reliability.sql',
+      parent: baseline?.filename,
+      parentChecksum: baseline?.checksum,
+    });
+    expect(executionManifest.expectedHead).toBe(incremental?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

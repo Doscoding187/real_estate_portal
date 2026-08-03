@@ -91,7 +91,7 @@ describe('database final closure residual executor authority', () => {
     }
   });
 
-  it('keeps one directly executable canonical migration', () => {
+  it('keeps executable migration membership manifest-authoritative', () => {
     const manifest = JSON.parse(
       read('docs/database-authority/' + 'migration-tree-authority.json'),
     ) as {

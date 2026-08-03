@@ -12,10 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { trpc } from '@/lib/trpc';
 import { formatSARandShort } from '@/lib/bond-calculator';
 import { trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 import { formatPriceCompact } from '@/lib/formatPrice';
+import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
 
 type LeadDialogMode = 'brochure' | 'contact' | 'qualification' | 'info';
 
@@ -107,6 +110,8 @@ export function DevelopmentLeadDialog({
     message: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [captureRequestId, setCaptureRequestId] = useState(() => createLeadCaptureRequestId());
 
   useEffect(() => {
     if (!open) {
@@ -117,6 +122,8 @@ export function DevelopmentLeadDialog({
         message: '',
       });
       setErrors({});
+      setConsentAccepted(false);
+      setCaptureRequestId(createLeadCaptureRequestId());
     }
   }, [open]);
 
@@ -164,14 +171,20 @@ export function DevelopmentLeadDialog({
   ]);
 
   const createLead = trpc.developer.createLead.useMutation({
-    onSuccess: () => {
+    onSuccess: result => {
       trackFunnelStep({
         funnel: 'development_detail',
         step: mode,
         action: 'lead_submitted',
         path: ctaLocation || 'unknown',
       });
-      toast.success(copy.successMessage);
+      toast.success(
+        result?.deliveryStatus === 'delivered'
+          ? copy.successMessage
+          : result?.deliveryStatus === 'attention_required'
+            ? 'Your request was received. Sales follow-up still needs attention.'
+            : 'Your request was received. Sales delivery is being completed.',
+      );
       onOpenChange(false);
 
       if (mode === 'brochure' && development.brochureUrl) {
@@ -196,6 +209,7 @@ export function DevelopmentLeadDialog({
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       nextErrors.email = 'Enter a valid email address.';
     if (!form.phone.trim()) nextErrors.phone = 'Phone number is required.';
+    if (!consentAccepted) nextErrors.consent = 'Consent is required before submitting.';
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -232,6 +246,8 @@ export function DevelopmentLeadDialog({
           affordabilityData.maxAffordable)
           ? affordabilityData
           : undefined,
+      captureRequestId,
+      consent: publicLeadConsent(`development_lead_dialog_${mode}`),
     });
   };
 
@@ -429,6 +445,25 @@ export function DevelopmentLeadDialog({
                   publisher reporting.
                 </p>
               </div>
+
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <Checkbox
+                  id="development-lead-consent"
+                  checked={consentAccepted}
+                  onCheckedChange={checked => {
+                    setConsentAccepted(checked === true);
+                    if (errors.consent) setErrors(prev => ({ ...prev, consent: '' }));
+                  }}
+                />
+                <Label htmlFor="development-lead-consent" className="text-xs leading-5 text-slate-600">
+                  I agree to be contacted about this enquiry. See our{' '}
+                  <a className="text-blue-700 underline" href="/legal/privacy" target="_blank" rel="noreferrer">
+                    Privacy Policy
+                  </a>
+                  .
+                </Label>
+              </div>
+              {errors.consent && <p className="text-xs text-red-500">{errors.consent}</p>}
 
               <Button
                 className="w-full bg-orange-500 text-white hover:bg-orange-600"

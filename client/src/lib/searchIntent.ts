@@ -1,4 +1,5 @@
 import { PROVINCE_SLUGS } from './locationUtils';
+import { isCanonicalLocationId } from '../../../shared/locationAuthority';
 
 /**
  * CORE PHILOSOPHY:
@@ -99,12 +100,14 @@ export function resolveSearchIntent(
     geography.province = queryProvince.toLowerCase();
   }
 
-  if (queryLocationId?.trim()) geography.locationId = queryLocationId.trim();
+  if (queryLocationId && isCanonicalLocationId(queryLocationId)) {
+    geography.locationId = queryLocationId.trim();
+  }
 
   // Fallback to path params if no query params for geography
   // This handles SEO page routes like /property-for-sale/gauteng
   if (!geography.province && !geography.city && !geography.suburb) {
-    if (pathParams.locationId) {
+    if (isCanonicalLocationId(pathParams.locationId)) {
       geography.locationId = pathParams.locationId;
     }
 
@@ -290,8 +293,14 @@ export function generateIntentUrl(intent: SearchIntent): string {
     }
   });
 
-  if (geography.locationId && geography.level !== 'province' && !queryParams.has('locationId')) {
-    queryParams.set('locationId', geography.locationId);
+  const canonicalLocationId = geography.locationId;
+  if (
+    canonicalLocationId &&
+    geography.level !== 'province' &&
+    isCanonicalLocationId(canonicalLocationId) &&
+    !queryParams.has('locationId')
+  ) {
+    queryParams.set('locationId', canonicalLocationId);
   }
 
   if (normalizedSuburbs.length > 0) {

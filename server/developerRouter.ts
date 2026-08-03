@@ -1589,6 +1589,12 @@ export const developerRouter = router({
         utmCampaign: z.string().optional(),
         sourceSurface: z.string().optional(),
         leadSource: z.string().optional(),
+        captureRequestId: z.string().trim().min(8).max(128),
+        consent: z.object({
+          accepted: z.literal(true),
+          version: z.string().trim().min(1).max(64),
+          source: z.string().trim().max(100).optional(),
+        }),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1614,6 +1620,8 @@ export const developerRouter = router({
         utmCampaign: input.utmCampaign,
         authenticatedUserId: ctx.user?.id,
         affordabilityData: input.affordabilityData,
+        captureRequestId: input.captureRequestId,
+        consent: input.consent,
       });
     }),
 

@@ -34,9 +34,10 @@ export const locationRouter = router({
       const results: any[] = [];
 
       // Check cache first
-      // Version the cache key so prior empty responses from a partially
-      // populated classic location tree do not suppress catalog fallbacks.
-      const cacheKey = `v2:${input.query}_${input.type}_${input.limit}`;
+      // Version the cache key when the authoritative location source changes.
+      // Public search IDs must always resolve to the province/city/suburb
+      // hierarchy, never to an arbitrary property row.
+      const cacheKey = `v3:${input.query}_${input.type}_${input.limit}`;
       const [cached] = await db
         .select()
         .from(locationSearchCache)
@@ -111,51 +112,6 @@ export const locationRouter = router({
           .limit(input.type === 'suburb' ? input.limit : Math.ceil(input.limit / 3));
 
         results.push(...suburbResults);
-      }
-
-      // Some legacy/imported public properties have a city/province text value
-      // before their classic location-tree foreign keys are backfilled. Make
-      // those active catalog locations discoverable instead of disabling a
-      // buyer's search until a separate data-maintenance job has run.
-      const publicCatalogStatus = or(
-        eq(properties.status, 'available'),
-        eq(properties.status, 'published'),
-      );
-
-      if (input.type === 'province' || input.type === 'all') {
-        const catalogProvinceResults = await db
-          .select({
-            id: sql<number>`MIN(${properties.id})`,
-            name: properties.province,
-            type: sql`'province'`,
-            latitude: sql<string | null>`NULL`,
-            longitude: sql<string | null>`NULL`,
-          })
-          .from(properties)
-          .where(and(publicCatalogStatus, like(properties.province, searchQuery)))
-          .groupBy(properties.province)
-          .limit(input.type === 'province' ? input.limit : Math.ceil(input.limit / 3));
-
-        results.push(...catalogProvinceResults);
-      }
-
-      if (input.type === 'city' || input.type === 'all') {
-        const catalogCityResults = await db
-          .select({
-            id: sql<number>`MIN(${properties.id})`,
-            name: properties.city,
-            provinceName: properties.province,
-            type: sql`'city'`,
-            latitude: sql<string | null>`NULL`,
-            longitude: sql<string | null>`NULL`,
-            isMetro: sql<number>`0`,
-          })
-          .from(properties)
-          .where(and(publicCatalogStatus, like(properties.city, searchQuery)))
-          .groupBy(properties.city, properties.province)
-          .limit(input.type === 'city' ? input.limit : Math.ceil(input.limit / 3));
-
-        results.push(...catalogCityResults);
       }
 
       const seen = new Set<string>();

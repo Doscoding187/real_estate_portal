@@ -55,14 +55,14 @@ afterEach(async () => {
   Object.assign(created, { userId: 0, propertyId: 0, cachePrefix: '' });
 });
 
-describeWithDb('location search public-catalog fallback', () => {
-  it('finds an active property city when the classic location tree has no match', async () => {
+describeWithDb('location search canonical location containment', () => {
+  it('does not expose property city text as a canonical city when the location tree has no match', async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`.toLowerCase();
     const city = `Catalog City ${suffix}`;
     const province = `Catalog Province ${suffix}`;
-    created.cachePrefix = `v2:${city}_all_`;
+    created.cachePrefix = `v3:${city}_all_`;
 
     const [userResult] = await db.insert(users).values({
       email: `catalog-location-${suffix}@example.com`,
@@ -77,7 +77,7 @@ describeWithDb('location search public-catalog fallback', () => {
 
     const [propertyResult] = await db.insert(properties).values({
       title: `Catalog location property ${suffix}`,
-      description: 'A public property used to verify the catalog location-search fallback.',
+      description: 'A public property used to verify canonical location containment.',
       propertyType: 'house',
       listingType: 'sale',
       transactionType: 'sale',
@@ -97,14 +97,6 @@ describeWithDb('location search public-catalog fallback', () => {
     const caller = appRouter.createCaller({ req: { headers: {} }, res: {}, user: null } as any);
     const results = await caller.location.searchLocations({ query: city, type: 'all', limit: 10 });
 
-    expect(results).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: city,
-          type: 'city',
-          provinceName: province,
-        }),
-      ]),
-    );
+    expect(results).toEqual([]);
   });
 });

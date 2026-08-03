@@ -39,11 +39,7 @@ function fixture(count = 3) {
     'ALTER TABLE widget ADD name varchar(20);',
     'ALTER TABLE widget ADD enabled int;',
   ];
-  const names = [
-    '0000_canonical_launch_baseline.sql',
-    '0001_add_name.sql',
-    '0002_add_enabled.sql',
-  ];
+  const names = ['0000_canonical_launch_baseline.sql', '0001_add_name.sql', '0002_add_enabled.sql'];
   const entries: MigrationManifestEntry[] = [];
   for (let index = 0; index < count; index += 1) {
     writeFileSync(join(root, names[index]), sql[index]);
@@ -69,14 +65,28 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it('accepts the repository baseline-only manifest', () => {
+  it('accepts the repository 0000 -> 0001 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    expect(manifest.orderedMigrations.map(item => item.filename)).toEqual([
-      '0000_canonical_launch_baseline.sql',
-    ]);
-    expect(manifest.expectedHead.filename).toBe('0000_canonical_launch_baseline.sql');
+    const [baseline, incremental] = manifest.orderedMigrations;
+
+    expect(baseline).toMatchObject({
+      sequence: 0,
+      filename: '0000_canonical_launch_baseline.sql',
+      parent: null,
+      parentChecksum: null,
+    });
+    expect(incremental).toMatchObject({
+      sequence: 1,
+      filename: '0001_public_search_to_lead_reliability.sql',
+      parent: baseline.filename,
+      parentChecksum: baseline.checksum,
+      checksum: 'adb04a6e5655e4812ddd594d2b85cb5b218c6f54cb2fc0c029ecdc76325da5a0',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(manifest.expectedHead.filename).toBe(incremental.filename);
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {
@@ -93,9 +103,7 @@ describe('canonical migration manifest', () => {
     const value = fixture(2);
     const duplicateSql = 'ALTER TABLE widget ADD other int;';
     writeFileSync(join(value.root, '0001_other.sql'), duplicateSql);
-    value.document.migrations.push(
-      entry(1, '0001_other.sql', duplicateSql, value.entries[0]),
-    );
+    value.document.migrations.push(entry(1, '0001_other.sql', duplicateSql, value.entries[0]));
     value.document.expectedHead = '0001_other.sql';
     value.save();
     expect(() =>

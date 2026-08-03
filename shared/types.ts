@@ -797,6 +797,12 @@ export interface PropertyFilters {
   city?: string;
   suburb?: string[];
   locations?: string[];
+  /** Canonical public location identity; public search must not widen this to text. */
+  canonicalLocation?: {
+    provinceId: number;
+    cityId?: number;
+    suburbId?: number;
+  };
 
   // Basic filters
   propertyType?: Property['propertyType'][];

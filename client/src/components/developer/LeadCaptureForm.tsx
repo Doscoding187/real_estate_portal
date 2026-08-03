@@ -13,8 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CheckCircle2, Mail, Phone, User, MessageSquare, TrendingUp } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
 
 interface LeadCaptureFormProps {
   developmentId: number;
@@ -42,6 +44,9 @@ export function LeadCaptureForm({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentError, setConsentError] = useState(false);
+  const [captureRequestId] = useState(() => createLeadCaptureRequestId());
   const [submitted, setSubmitted] = useState(false);
 
   // Capture UTM parameters from URL
@@ -75,6 +80,11 @@ export function LeadCaptureForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!consentAccepted) {
+      setConsentError(true);
+      return;
+    }
+
     createLeadMutation.mutate({
       developmentId,
       unitId,
@@ -84,6 +94,8 @@ export function LeadCaptureForm({
       message: message || undefined,
       affordabilityData,
       ...utmParams,
+      captureRequestId,
+      consent: publicLeadConsent('developer_lead_capture_form'),
     });
   };
 
@@ -209,6 +221,25 @@ export function LeadCaptureForm({
         </div>
 
         {/* Submit Button */}
+        <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <Checkbox
+            id="developer-lead-consent"
+            checked={consentAccepted}
+            onCheckedChange={checked => {
+              setConsentAccepted(checked === true);
+              setConsentError(false);
+            }}
+          />
+          <Label htmlFor="developer-lead-consent" className="text-xs leading-5 text-gray-600">
+            I agree to be contacted about this enquiry. See our{' '}
+            <a className="text-blue-700 underline" href="/legal/privacy" target="_blank" rel="noreferrer">
+              Privacy Policy
+            </a>
+            .
+          </Label>
+        </div>
+        {consentError && <p className="text-xs text-red-600">Consent is required before submitting.</p>}
+
         <Button
           type="submit"
           disabled={createLeadMutation.isPending}

@@ -88,6 +88,26 @@ function statusTone(status: string) {
   }
 }
 
+function deliveryTone(status?: string | null) {
+  switch (status) {
+    case 'delivered':
+      return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    case 'failed':
+      return 'bg-rose-100 text-rose-700 border-rose-200';
+    case 'attention_required':
+      return 'bg-amber-100 text-amber-700 border-amber-200';
+    default:
+      return 'bg-sky-100 text-sky-700 border-sky-200';
+  }
+}
+
+function deliveryLabel(status?: string | null) {
+  if (status === 'delivered') return 'Delivered';
+  if (status === 'failed') return 'Delivery failed';
+  if (status === 'attention_required') return 'Recipient follow-up needed';
+  return 'Delivery pending';
+}
+
 export default function AgencyLeads() {
   const [status, setStatus] = useState<LeadFilter>('all');
   const utils = trpc.useUtils();
@@ -217,6 +237,18 @@ export default function AgencyLeads() {
                                 <CalendarDays className="h-4 w-4" />
                                 {formatDate(lead.createdAt)}
                               </span>
+                              <Badge className={deliveryTone(lead.deliveryStatus)}>
+                                {deliveryLabel(lead.deliveryStatus)}
+                              </Badge>
+                              <Badge
+                                className={
+                                  lead.consentCapturedAt
+                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                    : 'bg-amber-100 text-amber-700 border-amber-200'
+                                }
+                              >
+                                {lead.consentCapturedAt ? 'Consent recorded' : 'Consent evidence missing'}
+                              </Badge>
                             </div>
                           </div>
 
@@ -279,6 +311,13 @@ export default function AgencyLeads() {
                             </p>
                             <p className="text-slate-950">{lead.agent?.name || 'Unassigned'}</p>
                             <p className="text-slate-500">{lead.leadSource || lead.source || 'web'}</p>
+                          </div>
+                          <div>
+                            <p className="mb-1 font-semibold text-slate-700">Recipient delivery</p>
+                            <p className="text-slate-500">
+                              {deliveryLabel(lead.deliveryStatus)}
+                              {lead.deliveryLastError ? ` · ${lead.deliveryLastError}` : ''}
+                            </p>
                           </div>
                         </div>
                       </aside>

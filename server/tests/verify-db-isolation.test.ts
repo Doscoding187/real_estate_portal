@@ -1,12 +1,23 @@
 import { describe, it, expect } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
+import { authorizeDatabaseOperation } from '../_core/databaseAuthority/authorization';
+import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
 
-// TODO(test-infra): Provide DATABASE_URL=listify_test in CI so this suite always runs.
 const describeWithDb = process.env.DATABASE_URL ? describe : describe.skip;
 
 describeWithDb('Database Isolation', () => {
-  it('should be connected to listify_test (or a test-specific DB)', async () => {
+  it('uses the exact authorized disposable test target', async () => {
+    const authority = resolveDatabaseAuthority({
+      operation: 'runtime-connect',
+      credentialClass: (process.env.DATABASE_CREDENTIAL_CLASS as any) ?? undefined,
+    });
+    expect(() => authorizeDatabaseOperation(authority)).not.toThrow();
+    expect(authority.context.runtimeMode).toBe('test');
+    expect(['disposable-worktree', 'disposable-test']).toContain(authority.context.targetClass);
+    expect(authority.context.local).toBe(true);
+    expect(authority.context.worktree.ownershipMatches).toBe(true);
+
     const db = await getDb();
     if (!db || typeof (db as any).execute !== 'function') throw new Error('DB execute unavailable');
 
@@ -20,8 +31,12 @@ describeWithDb('Database Isolation', () => {
 
     console.log(`[Database] Connected to: ${dbName} @ ${host}`);
 
-    expect(dbName).not.toBe('listify_prod');
-    expect(dbName).not.toBe('listify_staging');
-    expect(dbName).toBe('listify_test');
+    expect(dbName).toBe(authority.context.databaseName);
+    expect(authority.context.targetFingerprintHash).toMatch(/^[0-9a-f]{64}$/);
+
+    const parentFingerprint = process.env.DATABASE_AUTHORITY_PARENT_FINGERPRINT;
+    if (parentFingerprint) {
+      expect(authority.context.targetFingerprintHash).toBe(parentFingerprint);
+    }
   });
 });

@@ -296,9 +296,16 @@ export class PropertySearchService {
     }> = [];
     let resolvedLocation: ResolvedLocation | null = null;
 
-    try {
-      // Priority 1: Multi-location Search (New P24 Style)
-      if (filters.locations && filters.locations.length > 0) {
+    if (filters.canonicalLocation) {
+      locationIds.push({
+        provinceId: filters.canonicalLocation.provinceId,
+        cityId: filters.canonicalLocation.cityId,
+        suburbId: filters.canonicalLocation.suburbId,
+      });
+    } else {
+      try {
+        // Priority 1: Multi-location Search (New P24 Style)
+        if (filters.locations && filters.locations.length > 0) {
         await Promise.all(
           filters.locations.map(async slug => {
             const resolved = await locationResolver.resolveLocation({
@@ -338,31 +345,32 @@ export class PropertySearchService {
             }
           }),
         );
-      }
-      // Priority 2: Hierarchical Search (Legacy / Single Location)
-      else {
-        resolvedLocation = await locationResolver.resolveLocation({
-          provinceSlug: filters.province,
-          citySlug: filters.city,
-          suburbSlug: filters.suburb?.[0],
-        });
-
-        if (resolvedLocation) {
-          locationIds.push({
-            provinceId: resolvedLocation.province?.id,
-            provinceName: resolvedLocation.province?.name,
-            cityId: resolvedLocation.city?.id,
-            cityName: resolvedLocation.city?.name,
-            suburbId: resolvedLocation.suburb?.id,
-            suburbName: resolvedLocation.suburb?.name,
-          });
         }
+        // Priority 2: Hierarchical Search (Legacy / Single Location)
+        else {
+          resolvedLocation = await locationResolver.resolveLocation({
+            provinceSlug: filters.province,
+            citySlug: filters.city,
+            suburbSlug: filters.suburb?.[0],
+          });
+
+          if (resolvedLocation) {
+            locationIds.push({
+              provinceId: resolvedLocation.province?.id,
+              provinceName: resolvedLocation.province?.name,
+              cityId: resolvedLocation.city?.id,
+              cityName: resolvedLocation.city?.name,
+              suburbId: resolvedLocation.suburb?.id,
+              suburbName: resolvedLocation.suburb?.name,
+            });
+          }
+        }
+      } catch (error) {
+        console.error(
+          '[PropertySearchService] Location resolver failed, using text fallback:',
+          error,
+        );
       }
-    } catch (error) {
-      console.error(
-        '[PropertySearchService] Location resolver failed, using text fallback:',
-        error,
-      );
     }
 
     // Build query conditions with resolved location IDs
@@ -391,7 +399,7 @@ export class PropertySearchService {
         title: properties.title,
         description: properties.description,
         price: properties.price,
-        suburb: sql<string>`COALESCE(${properties.address}, '')`,
+        suburb: sql<string>`COALESCE(NULLIF(${suburbs.name}, ''), NULLIF(${properties.city}, ''), '')`,
         address: properties.address,
         city: properties.city,
         province: properties.province,
@@ -445,8 +453,9 @@ export class PropertySearchService {
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
       .leftJoin(developers, eq(developments.developerId, developers.id))
-      .leftJoin(agents, eq(properties.agentId, agents.id))
-      .leftJoin(agencies, eq(agents.agencyId, agencies.id))
+      .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
+      .leftJoin(agents, and(eq(properties.agentId, agents.id), eq(agents.status, 'approved')))
+      .leftJoin(agencies, and(eq(agents.agencyId, agencies.id), eq(agencies.isVerified, 1)))
       .leftJoin(
         developerBrandProfiles,
         sql`${developerBrandProfiles.id} = COALESCE(${properties.developerBrandProfileId}, ${developments.developerBrandProfileId})`,
@@ -504,6 +513,7 @@ export class PropertySearchService {
                 inArray(listingMedia.listingId, sourceListingIds),
                 eq(listingMedia.mediaType, 'image'),
                 inArray(listings.status, ['published', 'approved']),
+                eq(listings.approvalStatus, 'approved'),
               ),
             )
             .orderBy(desc(listingMedia.isPrimary), asc(listingMedia.displayOrder))
@@ -530,10 +540,16 @@ export class PropertySearchService {
               ownerEmail: users.email,
             })
             .from(listings)
-            .leftJoin(agents, eq(listings.agentId, agents.id))
-            .leftJoin(agencies, eq(listings.agencyId, agencies.id))
+            .leftJoin(agents, and(eq(listings.agentId, agents.id), eq(agents.status, 'approved')))
+            .leftJoin(agencies, and(eq(listings.agencyId, agencies.id), eq(agencies.isVerified, 1)))
             .leftJoin(users, eq(listings.ownerId, users.id))
-            .where(inArray(listings.id, sourceListingIds))
+            .where(
+              and(
+                inArray(listings.id, sourceListingIds),
+                inArray(listings.status, ['published', 'approved']),
+                eq(listings.approvalStatus, 'approved'),
+              ),
+            )
         : [];
 
     const imagesBySourceListing = new Map<number, typeof sourceListingImages>();
@@ -838,7 +854,7 @@ export class PropertySearchService {
         if (loc.suburbId) {
           locationConditions.push(eq(properties.suburbId, loc.suburbId));
         } else if (loc.cityId) {
-          if (loc.cityName) {
+          if (loc.cityName && !filters.canonicalLocation) {
             locationConditions.push(
               or(
                 eq(properties.cityId, loc.cityId),
@@ -849,7 +865,7 @@ export class PropertySearchService {
             locationConditions.push(eq(properties.cityId, loc.cityId));
           }
         } else if (loc.provinceId) {
-          if (loc.provinceName) {
+          if (loc.provinceName && !filters.canonicalLocation) {
             locationConditions.push(
               or(
                 eq(properties.provinceId, loc.provinceId),
@@ -865,7 +881,7 @@ export class PropertySearchService {
 
     // 2. Process Text Fallbacks (if no IDs found or explicit text overrides)
     // Legacy support for single text filters if not covered by ID list
-    if (locationIds.length === 0) {
+    if (locationIds.length === 0 && !filters.canonicalLocation) {
       if (filters.province) {
         locationConditions.push(sql`LOWER(${properties.province}) = LOWER(${filters.province})`);
       }
@@ -881,7 +897,12 @@ export class PropertySearchService {
     }
 
     // 3. Process Generic 'Locations' text array (from multi-select if resolution failed)
-    if (filters.locations && filters.locations.length > 0 && locationIds.length === 0) {
+    if (
+      filters.locations &&
+      filters.locations.length > 0 &&
+      locationIds.length === 0 &&
+      !filters.canonicalLocation
+    ) {
       // Fallback: search these strings in city or suburb (address)
       const multiTextConditions = filters.locations.map(slug => {
         // Unslugify loosely for search (replace - with space)

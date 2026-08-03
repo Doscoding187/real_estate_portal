@@ -73,6 +73,11 @@ describe('DevelopmentLeadDialog', () => {
       '/development/cosmopolitan?utm_source=google&utm_medium=cpc&utm_campaign=launch',
     );
 
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: /i agree to be contacted about this enquiry/i,
+      }),
+    );
     fireEvent.click(screen.getByRole('button', { name: /request information/i }));
 
     expect(screen.getAllByText('Unit: Type A').length).toBeGreaterThan(0);
@@ -90,6 +95,11 @@ describe('DevelopmentLeadDialog', () => {
         utmSource: 'google',
         utmMedium: 'cpc',
         utmCampaign: 'launch',
+        captureRequestId: expect.any(String),
+        consent: expect.objectContaining({
+          accepted: true,
+          source: 'development_lead_dialog_info',
+        }),
       }),
     );
   });

@@ -1,590 +1,512 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TRPCError } from '@trpc/server';
 
 const {
   mockGetDb,
-  mockSelect,
-  mockFrom,
-  mockWhere,
-  mockLimit,
-  mockUpdate,
-  mockSet,
-  mockUpdateWhere,
-  mockInsert,
-  mockValues,
-  mockCaptureBrandLead,
   mockRecordAgentOsEventForAgentId,
+  mockRecordProspectLeadAction,
+  mockIncrementLeadCountAsync,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
-  mockSelect: vi.fn(),
-  mockFrom: vi.fn(),
-  mockWhere: vi.fn(),
-  mockLimit: vi.fn(),
-  mockUpdate: vi.fn(),
-  mockSet: vi.fn(),
-  mockUpdateWhere: vi.fn(),
-  mockInsert: vi.fn(),
-  mockValues: vi.fn(),
-  mockCaptureBrandLead: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
+  mockRecordProspectLeadAction: vi.fn(),
+  mockIncrementLeadCountAsync: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({
   getDb: mockGetDb,
-}));
-
-vi.mock('../brandLeadService', () => ({
-  brandLeadService: {
-    captureBrandLead: mockCaptureBrandLead,
-  },
+  db: {},
 }));
 
 vi.mock('../agentOsEventService', () => ({
   recordAgentOsEventForAgentId: mockRecordAgentOsEventForAgentId,
 }));
 
+vi.mock('../prospectJourneyService', () => ({
+  recordProspectLeadAction: mockRecordProspectLeadAction,
+}));
+
+vi.mock('../developerBrandProfileService', () => ({
+  developerBrandProfileService: {
+    incrementLeadCountAsync: mockIncrementLeadCountAsync,
+  },
+}));
+
 import { capturePublicLead } from '../publicLeadCaptureService';
+
+type FakeDatabaseOptions = {
+  selectResults?: unknown[];
+  insertId?: number;
+};
+
+function makeFakeDatabase(options: FakeDatabaseOptions = {}) {
+  const selectResults = [...(options.selectResults || [])];
+  const state = { deliveryAttempts: [] as unknown[] };
+  const insertValues = vi.fn().mockResolvedValue([{ insertId: options.insertId || 456 }]);
+  const updateWhere = vi.fn().mockResolvedValue(undefined);
+  const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+
+  const makeQuery = () => {
+    let consumed = false;
+    const consume = () => {
+      if (consumed) return [];
+      consumed = true;
+      return selectResults.shift() || [];
+    };
+    const query: any = {
+      from: vi.fn(() => query),
+      where: vi.fn(() => query),
+      limit: vi.fn(async () => consume()),
+      leftJoin: vi.fn(() => query),
+      innerJoin: vi.fn(() => query),
+      orderBy: vi.fn(() => query),
+      offset: vi.fn(() => query),
+      then: (resolve: (value: unknown) => unknown, reject?: (error: unknown) => unknown) =>
+        Promise.resolve(consume()).then(resolve, reject),
+    };
+    return query;
+  };
+
+  const transaction = vi.fn(async (callback: (tx: any) => Promise<unknown>) => {
+    const tx = {
+      execute: vi.fn().mockResolvedValue([]),
+      select: vi.fn(() => {
+        const query: any = {
+          from: vi.fn(() => query),
+          where: vi.fn(() => query),
+          limit: vi.fn(async () => [{ deliveryAttempts: state.deliveryAttempts }]),
+        };
+        return query;
+      }),
+      update: vi.fn(() => ({
+        set: vi.fn((patch: { deliveryAttempts?: unknown[] }) => ({
+          where: vi.fn(async () => {
+            if (patch.deliveryAttempts) state.deliveryAttempts = patch.deliveryAttempts;
+            return undefined;
+          }),
+        })),
+      })),
+    };
+    return callback(tx);
+  });
+
+  return {
+    select: vi.fn(() => makeQuery()),
+    insert: vi.fn(() => ({ values: insertValues })),
+    update: vi.fn(() => ({ set: updateSet })),
+    transaction,
+    insertValues,
+    state,
+  };
+}
+
+const consent = { accepted: true as const, version: '2026-08-02', source: 'contract-test' };
+
+function baseInput(overrides: Record<string, unknown> = {}) {
+  return {
+    name: 'Jane Doe',
+    email: 'jane@example.com',
+    phone: '+27820000000',
+    message: 'Please send details.',
+    source: 'development_detail',
+    sourceSurface: 'development_detail',
+    leadSource: 'development_detail_contact',
+    captureRequestId: 'capture-request-001',
+    consent,
+    ...overrides,
+  };
+}
+
+function existingLead(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 812,
+    propertyId: 501,
+    developmentId: null,
+    developerBrandProfileId: null,
+    agentId: 33,
+    agencyId: null,
+    name: 'Jane Doe',
+    email: 'jane@example.com',
+    phone: '+27820000000',
+    message: 'Please send details.',
+    leadType: 'inquiry',
+    unitId: null,
+    unitName: null,
+    unitPriceFrom: null,
+    unitBedrooms: null,
+    unitBathrooms: null,
+    source: 'property_detail',
+    leadSource: 'property_detail',
+    referrerUrl: null,
+    utmSource: null,
+    utmMedium: null,
+    utmCampaign: null,
+    affordabilityData: null,
+    consentVersion: consent.version,
+    consentSource: consent.source,
+    leadDeliveryMethod: 'crm_export',
+    deliveryStatus: 'delivered',
+    deliveryAttempts: [
+      {
+        id: 'attempt-1',
+        recipientType: 'agent',
+        recipientId: 33,
+        status: 'delivered',
+        supplyOrigin: 'customer_managed',
+        leadCustody: 'verified_customer_recipient',
+      },
+    ],
+    brandLeadStatus: null,
+    ...overrides,
+  } as any;
+}
 
 describe('publicLeadCaptureService contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-
-    mockSelect.mockReturnValue({ from: mockFrom });
-    mockFrom.mockReturnValue({ where: mockWhere });
-    mockWhere.mockReturnValue({ limit: mockLimit });
-    mockUpdate.mockReturnValue({ set: mockSet });
-    mockSet.mockReturnValue({ where: mockUpdateWhere });
-    mockUpdateWhere.mockResolvedValue(undefined);
-    mockInsert.mockReturnValue({ values: mockValues });
-    mockValues.mockResolvedValue([{ insertId: 456 }]);
-    mockCaptureBrandLead.mockResolvedValue({
-      leadId: 321,
-      delivered: true,
-      deliveryMethod: 'crm_export',
-      brandLeadStatus: 'delivered_subscriber',
-      message: 'Lead captured',
-    });
     mockRecordAgentOsEventForAgentId.mockResolvedValue(undefined);
-    mockGetDb.mockResolvedValue({
-      select: mockSelect,
-      update: mockUpdate,
-      insert: mockInsert,
-    });
+    mockRecordProspectLeadAction.mockResolvedValue(undefined);
+    mockIncrementLeadCountAsync.mockResolvedValue(undefined);
   });
 
-  it('routes development leads to the resolved brand with full public context', async () => {
-    const affordabilityData = {
-      monthlyIncome: 65000,
-      monthlyExpenses: 12000,
-      monthlyDebts: 3000,
-      availableDeposit: 150000,
-      maxAffordable: 1400000,
-      calculatedAt: '2026-07-04T10:00:00.000Z',
-    };
-    mockLimit
-      .mockResolvedValueOnce([
-        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
-      ])
-      .mockResolvedValueOnce([{ id: 'unit-1', developmentId: 77, isActive: 1 }]);
-
-    const result = await capturePublicLead({
-      developmentId: 77,
-      unitId: 'unit-1',
-      unitName: 'Type A',
-      unitPriceFrom: 1299000,
-      unitBedrooms: 3,
-      unitBathrooms: 2,
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      phone: '0820000000',
-      message: 'Please send details.',
-      leadSource: 'development_full_qualification',
-      sourceSurface: 'development_qualification_page',
-      referrerUrl: 'https://property-listify.test/development/cosmopolitan',
-      utmSource: 'google',
-      utmMedium: 'cpc',
-      utmCampaign: 'launch',
-      affordabilityData,
+  it('captures platform-curated development demand in platform custody without a fake recipient', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 77,
+            developerId: null,
+            developerBrandProfileId: 13,
+            devOwnerType: 'platform',
+            isPublished: 1,
+            approvalStatus: 'approved',
+          },
+        ],
+        [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
+        [
+          {
+            id: 13,
+            ownerType: 'platform',
+            linkedDeveloperAccountId: null,
+            isVisible: 1,
+            isSubscriber: 0,
+          },
+        ],
+      ],
+      insertId: 901,
     });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(
+      baseInput({ developmentId: 77, unitId: 'unit-1', unitName: 'Type A' }),
+    );
 
     expect(result).toMatchObject({
       success: true,
-      leadId: 321,
+      leadId: 901,
       route: 'brand',
-      delivered: true,
+      delivered: false,
+      deliveryStatus: 'attention_required',
+      deliveryMethod: 'manual',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
+      recipientType: 'manual',
+      recipientId: null,
+      brandLeadStatus: 'captured',
     });
-    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
+    expect(database.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
+        developmentId: 77,
         developerBrandProfileId: 13,
-        developmentId: 77,
-        unitId: 'unit-1',
-        unitName: 'Type A',
-        unitPriceFrom: 1299000,
-        unitBedrooms: 3,
-        unitBathrooms: 2,
-        leadSource: 'development_full_qualification',
-        sourceSurface: 'development_qualification_page',
-        referrerUrl: 'https://property-listify.test/development/cosmopolitan',
-        utmSource: 'google',
-        utmMedium: 'cpc',
-        utmCampaign: 'launch',
-        affordabilityData,
-      }),
-    );
-    expect(mockSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source: 'development_qualification_page',
-        affordabilityData,
-        funnelStage: 'affordability',
-      }),
-    );
-  });
-
-  it('keeps direct development leads contract-complete when no brand can be resolved', async () => {
-    const affordabilityData = {
-      monthlyIncome: 42000,
-      availableDeposit: 90000,
-      maxAffordable: 980000,
-      calculatedAt: '2026-07-04T10:00:00.000Z',
-    };
-    mockLimit
-      .mockResolvedValueOnce([
-        { id: 77, developerBrandProfileId: null, isPublished: 1, approvalStatus: 'approved' },
-      ])
-      .mockResolvedValueOnce([{ id: 'unit-basic', developmentId: 77, isActive: 1 }]);
-
-    const result = await capturePublicLead({
-      developmentId: 77,
-      unitId: 'unit-basic',
-      unitName: 'Starter Unit',
-      unitPriceFrom: 899000,
-      unitBedrooms: 2,
-      unitBathrooms: 1,
-      name: 'Sam Buyer',
-      email: 'sam@example.com',
-      phone: '0830000000',
-      leadSource: 'development_detail_info',
-      sourceSurface: 'unit_floor_plan_dialog_unit-basic_info',
-      referrerUrl: 'https://property-listify.test/development/cosmopolitan/unit/unit-basic',
-      utmSource: 'newsletter',
-      utmMedium: 'email',
-      utmCampaign: 'winter',
-      affordabilityData,
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      leadId: 456,
-      route: 'direct',
-    });
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        developmentId: 77,
-        developerBrandProfileId: null,
-        unitId: 'unit-basic',
-        unitName: 'Starter Unit',
-        unitPriceFrom: 899000,
-        unitBedrooms: 2,
-        unitBathrooms: 1,
-        source: 'unit_floor_plan_dialog_unit-basic_info',
-        leadSource: 'development_detail_info',
-        referrerUrl: 'https://property-listify.test/development/cosmopolitan/unit/unit-basic',
-        utmSource: 'newsletter',
-        utmMedium: 'email',
-        utmCampaign: 'winter',
-        affordabilityData,
-        funnelStage: 'affordability',
-        qualificationStatus: 'pending',
-      }),
-    );
-  });
-
-  it('preserves legacy single-property source semantics when sourceSurface is omitted', async () => {
-    mockLimit.mockResolvedValueOnce([
-      {
-        id: 501,
-        status: 'available',
-        developmentId: null,
-        developerBrandProfileId: null,
+        captureRequestId: 'capture-request-001',
+        consentVersion: '2026-08-02',
+        leadDeliveryMethod: 'manual',
+        deliveryStatus: 'attention_required',
         agentId: null,
-      },
-    ]);
-
-    const result = await capturePublicLead({
-      propertyId: 501,
-      name: 'Pat Buyer',
-      email: 'pat@example.com',
-      phone: '0840000000',
-      leadSource: 'property_detail',
-      source: 'property_detail',
+        agencyId: null,
+      }),
+    );
+    expect(database.state.deliveryAttempts).toHaveLength(1);
+    expect(database.state.deliveryAttempts[0]).toMatchObject({
+      status: 'attention_required',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
+      recipientType: 'manual',
+      recipientId: null,
     });
+  });
+
+  it('routes a registered, approved development to its matching developer recipient', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 77,
+            developerId: 7,
+            developerBrandProfileId: 13,
+            devOwnerType: 'developer',
+            isPublished: 1,
+            approvalStatus: 'approved',
+          },
+        ],
+        [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
+        [
+          {
+            id: 13,
+            ownerType: 'developer',
+            linkedDeveloperAccountId: 7,
+            isVisible: 1,
+            isSubscriber: 1,
+          },
+        ],
+        [{ id: 7, userId: 70, status: 'approved' }],
+        [{ id: 70, role: 'property_developer' }],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(baseInput({ developmentId: 77, unitId: 'unit-1' }));
 
     expect(result).toMatchObject({
-      success: true,
-      leadId: 456,
-      route: 'direct',
+      deliveryStatus: 'delivered',
+      deliveryMethod: 'crm_export',
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'developer',
+      recipientId: 7,
+      brandLeadStatus: 'delivered_subscriber',
     });
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
+  });
+
+  it('uses canonical property agent ownership and ignores client recipient ids', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 501,
+            status: 'available',
+            developmentId: null,
+            developerBrandProfileId: null,
+            agentId: 33,
+            sourceListingId: null,
+            ownerId: 81,
+          },
+        ],
+        [{ id: 33, userId: 70, agencyId: null, status: 'approved' }],
+        [{ id: 70, role: 'agent' }],
+        [],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(
+      baseInput({
         propertyId: 501,
-        developmentId: null,
-        developerBrandProfileId: null,
-        agentId: null,
+        agentId: 999,
+        agencyId: 999,
         source: 'property_detail',
-        leadSource: 'property_detail',
-        affordabilityData: null,
-        funnelStage: 'interest',
-      }),
-    );
-  });
-
-  it('uses canonical property agent ownership when client submits competing owner ids', async () => {
-    mockLimit
-      .mockResolvedValueOnce([
-        {
-          id: 501,
-          status: 'available',
-          developmentId: null,
-          developerBrandProfileId: null,
-          agentId: 33,
-        },
-      ])
-      .mockResolvedValueOnce([{ id: 33, agencyId: 44 }]);
-
-    const result = await capturePublicLead({
-      propertyId: 501,
-      developerBrandProfileId: 999,
-      agentId: 999,
-      agencyId: 999,
-      name: 'Pat Buyer',
-      email: 'pat@example.com',
-      phone: '0840000000',
-      leadSource: 'property_detail',
-      sourceSurface: 'property_detail_contact_modal',
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      leadId: 456,
-      route: 'direct',
-    });
-    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        propertyId: 501,
-        developmentId: null,
-        developerBrandProfileId: null,
-        agentId: 33,
-        agencyId: 44,
-        source: 'property_detail_contact_modal',
-        leadSource: 'property_detail',
-      }),
-    );
-  });
-
-  it('routes an unassigned agency property lead through the canonical source listing', async () => {
-    mockLimit
-      .mockResolvedValueOnce([
-        {
-          id: 501,
-          status: 'available',
-          developmentId: null,
-          developerBrandProfileId: null,
-          agentId: null,
-          sourceListingId: 700,
-          ownerId: 81,
-        },
-      ])
-      .mockResolvedValueOnce([{ agencyId: 44 }]);
-
-    const result = await capturePublicLead({
-      propertyId: 501,
-      agencyId: 999,
-      name: 'Pat Buyer',
-      email: 'pat@example.com',
-      leadSource: 'property_detail',
-      sourceSurface: 'property_detail_contact_modal',
-    });
-
-    expect(result).toMatchObject({ success: true, leadId: 456, route: 'direct' });
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        propertyId: 501,
-        agentId: null,
-        agencyId: 44,
-      }),
-    );
-  });
-
-  it('uses owner agency membership for legacy unassigned property projections', async () => {
-    mockLimit
-      .mockResolvedValueOnce([
-        {
-          id: 501,
-          status: 'available',
-          developmentId: null,
-          developerBrandProfileId: null,
-          agentId: null,
-          sourceListingId: null,
-          ownerId: 81,
-        },
-      ])
-      .mockResolvedValueOnce([{ agencyId: 44 }]);
-
-    await capturePublicLead({
-      propertyId: 501,
-      agencyId: 999,
-      name: 'Pat Buyer',
-      email: 'pat@example.com',
-      leadSource: 'property_detail',
-    });
-
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        propertyId: 501,
-        agentId: null,
-        agencyId: 44,
-      }),
-    );
-  });
-
-  it('uses canonical property brand ownership when client submits a spoofed property brand id', async () => {
-    mockLimit.mockResolvedValueOnce([
-      {
-        id: 501,
-        status: 'available',
-        developmentId: null,
-        developerBrandProfileId: 13,
-        agentId: null,
-      },
-    ]);
-
-    const result = await capturePublicLead({
-      propertyId: 501,
-      developerBrandProfileId: 999,
-      name: 'Pat Buyer',
-      email: 'pat@example.com',
-      phone: '0840000000',
-      leadSource: 'property_detail',
-      sourceSurface: 'property_detail_contact_modal',
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      leadId: 321,
-      route: 'brand',
-    });
-    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
-      expect.objectContaining({
-        propertyId: 501,
-        developerBrandProfileId: 13,
-        leadSource: 'property_detail',
         sourceSurface: 'property_detail_contact_modal',
-      }),
-    );
-    expect(mockCaptureBrandLead).not.toHaveBeenCalledWith(
-      expect.objectContaining({ developerBrandProfileId: 999 }),
-    );
-  });
-
-  it('rejects single-property public leads for unavailable property inventory', async () => {
-    mockLimit.mockResolvedValueOnce([
-      {
-        id: 501,
-        status: 'draft',
-        developmentId: null,
-        developerBrandProfileId: null,
-        agentId: 33,
-      },
-    ]);
-
-    await expect(
-      capturePublicLead({
-        propertyId: 501,
-        name: 'Pat Buyer',
-        email: 'pat@example.com',
         leadSource: 'property_detail',
       }),
-    ).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-      message: 'Property not available for public enquiries.',
+    );
+
+    expect(result).toMatchObject({
+      deliveryStatus: 'delivered',
+      supplyOrigin: 'customer_managed',
+      recipientType: 'agent',
+      recipientId: 33,
     });
-
-    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
-    expect(mockValues).not.toHaveBeenCalled();
-  });
-
-  it('rejects single-property public leads when the property id cannot be resolved', async () => {
-    mockLimit.mockResolvedValueOnce([]);
-
-    await expect(
-      capturePublicLead({
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
         propertyId: 501,
-        name: 'Pat Buyer',
-        email: 'pat@example.com',
-        leadSource: 'property_detail',
-      }),
-    ).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-      message: 'Property not available for public enquiries.',
-    });
-
-    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
-    expect(mockValues).not.toHaveBeenCalled();
-  });
-
-  it('uses the canonical development brand when the client submits a spoofed brand id', async () => {
-    mockLimit.mockResolvedValueOnce([
-      { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
-    ]);
-
-    const result = await capturePublicLead({
-      developmentId: 77,
-      developerBrandProfileId: 999,
-      name: 'Jane Doe',
-      email: 'jane@example.com',
-      phone: '0820000000',
-      leadSource: 'development_detail_info',
-      sourceSurface: 'unit_floor_plan_dialog_unit-a_info',
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      leadId: 321,
-      route: 'brand',
-    });
-    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
-      expect.objectContaining({
-        developmentId: 77,
-        developerBrandProfileId: 13,
-        leadSource: 'development_detail_info',
-        sourceSurface: 'unit_floor_plan_dialog_unit-a_info',
-      }),
-    );
-    expect(mockCaptureBrandLead).not.toHaveBeenCalledWith(
-      expect.objectContaining({ developerBrandProfileId: 999 }),
-    );
-  });
-
-  it('rejects public development leads for inventory that is not approved and published', async () => {
-    mockLimit.mockResolvedValueOnce([
-      { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'pending' },
-    ]);
-
-    await expect(
-      capturePublicLead({
-        developmentId: 77,
-        developerBrandProfileId: 13,
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      }),
-    ).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-      message: 'Development not available for public enquiries.',
-    });
-
-    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
-    expect(mockValues).not.toHaveBeenCalled();
-  });
-
-  it('rejects unit context that does not belong to the canonical development', async () => {
-    mockLimit
-      .mockResolvedValueOnce([
-        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
-      ])
-      .mockResolvedValueOnce([{ id: 'unit-from-other-dev', developmentId: 88, isActive: 1 }]);
-
-    await expect(
-      capturePublicLead({
-        developmentId: 77,
-        developerBrandProfileId: 13,
-        unitId: 'unit-from-other-dev',
-        unitName: 'Wrong Unit',
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      }),
-    ).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-      message: 'Unit does not belong to this public development.',
-    });
-
-    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
-    expect(mockValues).not.toHaveBeenCalled();
-  });
-
-  it('rejects inactive unit context for a public development lead', async () => {
-    mockLimit
-      .mockResolvedValueOnce([
-        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
-      ])
-      .mockResolvedValueOnce([{ id: 'unit-inactive', developmentId: 77, isActive: 0 }]);
-
-    await expect(
-      capturePublicLead({
-        developmentId: 77,
-        unitId: 'unit-inactive',
-        unitName: 'Inactive Unit',
-        name: 'Jane Doe',
-        email: 'jane@example.com',
-      }),
-    ).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-      message: 'Unit does not belong to this public development.',
-    });
-
-    expect(mockCaptureBrandLead).not.toHaveBeenCalled();
-    expect(mockValues).not.toHaveBeenCalled();
-  });
-
-  it('preserves brand-only public lead capture when no development id is present', async () => {
-    const result = await capturePublicLead({
-      developerBrandProfileId: 55,
-      name: 'Brand Lead',
-      email: 'brand@example.com',
-      leadSource: 'brand_profile',
-      sourceSurface: 'brand_profile_page',
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      leadId: 321,
-      route: 'brand',
-    });
-    expect(mockCaptureBrandLead).toHaveBeenCalledWith(
-      expect.objectContaining({
-        developerBrandProfileId: 55,
-        developmentId: undefined,
-        leadSource: 'brand_profile',
-        sourceSurface: 'brand_profile_page',
-      }),
-    );
-  });
-
-  it('preserves agent lead capture when no development id is present', async () => {
-    mockLimit.mockResolvedValueOnce([{ id: 33, agencyId: 44 }]);
-
-    const result = await capturePublicLead({
-      agentId: 33,
-      name: 'Agent Lead',
-      email: 'agent@example.com',
-      leadSource: 'agent_profile',
-      sourceSurface: 'agent_profile_form',
-    });
-
-    expect(result).toMatchObject({
-      success: true,
-      leadId: 456,
-      route: 'direct',
-    });
-    expect(mockValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        propertyId: null,
-        developmentId: null,
-        developerBrandProfileId: null,
         agentId: 33,
-        agencyId: 44,
-        source: 'agent_profile_form',
-        leadSource: 'agent_profile',
+        agencyId: null,
+        developerBrandProfileId: null,
       }),
     );
+  });
+
+  it('rejects brand attribution that does not match the persisted public property', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 501,
+            status: 'available',
+            developmentId: null,
+            developerBrandProfileId: null,
+            agentId: null,
+            sourceListingId: null,
+            ownerId: null,
+          },
+        ],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(baseInput({ propertyId: 501, developerBrandProfileId: 999 })),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(database.insertValues).not.toHaveBeenCalled();
+  });
+
+  it('keeps a platform-curated property in custody rather than routing to public contact data', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 501,
+            status: 'published',
+            developmentId: null,
+            developerBrandProfileId: 13,
+            agentId: null,
+            sourceListingId: null,
+            ownerId: null,
+          },
+        ],
+        [
+          {
+            id: 13,
+            ownerType: 'platform',
+            linkedDeveloperAccountId: null,
+            isVisible: 1,
+            isSubscriber: 0,
+          },
+        ],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(baseInput({ propertyId: 501 }));
+
+    expect(result).toMatchObject({
+      deliveryStatus: 'attention_required',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
+      recipientType: 'manual',
+      recipientId: null,
+    });
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 501,
+        developerBrandProfileId: 13,
+        agentId: null,
+        agencyId: null,
+      }),
+    );
+  });
+
+  it('accepts a property replay when canonical development and brand attribution were omitted', async () => {
+    mockGetDb.mockResolvedValue(
+      makeFakeDatabase({
+        selectResults: [[existingLead({ developmentId: 77, developerBrandProfileId: 13 })]],
+      }),
+    );
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          propertyId: 501,
+          source: 'property_detail',
+          sourceSurface: 'property_detail',
+          leadSource: 'property_detail',
+        }),
+      ),
+    ).resolves.toMatchObject({ leadId: 812, duplicate: true, deliveryStatus: 'delivered' });
+  });
+
+  it('accepts a development replay when canonical brand attribution was omitted', async () => {
+    mockGetDb.mockResolvedValue(
+      makeFakeDatabase({
+        selectResults: [
+          [
+            existingLead({
+              propertyId: null,
+              developmentId: 77,
+              developerBrandProfileId: 13,
+              agentId: null,
+              source: 'development_detail',
+              leadSource: 'development_detail_contact',
+              deliveryAttempts: [
+                {
+                  id: 'attempt-1',
+                  recipientType: 'developer',
+                  recipientId: 7,
+                  status: 'delivered',
+                  supplyOrigin: 'customer_managed',
+                  leadCustody: 'verified_customer_recipient',
+                },
+              ],
+            }),
+          ],
+        ],
+      }),
+    );
+
+    await expect(capturePublicLead(baseInput({ developmentId: 77 }))).resolves.toMatchObject({
+      leadId: 812,
+      duplicate: true,
+      recipientType: 'developer',
+    });
+  });
+
+  it('returns the durable lead for an identical retry after the first response is presumed lost', async () => {
+    mockGetDb.mockResolvedValue(makeFakeDatabase({ selectResults: [[existingLead()]] }));
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          propertyId: 501,
+          agentId: 999,
+          source: 'property_detail',
+          sourceSurface: 'property_detail',
+          leadSource: 'property_detail',
+        }),
+      ),
+    ).resolves.toMatchObject({ leadId: 812, duplicate: true, deliveryStatus: 'delivered' });
+  });
+
+  it('rejects reuse of a capture identity for a different submitted target', async () => {
+    const mismatchDb = makeFakeDatabase({ selectResults: [[existingLead()]] });
+    mockGetDb.mockResolvedValue(mismatchDb);
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          propertyId: 502,
+          source: 'property_detail',
+          sourceSurface: 'property_detail',
+          leadSource: 'property_detail',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('rejects reuse of a capture identity for a different material payload', async () => {
+    mockGetDb.mockResolvedValue(makeFakeDatabase({ selectResults: [[existingLead()]] }));
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          propertyId: 501,
+          message: 'Please arrange a private viewing instead.',
+          source: 'property_detail',
+          sourceSurface: 'property_detail',
+          leadSource: 'property_detail',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('fails closed before persistence when consent or request identity is absent', async () => {
+    await expect(
+      capturePublicLead({ name: 'Jane Doe', email: 'jane@example.com', propertyId: 501 }),
+    ).rejects.toBeInstanceOf(TRPCError);
+    expect(mockGetDb).not.toHaveBeenCalled();
   });
 });

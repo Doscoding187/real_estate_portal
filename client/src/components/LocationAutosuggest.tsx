@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { MapPin, Loader2, X, Compass } from 'lucide-react';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
-import { CITY_PROVINCE_MAP, PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
+import { PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
 import { slugify } from '@/lib/urlUtils';
 import { trpc } from '@/lib/trpc';
 import { LocationNode } from '@/types/location';
 import type { SearchDiscoverySuggestion } from '@/lib/searchDiscovery';
+import { encodeCanonicalLocationId } from '../../../shared/locationAuthority';
 
 interface PlacePrediction {
   place_id: string;
@@ -96,14 +97,14 @@ export function LocationAutosuggest({
       limit: 10,
     },
     {
-      // The catalog remains searchable when Places is not configured or
-      // temporarily unavailable. Google remains the preferred rich lookup.
-      enabled: !isLoaded && debouncedQuery.length >= 2,
+      // The canonical database catalog remains searchable even when Places is
+      // configured. It is the only source that can provide an authoritative
+      // typed location ID for the public search contract.
+      enabled: debouncedQuery.length >= 2,
     },
   );
-  const databaseSuggestions: DatabaseLocationSuggestion[] = !isLoaded
-    ? (databaseLocations as DatabaseLocationSuggestion[] | undefined) || []
-    : [];
+  const databaseSuggestions: DatabaseLocationSuggestion[] =
+    (databaseLocations as DatabaseLocationSuggestion[] | undefined) || [];
   const suggestionCount = predictions.length + databaseSuggestions.length;
 
   useEffect(() => {
@@ -195,31 +196,19 @@ export function LocationAutosuggest({
         locationType = 'province';
         provinceSlug = matchedProvince;
       }
-      // 2. Check if the selection IS a known City (populates province automatically)
-      else if (CITY_PROVINCE_MAP[slug]) {
-        locationType = 'city';
-        citySlug = slug;
-        provinceSlug = CITY_PROVINCE_MAP[slug];
-      }
-      // 3. Fallback / Heuristics for Suburbs or minor places
+      // 2. Read only explicit hierarchy components from the Places result.
+      // A static city-to-province map would silently assign inventory to the
+      // wrong province when the name is duplicated or the catalog changes.
       else {
         const parts = prediction.description.split(',').map(s => slugify(s));
         const foundProvince = parts.find(p => PROVINCE_SLUGS.includes(p));
         if (foundProvince) provinceSlug = foundProvince;
 
-        if (!citySlug) {
-          const foundCity = parts.find(p => CITY_PROVINCE_MAP[p]);
-          if (foundCity) {
-            citySlug = foundCity;
-            if (!provinceSlug) provinceSlug = CITY_PROVINCE_MAP[foundCity];
-          }
-        }
-
-        if (!provinceSlug) {
-          if (prediction.description.toLowerCase().includes('cape town'))
-            provinceSlug = 'western-cape';
-          else if (prediction.description.toLowerCase().includes('durban'))
-            provinceSlug = 'kwazulu-natal';
+        if (locationType === 'suburb' && parts.length > 1) {
+          const possibleCity = parts[1];
+          if (possibleCity && !PROVINCE_SLUGS.includes(possibleCity)) citySlug = possibleCity;
+        } else if (locationType === 'city') {
+          citySlug = slug;
         }
       }
 
@@ -261,7 +250,7 @@ export function LocationAutosuggest({
       location.type === 'city' ? slug : location.cityName ? slugify(location.cityName) : undefined;
 
     onSelect({
-      id: String(location.id),
+      id: encodeCanonicalLocationId(location.type, Number(location.id)),
       name: location.name,
       slug,
       type: location.type,

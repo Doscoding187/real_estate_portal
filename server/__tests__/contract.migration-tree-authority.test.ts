@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 const ROOT = process.cwd();
 const MANIFEST_PATH = 'docs/database-authority/migration-tree-authority.json';
 const CANONICAL_RUNNER = 'server/migrations/runSqlMigrations.ts';
-const CANONICAL_SQL = 'server/migrations/0000_canonical_launch_baseline.sql';
 const APPROVED_DIAGNOSTIC_EXECUTABLES = new Set([
   'scripts/db-verify-distribution-schema.ts',
   'scripts/schema-sanity-check.mjs',
@@ -353,7 +352,13 @@ describe('migration tree authority', () => {
     const activeSql = manifest.classifications
       .filter(entry => entry.classification === 'canonical active')
       .map(entry => entry.path);
-    expect(activeSql).toEqual([CANONICAL_SQL]);
+    const executionManifest = JSON.parse(read('server/migrations/manifest.json')) as {
+      migrations: Array<{ filename: string }>;
+    };
+    const manifestPaths = executionManifest.migrations.map(
+      entry => `server/migrations/${entry.filename}`,
+    );
+    expect(activeSql).toEqual(manifestPaths);
   });
 
   it('keeps canonical discovery top-level and archives non-executable', () => {
@@ -433,10 +438,9 @@ describe('migration tree authority', () => {
     }
 
     const packageSource = read('package.json');
-    const packageScripts = (JSON.parse(packageSource) as { scripts: Record<string, string> }).scripts;
-    expect(packageScripts['db:migrate:apply']).toContain(
-      'databaseAuthorityCli.ts migration:apply',
-    );
+    const packageScripts = (JSON.parse(packageSource) as { scripts: Record<string, string> })
+      .scripts;
+    expect(packageScripts['db:migrate:apply']).toContain('databaseAuthorityCli.ts migration:apply');
     expect(read('scripts/databaseAuthorityCli.ts')).toContain(
       "from '../server/migrations/runSqlMigrations'",
     );
@@ -687,7 +691,9 @@ describe('migration tree authority', () => {
       expect(authorization, `Missing operation authorization: ${path}`).toBeGreaterThan(-1);
       expect(connection, `Missing bounded connection: ${path}`).toBeGreaterThan(-1);
       expect(source, `Diagnostic imported a raw driver: ${path}`).not.toContain('mysql2/promise');
-      expect(source, `Missing sanitized target evidence: ${path}`).toContain('targetFingerprintHash');
+      expect(source, `Missing sanitized target evidence: ${path}`).toContain(
+        'targetFingerprintHash',
+      );
       expect(source, `Diagnostic became mutating: ${path}`).not.toMatch(
         /\b(?:CREATE(?:\s+UNIQUE)?\s+(?:TABLE|INDEX)|ALTER\s+TABLE|DROP\s+(?:TABLE|INDEX|DATABASE)|TRUNCATE\s+TABLE|INSERT\s+INTO|DELETE\s+FROM|REPLACE\s+INTO|UPDATE\s+(?:`[^`]+`|[A-Za-z_][\w.]*)\s+SET)\b/i,
       );

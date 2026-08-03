@@ -60,7 +60,7 @@ describe('LocationAutosuggest database fallback', () => {
     fireEvent.click(screen.getByText('Sandton'));
 
     expect(onSelect).toHaveBeenCalledWith({
-      id: '12',
+      id: 'suburb:12',
       name: 'Sandton',
       slug: 'sandton',
       type: 'suburb',
@@ -85,7 +85,7 @@ describe('LocationAutosuggest database fallback', () => {
 
     expect(onSelect).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: '12',
+        id: 'suburb:12',
         slug: 'sandton',
         type: 'suburb',
       }),

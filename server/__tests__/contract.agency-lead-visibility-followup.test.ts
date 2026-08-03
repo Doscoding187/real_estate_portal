@@ -92,7 +92,13 @@ describe('agency lead visibility and follow-up contract', () => {
     const secondLeftJoin = vi.fn(() => ({ where }));
     const firstLeftJoin = vi.fn(() => ({ leftJoin: secondLeftJoin }));
     const from = vi.fn(() => ({ leftJoin: firstLeftJoin }));
-    const select = vi.fn(() => ({ from }));
+    const verifiedAgencyLimit = vi.fn().mockResolvedValue([{ isVerified: 1 }]);
+    const verifiedAgencyWhere = vi.fn(() => ({ limit: verifiedAgencyLimit }));
+    const verifiedAgencyFrom = vi.fn(() => ({ where: verifiedAgencyWhere }));
+    const select = vi
+      .fn()
+      .mockImplementationOnce(() => ({ from: verifiedAgencyFrom }))
+      .mockImplementation(() => ({ from }));
 
     mockGetDb.mockResolvedValue({ select });
 

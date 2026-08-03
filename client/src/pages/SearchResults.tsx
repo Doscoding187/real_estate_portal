@@ -7,7 +7,6 @@ import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
 import { getPrimaryListingBadge } from '@/lib/listingBadges';
 import { searchCardResultToPropertyCardProps } from '@/lib/normalizers';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
-import { blendSearchResults } from '@/lib/searchBlend';
 import {
   DEFAULT_SAVED_SEARCH_DELIVERY_PREFERENCES,
   getSavedSearchNotificationDescription,
@@ -63,6 +62,11 @@ import {
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import type { SearchCardResult } from '@/../../shared/types';
+import {
+  canAdvancePublicSearchPage,
+  getPublicSearchReachablePageCount,
+  PUBLIC_SEARCH_MAX_PAGE_INDEX,
+} from '@/../../shared/publicSearchPagination';
 
 export default function SearchResults({
   province: propProvince,
@@ -183,10 +187,6 @@ export default function SearchResults({
   );
 
   const limit = 12;
-  const blendFetchLimit = Math.max(limit, (page + 1) * limit);
-  const backendSortOption = sortBy === 'relevance' ? undefined : sortBy;
-  const shouldFetchManualListings = filters.listingSource !== 'development';
-  const shouldFetchDevelopmentListings = filters.listingSource !== 'manual';
 
   // SEO
   useEffect(() => {
@@ -208,93 +208,81 @@ export default function SearchResults({
     [filters, saveSearchEmailEnabled, saveSearchInAppEnabled, saveSearchNotificationFrequency],
   );
 
-  // Build query input for tRPC
-  const propertyQueryInput = useMemo(
-    () => ({
-      ...filters,
-      city: filters.city, // Explicitly ensure these are passed
-      province: filters.province,
-      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      locations: normalizedLocationSlugs,
-      locationId: filters.locationId, // Pass locationId if backend supports it (optional filter usually)
-      propertyType: filters.propertyType as any,
-      listingType: filters.listingType as any,
-      minPrice: filters.minPrice,
-      maxPrice: filters.maxPrice,
-      minBedrooms: filters.minBedrooms,
-      status: 'available' as const,
-      limit: blendFetchLimit,
-      offset: 0,
-      sortOption: backendSortOption,
-      includeDevelopments: false,
-    }),
-    [backendSortOption, blendFetchLimit, filters, normalizedLocationSlugs],
-  );
+  // One server-authoritative request owns source selection, blending, counts,
+  // pagination and location resolution. The browser receives only the page it
+  // is allowed to render.
+  const publicSearchQueryInput = useMemo(() => {
+    const publicPropertyTypes = new Set([
+      'apartment',
+      'house',
+      'villa',
+      'plot',
+      'commercial',
+      'townhouse',
+      'cluster_home',
+      'farm',
+      'shared_living',
+    ]);
+    const propertyType =
+      typeof filters.propertyType === 'string' && publicPropertyTypes.has(filters.propertyType)
+        ? (filters.propertyType as
+            | 'apartment'
+            | 'house'
+            | 'villa'
+            | 'plot'
+            | 'commercial'
+            | 'townhouse'
+            | 'cluster_home'
+            | 'farm'
+            | 'shared_living')
+        : undefined;
+    const numericFilter = (value: unknown) =>
+      typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
-  const developmentListingQueryInput = useMemo(
-    () => ({
+    return {
       city: filters.city,
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
       locations: normalizedLocationSlugs,
-      propertyType: filters.propertyType as any,
-      listingType: filters.listingType as any,
-      minPrice: filters.minPrice,
-      maxPrice: filters.maxPrice,
-      minBedrooms: filters.minBedrooms,
-      maxBedrooms: filters.maxBedrooms,
-      minBathrooms: filters.minBathrooms,
-      limit: blendFetchLimit,
-      offset: 0,
-      sortOption: backendSortOption,
-    }),
-    [backendSortOption, blendFetchLimit, filters, normalizedLocationSlugs],
-  );
-
-  const {
-    data: propertySearchResults,
-    isLoading: isPropertySearchLoading,
-    error: propertySearchError,
-  } = trpc.properties.search.useQuery(propertyQueryInput, {
-    enabled: shouldFetchManualListings,
-    retry: false,
-  });
-  const {
-    data: developmentListingResults,
-    isLoading: isDevelopmentSearchLoading,
-    error: developmentSearchError,
-  } = trpc.properties.searchDevelopmentListings.useQuery(developmentListingQueryInput, {
-    enabled: shouldFetchDevelopmentListings,
-    retry: false,
-  });
-  const isLoading = isPropertySearchLoading || isDevelopmentSearchLoading;
-  const hasSearchError = Boolean(propertySearchError || developmentSearchError);
-  const { data: filterCounts } = trpc.properties.getFilterCounts.useQuery({
-    filters: {
-      city: filters.city,
-      province: filters.province,
-      suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      locations: normalizedLocationSlugs,
-      listingType: filters.listingType,
+      locationId: filters.locationId,
+      propertyType,
+      listingType: filters.listingType === 'rent' ? ('rent' as const) : ('sale' as const),
       listingSource: filters.listingSource,
-      propertyType: filters.propertyType,
-      minPrice: filters.minPrice,
-      maxPrice: filters.maxPrice,
-      minBedrooms: filters.minBedrooms,
-      maxBedrooms: filters.maxBedrooms,
-    },
-  });
+      minPrice: numericFilter(filters.minPrice),
+      maxPrice: numericFilter(filters.maxPrice),
+      minBedrooms: numericFilter(filters.minBedrooms),
+      maxBedrooms: numericFilter(filters.maxBedrooms),
+      minBathrooms: numericFilter(filters.minBathrooms),
+      maxBathrooms: numericFilter(filters.maxBathrooms),
+      minArea: numericFilter(filters.minArea),
+      maxArea: numericFilter(filters.maxArea),
+      minLat: numericFilter(filters.minLat),
+      maxLat: numericFilter(filters.maxLat),
+      minLng: numericFilter(filters.minLng),
+      maxLng: numericFilter(filters.maxLng),
+      sortOption: sortBy,
+      page,
+      pageSize: limit,
+    };
+  }, [filters, limit, normalizedLocationSlugs, page, sortBy]);
 
-  const propertyCards: SearchCardResult[] = shouldFetchManualListings
-    ? ((propertySearchResults as any)?.cards ?? [])
-    : [];
-  const developmentCards: SearchCardResult[] = shouldFetchDevelopmentListings
-    ? ((developmentListingResults as any)?.cards ?? [])
-    : [];
-  const resultTotal =
-    (shouldFetchManualListings ? ((propertySearchResults as any)?.total ?? 0) : 0) +
-    (shouldFetchDevelopmentListings ? ((developmentListingResults as any)?.total ?? 0) : 0);
-  const locationContext = (propertySearchResults as any)?.locationContext;
+  const {
+    data: publicSearchResults,
+    isLoading,
+    error: publicSearchError,
+  } = trpc.properties.searchPublicInventory.useQuery(publicSearchQueryInput, {
+    retry: false,
+  });
+  const hasSearchError = Boolean(publicSearchError);
+  // Filter metadata is intentionally omitted until it is calculated by the
+  // same public inventory authority as the returned cards and total.
+  const filterCounts = undefined;
+
+  const renderedResults: SearchCardResult[] = (publicSearchResults?.cards ??
+    []) as SearchCardResult[];
+  const resultTotal = publicSearchResults?.total ?? 0;
+  const locationContext = publicSearchResults?.locationContext;
+  const locationMessage = publicSearchResults?.locationMessage;
 
   // Mutations
   const saveSearchMutation = trpc.savedSearch.create.useMutation({
@@ -346,6 +334,7 @@ export default function SearchResults({
       filters: nextFilters,
     };
     setLocation(generateIntentUrl(updatedIntent));
+    setPage(0);
   };
 
   const handleClearAllFilters = () => {
@@ -355,6 +344,7 @@ export default function SearchResults({
       filters: {}, // Clear all optional filters
     };
     setLocation(generateIntentUrl(updatedIntent));
+    setPage(0);
   };
 
   const handleListingSourceChange = (source?: SearchFilters['listingSource']) => {
@@ -431,41 +421,20 @@ export default function SearchResults({
     setPage(0);
   };
 
-  const combinedSearchResults = useMemo(() => {
-    const propertyItems = propertyCards.map(property => ({
-      kind: 'property' as const,
-      value: property,
-    }));
-    const derivedDevelopmentItems = developmentCards.map(development => ({
-      kind: 'development' as const,
-      value: development,
-    }));
-
-    return blendSearchResults(propertyItems, derivedDevelopmentItems, sortBy, filters);
-  }, [developmentCards, filters, propertyCards, sortBy]);
-
-  const pagedResults = useMemo(() => {
-    const start = page * limit;
-    return combinedSearchResults.slice(start, start + limit);
-  }, [combinedSearchResults, limit, page]);
-
-  const renderedResults = pagedResults;
-
   const mapResults = useMemo(
     () =>
       renderedResults
-        .map((item, index) => {
-          const card = item.value as SearchCardResult;
+        .map((card, index) => {
           const latitude = parseFloat(String(card.latitude || ''));
           const longitude = parseFloat(String(card.longitude || ''));
           if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
           return {
             markerId:
-              item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
+              card.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
             href: card.href,
             property: {
-              id: item.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
+              id: card.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
               title: card.title,
               price: card.price,
               propertyType: card.propertyType ?? 'unknown',
@@ -490,7 +459,8 @@ export default function SearchResults({
 
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
-  const totalPages = resultCount > 0 ? Math.max(1, Math.ceil(resultCount / limit)) : 0;
+  const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
+  const canAdvancePage = canAdvancePublicSearchPage(page, resultCount, limit);
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
@@ -583,11 +553,10 @@ export default function SearchResults({
                   <>
                     {viewMode === 'list' && (
                       <div className="flex flex-col gap-4 sm:gap-5 lg:gap-6">
-                        {renderedResults.map((item, index) => {
-                          const card = item.value as SearchCardResult;
+                        {renderedResults.map((card, index) => {
                           return (
                             <ListingResultCard
-                              key={`prop-${card.id}-${index}`}
+                              key={`${card.kind}-${card.id}-${index}`}
                               data={{
                                 id: card.id,
                                 href: card.href,
@@ -627,10 +596,9 @@ export default function SearchResults({
 
                     {viewMode === 'grid' && (
                       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3 2xl:gap-7">
-                        {renderedResults.map(item => {
-                          const card = item.value as SearchCardResult;
+                        {renderedResults.map(card => {
                           const cardProps = searchCardResultToPropertyCardProps(card);
-                          return <PropertyCard key={card.id} {...cardProps} />;
+                          return <PropertyCard key={`${card.kind}-${card.id}`} {...cardProps} />;
                         })}
                       </div>
                     )}
@@ -664,8 +632,10 @@ export default function SearchResults({
                           </span>
                           <Button
                             variant="outline"
-                            disabled={(page + 1) * limit >= resultCount}
-                            onClick={() => setPage(p => p + 1)}
+                            disabled={!canAdvancePage}
+                            onClick={() =>
+                              setPage(p => Math.min(PUBLIC_SEARCH_MAX_PAGE_INDEX, p + 1))
+                            }
                           >
                             Next
                           </Button>
@@ -677,6 +647,7 @@ export default function SearchResults({
                   <SearchResultsEmptyState
                     filters={filters}
                     locationContext={locationContext as any}
+                    locationMessage={locationMessage}
                     onClearAllFilters={handleClearAllFilters}
                     onSwitchToSource={handleListingSourceChange}
                     onBroadenToCity={

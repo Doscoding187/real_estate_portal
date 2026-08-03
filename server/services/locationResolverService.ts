@@ -14,6 +14,7 @@
 import { getDb } from '../db-connection';
 import { eq, and, sql } from 'drizzle-orm';
 import { provinces, cities, suburbs } from '../../drizzle/schema';
+import { parseCanonicalLocationId } from '../../shared/locationAuthority';
 
 export interface ResolvedProvince {
   id: number;
@@ -52,7 +53,297 @@ export interface ResolvedLocation {
   originalIntent: string; // "Sandton", "Sandton, Johannesburg", etc.
 }
 
+export type PublicLocationResolutionStatus = 'resolved' | 'unresolved' | 'ambiguous';
+
+export interface PublicLocationResolutionResult {
+  status: PublicLocationResolutionStatus;
+  location: ResolvedLocation | null;
+  message?: string;
+}
+
 export class LocationResolverService {
+  /**
+   * Resolve public search geography without the SEO resolver's widening
+   * fallbacks. A public search must never turn an unknown suburb into a city
+   * or an ambiguous city into a province-wide search.
+   */
+  async resolvePublicLocation(opts: {
+    locationId?: string;
+    provinceSlug?: string;
+    citySlug?: string;
+    suburbSlug?: string;
+  }): Promise<PublicLocationResolutionResult> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const normalize = (value?: string) =>
+      String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-');
+    const provinceSlug = normalize(opts.provinceSlug);
+    const citySlug = normalize(opts.citySlug);
+    const suburbSlug = normalize(opts.suburbSlug);
+    const originalIntent = [suburbSlug, citySlug, provinceSlug].filter(Boolean).join(', ');
+
+    const unresolved = (message: string): PublicLocationResolutionResult => ({
+      status: 'unresolved',
+      location: null,
+      message,
+    });
+    const ambiguous = (message: string): PublicLocationResolutionResult => ({
+      status: 'ambiguous',
+      location: null,
+      message,
+    });
+
+    const findProvinceById = async (id: number) => {
+      const [row] = await db
+        .select({ id: provinces.id, name: provinces.name, slug: provinces.slug, code: provinces.code })
+        .from(provinces)
+        .where(eq(provinces.id, id))
+        .limit(1);
+      return row
+        ? {
+            id: row.id,
+            name: row.name,
+            slug: row.slug || normalize(row.name),
+            code: row.code,
+          }
+        : null;
+    };
+
+    const findProvinceBySlug = async (slug: string) => {
+      const [row] = await db
+        .select({ id: provinces.id, name: provinces.name, slug: provinces.slug, code: provinces.code })
+        .from(provinces)
+        .where(sql`LOWER(${provinces.slug}) = LOWER(${slug})`)
+        .limit(1);
+      return row
+        ? {
+            id: row.id,
+            name: row.name,
+            slug: row.slug || slug,
+            code: row.code,
+          }
+        : null;
+    };
+
+    const findCityById = async (id: number) => {
+      const [row] = await db
+        .select({
+          id: cities.id,
+          name: cities.name,
+          slug: cities.slug,
+          provinceId: cities.provinceId,
+          latitude: cities.latitude,
+          longitude: cities.longitude,
+        })
+        .from(cities)
+        .where(eq(cities.id, id))
+        .limit(1);
+      return row
+        ? {
+            id: row.id,
+            name: row.name,
+            slug: row.slug || normalize(row.name),
+            provinceId: row.provinceId,
+            latitude: row.latitude || undefined,
+            longitude: row.longitude || undefined,
+          }
+        : null;
+    };
+
+    const findCityBySlug = async (slug: string, provinceId?: number) => {
+      const rows = await db
+        .select({
+          id: cities.id,
+          name: cities.name,
+          slug: cities.slug,
+          provinceId: cities.provinceId,
+          latitude: cities.latitude,
+          longitude: cities.longitude,
+        })
+        .from(cities)
+        .where(
+          provinceId
+            ? and(sql`LOWER(${cities.slug}) = LOWER(${slug})`, eq(cities.provinceId, provinceId))
+            : sql`LOWER(${cities.slug}) = LOWER(${slug})`,
+        )
+        .limit(2);
+
+      if (rows.length > 1) return 'ambiguous' as const;
+      const row = rows[0];
+      return row
+        ? {
+            id: row.id,
+            name: row.name,
+            slug: row.slug || slug,
+            provinceId: row.provinceId,
+            latitude: row.latitude || undefined,
+            longitude: row.longitude || undefined,
+          }
+        : null;
+    };
+
+    const findSuburbById = async (id: number) => {
+      const [row] = await db
+        .select({
+          id: suburbs.id,
+          name: suburbs.name,
+          slug: suburbs.slug,
+          cityId: suburbs.cityId,
+          latitude: suburbs.latitude,
+          longitude: suburbs.longitude,
+        })
+        .from(suburbs)
+        .where(eq(suburbs.id, id))
+        .limit(1);
+      return row
+        ? {
+            id: row.id,
+            name: row.name,
+            slug: row.slug || normalize(row.name),
+            cityId: row.cityId,
+            latitude: row.latitude || undefined,
+            longitude: row.longitude || undefined,
+          }
+        : null;
+    };
+
+    const findSuburbBySlug = async (slug: string, cityId?: number, provinceId?: number) => {
+      const suburbConditions = [sql`LOWER(${suburbs.slug}) = LOWER(${slug})`];
+      if (cityId) suburbConditions.push(eq(suburbs.cityId, cityId));
+      if (provinceId) suburbConditions.push(eq(cities.provinceId, provinceId));
+
+      const rows = await db
+        .select({
+          id: suburbs.id,
+          name: suburbs.name,
+          slug: suburbs.slug,
+          cityId: suburbs.cityId,
+          latitude: suburbs.latitude,
+          longitude: suburbs.longitude,
+        })
+        .from(suburbs)
+        .innerJoin(cities, eq(suburbs.cityId, cities.id))
+        .where(and(...suburbConditions))
+        .limit(2);
+
+      if (rows.length > 1) return 'ambiguous' as const;
+      const row = rows[0];
+      return row
+        ? {
+            id: row.id,
+            name: row.name,
+            slug: row.slug || slug,
+            cityId: row.cityId,
+            latitude: row.latitude || undefined,
+            longitude: row.longitude || undefined,
+          }
+        : null;
+    };
+
+    let province: ResolvedProvince | null = null;
+    let city: ResolvedCity | null = null;
+    let suburb: ResolvedSuburb | null = null;
+    const canonicalId = parseCanonicalLocationId(opts.locationId);
+
+    if (opts.locationId && !canonicalId) {
+      return unresolved('The selected location does not match its canonical identity.');
+    }
+
+    if (canonicalId?.level === 'province') {
+      province = await findProvinceById(canonicalId.id);
+      if (!province) return unresolved('That province is no longer available.');
+    } else if (canonicalId?.level === 'city') {
+      city = await findCityById(canonicalId.id);
+      if (!city) return unresolved('That city is no longer available.');
+      province = await findProvinceById(city.provinceId);
+      if (!province) return unresolved('That city has no valid province authority.');
+    } else if (canonicalId?.level === 'suburb') {
+      suburb = await findSuburbById(canonicalId.id);
+      if (!suburb) return unresolved('That suburb is no longer available.');
+      city = await findCityById(suburb.cityId);
+      if (!city) return unresolved('That suburb has no valid city authority.');
+      province = await findProvinceById(city.provinceId);
+      if (!province) return unresolved('That suburb has no valid province authority.');
+    } else if (provinceSlug) {
+      province = await findProvinceBySlug(provinceSlug);
+      if (!province) return unresolved(`We could not match the province "${provinceSlug}".`);
+
+      if (citySlug) {
+        const cityResult = await findCityBySlug(citySlug, province.id);
+        if (cityResult === 'ambiguous') {
+          return ambiguous(`The city "${citySlug}" needs a more specific location.`);
+        }
+        city = cityResult;
+        if (!city) return unresolved(`We could not match "${citySlug}" in ${province.name}.`);
+      }
+    } else if (citySlug) {
+      const cityResult = await findCityBySlug(citySlug);
+      if (cityResult === 'ambiguous') {
+        return ambiguous(`The city "${citySlug}" exists in more than one province. Choose a province.`);
+      }
+      city = cityResult;
+      if (!city) return unresolved(`We could not match the city "${citySlug}".`);
+      province = await findProvinceById(city.provinceId);
+      if (!province) return unresolved('That city has no valid province authority.');
+    }
+
+    if (!province && suburbSlug) {
+      const suburbResult = await findSuburbBySlug(suburbSlug);
+      if (suburbResult === 'ambiguous') {
+        return ambiguous(`The suburb "${suburbSlug}" needs a city or province.`);
+      }
+      suburb = suburbResult;
+      if (!suburb) return unresolved(`We could not match the suburb "${suburbSlug}".`);
+      city = await findCityById(suburb.cityId);
+      if (!city) return unresolved('That suburb has no valid city authority.');
+      province = await findProvinceById(city.provinceId);
+      if (!province) return unresolved('That suburb has no valid province authority.');
+    } else if (province && suburbSlug) {
+      const suburbResult = await findSuburbBySlug(suburbSlug, city?.id, province.id);
+      if (suburbResult === 'ambiguous') {
+        return ambiguous(`The suburb "${suburbSlug}" needs a more specific city.`);
+      }
+      suburb = suburbResult;
+      if (!suburb) return unresolved(`We could not match "${suburbSlug}" in this location.`);
+      if (!city) {
+        city = await findCityById(suburb.cityId);
+        if (!city) return unresolved('That suburb has no valid city authority.');
+      }
+    }
+
+    if (!province) {
+      return unresolved('Choose a supported province, city, or suburb before searching.');
+    }
+
+    if (provinceSlug && normalize(provinceSlug) !== normalize(province.slug)) {
+      return unresolved('The selected province does not match its canonical authority.');
+    }
+    if (citySlug && (!city || normalize(citySlug) !== normalize(city.slug))) {
+      return unresolved('The selected city does not match its canonical authority.');
+    }
+    if (suburbSlug && (!suburb || normalize(suburbSlug) !== normalize(suburb.slug))) {
+      return unresolved('The selected location does not match its canonical hierarchy.');
+    }
+
+    return {
+      status: 'resolved',
+      location: {
+        level: suburb ? 'suburb' : city ? 'city' : 'province',
+        province,
+        city: city || undefined,
+        suburb: suburb || undefined,
+        confidence: 'exact',
+        fallbackLevel: 'none',
+        originalIntent:
+          originalIntent || [suburb?.slug, city?.slug, province.slug].filter(Boolean).join(', '),
+      },
+    };
+  }
+
   /**
    * Resolve location slugs to full location data with IDs
    * Returns null if no valid location found

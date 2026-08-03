@@ -239,6 +239,12 @@ describeWithDb('agency principal listing attribution', () => {
       phone: '+27112223333',
       leadSource: 'property_detail',
       sourceSurface: 'property_detail_contact_modal',
+      captureRequestId: `agency-attribution-${suffix}`,
+      consent: {
+        accepted: true,
+        version: '2026-08-02',
+        source: 'agency-attribution-test',
+      },
     });
     created.leadId = lead.leadId;
 

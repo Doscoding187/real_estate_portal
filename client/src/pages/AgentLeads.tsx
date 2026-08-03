@@ -28,6 +28,17 @@ type LeadPipelineItem = {
   phone: string;
   status: string;
   source: string;
+  consent: {
+    capturedAt: string | null;
+    version: string | null;
+    source: string | null;
+  };
+  delivery: {
+    status: string;
+    attempts: unknown;
+    lastAttemptAt: string | null;
+    lastError: string | null;
+  };
   notes: string | null;
   createdAt: string | Date;
   property: {

@@ -23,10 +23,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { trpc } from '@/lib/trpc';
 import { calculateMonthlyRepayment, formatSARandShort, SA_PRIME_RATE } from '@/lib/bond-calculator';
 import { formatPriceCompact } from '@/lib/formatPrice';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
+import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
 
 const DEFAULT_BOND_TERM_YEARS = 20;
 
@@ -90,6 +92,8 @@ export default function DevelopmentQualificationPage() {
     email: '',
     phone: '',
   });
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [captureRequestId] = useState(() => createLeadCaptureRequestId());
 
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
     { slugOrId: slug || '' },
@@ -107,7 +111,7 @@ export default function DevelopmentQualificationPage() {
   }, [dev, slug]);
 
   const createLead = trpc.developer.createLead.useMutation({
-    onSuccess: () => {
+    onSuccess: result => {
       trackFunnelStep({
         funnel: 'development_qualification',
         step: 'submit',
@@ -115,7 +119,13 @@ export default function DevelopmentQualificationPage() {
         path: dev?.slug || slug,
       });
       setSubmitted(true);
-      toast.success('Qualification submitted to the sales team.');
+      toast.success(
+        result?.deliveryStatus === 'delivered'
+          ? 'Qualification submitted to the sales team.'
+          : result?.deliveryStatus === 'attention_required'
+            ? 'Qualification was saved. Sales follow-up still needs attention.'
+            : 'Qualification was saved. Sales delivery is being completed.',
+      );
     },
     onError: error => {
       toast.error(error.message || 'Unable to submit qualification.');
@@ -199,11 +209,16 @@ export default function DevelopmentQualificationPage() {
     contact.name.trim().length >= 2 &&
     contact.email.trim().length > 3 &&
     contact.phone.trim().length >= 7 &&
-    totalIncome > 0;
+    totalIncome > 0 &&
+    consentAccepted;
 
   const handleSubmit = () => {
     if (!dev || !canSubmit) {
-      toast.error('Complete the required details before submitting.');
+      toast.error(
+        consentAccepted
+          ? 'Complete the required details before submitting.'
+          : 'Please agree to be contacted before submitting.',
+      );
       return;
     }
 
@@ -262,6 +277,8 @@ export default function DevelopmentQualificationPage() {
         maxAffordable,
         calculatedAt: new Date().toISOString(),
       },
+      captureRequestId,
+      consent: publicLeadConsent('development_qualification_page'),
     });
   };
 
@@ -531,6 +548,29 @@ export default function DevelopmentQualificationPage() {
                             Adding expenses, debts, and deposit improves the affordability estimate
                             before you submit.
                           </p>
+                        </div>
+
+                        <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                          <Checkbox
+                            id="qualification-lead-consent"
+                            checked={consentAccepted}
+                            onCheckedChange={checked => setConsentAccepted(checked === true)}
+                          />
+                          <Label
+                            htmlFor="qualification-lead-consent"
+                            className="text-xs leading-5 text-slate-600"
+                          >
+                            I agree to be contacted about this enquiry. See our{' '}
+                            <a
+                              className="text-blue-700 underline"
+                              href="/legal/privacy"
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Privacy Policy
+                            </a>
+                            .
+                          </Label>
                         </div>
 
                         <div className="flex justify-between">

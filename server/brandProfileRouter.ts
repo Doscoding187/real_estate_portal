@@ -10,6 +10,11 @@ import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { developerBrandProfileService } from './services/developerBrandProfileService';
 import { brandLeadService } from './services/brandLeadService';
+import { capturePublicLead } from './services/publicLeadCaptureService';
+import {
+  checkPublicLeadRateLimit,
+  getPublicLeadClientIp,
+} from './services/publicLeadRateLimitService';
 import { brandEmulationService } from './_core/brandEmulation';
 import { developmentService } from './services/developmentService';
 import { requireUser } from './_core/requireUser';
@@ -96,6 +101,12 @@ const captureBrandLeadSchema = z.object({
       calculatedAt: z.string().optional(),
     })
     .optional(),
+  captureRequestId: z.string().trim().min(8).max(128),
+  consent: z.object({
+    accepted: z.literal(true),
+    version: z.string().trim().min(1).max(64),
+    source: z.string().trim().max(100).optional(),
+  }),
 });
 
 // ============================================================================
@@ -152,11 +163,24 @@ export const brandProfileRouter = router({
    * Capture lead for brand profile (public)
    * This is the main lead capture endpoint
    */
-  captureLead: publicProcedure.input(captureBrandLeadSchema).mutation(async ({ input }) => {
+  captureLead: publicProcedure.input(captureBrandLeadSchema).mutation(async ({ input, ctx }) => {
     try {
-      const result = await brandLeadService.captureBrandLead(input);
-      return result;
+      if (!checkPublicLeadRateLimit(getPublicLeadClientIp(ctx))) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: 'Too many lead submissions. Please try again in a minute.',
+        });
+      }
+
+      return await capturePublicLead({
+        ...input,
+        leadType: 'inquiry',
+        source: input.sourceSurface || input.leadSource || 'brand_profile',
+        sourceSurface: input.sourceSurface || 'brand_profile',
+        leadSource: input.leadSource || 'brand_profile',
+      });
     } catch (error) {
+      if (error instanceof TRPCError) throw error;
       console.error('Lead capture failed:', error);
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',

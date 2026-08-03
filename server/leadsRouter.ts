@@ -1,7 +1,16 @@
 import { z } from 'zod';
-import { router, publicProcedure } from './_core/trpc';
+import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
 import { capturePublicLead } from './services/publicLeadCaptureService';
+import { brandLeadService } from './services/brandLeadService';
+import { getDb } from './db';
+import { agents, agencies, developers, developments, leads } from '../drizzle/schema';
+import { and, eq } from 'drizzle-orm';
+import { requireUser } from './_core/requireUser';
+import {
+  checkPublicLeadRateLimit,
+  getPublicLeadClientIp,
+} from './services/publicLeadRateLimitService';
 
 const affordabilityDataSchema = z
   .object({
@@ -14,30 +23,13 @@ const affordabilityDataSchema = z
   })
   .optional();
 
-const LEAD_RATE_LIMIT_WINDOW_MS = 60_000;
-const LEAD_RATE_LIMIT_MAX_PER_WINDOW = 12;
-const leadRateLimitStore = new Map<string, number[]>();
+const leadConsentSchema = z.object({
+  accepted: z.literal(true),
+  version: z.string().trim().min(1).max(64),
+  source: z.string().trim().max(100).optional(),
+});
 
 type LeadOwnerType = 'brand_profile' | 'development' | 'property' | 'agency' | 'agent' | 'unknown';
-
-function getClientIp(ctx: any): string {
-  const forwarded = ctx?.req?.headers?.['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0].trim();
-  }
-
-  const socketIp = ctx?.req?.socket?.remoteAddress;
-  if (typeof socketIp === 'string' && socketIp.length > 0) {
-    return socketIp;
-  }
-
-  const reqIp = ctx?.req?.ip;
-  if (typeof reqIp === 'string' && reqIp.length > 0) {
-    return reqIp;
-  }
-
-  return 'unknown';
-}
 
 function getRequestId(ctx: any): string {
   const requestId = ctx?.requestId;
@@ -82,21 +74,6 @@ function logLeadEvent(
   console.info(`[LeadCapture] ${JSON.stringify({ event, ...payload })}`);
 }
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const windowStart = now - LEAD_RATE_LIMIT_WINDOW_MS;
-  const attempts = leadRateLimitStore.get(ip) || [];
-  const activeAttempts = attempts.filter(timestamp => timestamp > windowStart);
-
-  if (activeAttempts.length >= LEAD_RATE_LIMIT_MAX_PER_WINDOW) {
-    return false;
-  }
-
-  activeAttempts.push(now);
-  leadRateLimitStore.set(ip, activeAttempts);
-  return true;
-}
-
 export const leadsRouter = router({
   create: publicProcedure
     .input(
@@ -125,11 +102,28 @@ export const leadsRouter = router({
         utmCampaign: z.string().optional(),
         website: z.string().optional(), // honeypot (must remain empty)
         affordabilityData: affordabilityDataSchema,
+        captureRequestId: z.string().trim().min(8).max(128).optional(),
+        consent: leadConsentSchema.optional(),
+      }).superRefine((input, refinementContext) => {
+        if ((input.propertyId || input.developmentId) && !input.captureRequestId) {
+          refinementContext.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['captureRequestId'],
+            message: 'A stable enquiry request ID is required.',
+          });
+        }
+        if ((input.propertyId || input.developmentId) && !input.consent) {
+          refinementContext.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['consent'],
+            message: 'Consent is required before submitting an enquiry.',
+          });
+        }
       }),
     )
     .mutation(async ({ ctx, input }) => {
       const requestId = getRequestId(ctx);
-      const ip = getClientIp(ctx);
+      const ip = getPublicLeadClientIp(ctx);
       const { ownerType, ownerId } = resolveOwner(input);
 
       // Silent drop for obvious bots filling hidden field
@@ -145,13 +139,14 @@ export const leadsRouter = router({
 
         return {
           success: true as const,
+          ignored: true as const,
           leadId: 0,
           route: 'direct' as const,
-          message: 'Lead captured',
+          message: 'Request received',
         };
       }
 
-      if (!checkRateLimit(ip)) {
+      if (!checkPublicLeadRateLimit(ip)) {
         logLeadEvent('rate_limit_trigger', {
           requestId,
           ip,
@@ -184,5 +179,64 @@ export const leadsRouter = router({
       });
 
       return result;
+    }),
+
+  retryDelivery: protectedProcedure
+    .input(z.object({ leadId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const user = requireUser(ctx);
+      const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
+      if (!lead) throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found.' });
+
+      let authorized = user.role === 'super_admin';
+
+      if (!authorized && lead.agentId) {
+        const [agent] = await db
+          .select({ userId: agents.userId, agencyId: agents.agencyId, status: agents.status })
+          .from(agents)
+          .where(eq(agents.id, lead.agentId))
+          .limit(1);
+        authorized =
+          agent?.status === 'approved' &&
+          (agent.userId === user.id ||
+          (user.role === 'agency_admin' &&
+            !!user.agencyId &&
+            Number(agent.agencyId || 0) === Number(user.agencyId)));
+      }
+
+      if (!authorized && user.role === 'agency_admin' && user.agencyId && lead.agencyId) {
+        const [agency] = await db
+          .select({ isVerified: agencies.isVerified })
+          .from(agencies)
+          .where(eq(agencies.id, user.agencyId))
+          .limit(1);
+        authorized =
+          Number(agency?.isVerified || 0) === 1 &&
+          Number(user.agencyId) === Number(lead.agencyId);
+      }
+
+      if (!authorized && lead.developmentId) {
+        const [ownedDevelopment] = await db
+          .select({ id: developments.id })
+          .from(developments)
+          .innerJoin(developers, eq(developments.developerId, developers.id))
+          .where(
+            and(eq(developments.id, lead.developmentId), eq(developers.userId, user.id)),
+          )
+          .limit(1);
+        authorized = !!ownedDevelopment;
+      }
+
+      if (!authorized) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You are not authorized to retry delivery for this lead.',
+        });
+      }
+
+      return await brandLeadService.retryBrandLeadDelivery(input.leadId);
     }),
 });

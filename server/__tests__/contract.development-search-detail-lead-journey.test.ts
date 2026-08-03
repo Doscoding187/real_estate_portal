@@ -59,6 +59,10 @@ vi.mock('../services/brandLeadService', () => ({
   },
 }));
 
+vi.mock('../services/publicLeadCaptureService', () => ({
+  capturePublicLead: mockCaptureBrandLead,
+}));
+
 vi.mock('../services/agentOsEventService', () => ({
   recordAgentOsEventForAgentId: mockRecordAgentOsEventForAgentId,
 }));
@@ -187,9 +191,16 @@ describe('development search-detail-lead public journey contract', () => {
     });
     mockInsert.mockReturnValue({ values: mockInsertValues });
     mockCaptureBrandLead.mockResolvedValue({
+      success: true,
       leadId: 909,
+      route: 'brand',
       delivered: true,
       deliveryMethod: 'crm_export',
+      deliveryStatus: 'delivered',
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'developer',
+      recipientId: 7,
       brandLeadStatus: 'delivered_subscriber',
       message: 'Lead captured',
     });
@@ -260,12 +271,6 @@ describe('development search-detail-lead public journey contract', () => {
       maxAffordable: 1400000,
       calculatedAt: '2026-07-04T10:00:00.000Z',
     };
-    mockLimit
-      .mockResolvedValueOnce([
-        { id: 77, developerBrandProfileId: 13, isPublished: 1, approvalStatus: 'approved' },
-      ])
-      .mockResolvedValueOnce([{ id: 'unit-a', developmentId: 77, isActive: 1 }]);
-
     const lead = await caller.developer.createLead({
       developmentId: card.developmentId,
       developerBrandProfileId: 999,
@@ -286,6 +291,12 @@ describe('development search-detail-lead public journey contract', () => {
       utmMedium: 'cpc',
       utmCampaign: 'launch',
       affordabilityData,
+      captureRequestId: 'lead-request-development-journey',
+      consent: {
+        accepted: true,
+        version: '2026-08-02',
+        source: 'development_journey_contract',
+      },
     });
 
     expect(lead).toMatchObject({
@@ -296,7 +307,7 @@ describe('development search-detail-lead public journey contract', () => {
     expect(mockCaptureBrandLead).toHaveBeenCalledWith(
       expect.objectContaining({
         developmentId: 77,
-        developerBrandProfileId: 13,
+        developerBrandProfileId: 999,
         unitId: 'unit-a',
         unitName: 'Type A',
         unitPriceFrom: 1299000,
@@ -308,36 +319,15 @@ describe('development search-detail-lead public journey contract', () => {
         utmMedium: 'cpc',
         utmCampaign: 'launch',
         affordabilityData,
+        captureRequestId: 'lead-request-development-journey',
+        consent: {
+          accepted: true,
+          version: '2026-08-02',
+          source: 'development_journey_contract',
+        },
       }),
     );
-    expect(mockCaptureBrandLead).not.toHaveBeenCalledWith(
-      expect.objectContaining({ developerBrandProfileId: 999 }),
-    );
-    expect(insertedAttributions).toHaveLength(1);
-    expect(insertedAttributions[0]).toMatchObject({
-      leadId: 909,
-      sourceType: 'web',
-      sourceEntityId: 'development:77',
-      campaignContext: { campaign: 'launch' },
-      utmContext: { source: 'google', medium: 'cpc', campaign: 'launch' },
-      referrerContext:
-        'https://property-listify.test/development/cosmopolitan-projects/unit/unit-a?utm_source=google&utm_medium=cpc&utm_campaign=launch',
-      firstTouch: expect.objectContaining({
-        sourceType: 'web',
-        propertyId: null,
-        developmentId: 77,
-      }),
-      lastTouch: expect.objectContaining({
-        sourceType: 'web',
-        propertyId: null,
-        developmentId: 77,
-      }),
-      actionTouch: expect.objectContaining({
-        sourceType: 'web',
-        propertyId: null,
-        developmentId: 77,
-      }),
-    });
+    expect(insertedAttributions).toHaveLength(0);
   });
 
   it('does not expose published but unapproved detail through the public detail contract', async () => {

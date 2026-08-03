@@ -23,6 +23,7 @@ interface SearchResultsEmptyStateProps {
       cityId?: string;
     };
   } | null;
+  locationMessage?: string;
   onClearAllFilters: () => void;
   onSwitchToSource: (source?: SearchFilters['listingSource']) => void;
   onBroadenToCity?: () => void;
@@ -69,6 +70,7 @@ export function SearchResultsEmptyState({
   onSwitchToSource,
   onBroadenToCity,
   onBroadenToProvince,
+  locationMessage,
 }: SearchResultsEmptyStateProps) {
   const copy = getEmptyStateCopy(filters);
   const Icon = copy.icon;
@@ -81,7 +83,7 @@ export function SearchResultsEmptyState({
         </EmptyMedia>
         <EmptyTitle className="text-slate-900">{copy.title}</EmptyTitle>
         <EmptyDescription className="max-w-lg text-slate-600">
-          {copy.description}
+          {locationMessage || copy.description}
         </EmptyDescription>
       </EmptyHeader>
 

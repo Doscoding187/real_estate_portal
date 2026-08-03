@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PUBLIC_SEARCH_MAX_PAGE_INDEX } from '../shared/publicSearchPagination';
 import { getSessionCookieOptions } from './_core/cookies';
 import { COOKIE_NAME } from '../shared/const';
 import type { User } from './_core/context';
@@ -75,8 +76,8 @@ function isPublicPropertyStatus(status: unknown): boolean {
   return status === 'available' || status === 'published';
 }
 
-function isPublicListingStatus(status: unknown): boolean {
-  return status === 'published' || status === 'approved';
+function isPublicListingStatus(status: unknown, approvalStatus?: unknown): boolean {
+  return (status === 'published' || status === 'approved') && approvalStatus === 'approved';
 }
 
 async function getPropertyContactAgent(
@@ -529,6 +530,58 @@ const appRouterConfig = {
         };
       }),
 
+    /**
+     * Canonical public inventory authority. Property and approved-development
+     * inventory are fetched and paginated here before the browser receives a
+     * page, so the client cannot blend independently paginated sources.
+     */
+    searchPublicInventory: publicProcedure
+      .input(
+        z.object({
+          province: z.string().trim().max(120).optional(),
+          city: z.string().trim().max(120).optional(),
+          suburb: z.array(z.string().trim().max(120)).max(10).optional(),
+          locations: z.array(z.string().trim().max(120)).max(10).optional(),
+          locationId: z.string().trim().max(128).optional(),
+          propertyType: z
+            .enum([
+              'apartment',
+              'house',
+              'villa',
+              'plot',
+              'commercial',
+              'townhouse',
+              'cluster_home',
+              'farm',
+              'shared_living',
+            ])
+            .optional(),
+          listingType: z.enum(['sale', 'rent']).optional(),
+          listingSource: z.enum(['manual', 'development']).optional(),
+          minPrice: z.number().nonnegative().optional(),
+          maxPrice: z.number().nonnegative().optional(),
+          minBedrooms: z.number().nonnegative().optional(),
+          maxBedrooms: z.number().nonnegative().optional(),
+          minBathrooms: z.number().nonnegative().optional(),
+          maxBathrooms: z.number().nonnegative().optional(),
+          minArea: z.number().nonnegative().optional(),
+          maxArea: z.number().nonnegative().optional(),
+          minLat: z.number().optional(),
+          maxLat: z.number().optional(),
+          minLng: z.number().optional(),
+          maxLng: z.number().optional(),
+          sortOption: z
+            .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc'])
+            .default('relevance'),
+          page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
+          pageSize: z.number().int().min(1).max(50).default(12),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { publicSearchService } = await import('./services/publicSearchService');
+        return await publicSearchService.searchInventory(input);
+      }),
+
     searchDevelopments: publicProcedure
       .input(
         z.object({
@@ -659,6 +712,7 @@ const appRouterConfig = {
               maxPrice: z.number().optional(),
               minBedrooms: z.number().optional(),
               maxBedrooms: z.number().optional(),
+              locationId: z.string().optional(),
             })
             .optional(),
         }),
@@ -800,7 +854,11 @@ const appRouterConfig = {
             ? await db.getListingById(linkedListingId)
             : null;
         const publicLinkedListing =
-          linkedListing && isPublicListingStatus((linkedListing as any).status)
+          linkedListing &&
+          isPublicListingStatus(
+            (linkedListing as any).status,
+            (linkedListing as any).approvalStatus,
+          )
             ? linkedListing
             : null;
         const linkedListingMedia = publicLinkedListing
