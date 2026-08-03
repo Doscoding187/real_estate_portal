@@ -213,30 +213,162 @@ describe('immutable resolved database context and operation authorization', () =
     );
   });
 
-  it('does not classify a fixed local test database as disposable outside isolated CI', () => {
+  it('authorizes an explicitly declared repository-owned CI test target without exposing credentials', () => {
     const identity = fixtureIdentity();
-    const local = resolveDatabaseAuthority({
-      operation: 'test-fixture',
+    const first = resolveDatabaseAuthority({
+      operation: 'verification',
       cwd: identity.worktreePath,
       gitIdentity: identity,
-      explicitDatabaseUrl: 'mysql://user:secret@127.0.0.1:3307/listify_test',
-      credentialClass: 'test-owner',
-      processEnv: { NODE_ENV: 'test', APP_ENV: 'test' },
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/listify_test',
+      processEnv: { CI: 'true', APP_ENV: 'test' },
     });
-    expect(local.context.targetClass).toBe('unknown');
-    expect(() => authorizeDatabaseOperation(local, { root: process.cwd() })).toThrow('fails closed');
+    const second = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://different:different@127.0.0.1:3306/listify_test',
+      processEnv: { CI: 'true', APP_ENV: 'test' },
+    });
 
-    const ci = resolveDatabaseAuthority({
-      operation: 'test-fixture',
+    expect(first.context.runtimeMode).toBe('test');
+    expect(first.context.targetClass).toBe('disposable-test');
+    expect(first.context.credentialClass).toBe('test-owner');
+    expect(first.context.targetFingerprint).toBe('mysql://127.0.0.1:3306/listify_test');
+    expect(first.context.targetFingerprintHash).toBe(second.context.targetFingerprintHash);
+    expect(authorizeDatabaseOperation(first, { root: process.cwd() })).toMatchObject({
+      operation: 'verification',
+      targetClass: 'disposable-test',
+      credentialClass: 'test-owner',
+    });
+
+    const output = JSON.stringify(first);
+    expect(output).not.toContain('synthetic');
+    expect(output).not.toContain('different');
+    expect(output).not.toContain('@');
+  });
+
+  it('keeps the CI test target unknown without an explicit test runtime', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'verification',
       cwd: identity.worktreePath,
       gitIdentity: identity,
-      explicitDatabaseUrl: 'mysql://user:secret@127.0.0.1:3306/listify_test',
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/listify_test',
+      processEnv: { CI: 'true' },
+    });
+
+    expect(authority.context.runtimeMode).toBe('development');
+    expect(authority.context.targetClass).toBe('unknown');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+      'fails closed',
+    );
+  });
+
+  it('does not trust CI alone or a test runtime for an arbitrary port-3306 database', () => {
+    const identity = fixtureIdentity();
+    const ciOnly = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/arbitrary_database',
+      processEnv: { CI: 'true' },
+    });
+    const explicitlyTestButWrongName = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/not_listify_test',
+      processEnv: { CI: 'true', APP_ENV: 'test', NODE_ENV: 'test' },
+    });
+
+    for (const authority of [ciOnly, explicitlyTestButWrongName]) {
+      expect(authority.context.targetClass).toBe('unknown');
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'fails closed',
+      );
+    }
+  });
+
+  it('denies remote CI targets and inappropriate CI credential classes', () => {
+    const identity = fixtureIdentity();
+    const remote = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@remote.example/listify_test',
       credentialClass: 'test-owner',
-      processEnv: { NODE_ENV: 'test', APP_ENV: 'test', CI: 'true' },
+      processEnv: { CI: 'true', APP_ENV: 'test', NODE_ENV: 'test' },
     });
-    expect(authorizeDatabaseOperation(ci, { root: process.cwd() })).toMatchObject({
-      targetClass: 'disposable-test',
+    const wrongCredential = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/listify_test',
+      credentialClass: 'lifecycle-admin',
+      processEnv: { CI: 'true', APP_ENV: 'test', NODE_ENV: 'test' },
     });
+
+    expect(remote.context.targetClass).toBe('shared-remote');
+    expect(() => authorizeDatabaseOperation(remote, { root: process.cwd() })).toThrow(
+      'fails closed',
+    );
+    expect(wrongCredential.context.targetClass).toBe('disposable-test');
+    expect(() => authorizeDatabaseOperation(wrongCredential, { root: process.cwd() })).toThrow(
+      'credential class lifecycle-admin is not allowed',
+    );
+  });
+
+  it('keeps development port 3306 and non-CI fixed test databases denied', () => {
+    const identity = fixtureIdentity();
+    const development = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/listify_test',
+      processEnv: { CI: 'true', APP_ENV: 'development', NODE_ENV: 'development' },
+    });
+    const nonCiTest = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+      explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3307/listify_test',
+      processEnv: { APP_ENV: 'test', NODE_ENV: 'test' },
+    });
+
+    for (const authority of [development, nonCiTest]) {
+      expect(authority.context.targetClass).toBe('unknown');
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+        'fails closed',
+      );
+    }
+  });
+
+  it('rejects a CI child target whose fingerprint differs from its parent', () => {
+    const identity = fixtureIdentity();
+    expect(() =>
+      resolveDatabaseAuthority({
+        operation: 'verification',
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        centralPath: join(identity.repositoryRoot, 'missing-central.env'),
+        explicitDatabaseUrl: 'mysql://synthetic:synthetic@127.0.0.1:3306/listify_test',
+        processEnv: {
+          CI: 'true',
+          APP_ENV: 'test',
+          NODE_ENV: 'test',
+          DATABASE_AUTHORITY_PARENT_FINGERPRINT: '0'.repeat(64),
+        },
+      }),
+    ).toThrow('differs from the parent');
   });
 
   it('requires exact target acknowledgement for disposal', () => {

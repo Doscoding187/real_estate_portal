@@ -11,6 +11,12 @@ jobs:
     name: DB Contract Verification
     runs-on: ubuntu-latest
 
+    env:
+      CI: 'true'
+      APP_ENV: test
+      NODE_ENV: test
+      DATABASE_CREDENTIAL_CLASS: test-owner
+
     services:
       mysql:
         image: mysql:8.0

@@ -142,10 +142,24 @@ describe('database authority agent entry contract', () => {
     const ci = readFileSync(resolve(ROOT, '.github/workflows/ci.yml'), 'utf8');
     const status = readFileSync(resolve(ROOT, 'scripts/databaseAuthorityStatus.ts'), 'utf8');
     const aggregate = readFileSync(resolve(ROOT, 'scripts/databaseAuthorityCheck.ts'), 'utf8');
+    const dbJobStart = ci.indexOf('  db-contract-verification:');
+    const dbJobEnd = ci.indexOf('\n  lint-and-typecheck:');
+    const dbJob = ci.slice(dbJobStart, dbJobEnd);
 
     expect(ci).toContain('pnpm db:verify:ci');
     expect(ci).toContain('pnpm db:authority:consumer-contract');
     expect(ci).toContain('pnpm db:authority:check');
+    expect(dbJobStart).toBeGreaterThanOrEqual(0);
+    expect(dbJobEnd).toBeGreaterThan(dbJobStart);
+    expect(dbJob).toContain(
+      "    env:\n      CI: 'true'\n      APP_ENV: test\n      NODE_ENV: test\n      DATABASE_CREDENTIAL_CLASS: test-owner",
+    );
+    expect(dbJob.match(/\n      CI:/g)).toHaveLength(1);
+    expect(dbJob.match(/\n      APP_ENV:/g)).toHaveLength(1);
+    expect(dbJob.match(/\n      NODE_ENV:/g)).toHaveLength(1);
+    expect(dbJob.match(/\n      DATABASE_CREDENTIAL_CLASS:/g)).toHaveLength(1);
+    expect(dbJob).toContain('MYSQL_DATABASE: listify_test');
+    expect(dbJob).toContain('- 3306:3306');
     expect(aggregate).toContain("['test:db-authority:static']");
     expect(aggregate).toContain("['db:authority:utilities']");
     expect(aggregate).toContain("['schema:sanity']");
