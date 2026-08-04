@@ -6,6 +6,8 @@
     "server/migrations/runSqlMigrations.ts",
     "server/_core/databaseAuthority/lifecycle.ts",
     "server/_core/databaseAuthority/readiness.ts",
+    "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+    "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
     "server/_core/launchPreflight.ts",
     "scripts/databaseAuthorityCli.ts",
     "scripts/databaseAuthorityConsumerContract.ts",
@@ -14,7 +16,6 @@
     "scripts/db-verify-distribution-schema.ts"
   ],
   "retiredDirectMutationSources": [
-    "scripts/localDbWorkflow.ts",
     "scripts/run-listing-performance-e2e.ts",
     "scripts/run-prospect-journey-e2e.ts",
     "scripts/testDbWorkflow.ts",
@@ -70,6 +71,20 @@
     "retired-direct-mutation": "Package commands and direct module entrypoints fail before database resolution or connection.",
     "legacy-contained": "Not reachable from approved package commands; remains prohibited historical or diagnostic source pending deletion/adaptation.",
     "legacy-target-parser": "Not an authority and not reachable from approved database commands."
+  },
+  "serviceLifecycle": {
+    "path": "scripts/local-db.sh",
+    "servicePathAuthority": "server/_core/databaseAuthority/localServicePaths.ts",
+    "serviceDirectory": "/var/tmp/property-listify-<uid>/mysql-3307",
+    "host": "127.0.0.1",
+    "port": 3307,
+    "scope": "service-only; no application database, user, grant, migration, reference data, scenario data, or disposal"
+  },
+  "operationAdapters": {
+    "canonicalReferenceData": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+    "searchToLeadScenario": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
+    "targetRequirement": "exact owned disposable worktree profile and accepted manifest head",
+    "legacyLocationsAuthority": "never written or used as canonical geography authority"
   },
   "temporaryCompatibility": [
     {

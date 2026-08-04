@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   authorizeDatabaseOperation,
@@ -12,6 +12,16 @@ import {
 } from './connectionAuthority';
 import { resolveDatabaseAuthority } from './context';
 import type { ResolvedDatabaseAuthority } from './types';
+import { assertOwnedDisposableTarget, identityFromAuthority } from './lifecycle';
+import { readWorktreeDatabaseProfile } from './worktreeProfile';
+import { verifyCanonicalGeography } from './dataAdapters/canonicalGeography';
+import { verifySearchToLeadScenario } from './dataAdapters/searchToLeadScenario';
+import {
+  compareNormalizedSchemas,
+  normalizedDesiredSchema,
+  normalizedPhysicalSchema,
+} from './schemaCongruency';
+import * as canonicalSchema from '../../../drizzle/schema';
 import {
   buildMigrationPlan,
   type AppliedMigration,
@@ -30,14 +40,24 @@ export type ReadinessLayer = {
   detail: string;
 };
 
+export type RuntimeReadinessPurpose = 'database' | 'location-discovery' | 'search-to-lead';
+
 export type LayeredDatabaseReadiness = {
   reportVersion: 1;
   checkedAt: string;
   targetFingerprintHash: string;
   targetClass: string;
+  requestedRuntime: RuntimeReadinessPurpose;
   applicationReady: boolean;
   layers: {
     processLiveness: ReadinessLayer;
+    serviceAvailable: ReadinessLayer;
+    targetOwned: ReadinessLayer;
+    schemaMigrated: ReadinessLayer;
+    schemaCongruent: ReadinessLayer;
+    canonicalReferenceData: ReadinessLayer;
+    acceptanceScenario: ReadinessLayer;
+    application: ReadinessLayer;
     targetConnectivity: ReadinessLayer;
     migrationHead: ReadinessLayer;
     incompleteAttemptState: ReadinessLayer;
@@ -50,11 +70,7 @@ export type LayeredDatabaseReadiness = {
   };
 };
 
-function layer(
-  state: ReadinessState,
-  code: string,
-  detail: string,
-): ReadinessLayer {
+function layer(state: ReadinessState, code: string, detail: string): ReadinessLayer {
   return { state, code, detail };
 }
 
@@ -80,9 +96,21 @@ async function queryRows(
 
 function notEvaluatedLayers() {
   return {
-    consumerApi: layer('not-evaluated', 'consumer-not-evaluated', 'Consumer/API smoke is a separate readiness layer.'),
-    browserJourney: layer('not-evaluated', 'browser-not-evaluated', 'Browser journey readiness is verified separately.'),
-    release: layer('not-evaluated', 'release-not-evaluated', 'Release readiness requires protected release evidence.'),
+    consumerApi: layer(
+      'not-evaluated',
+      'consumer-not-evaluated',
+      'Consumer/API smoke is a separate readiness layer.',
+    ),
+    browserJourney: layer(
+      'not-evaluated',
+      'browser-not-evaluated',
+      'Browser journey readiness is verified separately.',
+    ),
+    release: layer(
+      'not-evaluated',
+      'release-not-evaluated',
+      'Release readiness requires protected release evidence.',
+    ),
     fullDiagnostics: layer(
       'not-evaluated',
       'diagnostics-not-evaluated',
@@ -91,11 +119,76 @@ function notEvaluatedLayers() {
   };
 }
 
+function targetOwnershipLayer(authority: ResolvedDatabaseAuthority): ReadinessLayer {
+  try {
+    assertOwnedDisposableTarget(authority);
+    const profile = readWorktreeDatabaseProfile(identityFromAuthority(authority));
+    return profile
+      ? layer(
+          'ready',
+          'exact-worktree-owned',
+          `Exact worktree target ${profile.databaseName} has a matching ownership profile.`,
+        )
+      : layer(
+          'not-ready',
+          'worktree-profile-missing',
+          'Exact disposable target ownership profile is missing.',
+        );
+  } catch (error) {
+    return layer(
+      'not-ready',
+      'target-not-exact-owned-worktree',
+      error instanceof Error
+        ? error.message
+        : 'Target is not the exact owned disposable worktree target.',
+    );
+  }
+}
+
+async function schemaCongruencyLayer(
+  connection: AuthoritySqlConnection,
+  root: string,
+): Promise<ReadinessLayer> {
+  if (!existsSync(resolve(root, 'drizzle/schema/index.ts'))) {
+    return layer(
+      'not-evaluated',
+      'canonical-schema-not-available',
+      'The canonical Drizzle schema root is not available in this readiness fixture.',
+    );
+  }
+  try {
+    const report = compareNormalizedSchemas(
+      normalizedDesiredSchema(canonicalSchema),
+      await normalizedPhysicalSchema(connection),
+    );
+    return report.congruent
+      ? layer(
+          'ready',
+          'schema-congruent',
+          `Physical schema matches canonical digest ${report.desiredDigest}.`,
+        )
+      : layer(
+          'not-ready',
+          'schema-not-congruent',
+          `Physical schema differs from canonical digest ${report.desiredDigest}; ${report.differences.length} difference(s) found.`,
+        );
+  } catch (error) {
+    return layer(
+      'not-ready',
+      'schema-congruency-check-failed',
+      error instanceof Error ? error.message : 'Schema congruency could not be established.',
+    );
+  }
+}
+
 function inventoryTables(root: string): string[] {
   const inventory = JSON.parse(
     readFileSync(resolve(root, 'drizzle/schema/canonical-model-inventory.json'), 'utf8'),
   ) as { tables?: unknown };
-  if (!Array.isArray(inventory.tables) || inventory.tables.some(value => typeof value !== 'string')) {
+  if (
+    !Array.isArray(inventory.tables) ||
+    inventory.tables.some(value => typeof value !== 'string')
+  ) {
     throw new Error('Canonical model inventory is malformed.');
   }
   return inventory.tables as string[];
@@ -104,8 +197,10 @@ function inventoryTables(root: string): string[] {
 export async function assessAuthorizedDatabaseReadiness(input: {
   authority: ResolvedDatabaseAuthority;
   connection: AuthoritySqlConnection;
+  authorization?: AuthorizedDatabaseOperation;
   manifest?: ValidatedMigrationManifest;
   root?: string;
+  purpose?: RuntimeReadinessPurpose;
   now?: Date;
 }): Promise<LayeredDatabaseReadiness> {
   const root = input.root ?? input.authority.context.repository.root;
@@ -115,6 +210,7 @@ export async function assessAuthorizedDatabaseReadiness(input: {
       migrationsDirectory: resolve(root, 'server/migrations'),
     });
   const context = input.authority.context;
+  const requestedRuntime = input.purpose ?? 'database';
   const selectedRows = await queryRows(input.connection, 'SELECT DATABASE() AS database_name');
   const selected = String(rowValue(selectedRows[0] ?? {}, 'database_name') ?? '');
   const targetMatches = selected === context.databaseName;
@@ -134,19 +230,23 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   const historyPresent = tables.has(manifest.document.historyTable);
   const attemptPresent = tables.has(manifest.document.attemptTable);
   const applied: AppliedMigration[] = historyPresent
-    ? (await queryRows(
-        input.connection,
-        `SELECT filename, checksum FROM \`${manifest.document.historyTable}\` ORDER BY numeric_version, filename`,
-      )).map(row => ({
+    ? (
+        await queryRows(
+          input.connection,
+          `SELECT filename, checksum FROM \`${manifest.document.historyTable}\` ORDER BY numeric_version, filename`,
+        )
+      ).map(row => ({
         fileName: String(rowValue(row, 'filename') ?? ''),
         checksum: String(rowValue(row, 'checksum') ?? ''),
       }))
     : [];
   const incompleteAttempts: MigrationAttempt[] = attemptPresent
-    ? (await queryRows(
-        input.connection,
-        `SELECT attempt_id, migration_filename, state FROM \`${manifest.document.attemptTable}\` WHERE state IN ('running', 'failed', 'blocked') ORDER BY started_at, attempt_id`,
-      )).map(row => ({
+    ? (
+        await queryRows(
+          input.connection,
+          `SELECT attempt_id, migration_filename, state FROM \`${manifest.document.attemptTable}\` WHERE state IN ('running', 'failed', 'blocked') ORDER BY started_at, attempt_id`,
+        )
+      ).map(row => ({
         attemptId: String(rowValue(row, 'attempt_id') ?? ''),
         fileName: String(rowValue(row, 'migration_filename') ?? ''),
         state: String(rowValue(row, 'state') ?? 'blocked') as MigrationAttempt['state'],
@@ -210,7 +310,11 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   const missingTables = requiredTables.filter(table => !tables.has(table));
   const structuralSchema =
     missingTables.length === 0
-      ? layer('ready', 'required-schema-present', `All ${requiredTables.length} application tables are present.`)
+      ? layer(
+          'ready',
+          'required-schema-present',
+          `All ${requiredTables.length} application tables are present.`,
+        )
       : layer(
           'not-ready',
           'required-schema-missing',
@@ -218,20 +322,135 @@ export async function assessAuthorizedDatabaseReadiness(input: {
             missingTables.length > 12 ? ` (+${missingTables.length - 12} more)` : ''
           }.`,
         );
-  const requiredDataVersion = manifest.expectedHead.requiredReferenceDataVersion;
-  const requiredData = requiredDataVersion
-    ? layer(
+  const serviceAvailable = targetConnectivity;
+  const targetOwned = targetOwnershipLayer(input.authority);
+  const schemaMigrated = migrationHead;
+  const schemaCongruent = await schemaCongruencyLayer(input.connection, root);
+  let canonicalReferenceData = layer(
+    'not-evaluated',
+    'reference-not-evaluated',
+    'Canonical reference data is evaluated for a requested location runtime.',
+  );
+  let acceptanceScenario = layer(
+    'not-evaluated',
+    'scenario-not-evaluated',
+    'The isolated acceptance scenario is evaluated for a requested location runtime.',
+  );
+  if (requestedRuntime !== 'database') {
+    if (targetOwned.state !== 'ready') {
+      canonicalReferenceData = layer(
         'not-ready',
-        'required-data-version-unverified',
-        `Required data version ${requiredDataVersion} needs its registered verifier.`,
-      )
-    : layer('not-required', 'required-data-not-declared', 'Manifest head declares no required data version.');
-  const applicationReady =
-    targetConnectivity.state === 'ready' &&
-    migrationHead.state === 'ready' &&
+        'reference-blocked-by-target-ownership',
+        'Canonical reference data cannot be ready until the exact disposable target is owned.',
+      );
+      acceptanceScenario = layer(
+        'not-ready',
+        'scenario-blocked-by-target-ownership',
+        'Acceptance scenario data cannot be ready until the exact disposable target is owned.',
+      );
+    } else if (migrationHead.state !== 'ready' || schemaCongruent.state !== 'ready') {
+      canonicalReferenceData = layer(
+        'not-ready',
+        'reference-blocked-by-schema',
+        'Canonical reference data requires the accepted migration head and a congruent schema.',
+      );
+      acceptanceScenario = layer(
+        'not-ready',
+        'scenario-blocked-by-schema',
+        'Acceptance scenario data requires the accepted migration head and a congruent schema.',
+      );
+    } else if (!input.authorization) {
+      canonicalReferenceData = layer(
+        'not-evaluated',
+        'reference-authorization-not-supplied',
+        'Reference verification requires the authorized readiness operation.',
+      );
+      acceptanceScenario = layer(
+        'not-evaluated',
+        'scenario-authorization-not-supplied',
+        'Scenario verification requires the authorized readiness operation.',
+      );
+    } else {
+      try {
+        const reference = await verifyCanonicalGeography({
+          authority: input.authority,
+          decision: input.authorization,
+          connection: input.connection,
+        });
+        canonicalReferenceData = layer(
+          'ready',
+          'canonical-reference-ready',
+          `${reference.version} (${reference.digest.slice(0, 16)}) verified: ${reference.verified.provinces} provinces, ${reference.verified.cities} cities, ${reference.verified.suburbs} suburb(s).`,
+        );
+      } catch (error) {
+        canonicalReferenceData = layer(
+          'not-ready',
+          'canonical-reference-not-ready',
+          error instanceof Error
+            ? error.message
+            : 'Canonical geography reference data is not ready.',
+        );
+      }
+      try {
+        const scenario = await verifySearchToLeadScenario({
+          authority: input.authority,
+          decision: input.authorization,
+          connection: input.connection,
+        });
+        acceptanceScenario = layer(
+          'ready',
+          'acceptance-scenario-ready',
+          `${scenario.version} (${scenario.digest.slice(0, 16)}) verified: ${scenario.verified.eligibleProperties} property and ${scenario.verified.eligibleDevelopments} development prerequisite(s).`,
+        );
+      } catch (error) {
+        acceptanceScenario = layer(
+          'not-ready',
+          'acceptance-scenario-not-ready',
+          error instanceof Error
+            ? error.message
+            : 'Search-to-Lead acceptance scenario is not ready.',
+        );
+      }
+    }
+  }
+  const requiredData =
+    requestedRuntime === 'database'
+      ? layer(
+          'not-required',
+          'requested-data-not-required',
+          'The database-only readiness purpose does not claim feature reference or scenario data readiness.',
+        )
+      : canonicalReferenceData.state === 'ready' && acceptanceScenario.state === 'ready'
+        ? layer(
+            'ready',
+            'requested-data-ready',
+            'Canonical geography and the isolated Search-to-Lead acceptance scenario are ready.',
+          )
+        : layer(
+            'not-ready',
+            'requested-data-not-ready',
+            'The requested runtime still lacks canonical geography or acceptance scenario data.',
+          );
+  const baseReady =
+    serviceAvailable.state === 'ready' &&
+    targetOwned.state === 'ready' &&
+    schemaMigrated.state === 'ready' &&
+    schemaCongruent.state === 'ready' &&
     incompleteAttemptState.state === 'ready' &&
-    structuralSchema.state === 'ready' &&
-    requiredData.state !== 'not-ready';
+    structuralSchema.state === 'ready';
+  const applicationReady =
+    baseReady && (requestedRuntime === 'database' || requiredData.state === 'ready');
+  const application = applicationReady
+    ? layer(
+        'ready',
+        'application-ready-for-requested-runtime',
+        `Database Authority is ready for ${requestedRuntime} verification.`,
+      )
+    : layer(
+        'not-ready',
+        'application-not-ready-for-requested-runtime',
+        `Database Authority is not ready for ${requestedRuntime} verification.`,
+      );
   const separatelyEvaluatedLayers = notEvaluatedLayers();
   if (incompleteAttemptState.state === 'not-ready') {
     separatelyEvaluatedLayers.release = layer(
@@ -246,9 +465,17 @@ export async function assessAuthorizedDatabaseReadiness(input: {
     checkedAt: (input.now ?? new Date()).toISOString(),
     targetFingerprintHash: context.targetFingerprintHash,
     targetClass: context.targetClass,
+    requestedRuntime,
     applicationReady,
     layers: {
       processLiveness: layer('ready', 'process-alive', 'The process is able to answer.'),
+      serviceAvailable,
+      targetOwned,
+      schemaMigrated,
+      schemaCongruent,
+      canonicalReferenceData,
+      acceptanceScenario,
+      application,
       targetConnectivity,
       migrationHead,
       incompleteAttemptState,
@@ -259,16 +486,19 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   };
 }
 
-export async function assessRuntimeDatabaseReadiness(input: {
-  authority?: ResolvedDatabaseAuthority;
-  authorization?: AuthorizedDatabaseOperation;
-  root?: string;
-  connectionFactory?: (
-    authority: ResolvedDatabaseAuthority,
-    decision: AuthorizedDatabaseOperation,
-  ) => Promise<AuthoritySqlConnection>;
-  now?: Date;
-} = {}): Promise<LayeredDatabaseReadiness> {
+export async function assessRuntimeDatabaseReadiness(
+  input: {
+    authority?: ResolvedDatabaseAuthority;
+    authorization?: AuthorizedDatabaseOperation;
+    root?: string;
+    connectionFactory?: (
+      authority: ResolvedDatabaseAuthority,
+      decision: AuthorizedDatabaseOperation,
+    ) => Promise<AuthoritySqlConnection>;
+    purpose?: RuntimeReadinessPurpose;
+    now?: Date;
+  } = {},
+): Promise<LayeredDatabaseReadiness> {
   let authority: ResolvedDatabaseAuthority;
   try {
     authority =
@@ -283,6 +513,7 @@ export async function assessRuntimeDatabaseReadiness(input: {
       checkedAt: input.now ?? new Date(),
       targetFingerprintHash: 'unresolved',
       targetClass: 'unknown',
+      purpose: input.purpose,
       connectivityCode: 'authority-unresolved',
       connectivityDetail: 'Database target authority could not be resolved.',
     });
@@ -305,7 +536,9 @@ export async function assessRuntimeDatabaseReadiness(input: {
     return await assessAuthorizedDatabaseReadiness({
       authority,
       connection,
+      authorization,
       root: input.root,
+      purpose: input.purpose,
       now: input.now,
     });
   } catch (error) {
@@ -329,6 +562,7 @@ export async function assessRuntimeDatabaseReadiness(input: {
       checkedAt: input.now ?? new Date(),
       targetFingerprintHash: context.targetFingerprintHash,
       targetClass: context.targetClass,
+      purpose: input.purpose,
       connectivityCode,
       connectivityDetail,
     });
@@ -341,6 +575,7 @@ function unavailableReadiness(input: {
   checkedAt: Date;
   targetFingerprintHash: string;
   targetClass: string;
+  purpose?: RuntimeReadinessPurpose;
   connectivityCode: string;
   connectivityDetail: string;
 }): LayeredDatabaseReadiness {
@@ -349,14 +584,42 @@ function unavailableReadiness(input: {
     checkedAt: input.checkedAt.toISOString(),
     targetFingerprintHash: input.targetFingerprintHash,
     targetClass: input.targetClass,
+    requestedRuntime: input.purpose ?? 'database',
     applicationReady: false,
     layers: {
       processLiveness: layer('ready', 'process-alive', 'The process is able to answer.'),
-      targetConnectivity: layer(
-        'not-ready',
-        input.connectivityCode,
-        input.connectivityDetail,
+      serviceAvailable: layer('not-ready', input.connectivityCode, input.connectivityDetail),
+      targetOwned: layer(
+        'not-evaluated',
+        'target-ownership-not-evaluated',
+        'Target ownership could not be evaluated before database connectivity.',
       ),
+      schemaMigrated: layer(
+        'not-evaluated',
+        'schema-migration-not-evaluated',
+        'Target readiness failed before migration-head verification.',
+      ),
+      schemaCongruent: layer(
+        'not-evaluated',
+        'schema-congruency-not-evaluated',
+        'Target readiness failed before schema-congruency verification.',
+      ),
+      canonicalReferenceData: layer(
+        'not-evaluated',
+        'reference-not-evaluated',
+        'Target readiness failed before canonical reference-data verification.',
+      ),
+      acceptanceScenario: layer(
+        'not-evaluated',
+        'scenario-not-evaluated',
+        'Target readiness failed before acceptance-scenario verification.',
+      ),
+      application: layer(
+        'not-ready',
+        'application-not-ready-for-requested-runtime',
+        `Database Authority is not ready for ${input.purpose ?? 'database'} verification.`,
+      ),
+      targetConnectivity: layer('not-ready', input.connectivityCode, input.connectivityDetail),
       migrationHead: layer(
         'not-evaluated',
         'head-not-evaluated',

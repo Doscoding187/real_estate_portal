@@ -45,6 +45,12 @@ describe('database authority agent entry contract', () => {
     expect(manifest.databaseChangeProtocol).toBe(
       'docs/database-authority/database-change-protocol.md',
     );
+    expect(manifest.localServicePathAuthority).toBe(
+      'server/_core/databaseAuthority/localServicePaths.ts',
+    );
+    expect(manifest.localServiceDirectoryPattern).toBe(
+      '/var/tmp/property-listify-<uid>/mysql-3307',
+    );
   });
 
   it('classifies only exact approved local and test targets as safe', () => {
@@ -72,15 +78,31 @@ describe('database authority agent entry contract', () => {
     ).toMatchObject({ classification: 'production', approved: false });
   });
 
+  it('reports the same UID-bound service authority from status, context, and documentation', () => {
+    const status = readFileSync(resolve(ROOT, 'scripts/databaseAuthorityStatus.ts'), 'utf8');
+    const cli = readFileSync(resolve(ROOT, 'scripts/databaseAuthorityCli.ts'), 'utf8');
+    const entry = readFileSync(
+      resolve(ROOT, 'docs/database-authority/00-database-authority-agent-entry.md'),
+      'utf8',
+    );
+
+    expect(status).toContain('localServiceRoot()');
+    expect(status).toContain('localServiceFingerprint()');
+    expect(cli).toContain('localServiceRoot()');
+    expect(cli).toContain('legacyPathPolicy');
+    expect(entry).toContain('/var/tmp/property-listify-<uid>/mysql-3307');
+    expect(entry).toContain('home-directory MySQL datadir or modify AppArmor');
+  });
+
   it('uses a non-destructive local bootstrap sequence and a fresh-schema consumer sequence', () => {
     expect(localBootstrapCommandSequence()).toEqual([
-      ['pnpm', ['db:local:start']],
-      ['pnpm', ['db:local:wait']],
+      ['pnpm', ['db:authority:service:start']],
       ['pnpm', ['db:worktree:create']],
       ['pnpm', ['db:migrate:plan']],
       ['pnpm', ['db:migrate:apply']],
-      ['pnpm', ['db:schema:congruency']],
-      ['pnpm', ['db:readiness']],
+      ['pnpm', ['db:reference:prepare']],
+      ['pnpm', ['db:scenario:prepare']],
+      ['pnpm', ['db:readiness', '--', '--purpose=location-discovery']],
     ]);
     expect(consumerContractCommandSequence()).toEqual([
       ['pnpm', ['db:migrate:test']],
@@ -94,10 +116,10 @@ describe('database authority agent entry contract', () => {
     const testEnvironment = { NODE_ENV: 'test', APP_ENV: 'test' };
 
     expect(() =>
-      assertFreshDisposableTestTarget(
-        'mysql://user:password@127.0.0.1:3306/listify_test',
-        { ...testEnvironment, CI: 'true' },
-      ),
+      assertFreshDisposableTestTarget('mysql://user:password@127.0.0.1:3306/listify_test', {
+        ...testEnvironment,
+        CI: 'true',
+      }),
     ).not.toThrow();
     expect(() =>
       assertFreshDisposableTestTarget(
@@ -164,7 +186,9 @@ describe('database authority agent entry contract', () => {
     expect(aggregate).toContain("['db:authority:utilities']");
     expect(aggregate).toContain("['schema:sanity']");
     expect(aggregate).toContain("['schema:inventory:check']");
-    expect(aggregate).not.toMatch(/dotenv|mysql2|createConnection|db:migrate|db:seed|db:authority:status/);
+    expect(aggregate).not.toMatch(
+      /dotenv|mysql2|createConnection|db:migrate|db:seed|db:authority:status/,
+    );
     expect(status).toContain('Required Local Variables:');
     expect(status).not.toContain('console.log(process.env.DATABASE_URL)');
     expect(status).not.toContain('console.log(process.env.LOCAL_DEMO_AGENCY_PASSWORD)');

@@ -5,10 +5,8 @@ import {
   type AuthorizedDatabaseOperation,
 } from './authorization';
 import { readDatabaseCredentialUrl } from './credentialVault';
-import type {
-  DatabaseOperation,
-  ResolvedDatabaseAuthority,
-} from './types';
+import { localServiceSocketPath } from './localServicePaths';
+import type { DatabaseOperation, ResolvedDatabaseAuthority } from './types';
 
 export type AuthoritySqlConnection = {
   execute: (statement: string, values?: readonly unknown[]) => Promise<unknown>;
@@ -166,9 +164,9 @@ export async function createLocalLifecycleAdminConnection(
   }
   try {
     const connection = await mysql.createConnection({
-      socketPath: input.socketPath ?? '/tmp/listify-mysql-3307/mysql.sock',
+      socketPath: input.socketPath ?? localServiceSocketPath(),
       user: 'root',
-      password: input.password ?? 'listify_root_password',
+      ...(input.password === undefined ? {} : { password: input.password }),
     });
     return {
       execute: (statement, values) => connection.execute(statement, values as any),

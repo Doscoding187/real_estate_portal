@@ -13,10 +13,26 @@ import {
 } from '../server/_core/databaseAuthority/lifecycle';
 import { assessRuntimeDatabaseReadiness } from '../server/_core/databaseAuthority/readiness';
 import {
+  prepareCanonicalGeography,
+  verifyCanonicalGeography,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
+import {
+  prepareSearchToLeadScenario,
+  verifySearchToLeadScenario,
+} from '../server/_core/databaseAuthority/dataAdapters/searchToLeadScenario';
+import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
 } from '../server/_core/databaseAuthority/schemaCongruency';
+import {
+  LOCAL_SERVICE_HOST,
+  LOCAL_SERVICE_PORT,
+  localServiceDataDir,
+  localServiceFingerprint,
+  localServiceLegacyRoot,
+  localServiceRoot,
+} from '../server/_core/databaseAuthority/localServicePaths';
 import {
   DATABASE_OPERATIONS,
   type DatabaseCredentialClass,
@@ -36,11 +52,18 @@ type Command =
   | 'release:plan'
   | 'release:apply'
   | 'readiness'
-  | 'schema:check';
+  | 'schema:check'
+  | 'reference:prepare'
+  | 'reference:verify'
+  | 'scenario:prepare'
+  | 'scenario:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
-  return process.argv.slice(3).find(value => value.startsWith(prefix))?.slice(prefix.length);
+  return process.argv
+    .slice(3)
+    .find(value => value.startsWith(prefix))
+    ?.slice(prefix.length);
 }
 
 function operationOption(fallback: DatabaseOperation): DatabaseOperation {
@@ -57,10 +80,7 @@ function credentialClass(fallback?: DatabaseCredentialClass): DatabaseCredential
     | undefined;
 }
 
-function authorityFor(
-  operation: DatabaseOperation,
-  fallbackCredential?: DatabaseCredentialClass,
-) {
+function authorityFor(operation: DatabaseOperation, fallbackCredential?: DatabaseCredentialClass) {
   return resolveDatabaseAuthority({
     operation,
     credentialClass: credentialClass(fallbackCredential),
@@ -99,7 +119,18 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'context') {
     const authority = authorityFor(operationOption('read-only-connect'));
-    print(authority.context);
+    print({
+      ...authority.context,
+      localService: {
+        host: LOCAL_SERVICE_HOST,
+        port: LOCAL_SERVICE_PORT,
+        directory: localServiceRoot(),
+        dataDirectory: localServiceDataDir(),
+        fingerprint: localServiceFingerprint(),
+        legacyHomeDirectory: localServiceLegacyRoot(),
+        legacyPathPolicy: 'inactive-residue-only; never adopted or deleted automatically',
+      },
+    });
     return;
   }
 
@@ -148,8 +179,7 @@ async function run(command: Command): Promise<void> {
         : planOnly
           ? 'migration-plan'
           : 'migration-apply',
-      acceptedOldHead:
-        option('accepted-old-head') === 'none' ? null : option('accepted-old-head'),
+      acceptedOldHead: option('accepted-old-head') === 'none' ? null : option('accepted-old-head'),
       expectedNewHead: option('expected-new-head'),
       acknowledgement: option('ack'),
     });
@@ -168,7 +198,42 @@ async function run(command: Command): Promise<void> {
   }
 
   if (command === 'readiness') {
-    print(await assessRuntimeDatabaseReadiness());
+    print(
+      await assessRuntimeDatabaseReadiness({
+        purpose: (option('purpose') as any) ?? 'location-discovery',
+      }),
+    );
+    return;
+  }
+
+  if (
+    command === 'reference:prepare' ||
+    command === 'reference:verify' ||
+    command === 'scenario:prepare' ||
+    command === 'scenario:verify'
+  ) {
+    const isReference = command.startsWith('reference:');
+    const isPrepare = command.endsWith(':prepare');
+    const operation = isPrepare
+      ? isReference
+        ? 'reference-seed'
+        : 'scenario-seed'
+      : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      const evidence = isReference
+        ? isPrepare
+          ? await prepareCanonicalGeography({ authority, decision, connection })
+          : await verifyCanonicalGeography({ authority, decision, connection })
+        : isPrepare
+          ? await prepareSearchToLeadScenario({ authority, decision, connection })
+          : await verifySearchToLeadScenario({ authority, decision, connection });
+      print(evidence);
+    } finally {
+      await connection.end();
+    }
     return;
   }
 
@@ -205,6 +270,10 @@ const commands = new Set<Command>([
   'release:apply',
   'readiness',
   'schema:check',
+  'reference:prepare',
+  'reference:verify',
+  'scenario:prepare',
+  'scenario:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

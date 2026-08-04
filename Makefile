@@ -15,8 +15,8 @@ help:
 	@echo ""
 	@echo "Setup:"
 	@echo "  make env          - Create .env.local from example"
-	@echo "  make docker-up    - Start canonical local MySQL"
-	@echo "  make docker-down  - Stop canonical local MySQL"
+	@echo "  make docker-up    - Start the Database Authority MySQL service"
+	@echo "  make docker-down  - Stop the bounded Database Authority service"
 	@echo ""
 	@echo "Database:"
 	@echo "  make db-migrate   - Run canonical local SQL migrations"
@@ -42,11 +42,11 @@ env:
 ## ---------- DOCKER ----------
 docker-up:
 	@pnpm db:local:start
-	@echo "🐳 Canonical local MySQL started"
+	@echo "Database Authority MySQL service started"
 
 docker-down:
 	@pnpm db:local:stop
-	@echo "🛑 Canonical local MySQL stopped"
+	@echo "Database Authority MySQL service stopped"
 
 ## ---------- DATABASE ----------
 db-migrate:
