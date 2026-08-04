@@ -12,6 +12,7 @@ import {
   removeWorktreeDatabaseProfile,
   writeWorktreeDatabaseProfile,
 } from './worktreeProfile';
+import { readDatabaseCredentialUrl } from './credentialVault';
 
 export type WorktreeLifecycleEvidence = {
   operation: 'create' | 'dispose';
@@ -21,7 +22,7 @@ export type WorktreeLifecycleEvidence = {
   changed: boolean;
 };
 
-function assertOwnedDisposableTarget(authority: ResolvedDatabaseAuthority): void {
+export function assertOwnedDisposableTarget(authority: ResolvedDatabaseAuthority): void {
   const { context } = authority;
   if (
     context.targetClass !== 'disposable-worktree' ||
@@ -36,7 +37,7 @@ function assertOwnedDisposableTarget(authority: ResolvedDatabaseAuthority): void
   }
 }
 
-function identityFromAuthority(authority: ResolvedDatabaseAuthority): GitWorktreeIdentity {
+export function identityFromAuthority(authority: ResolvedDatabaseAuthority): GitWorktreeIdentity {
   const { context } = authority;
   return {
     repositoryRoot: context.repository.root,
@@ -75,18 +76,42 @@ async function databaseExists(
   );
 }
 
+function quoteSqlString(value: string): string {
+  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+}
+
+function applicationPassword(authority: ResolvedDatabaseAuthority): string {
+  const url = new URL(readDatabaseCredentialUrl(authority.credential));
+  const password = decodeURIComponent(url.password);
+  if (!password) {
+    throw new Error(
+      'Worktree lifecycle refused: the exact worktree application credential has no password.',
+    );
+  }
+  return password;
+}
+
 async function grantLocalApplicationOwnership(
   connection: AuthoritySqlConnection,
   databaseName: string,
+  authority: ResolvedDatabaseAuthority,
 ): Promise<void> {
   const result = await connection.execute(
     "SELECT Host AS host_name FROM mysql.user WHERE User = 'listify_app' ORDER BY Host",
   );
-  const hosts = rowsFromResult(result)
-    .map(row => String(row.host_name ?? row.HOST_NAME ?? ''))
-    .filter(host => host === '%' || host === '127.0.0.1' || host === 'localhost');
-  if (hosts.length === 0) {
-    throw new Error('Worktree lifecycle refused: approved local application user is unavailable.');
+  const existingHosts = new Set(
+    rowsFromResult(result)
+      .map(row => String(row.host_name ?? row.HOST_NAME ?? ''))
+      .filter(host => host === '127.0.0.1' || host === 'localhost'),
+  );
+  const password = quoteSqlString(applicationPassword(authority));
+  const hosts = ['127.0.0.1', 'localhost'] as const;
+  for (const host of hosts) {
+    if (!existingHosts.has(host)) {
+      await connection.execute(
+        `CREATE USER IF NOT EXISTS 'listify_app'@'${host}' IDENTIFIED BY ${password}`,
+      );
+    }
   }
   for (const host of hosts) {
     await connection.execute(
@@ -122,13 +147,15 @@ export async function createOwnedWorktreeDatabase(input: {
     if (!exists) {
       await connection.execute(`CREATE DATABASE \`${authority.context.databaseName}\``);
       created = true;
-      try {
-        await grantLocalApplicationOwnership(connection, authority.context.databaseName);
-      } catch (error) {
+    }
+    try {
+      await grantLocalApplicationOwnership(connection, authority.context.databaseName, authority);
+    } catch (error) {
+      if (created) {
         await connection.execute(`DROP DATABASE \`${authority.context.databaseName}\``);
         created = false;
-        throw error;
       }
+      throw error;
     }
     writeWorktreeDatabaseProfile(identity, {}, input.profileRoot);
     return {

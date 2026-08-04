@@ -6,6 +6,13 @@ import {
 } from '../server/_core/databaseAuthority/authorization';
 import { resolveDatabaseAuthority } from '../server/_core/databaseAuthority/context';
 import { assessRuntimeDatabaseReadiness } from '../server/_core/databaseAuthority/readiness';
+import {
+  LOCAL_SERVICE_HOST,
+  LOCAL_SERVICE_PORT,
+  localServiceDataDir,
+  localServiceFingerprint,
+  localServiceRoot,
+} from '../server/_core/databaseAuthority/localServicePaths';
 import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
 import {
   inspectCentralLocalEnvironment,
@@ -50,6 +57,11 @@ export type AuthorityManifest = {
   databaseChangeProtocol: string;
   migrationTreeAuthority: string;
   residualUtilityAuthority: string;
+  localServicePathAuthority: string;
+  localServiceLifecycle: string;
+  localServiceDirectoryPattern: string;
+  canonicalReferenceDataAdapter: string;
+  acceptanceScenarioAdapter: string;
 };
 
 const MANIFEST_PATH = 'docs/database-authority/authority-manifest.json';
@@ -68,6 +80,14 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   'db:release:apply',
   'db:readiness',
   'db:schema:congruency',
+  'db:authority:service:start',
+  'db:authority:service:wait',
+  'db:authority:service:status',
+  'db:authority:service:stop',
+  'db:reference:prepare',
+  'db:reference:verify',
+  'db:scenario:prepare',
+  'db:scenario:verify',
 ] as const;
 
 export function loadAuthorityManifest(root = process.cwd()): AuthorityManifest {
@@ -99,6 +119,10 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.databaseChangeProtocol,
     manifest.migrationTreeAuthority,
     manifest.residualUtilityAuthority,
+    manifest.localServicePathAuthority,
+    manifest.localServiceLifecycle,
+    manifest.canonicalReferenceDataAdapter,
+    manifest.acceptanceScenarioAdapter,
   ];
   const missingPaths = paths.filter(path => !existsSync(resolve(root, path)));
   const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
@@ -129,6 +153,9 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
       : '',
     manifest.worktreeProfileRelativeDirectory !== '.config/property-listify/worktrees'
       ? 'worktree profile directory is inconsistent'
+      : '',
+    manifest.localServiceDirectoryPattern !== '/var/tmp/property-listify-<uid>/mysql-3307'
+      ? 'local service directory pattern is inconsistent'
       : '',
   ].filter(Boolean);
 
@@ -200,7 +227,11 @@ export function classifyDatabaseTarget(
   ) {
     return { classification: 'test', approved: true, host, database, url };
   }
-  if (runtime === 'production' || database === 'listify_property_sa' || /prod|railway|tidb/i.test(host)) {
+  if (
+    runtime === 'production' ||
+    database === 'listify_property_sa' ||
+    /prod|railway|tidb/i.test(host)
+  ) {
     return { classification: 'production', approved: false, host, database, url };
   }
   if (runtime === 'staging' || database === 'listify_staging' || /stag/i.test(host)) {
@@ -244,7 +275,21 @@ async function main() {
   console.log(`Sanitized Target: ${authority.context.targetFingerprint}`);
   console.log(`Target Fingerprint Hash: ${authority.context.targetFingerprintHash}`);
   console.log(`Target Classification: ${authority.context.targetClass}`);
-  console.log(`Worktree Ownership: ${authority.context.worktree.ownershipMatches ? 'exact' : 'not-exact'}`);
+  console.log(`Local Service Host: ${LOCAL_SERVICE_HOST}`);
+  console.log(`Local Service Port: ${LOCAL_SERVICE_PORT}`);
+  console.log(`Local Service Directory: ${localServiceRoot()}`);
+  console.log(`Local Service Data Directory: ${localServiceDataDir()}`);
+  console.log(`Local Service Fingerprint: ${localServiceFingerprint()}`);
+  console.log(
+    `Worktree Ownership: ${authority.context.worktree.ownershipMatches ? 'exact' : 'not-exact'}`,
+  );
+  console.log(`Service Availability: ${readiness.layers.serviceAvailable.code}`);
+  console.log(`Target Ownership: ${readiness.layers.targetOwned.code}`);
+  console.log(`Schema Migrated: ${readiness.layers.schemaMigrated.code}`);
+  console.log(`Schema Congruency: ${readiness.layers.schemaCongruent.code}`);
+  console.log(`Canonical Reference Data: ${readiness.layers.canonicalReferenceData.code}`);
+  console.log(`Acceptance Scenario Data: ${readiness.layers.acceptanceScenario.code}`);
+  console.log(`Requested Runtime: ${readiness.requestedRuntime}`);
   console.log(`Application Readiness: ${readiness.applicationReady ? 'ready' : 'not-ready'}`);
   console.log(`Authority Contract Path: ${manifest.agentEntryContract}`);
   console.log(`Prohibited Operations: ${manifest.prohibitedCommandCategories.join('; ')}`);

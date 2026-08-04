@@ -101,6 +101,37 @@ Use bootstrap to establish or validate it. Do not reveal values, recreate
 passwords, copy remote credentials, overwrite a normal `.env.local`, or weaken
 the `0600` requirement.
 
+## Local Runtime
+
+Inspect the Database Authority status, manifest, and context before any
+database-bearing command. Treat service start as potentially mutating: it may
+establish or initialize the authority-owned runtime directory even though it
+does not create an application database. Obtain the required approval before
+database creation, migrations, reference/scenario writes, disposal, or other
+destructive cleanup.
+
+System MySQL on host port `3306` is unrelated and prohibited. The local
+Database Authority service uses only `127.0.0.1:3307` and the authority-derived
+AppArmor-compatible runtime directory
+`/var/tmp/property-listify-<uid>/mysql-3307`. Do not improvise a
+home-directory MySQL datadir, and do not modify or disable AppArmor. Service
+readiness, database readiness, schema readiness, canonical reference-data
+readiness, scenario-data readiness, and application readiness are separate
+claims. If the first runtime stage or any later stage fails, stop the sequence
+and preserve the service, target, and sanitized logs as evidence; do not retry
+migrations, edit ledgers, or repair data manually. Machine-local security
+changes require separate founder authorization. AppArmor may mediate signals
+independently of ordinary UID ownership: never assume a same-user shell can
+signal a confined `mysqld`. Canonical shutdown uses the exact validated Unix
+socket and `mysqladmin shutdown`; signal or privileged fallback requires
+separate founder authorization. A first shutdown failure preserves evidence
+and stops the workflow.
+
+Adapter SQL control statements must use the driver's supported transaction or
+non-prepared query path. Keep parameterized data statements on prepared
+execution, and require real-MySQL protocol proof before declaring a new data
+adapter runtime-ready.
+
 ## Token discipline
 
 - Do not read the whole repository, every migration, or archived migrations.

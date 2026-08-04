@@ -8,21 +8,24 @@ are in `authority-manifest.json`; operation permissions are in
 
 ## Authority spine
 
-| Concern | Authority |
-| --- | --- |
-| Immutable target context | `server/_core/databaseAuthority/context.ts` |
-| Operation policy and decision | `authorization.ts`, `operation-policy.json` |
-| Connection creation | `connectionAuthority.ts` |
-| Worktree identity and lifecycle | `worktreeIdentity.ts`, `lifecycle.ts` |
-| Migration membership and lineage | `server/migrations/manifest.json`, `migrationManifest.ts` |
-| Migration planning and application | `runSqlMigrations.ts` |
-| Successful history | `sql_migration_history` |
-| Durable attempt evidence | `sql_migration_attempts` |
-| Desired schema | `drizzle/schema/` |
-| Generated model evidence | `drizzle/schema/canonical-model-inventory.json` |
-| Physical-schema comparison | `schemaCongruency.ts` |
-| Layered readiness | `readiness.ts` |
-| Remaining connection paths | `connection-path-inventory.json` |
+| Concern                            | Authority                                                 |
+| ---------------------------------- | --------------------------------------------------------- |
+| Immutable target context           | `server/_core/databaseAuthority/context.ts`               |
+| Operation policy and decision      | `authorization.ts`, `operation-policy.json`               |
+| Connection creation                | `connectionAuthority.ts`                                  |
+| Worktree identity and lifecycle    | `worktreeIdentity.ts`, `lifecycle.ts`                     |
+| Migration membership and lineage   | `server/migrations/manifest.json`, `migrationManifest.ts` |
+| Migration planning and application | `runSqlMigrations.ts`                                     |
+| Successful history                 | `sql_migration_history`                                   |
+| Durable attempt evidence           | `sql_migration_attempts`                                  |
+| Desired schema                     | `drizzle/schema/`                                         |
+| Generated model evidence           | `drizzle/schema/canonical-model-inventory.json`           |
+| Physical-schema comparison         | `schemaCongruency.ts`                                     |
+| Layered readiness                  | `readiness.ts`                                            |
+| Local service lifecycle            | `scripts/local-db.sh`, `localServicePaths.ts`             |
+| Canonical geography reference data | `dataAdapters/canonicalGeography.ts`                      |
+| Isolated Search-to-Lead scenario   | `dataAdapters/searchToLeadScenario.ts`                    |
+| Remaining connection paths         | `connection-path-inventory.json`                          |
 
 The credential-bearing URL is private to connection creation. Commands and
 reports may emit a sanitized fingerprint and hash, never credentials or a
@@ -46,17 +49,69 @@ rebuild, import, restore, repair, and ledger editing are not authorized.
 
 ## Owned local worktree workflow
 
-Start or wait for the one approved local server, then provision this
-worktree's database:
+Start or wait for the one approved native local server, then provision this
+worktree's database. The service-only commands never create an application
+database, account, migration, or data and never use host port 3306:
 
 ```sh
-pnpm db:local:start
-pnpm db:local:wait
+pnpm db:authority:service:start
+pnpm db:authority:service:wait
+pnpm db:authority:service:status
 pnpm db:worktree:create
 pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:schema:congruency
-pnpm db:readiness
+pnpm db:reference:prepare
+pnpm db:scenario:prepare
+pnpm db:reference:verify
+pnpm db:scenario:verify
+pnpm db:readiness -- --purpose=location-discovery
+```
+
+Run the sequence stage by stage. The first unexpected result stops the
+workflow; preserve sanitized logs and runtime state, and do not retry a failed
+migration or repair data manually. After successful feature verification,
+re-resolve the context, dispose only the exact owned target with its emitted
+acknowledgement, then stop the service through the validated Unix socket:
+
+```sh
+pnpm db:authority:context
+pnpm db:worktree:ack
+pnpm db:worktree:dispose -- --ack=CONFIRM_DATABASE_DISPOSE_<fingerprint-prefix>
+pnpm db:authority:service:stop
+pnpm db:authority:service:status
+```
+
+Service shutdown is implemented as `mysqladmin shutdown` over the exact
+validated Unix socket. Do not assume a same-user signal is permitted for a
+confined `mysqld`; there is no silent TCP, signal, or broad-process fallback.
+
+The native MySQL initialization command owns creation of its data directory.
+The service path is derived by `localServicePaths.ts` as
+`/var/tmp/property-listify-<uid>/mysql-3307`. The shared `/var/tmp` parent must
+remain root-owned and sticky; the UID directory and service directory are
+created or reused only when they are exact, non-symlinked, current-user-owned,
+and mode `0700`. This is the AppArmor-compatible local path. Do not improvise a
+home-directory MySQL datadir or modify AppArmor. A previous home-directory
+service path is inactive legacy residue: report it, never adopt it, and never
+delete it automatically.
+
+The native MySQL initialization command owns creation of the data directory.
+A successful initialization records a mode-0600 service identity marker
+containing only the approved service fingerprint. An existing data path
+without both the initialized `mysql` system schema and the matching marker is
+treated as preserved partial or foreign state and fails closed; the service
+never deletes it automatically. Validate and remove only an exact, empty,
+owned residue via an approved cleanup packet before retrying initialization.
+
+Reference and scenario adapters require the exact mode-0600 ownership profile,
+the accepted `0001_public_search_to_lead_reliability.sql` migration head, and
+the disposable worktree target. They are never part of ordinary service
+startup. Replay is explicit:
+
+```sh
+pnpm db:reference:verify
+pnpm db:scenario:verify
 ```
 
 Provisioning is idempotent only when its mode-0600 ownership profile exactly
@@ -125,10 +180,11 @@ Change Protocol.
 metadata and excludes only the two runner control tables.
 
 `/api/health` proves process liveness only. `/api/readiness` separately reports
-target connectivity, exact manifest head, incomplete attempts, required schema,
-and required data. Consumer/API, browser, release, and full diagnostics remain
-separate layers. A client object, reachable server, or coherent ledger alone is
-not application readiness.
+service availability, exact target ownership, schema migration, schema
+congruency, canonical reference data, acceptance scenario data, and application
+readiness for the requested runtime. Consumer/API, browser, release, and full
+diagnostics remain separate layers. A client object, reachable server, or
+coherent ledger alone is not application readiness.
 
 A stale seed, fixture, test helper or runtime query must be reconciled to the canonical schema.
 Do not conceal authority failure with schema guessing, alternate queries,

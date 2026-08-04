@@ -2,10 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
 import { storeDatabaseCredentialUrl, readDatabaseCredentialUrl } from './credentialVault';
 import { resolveDatabaseEnvironment } from './environment';
-import {
-  isProtectedIntegrationBranch,
-  readGitWorktreeIdentity,
-} from './worktreeIdentity';
+import { isProtectedIntegrationBranch, readGitWorktreeIdentity } from './worktreeIdentity';
 import { readWorktreeDatabaseProfile } from './worktreeProfile';
 import type {
   DatabaseCredentialClass,
@@ -16,14 +13,10 @@ import type {
   ResolvedDatabaseContext,
 } from './types';
 
-const LOCAL_HOSTS = new Set([
-  'localhost',
-  '127.0.0.1',
-  '::1',
-  'host.docker.internal',
-  'listify-mysql-local',
-]);
+const LOCAL_HOSTS = new Set(['127.0.0.1']);
 const LOCAL_LOOPBACK_PORTS = new Set(['3307']);
+// CI owns its isolated test service separately; the local development service
+// above remains pinned to 127.0.0.1:3307.
 const TEST_LOOPBACK_PORTS = new Set(['3306', '3307']);
 const CREDENTIAL_CLASSES = new Set<DatabaseCredentialClass>([
   'runtime',
@@ -68,17 +61,8 @@ function classifyCredential(
   return 'unknown';
 }
 
-function isLocalPortAllowed(
-  host: string,
-  port: string,
-  runtimeMode: string,
-): boolean {
-  if (host === 'host.docker.internal' || host === 'listify-mysql-local') {
-    return port === '3306';
-  }
-  return runtimeMode === 'test'
-    ? TEST_LOOPBACK_PORTS.has(port)
-    : LOCAL_LOOPBACK_PORTS.has(port);
+function isLocalPortAllowed(host: string, port: string, runtimeMode: string): boolean {
+  return runtimeMode === 'test' ? TEST_LOOPBACK_PORTS.has(port) : LOCAL_LOOPBACK_PORTS.has(port);
 }
 
 function deepFreeze<T>(value: T): T {
@@ -148,7 +132,11 @@ export function resolveDatabaseAuthority(input: {
     local &&
     port === '3306';
   let targetClass: DatabaseTargetClass = 'unknown';
-  if (local && parsed.protocol === 'mysql:' && isLocalPortAllowed(host, port, environment.runtimeMode)) {
+  if (
+    local &&
+    parsed.protocol === 'mysql:' &&
+    isLocalPortAllowed(host, port, environment.runtimeMode)
+  ) {
     if (databaseName === 'listify_local') {
       targetClass = 'clean-main-local';
     } else if (databaseName === identity.expectedWorktreeDatabase) {
@@ -170,11 +158,7 @@ export function resolveDatabaseAuthority(input: {
   }
 
   const provider =
-    parsed.protocol === 'mysql:'
-      ? /tidb/i.test(host)
-        ? 'tidb'
-        : 'mysql'
-      : 'unknown';
+    parsed.protocol === 'mysql:' ? (/tidb/i.test(host) ? 'tidb' : 'mysql') : 'unknown';
   const dialect = parsed.protocol === 'mysql:' ? 'mysql' : 'unknown';
   let tlsRequired = !local;
   let certificateVerificationRequired = !local;
@@ -195,7 +179,8 @@ export function resolveDatabaseAuthority(input: {
 
   const ownershipMatches =
     identity.registered &&
-    ((targetClass === 'disposable-worktree' && databaseName === identity.expectedWorktreeDatabase) ||
+    ((targetClass === 'disposable-worktree' &&
+      databaseName === identity.expectedWorktreeDatabase) ||
       (targetClass === 'disposable-test' &&
         (databaseName === expectedTestDatabase || isolatedCiTestTarget)) ||
       (targetClass === 'clean-main-local' && protectedBranch));

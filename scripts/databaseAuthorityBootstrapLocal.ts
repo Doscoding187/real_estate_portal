@@ -1,85 +1,21 @@
-import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import dotenv from 'dotenv';
-import { getLocalDemoCredentials } from '../server/scripts/localDemoSeed';
-import { assertLocalDatabaseTarget } from './localDbWorkflow';
-import { loadAuthorityManifest, validateAuthorityManifest } from './databaseAuthorityStatus';
-import {
-  assertCentralEnvironmentReady,
-  ensureWorktreeLink,
-  establishCentralLocalEnvironment,
-  resolveCentralLocalEnvironment,
-} from './localEnvironmentAuthority';
+import { reprovisionCommandSequence } from './localDbWorkflow';
 
-const BOOTSTRAP_STEPS = [
-  ['pnpm', ['db:local:start']],
-  ['pnpm', ['db:local:wait']],
-  ['pnpm', ['db:worktree:create']],
-  ['pnpm', ['db:migrate:plan']],
-  ['pnpm', ['db:migrate:apply']],
-  ['pnpm', ['db:schema:congruency']],
-  ['pnpm', ['db:readiness']],
-] as const;
-
+/** Compatibility entrypoint; it intentionally does not execute state changes. */
 export function localBootstrapCommandSequence() {
-  return BOOTSTRAP_STEPS;
-}
-
-function runStep(command: string, args: readonly string[], databaseUrl: string) {
-  console.log(`[Database Authority] ${command} ${args.join(' ')}`);
-  const result = spawnSync(command, args, {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      DATABASE_URL: databaseUrl,
-      LISTIFY_E2E_DATABASE_URL: databaseUrl,
-    },
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(
-      `[Database Authority] ${args.join(' ')} failed. ` +
-        'Local setup stopped before the next step; inspect the command output for schema-consumer drift or local setup failure.',
-    );
-  }
+  return reprovisionCommandSequence();
 }
 
 async function main() {
   throw new Error(
-    'The legacy listify_local bootstrap is retired; use pnpm db:worktree:create followed by pnpm db:migrate:apply.',
-  );
-  const manifest = loadAuthorityManifest();
-  validateAuthorityManifest(manifest);
-  const centralPath = resolveCentralLocalEnvironment();
-  const central = establishCentralLocalEnvironment(process.cwd(), centralPath);
-  assertCentralEnvironmentReady(central);
-  ensureWorktreeLink(process.cwd(), centralPath);
-  dotenv.config({ path: resolve(process.cwd(), '.env.local'), override: false, quiet: true });
-  const target = assertLocalDatabaseTarget();
-  try {
-    getLocalDemoCredentials();
-  } catch {
-    throw new Error(
-      'Local setup failure: reconcile LOCAL_DEMO_AGENCY_PASSWORD in the approved central local environment before bootstrapping.',
-    );
-  }
-  console.log(`[Database Authority] Approved local target: ${target.host}/${target.database}`);
-
-  for (const [command, args] of BOOTSTRAP_STEPS) {
-    runStep(command, args, target.url.toString());
-  }
-
-  console.log(`[Database Authority] Local bootstrap complete: ${target.host}/${target.database}`);
-  console.log(
-    '[Database Authority] Canonical migrations, demo seed, distribution schema, and demo data verified.',
+    'The legacy local bootstrap is retired; run the exact Database Authority service, worktree, migration, reference, and scenario commands individually.',
   );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
   main().catch(error => {
     console.error(
-      error instanceof Error ? error.message : 'Database authority local bootstrap failed.',
+      error instanceof Error ? error.message : 'Database Authority bootstrap is retired.',
     );
     process.exit(1);
   });

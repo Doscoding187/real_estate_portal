@@ -89,14 +89,15 @@ Production/reset variables must stay disabled locally:
 - `PROD_SUPERADMIN_EMAIL`
 - `PROD_SUPERADMIN_PASSWORD`
 
-Local demo seed guard:
+Database Authority data rule:
 
-- `LOCAL_SEED_ALLOWED=true` is required for any seed/reset command.
-- Seed commands refuse `NODE_ENV=production`.
-- Seed commands refuse non-local database hosts.
-- Seed commands refuse the production database name `listify_property_sa`.
-- Local seed must target `listify_local`.
-- Test seed must target `listify_test`.
+- The fixed `listify_local` database is quarantined and is not a development
+  target for feature worktrees.
+- Fixed-database seed, reset, rebuild, and reprovision commands are retired.
+- Feature worktrees use only the exact owned disposable database resolved by
+  Database Authority.
+- Canonical geography and Search-to-Lead data are prepared through their
+  operation-specific adapters; do not use ad hoc SQL or legacy seeds.
 
 ## First-Time Setup
 
@@ -120,138 +121,105 @@ Generate local secrets and paste them into `.env.local` and `.env.test`:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-## Recommended Local Database
+## Database Authority local runtime
 
-Prefer the repository-managed MySQL 8 workflow on port `3307` so it does not collide with other MySQL installs.
+The local Database Authority service is native MySQL, service-only, and
+Docker-independent. It binds only to `127.0.0.1:3307`. The system MySQL
+listener on host port `3306` is unrelated and prohibited. Service state is
+derived from the current numeric UID under
+`/var/tmp/property-listify-<uid>/mysql-3307`; the UID and service directories
+must be exact-owned, mode `0700`, and non-symlinked. Do not improvise a
+home-directory datadir or modify AppArmor.
 
-Start local MySQL:
-
-```bash
-pnpm db:local:start
-pnpm db:local:wait
-```
-
-The local DB wrapper uses `docker-compose.local-db.yml` when Docker Compose is available. That path creates:
-
-- `listify_local`
-- `listify_test`
-- `listify_app`
-- `listify_test`
-
-Docker Compose stores data in the named volume `listify_mysql_3307_data`, which is the preferred persistent local-development option. It does not store important working data under `/tmp`.
-
-If Docker is not available, `scripts/local-db.sh` can fall back to a native `mysqld` process with `LISTIFY_LOCAL_DB_MODE=native`. The native fallback defaults to `/tmp/listify-mysql-3307` and is disposable. Do not keep important local work in that fallback directory.
-
-Stop local MySQL:
+Run the normal feature-worktree sequence in order:
 
 ```bash
-pnpm db:local:stop
+pnpm db:authority:status
+pnpm db:authority:manifest
+pnpm db:authority:context
+
+pnpm db:authority:service:start
+pnpm db:authority:service:wait
+pnpm db:authority:service:status
+
+pnpm db:worktree:create
+
+pnpm db:migrate:plan -- \
+  --accepted-old-head=none \
+  --expected-new-head=<manifest-head>
+pnpm db:migrate:apply -- \
+  --accepted-old-head=none \
+  --expected-new-head=<manifest-head>
+pnpm db:schema:congruency
+
+pnpm db:reference:prepare
+pnpm db:reference:verify
+pnpm db:scenario:prepare
+pnpm db:scenario:verify
+
+pnpm db:readiness -- --purpose=database
+pnpm db:readiness -- --purpose=location-discovery
 ```
 
-Optionally destroy the local database:
+Replace `<manifest-head>` with the expected head reported by
+`db:authority:manifest`. The service start creates no application database,
+account, grant, migration, reference data, or scenario data. Database creation
+and data writes are separate approved operations. The worktree context derives
+the exact database identity; do not handcraft a fixed `listify_local` URL.
+
+Only after the requested readiness purpose is ready should you start the
+application with `pnpm dev`. Browser readiness is not implied by a live
+service, a migrated schema, or a reachable API.
+
+Replay the approved adapters explicitly when deterministic evidence is needed:
 
 ```bash
-pnpm db:local:destroy
+pnpm db:reference:prepare
+pnpm db:scenario:prepare
+pnpm db:reference:verify
+pnpm db:scenario:verify
 ```
 
-Use these URLs:
-
-```text
-# .env.local
-DATABASE_URL=mysql://listify_app:listify_app_password@127.0.0.1:3307/listify_local
-
-# .env.test
-DATABASE_URL=mysql://listify_test:listify_test_password@127.0.0.1:3307/listify_test
-```
-
-A non-production TiDB development database can work as a fallback for some development tasks, but keep database names isolated and never reuse production credentials. Do not point browser tests at production or shared data.
-
-## Local database startup and recovery
-
-`listify_local` is a disposable development database only. Normal startup is non-destructive: it starts MySQL, applies both migration journals incrementally, then verifies schema, custom migration history, demo-login readiness, and the seeded agency workspace.
+After feature verification, re-resolve the context, obtain the exact disposal
+acknowledgement, dispose only the exact owned target, and then stop the service
+through its validated Unix socket:
 
 ```bash
-pnpm db:start:local
+pnpm db:authority:context
+pnpm db:worktree:ack
+pnpm db:worktree:dispose -- --ack=CONFIRM_DATABASE_DISPOSE_<fingerprint-prefix>
+pnpm db:authority:service:stop
+pnpm db:authority:service:status
 ```
 
-If MySQL is already running, use the incremental migration command directly:
+`mysqladmin shutdown` over the exact Unix socket is the only canonical service
+shutdown path. Do not fall back to TCP, direct signals, `pkill`, `killall`, or
+system-service control. The first unexpected runtime result stops the sequence;
+preserve the service, target, and sanitized logs for review rather than
+retrying migrations or repairing data manually.
 
-```bash
-pnpm db:migrate:local
-pnpm db:verify:local
-```
+## Database Authority troubleshooting
 
-Do not use either command to repair a database with incomplete custom migration history or untrusted schema drift. The custom migration runner will deliberately refuse historical replay in that situation.
-
-When `listify_local` is broken or disposable, reprovision it explicitly. This destroys only `listify_local`, recreates it from repository migrations, applies every custom SQL migration from the beginning, seeds deterministic demo data, and verifies the finished contract:
-
-```bash
-LISTIFY_LOCAL_DB_REPROVISION_CONFIRM=I_UNDERSTAND_LISTIFY_LOCAL_WILL_BE_DESTROYED pnpm db:reprovision:local
-```
-
-The command requires all of the following before it can issue a destructive statement:
-
-- `NODE_ENV=development` (the package script sets this)
-- exact database name `listify_local`
-- a repository-approved local MySQL host (`127.0.0.1`, `localhost`, Docker service aliases, or the approved local service host)
-- the exact acknowledgement above
-
-It prints only the selected host and database name—never credentials—and rejects staging, production, unknown hosts, prefixes, wildcard names, and missing acknowledgement. It never runs during application startup. A failed migration stops before seed, and a failed seed stops before verification or app use. A partial recreation is reported as failed; rerun the explicit command only after addressing the reported error.
-
-Never run the local reprovision command against staging or production. It is deliberately restricted to the exact local development database and is not a deployment or shared-environment recovery tool.
-
-`pnpm db:verify:local` is read-only. It checks connectivity and exact identity, Drizzle/custom schema essentials, complete executed custom-SQL ledger with checksums, migration-lock state, the current showings lifecycle enum, Listing Performance tables and `contact_date`, auth columns, and deterministic agency demo-login/workspace data.
-
-Only after `pnpm db:start:local` or `pnpm db:reprovision:local` succeeds should you start the application with `pnpm dev`. Reprovision never starts the app itself, so a migration or seed failure cannot leave a server claiming local readiness.
-
-### Common recovery errors
-
-- `users` missing, a stale `showings.status` enum, or an absent Listing Performance `contact_date` means the schema is not current. For disposable local data, reprovision instead of manually forcing migration-history rows.
-- “Historical custom schema effects exist” with an empty `sql_migration_history` ledger means normal migration correctly refused unsafe replay. Do not silently baseline that unknown state; reprovision the disposable local database.
-- A checksum mismatch means a committed custom SQL migration was changed after it was recorded. Restore the migration file; do not rewrite the ledger.
-- A healthy reprovision records every custom migration as `executed`, including the current `0072` entry. A subsequent `pnpm db:migrate:local` is expected to be a no-op.
-
-Run test migrations:
-
-```bash
-pnpm db:migrate:test
-```
-
-Seed local-only demo data for visual testing:
-
-```bash
-LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:seed:local
-LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:verify:local-demo
-```
-
-Full local bootstrap, when `LOCAL_DEMO_AGENCY_PASSWORD` is already present in `.env.local`:
-
-```bash
-LISTIFY_LOCAL_DB_REPROVISION_CONFIRM=I_UNDERSTAND_LISTIFY_LOCAL_WILL_BE_DESTROYED pnpm db:reprovision:local
-```
-
-The demo password is never committed or printed. Set `LOCAL_DEMO_AGENCY_PASSWORD` in ignored `.env.local`; its placeholder and required variable name are in `.env.example`. The `agency@listify.local` account is the agency-workspace login verified by the commands above.
-
-Reset only local demo data:
-
-```bash
-pnpm db:reset:local
-```
-
-Seed the disposable test database:
-
-```bash
-pnpm db:seed:test
-pnpm db:verify:test-demo
-```
-
-The verify commands are read-only preflights for browser and integration work. They confirm the demo accounts, referrer identities, developments, referral deals, approved reward entry, and agency workspace fixtures exist before authenticated browser routes are exercised.
-
-Run the agency browser smoke against local app servers and the local DB:
-
-```bash
-LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm test:agency-browser-smoke
-```
+- **AppArmor path denial:** use the authority-derived `/var/tmp` path. Do not
+  create a home-directory datadir, broaden home permissions, or modify,
+  disable, or reload AppArmor. A previous home path is inactive legacy residue.
+- **Unexpected service-root entry:** preserve the directory and inspect the
+  exact artifact. The lifecycle accepts only known MySQL artifacts, including
+  the exact `mysql.sock.lock`; arbitrary lock files, symlinks, foreign ownership,
+  and unexpected contents fail closed.
+- **Port `3307` conflict:** stop before connecting or terminating anything and
+  identify the exact owner. Never use or stop the unrelated host listener on
+  port `3306`.
+- **Socket shutdown failure:** preserve the running state and logs. The stop
+  command validates the PID, socket, lock, marker, and port, then uses only
+  `mysqladmin --no-defaults --protocol=socket` on the exact socket. It has no
+  signal or TCP fallback.
+- **Stale service identity:** do not overwrite, delete, or adopt ambiguous
+  state. Obtain an exact cleanup authorization for only the validated residue.
+- **Missing reference or scenario readiness:** do not use manual SQL or a
+  general seed. Confirm the exact owned worktree target, accepted migration
+  head, and operation-specific adapter verification; application readiness
+  remains false until the requested data layers are ready.
 
 The agency billing smoke uses manual EFT placeholders and private local proof storage. For local and test runs, keep values non-payable:
 
@@ -267,18 +235,18 @@ BILLING_PRIVATE_STORAGE_DIR=.private/billing-proofs
 
 Production bank details must come from deployment configuration or a secrets manager. Production proof storage must be configured with the private S3 billing variables in `.env.example`; proof uploads must not persist public object URLs.
 
-The local demo seed is idempotent. It first removes only records it owns:
+The legacy fixed-database demo seed/reset commands are retired. They may not
+be used to create, adopt, or mutate `listify_local`. Product-specific demo
+workflows require their own approved Database Authority target and adapter.
 
-- emails ending in `@listify.local`
-- names prefixed with `[LOCAL DEMO]`
-- slugs prefixed with `local-demo-`
-- referral external refs prefixed with `LOCAL-DEMO-`
+## Product-specific demo details (separate workflow)
 
-Use only the guarded local and test seed commands documented above. Legacy ad-hoc seed scripts are not approved local setup authority and may delete or mutate unrelated records.
-
-Do not run production seed or reset operations against a local environment unless the database target and operation have been explicitly reviewed.
-
-## Local Demo Login Details
+The accounts and records below describe an older agency-workspace smoke
+scenario. They are not created by the Database Authority service or the
+Search-to-Lead adapter above, and they are not a prerequisite for ordinary
+feature-worktree startup. Do not restore the retired fixed-database seed
+commands to create them; use a separately approved target and adapter when
+that product workflow is explicitly required.
 
 Local demo credentials are supplied through development-only environment configuration:
 
@@ -327,13 +295,23 @@ Seeded agency workspace checks:
 1. Start the app:
 
 ```bash
-pnpm db:local:start
-pnpm db:local:wait
-pnpm db:migrate:fresh:local
-LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:seed:local
-LOCAL_DEMO_AGENCY_PASSWORD='local-only-password' pnpm db:verify:local-demo
+pnpm db:authority:service:start
+pnpm db:authority:service:wait
+pnpm db:worktree:create
+pnpm db:migrate:plan -- --accepted-old-head=none --expected-new-head=<manifest-head>
+pnpm db:migrate:apply -- --accepted-old-head=none --expected-new-head=<manifest-head>
+pnpm db:schema:congruency
+pnpm db:reference:prepare
+pnpm db:reference:verify
+pnpm db:scenario:prepare
+pnpm db:scenario:verify
+pnpm db:readiness -- --purpose=location-discovery
 pnpm dev
 ```
+
+Use only records provided by the approved adapter for the feature under test;
+this workflow does not create the retired agency demo seed or fixed
+`listify_local` database.
 
 2. Open `http://localhost:3009/login`.
 
@@ -438,8 +416,12 @@ If the test is skipped, `DATABASE_URL` is missing or `.env.test` was not loaded.
 
 ## Missing Scripts And Blockers
 
-- Use `pnpm db:migrate:fresh:local` for a fresh local database and `pnpm db:migrate:local` for existing local databases. Do not use production migration commands for local bootstrap.
-- `docker-compose.yml` defines a MySQL database named `real_estate_portal` on port `3306`. It is useful for older workflows, but the recommended local setup above uses `docker-compose.local-db.yml`, `listify_local`, and `listify_test` on port `3307` to match current runtime guards and avoid collisions.
+- Fixed-database local bootstrap, `db:migrate:fresh:local`, `db:reprovision:local`,
+  and local demo seed/reset commands are retired. Use the Database Authority
+  sequence above.
+- The system MySQL listener on port `3306` is unrelated and prohibited. The
+  approved local service uses only `127.0.0.1:3307` and the UID-bound native
+  runtime path under `/var/tmp`.
 - `.env.vercel` is a local Vercel environment file and is intentionally ignored by Git. Create it locally from `.env.vercel.example`, populate the required values through the appropriate provider or local environment, and never commit real credentials or tokens.
 - Earlier repository revisions contained concrete `.env.vercel` credential material. Removing the current file from the main tree does not remove those historical values from Git history or revoke them at their providers. Credential rotation and the Git-history remediation decision remain separate operational obligations.
 - Durable local drafts/autosave may still use browser-local state unless a feature adds schema-backed drafts.
@@ -448,7 +430,9 @@ If the test is skipped, `DATABASE_URL` is missing or `.env.test` was not loaded.
 
 Use three rings:
 
-1. Local: `.env.local`, local MySQL `listify_local`, browser inspection, targeted tests, and TypeScript check.
+1. Local: `.env.local`, the Database Authority service, an exact disposable
+   worktree database, approved adapters, purpose-aware readiness, browser
+   inspection, targeted tests, and TypeScript check.
 2. Preview: per-PR deployment with preview-only env vars and a disposable or staging-safe database. Never use production DB credentials in preview.
 3. Staging: production-like env with `APP_ENV=staging`, database name `listify_staging`, production-style integrations in sandbox/test mode, and explicit smoke checks before promotion.
 

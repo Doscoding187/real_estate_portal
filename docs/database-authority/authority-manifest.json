@@ -33,13 +33,7 @@
     "VITE_API_URL",
     "VITE_API_BASE_URL"
   ],
-  "approvedLocalHosts": [
-    "localhost",
-    "127.0.0.1",
-    "::1",
-    "host.docker.internal",
-    "listify-mysql-local"
-  ],
+  "approvedLocalHosts": ["127.0.0.1", "::1"],
   "approvedLocalCommands": [
     "db:authority:status",
     "db:authority:manifest",
@@ -50,11 +44,17 @@
     "db:readiness",
     "db:schema:congruency",
     "db:local:start",
-    "db:local:wait"
+    "db:local:wait",
+    "db:authority:service:start",
+    "db:authority:service:wait",
+    "db:authority:service:status",
+    "db:authority:service:stop",
+    "db:reference:prepare",
+    "db:reference:verify",
+    "db:scenario:prepare",
+    "db:scenario:verify"
   ],
-  "destructiveLocalCommands": [
-    "db:worktree:dispose"
-  ],
+  "destructiveLocalCommands": ["db:worktree:dispose"],
   "prohibitedCommandCategories": [
     "db:push and schema push",
     "schema generation outside an approved migration task",
@@ -62,8 +62,8 @@
     "unapproved remote, shared, staging, production, Railway, and TiDB targets",
     "all mutation of the quarantined current listify_local database"
   ],
-  "localSeedEntrypoint": "server/scripts/localDemoSeed.ts",
-  "localDataAuthorityStatus": "retired-pending-operation-specific-data-adapters",
+  "localSeedEntrypoint": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+  "localDataAuthorityStatus": "operation-specific-reference-and-scenario-adapters-only",
   "verificationEntrypoints": [
     "scripts/db-contract-verify.ts",
     "scripts/db-verify-distribution-schema.ts",
@@ -74,5 +74,10 @@
   "agentEntryContract": "docs/database-authority/00-database-authority-agent-entry.md",
   "databaseChangeProtocol": "docs/database-authority/database-change-protocol.md",
   "migrationTreeAuthority": "docs/database-authority/migration-tree-authority.json",
-  "residualUtilityAuthority": "docs/database-authority/residual-utility-authority.json"
+  "residualUtilityAuthority": "docs/database-authority/residual-utility-authority.json",
+  "localServicePathAuthority": "server/_core/databaseAuthority/localServicePaths.ts",
+  "localServiceLifecycle": "scripts/local-db.sh",
+  "localServiceDirectoryPattern": "/var/tmp/property-listify-<uid>/mysql-3307",
+  "canonicalReferenceDataAdapter": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+  "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
 }

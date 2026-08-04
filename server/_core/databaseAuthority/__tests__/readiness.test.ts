@@ -6,10 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { authorizeDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { resolveDatabaseAuthority } from '../context';
-import {
-  assessAuthorizedDatabaseReadiness,
-  assessRuntimeDatabaseReadiness,
-} from '../readiness';
+import { assessAuthorizedDatabaseReadiness, assessRuntimeDatabaseReadiness } from '../readiness';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 import { loadAndValidateMigrationManifest } from '../../../migrations/migrationManifest';
 
@@ -258,14 +255,10 @@ describe('truthful layered readiness', () => {
     expect(report.applicationReady).toBe(false);
   });
 
-  it('reports core readiness only at exact head with no attempts and required schema', async () => {
+  it('does not claim application readiness without exact target ownership and schema congruency evidence', async () => {
     const value = fixture();
     const connection = new ReadinessConnection(value.authority.context.databaseName);
-    connection.tables = new Set([
-      'widgets',
-      'sql_migration_history',
-      'sql_migration_attempts',
-    ]);
+    connection.tables = new Set(['widgets', 'sql_migration_history', 'sql_migration_attempts']);
     connection.history.push({ filename: value.filename, checksum: value.checksum });
 
     const report = await assessAuthorizedDatabaseReadiness({
@@ -274,7 +267,14 @@ describe('truthful layered readiness', () => {
       manifest: value.manifest,
       root: value.root,
     });
-    expect(report.applicationReady).toBe(true);
+    expect(report.applicationReady).toBe(false);
+    expect(report.layers.serviceAvailable.state).toBe('ready');
+    expect(report.layers.targetOwned.state).toBe('not-ready');
+    expect(report.layers.schemaMigrated.state).toBe('ready');
+    expect(report.layers.schemaCongruent.state).toBe('not-evaluated');
+    expect(report.layers.canonicalReferenceData.state).toBe('not-evaluated');
+    expect(report.layers.acceptanceScenario.state).toBe('not-evaluated');
+    expect(report.layers.application.state).toBe('not-ready');
     expect(report.layers.migrationHead.code).toBe('manifest-head-ready');
     expect(report.layers.incompleteAttemptState.state).toBe('ready');
     expect(report.layers.structuralSchema.state).toBe('ready');
