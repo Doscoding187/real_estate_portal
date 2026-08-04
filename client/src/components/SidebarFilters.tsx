@@ -24,6 +24,9 @@ interface SidebarFiltersProps {
   locationContext?: SearchResults['locationContext'];
   onFilterChange: (newFilters: SearchFilters) => void;
   onSaveSearch?: () => void;
+  allowedPropertyTypes?: readonly string[];
+  showAmenities?: boolean;
+  showLocationRefinement?: boolean;
 }
 
 const AMENITIES = [
@@ -57,13 +60,16 @@ const LISTING_SOURCE_OPTIONS = [
 const FALLBACK_PROPERTY_TYPES = [
   { value: 'house', label: 'Houses' },
   { value: 'apartment', label: 'Apartments / Flats' },
+  { value: 'villa', label: 'Villas' },
   { value: 'townhouse', label: 'Townhouses' },
+  { value: 'cluster_home', label: 'Cluster Homes' },
+  { value: 'farm', label: 'Farms' },
   { value: 'commercial', label: 'Commercial Property' },
   { value: 'plot', label: 'Land / Plots' },
 ] as const;
 
 const PROPERTY_TYPE_CATEGORIES = {
-  residential: ['house', 'apartment', 'townhouse'],
+  residential: ['house', 'apartment', 'villa', 'townhouse', 'cluster_home', 'farm'],
   commercial: ['commercial'],
   land: ['plot'],
 } as const;
@@ -73,7 +79,10 @@ type PropertyTypeCategory = keyof typeof PROPERTY_TYPE_CATEGORIES;
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
   house: 'Houses',
   apartment: 'Apartments / Flats',
+  villa: 'Villas',
   townhouse: 'Townhouses',
+  cluster_home: 'Cluster Homes',
+  farm: 'Farms',
   commercial: 'Commercial Property',
   plot: 'Land / Plots',
 };
@@ -98,7 +107,13 @@ export function SidebarFilters({
   locationContext,
   onFilterChange,
   onSaveSearch,
+  allowedPropertyTypes,
+  showAmenities = true,
+  showLocationRefinement = true,
 }: SidebarFiltersProps) {
+  const isAllowedPropertyType = (value: string) =>
+    !allowedPropertyTypes || allowedPropertyTypes.includes(value);
+
   const selectedSuburbs = Array.isArray(filters.suburb)
     ? filters.suburb
     : filters.suburb
@@ -228,9 +243,7 @@ export function SidebarFilters({
   };
 
   const locationOptions =
-    filterCounts?.byLocation
-      ?.filter(item => item && item.name && item.count > 0)
-      .slice(0, 7) ?? [];
+    filterCounts?.byLocation?.filter(item => item && item.name && item.count > 0).slice(0, 7) ?? [];
 
   const propertyTypeOptions = (() => {
     const fromCounts = Object.entries(filterCounts?.byType ?? {})
@@ -252,19 +265,25 @@ export function SidebarFilters({
       seeded.push({ ...type, count: 0 });
     });
 
-    return seeded.slice(0, 10);
+    return seeded.filter(option => isAllowedPropertyType(option.value)).slice(0, 10);
   })();
 
   const propertyTypeMap = new Map(propertyTypeOptions.map(option => [option.value, option]));
-  const propertyTypeCategoryOptions = PROPERTY_TYPE_CATEGORIES[propertyTypeCategory].map(value => {
-    const match = propertyTypeMap.get(value);
-    if (match) return match;
-    return {
-      value,
-      label: PROPERTY_TYPE_LABELS[value] || value,
-      count: 0,
-    };
-  });
+  const propertyTypeCategoryOptions = PROPERTY_TYPE_CATEGORIES[propertyTypeCategory]
+    .filter(isAllowedPropertyType)
+    .map(value => {
+      const match = propertyTypeMap.get(value);
+      if (match) return match;
+      return {
+        value,
+        label: PROPERTY_TYPE_LABELS[value] || value,
+        count: 0,
+      };
+    });
+
+  const availablePropertyTypeCategories = (
+    Object.keys(PROPERTY_TYPE_CATEGORIES) as PropertyTypeCategory[]
+  ).filter(category => PROPERTY_TYPE_CATEGORIES[category].some(isAllowedPropertyType));
 
   const hasPendingSuburbChanges = !areSameSelections(selectedSuburbs, pendingSuburbs);
   const hasPendingPropertyTypeChanges =
@@ -348,7 +367,9 @@ export function SidebarFilters({
           <AccordionContent>
             <div className="px-1 pt-1 pb-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-2xl font-bold text-slate-900">{formatBudgetCompact(priceRange[0])}</p>
+                <p className="text-2xl font-bold text-slate-900">
+                  {formatBudgetCompact(priceRange[0])}
+                </p>
                 <span className="rounded bg-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white">
                   {formatBudgetCompact(priceRange[1])}+
                 </span>
@@ -396,7 +417,7 @@ export function SidebarFilters({
         </AccordionItem>
 
         {/* Locations */}
-        <AccordionItem value="locations">
+        <AccordionItem value="locations" className={!showLocationRefinement ? 'hidden' : undefined}>
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
             Locations
           </AccordionTrigger>
@@ -463,7 +484,7 @@ export function SidebarFilters({
           <AccordionContent>
             <div className="space-y-3 pt-1">
               <div className="grid grid-cols-3 gap-1">
-                {(Object.keys(PROPERTY_TYPE_CATEGORIES) as PropertyTypeCategory[]).map(category => (
+                {availablePropertyTypeCategories.map(category => (
                   <Button
                     key={category}
                     type="button"
@@ -545,7 +566,7 @@ export function SidebarFilters({
         </AccordionItem>
 
         {/* Amenities */}
-        <AccordionItem value="amenities">
+        <AccordionItem value="amenities" className={!showAmenities ? 'hidden' : undefined}>
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
             Amenities
           </AccordionTrigger>

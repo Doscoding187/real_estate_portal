@@ -4,7 +4,7 @@ import { resolveSearchIntent } from '@/lib/searchIntent';
 import type { LocationNode } from '@/types/location';
 
 const johannesburg: LocationNode = {
-  id: 'city-12',
+  id: 'city:12',
   name: 'Johannesburg',
   slug: 'johannesburg',
   type: 'city',
@@ -14,7 +14,7 @@ const johannesburg: LocationNode = {
 };
 
 const sandton: LocationNode = {
-  id: 'suburb-42',
+  id: 'suburb:42',
   name: 'Sandton',
   slug: 'sandton',
   type: 'suburb',
@@ -24,7 +24,7 @@ const sandton: LocationNode = {
 };
 
 const gauteng: LocationNode = {
-  id: 'province-1',
+  id: 'province:1',
   name: 'Gauteng',
   slug: 'gauteng',
   type: 'province',
@@ -36,16 +36,34 @@ describe('Buy journey URL authority', () => {
     expect(buildBuySearchUrl({})).toBe('/property-for-sale');
   });
 
-  it('preserves known free-text city context', () => {
+  it('does not guess unresolved free text as a city', () => {
     expect(buildBuySearchUrl({ searchQuery: 'Johannesburg' })).toBe(
-      '/property-for-sale?city=johannesburg',
+      '/property-for-sale?searchError=canonical-location-required',
     );
   });
 
   it('sends a structured province selection to the sale-results authority', () => {
-    expect(buildBuySearchUrl({ selectedLocations: [gauteng] })).toBe(
-      '/property-for-sale?province=gauteng',
-    );
+    const url = buildBuySearchUrl({ selectedLocations: [gauteng] });
+    const params = new URL(url, 'https://listify.test').searchParams;
+
+    expect(params.get('province')).toBe('gauteng');
+    expect(params.get('locationId')).toBe('province:1');
+  });
+
+  it('preserves province identity alongside supported refinements', () => {
+    const params = new URL(
+      buildBuySearchUrl({
+        selectedLocations: [gauteng],
+        propertyType: 'house',
+        maxPrice: 2_000_000,
+      }),
+      'https://listify.test',
+    ).searchParams;
+
+    expect(params.get('province')).toBe('gauteng');
+    expect(params.get('locationId')).toBe('province:1');
+    expect(params.get('propertyType')).toBe('house');
+    expect(params.get('maxPrice')).toBe('2000000');
   });
 
   it('preserves structured location identity, hierarchy and supported filters', () => {
@@ -61,20 +79,19 @@ describe('Buy journey URL authority', () => {
     expect(params.get('suburb')).toBe('sandton');
     expect(params.get('city')).toBe('johannesburg');
     expect(params.get('province')).toBe('gauteng');
-    expect(params.get('locationId')).toBe('suburb-42');
+    expect(params.get('locationId')).toBe('suburb:42');
     expect(params.get('propertyType')).toBe('house');
     expect(params.get('minPrice')).toBe('500000');
     expect(params.get('maxPrice')).toBe('2000000');
   });
 
-  it('uses one structured location as the bounded Buy authority', () => {
+  it('rejects multiple structured locations instead of silently taking the first', () => {
     const url = buildBuySearchUrl({ selectedLocations: [johannesburg, sandton] });
     const params = new URL(url, 'https://listify.test').searchParams;
 
-    expect(params.get('city')).toBe('johannesburg');
+    expect(params.get('searchError')).toBe('multiple-locations-unsupported');
+    expect(params.get('city')).toBeNull();
     expect(params.get('suburb')).toBeNull();
-    expect(params.get('locations')).toBeNull();
-    expect(params.get('locationIds')).toBeNull();
   });
 
   it('blocks contradictory or invalid visible price ranges without dropping values', () => {
@@ -96,6 +113,43 @@ describe('Buy journey URL authority', () => {
     expect(url).toBe('/property-for-sale?maxPrice=100000');
   });
 
+  it('rejects a Google Place ID instead of falling back to its label', () => {
+    const googleLocation: LocationNode = {
+      id: 'ChIJgoogle-place-id',
+      name: 'Sandton',
+      slug: 'sandton',
+      type: 'suburb',
+      provinceSlug: 'gauteng',
+      citySlug: 'johannesburg',
+    };
+
+    const params = new URL(
+      buildBuySearchUrl({ selectedLocations: [googleLocation] }),
+      'https://listify.test',
+    ).searchParams;
+
+    expect(params.get('searchError')).toBe('canonical-location-required');
+    expect(params.get('locationId')).toBeNull();
+  });
+
+  it('preserves the supported bedroom and bathroom refinements', () => {
+    const params = new URL(
+      buildBuySearchUrl({
+        selectedLocations: [johannesburg],
+        propertyType: 'house',
+        minBedrooms: 2,
+        minBathrooms: 1,
+      }),
+      'https://listify.test',
+    ).searchParams;
+
+    expect(params.get('city')).toBe('johannesburg');
+    expect(params.get('locationId')).toBe('city:12');
+    expect(params.get('propertyType')).toBe('house');
+    expect(params.get('minBedrooms')).toBe('2');
+    expect(params.get('minBathrooms')).toBe('1');
+  });
+
   it('interprets the submitted URL as the same search intent with numeric filters', () => {
     const url = buildBuySearchUrl({
       selectedLocations: [sandton],
@@ -108,11 +162,11 @@ describe('Buy journey URL authority', () => {
 
     expect(intent.transactionType).toBe('for-sale');
     expect(intent.geography).toMatchObject({
-      level: 'locality',
+      level: 'suburb',
       province: 'gauteng',
       city: 'johannesburg',
       suburb: 'sandton',
-      locationId: 'suburb-42',
+      locationId: 'suburb:42',
     });
     expect(intent.filters).toMatchObject({
       propertyType: 'house',

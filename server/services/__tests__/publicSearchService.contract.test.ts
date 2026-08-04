@@ -131,6 +131,37 @@ describe('publicSearchService contract', () => {
     expect(result.sourceCounts).toEqual({ manual: 3, development: 2 });
   });
 
+  it('passes complete map bounds to both public inventory sources', async () => {
+    await publicSearchService.searchInventory({
+      city: 'johannesburg',
+      province: 'gauteng',
+      minLat: -26.2,
+      maxLat: -26,
+      minLng: 28,
+      maxLng: 28.1,
+    });
+
+    const expectedBounds = {
+      south: -26.2,
+      north: -26,
+      west: 28,
+      east: 28.1,
+    };
+
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({ bounds: expectedBounds }),
+      'date_desc',
+      1,
+      12,
+    );
+    expect(mockSearchListings).toHaveBeenCalledWith(
+      expect.objectContaining({ bounds: expectedBounds }),
+      'date_desc',
+      1,
+      12,
+    );
+  });
+
   it('keeps the final accepted page reachable but never advertises an invalid next page', async () => {
     mockSearchProperties.mockResolvedValueOnce({ cards: [], total: 50_000 });
     mockSearchListings.mockResolvedValueOnce({ cards: [], total: 50_000 });

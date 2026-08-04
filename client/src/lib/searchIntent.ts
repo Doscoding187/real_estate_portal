@@ -1,5 +1,13 @@
 import { PROVINCE_SLUGS } from './locationUtils';
-import { isCanonicalLocationId } from '../../../shared/locationAuthority';
+import {
+  encodeCanonicalLocationId,
+  parseCanonicalLocationId,
+} from '../../../shared/locationAuthority';
+import {
+  BUY_TRANSACTION_TYPE,
+  parseBuySearchParams,
+  sanitizeBuySearchFilters,
+} from '../../../shared/buySearchContract';
 
 /**
  * CORE PHILOSOPHY:
@@ -9,15 +17,26 @@ import { isCanonicalLocationId } from '../../../shared/locationAuthority';
  */
 
 export type TransactionType = 'for-sale' | 'to-rent' | 'developments';
-export type GeographyLevel = 'province' | 'city' | 'locality' | 'development' | 'country';
+export type GeographyLevel = 'province' | 'city' | 'suburb' | 'development' | 'country';
 export type SearchRouteMode = 'seo' | 'results';
+
+export type SearchIntentValidationCode =
+  | 'canonical-location-required'
+  | 'invalid-location-id'
+  | 'location-identity-mismatch'
+  | 'multiple-locations-unsupported';
+
+export interface SearchIntentValidation {
+  code: SearchIntentValidationCode;
+  message: string;
+}
 
 export interface GeographyIntent {
   level: GeographyLevel;
   province?: string;
   city?: string;
-  suburb?: string; // "locality" in the spec, but we use suburb in the codebase usually
-  locationId?: string; // Numeric ID from P24 pattern
+  suburb?: string;
+  locationId?: string;
   slug?: string; // For development specific pages or as fallback
 }
 
@@ -31,12 +50,36 @@ export interface SearchIntent {
   geography: GeographyIntent;
   filters: Record<string, any>; // The query params refing the search
   defaults: SearchDefaults;
+  validation?: SearchIntentValidation;
   /**
    * Controls the destination shape without changing search meaning.
    * SEO pages remain the default for direct path-based province routes;
    * hero submissions explicitly target the results authority.
    */
   routeMode?: SearchRouteMode;
+}
+
+const SEARCH_VALIDATION_MESSAGES: Record<SearchIntentValidationCode, string> = {
+  'canonical-location-required':
+    'Choose a canonical province, city, or suburb suggestion before searching.',
+  'invalid-location-id': 'The selected location does not match its canonical identity.',
+  'location-identity-mismatch': 'The selected location does not match its canonical hierarchy.',
+  'multiple-locations-unsupported':
+    'Choose one canonical province, city, or suburb before searching.',
+};
+
+function getSearchIntentValidation(
+  value: string | null | undefined,
+): SearchIntentValidation | undefined {
+  if (!value || !(value in SEARCH_VALIDATION_MESSAGES)) return undefined;
+  const code = value as SearchIntentValidationCode;
+  return { code, message: SEARCH_VALIDATION_MESSAGES[code] };
+}
+
+export function createSearchIntentValidation(
+  code: SearchIntentValidationCode,
+): SearchIntentValidation {
+  return { code, message: SEARCH_VALIDATION_MESSAGES[code] };
 }
 
 /**
@@ -52,27 +95,20 @@ export function resolveSearchIntent(
   pathParams: Record<string, string | undefined>,
   searchParams: URLSearchParams,
 ): SearchIntent {
-  // 1. Determine Transaction Type
-  let transactionType: TransactionType = 'for-sale'; // Default
+  let transactionType: TransactionType = 'for-sale';
   if (path.includes('property-to-rent') || path.includes('to-rent')) {
     transactionType = 'to-rent';
   } else if (path.includes('new-developments') || path.includes('developments')) {
     transactionType = 'developments';
   }
 
-  // 2. Determine Geography (Sacred & Hierarchical)
-  const geography: GeographyIntent = {
-    level: 'country', // Default
-  };
+  const geography: GeographyIntent = { level: 'country' };
+  let validation = getSearchIntentValidation(searchParams.get('searchError'));
 
-  // ============================================================
-  // PRIORITY: Query params ALWAYS win for SRP routing
-  // This ensures /property-for-sale?city=alberton works correctly
-  // ============================================================
-
-  const queryProvince = searchParams.get('province');
-  const queryCity = searchParams.get('city');
-  const queryLocationId = searchParams.get('locationId');
+  const queryProvince = searchParams.get('province')?.trim().toLowerCase() || undefined;
+  const queryCity = searchParams.get('city')?.trim().toLowerCase() || undefined;
+  const queryLocationId = searchParams.get('locationId')?.trim() || undefined;
+  const canonicalQueryLocation = parseCanonicalLocationId(queryLocationId);
   const queryLocationIds = searchParams
     .getAll('locationIds')
     .map(value => value.trim())
@@ -82,51 +118,105 @@ export function resolveSearchIntent(
     .map(value => value.trim().toLowerCase())
     .filter(Boolean);
   const querySuburb = querySuburbs[0];
+  const locations = searchParams
+    .getAll('locations')
+    .concat(searchParams.getAll('locations[]'))
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (queryLocationId && !canonicalQueryLocation) {
+    validation ||= {
+      code: 'invalid-location-id',
+      message: SEARCH_VALIDATION_MESSAGES['invalid-location-id'],
+    };
+  }
+
+  if (querySuburbs.length > 1 || queryLocationIds.length > 0 || locations.length > 1) {
+    validation ||= {
+      code: 'multiple-locations-unsupported',
+      message: SEARCH_VALIDATION_MESSAGES['multiple-locations-unsupported'],
+    };
+  }
 
   if (querySuburb && querySuburbs.length === 1) {
-    geography.level = 'locality';
+    geography.level = 'suburb';
     geography.suburb = querySuburb;
-  } else if (querySuburbs.length > 1 && queryCity) {
-    geography.level = 'city';
   }
 
   if (queryCity) {
     if (!geography.suburb) geography.level = 'city';
-    geography.city = queryCity.toLowerCase();
+    geography.city = queryCity;
   }
 
   if (queryProvince) {
     if (!geography.city && !geography.suburb) geography.level = 'province';
-    geography.province = queryProvince.toLowerCase();
+    geography.province = queryProvince;
   }
 
-  if (queryLocationId && isCanonicalLocationId(queryLocationId)) {
-    geography.locationId = queryLocationId.trim();
+  if (canonicalQueryLocation) {
+    geography.locationId = queryLocationId;
+    if (!queryProvince && !queryCity && !querySuburb) {
+      geography.level = canonicalQueryLocation.level;
+    } else {
+      const deepestQueryLevel = querySuburb ? 'suburb' : queryCity ? 'city' : 'province';
+      if (deepestQueryLevel !== canonicalQueryLocation.level) {
+        validation ||= {
+          code: 'location-identity-mismatch',
+          message: SEARCH_VALIDATION_MESSAGES['location-identity-mismatch'],
+        };
+      }
+    }
   }
 
-  // Fallback to path params if no query params for geography
-  // This handles SEO page routes like /property-for-sale/gauteng
-  if (!geography.province && !geography.city && !geography.suburb) {
-    if (isCanonicalLocationId(pathParams.locationId)) {
-      geography.locationId = pathParams.locationId;
+  // Preserve existing path-based SEO routes. S1 does not decide the broader
+  // discovery-routing policy, but it does preserve typed IDs when supplied.
+  if (
+    !geography.province &&
+    !geography.city &&
+    !geography.suburb &&
+    !locations.length &&
+    !queryLocationId
+  ) {
+    const pathLocationId = pathParams.locationId?.trim() || undefined;
+    const canonicalPathLocation = parseCanonicalLocationId(pathLocationId);
+
+    if (pathLocationId && !canonicalPathLocation) {
+      validation ||= {
+        code: 'invalid-location-id',
+        message: SEARCH_VALIDATION_MESSAGES['invalid-location-id'],
+      };
+    }
+
+    if (canonicalPathLocation) {
+      geography.locationId = pathLocationId;
+      geography.level = canonicalPathLocation.level;
     }
 
     if (pathParams.province) {
       geography.level = 'province';
-      geography.province = pathParams.province.toLowerCase();
+      geography.province = pathParams.province.trim().toLowerCase();
     }
 
     if (pathParams.city) {
       geography.level = 'city';
-      geography.city = pathParams.city.toLowerCase();
+      geography.city = pathParams.city.trim().toLowerCase();
     }
 
     if (pathParams.suburb) {
-      geography.level = 'locality';
-      geography.suburb = pathParams.suburb.toLowerCase();
+      geography.level = 'suburb';
+      geography.suburb = pathParams.suburb.trim().toLowerCase();
     }
 
-    // Handle Legacy "Slug" or Development specific routes if needed
+    if (canonicalPathLocation && (pathParams.province || pathParams.city || pathParams.suburb)) {
+      const deepestPathLevel = pathParams.suburb ? 'suburb' : pathParams.city ? 'city' : 'province';
+      if (deepestPathLevel !== canonicalPathLocation.level) {
+        validation ||= {
+          code: 'location-identity-mismatch',
+          message: SEARCH_VALIDATION_MESSAGES['location-identity-mismatch'],
+        };
+      }
+    }
+
     if (pathParams.slug) {
       if (!geography.city && !geography.suburb && !geography.province) {
         if (PROVINCE_SLUGS.includes(pathParams.slug.toLowerCase())) {
@@ -141,76 +231,65 @@ export function resolveSearchIntent(
     }
   }
 
-  // 3. Extract Filters (Query Params)
-  // We explicitly exclude geography keys from filters to avoid duplication
-  const filters: Record<string, any> = {};
-
-  // Explicitly handle array parameters
-  const locations = searchParams.getAll('locations');
-  const legacyLocations = searchParams.getAll('locations[]');
-  const normalizedLocations = locations.length > 0 ? locations : legacyLocations;
-  if (normalizedLocations.length > 0) {
-    filters.locations = normalizedLocations;
-  }
-  if (queryLocationIds.length > 0) {
-    filters.locationIds = queryLocationIds;
-  }
-
-  if (querySuburbs.length > 1) {
-    filters.suburb = querySuburbs;
-  } else if (querySuburbs.length === 1) {
-    filters.suburb = querySuburbs[0];
-  }
-
-  if (
-    !geography.province &&
-    !geography.city &&
-    !geography.suburb &&
-    normalizedLocations.length === 1
-  ) {
-    const [locationSlug] = normalizedLocations;
-    if (PROVINCE_SLUGS.includes(locationSlug.toLowerCase())) {
+  // A single legacy locations slug remains readable for compatibility, but
+  // S1 never generates it and never treats it as canonical identity.
+  if (!geography.province && !geography.city && !geography.suburb && locations.length === 1) {
+    const [locationSlug] = locations;
+    if (PROVINCE_SLUGS.includes(locationSlug)) {
       geography.level = 'province';
-      geography.province = locationSlug.toLowerCase();
+      geography.province = locationSlug;
     } else {
       geography.level = 'city';
-      geography.city = locationSlug.toLowerCase();
+      geography.city = locationSlug;
     }
   }
 
-  searchParams.forEach((value, key) => {
-    // Skip geography keys - they're handled above
-    if (
-      key === 'province' ||
-      key === 'city' ||
-      key === 'suburb' ||
-      key === 'locationId' ||
-      key === 'locationIds'
-    )
-      return;
-    // Skip array keys handled explicitly
-    if (key === 'locations' || key === 'locations[]') return;
+  const filters: Record<string, any> =
+    transactionType === BUY_TRANSACTION_TYPE ? parseBuySearchParams(searchParams) : {};
 
-    if (
-      [
-        'minPrice',
-        'maxPrice',
-        'minBedrooms',
-        'maxBedrooms',
-        'minBathrooms',
-        'minArea',
-        'maxArea',
-      ].includes(key)
-    ) {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed) && parsed >= 0) filters[key] = parsed;
-      return;
+  if (transactionType !== BUY_TRANSACTION_TYPE) {
+    if (locations.length > 0) filters.locations = locations;
+    if (queryLocationIds.length > 0) filters.locationIds = queryLocationIds;
+    if (querySuburbs.length > 1) {
+      filters.suburb = querySuburbs;
+    } else if (querySuburbs.length === 1) {
+      filters.suburb = querySuburbs[0];
     }
 
-    filters[key] = value;
-  });
+    searchParams.forEach((value, key) => {
+      if (
+        key === 'province' ||
+        key === 'city' ||
+        key === 'suburb' ||
+        key === 'locationId' ||
+        key === 'locationIds' ||
+        key === 'locations' ||
+        key === 'locations[]' ||
+        key === 'searchError'
+      ) {
+        return;
+      }
 
-  // Ensure listingType matches transactionType (Synchronization)
+      if (
+        [
+          'minPrice',
+          'maxPrice',
+          'minBedrooms',
+          'maxBedrooms',
+          'minBathrooms',
+          'minArea',
+          'maxArea',
+        ].includes(key)
+      ) {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed) && parsed >= 0) filters[key] = parsed;
+        return;
+      }
+
+      filters[key] = value;
+    });
+  }
+
   filters.listingType = transactionType === 'to-rent' ? 'rent' : 'sale';
 
   return {
@@ -221,6 +300,7 @@ export function resolveSearchIntent(
       propertyCategory: 'residential',
       sort: 'relevance',
     },
+    ...(validation ? { validation } : {}),
     routeMode:
       path.split('?')[0] === '/property-for-sale' || path.split('?')[0] === '/property-to-rent'
         ? 'results'
@@ -251,21 +331,27 @@ export function generateIntentUrl(intent: SearchIntent): string {
 
   // 2. Build query params from filters
   const queryParams = new URLSearchParams();
-  const normalizedSuburbs = (() => {
-    if (Array.isArray(filters.suburb)) {
-      return filters.suburb.map(value => String(value).trim().toLowerCase()).filter(Boolean);
-    }
+  const normalizedSuburbs =
+    transactionType === BUY_TRANSACTION_TYPE
+      ? []
+      : (() => {
+          if (Array.isArray(filters.suburb)) {
+            return filters.suburb.map(value => String(value).trim().toLowerCase()).filter(Boolean);
+          }
 
-    if (typeof filters.suburb === 'string' && filters.suburb.trim()) {
-      return [filters.suburb.trim().toLowerCase()];
-    }
+          if (typeof filters.suburb === 'string' && filters.suburb.trim()) {
+            return [filters.suburb.trim().toLowerCase()];
+          }
 
-    return [];
-  })();
+          return [];
+        })();
 
-  Object.entries(filters).forEach(([key, value]) => {
+  const serializableFilters =
+    transactionType === BUY_TRANSACTION_TYPE ? sanitizeBuySearchFilters(filters) : filters;
+
+  Object.entries(serializableFilters).forEach(([key, value]) => {
     // Skip internal keys that shouldn't appear in URL
-    if (key === 'listingType') return;
+    if (key === 'listingType' || key === 'searchError') return;
     if (key === 'suburb') return;
     if (!value) return;
 
@@ -294,13 +380,16 @@ export function generateIntentUrl(intent: SearchIntent): string {
   });
 
   const canonicalLocationId = geography.locationId;
-  if (
-    canonicalLocationId &&
-    geography.level !== 'province' &&
-    isCanonicalLocationId(canonicalLocationId) &&
-    !queryParams.has('locationId')
-  ) {
-    queryParams.set('locationId', canonicalLocationId);
+  const parsedCanonicalLocationId = parseCanonicalLocationId(canonicalLocationId);
+  if (parsedCanonicalLocationId && !queryParams.has('locationId')) {
+    queryParams.set(
+      'locationId',
+      encodeCanonicalLocationId(parsedCanonicalLocationId.level, parsedCanonicalLocationId.id),
+    );
+  }
+
+  if (intent.validation) {
+    queryParams.set('searchError', intent.validation.code);
   }
 
   if (normalizedSuburbs.length > 0) {

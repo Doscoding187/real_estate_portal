@@ -125,7 +125,7 @@ function filtersToIntent(filters: SearchFilters): SearchIntent {
     transactionType: filters.listingType === 'rent' ? 'to-rent' : 'for-sale', // default
     geography: {
       level: filters.suburb
-        ? 'locality'
+        ? 'suburb'
         : filters.city
           ? 'city'
           : filters.province

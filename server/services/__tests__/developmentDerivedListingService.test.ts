@@ -75,8 +75,7 @@ describe('DevelopmentDerivedListingService', () => {
         completionDate: '2027-05-01 00:00:00',
         legacyStatus: 'pre_launch',
         constructionPhase: 'planning',
-        developmentImages:
-          '[{"url":"https://example.com/dev-cover.jpg"}]',
+        developmentImages: '[{"url":"https://example.com/dev-cover.jpg"}]',
         developmentCreatedAt: '2026-03-20 10:00:00',
         developerId: 7,
         developerBrandProfileId: 9,
@@ -103,8 +102,7 @@ describe('DevelopmentDerivedListingService', () => {
         auctionStatus: 'scheduled',
         availableUnits: 7,
         totalUnits: 12,
-        unitBaseMedia:
-          '{"gallery":[{"url":"https://example.com/unit-primary.jpg"}]}',
+        unitBaseMedia: '{"gallery":[{"url":"https://example.com/unit-primary.jpg"}]}',
         unitCreatedAt: '2026-03-21 09:00:00',
       },
     ]);
@@ -176,6 +174,65 @@ describe('DevelopmentDerivedListingService', () => {
       },
       image: 'https://example.com/unit-primary.jpg',
     });
+  });
+
+  it('applies map bounds to development-derived listings', async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      {
+        developmentId: 42,
+        developmentName: 'Inside Bounds',
+        developmentSlug: 'inside-bounds',
+        developmentStatus: 'launching-soon',
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        province: 'Gauteng',
+        latitude: '-26.1000',
+        longitude: '28.0500',
+        unitTypeId: 'inside-unit',
+        unitName: 'Inside Bounds Apartment',
+        structuralType: 'apartment',
+        bedrooms: 2,
+        bathrooms: 1,
+        priceFrom: '1000000',
+        unitBaseMedia: '{}',
+        unitCreatedAt: '2026-03-21 09:00:00',
+      },
+      {
+        developmentId: 43,
+        developmentName: 'Outside Bounds',
+        developmentSlug: 'outside-bounds',
+        developmentStatus: 'launching-soon',
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        city: 'Johannesburg',
+        suburb: 'Sandton',
+        province: 'Gauteng',
+        latitude: '-25.8000',
+        longitude: '28.0500',
+        unitTypeId: 'outside-unit',
+        unitName: 'Outside Bounds Apartment',
+        structuralType: 'apartment',
+        bedrooms: 2,
+        bathrooms: 1,
+        priceFrom: '1000000',
+        unitBaseMedia: '{}',
+        unitCreatedAt: '2026-03-21 09:00:00',
+      },
+    ]);
+
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        listingType: 'sale',
+        bounds: { south: -26.2, north: -26, west: 28, east: 28.1 },
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items.map(item => item.unitTypeId)).toEqual(['inside-unit']);
   });
 
   it('only queries approved published developments with active unit inventory', async () => {
