@@ -123,6 +123,24 @@ function emptyLocationResult(
   } satisfies PublicSearchInventoryResult;
 }
 
+function buildSearchBounds(input: PublicSearchInventoryInput) {
+  if (
+    input.minLat === undefined ||
+    input.maxLat === undefined ||
+    input.minLng === undefined ||
+    input.maxLng === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    south: input.minLat,
+    north: input.maxLat,
+    west: input.minLng,
+    east: input.maxLng,
+  };
+}
+
 function buildPublicFilters(
   input: PublicSearchInventoryInput,
   location: ResolvedLocation | null,
@@ -149,18 +167,7 @@ function buildPublicFilters(
     maxErfSize: input.maxArea,
     minFloorSize: input.minArea,
     maxFloorSize: input.maxArea,
-    bounds:
-      input.minLat !== undefined &&
-      input.maxLat !== undefined &&
-      input.minLng !== undefined &&
-      input.maxLng !== undefined
-        ? {
-            south: input.minLat,
-            north: input.maxLat,
-            west: input.minLng,
-            east: input.maxLng,
-          }
-        : undefined,
+    bounds: buildSearchBounds(input),
   };
 }
 
@@ -179,6 +186,7 @@ function buildDevelopmentFilters(
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
     minBathrooms: input.minBathrooms,
+    bounds: buildSearchBounds(input),
     locations: undefined,
   };
 }

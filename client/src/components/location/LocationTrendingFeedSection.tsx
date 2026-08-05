@@ -26,8 +26,9 @@ interface LocationTrendingFeedSectionProps {
   city?: string;
   suburb?: string;
   maxItems?: number;
-  activeTab?: FeedTab;
+  activeTab?: FeedTab | null;
   onTabChange?: (tab: FeedTab) => void;
+  neutralMode?: boolean;
 }
 
 type TrendingFeedItem = {
@@ -95,22 +96,31 @@ export function LocationTrendingFeedSection({
   maxItems = 5,
   activeTab: controlledActiveTab,
   onTabChange,
+  neutralMode = false,
 }: LocationTrendingFeedSectionProps) {
-  const [internalTab, setInternalTab] = useState<FeedTab>('buy');
-  const activeTab = controlledActiveTab ?? internalTab;
+  const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
 
-  const { data: feedData } = trpc.developer.getHomeTrendingFeed.useQuery({
-    tab: activeTab,
-    province,
-    city,
-    suburb,
-    limit: maxItems,
-  });
+  const { data: feedData } = trpc.developer.getHomeTrendingFeed.useQuery(
+    {
+      tab: activeTab || 'buy',
+      province,
+      city,
+      suburb,
+      limit: maxItems,
+    },
+    { enabled: Boolean(activeTab) },
+  );
 
   const items = ((feedData?.items || []) as TrendingFeedItem[]).slice(0, maxItems);
 
-  const copy = TAB_COPY[activeTab];
-  const title = `${copy.title} in ${locationName}`;
+  const copy = activeTab
+    ? TAB_COPY[activeTab]
+    : {
+        title: `Explore ${locationName}`,
+        subtitle: 'Choose a supported journey to see local opportunities in this area.',
+      };
+  const title = activeTab ? `${copy.title} in ${locationName}` : copy.title;
 
   return (
     <section className="py-10 bg-white rounded-2xl border border-slate-200/80 px-4 md:px-6">
@@ -124,7 +134,12 @@ export function LocationTrendingFeedSection({
           {FEED_TABS.map(tab => (
             <button
               key={tab.value}
+              type="button"
+              disabled={neutralMode && tab.value !== 'buy'}
+              aria-disabled={neutralMode && tab.value !== 'buy'}
+              aria-pressed={activeTab === tab.value}
               onClick={() => {
+                if (neutralMode && tab.value !== 'buy') return;
                 if (controlledActiveTab === undefined) {
                   setInternalTab(tab.value);
                 }
@@ -133,7 +148,9 @@ export function LocationTrendingFeedSection({
               className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
                 activeTab === tab.value
                   ? 'bg-[#2774AE] text-white shadow-sm'
-                  : 'text-slate-600 hover:text-[#2774AE] hover:bg-white'
+                  : neutralMode && tab.value !== 'buy'
+                    ? 'text-slate-400 cursor-not-allowed'
+                    : 'text-slate-600 hover:text-[#2774AE] hover:bg-white'
               }`}
             >
               {tab.label}
@@ -142,7 +159,11 @@ export function LocationTrendingFeedSection({
         </div>
       </div>
 
-      {items.length > 0 ? (
+      {!activeTab ? (
+        <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
+          Choose a supported journey to view live opportunities in this area.
+        </div>
+      ) : items.length > 0 ? (
         <div className="group/carousel relative w-full max-w-[1240px]">
           <Carousel opts={{ align: 'start', loop: items.length > 4 }} className="w-full">
             <CarouselContent className="-ml-3 pb-2 justify-start">

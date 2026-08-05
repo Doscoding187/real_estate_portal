@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from 'react';
+import { useState, useEffect, useRef, useId, type RefObject } from 'react';
 import { MapPin, Loader2, X, Compass } from 'lucide-react';
 import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
@@ -31,14 +31,21 @@ function getCanonicalBuyLocationPath(location: {
   slug: string;
   provinceSlug?: string;
   citySlug?: string;
+  canonicalLocationId?: string;
 }) {
-  const province = location.provinceSlug ? `&province=${location.provinceSlug}` : '';
-  if (location.type === 'province') return `/property-for-sale/${location.slug}`;
-  if (location.type === 'suburb' || location.type === 'area') {
-    const city = location.citySlug ? `&city=${location.citySlug}` : '';
-    return `/property-for-sale?suburb=${location.slug}${city}${province}`;
+  const params = new URLSearchParams();
+  if (location.canonicalLocationId) params.set('locationId', location.canonicalLocationId);
+  if (location.type === 'province') {
+    params.set('province', location.slug);
+  } else if (location.type === 'suburb' || location.type === 'area') {
+    params.set('suburb', location.slug);
+    if (location.citySlug) params.set('city', location.citySlug);
+    if (location.provinceSlug) params.set('province', location.provinceSlug);
+  } else {
+    params.set('city', location.slug);
+    if (location.provinceSlug) params.set('province', location.provinceSlug);
   }
-  return `/property-for-sale?city=${location.slug}${province}`;
+  return `/property-for-sale?${params.toString()}`;
 }
 
 interface LocationAutosuggestProps {
@@ -53,6 +60,8 @@ interface LocationAutosuggestProps {
   inputClassName?: string;
   showIcon?: boolean;
   maxLocations?: number;
+  inputRef?: RefObject<HTMLInputElement>;
+  inputAriaDescribedBy?: string;
   // Search Discovery Engine — foundation for future smart suggestions
   discoverySuggestions?: SearchDiscoverySuggestion[];
   onDiscoveryNavigate?: (canonicalPath: string) => void;
@@ -69,6 +78,8 @@ export function LocationAutosuggest({
   inputClassName = '',
   showIcon = true,
   maxLocations = 5,
+  inputRef,
+  inputAriaDescribedBy,
   discoverySuggestions,
   onDiscoveryNavigate,
 }: LocationAutosuggestProps) {
@@ -80,7 +91,8 @@ export function LocationAutosuggest({
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const localInputRef = useRef<HTMLInputElement>(null);
+  const activeInputRef = inputRef ?? localInputRef;
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const predictionRequestSequence = useRef(0);
   const listboxId = useId();
@@ -181,7 +193,7 @@ export function LocationAutosuggest({
 
     setShowSuggestions(false);
     // Keep focus on input for rapid multi-select
-    inputRef.current?.focus();
+    activeInputRef.current?.focus();
 
     if (onSelect) {
       const slug = slugify(mainText);
@@ -235,7 +247,7 @@ export function LocationAutosuggest({
     setQuery('');
     if (onChange) onChange('');
     setShowSuggestions(false);
-    inputRef.current?.focus();
+    activeInputRef.current?.focus();
 
     if (!onSelect) return;
 
@@ -261,6 +273,7 @@ export function LocationAutosuggest({
         slug,
         provinceSlug,
         citySlug,
+        canonicalLocationId: encodeCanonicalLocationId(location.type, Number(location.id)),
       }),
     });
   };
@@ -321,7 +334,7 @@ export function LocationAutosuggest({
 
   // Wrapper click focuses input
   const handleWrapperClick = () => {
-    inputRef.current?.focus();
+    activeInputRef.current?.focus();
   };
 
   const isLimitReached = selectedLocations.length >= maxLocations;
@@ -355,7 +368,7 @@ export function LocationAutosuggest({
 
         {/* The actual Input - borderless */}
         <input
-          ref={inputRef}
+          ref={activeInputRef}
           id={`${listboxId}-input`}
           type="text"
           autoComplete="off"
@@ -367,6 +380,7 @@ export function LocationAutosuggest({
           aria-activedescendant={
             selectedIndex >= 0 ? `${listboxId}-option-${selectedIndex}` : undefined
           }
+          aria-describedby={inputAriaDescribedBy}
           aria-busy={isLoading || isDatabaseSearchLoading}
           // Disable input if limit reached (optional, P24 behavior allows typing but no selecting? Let's keep typing allowed for UX)
           // readOnly={isLimitReached}

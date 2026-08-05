@@ -118,9 +118,15 @@ export const locationRouter = router({
       const uniqueResults = results.filter(result => {
         const key = [
           String(result.type || ''),
-          String(result.name || '').trim().toLowerCase(),
-          String(result.cityName || '').trim().toLowerCase(),
-          String(result.provinceName || '').trim().toLowerCase(),
+          String(result.name || '')
+            .trim()
+            .toLowerCase(),
+          String(result.cityName || '')
+            .trim()
+            .toLowerCase(),
+          String(result.provinceName || '')
+            .trim()
+            .toLowerCase(),
         ].join('|');
         if (seen.has(key)) return false;
         seen.add(key);
@@ -803,7 +809,7 @@ export const locationRouter = router({
   /**
    * Search Discovery Engine — suggest locations by partial name match.
    *
-   * Returns canonical path-based suggestions with listing counts.
+   * Returns canonical neutral geography suggestions with listing counts.
    * Foundation for future ranking/personalisation; no ranking yet.
    */
   searchDiscoverySuggestions: publicProcedure
@@ -910,7 +916,7 @@ export const locationRouter = router({
             label: r.name,
             type: 'province',
             provinceSlug: r.slug,
-            canonicalPath: `/property-for-sale/${r.slug}`,
+            canonicalPath: `/${r.slug}`,
             source: 'database',
             listingCount: r.listingCount ?? undefined,
           });
@@ -922,7 +928,7 @@ export const locationRouter = router({
             type: 'city',
             provinceSlug: r.provinceSlug,
             citySlug: r.slug,
-            canonicalPath: `/property-for-sale/${r.provinceSlug}/${r.slug}`,
+            canonicalPath: `/${r.provinceSlug}/${r.slug}`,
             source: 'database',
             listingCount: r.listingCount ?? undefined,
           });
@@ -935,7 +941,7 @@ export const locationRouter = router({
             provinceSlug: r.provinceSlug,
             citySlug: r.citySlug,
             suburbSlug: r.slug,
-            canonicalPath: `/property-for-sale/${r.provinceSlug}/${r.citySlug}/${r.slug}`,
+            canonicalPath: `/${r.provinceSlug}/${r.citySlug}/${r.slug}`,
             source: 'database',
             listingCount: r.listingCount ?? undefined,
           });

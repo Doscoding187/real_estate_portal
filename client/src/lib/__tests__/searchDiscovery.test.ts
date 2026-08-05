@@ -72,13 +72,12 @@ describe('getSearchDiscoverySuggestions', () => {
     }
   });
 
-  it('returns paths starting with /property-for-sale or /property-to-rent', () => {
+  it('returns neutral geography paths rather than transaction paths', () => {
     const results = getSearchDiscoverySuggestions('cape');
     for (const r of results) {
-      expect(
-        r.canonicalPath.startsWith('/property-for-sale') ||
-          r.canonicalPath.startsWith('/property-to-rent'),
-      ).toBe(true);
+      expect(r.canonicalPath).toMatch(/^\/[a-z0-9-]+(?:\/[a-z0-9-]+){0,2}$/);
+      expect(r.canonicalPath).not.toContain('/property-for-sale');
+      expect(r.canonicalPath).not.toContain('/property-to-rent');
     }
   });
 

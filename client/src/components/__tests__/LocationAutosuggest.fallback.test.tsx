@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createRef } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { useLocationSearchQuery } = vi.hoisted(() => ({
@@ -66,7 +67,8 @@ describe('LocationAutosuggest database fallback', () => {
       type: 'suburb',
       provinceSlug: 'gauteng',
       citySlug: 'johannesburg',
-      canonicalPath: '/property-for-sale?suburb=sandton&city=johannesburg&province=gauteng',
+      canonicalPath:
+        '/property-for-sale?locationId=suburb%3A12&suburb=sandton&city=johannesburg&province=gauteng',
     });
   });
 
@@ -90,5 +92,20 @@ describe('LocationAutosuggest database fallback', () => {
         type: 'suburb',
       }),
     );
+  });
+
+  it('supports a parent input ref without changing location search behavior', () => {
+    const inputRef = createRef<HTMLInputElement>();
+    render(<LocationAutosuggest inputRef={inputRef} />);
+
+    const input = screen.getByRole('combobox', { name: 'Search by city, suburb, or area' });
+    expect(inputRef.current).toBe(input);
+    expect(useLocationSearchQuery).toHaveBeenLastCalledWith(
+      { query: '', type: 'all', limit: 10 },
+      expect.objectContaining({ enabled: false }),
+    );
+
+    fireEvent.click(input);
+    expect(input).toHaveFocus();
   });
 });

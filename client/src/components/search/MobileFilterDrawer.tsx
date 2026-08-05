@@ -9,6 +9,9 @@ interface MobileFilterDrawerProps {
   onClose: () => void;
   filters: SearchFilters;
   onFilterChange: (filters: SearchFilters) => void;
+  allowedPropertyTypes?: readonly string[];
+  showAmenities?: boolean;
+  showLocationRefinement?: boolean;
 }
 
 export function MobileFilterDrawer({
@@ -16,6 +19,9 @@ export function MobileFilterDrawer({
   onClose,
   filters,
   onFilterChange,
+  allowedPropertyTypes,
+  showAmenities = true,
+  showLocationRefinement = true,
 }: MobileFilterDrawerProps) {
   const [localFilters, setLocalFilters] = useState(filters);
 
@@ -75,6 +81,9 @@ export function MobileFilterDrawer({
               filters={localFilters as any}
               onFilterChange={f => setLocalFilters(f as SearchFilters)}
               onSaveSearch={() => {}}
+              allowedPropertyTypes={allowedPropertyTypes}
+              showAmenities={showAmenities}
+              showLocationRefinement={showLocationRefinement}
             />
           </div>
 

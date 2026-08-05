@@ -36,10 +36,10 @@ function listingCountLabel(count: unknown): string {
 
 function locationHref(location: LocationSelection): string {
   if (location.type === 'suburb' && location.provinceSlug && location.citySlug && location.slug) {
-    return `/property-for-sale/${location.provinceSlug}/${location.citySlug}/${location.slug}`;
+    return `/${location.provinceSlug}/${location.citySlug}/${location.slug}`;
   }
   if (location.type === 'city' && location.provinceSlug && (location.slug || location.citySlug)) {
-    return `/property-for-sale/${location.provinceSlug}/${location.slug || location.citySlug}`;
+    return `/${location.provinceSlug}/${location.slug || location.citySlug}`;
   }
   return PUBLIC_CITY_ENTRY.href;
 }
@@ -97,7 +97,7 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
   const [activeSuburbSlug, setActiveSuburbSlug] = useState<string | null>(null);
   const activeCity = popularCitiesQuery.isLoading
     ? undefined
-    : cities.find(city => city.href === activeCityHref) ?? cities[0];
+    : (cities.find(city => city.href === activeCityHref) ?? cities[0]);
 
   useEffect(() => {
     if (activeCity && activeCity.href !== activeCityHref) {
@@ -135,7 +135,7 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
 
   const suburbHref = (suburb: { slug?: string }) =>
     activeCity?.provinceSlug && activeCity.citySlug && suburb.slug
-      ? `/property-for-sale/${activeCity.provinceSlug}/${activeCity.citySlug}/${suburb.slug}`
+      ? `/${activeCity.provinceSlug}/${activeCity.citySlug}/${suburb.slug}`
       : cityHref;
 
   return (
@@ -171,7 +171,9 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
           <h2 className="public-navbar__section-heading">{areaColumnLabel}</h2>
           <div className="public-navbar__menu-section-list" aria-live="polite">
             {!activeCity ? (
-              <p className="public-navbar__city-empty">Choose a city to see its suburbs and areas.</p>
+              <p className="public-navbar__city-empty">
+                Choose a city to see its suburbs and areas.
+              </p>
             ) : cityDataQuery.isLoading ? (
               Array.from({ length: 5 }, (_, index) => (
                 <div key={index} className="public-navbar__city-skeleton" aria-hidden="true" />
@@ -191,14 +193,19 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
                     data-active={active}
                     aria-current={active ? 'true' : undefined}
                   >
-                    <span className="public-navbar__city-link-main"><MapPin className="size-4" aria-hidden="true" /><span>{suburb.name}</span></span>
+                    <span className="public-navbar__city-link-main">
+                      <MapPin className="size-4" aria-hidden="true" />
+                      <span>{suburb.name}</span>
+                    </span>
                   </Link>
                 );
               })
             ) : cityDataQuery.isError ? (
               <p className="public-navbar__city-empty">Unable to load areas right now.</p>
             ) : (
-              <p className="public-navbar__city-empty">No active areas are available for this city yet.</p>
+              <p className="public-navbar__city-empty">
+                No active areas are available for this city yet.
+              </p>
             )}
           </div>
         </section>
@@ -225,7 +232,9 @@ export function CityDiscoveryMenu({ onNavigate }: CityDiscoveryMenuProps) {
             />
           </div>
 
-          <div className="public-navbar__city-action-divider" aria-hidden="true"><span>or</span></div>
+          <div className="public-navbar__city-action-divider" aria-hidden="true">
+            <span>or</span>
+          </div>
 
           <div className="public-navbar__city-actions">
             {activeCity ? (

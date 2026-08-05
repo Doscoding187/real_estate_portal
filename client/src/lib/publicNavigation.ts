@@ -4,6 +4,7 @@ import {
   toServiceCategorySlug,
   type ServiceCategory,
 } from '@/features/services/catalog';
+import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 
 export type PublicNavigationCapabilityStatus =
   | 'LAUNCH_READY'
@@ -797,11 +798,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
     groups: [
       {
         label: 'Home and move',
-        items: serviceCategoryDestinations(
-          'home_improvement',
-          'moving',
-          'inspection_compliance',
-        ),
+        items: serviceCategoryDestinations('home_improvement', 'moving', 'inspection_compliance'),
       },
       {
         label: 'Transaction and property support',
@@ -905,13 +902,10 @@ export const PUBLIC_NAVIGATION_ACTIONS = {
  * included here and remain owned by their engine-local navigation.
  */
 export const PUBLIC_NAVIGATION_ACTIVE_ROUTES: Record<PublicNavigationActiveOwner, string[]> = {
-  locations: ['/property-for-sale/'],
+  locations: PROVINCE_SLUGS.map(slug => `/${slug}`),
   referrals: ['/distribution-network'],
   advertise: ['/advertise'],
-  professionals: [
-    '/agents',
-    '/developers',
-  ],
+  professionals: ['/agents', '/developers'],
   services: ['/services'],
   buyers: ['/property-for-sale', '/new-developments'],
   renters: ['/property-to-rent'],
@@ -1005,10 +999,7 @@ export function getSafeNextPath(value: unknown): string | null {
   }
 }
 
-export function getAccountAuthHref(
-  mode: 'signin' | 'register',
-  nextPath: unknown,
-): string {
+export function getAccountAuthHref(mode: 'signin' | 'register', nextPath: unknown): string {
   const params = new URLSearchParams({ mode });
   const safeNextPath = getSafeNextPath(nextPath);
 
@@ -1048,10 +1039,11 @@ export function getAccountDisplayName(user: PublicNavigationUser) {
 export function getAccountInitials(user: PublicNavigationUser) {
   if (!user) return null;
 
-  const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-    || user.name
-    || user.email?.split('@')[0]
-    || '';
+  const name =
+    [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+    user.name ||
+    user.email?.split('@')[0] ||
+    '';
   if (!name) return null;
 
   const initials = name

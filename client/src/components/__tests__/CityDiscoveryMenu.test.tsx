@@ -20,8 +20,14 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 vi.mock('wouter', () => ({
-  Link: ({ href, children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; children: ReactNode }) => (
-    <a href={href} {...props}>{children}</a>
+  Link: ({
+    href,
+    children,
+    ...props
+  }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string; children: ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -32,7 +38,13 @@ vi.mock('@/components/LocationAutosuggest', () => ({
 }));
 
 const cities = [
-  { id: 1, name: 'Johannesburg', slug: 'johannesburg', provinceSlug: 'gauteng', listingCount: 1284 },
+  {
+    id: 1,
+    name: 'Johannesburg',
+    slug: 'johannesburg',
+    provinceSlug: 'gauteng',
+    listingCount: 1284,
+  },
   { id: 2, name: 'Cape Town', slug: 'cape-town', provinceSlug: 'western-cape', listingCount: 980 },
 ];
 
@@ -72,13 +84,12 @@ describe('CityDiscoveryMenu', () => {
 
     const johannesburg = screen.getByRole('link', { name: 'Johannesburg' });
     expect(johannesburg.textContent).toBe('Johannesburg');
-    expect(johannesburg).toHaveAttribute(
-      'href',
-      '/property-for-sale/gauteng/johannesburg',
-    );
+    expect(johannesburg).toHaveAttribute('href', '/gauteng/johannesburg');
     expect(johannesburg).toHaveAttribute('data-active', 'true');
     expect(screen.getByText('Areas in Johannesburg')).toBeInTheDocument();
-    expect(document.querySelector('.public-navbar__city-count-summary')?.textContent).toMatch(/1\s+284 active listings/);
+    expect(document.querySelector('.public-navbar__city-count-summary')?.textContent).toMatch(
+      /1\s+284 active listings/,
+    );
   });
 
   it('updates the active city and only renders that city’s areas on hover', async () => {
@@ -88,10 +99,7 @@ describe('CityDiscoveryMenu', () => {
     expect(screen.getByText('Areas in Cape Town')).toBeInTheDocument();
     const seaPoint = screen.getByRole('link', { name: 'Sea Point' });
     expect(seaPoint.textContent).toBe('Sea Point');
-    expect(seaPoint).toHaveAttribute(
-      'href',
-      '/property-for-sale/western-cape/cape-town/sea-point',
-    );
+    expect(seaPoint).toHaveAttribute('href', '/western-cape/cape-town/sea-point');
     expect(screen.queryByRole('link', { name: 'Sandton' })).not.toBeInTheDocument();
   });
 
@@ -101,10 +109,12 @@ describe('CityDiscoveryMenu', () => {
     fireEvent.focus(sandton);
 
     expect(document.querySelector('.public-navbar__city-parent')?.textContent).toBe('Johannesburg');
-    expect(document.querySelector('.public-navbar__city-count-summary')?.textContent).toBe('420 active listings');
+    expect(document.querySelector('.public-navbar__city-count-summary')?.textContent).toBe(
+      '420 active listings',
+    );
     expect(screen.getByRole('link', { name: /View all properties in Sandton/ })).toHaveAttribute(
       'href',
-      '/property-for-sale/gauteng/johannesburg/sandton',
+      '/gauteng/johannesburg/sandton',
     );
   });
 
@@ -136,12 +146,13 @@ describe('CityDiscoveryMenu', () => {
     renderMenu();
 
     expect(screen.queryByRole('link', { name: 'Sandton' })).not.toBeInTheDocument();
-    expect(screen.getByText('No active areas are available for this city yet.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No active areas are available for this city yet.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('No active listings')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /View all properties in Johannesburg/ })).toHaveAttribute(
-      'href',
-      '/property-for-sale/gauteng/johannesburg',
-    );
+    expect(
+      screen.getByRole('link', { name: /View all properties in Johannesburg/ }),
+    ).toHaveAttribute('href', '/gauteng/johannesburg');
   });
 
   it('keeps the empty state when a successful popular-city response is empty', () => {

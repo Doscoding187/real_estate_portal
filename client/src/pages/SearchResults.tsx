@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
@@ -62,6 +62,11 @@ import {
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import type { SearchCardResult } from '@/../../shared/types';
+import {
+  BUY_PROPERTY_TYPES,
+  sanitizeBuySearchFilters,
+  toBuyPublicSearchFilters,
+} from '@/../../shared/buySearchContract';
 import {
   canAdvancePublicSearchPage,
   getPublicSearchReachablePageCount,
@@ -188,15 +193,6 @@ export default function SearchResults({
 
   const limit = 12;
 
-  // SEO
-  useEffect(() => {
-    document.title = generatePageTitle(filters);
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute('content', generateMetaDescription(filters));
-    }
-  }, [filters]);
-
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
   const suggestedSaveSearchName = useMemo(() => getSavedSearchSuggestedName(filters), [filters]);
   const saveSearchDescription = useMemo(
@@ -212,6 +208,7 @@ export default function SearchResults({
   // pagination and location resolution. The browser receives only the page it
   // is allowed to render.
   const publicSearchQueryInput = useMemo(() => {
+    const isBuySearch = searchIntent.transactionType === 'for-sale';
     const publicPropertyTypes = new Set([
       'apartment',
       'house',
@@ -238,33 +235,38 @@ export default function SearchResults({
         : undefined;
     const numericFilter = (value: unknown) =>
       typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+    const buyFilters = isBuySearch ? toBuyPublicSearchFilters(filters) : undefined;
 
     return {
       city: filters.city,
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      locations: normalizedLocationSlugs,
+      locations: isBuySearch ? undefined : normalizedLocationSlugs,
       locationId: filters.locationId,
-      propertyType,
-      listingType: filters.listingType === 'rent' ? ('rent' as const) : ('sale' as const),
-      listingSource: filters.listingSource,
-      minPrice: numericFilter(filters.minPrice),
-      maxPrice: numericFilter(filters.maxPrice),
-      minBedrooms: numericFilter(filters.minBedrooms),
-      maxBedrooms: numericFilter(filters.maxBedrooms),
-      minBathrooms: numericFilter(filters.minBathrooms),
-      maxBathrooms: numericFilter(filters.maxBathrooms),
-      minArea: numericFilter(filters.minArea),
-      maxArea: numericFilter(filters.maxArea),
-      minLat: numericFilter(filters.minLat),
-      maxLat: numericFilter(filters.maxLat),
-      minLng: numericFilter(filters.minLng),
-      maxLng: numericFilter(filters.maxLng),
+      propertyType: isBuySearch ? buyFilters?.propertyType : propertyType,
+      listingType: isBuySearch
+        ? buyFilters?.listingType
+        : filters.listingType === 'rent'
+          ? ('rent' as const)
+          : ('sale' as const),
+      listingSource: isBuySearch ? buyFilters?.listingSource : filters.listingSource,
+      minPrice: isBuySearch ? buyFilters?.minPrice : numericFilter(filters.minPrice),
+      maxPrice: isBuySearch ? buyFilters?.maxPrice : numericFilter(filters.maxPrice),
+      minBedrooms: isBuySearch ? buyFilters?.minBedrooms : numericFilter(filters.minBedrooms),
+      maxBedrooms: isBuySearch ? undefined : numericFilter(filters.maxBedrooms),
+      minBathrooms: isBuySearch ? buyFilters?.minBathrooms : numericFilter(filters.minBathrooms),
+      maxBathrooms: isBuySearch ? undefined : numericFilter(filters.maxBathrooms),
+      minArea: isBuySearch ? undefined : numericFilter(filters.minArea),
+      maxArea: isBuySearch ? undefined : numericFilter(filters.maxArea),
+      minLat: isBuySearch ? buyFilters?.minLat : numericFilter(filters.minLat),
+      maxLat: isBuySearch ? buyFilters?.maxLat : numericFilter(filters.maxLat),
+      minLng: isBuySearch ? buyFilters?.minLng : numericFilter(filters.minLng),
+      maxLng: isBuySearch ? buyFilters?.maxLng : numericFilter(filters.maxLng),
       sortOption: sortBy,
       page,
       pageSize: limit,
     };
-  }, [filters, limit, normalizedLocationSlugs, page, sortBy]);
+  }, [filters, limit, normalizedLocationSlugs, page, searchIntent.transactionType, sortBy]);
 
   const {
     data: publicSearchResults,
@@ -272,6 +274,7 @@ export default function SearchResults({
     error: publicSearchError,
   } = trpc.properties.searchPublicInventory.useQuery(publicSearchQueryInput, {
     retry: false,
+    enabled: !searchIntent.validation,
   });
   const hasSearchError = Boolean(publicSearchError);
   // Filter metadata is intentionally omitted until it is calculated by the
@@ -282,7 +285,7 @@ export default function SearchResults({
     []) as SearchCardResult[];
   const resultTotal = publicSearchResults?.total ?? 0;
   const locationContext = publicSearchResults?.locationContext;
-  const locationMessage = publicSearchResults?.locationMessage;
+  const locationMessage = publicSearchResults?.locationMessage ?? searchIntent.validation?.message;
 
   // Mutations
   const saveSearchMutation = trpc.savedSearch.create.useMutation({
@@ -306,12 +309,21 @@ export default function SearchResults({
     // We need to be careful not to overwrite the "Sacred Geography" with undefined if the sidebar logic doesn't include it.
 
     // Ideally, we pass the new filters to `generateIntentUrl` by mixing them into the current intent.
+    const mergedFilters =
+      Object.keys(newFilters).length === 0
+        ? {}
+        : {
+            ...searchIntent.filters,
+            ...newFilters,
+          };
+    const nextFilters =
+      searchIntent.transactionType === 'for-sale'
+        ? sanitizeBuySearchFilters(mergedFilters)
+        : mergedFilters;
+
     const updatedIntent: SearchIntent = {
       ...searchIntent,
-      filters: {
-        ...searchIntent.filters,
-        ...newFilters,
-      },
+      filters: nextFilters,
     };
 
     // Sanitize: We do not allow the sidebar to change the geography level keys (province, city, suburb) via 'filters'.
@@ -459,6 +471,8 @@ export default function SearchResults({
 
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
+  const pageTitle = useMemo(() => generatePageTitle(filters), [filters]);
+  const pageDescription = useMemo(() => generateMetaDescription(filters), [filters]);
   const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
   const canAdvancePage = canAdvancePublicSearchPage(page, resultCount, limit);
   const hasRenderableResults =
@@ -480,7 +494,7 @@ export default function SearchResults({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <MetaControl canonicalUrl={canonicalUrl} />
+      <MetaControl canonicalUrl={canonicalUrl} title={pageTitle} description={pageDescription} />
       <ListingNavbar defaultLocations={normalizedLocationFilters} />
 
       <div className="container pb-32 pt-24 lg:pb-12">
@@ -524,6 +538,11 @@ export default function SearchResults({
                   locationContext={locationContext}
                   onFilterChange={handleFilterChange}
                   onSaveSearch={handleSaveSearch}
+                  allowedPropertyTypes={
+                    searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
+                  }
+                  showAmenities={searchIntent.transactionType !== 'for-sale'}
+                  showLocationRefinement={searchIntent.transactionType !== 'for-sale'}
                 />
               </div>
             </div>
@@ -699,6 +718,11 @@ export default function SearchResults({
         onClose={() => setIsMobileFilterOpen(false)}
         filters={filters}
         onFilterChange={handleFilterChange}
+        allowedPropertyTypes={
+          searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
+        }
+        showAmenities={searchIntent.transactionType !== 'for-sale'}
+        showLocationRefinement={searchIntent.transactionType !== 'for-sale'}
       />
 
       {/* Save Search Dialog */}

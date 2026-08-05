@@ -172,18 +172,19 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
 
     setIsDialogOpen(false);
 
-    let url = '';
-
-    // Base Route
-    if (selectedLocation.slug && selectedLocation.provinceSlug) {
-      url = `/property-for-sale/${selectedLocation.provinceSlug}/${selectedLocation.slug}`;
-    } else if (selectedLocation.slug) {
-      url = `/property-for-sale/${selectedLocation.slug}`;
-    } else {
-      url = `/properties`; // Fallback
-    }
-
     const params = new URLSearchParams();
+    const hierarchy = String(selectedLocation.provinceSlug || '')
+      .split('/')
+      .filter(Boolean);
+    if (hierarchy[0]) params.set('province', hierarchy[0]);
+    if (selectedLocation.type === 'city' && selectedLocation.slug) {
+      params.set('city', selectedLocation.slug);
+    }
+    if (selectedLocation.type === 'suburb') {
+      if (hierarchy[1]) params.set('city', hierarchy[1]);
+      if (selectedLocation.slug) params.set('suburb', selectedLocation.slug);
+    }
+    if (selectedLocation.id) params.set('locationId', selectedLocation.id);
 
     // Core Params
     params.set('propertyType', selectedCategory.type);
@@ -194,9 +195,6 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
     if (maxPrice) params.set('maxPrice', maxPrice);
     if (bedrooms) params.set('minBedrooms', bedrooms);
 
-    // Location Name fallback if no slug
-    if (!selectedLocation.slug) params.set('location', selectedLocation.name);
-
     // Features / Amenities
     if (features.length > 0) {
       params.set('amenities', features.join(','));
@@ -206,7 +204,7 @@ export function PropertyCategories({ preselectedLocation }: PropertyCategoriesPr
       }
     }
 
-    setLocation(`${url}?${params.toString()}`);
+    setLocation(`/property-for-sale?${params.toString()}`);
   };
 
   const priceOptions = [

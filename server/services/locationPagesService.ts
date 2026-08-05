@@ -21,14 +21,30 @@ function safeParseImages(value: unknown): string[] {
   if (value == null) return [];
 
   if (Array.isArray(value)) {
-    return value.map(img => (typeof img === 'string' ? img : typeof img === 'object' && img !== null && 'url' in img ? String(img.url) : '')).filter(Boolean);
+    return value
+      .map(img =>
+        typeof img === 'string'
+          ? img
+          : typeof img === 'object' && img !== null && 'url' in img
+            ? String(img.url)
+            : '',
+      )
+      .filter(Boolean);
   }
 
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
       if (Array.isArray(parsed)) {
-        return parsed.map(img => (typeof img === 'string' ? img : typeof img === 'object' && img !== null && 'url' in img ? String(img.url) : '')).filter(Boolean);
+        return parsed
+          .map(img =>
+            typeof img === 'string'
+              ? img
+              : typeof img === 'object' && img !== null && 'url' in img
+                ? String(img.url)
+                : '',
+          )
+          .filter(Boolean);
       }
     } catch {
       console.warn('[LocationPages] Failed to parse images JSON string');
@@ -37,6 +53,10 @@ function safeParseImages(value: unknown): string[] {
   }
 
   return [];
+}
+
+function normalizeLocationSlug(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 export const locationPagesService = {
@@ -96,45 +116,15 @@ export const locationPagesService = {
 
     const db = await getDb();
 
-    // Try slug column first (if it exists), fallback to name matching
-    let province;
-
-    try {
-      // Method 1: Use slug column (preferred)
-      [province] = await db
-        .select()
-        .from(provinces)
-        .where(eq(provinces.slug, provinceSlug))
-        .limit(1);
-
-      console.log(`[LocationPages] Slug match result:`, province ? province.name : 'NOT FOUND');
-    } catch (error) {
-      console.log(`[LocationPages] Slug column doesn't exist, using name matching`);
-    }
-
-    // Method 2: Fallback to name matching
-    if (!province) {
-      const cleanName = provinceSlug.replace(/-/g, ' ');
-      console.log(`[LocationPages] Trying name match with: "${cleanName}"`);
-
-      [province] = await db
-        .select()
-        .from(provinces)
-        .where(sql`LOWER(${provinces.name}) = LOWER(${cleanName})`)
-        .limit(1);
-
-      console.log(`[LocationPages] Name match result:`, province ? province.name : 'NOT FOUND');
-    }
+    const normalizedProvinceSlug = normalizeLocationSlug(provinceSlug);
+    const [province] = await db
+      .select()
+      .from(provinces)
+      .where(eq(provinces.slug, normalizedProvinceSlug))
+      .limit(1);
 
     if (!province) {
       console.log(`[LocationPages] Province not found for slug: "${provinceSlug}"`);
-
-      // Debug: Show available provinces
-      const allProvinces = await db
-        .select({ name: provinces.name, slug: provinces.slug })
-        .from(provinces);
-      console.log(`[LocationPages] Available provinces:`, allProvinces);
-
       return null;
     }
 
@@ -181,7 +171,10 @@ export const locationPagesService = {
         )
         .limit(6);
     } catch (error) {
-      console.warn('[LocationPages] Developments query failed for province, returning empty', error);
+      console.warn(
+        '[LocationPages] Developments query failed for province, returning empty',
+        error,
+      );
     }
 
     try {
@@ -205,7 +198,10 @@ export const locationPagesService = {
         .orderBy(desc(sql`count(${properties.id})`))
         .limit(10);
     } catch (error) {
-      console.warn('[LocationPages] Trending suburbs query failed for province, returning empty', error);
+      console.warn(
+        '[LocationPages] Trending suburbs query failed for province, returning empty',
+        error,
+      );
     }
 
     try {
@@ -235,7 +231,11 @@ export const locationPagesService = {
   /**
    * Get data for City Page (Level 2)
    */
-  async getCityData(provinceSlug: string, citySlug: string) {
+  async getCityData(
+    provinceSlug: string,
+    citySlug: string,
+    options?: { includeInventoryPreview?: boolean },
+  ) {
     console.log(
       `[LocationPages] getCityData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}"`,
     );
@@ -243,67 +243,30 @@ export const locationPagesService = {
     try {
       const db = await getDb();
 
-      // Try slug column first, fallback to name matching
-      let city;
-
-      try {
-        // Method 1: Use slug column (preferred)
-        [city] = await db
-          .select({
-            id: cities.id,
-            name: cities.name,
-            slug: cities.slug,
-            provinceId: cities.provinceId,
-            provinceName: provinces.name,
-            provinceSlug: provinces.slug,
-            isMetro: cities.isMetro,
-            latitude: cities.latitude,
-            longitude: cities.longitude,
-          })
-          .from(cities)
-          .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(eq(cities.slug, citySlug))
-          .limit(1);
-
-        console.log(`[LocationPages] Slug match result:`, city ? city.name : 'NOT FOUND');
-      } catch (error) {
-        console.log(`[LocationPages] Slug column doesn't exist, using name matching`);
-      }
-
-      // Method 2: Fallback to name matching
-      if (!city) {
-        const cleanCityName = citySlug.replace(/-/g, ' ');
-        console.log(`[LocationPages] Trying name match with: "${cleanCityName}"`);
-
-        [city] = await db
-          .select({
-            id: cities.id,
-            name: cities.name,
-            slug: cities.slug,
-            provinceId: cities.provinceId,
-            provinceName: provinces.name,
-            provinceSlug: provinces.slug,
-            isMetro: cities.isMetro,
-            latitude: cities.latitude,
-            longitude: cities.longitude,
-          })
-          .from(cities)
-          .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(sql`LOWER(${cities.name}) = LOWER(${cleanCityName})`)
-          .limit(1);
-
-        console.log(`[LocationPages] Name match result:`, city ? city.name : 'NOT FOUND');
-      }
+      const [city] = await db
+        .select({
+          id: cities.id,
+          name: cities.name,
+          slug: cities.slug,
+          provinceId: cities.provinceId,
+          provinceName: provinces.name,
+          provinceSlug: provinces.slug,
+          isMetro: cities.isMetro,
+          latitude: cities.latitude,
+          longitude: cities.longitude,
+        })
+        .from(cities)
+        .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+        .where(
+          and(
+            eq(cities.slug, normalizeLocationSlug(citySlug)),
+            eq(provinces.slug, normalizeLocationSlug(provinceSlug)),
+          ),
+        )
+        .limit(1);
 
       if (!city) {
         console.log(`[LocationPages] City not found for slug: "${citySlug}"`);
-
-        // Debug: Show available cities
-        const allCities = await db
-          .select({ name: cities.name, slug: cities.slug })
-          .from(cities)
-          .limit(10);
-        console.log(`[LocationPages] Sample cities:`, allCities);
 
         return null;
       }
@@ -319,9 +282,15 @@ export const locationPagesService = {
           name: suburbs.name,
           slug: suburbs.slug,
           listingCount: listingCountSql,
-          avgPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
-          avgSalePrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'sale')`,
-          avgRentalPrice: sql<number>`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'rent')`,
+          avgPrice: sql<
+            number | null
+          >`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
+          avgSalePrice: sql<
+            number | null
+          >`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'sale')`,
+          avgRentalPrice: sql<
+            number | null
+          >`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'rent')`,
           propertiesForSale: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'sale')`,
           propertiesForRent: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'rent')`,
         })
@@ -332,18 +301,23 @@ export const locationPagesService = {
 
       console.log(`[LocationPages] Found ${suburbList.length} suburbs`);
 
-      // 3. Featured Properties in City
-      const featuredProperties = await db
-        .select()
-        .from(properties)
-        .where(
-          and(
-            eq(properties.cityId, city.id),
-            eq(properties.status, 'published' as any),
-            eq(properties.featured, 1),
-          ),
-        )
-        .limit(6);
+      // Neutral geography pages may expose aggregate counts and insights, but
+      // must not fetch a journey-specific listing preview before a journey is
+      // explicitly selected.
+      const includeInventoryPreview = options?.includeInventoryPreview ?? true;
+      const featuredProperties = includeInventoryPreview
+        ? await db
+            .select()
+            .from(properties)
+            .where(
+              and(
+                eq(properties.cityId, city.id),
+                eq(properties.status, 'published' as any),
+                eq(properties.featured, 1),
+              ),
+            )
+            .limit(6)
+        : [];
 
       // 4. Developments in City (match by city name, trim whitespace, also include suburb matches)
       // Cascading: show developments where city matches OR suburb is in this city's suburbs
@@ -422,78 +396,45 @@ export const locationPagesService = {
   /**
    * Get data for Suburb Page (Level 3)
    */
-  async getSuburbData(provinceSlug: string, citySlug: string, suburbSlug: string) {
+  async getSuburbData(
+    provinceSlug: string,
+    citySlug: string,
+    suburbSlug: string,
+    options?: { includeInventoryPreview?: boolean },
+  ) {
     console.log(
       `[LocationPages] getSuburbData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}", suburbSlug="${suburbSlug}"`,
     );
 
     const db = await getDb();
 
-    // Try slug column first, fallback to name matching
-    let suburb;
-
-    try {
-      // Method 1: Use slug column (preferred)
-      [suburb] = await db
-        .select({
-          id: suburbs.id,
-          name: suburbs.name,
-          slug: suburbs.slug,
-          cityId: suburbs.cityId,
-          cityName: cities.name,
-          citySlug: cities.slug,
-          provinceName: provinces.name,
-          provinceSlug: provinces.slug,
-          latitude: suburbs.latitude,
-          longitude: suburbs.longitude,
-        })
-        .from(suburbs)
-        .leftJoin(cities, eq(suburbs.cityId, cities.id))
-        .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-        .where(eq(suburbs.slug, suburbSlug))
-        .limit(1);
-
-      console.log(`[LocationPages] Slug match result:`, suburb ? suburb.name : 'NOT FOUND');
-    } catch (error) {
-      console.log(`[LocationPages] Slug column doesn't exist, using name matching`);
-    }
-
-    // Method 2: Fallback to name matching
-    if (!suburb) {
-      const cleanSuburbName = suburbSlug.replace(/-/g, ' ');
-      console.log(`[LocationPages] Trying name match with: "${cleanSuburbName}"`);
-
-      [suburb] = await db
-        .select({
-          id: suburbs.id,
-          name: suburbs.name,
-          slug: suburbs.slug,
-          cityId: suburbs.cityId,
-          cityName: cities.name,
-          citySlug: cities.slug,
-          provinceName: provinces.name,
-          provinceSlug: provinces.slug,
-          latitude: suburbs.latitude,
-          longitude: suburbs.longitude,
-        })
-        .from(suburbs)
-        .leftJoin(cities, eq(suburbs.cityId, cities.id))
-        .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-        .where(sql`LOWER(${suburbs.name}) = LOWER(${cleanSuburbName})`)
-        .limit(1);
-
-      console.log(`[LocationPages] Name match result:`, suburb ? suburb.name : 'NOT FOUND');
-    }
+    const [suburb] = await db
+      .select({
+        id: suburbs.id,
+        name: suburbs.name,
+        slug: suburbs.slug,
+        cityId: suburbs.cityId,
+        cityName: cities.name,
+        citySlug: cities.slug,
+        provinceName: provinces.name,
+        provinceSlug: provinces.slug,
+        latitude: suburbs.latitude,
+        longitude: suburbs.longitude,
+      })
+      .from(suburbs)
+      .innerJoin(cities, eq(suburbs.cityId, cities.id))
+      .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+      .where(
+        and(
+          eq(suburbs.slug, normalizeLocationSlug(suburbSlug)),
+          eq(cities.slug, normalizeLocationSlug(citySlug)),
+          eq(provinces.slug, normalizeLocationSlug(provinceSlug)),
+        ),
+      )
+      .limit(1);
 
     if (!suburb) {
       console.log(`[LocationPages] Suburb not found for slug: "${suburbSlug}"`);
-
-      // Debug: Show available suburbs
-      const allSuburbs = await db
-        .select({ name: suburbs.name, slug: suburbs.slug })
-        .from(suburbs)
-        .limit(10);
-      console.log(`[LocationPages] Sample suburbs:`, allSuburbs);
 
       return null;
     }
@@ -518,15 +459,17 @@ export const locationPagesService = {
 
     // 3. Featured Properties in Suburb — wrap so media parsing or schema mismatch doesn't crash
     let localProperties: any[] = [];
-    try {
-      localProperties = await db
-        .select()
-        .from(properties)
-        .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')))
-        .orderBy(desc(properties.createdAt))
-        .limit(12);
-    } catch (error) {
-      console.warn('[LocationPages] Properties query failed for suburb, returning empty', error);
+    if (options?.includeInventoryPreview ?? true) {
+      try {
+        localProperties = await db
+          .select()
+          .from(properties)
+          .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')))
+          .orderBy(desc(properties.createdAt))
+          .limit(12);
+      } catch (error) {
+        console.warn('[LocationPages] Properties query failed for suburb, returning empty', error);
+      }
     }
 
     // 4. Market Insights (Price Analytics)
@@ -546,14 +489,13 @@ export const locationPagesService = {
     let reviews: any[] = [];
     try {
       const { locationInsightsService } = await import('./locationInsightsService');
-      insights = await locationInsightsService.getInsights(
-        suburb.id,
-        suburb.name,
-        suburb.cityName,
-      );
+      insights = await locationInsightsService.getInsights(suburb.id, suburb.name, suburb.cityName);
       reviews = await locationInsightsService.getReviews(suburb.id);
     } catch (error) {
-      console.warn('[LocationPages] locationInsightsService failed, returning null insights', error);
+      console.warn(
+        '[LocationPages] locationInsightsService failed, returning null insights',
+        error,
+      );
     }
 
     return {

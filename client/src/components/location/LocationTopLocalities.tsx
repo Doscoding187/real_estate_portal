@@ -7,17 +7,27 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export interface Locality {
   name: string;
-  rating: number;
-  reviews: number;
-  avgSalePrice: number;
-  avgRental: number;
-  propertiesForSale: number;
-  propertiesForRent: number;
+  rating?: number | null;
+  reviews?: number | null;
+  avgSalePrice: number | null;
+  avgRentalPrice: number | null;
+  propertiesForSale: number | null;
+  propertiesForRent: number | null;
 }
 
 interface LocationTopLocalitiesProps {
   localities: Locality[];
   locationName: string;
+}
+
+type NumericMetric = number | null | undefined;
+
+function hasNumericValue(value: NumericMetric): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function formatListingCount(value: NumericMetric, label: string): string {
+  return hasNumericValue(value) ? `${value.toLocaleString()} ${label}` : `${label} unavailable`;
 }
 
 export function LocationTopLocalities({ localities, locationName }: LocationTopLocalitiesProps) {
@@ -75,17 +85,24 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                               <h3 className="font-bold text-xl mb-2 text-gray-900 group-hover:text-blue-600 transition-colors">
                                 {locality.name}
                               </h3>
-                              <div className="flex items-center gap-2 text-sm">
-                                <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-md border border-yellow-100">
-                                  <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                                  <span className="font-bold text-yellow-700">
-                                    {locality.rating}
-                                  </span>
+                              {hasNumericValue(locality.rating) ||
+                              hasNumericValue(locality.reviews) ? (
+                                <div className="flex items-center gap-2 text-sm">
+                                  {hasNumericValue(locality.rating) && (
+                                    <div className="flex items-center gap-1 bg-yellow-50 px-2 py-0.5 rounded-md border border-yellow-100">
+                                      <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                                      <span className="font-bold text-yellow-700">
+                                        {locality.rating.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {hasNumericValue(locality.reviews) && (
+                                    <span className="text-muted-foreground text-xs">
+                                      ({locality.reviews.toLocaleString()} Reviews)
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-muted-foreground text-xs">
-                                  ({locality.reviews} Reviews)
-                                </span>
-                              </div>
+                              ) : null}
                             </div>
                           </div>
                         </Link>
@@ -97,8 +114,16 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                               Avg. Sale Price
                             </p>
                             <p className="font-bold text-gray-900">
-                              R {locality.avgSalePrice.toLocaleString()}
-                              <span className="text-xs text-muted-foreground font-normal">/m²</span>
+                              {hasNumericValue(locality.avgSalePrice) ? (
+                                <>
+                                  R {locality.avgSalePrice.toLocaleString()}
+                                  <span className="text-xs text-muted-foreground font-normal">
+                                    /m²
+                                  </span>
+                                </>
+                              ) : (
+                                'Not enough data'
+                              )}
                             </p>
                           </div>
                           <div>
@@ -106,8 +131,16 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                               Avg. Rental
                             </p>
                             <p className="font-bold text-gray-900">
-                              R {locality.avgRental}
-                              <span className="text-xs text-muted-foreground font-normal">/m²</span>
+                              {hasNumericValue(locality.avgRentalPrice) ? (
+                                <>
+                                  R {locality.avgRentalPrice.toLocaleString()}
+                                  <span className="text-xs text-muted-foreground font-normal">
+                                    /m²
+                                  </span>
+                                </>
+                              ) : (
+                                'Not enough data'
+                              )}
                             </p>
                           </div>
                         </div>
@@ -120,7 +153,10 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                           >
                             <div>
                               <p className="font-semibold text-sm text-gray-900 group-hover/link:text-blue-600 transition-colors">
-                                {locality.propertiesForSale.toLocaleString()} Properties for Sale
+                                {formatListingCount(
+                                  locality.propertiesForSale,
+                                  'Properties for Sale',
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">in {locality.name}</p>
                             </div>
@@ -134,7 +170,10 @@ export function LocationTopLocalities({ localities, locationName }: LocationTopL
                           >
                             <div>
                               <p className="font-semibold text-sm text-gray-900 group-hover/link:text-blue-600 transition-colors">
-                                {locality.propertiesForRent.toLocaleString()} Properties for Rent
+                                {formatListingCount(
+                                  locality.propertiesForRent,
+                                  'Properties for Rent',
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">in {locality.name}</p>
                             </div>

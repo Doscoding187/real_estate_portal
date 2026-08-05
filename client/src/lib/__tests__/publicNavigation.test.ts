@@ -104,9 +104,9 @@ describe('public navigation authority', () => {
       href: '/explore',
       activeHref: '/explore',
     });
-    expect(explore?.groups.flatMap(group => group.items).some(item => item.href === '/explore/upload')).toBe(
-      false,
-    );
+    expect(
+      explore?.groups.flatMap(group => group.items).some(item => item.href === '/explore/upload'),
+    ).toBe(false);
   });
 
   it('derives Services navigation from the six canonical marketplace categories', () => {
@@ -251,6 +251,6 @@ describe('public navigation authority', () => {
   });
 
   it('gives location pages to Locations without activating Buyers as well', () => {
-    expect(getPublicNavigationActiveOwner('/property-for-sale/gauteng/johannesburg')).toBe('locations');
+    expect(getPublicNavigationActiveOwner('/gauteng/johannesburg')).toBe('locations');
   });
 });

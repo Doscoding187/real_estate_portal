@@ -15,12 +15,26 @@ export const locationPagesService = {
     return await baseLocationPagesService.getProvinceData(provinceSlug);
   },
 
-  async getCityData(provinceSlug: string, citySlug: string) {
-    return await baseLocationPagesService.getCityData(provinceSlug, citySlug);
+  async getCityData(
+    provinceSlug: string,
+    citySlug: string,
+    options?: { includeInventoryPreview?: boolean },
+  ) {
+    return await baseLocationPagesService.getCityData(provinceSlug, citySlug, options);
   },
 
-  async getSuburbData(provinceSlug: string, citySlug: string, suburbSlug: string) {
-    return await baseLocationPagesService.getSuburbData(provinceSlug, citySlug, suburbSlug);
+  async getSuburbData(
+    provinceSlug: string,
+    citySlug: string,
+    suburbSlug: string,
+    options?: { includeInventoryPreview?: boolean },
+  ) {
+    return await baseLocationPagesService.getSuburbData(
+      provinceSlug,
+      citySlug,
+      suburbSlug,
+      options,
+    );
   },
 
   async getEnhancedProvinceData(provinceSlug: string) {

@@ -1,5 +1,7 @@
 export interface LocationNode {
-  id: string; // Google Place ID or internal ID
+  /** Canonical public-search identity; Google Place IDs must not be submitted as this value. */
+  id: string;
+  canonicalLocationId?: string;
   slug: string; // URL-safe slug
   name: string; // Display name
   type: 'province' | 'city' | 'suburb' | 'area';

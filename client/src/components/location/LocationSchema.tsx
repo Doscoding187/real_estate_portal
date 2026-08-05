@@ -1,5 +1,5 @@
-import { Helmet } from 'react-helmet-async';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
+import { MetaControl } from '@/components/seo/MetaControl';
 
 /**
  * LocationSchema Component
@@ -43,6 +43,7 @@ interface LocationSchemaProps {
     avgPrice?: number;
     avgRentalPrice?: number;
   };
+  neutralMode?: boolean;
 }
 
 export function LocationSchema({
@@ -56,6 +57,7 @@ export function LocationSchema({
   address,
   aggregateRating,
   stats,
+  neutralMode = false,
 }: LocationSchemaProps) {
   const fullUrl = toAbsoluteUrl(url);
 
@@ -154,46 +156,24 @@ export function LocationSchema({
 
   // Generate dynamic meta tags
   // Requirements 23.2: Include location name, listing count, and average price in title tag
-  const metaTitle = generateMetaTitle(type, name, stats);
+  const metaTitle = neutralMode
+    ? `Explore ${name} | Property Listify`
+    : generateMetaTitle(type, name, stats);
 
   // Requirements 23.3: Create description with key statistics and property types
-  const metaDescription = generateMetaDescription(type, name, description, stats);
+  const metaDescription = neutralMode
+    ? `Discover properties, developments, local insights, suburbs, and agents in ${name}.`
+    : generateMetaDescription(type, name, description, stats);
 
   return (
-    <Helmet>
-      {/* Primary Meta Tags */}
-      <title>{metaTitle}</title>
-      <meta name="description" content={metaDescription} />
-      <link rel="canonical" href={fullUrl} />
-
-      {/* Open Graph / Facebook */}
-      <meta property="og:type" content="website" />
-      <meta property="og:url" content={fullUrl} />
-      <meta property="og:title" content={metaTitle} />
-      <meta property="og:description" content={metaDescription} />
-      {image && <meta property="og:image" content={image} />}
-      <meta property="og:site_name" content="Property Listify" />
-
-      {/* Twitter */}
-      <meta property="twitter:card" content="summary_large_image" />
-      <meta property="twitter:url" content={fullUrl} />
-      <meta property="twitter:title" content={metaTitle} />
-      <meta property="twitter:description" content={metaDescription} />
-      {image && <meta property="twitter:image" content={image} />}
-
-      {/* Geo Tags */}
-      {geo && (
-        <>
-          <meta name="geo.position" content={`${geo.latitude};${geo.longitude}`} />
-          <meta name="geo.placename" content={name} />
-          <meta name="geo.region" content="ZA" />
-        </>
-      )}
-
-      {/* Structured Data */}
-      <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
-      <script type="application/ld+json">{JSON.stringify(placeSchema)}</script>
-    </Helmet>
+    <MetaControl
+      canonicalUrl={fullUrl}
+      title={metaTitle}
+      description={metaDescription}
+      image={image}
+      geo={geo ? { ...geo, name } : undefined}
+      structuredData={[breadcrumbSchema, placeSchema]}
+    />
   );
 }
 

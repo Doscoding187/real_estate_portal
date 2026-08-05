@@ -35,7 +35,7 @@ const landingPages: Record<string, LandingPageConfig> = {
       {
         title: 'Local market pages',
         body: 'Location pages remain the canonical property SEO layer. Insights pages explain the market around those searches.',
-        href: '/property-for-sale/gauteng/johannesburg',
+        href: '/gauteng/johannesburg',
         linkLabel: 'View a location page',
       },
     ],
@@ -274,7 +274,7 @@ const landingPages: Record<string, LandingPageConfig> = {
     description:
       'A navigation hub for researching cities, suburbs, local demand, amenities, and property opportunities across South Africa.',
     canonicalPath: '/tools/area-guides',
-    primaryCta: { label: 'Explore Johannesburg', href: '/property-for-sale/gauteng/johannesburg' },
+    primaryCta: { label: 'Explore Johannesburg', href: '/gauteng/johannesburg' },
     secondaryCta: { label: 'Browse all property', href: '/property-for-sale' },
     sections: [
       {

@@ -56,12 +56,25 @@ export function LocationPropertyTypeExplorer({
     // If locationSlug exists, use it. Otherwise fall back to generic search?
     // Assumption: locationSlug is passed as 'province/city/suburb' or similar canonical path
 
-    // Construct new URL: /property-for-sale/{locationSlug}?propertyType={type}
+    // Construct a root results URL; geography is query state, not a
+    // transaction-specific page path.
     if (locationSlug) {
-      navigate(`/property-for-sale/${locationSlug}?propertyType=${type}`);
+      const segments = locationSlug.split('/').filter(Boolean);
+      const params = new URLSearchParams({ propertyType: type });
+      if (segments.length === 1) {
+        params.set('province', segments[0]);
+      } else if (segments.length === 2) {
+        params.set('province', segments[0]);
+        params.set('city', segments[1]);
+      } else if (segments.length === 3) {
+        params.set('province', segments[0]);
+        params.set('city', segments[1]);
+        params.set('suburb', segments[2]);
+      }
+      navigate(`/property-for-sale?${params.toString()}`);
     } else {
       // Fallback for location-less usage (rare in this component)
-      navigate(`/property-for-sale/search?propertyType=${type}`);
+      navigate(`/property-for-sale?propertyType=${encodeURIComponent(type)}`);
     }
   };
 

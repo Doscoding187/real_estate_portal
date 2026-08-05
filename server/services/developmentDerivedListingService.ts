@@ -14,6 +14,12 @@ interface DevelopmentDerivedListingFilters {
   city?: string;
   suburb?: string[];
   locations?: string[];
+  bounds?: {
+    south: number;
+    north: number;
+    west: number;
+    east: number;
+  };
   propertyType?: Property['propertyType'][];
   listingType?: Property['listingType'];
   minPrice?: number;
@@ -130,6 +136,25 @@ function toNumberOrZero(value: unknown): number {
   return toNumberOrNull(value) ?? 0;
 }
 
+function isWithinBounds(
+  row: { latitude?: unknown; longitude?: unknown },
+  bounds?: DevelopmentDerivedListingFilters['bounds'],
+): boolean {
+  if (!bounds) return true;
+
+  const latitude = toNumberOrNull(row.latitude);
+  const longitude = toNumberOrNull(row.longitude);
+
+  return (
+    latitude !== null &&
+    longitude !== null &&
+    latitude >= bounds.south &&
+    latitude <= bounds.north &&
+    longitude >= bounds.west &&
+    longitude <= bounds.east
+  );
+}
+
 function toSentenceCaseLabel(value: string): string {
   return value
     .split(/[_-\s]+/)
@@ -159,11 +184,7 @@ function slugifyText(value: string): string {
 }
 
 function normalizeLocationText(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/-/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return value.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function matchesLocationSlugs(
@@ -206,7 +227,11 @@ function mapStructuralTypeToPropertyType(
   if (devType === 'land' || structural.includes('plot')) return 'plot';
   if (devType === 'commercial' || structural.includes('office')) return 'commercial';
   if (structural.includes('house')) return 'house';
-  if (structural.includes('townhouse') || structural.includes('simplex') || structural.includes('duplex')) {
+  if (
+    structural.includes('townhouse') ||
+    structural.includes('simplex') ||
+    structural.includes('duplex')
+  ) {
     return 'townhouse';
   }
   return 'apartment';
@@ -234,7 +259,10 @@ function getPrimaryImage(unitBaseMedia: unknown, developmentImages: unknown): st
   return null;
 }
 
-function getMediaSignals(unitBaseMedia: unknown, developmentImages: unknown): {
+function getMediaSignals(
+  unitBaseMedia: unknown,
+  developmentImages: unknown,
+): {
   image: string | null;
   usesDedicatedUnitImage: boolean;
   unitImageCount: number;
@@ -308,9 +336,7 @@ function flattenFeatureCollections(value: unknown): string[] {
 
   return Object.values(parsed).flatMap(entry => {
     if (Array.isArray(entry)) {
-      return entry
-        .map(item => String(item || '').trim())
-        .filter(Boolean);
+      return entry.map(item => String(item || '').trim()).filter(Boolean);
     }
 
     if (entry && typeof entry === 'object') {
@@ -568,7 +594,11 @@ export class DevelopmentDerivedListingService {
     ];
 
     const targetTransactionType =
-      filters.listingType === 'rent' ? 'for_rent' : filters.listingType === 'sale' ? 'for_sale' : null;
+      filters.listingType === 'rent'
+        ? 'for_rent'
+        : filters.listingType === 'sale'
+          ? 'for_sale'
+          : null;
     if (targetTransactionType) {
       conditions.push(eq(developments.transactionType, targetTransactionType as any));
     }
@@ -647,6 +677,10 @@ export class DevelopmentDerivedListingService {
 
     const mapped = rows
       .map(row => {
+        if (!isWithinBounds(row, filters.bounds)) {
+          return null;
+        }
+
         if (!matchesNormalizedField(row.province, filters.province)) {
           return null;
         }
@@ -750,7 +784,9 @@ export class DevelopmentDerivedListingService {
           description,
           highlights,
           image: mediaSignals.image,
-          images: mediaSignals.image ? [{ url: mediaSignals.image, thumbnailUrl: mediaSignals.image }] : [],
+          images: mediaSignals.image
+            ? [{ url: mediaSignals.image, thumbnailUrl: mediaSignals.image }]
+            : [],
           badges: [stageBadge].filter(Boolean) as string[],
           availableUnits,
           totalUnits: toNumberOrNull(row.totalUnits) ?? undefined,

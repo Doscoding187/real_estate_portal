@@ -46,11 +46,13 @@ export function getSearchDiscoverySuggestions(
   const lower = query.toLowerCase().trim();
   if (lower.length < 2) return [];
 
-  return FALLBACK_CITY_LINKS
-    .filter(link => {
-      if (!link.label) return false;
-      return link.label.toLowerCase().includes(lower);
-    })
+  return FALLBACK_CITY_LINKS.filter(link => {
+    if (!link.label) return false;
+    if (link.href.startsWith('/property-for-sale?') || link.href.startsWith('/property-to-rent?')) {
+      return false;
+    }
+    return link.label.toLowerCase().includes(lower);
+  })
     .slice(0, limit)
     .map(link => ({
       label: link.label,

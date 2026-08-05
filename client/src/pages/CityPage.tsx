@@ -1,6 +1,5 @@
 import React from 'react';
 import { useLocation } from 'wouter';
-import { MetaControl } from '@/components/seo/MetaControl';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
 import { LocationHeroSection } from '@/components/location/LocationHeroSection';
@@ -38,8 +37,6 @@ import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAg
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 
-import SearchResults from './SearchResults';
-
 export default function CityPage({
   params,
 }: {
@@ -47,11 +44,17 @@ export default function CityPage({
 }) {
   const [location, navigate] = useLocation();
   const { province: provinceSlug, city: citySlug, action, locationId } = params;
-  const locationPathPrefix = location.startsWith('/property-to-rent')
-    ? '/property-to-rent'
-    : '/property-for-sale';
-  const locationCanonicalPath = `${locationPathPrefix}/${provinceSlug}/${citySlug}`;
-  const [heroTab, setHeroTab] = React.useState<string>('buy');
+  const isLocationDiscovery =
+    !location.startsWith('/property-for-sale') && !location.startsWith('/property-to-rent');
+  const locationPathPrefix = isLocationDiscovery
+    ? ''
+    : location.startsWith('/property-to-rent')
+      ? '/property-to-rent'
+      : '/property-for-sale';
+  const locationCanonicalPath = isLocationDiscovery
+    ? `/${provinceSlug}/${citySlug}`
+    : `${locationPathPrefix}/${provinceSlug}/${citySlug}`;
+  const [heroTab, setHeroTab] = React.useState<string | null>(isLocationDiscovery ? null : 'buy');
   const campaignHierarchy = buildCampaignSlugHierarchy(`${provinceSlug}/${citySlug}`);
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
@@ -67,53 +70,17 @@ export default function CityPage({
 
   const mapFeedTabToHeroTab = (tab: FeedTab): string => (tab === 'rent' ? 'rental' : tab);
 
-  // Use window.location.search for reactivity to query param changes
-  // wouter's useLocation() only returns pathname, not query params
-  const [searchString, setSearchString] = React.useState(window.location.search);
-
-  // Listen for URL changes (popstate and custom navigation)
-  React.useEffect(() => {
-    const handleLocationChange = () => {
-      setSearchString(window.location.search);
-    };
-
-    // Listen to popstate (back/forward buttons)
-    window.addEventListener('popstate', handleLocationChange);
-
-    // Check for URL changes on every render
-    if (window.location.search !== searchString) {
-      setSearchString(window.location.search);
-    }
-
-    return () => {
-      window.removeEventListener('popstate', handleLocationChange);
-    };
-  }, [location, searchString]); // Re-run when wouter's location changes
-
-  // 2025 Architecture: Controller Logic (Transaction Mode)
-  const searchParams = new URLSearchParams(searchString);
-  const hasSearchFilters =
-    searchParams.has('propertyType') ||
-    searchParams.has('minPrice') ||
-    searchParams.has('maxPrice') ||
-    searchParams.has('bedrooms');
-
-  const isTransactionMode = searchParams.get('view') === 'list' || hasSearchFilters;
-
-  // Data fetching — must be before conditional early returns for hook-order safety
+  // Bare geography routes are always neutral discovery pages. Transactional search
+  // state belongs to the explicit /property-for-sale or /property-to-rent roots.
   const { data, isLoading, error } = trpc.locationPages.getCityData.useQuery(
-    { provinceSlug, citySlug },
-    { enabled: !isTransactionMode },
+    { provinceSlug, citySlug, includeInventoryPreview: !isLocationDiscovery },
+    { enabled: true },
   );
 
   const { data: heroCampaign } = trpc.locationPages.getHeroCampaign.useQuery(
     { locationSlug: `${provinceSlug}/${citySlug}`, fallbacks: campaignHierarchy.slice(1) },
-    { enabled: !isTransactionMode },
+    { enabled: true },
   );
-
-  if (isTransactionMode) {
-    return <SearchResults province={provinceSlug} city={citySlug} locationId={locationId} />;
-  }
 
   if (isLoading) {
     return <CityPageSkeleton />;
@@ -176,15 +143,24 @@ export default function CityPage({
 
   return (
     <>
-      <MetaControl />
       <LocationSchema
         type="City"
         name={city.name}
-        description={`Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${city.name}`}
+        description={
+          isLocationDiscovery
+            ? `Explore property opportunities, developments, local insights, and agents in ${city.name}.`
+            : `Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${city.name}`
+        }
         url={locationCanonicalPath}
         breadcrumbs={[
           { name: 'Home', url: '/' },
-          { name: city.provinceName || provinceSlug, url: `${locationPathPrefix}/${provinceSlug}` },
+          {
+            name: isLocationDiscovery ? 'Explore' : city.provinceName || provinceSlug,
+            url: isLocationDiscovery ? '/' : `${locationPathPrefix}/${provinceSlug}`,
+          },
+          ...(isLocationDiscovery
+            ? [{ name: city.provinceName || provinceSlug, url: `/${provinceSlug}` }]
+            : []),
           { name: city.name, url: locationCanonicalPath },
         ]}
         geo={{
@@ -192,6 +168,7 @@ export default function CityPage({
           longitude: Number(city.longitude),
         }}
         stats={stats}
+        neutralMode={isLocationDiscovery}
         image="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
       />
 
@@ -209,33 +186,42 @@ export default function CityPage({
             campaign={heroCampaign}
             activeTab={heroTab}
             onActiveTabChange={setHeroTab}
+            neutralMode={isLocationDiscovery}
             quickLinks={
               suburbs?.slice(0, 10).map((suburb: any) => ({
                 label: suburb.name,
-                slug: suburb.slug,
+                slug: isLocationDiscovery ? undefined : suburb.slug,
+                path: isLocationDiscovery
+                  ? `/${provinceSlug}/${citySlug}/${suburb.slug}`
+                  : undefined,
               })) || []
             }
           />
         }
         searchStage={null}
+        discoveryMode={isLocationDiscovery}
         featuredProperties={
-          <FeaturedPropertiesCarousel
-            locationId={city.id}
-            locationName={city.name}
-            locationScope="city"
-          />
+          isLocationDiscovery ? undefined : (
+            <FeaturedPropertiesCarousel
+              locationId={city.id}
+              locationName={city.name}
+              locationScope="city"
+            />
+          )
         }
         // Section 6: Property Type Explorer
         // Section 6: Property Type Explorer
         propertyTypeExplorer={
-          <PropertyCategories
-            preselectedLocation={{
-              name: city.name,
-              slug: citySlug,
-              provinceSlug: provinceSlug,
-              type: 'city',
-            }}
-          />
+          isLocationDiscovery ? undefined : (
+            <PropertyCategories
+              preselectedLocation={{
+                name: city.name,
+                slug: citySlug,
+                provinceSlug: provinceSlug,
+                type: 'city',
+              }}
+            />
+          )
         }
         // Section 7: Top Localities / Market Insights
         topLocalities={topLocalities}
@@ -249,16 +235,17 @@ export default function CityPage({
             locationName={city.name}
             province={city.provinceName || provinceSlug}
             city={city.name}
-            activeTab={mapHeroTabToFeedTab(heroTab)}
+            activeTab={isLocationDiscovery ? null : mapHeroTabToFeedTab(heroTab)}
             onTabChange={tab => setHeroTab(mapFeedTabToHeroTab(tab))}
+            neutralMode={isLocationDiscovery}
           />
         }
         popularLocations={
           <ExploreCities
             // CRITICAL: Suburb Link -> SRP
             // Override Base Path to point to Transaction Root
-            basePath="/property-for-sale"
-            queryParams="?view=list"
+            basePath={isLocationDiscovery ? '' : '/property-for-sale'}
+            queryParams={isLocationDiscovery ? '' : '?view=list'}
             customLocations={suburbs.map((suburb: any) => ({
               name: suburb.name,
               province: city.name,
@@ -298,16 +285,19 @@ export default function CityPage({
           />
         }
         buyerCTA={
-          // Temporary simple CTA until Phase 3 specific component
-          <div className="py-8 text-left bg-blue-50 rounded-lg mx-4 md:mx-0">
-            <h3 className="text-fluid-h4 font-bold mb-2">Looking for a new home in {city.name}?</h3>
-            <p className="mb-4 text-slate-600">
-              Get alerts for new properties matching your criteria.
-            </p>
-            <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
-              Set Property Alert
-            </button>
-          </div>
+          isLocationDiscovery ? undefined : (
+            <div className="py-8 text-left bg-blue-50 rounded-lg mx-4 md:mx-0">
+              <h3 className="text-fluid-h4 font-bold mb-2">
+                Looking for a new home in {city.name}?
+              </h3>
+              <p className="mb-4 text-slate-600">
+                Get alerts for new properties matching your criteria.
+              </p>
+              <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
+                Set Property Alert
+              </button>
+            </div>
+          )
         }
         listingsFeed={
           <div className="space-y-12">

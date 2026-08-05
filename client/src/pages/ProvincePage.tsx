@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
-import { MetaControl } from '@/components/seo/MetaControl';
 import { generateCanonicalUrl } from '@/lib/urlUtils';
 import { LocationHeroSection } from '@/components/location/LocationHeroSection';
 import { SearchStage } from '@/components/location/SearchStage';
@@ -19,7 +18,6 @@ import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { AmenitiesSection } from '@/components/location/AmenitiesSection';
 import { InteractiveMap } from '@/components/location/InteractiveMap';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Helmet } from 'react-helmet-async';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { TopDevelopersCarousel } from '@/components/location/TopDevelopersCarousel';
 import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProjectsCarousel';
@@ -35,11 +33,17 @@ import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 export default function ProvincePage({ params }: { params: { province: string } }) {
   const [location, navigate] = useLocation();
   const provinceSlug = params.province;
-  const locationPathPrefix = location.startsWith('/property-to-rent')
-    ? '/property-to-rent'
-    : '/property-for-sale';
-  const locationCanonicalPath = `${locationPathPrefix}/${provinceSlug}`;
-  const [heroTab, setHeroTab] = useState<string>('buy');
+  const isLocationDiscovery =
+    !location.startsWith('/property-for-sale') && !location.startsWith('/property-to-rent');
+  const locationPathPrefix = isLocationDiscovery
+    ? ''
+    : location.startsWith('/property-to-rent')
+      ? '/property-to-rent'
+      : '/property-for-sale';
+  const locationCanonicalPath = isLocationDiscovery
+    ? `/${provinceSlug}`
+    : `${locationPathPrefix}/${provinceSlug}`;
+  const [heroTab, setHeroTab] = useState<string | null>(isLocationDiscovery ? null : 'buy');
   const campaignHierarchy = buildCampaignSlugHierarchy(provinceSlug);
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
@@ -94,25 +98,25 @@ export default function ProvincePage({ params }: { params: { province: string } 
 
   return (
     <div className="min-h-screen bg-white">
-      <MetaControl />
-      <Helmet>
-        <title>Property for Sale in {province.name} | Real Estate Portal</title>
-        <meta
-          name="description"
-          content={`Find the best properties for sale in ${province.name}. Browse ${stats.totalListings} listings, including houses, apartments, and developments.`}
-        />
-      </Helmet>
-
       <LocationSchema
         type="Province"
         name={province.name}
-        description={`Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${province.name}`}
+        description={
+          isLocationDiscovery
+            ? `Explore property opportunities, developments, local insights, and agents in ${province.name}.`
+            : `Property ${locationPathPrefix === '/property-to-rent' ? 'to rent' : 'for sale'} in ${province.name}`
+        }
         url={locationCanonicalPath}
         breadcrumbs={[
           { name: 'Home', url: '/' },
-          { name: province.name, url: locationCanonicalPath },
+          {
+            name: isLocationDiscovery ? 'Explore' : province.name,
+            url: isLocationDiscovery ? '/' : locationCanonicalPath,
+          },
+          ...(isLocationDiscovery ? [{ name: province.name, url: locationCanonicalPath }] : []),
         ]}
         stats={stats}
+        neutralMode={isLocationDiscovery}
         image="https://images.unsplash.com/photo-1577931767667-0c58e744d081?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
         geo={
           province.latitude && province.longitude
@@ -138,21 +142,26 @@ export default function ProvincePage({ params }: { params: { province: string } 
             campaign={heroCampaign}
             activeTab={heroTab}
             onActiveTabChange={setHeroTab}
+            neutralMode={isLocationDiscovery}
             quickLinks={
               cities?.slice(0, 10).map((city: any) => ({
                 label: city.name,
-                slug: city.slug,
+                slug: isLocationDiscovery ? undefined : city.slug,
+                path: isLocationDiscovery ? `/${provinceSlug}/${city.slug}` : undefined,
               })) || []
             }
           />
         }
         searchStage={null}
+        discoveryMode={isLocationDiscovery}
         featuredProperties={
-          <FeaturedPropertiesCarousel
-            locationId={province.id}
-            locationName={province.name}
-            locationScope="province"
-          />
+          isLocationDiscovery ? undefined : (
+            <FeaturedPropertiesCarousel
+              locationId={province.id}
+              locationName={province.name}
+              locationScope="province"
+            />
+          )
         }
         // Hidden on province pages per UX rules (visible on city/suburb pages only)
         propertyCategories={undefined}
@@ -160,8 +169,9 @@ export default function ProvincePage({ params }: { params: { province: string } 
           <LocationTrendingFeedSection
             locationName={province.name}
             province={province.name}
-            activeTab={mapHeroTabToFeedTab(heroTab)}
+            activeTab={isLocationDiscovery ? null : mapHeroTabToFeedTab(heroTab)}
             onTabChange={tab => setHeroTab(mapFeedTabToHeroTab(tab))}
+            neutralMode={isLocationDiscovery}
           />
         }
         // Section 6: Removed Property Type Explorer (Discovery Page)
@@ -208,22 +218,24 @@ export default function ProvincePage({ params }: { params: { province: string } 
           ) : undefined
         }
         buyerCTA={
-          <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
-            <h3 className="text-fluid-h4 font-bold mb-2">
-              Looking for property in {province.name}?
-            </h3>
-            <p className="mb-4 text-slate-600">
-              Get alerts for new properties matching your criteria.
-            </p>
-            <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
-              Set Property Alert
-            </button>
-          </div>
+          isLocationDiscovery ? undefined : (
+            <div className="py-8 text-center bg-blue-50 rounded-lg mx-4 md:mx-0">
+              <h3 className="text-fluid-h4 font-bold mb-2">
+                Looking for property in {province.name}?
+              </h3>
+              <p className="mb-4 text-slate-600">
+                Get alerts for new properties matching your criteria.
+              </p>
+              <button className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700">
+                Set Property Alert
+              </button>
+            </div>
+          )
         }
         popularLocations={
           <ExploreCities
-            basePath="/property-for-sale"
-            queryParams="?view=list"
+            basePath={isLocationDiscovery ? '' : '/property-for-sale'}
+            queryParams={isLocationDiscovery ? '' : '?view=list'}
             title={`Explore Popular Cities in ${province.name}`}
             description={`Find high-end residences and investment opportunities in top cities across ${province.name}.`}
             customLocations={
