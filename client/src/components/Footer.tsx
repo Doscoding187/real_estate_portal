@@ -12,35 +12,38 @@ export function Footer() {
           <div className="space-y-6">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-                <span className="text-white font-bold text-xl">R</span>
+                <span className="text-white font-bold text-xl">P</span>
               </div>
-              <span className="text-2xl font-bold text-white">RealEstate</span>
+              <span className="text-2xl font-bold text-white">Property Listify</span>
             </div>
             <p className="text-slate-400 leading-relaxed">
-              South Africa's fastest growing real estate platform. We make buying, selling, and
-              renting properties simple and transparent.
+              A clearer way to buy, rent and discover property across South Africa.
             </p>
             <div className="flex gap-4">
               <a
                 href="#"
+                aria-label="Property Listify on Facebook"
                 className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
               >
                 <Facebook className="h-5 w-5" />
               </a>
               <a
                 href="#"
+                aria-label="Property Listify on X"
                 className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-400 hover:text-white transition-all"
               >
                 <Twitter className="h-5 w-5" />
               </a>
               <a
                 href="#"
+                aria-label="Property Listify on Instagram"
                 className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition-all"
               >
                 <Instagram className="h-5 w-5" />
               </a>
               <a
                 href="#"
+                aria-label="Property Listify on LinkedIn"
                 className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-700 hover:text-white transition-all"
               >
                 <Linkedin className="h-5 w-5" />
@@ -63,11 +66,11 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/properties"
+                  href="/property-for-sale"
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  Search Properties
+                  Search properties
                 </Link>
               </li>
               <li>
@@ -76,7 +79,7 @@ export function Footer() {
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  New Developments
+                  New developments
                 </Link>
               </li>
               <li>
@@ -85,7 +88,7 @@ export function Footer() {
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  List Your Property
+                  List your property
                 </Link>
               </li>
             </ul>
@@ -132,15 +135,15 @@ export function Footer() {
             <ul className="space-y-4 mb-8">
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0 mt-1" />
-                <span>123 Real Estate Ave, Sandton, Johannesburg, 2196</span>
+                <span>South Africa · online support</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <span>+27 10 123 4567</span>
+                <span>Help centre and safety guidance</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <span>hello@realestate.co.za</span>
+                <span>Support via Property Listify</span>
               </li>
             </ul>
 
@@ -150,7 +153,11 @@ export function Footer() {
                 placeholder="Enter your email"
                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus-visible:ring-blue-500"
               />
-              <Button size="icon" className="bg-blue-600 hover:bg-blue-700 shrink-0">
+              <Button
+                size="icon"
+                aria-label="Subscribe to newsletter"
+                className="bg-blue-600 hover:bg-blue-700 shrink-0"
+              >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
@@ -158,7 +165,7 @@ export function Footer() {
         </div>
 
         <div className="pt-8 border-t border-slate-800 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
-          <p>© 2025 Real Estate Portal. All rights reserved.</p>
+          <p>© 2026 Property Listify. All rights reserved.</p>
           <div className="flex gap-6 text-sm">
             <a href="#" className="hover:text-white transition-colors">
               Privacy Policy
