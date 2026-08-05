@@ -82,4 +82,3 @@ client/src/pages/AgentDetail.tsx
 client/src/pages/Agents.tsx
 client/src/pages/DeveloperBrandProfilePage.tsx
 client/src/pages/OnboardingSuccess.tsx
-client/src/pages/ProvincePage.tsx

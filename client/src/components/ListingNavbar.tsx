@@ -8,6 +8,7 @@ import { generatePropertyUrl } from '@/lib/urlUtils';
 import { useAuth } from '@/_core/hooks/useAuth';
 
 interface ListingNavbarProps {
+  neutralSearch?: boolean;
   defaultLocations?: {
     name: string;
     slug: string;
@@ -18,10 +19,15 @@ interface ListingNavbarProps {
   }[];
 }
 
-export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
+export function ListingNavbar({
+  neutralSearch = false,
+  defaultLocations = [],
+}: ListingNavbarProps) {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
-  const [listingType, setListingType] = useState<'sale' | 'rent'>('sale');
+  const [listingType, setListingType] = useState<'sale' | 'rent' | null>(
+    neutralSearch ? null : 'sale',
+  );
 
   // Multi-location state
   const [selectedLocations, setSelectedLocations] = useState<
@@ -42,6 +48,8 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
   const typeOrder: Record<string, number> = { province: 1, city: 2, suburb: 3 };
 
   const handleSearch = () => {
+    if (!listingType) return;
+
     // Intelligent Routing:
     // 1. Single Province -> SEO Page
     // 2. Single City/Suburb -> Interactive Results Page (Query Param)
@@ -108,7 +116,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-[#005ca8] h-16 flex items-center px-4 md:px-8 shadow-md">
+    <header className="fixed top-0 left-0 right-0 z-[100] bg-[#005ca8] h-16 flex items-center px-4 md:px-8 shadow-md">
       {/* Logo Section */}
       <div className="flex items-center gap-2 cursor-pointer mr-8" onClick={() => setLocation('/')}>
         <h1 className="text-2xl font-bold text-white tracking-tight">Property Listify</h1>
@@ -123,7 +131,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             <span className="text-sm text-gray-700 font-medium capitalize">
-              {listingType === 'sale' ? 'Buy' : 'Rent'}
+              {listingType === null ? 'Search' : listingType === 'sale' ? 'Buy' : 'Rent'}
             </span>
             <ChevronDown className="h-4 w-4 ml-1 text-gray-500" />
 
@@ -184,10 +192,15 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
           {/* Icons */}
           <div className="flex items-center px-2 gap-2 flex-shrink-0">
             <div className="h-6 w-px bg-gray-200 mx-1"></div>
-            <Search
-              className="h-5 w-5 text-gray-600 cursor-pointer hover:text-gray-800"
+            <button
+              type="button"
+              aria-label={listingType ? 'Search properties' : 'Choose Buy or Rent first'}
+              disabled={!listingType}
+              className="rounded p-1 text-gray-600 transition-colors hover:text-gray-800 disabled:cursor-not-allowed disabled:text-gray-300"
               onClick={handleSearch}
-            />
+            >
+              <Search className="h-5 w-5" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </div>
@@ -200,7 +213,7 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
           onClick={() => setLocation('/listings/create')}
         >
           Post property
-          <Badge className="bg-green-600 hover:bg-green-700 text-[10px] px-1 py-0 h-4 rounded text-white border-0">
+            <Badge className="bg-green-700 hover:bg-green-800 text-[10px] px-1 py-0 h-4 rounded text-white border-0">
             FREE
           </Badge>
         </Button>
@@ -218,11 +231,12 @@ export function ListingNavbar({ defaultLocations = [] }: ListingNavbarProps) {
         <Button
           variant="ghost"
           className="hidden text-white hover:bg-white/10 hover:text-white md:inline-flex"
-          onClick={() => setLocation('/property-for-sale')}
+          disabled={!listingType}
+          onClick={handleSearch}
         >
-          Search
+          {listingType ? 'Search' : 'Choose journey'}
         </Button>
       </div>
-    </div>
+    </header>
   );
 }

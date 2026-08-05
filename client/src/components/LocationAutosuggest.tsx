@@ -56,6 +56,7 @@ interface LocationAutosuggestProps {
   onChange?: (value: string) => void;
   onSubmit?: () => void;
   placeholder?: string;
+  inputId?: string;
   className?: string;
   inputClassName?: string;
   showIcon?: boolean;
@@ -74,6 +75,7 @@ export function LocationAutosuggest({
   onChange,
   onSubmit,
   placeholder = 'Search by city, suburb, or area...',
+  inputId,
   className = '',
   inputClassName = '',
   showIcon = true,
@@ -369,7 +371,7 @@ export function LocationAutosuggest({
         {/* The actual Input - borderless */}
         <input
           ref={activeInputRef}
-          id={`${listboxId}-input`}
+          id={inputId || `${listboxId}-input`}
           type="text"
           autoComplete="off"
           role="combobox"

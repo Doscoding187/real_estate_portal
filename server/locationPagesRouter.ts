@@ -1,6 +1,7 @@
 import { router, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { locationPagesService } from './services/locationPagesService.improved';
+import { provincialDiscoveryService } from './services/provincialDiscoveryService';
 import { getDb } from './db';
 import { heroCampaigns } from '../drizzle/schema';
 import { and, eq, lte, gte, or, isNull, inArray } from 'drizzle-orm';
@@ -27,6 +28,17 @@ export const locationPagesRouter = router({
     )
     .query(async ({ input }) => {
       return await locationPagesService.getProvinceData(input.provinceSlug);
+    }),
+
+  /**
+   * Provincial discovery read model. This is intentionally separate from the
+   * metro/city/suburb contracts: it composes typed province configuration with
+   * bounded results from the canonical public inventory service.
+   */
+  getProvincialDiscoveryData: publicProcedure
+    .input(z.object({ provinceSlug: z.string().trim().min(1).max(80) }))
+    .query(async ({ input }) => {
+      return await provincialDiscoveryService.getProvinceData(input.provinceSlug);
     }),
 
   /**
