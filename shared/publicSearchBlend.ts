@@ -1,9 +1,6 @@
-export type PublicSearchBlendSortOption =
-  | 'relevance'
-  | 'price_asc'
-  | 'price_desc'
-  | 'date_desc'
-  | 'date_asc';
+import type { SearchResultSortOption } from './transactionalSearchState';
+
+export type PublicSearchBlendSortOption = SearchResultSortOption;
 
 export interface PublicSearchBlendItem<T = unknown> {
   kind: 'property' | 'development';

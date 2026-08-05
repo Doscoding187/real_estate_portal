@@ -8,6 +8,13 @@ import {
   parseBuySearchParams,
   sanitizeBuySearchFilters,
 } from '../../../shared/buySearchContract';
+import {
+  appendTransactionalResultState,
+  parseTransactionalResultState,
+  SEARCH_RESULT_PAGE_PARAM,
+  SEARCH_RESULT_SORT_PARAM,
+  type TransactionalResultState,
+} from '../../../shared/transactionalSearchState';
 
 /**
  * CORE PHILOSOPHY:
@@ -49,6 +56,7 @@ export interface SearchIntent {
   transactionType: TransactionType;
   geography: GeographyIntent;
   filters: Record<string, any>; // The query params refing the search
+  resultState: TransactionalResultState;
   defaults: SearchDefaults;
   validation?: SearchIntentValidation;
   /**
@@ -104,6 +112,7 @@ export function resolveSearchIntent(
 
   const geography: GeographyIntent = { level: 'country' };
   let validation = getSearchIntentValidation(searchParams.get('searchError'));
+  const resultState = parseTransactionalResultState(searchParams);
 
   const queryProvince = searchParams.get('province')?.trim().toLowerCase() || undefined;
   const queryCity = searchParams.get('city')?.trim().toLowerCase() || undefined;
@@ -265,7 +274,9 @@ export function resolveSearchIntent(
         key === 'locationIds' ||
         key === 'locations' ||
         key === 'locations[]' ||
-        key === 'searchError'
+        key === 'searchError' ||
+        key === SEARCH_RESULT_SORT_PARAM ||
+        key === SEARCH_RESULT_PAGE_PARAM
       ) {
         return;
       }
@@ -296,6 +307,7 @@ export function resolveSearchIntent(
     transactionType,
     geography,
     filters,
+    resultState,
     defaults: {
       propertyCategory: 'residential',
       sort: 'relevance',
@@ -352,6 +364,7 @@ export function generateIntentUrl(intent: SearchIntent): string {
   Object.entries(serializableFilters).forEach(([key, value]) => {
     // Skip internal keys that shouldn't appear in URL
     if (key === 'listingType' || key === 'searchError') return;
+    if (key === SEARCH_RESULT_SORT_PARAM || key === SEARCH_RESULT_PAGE_PARAM) return;
     if (key === 'suburb') return;
     if (!value) return;
 
@@ -378,6 +391,8 @@ export function generateIntentUrl(intent: SearchIntent): string {
       queryParams.set(key, String(value));
     }
   });
+
+  appendTransactionalResultState(queryParams, intent.resultState);
 
   const canonicalLocationId = geography.locationId;
   const parsedCanonicalLocationId = parseCanonicalLocationId(canonicalLocationId);

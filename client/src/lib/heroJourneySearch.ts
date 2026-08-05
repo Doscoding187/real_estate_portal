@@ -146,6 +146,7 @@ function buildInvalidBuySearchUrl(code: SearchIntentValidationCode): string {
     transactionType: 'for-sale',
     geography: { level: 'country' },
     filters: {},
+    resultState: { sort: 'relevance', page: 0 },
     defaults: { propertyCategory: 'residential', sort: 'relevance' },
     routeMode: 'results',
     validation: createSearchIntentValidation(code),
@@ -206,6 +207,7 @@ export function buildPropertySearchUrl({
     transactionType,
     geography,
     filters,
+    resultState: { sort: 'relevance', page: 0 },
     defaults: { propertyCategory: 'residential', sort: 'relevance' },
     routeMode: 'results',
   });

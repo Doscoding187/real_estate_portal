@@ -8,6 +8,7 @@ import {
   normalizePublicSearchPageSize,
 } from '../../shared/publicSearchPagination';
 import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
+import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
 import { locationResolver, type ResolvedLocation } from './locationResolverService';
 import { propertySearchService } from './propertySearchService';
@@ -197,6 +198,11 @@ function sourceSort(sortOption: PublicSearchBlendSortOption): SortOption {
 
 export class PublicSearchService {
   async searchInventory(input: PublicSearchInventoryInput): Promise<PublicSearchInventoryResult> {
+    const validationIssue = validatePublicSearchInput(input);
+    if (validationIssue) {
+      throw new Error(validationIssue.message);
+    }
+
     const page = normalizePublicSearchPageIndex(input.page);
     const pageSize = normalizePublicSearchPageSize(input.pageSize);
     const sortOption: PublicSearchBlendSortOption = input.sortOption || 'relevance';

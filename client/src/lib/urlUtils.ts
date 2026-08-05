@@ -118,6 +118,7 @@ export interface SearchFilters {
 
 import { generateIntentUrl, SearchIntent } from './searchIntent';
 import { toAbsoluteUrl } from './seo/structuredData';
+import { normalizeTransactionalResultState } from '../../../shared/transactionalSearchState';
 
 // Helper to bridge SearchFilters -> SearchIntent for URL generation
 function filtersToIntent(filters: SearchFilters): SearchIntent {
@@ -137,6 +138,10 @@ function filtersToIntent(filters: SearchFilters): SearchIntent {
       locationId: filters.locationId,
     },
     filters: filters, // Pass full filters as query params source
+    resultState: normalizeTransactionalResultState({
+      sort: filters.sort as any,
+      page: filters.page as any,
+    }),
     defaults: { propertyCategory: 'residential', sort: 'relevance' },
   };
 }
