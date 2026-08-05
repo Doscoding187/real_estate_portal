@@ -16,16 +16,11 @@ import { SkipToContent } from './components/ui/SkipToContent';
 import '@/styles/keyboard-navigation.css';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
+import { isCanonicalProvinceSlug } from './lib/locationDiscovery';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
 import { RequireRole } from '@/components/RequireRole';
-import {
-  LegacyCityRedirect,
-  LegacySuburbRedirect,
-  LegacyProvinceRedirect,
-  OldLegacyCityRedirect,
-} from './components/LegacyRouteHandler';
 
 // Lazy Imports (Code Split)
 const PropertyDetail = lazy(() => import('./pages/PropertyDetail'));
@@ -185,20 +180,6 @@ const SearchResults = lazy(() => import('./pages/SearchResults'));
 const SuburbPage = lazy(() => import('./pages/SuburbPage'));
 
 function Router() {
-  const isLegacyPropertyAction = (action?: string) => {
-    const normalized = String(action || '')
-      .trim()
-      .toLowerCase();
-    if (!normalized) return false;
-    return (
-      normalized.includes('for-sale') ||
-      normalized.includes('to-rent') ||
-      normalized.includes('for-rent') ||
-      normalized.includes('for-auction') ||
-      normalized.includes('to-let')
-    );
-  };
-
   // Auto-migrate guest data on login
   useGuestDataMigration();
 
@@ -223,31 +204,11 @@ function Router() {
           <Route path={'/'} component={Home} />
 
           {/* ============================================================== */}
-          {/* 1. TRANSACTION ROOTS (Query-Based SRP) - MUST BE FIRST         */}
-          {/* These catch /property-for-sale?city=alberton style URLs        */}
-          {/* ============================================================== */}
-          <Route path="/property-for-sale" component={SearchResults} />
-          <Route path="/property-to-rent" component={SearchResults} />
-
-          {/* ============================================================== */}
-          {/* 2. CANONICAL SEO PAGES (Path-Based Discovery)                  */}
-          {/* Order: Most specific (4 segments) to least specific (2 segments) */}
+          {/* 1. EXPLICIT PRODUCT AND DETAIL ROUTES                          */}
           {/* ============================================================== */}
 
-          {/* Suburb Pages: /property-for-sale/gauteng/johannesburg/sandton */}
-          <Route path="/property-for-sale/:province/:city/:suburb" component={SuburbPage} />
-          <Route path="/property-to-rent/:province/:city/:suburb" component={SuburbPage} />
-
-          {/* City Pages: /property-for-sale/gauteng/johannesburg */}
-          <Route path="/property-for-sale/:province/:city" component={CityPage} />
-          <Route path="/property-to-rent/:province/:city" component={CityPage} />
-
-          {/* Province Pages: /property-for-sale/gauteng */}
-          <Route path="/property-for-sale/:province" component={ProvincePage} />
-          <Route path="/property-to-rent/:province" component={ProvincePage} />
-
           {/* ============================================================== */}
-          {/* 2A. DEVELOPER DASHBOARD ROUTES                                 */}
+          {/* 1A. DEVELOPER DASHBOARD ROUTES                                */}
           {/* All /developer/* routes are handled by DeveloperRoutes         */}
           {/* ============================================================== */}
 
@@ -270,7 +231,7 @@ function Router() {
           <Route path="/developer/:slug" component={DeveloperBrandProfilePage} />
 
           {/* ============================================================== */}
-          {/* 3. LEGACY / P24-STYLE ROUTES (Lower Priority)                  */}
+          {/* 1B. PUBLIC AND LEGACY PRODUCT ROUTES                           */}
           {/* ============================================================== */}
 
           {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
@@ -361,14 +322,6 @@ function Router() {
           <Route path="/a/:slug" component={AgentMicrosite} />
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
           <Route path="/agent/:id" component={AgentDetail} />
-
-          {/* Redirects for Old Route Structures */}
-          {/* Very Old Format: /city/johannesburg */}
-          <Route path="/city/:slug" component={OldLegacyCityRedirect} />
-          {/* Very Old Format: /suburb/johannesburg/sandton */}
-          <Route path="/suburb/:city/:suburb">
-            {params => <LegacySuburbRedirect params={{ ...params, province: 'gauteng' }} />}
-          </Route>
 
           {/* Route Handlers / Wizards */}
           <Route path="/listings/create" component={ListingWizard} />
@@ -634,7 +587,7 @@ function Router() {
             <Redirect to="/agency/team" />
           </Route>
 
-          {/* NOTE: Developer routes are defined in section 2A above */}
+          {/* NOTE: Developer routes are defined in section 1A above */}
 
           {/* User Dashboard Route */}
           <Route path="/user/dashboard">
@@ -656,49 +609,46 @@ function Router() {
             </RequireRole>
           </Route>
 
-          {/* Property24-style Routes (Inverted Hierarchy + Location ID) */}
-          {/* Suburb Page: /houses-for-sale/sky-city/alberton/gauteng/17552 */}
-          <Route path="/:action/:suburb/:city/:province/:locationId">
+          {/* ============================================================== */}
+          {/* 2. TRANSACTION ROOTS (Query-Based SRP)                         */}
+          {/* Geography remains canonical query state on these roots.        */}
+          {/* ============================================================== */}
+          <Route path="/property-for-sale" component={SearchResults} />
+          <Route path="/property-to-rent" component={SearchResults} />
+
+          <Route path={'/404'} component={NotFound} />
+
+          {/* ============================================================== */}
+          {/* 3. VALIDATED NEUTRAL GEOGRAPHY AUTHORITY                       */}
+          {/* Static/product/detail routes and transaction roots are above.  */}
+          {/* ============================================================== */}
+          <Route path="/:province/:city/:suburb">
             {params =>
-              isLegacyPropertyAction(params.action) ? (
+              isCanonicalProvinceSlug(params.province) ? (
                 <SuburbPage params={params as any} />
               ) : (
                 <NotFound />
               )
             }
           </Route>
-
-          {/* City Page: /houses-for-sale/sandton/gauteng/109 */}
-          <Route path="/:action/:city/:province/:locationId">
+          <Route path="/:province/:city">
             {params =>
-              isLegacyPropertyAction(params.action) ? (
+              isCanonicalProvinceSlug(params.province) ? (
                 <CityPage params={params as any} />
               ) : (
                 <NotFound />
               )
             }
           </Route>
-
-          {/* Province Page (Legacy Pattern): /houses-for-sale/gauteng/1 */}
-          <Route path="/:action/:province/:locationId">
+          <Route path="/:province">
             {params =>
-              isLegacyPropertyAction(params.action) ? (
+              isCanonicalProvinceSlug(params.province) ? (
                 <ProvincePage params={params as any} />
               ) : (
                 <NotFound />
               )
             }
           </Route>
-
-          <Route path={'/404'} component={NotFound} />
-
-          {/* CATCH-ALL ROUTES & LEGACY REDIRECTS - MUST BE LAST */}
-          {/* Redirect /:province/:city/:suburb -> /property-for-sale/:province/:city/:suburb */}
-          <Route path="/:province/:city/:suburb" component={LegacySuburbRedirect} />
-          {/* Redirect /:province/:city -> /property-for-sale/:province/:city */}
-          <Route path="/:province/:city" component={LegacyCityRedirect} />
-          {/* Redirect /:province -> /property-for-sale/:province */}
-          <Route path="/:province" component={LegacyProvinceRedirect} />
 
           {/* Final fallback route */}
           <Route component={NotFound} />

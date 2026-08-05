@@ -28,7 +28,7 @@ const gauteng: LocationNode = {
   name: 'Gauteng',
   slug: 'gauteng',
   type: 'province',
-  canonicalPath: '/property-for-sale/gauteng',
+  canonicalPath: '/property-for-sale?province=gauteng&locationId=province%3A1',
 };
 
 describe('Buy journey URL authority', () => {

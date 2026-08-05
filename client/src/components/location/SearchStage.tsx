@@ -35,16 +35,19 @@ export function SearchStage({ locationName, locationSlug, totalListings }: Searc
   const [_, setLocation] = useLocation();
 
   const handleSearch = () => {
-    // 2025 Architecture: Search Input => Transaction Intent (SRP)
-    // Route to Canonical SRP: /property-for-sale/{locationSlug}
-
-    // Base Path
-    let targetPath = `/property-for-sale/${locationSlug}`;
+    // Search Input => Transaction Intent (SRP). Geography remains query state
+    // on the transaction root rather than creating a second location-page
+    // authority.
+    let targetPath = '/property-for-sale';
     const params = new URLSearchParams();
+    const locationSegments = locationSlug.split('/').filter(Boolean);
+    if (locationSegments[0]) params.set('province', locationSegments[0]);
+    if (locationSegments[1]) params.set('city', locationSegments[1]);
+    if (locationSegments[2]) params.set('suburb', locationSegments[2]);
 
     // Map Tabs/Type to Query Params
     if (activeTab === 'rent') {
-      targetPath = `/property-to-rent/${locationSlug}`;
+      targetPath = '/property-to-rent';
     }
     // 'buy' is default /property-for-sale
 

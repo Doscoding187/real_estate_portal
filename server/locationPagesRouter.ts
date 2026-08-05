@@ -37,10 +37,13 @@ export const locationPagesRouter = router({
       z.object({
         provinceSlug: z.string(),
         citySlug: z.string(),
+        includeInventoryPreview: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
-      return await locationPagesService.getCityData(input.provinceSlug, input.citySlug);
+      return await locationPagesService.getCityData(input.provinceSlug, input.citySlug, {
+        includeInventoryPreview: input.includeInventoryPreview,
+      });
     }),
 
   /**
@@ -52,6 +55,7 @@ export const locationPagesRouter = router({
         provinceSlug: z.string(),
         citySlug: z.string(),
         suburbSlug: z.string(),
+        includeInventoryPreview: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -59,6 +63,7 @@ export const locationPagesRouter = router({
         input.provinceSlug,
         input.citySlug,
         input.suburbSlug,
+        { includeInventoryPreview: input.includeInventoryPreview },
       );
     }),
 
@@ -230,10 +235,7 @@ export const locationPagesRouter = router({
                 isNull(heroCampaigns.startDate),
                 lte(heroCampaigns.startDate, today.toISOString()),
               ),
-              or(
-                isNull(heroCampaigns.endDate),
-                gte(heroCampaigns.endDate, today.toISOString()),
-              ),
+              or(isNull(heroCampaigns.endDate), gte(heroCampaigns.endDate, today.toISOString())),
             ),
           );
 
@@ -263,7 +265,6 @@ export const locationPagesRouter = router({
         });
         return null;
       }
-
     }),
 
   /**

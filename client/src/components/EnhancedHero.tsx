@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,7 @@ import { LocationNode } from '@/types/location';
 import { VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED } from '@/const';
 import { getSearchDiscoverySuggestions } from '@/lib/searchDiscovery';
 import type { SearchDiscoverySuggestion } from '@/lib/searchDiscovery';
+import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
 
 // ... imports
 export interface EnhancedHeroProps {
@@ -95,6 +96,13 @@ const TRUST_ITEMS = [
   { label: 'Agent Tools', icon: Users },
 ] as const;
 
+function formatLocationNames(locations: readonly LocationNode[]): string {
+  const names = locations.map(location => location.name).filter(Boolean);
+  if (names.length <= 1) return names[0] || 'the selected area';
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+}
+
 export function EnhancedHero({
   variant = 'home',
   title,
@@ -109,7 +117,16 @@ export function EnhancedHero({
 }: EnhancedHeroProps) {
   const [, setLocation] = useLocation();
   const [internalTab, setInternalTab] = useState('');
-  const activeTab = controlledTab ?? internalTab;
+  // An empty controlled value represents the neutral homepage state, not a
+  // command to discard a journey selected locally in the composer. This lets
+  // location-first and journey-first selection coexist while Home updates
+  // the explicit intent URL.
+  const activeTab = controlledTab || internalTab;
+  const hasExplicitJourney = String(activeTab || '').trim().length > 0;
+  const normalizedActiveTab = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) : '';
+  const hasSelectedJourney = normalizedActiveTab.length > 0;
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const previousJourneyRef = useRef(normalizedActiveTab);
 
   const handleTabChange = (tab: string) => {
     setInternalTab(tab);
@@ -118,7 +135,23 @@ export function EnhancedHero({
 
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
-  const hasActiveSearchInput = searchQuery.trim().length > 0 || selectedLocations.length > 0;
+  const hasCanonicalLocations =
+    selectedLocations.length > 0 && selectedLocations.every(hasCanonicalLocationIdentity);
+  const canSubmitSearch = hasCanonicalLocations;
+  const locationDiscoveryPath =
+    selectedLocations.length === 1 ? buildLocationDiscoveryPath(selectedLocations[0]) : undefined;
+  const [showIntentResolver, setShowIntentResolver] = useState(false);
+
+  useEffect(() => {
+    const previousJourney = previousJourneyRef.current;
+    previousJourneyRef.current = normalizedActiveTab;
+
+    if (variant === 'home' && previousJourney !== 'buy' && normalizedActiveTab === 'buy') {
+      locationInputRef.current?.focus();
+    }
+
+    return undefined;
+  }, [normalizedActiveTab, variant]);
 
   // Search Discovery Engine — foundation mode
   const isDiscoveryEnabled = VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED === '1';
@@ -224,6 +257,7 @@ export function EnhancedHero({
   // Comprehensive South African location data with context
 
   const handleCategoryClick = (categoryId: string) => {
+    setShowIntentResolver(false);
     handleTabChange(categoryId);
     if (categoryId === 'find_agent') {
       setLocation('/agents');
@@ -243,8 +277,41 @@ export function EnhancedHero({
     }
   };
 
+  const submitBuySearch = () => {
+    const nextPriceRangeError = getPriceRangeError(filters.priceMin, filters.priceMax);
+    if (nextPriceRangeError) {
+      setPriceRangeError(nextPriceRangeError);
+      setShowFilters(true);
+      return;
+    }
+
+    setPriceRangeError(null);
+    setLocation(
+      buildBuySearchUrl({
+        searchQuery,
+        selectedLocations,
+        propertyType: filters.propertyTypes[0],
+        minPrice: filters.priceMin,
+        maxPrice: filters.priceMax,
+      }),
+    );
+  };
+
   const handleSearch = () => {
-    const effectiveJourney = normalizePublicHeroJourney(activeTab);
+    if (!canSubmitSearch) return;
+
+    if (!hasSelectedJourney) {
+      if (locationDiscoveryPath) {
+        setShowIntentResolver(false);
+        setLocation(locationDiscoveryPath);
+        return;
+      }
+
+      setShowIntentResolver(true);
+      return;
+    }
+
+    const effectiveJourney = normalizedActiveTab;
 
     if (effectiveJourney === 'find_agent') {
       setLocation('/agents');
@@ -252,23 +319,7 @@ export function EnhancedHero({
     }
 
     if (effectiveJourney === 'buy') {
-      const nextPriceRangeError = getPriceRangeError(filters.priceMin, filters.priceMax);
-      if (nextPriceRangeError) {
-        setPriceRangeError(nextPriceRangeError);
-        setShowFilters(true);
-        return;
-      }
-
-      setPriceRangeError(null);
-      setLocation(
-        buildBuySearchUrl({
-          searchQuery,
-          selectedLocations,
-          propertyType: filters.propertyTypes[0],
-          minPrice: filters.priceMin,
-          maxPrice: filters.priceMax,
-        }),
-      );
+      submitBuySearch();
       return;
     }
 
@@ -323,9 +374,12 @@ export function EnhancedHero({
   };
 
   const isNavigationMode = heroMode === 'province' || heroMode === 'city';
-  const normalizedActiveTab = normalizePublicHeroJourney(activeTab);
   const effectiveIntent = normalizedActiveTab;
-  const intentHelperCopy = INTENT_HELPER_COPY[effectiveIntent] || INTENT_HELPER_COPY.buy;
+  const intentHelperCopy = hasSelectedJourney
+    ? INTENT_HELPER_COPY[effectiveIntent] || INTENT_HELPER_COPY.buy
+    : selectedLocations.length > 0
+      ? `What are you looking for in ${formatLocationNames(selectedLocations)}?`
+      : 'Choose how you would like to start.';
 
   return (
     <div className="relative z-10 overflow-visible border-b border-slate-200 bg-gradient-to-b from-blue-50/70 via-white to-white text-slate-900">
@@ -441,7 +495,14 @@ export function EnhancedHero({
                     <p className="text-xs font-bold uppercase tracking-[0.12em]">
                       Start with your property journey
                     </p>
-                    <p className="mt-1 text-sm font-medium text-blue-50">{intentHelperCopy}</p>
+                    <p
+                      id="homepage-journey-selection-prompt"
+                      role="status"
+                      aria-live="polite"
+                      className="mt-1 text-sm font-medium text-blue-50"
+                    >
+                      {intentHelperCopy}
+                    </p>
                   </div>
                   <div className="hidden rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white md:block">
                     Search, compare, connect
@@ -465,6 +526,8 @@ export function EnhancedHero({
                       className="w-full"
                       inputClassName="h-11 w-full rounded-xl bg-white pl-4 pr-20 text-[15px] shadow-sm transition-colors hover:border-blue-300 sm:h-12 sm:pr-24 sm:text-base"
                       showIcon={false}
+                      inputRef={locationInputRef}
+                      inputAriaDescribedBy="homepage-journey-selection-prompt"
                       selectedLocations={selectedLocations}
                       onRemove={index => {
                         setSelectedLocations(prev => prev.filter((_, i) => i !== index));
@@ -485,36 +548,11 @@ export function EnhancedHero({
 
                           if (prev.some(isSameLocation)) return prev;
 
-                          // A province selection is already broader than any
-                          // child location in that province. Conversely, a
-                          // province selection replaces its selected children
-                          // so the URL cannot represent contradictory scopes.
-                          if (loc.type === 'province') {
-                            return [
-                              loc,
-                              ...prev.filter(
-                                candidate =>
-                                  candidate.provinceSlug !== loc.slug &&
-                                  candidate.slug !== loc.slug,
-                              ),
-                            ];
-                          }
-
-                          if (
-                            prev.some(
-                              candidate =>
-                                candidate.type === 'province' &&
-                                candidate.slug === loc.provinceSlug,
-                            )
-                          ) {
-                            return prev;
-                          }
-
                           return [...prev, loc];
                         });
                       }}
                       onSubmit={handleSearch}
-                      maxLocations={1}
+                      maxLocations={5}
                       discoverySuggestions={discoverySuggestions}
                       onDiscoveryNavigate={(path: string) => {
                         setLocation(path);
@@ -527,10 +565,11 @@ export function EnhancedHero({
                         type="submit"
                         size="icon"
                         className={`h-10 w-10 rounded-lg shadow-sm transition-all sm:hidden ${
-                          hasActiveSearchInput
+                          canSubmitSearch && !priceRangeError
                             ? 'bg-blue-600 text-white hover:bg-blue-700'
                             : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                         }`}
+                        disabled={!canSubmitSearch || Boolean(priceRangeError)}
                         aria-label="Search"
                       >
                         <Search className="h-4 w-4" />
@@ -541,8 +580,13 @@ export function EnhancedHero({
                   {/* Search Button */}
                   <Button
                     type="submit"
-                    className="hidden h-11 min-w-[120px] rounded-xl bg-blue-700 px-6 text-sm font-semibold text-white shadow-md shadow-blue-700/20 transition-all hover:bg-blue-800 hover:shadow-lg sm:inline-flex sm:h-12 sm:min-w-[132px] sm:px-7 sm:text-base"
+                    className={`hidden h-11 min-w-[120px] rounded-xl px-6 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex sm:h-12 sm:min-w-[132px] sm:px-7 sm:text-base ${
+                      canSubmitSearch && !priceRangeError
+                        ? 'bg-blue-700 text-white shadow-md shadow-blue-700/20 hover:bg-blue-800 hover:shadow-lg'
+                        : 'bg-slate-100 text-slate-400'
+                    }`}
                     size="lg"
+                    disabled={!canSubmitSearch || Boolean(priceRangeError)}
                   >
                     <div className="flex flex-col items-center leading-none">
                       <span className="flex items-center gap-2">
@@ -551,6 +595,60 @@ export function EnhancedHero({
                     </div>
                   </Button>
                 </form>
+
+                {showIntentResolver && !hasSelectedJourney && hasCanonicalLocations ? (
+                  <section
+                    className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4"
+                    aria-labelledby="homepage-location-intent-heading"
+                    role="region"
+                  >
+                    <h2
+                      id="homepage-location-intent-heading"
+                      className="text-sm font-semibold text-slate-900"
+                    >
+                      What are you looking for in {formatLocationNames(selectedLocations)}?
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Choose an available journey, or keep editing the selected locations.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        disabled
+                        aria-describedby={
+                          selectedLocations.length > 1 ? 'homepage-location-intent-note' : undefined
+                        }
+                        data-testid="homepage-location-intent-buy"
+                        className="bg-blue-700 text-white hover:bg-blue-800"
+                      >
+                        Buy
+                      </Button>
+                      <Button type="button" variant="outline" disabled>
+                        Rent (coming soon)
+                      </Button>
+                      <Button type="button" variant="outline" disabled>
+                        Explore these areas (coming soon)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setShowIntentResolver(false)}
+                      >
+                        Keep editing
+                      </Button>
+                    </div>
+                    {selectedLocations.length > 1 ? (
+                      <p
+                        id="homepage-location-intent-note"
+                        className="mt-3 text-xs text-slate-600"
+                        role="status"
+                      >
+                        The current Buy results route supports one canonical area at a time. Your
+                        selected areas remain available while multi-area Buy search is completed.
+                      </p>
+                    ) : null}
+                  </section>
+                ) : null}
 
                 {/* FOOTER: Navigation Pills ONLY (Quick Searches hidden per request) */}
                 {isNavigationMode && (

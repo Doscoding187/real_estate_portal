@@ -20,15 +20,19 @@ export interface NavLocationLink {
 }
 
 export interface CityToNavLinkOptions {
-  transactionType?: 'sale' | 'rent';
+  transactionType?: 'sale' | 'rent' | 'discovery';
 }
 
 export interface PopularCitiesToNavLinksOptions extends CityToNavLinkOptions {
   limit?: number;
 }
 
-function basePath(transactionType: 'sale' | 'rent'): string {
+function transactionRoot(transactionType: 'sale' | 'rent'): string {
   return transactionType === 'rent' ? '/property-to-rent' : '/property-for-sale';
+}
+
+function neutralLocationPath(provinceSlug: string, citySlug: string): string {
+  return `/${provinceSlug}/${citySlug}`;
 }
 
 /**
@@ -45,7 +49,7 @@ function basePath(transactionType: 'sale' | 'rent'): string {
 export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   {
     label: 'Johannesburg',
-    href: '/property-for-sale/gauteng/johannesburg',
+    href: '/gauteng/johannesburg',
     provinceSlug: 'gauteng',
     citySlug: 'johannesburg',
     listingCount: undefined,
@@ -53,7 +57,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Cape Town',
-    href: '/property-for-sale/western-cape/cape-town',
+    href: '/property-to-rent?city=cape-town&province=western-cape',
     provinceSlug: 'western-cape',
     citySlug: 'cape-town',
     listingCount: undefined,
@@ -61,7 +65,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Kimberley',
-    href: '/property-for-sale/northern-cape/kimberley',
+    href: '/northern-cape/kimberley',
     provinceSlug: 'northern-cape',
     citySlug: 'kimberley',
     listingCount: undefined,
@@ -69,7 +73,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Durban',
-    href: '/property-for-sale/kwazulu-natal/durban',
+    href: '/kwazulu-natal/durban',
     provinceSlug: 'kwazulu-natal',
     citySlug: 'durban',
     listingCount: undefined,
@@ -77,7 +81,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Gqeberha',
-    href: '/property-for-sale/eastern-cape/gqeberha',
+    href: '/eastern-cape/gqeberha',
     provinceSlug: 'eastern-cape',
     citySlug: 'gqeberha',
     listingCount: undefined,
@@ -85,7 +89,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Bloemfontein',
-    href: '/property-for-sale/free-state/bloemfontein',
+    href: '/free-state/bloemfontein',
     provinceSlug: 'free-state',
     citySlug: 'bloemfontein',
     listingCount: undefined,
@@ -93,7 +97,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Polokwane',
-    href: '/property-for-sale/limpopo/polokwane',
+    href: '/limpopo/polokwane',
     provinceSlug: 'limpopo',
     citySlug: 'polokwane',
     listingCount: undefined,
@@ -101,7 +105,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Mbombela',
-    href: '/property-for-sale/mpumalanga/mbombela',
+    href: '/mpumalanga/mbombela',
     provinceSlug: 'mpumalanga',
     citySlug: 'mbombela',
     listingCount: undefined,
@@ -109,7 +113,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Mahikeng',
-    href: '/property-for-sale/north-west/mahikeng',
+    href: '/north-west/mahikeng',
     provinceSlug: 'north-west',
     citySlug: 'mahikeng',
     listingCount: undefined,
@@ -117,7 +121,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Pretoria',
-    href: '/property-for-sale/gauteng/pretoria',
+    href: '/gauteng/pretoria',
     provinceSlug: 'gauteng',
     citySlug: 'pretoria',
     listingCount: undefined,
@@ -125,7 +129,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Port Elizabeth',
-    href: '/property-for-sale/eastern-cape/port-elizabeth',
+    href: '/eastern-cape/port-elizabeth',
     provinceSlug: 'eastern-cape',
     citySlug: 'port-elizabeth',
     listingCount: undefined,
@@ -133,7 +137,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Sandton',
-    href: '/property-for-sale/gauteng/johannesburg/sandton',
+    href: '/gauteng/johannesburg/sandton',
     provinceSlug: 'gauteng',
     citySlug: 'johannesburg',
     suburbSlug: 'sandton',
@@ -142,7 +146,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Cape Town',
-    href: '/property-to-rent/western-cape/cape-town',
+    href: '/western-cape/cape-town',
     provinceSlug: 'western-cape',
     citySlug: 'cape-town',
     listingCount: undefined,
@@ -179,8 +183,7 @@ function resolveProvinceSlug(raw: Record<string, unknown>): string | null {
 }
 
 function resolveListingCount(raw: Record<string, unknown>): number | undefined {
-  const count =
-    raw.listingCount ?? raw.propertyCount ?? raw.activeListings ?? undefined;
+  const count = raw.listingCount ?? raw.propertyCount ?? raw.activeListings ?? undefined;
   if (count === undefined || count === null) return undefined;
   const num = Number(count);
   return Number.isFinite(num) && num >= 0 ? num : undefined;
@@ -200,14 +203,26 @@ export function cityToNavLink(
 
   if (!name || !slug) return null;
 
-  const txType = options?.transactionType ?? 'sale';
-  const path = basePath(txType);
-
   if (!provinceSlug) return null;
+
+  const txType = options?.transactionType ?? 'discovery';
+  const href =
+    txType === 'discovery'
+      ? neutralLocationPath(provinceSlug, slug)
+      : (() => {
+          const params = new URLSearchParams({
+            city: slug,
+            province: provinceSlug,
+          });
+          if (typeof raw.id === 'number' && Number.isInteger(raw.id)) {
+            params.set('locationId', `city:${raw.id}`);
+          }
+          return `${transactionRoot(txType)}?${params.toString()}`;
+        })();
 
   return {
     label: name,
-    href: `${path}/${provinceSlug}/${slug}`,
+    href,
     provinceSlug,
     citySlug: slug,
     listingCount,

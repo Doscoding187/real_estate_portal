@@ -191,6 +191,7 @@ export function ExploreCities({
   const displayDescription =
     description ||
     'Use city pages as a starting point for local listings, suburb research, and market discovery.';
+  const viewAllPath = basePath === '' || basePath === '/' ? '/' : '/property-for-sale';
 
   return (
     <section className="home-section bg-white">
@@ -206,7 +207,7 @@ export function ExploreCities({
             </p>
           </div>
 
-          <Link href="/property-for-sale">
+          <Link href={viewAllPath}>
             <Button
               variant="ghost"
               className="group h-9 justify-start rounded-full border border-slate-200 px-3.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:rounded-md md:border-0 md:px-0 md:text-sm"

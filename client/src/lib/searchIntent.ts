@@ -52,9 +52,9 @@ export interface SearchIntent {
   defaults: SearchDefaults;
   validation?: SearchIntentValidation;
   /**
-   * Controls the destination shape without changing search meaning.
-   * SEO pages remain the default for direct path-based province routes;
-   * hero submissions explicitly target the results authority.
+   * Records whether an intent came from a neutral geography page or a
+   * transactional result route without creating a second transaction URL
+   * family.
    */
   routeMode?: SearchRouteMode;
 }
@@ -312,12 +312,12 @@ export function resolveSearchIntent(
  * Reconstructs the canonical URL from a SearchIntent object.
  *
  * CRITICAL ROUTING RULE (2025 Architecture):
- * - Province searches → Path-based SEO URLs (/property-for-sale/gauteng)
- * - City/Suburb searches → Query-based SRP URLs (/property-for-sale?city=alberton)
+ * - Neutral geography searches use bare geography routes (/gauteng)
+ * - Transactional searches always use the transaction root with query state
  *
  * This ensures:
- * - SEO pages are for discovery (provinces only)
- * - SRP pages fulfill user intent (cities/suburbs with listings)
+ * - Geography pages are neutral discovery authorities
+ * - Results pages fulfill declared transactional intent
  */
 export function generateIntentUrl(intent: SearchIntent): string {
   const { transactionType, geography, filters } = intent;
@@ -398,8 +398,8 @@ export function generateIntentUrl(intent: SearchIntent): string {
   }
 
   // ============================================================
-  // CRITICAL: City/Suburb searches MUST use query-based URLs
-  // Path-based URLs are ONLY for province-level SEO pages
+  // Transactional searches always use the root route. Bare geography paths
+  // belong to neutral discovery and are built by locationDiscovery.ts.
   // ============================================================
 
   if (geography.suburb) {
@@ -423,18 +423,10 @@ export function generateIntentUrl(intent: SearchIntent): string {
     return `${basePath}${queryString ? `?${queryString}` : ''}`;
   }
 
-  // Province-only search → path-based SEO page by default. Hero submissions
-  // explicitly target the results authority so they remain usable when the
-  // SEO catalog page is not populated in the active environment.
   if (geography.province && geography.level === 'province') {
-    if (intent.routeMode === 'results') {
-      queryParams.set('province', geography.province);
-      const queryString = queryParams.toString();
-      return `${basePath}${queryString ? `?${queryString}` : ''}`;
-    }
-
+    queryParams.set('province', geography.province);
     const queryString = queryParams.toString();
-    return `${basePath}/${geography.province}${queryString ? `?${queryString}` : ''}`;
+    return `${basePath}${queryString ? `?${queryString}` : ''}`;
   }
 
   // Country-level / no geography → Base transaction root

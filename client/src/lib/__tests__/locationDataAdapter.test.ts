@@ -17,23 +17,24 @@ describe('cityToNavLink', () => {
     listingCount: 1240,
   };
 
-  it('maps a normal popular city object to a canonical sale path', () => {
+  it('maps a normal popular city object to a neutral geography path', () => {
     const result = cityToNavLink(popularJohannesburg);
     expect(result).not.toBeNull();
     expect(result!.label).toBe('Johannesburg');
-    expect(result!.href).toBe('/property-for-sale/gauteng/johannesburg');
+    expect(result!.href).toBe('/gauteng/johannesburg');
     expect(result!.provinceSlug).toBe('gauteng');
     expect(result!.citySlug).toBe('johannesburg');
     expect(result!.type).toBe('city');
     expect(result!.listingCount).toBe(1240);
   });
 
-  it('supports rent transaction type prefix', () => {
+  it('supports an explicit rent transaction root', () => {
     const result = cityToNavLink(popularJohannesburg, { transactionType: 'rent' });
     expect(result).not.toBeNull();
-    expect(result!.href).toBe('/property-to-rent/gauteng/johannesburg');
+    expect(result!.href).toContain('/property-to-rent?');
+    expect(result!.href).toContain('locationId=city%3A1');
     expect(result!.href).not.toContain('/property-for-sale');
-    expect(result!.href).toMatch(/^\/property-to-rent\//);
+    expect(result!.href).toMatch(/^\/property-to-rent\?/);
   });
 
   it('supports alternate field names: cityName, citySlug, propertyCount', () => {
@@ -47,7 +48,7 @@ describe('cityToNavLink', () => {
     const result = cityToNavLink(alternate);
     expect(result).not.toBeNull();
     expect(result!.label).toBe('Cape Town');
-    expect(result!.href).toBe('/property-for-sale/western-cape/cape-town');
+    expect(result!.href).toBe('/western-cape/cape-town');
     expect(result!.listingCount).toBe(980);
   });
 
@@ -162,9 +163,9 @@ describe('popularCitiesToNavLinks', () => {
   it('maps an array of popular cities to NavLocationLink[]', () => {
     const result = popularCitiesToNavLinks(cities);
     expect(result).toHaveLength(3);
-    expect(result[0].href).toBe('/property-for-sale/gauteng/johannesburg');
-    expect(result[1].href).toBe('/property-for-sale/western-cape/cape-town');
-    expect(result[2].href).toBe('/property-for-sale/kwazulu-natal/durban');
+    expect(result[0].href).toBe('/gauteng/johannesburg');
+    expect(result[1].href).toBe('/western-cape/cape-town');
+    expect(result[2].href).toBe('/kwazulu-natal/durban');
   });
 
   it('handles non-array input safely by returning an empty array', () => {
@@ -219,9 +220,7 @@ describe('resolveLocationMenuCities', () => {
   const popular = [
     { name: 'Johannesburg', slug: 'johannesburg', provinceSlug: 'gauteng', listingCount: 12 },
   ];
-  const featured = [
-    { name: 'Launch City', slug: 'launch-city', provinceSlug: 'gauteng' },
-  ];
+  const featured = [{ name: 'Launch City', slug: 'launch-city', provinceSlug: 'gauteng' }];
 
   it('uses valid data-driven popular cities before featured launch cities', () => {
     const result = resolveLocationMenuCities({
@@ -244,7 +243,7 @@ describe('resolveLocationMenuCities', () => {
     expect(result.heading).toBe('Featured cities');
     expect(result.cities[0]).toMatchObject({
       label: 'Launch City',
-      href: '/property-for-sale/gauteng/launch-city',
+      href: '/gauteng/launch-city',
     });
   });
 
@@ -256,7 +255,9 @@ describe('resolveLocationMenuCities', () => {
 
   it('does not call a city popular without positive inventory evidence', () => {
     const result = resolveLocationMenuCities({
-      popularCities: [{ name: 'Empty City', slug: 'empty-city', provinceSlug: 'gauteng', listingCount: 0 }],
+      popularCities: [
+        { name: 'Empty City', slug: 'empty-city', provinceSlug: 'gauteng', listingCount: 0 },
+      ],
     });
 
     expect(result.source).toBe('empty');
@@ -297,30 +298,32 @@ describe('FALLBACK_CITY_LINKS', () => {
     expect(labels).toContain('Mahikeng');
   });
 
-  it('Kimberley, Gqeberha, Mbombela, Mahikeng use canonical path-based hrefs', () => {
+  it('Kimberley, Gqeberha, Mbombela, Mahikeng use neutral geography hrefs', () => {
     const kimberley = FALLBACK_CITY_LINKS.find(l => l.label === 'Kimberley');
     expect(kimberley).toBeDefined();
-    expect(kimberley!.href).toBe('/property-for-sale/northern-cape/kimberley');
+    expect(kimberley!.href).toBe('/northern-cape/kimberley');
     expect(kimberley!.type).toBe('city');
 
     const gqeberha = FALLBACK_CITY_LINKS.find(l => l.label === 'Gqeberha');
     expect(gqeberha).toBeDefined();
-    expect(gqeberha!.href).toBe('/property-for-sale/eastern-cape/gqeberha');
+    expect(gqeberha!.href).toBe('/eastern-cape/gqeberha');
     expect(gqeberha!.type).toBe('city');
 
     const mbombela = FALLBACK_CITY_LINKS.find(l => l.label === 'Mbombela');
     expect(mbombela).toBeDefined();
-    expect(mbombela!.href).toBe('/property-for-sale/mpumalanga/mbombela');
+    expect(mbombela!.href).toBe('/mpumalanga/mbombela');
     expect(mbombela!.type).toBe('city');
 
     const mahikeng = FALLBACK_CITY_LINKS.find(l => l.label === 'Mahikeng');
     expect(mahikeng).toBeDefined();
-    expect(mahikeng!.href).toBe('/property-for-sale/north-west/mahikeng');
+    expect(mahikeng!.href).toBe('/north-west/mahikeng');
     expect(mahikeng!.type).toBe('city');
   });
 
-  it('every link has a canonical path without query params', () => {
-    for (const link of FALLBACK_CITY_LINKS) {
+  it('neutral fallback links have no query params', () => {
+    for (const link of FALLBACK_CITY_LINKS.filter(
+      link => link.type === 'city' && !link.href.startsWith('/property-to-rent'),
+    )) {
       expect(link.href).not.toContain('?');
       expect(link.href).not.toContain('=');
       expect(link.href).not.toContain('&');
@@ -333,10 +336,12 @@ describe('FALLBACK_CITY_LINKS', () => {
     }
   });
 
-  it('every link starts with /property-for-sale or /property-to-rent', () => {
+  it('fallback links use neutral geography or an explicit transaction root', () => {
     for (const link of FALLBACK_CITY_LINKS) {
       expect(
-        link.href.startsWith('/property-for-sale') || link.href.startsWith('/property-to-rent'),
+        link.href.startsWith('/') &&
+          !link.href.startsWith('/property-for-sale/') &&
+          !link.href.startsWith('/property-to-rent/'),
       ).toBe(true);
     }
   });
@@ -368,14 +373,14 @@ describe('FALLBACK_CITY_LINKS', () => {
       l => l.label === 'Cape Town' && l.href.startsWith('/property-to-rent'),
     );
     expect(rentCapeTown).toBeDefined();
-    expect(rentCapeTown!.href).toBe('/property-to-rent/western-cape/cape-town');
+    expect(rentCapeTown!.href).toBe('/property-to-rent?city=cape-town&province=western-cape');
   });
 
-  it('suburb fallback entries use full canonical province/city/suburb paths', () => {
+  it('suburb fallback entries use full neutral province/city/suburb paths', () => {
     const sandton = FALLBACK_CITY_LINKS.find(l => l.label === 'Sandton');
     expect(sandton).toBeDefined();
     expect(sandton!.type).toBe('suburb');
-    expect(sandton!.href).toBe('/property-for-sale/gauteng/johannesburg/sandton');
+    expect(sandton!.href).toBe('/gauteng/johannesburg/sandton');
     expect(sandton!.provinceSlug).toBe('gauteng');
     expect(sandton!.citySlug).toBe('johannesburg');
     expect(sandton!.suburbSlug).toBe('sandton');

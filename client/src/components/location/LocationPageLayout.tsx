@@ -1,5 +1,4 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 
 import { useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
@@ -30,6 +29,7 @@ interface LocationPageLayoutProps {
   sellerCTA?: React.ReactNode;
   seoContent?: React.ReactNode;
   exploreMore?: React.ReactNode;
+  discoveryMode?: boolean;
 }
 
 export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
@@ -55,16 +55,17 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
   sellerCTA,
   seoContent,
   exploreMore,
+  discoveryMode = false,
 }) => {
   const [location] = useLocation();
   const isRent = location.startsWith('/property-to-rent');
-  const rootLabel = isRent ? 'For Rent' : 'For Sale';
-  const rootPath = isRent ? '/property-to-rent' : '/property-for-sale';
+  const rootLabel = discoveryMode ? 'Explore' : isRent ? 'For Rent' : 'For Sale';
+  const rootPath = discoveryMode ? '/' : isRent ? '/property-to-rent' : '/property-for-sale';
 
   const parts = locationSlug.split('/').filter(Boolean);
   const breadcrumbItems = [
     { label: 'Home', href: '/' },
-    { label: rootLabel, href: rootPath },
+    { label: rootLabel, href: discoveryMode ? '/' : rootPath },
   ];
 
   let currentPath = rootPath;
@@ -78,14 +79,6 @@ export const LocationPageLayout: React.FC<LocationPageLayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-50 w-full pt-16">
-      <Helmet>
-        <title>{`Property for Sale in ${locationName} | Real Estate Portal`}</title>
-        <meta
-          name="description"
-          content={`Find the best properties for sale in ${locationName}. Search apartments, houses, and new developments.`}
-        />
-      </Helmet>
-
       <ListingNavbar />
 
       {/* Breadcrumbs Bar */}

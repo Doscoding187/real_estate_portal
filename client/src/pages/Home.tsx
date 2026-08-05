@@ -29,8 +29,10 @@ export default function Home() {
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
   const queryString = search;
   const rawIntent = new URLSearchParams(queryString).get('intent');
-  const activeJourney = parseHomepageJourney(queryString);
   const requestedJourney = normalizePublicHeroJourney(rawIntent);
+  const hasCanonicalHomepageJourney =
+    rawIntent !== null && rawIntent.trim().toLowerCase() === requestedJourney;
+  const activeJourney = hasCanonicalHomepageJourney ? parseHomepageJourney(queryString) : undefined;
 
   useEffect(() => {
     if (rawIntent === null) return;
@@ -44,13 +46,14 @@ export default function Home() {
       !isHomepageHeroJourneyEnabled(requestedJourney) ||
       rawIntent.trim().toLowerCase() !== requestedJourney
     ) {
-      setLocation(buildHomepageJourneyUrl('buy'), { replace: true });
+      setLocation('/', { replace: true });
     }
   }, [rawIntent, requestedJourney, setLocation]);
 
-  const effectiveHeroTab: HeroTab = isHomepageHeroJourneyEnabled(activeJourney)
-    ? (activeJourney as HeroTab)
-    : 'buy';
+  const effectiveHeroTab: HeroTab =
+    activeJourney && isHomepageHeroJourneyEnabled(activeJourney)
+      ? (activeJourney as HeroTab)
+      : 'buy';
   const { data: popularCitiesData } = trpc.locationPages.getPopularCities.useQuery({
     limit: 12,
   });
@@ -75,7 +78,8 @@ export default function Home() {
     setLocation(nextLocation);
   };
 
-  const heroTabValue = effectiveHeroTab;
+  const heroTabValue =
+    activeJourney && isHomepageHeroJourneyEnabled(activeJourney) ? effectiveHeroTab : '';
   const homeCanonicalUrl = toAbsoluteUrl('/');
   const homeDescription =
     'Search South African property listings, explore new developments, compare areas, and connect with agents and developers on Property Listify.';

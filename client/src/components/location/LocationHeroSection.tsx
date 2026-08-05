@@ -15,6 +15,9 @@ import {
 import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
+import type { LocationNode } from '@/types/location';
+import { buildLocationDiscoveryPath } from '@/lib/locationDiscovery';
+import { buildBuySearchUrl, buildPropertySearchUrl } from '@/lib/heroJourneySearch';
 
 interface HeroCampaign {
   imageUrl: string;
@@ -34,6 +37,7 @@ interface LocationHeroSectionProps {
   initialSearchQuery?: string;
   activeTab?: string | null;
   onActiveTabChange?: (tabId: string) => void;
+  neutralMode?: boolean;
 }
 
 // SA-specific property categories
@@ -96,12 +100,30 @@ export function LocationHeroSection({
   initialSearchQuery = '',
   activeTab: controlledActiveTab,
   onActiveTabChange,
+  neutralMode = false,
 }: LocationHeroSectionProps) {
   const [, setLocation] = useLocation();
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showFilters, setShowFilters] = useState(false);
   const activeTab = controlledActiveTab ?? internalActiveTab;
+  const locationSegments = locationSlug.split('/').filter(Boolean);
+
+  const currentLocation: LocationNode = {
+    id: `${locationType}:${locationId}`,
+    canonicalLocationId: `${locationType}:${locationId}`,
+    name: locationName,
+    slug: locationSegments[locationSegments.length - 1] || locationName,
+    type: locationType,
+    provinceSlug: locationSegments[0],
+    citySlug: locationSegments[1],
+  };
+
+  const buildCanonicalBuyResultsPath = (location: LocationNode) => {
+    const path = buildBuySearchUrl({ selectedLocations: [location] });
+    const parsedPath = new URL(path, 'https://property-listify.local');
+    return parsedPath.searchParams.has('searchError') ? undefined : path;
+  };
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -120,6 +142,7 @@ export function LocationHeroSection({
   });
 
   const handleCategoryClick = (categoryId: string) => {
+    if (neutralMode && categoryId !== 'buy') return;
     if (controlledActiveTab === undefined) {
       setInternalActiveTab(categoryId);
     }
@@ -133,7 +156,13 @@ export function LocationHeroSection({
   };
 
   const getSearchPath = (categoryId: string | null, locSlug: string, locName: string) => {
-    const effectiveCategoryId = categoryId || 'buy';
+    const effectiveCategoryId = categoryId || (neutralMode ? '' : 'buy');
+    if (!effectiveCategoryId) return undefined;
+
+    if (neutralMode && effectiveCategoryId === 'buy') {
+      return buildCanonicalBuyResultsPath(currentLocation);
+    }
+
     const category = categories.find(c => c.id === effectiveCategoryId);
     if (!category) return '/';
 
@@ -141,36 +170,32 @@ export function LocationHeroSection({
       return `/new-developments?location=${encodeURIComponent(locName)}`;
     }
 
-    const baseRoute =
-      category.listingType === 'rent' || category.id === 'shared_living'
-        ? 'property-to-rent'
-        : 'property-for-sale';
-
-    const params = new URLSearchParams();
-    params.set('view', 'list');
-
-    // Add filter params
-    if (filters.propertyTypes.length > 0 && filters.propertyTypes[0] !== 'all') {
-      params.set('propertyType', filters.propertyTypes[0].toLowerCase());
+    if (category.listingType === 'sale' || category.listingType === 'rent') {
+      return buildPropertySearchUrl({
+        transactionType: category.listingType === 'rent' ? 'to-rent' : 'for-sale',
+        selectedLocations: [currentLocation],
+        propertyType: filters.propertyTypes[0],
+        minPrice: filters.priceMin,
+        maxPrice: filters.priceMax,
+      });
     }
-    if (filters.priceMin) params.set('minPrice', filters.priceMin);
-    if (filters.priceMax) params.set('maxPrice', filters.priceMax);
-    if (category.id === 'commercial') params.set('type', 'commercial');
-    if (category.id === 'plot_land') params.set('type', 'vacant-land');
-    if (category.id === 'shared_living') params.set('type', 'flat-apartment');
 
-    return `/${baseRoute}/${locSlug}?${params.toString()}`;
+    return undefined;
   };
 
   const handleSearch = () => {
     const path = getSearchPath(activeTab, locationSlug, locationName);
-    setLocation(path);
+    if (path) setLocation(path);
   };
 
   const handleLocationSelect = (selectedLoc: any) => {
     if (selectedLoc?.slug) {
-      const path = getSearchPath(activeTab, selectedLoc.slug, selectedLoc.name);
-      setLocation(path);
+      const path = neutralMode
+        ? activeTab === 'buy'
+          ? buildCanonicalBuyResultsPath(selectedLoc)
+          : buildLocationDiscoveryPath(selectedLoc)
+        : getSearchPath(activeTab, selectedLoc.slug, selectedLoc.name);
+      if (path) setLocation(path);
     }
   };
 
@@ -182,7 +207,9 @@ export function LocationHeroSection({
     <div className="relative w-full">
       {/* SEO Title - visually hidden */}
       <h1 className="sr-only">
-        Property for Sale in {locationName} - Explore {listingCount.toLocaleString()} properties
+        {neutralMode
+          ? `Explore ${locationName} and its property opportunities`
+          : `Property for Sale in ${locationName} - Explore ${listingCount.toLocaleString()} properties`}
       </h1>
 
       {/* Banner Image Section */}
@@ -216,15 +243,22 @@ export function LocationHeroSection({
             {categories.map(category => {
               const Icon = category.icon;
               const isActive = activeTab === category.id;
+              const isUnavailableInNeutralMode = neutralMode && category.id !== 'buy';
               return (
                 <button
                   key={category.id}
+                  type="button"
                   onClick={() => handleCategoryClick(category.id)}
+                  disabled={isUnavailableInNeutralMode}
+                  aria-disabled={isUnavailableInNeutralMode}
+                  aria-pressed={isActive}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm transition-all duration-200 whitespace-nowrap',
                     isActive
                       ? 'bg-blue-600 text-white shadow-lg scale-105'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:scale-102',
+                      : isUnavailableInNeutralMode
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:scale-102',
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -713,8 +747,9 @@ export function LocationHeroSection({
 
             <Button
               onClick={handleSearch}
+              disabled={neutralMode && !activeTab}
               size="lg"
-              className="px-8 h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 font-semibold"
+              className="px-8 h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Search className="h-5 w-5 mr-2" />
               Search
@@ -729,11 +764,11 @@ export function LocationHeroSection({
                 <button
                   key={idx}
                   onClick={() => {
-                    if (link.slug) {
-                      const path = getSearchPath(activeTab, link.slug, link.label);
-                      setLocation(path);
-                    } else if (link.path) {
+                    if (link.path) {
                       setLocation(link.path);
+                    } else if (link.slug) {
+                      const path = getSearchPath(activeTab, link.slug, link.label);
+                      if (path) setLocation(path);
                     }
                   }}
                   className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-full hover:bg-blue-100 hover:text-blue-700 transition-colors"

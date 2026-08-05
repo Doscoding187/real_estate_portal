@@ -64,14 +64,7 @@ describe('search intent location serialization', () => {
     });
   });
 
-  it('keeps direct province SEO paths while query-based province results stay on SRP', () => {
-    const seoIntent = resolveSearchIntent(
-      '/property-for-sale/gauteng',
-      { province: 'gauteng' },
-      new URLSearchParams(),
-    );
-    expect(generateIntentUrl(seoIntent)).toBe('/property-for-sale/gauteng');
-
+  it('keeps province geography on the transactional root when a journey is declared', () => {
     const resultsIntent = resolveSearchIntent(
       '/property-for-sale?province=gauteng',
       {},

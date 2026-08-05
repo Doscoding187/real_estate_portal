@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
@@ -192,15 +192,6 @@ export default function SearchResults({
   );
 
   const limit = 12;
-
-  // SEO
-  useEffect(() => {
-    document.title = generatePageTitle(filters);
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) {
-      metaDesc.setAttribute('content', generateMetaDescription(filters));
-    }
-  }, [filters]);
 
   const breadcrumbs = useMemo(() => generateBreadcrumbs(filters), [filters]);
   const suggestedSaveSearchName = useMemo(() => getSavedSearchSuggestedName(filters), [filters]);
@@ -480,6 +471,8 @@ export default function SearchResults({
 
   const resultCount = resultTotal;
   const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
+  const pageTitle = useMemo(() => generatePageTitle(filters), [filters]);
+  const pageDescription = useMemo(() => generateMetaDescription(filters), [filters]);
   const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
   const canAdvancePage = canAdvancePublicSearchPage(page, resultCount, limit);
   const hasRenderableResults =
@@ -501,7 +494,7 @@ export default function SearchResults({
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <MetaControl canonicalUrl={canonicalUrl} />
+      <MetaControl canonicalUrl={canonicalUrl} title={pageTitle} description={pageDescription} />
       <ListingNavbar defaultLocations={normalizedLocationFilters} />
 
       <div className="container pb-32 pt-24 lg:pb-12">

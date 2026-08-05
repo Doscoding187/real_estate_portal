@@ -183,7 +183,9 @@ export function LocationRecommendations() {
   const handleLocationClick = (location: LocationData) => {
     const provinceSlug = location.province.toLowerCase().replace(/\s+/g, '-');
     const suburbSlug = location.name.toLowerCase().replace(/\s+/g, '-');
-    setLocation(`/property-for-sale/${provinceSlug}/${suburbSlug}`);
+    setLocation(
+      `/property-for-sale?province=${encodeURIComponent(provinceSlug)}&suburb=${encodeURIComponent(suburbSlug)}`,
+    );
   };
 
   const formatPrice = (price: number) => {
