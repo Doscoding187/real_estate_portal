@@ -25,6 +25,7 @@ describe('search intent location serialization', () => {
           },
         ],
       },
+      resultState: { sort: 'relevance', page: 0 },
       defaults: {
         propertyCategory: 'residential',
         sort: 'relevance',
@@ -52,7 +53,9 @@ describe('search intent location serialization', () => {
     const result = resolveSearchIntent(
       '/property-to-rent?city=johannesburg&minPrice=5000&propertyType=apartment',
       {},
-      new URLSearchParams('city=johannesburg&minPrice=5000&propertyType=apartment'),
+      new URLSearchParams(
+        'city=johannesburg&minPrice=5000&propertyType=apartment&sort=price_asc&page=2',
+      ),
     );
 
     expect(result.transactionType).toBe('to-rent');
@@ -62,6 +65,7 @@ describe('search intent location serialization', () => {
       minPrice: 5000,
       propertyType: 'apartment',
     });
+    expect(result.resultState).toEqual({ sort: 'price_asc', page: 2 });
   });
 
   it('keeps province geography on the transactional root when a journey is declared', () => {
@@ -163,6 +167,46 @@ describe('search intent location serialization', () => {
       transactionType: 'for-sale',
       geography: intent.geography,
       filters: intent.filters,
+      resultState: intent.resultState,
+    });
+  });
+
+  it('round-trips Buy sorting and pagination without changing the journey', () => {
+    const intent = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams(
+        'locationId=city%3A12&city=johannesburg&province=gauteng&sort=price_desc&page=4',
+      ),
+    );
+
+    const generated = generateIntentUrl(intent);
+    const reparsed = new URL(generated, 'https://listify.test');
+    const roundTripped = resolveSearchIntent(reparsed.pathname, {}, reparsed.searchParams);
+
+    expect(generated).toContain('sort=price_desc');
+    expect(generated).toContain('page=4');
+    expect(roundTripped.transactionType).toBe('for-sale');
+    expect(roundTripped.resultState).toEqual({ sort: 'price_desc', page: 4 });
+  });
+
+  it('round-trips complete map bounds without retaining partial bounds', () => {
+    const intent = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams(
+        'locationId=city%3A12&city=johannesburg&province=gauteng&minLat=-26.3&maxLat=-25.9&minLng=27.8&maxLng=28.4',
+      ),
+    );
+
+    const reparsed = new URL(generateIntentUrl(intent), 'https://listify.test');
+    const roundTripped = resolveSearchIntent(reparsed.pathname, {}, reparsed.searchParams);
+
+    expect(roundTripped.filters).toMatchObject({
+      minLat: -26.3,
+      maxLat: -25.9,
+      minLng: 27.8,
+      maxLng: 28.4,
     });
   });
 });

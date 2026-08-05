@@ -35,6 +35,7 @@ import { priceInsightsRouter } from './priceInsightsRouter';
 import { devRouter } from './devRouter';
 import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
+import { validatePublicSearchInput } from '../shared/publicSearchValidation';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -575,6 +576,15 @@ const appRouterConfig = {
             .default('relevance'),
           page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
           pageSize: z.number().int().min(1).max(50).default(12),
+        }).superRefine((input, context) => {
+          const issue = validatePublicSearchInput(input);
+          if (!issue) return;
+
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [issue.path],
+            message: issue.message,
+          });
         }),
       )
       .query(async ({ input }) => {

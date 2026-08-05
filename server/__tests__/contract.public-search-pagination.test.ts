@@ -52,4 +52,40 @@ describe('public search page boundary', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(mockSearchInventory).not.toHaveBeenCalled();
   });
+
+  it('rejects incomplete map bounds before invoking search', async () => {
+    await expect(
+      publicCaller().properties.searchPublicInventory({
+        listingType: 'sale',
+        minLat: -26.2,
+        maxLat: -26,
+        minLng: 28,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockSearchInventory).not.toHaveBeenCalled();
+  });
+
+  it('rejects contradictory prices before invoking search', async () => {
+    await expect(
+      publicCaller().properties.searchPublicInventory({
+        listingType: 'sale',
+        minPrice: 2_000_000,
+        maxPrice: 1_000_000,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockSearchInventory).not.toHaveBeenCalled();
+  });
+
+  it('rejects a canonical location level that contradicts the submitted geography', async () => {
+    await expect(
+      publicCaller().properties.searchPublicInventory({
+        listingType: 'sale',
+        locationId: 'city:12',
+        province: 'gauteng',
+        city: 'johannesburg',
+        suburb: ['sandton'],
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockSearchInventory).not.toHaveBeenCalled();
+  });
 });

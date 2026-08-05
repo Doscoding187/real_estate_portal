@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useLocation } from 'wouter';
+import { useParams, useLocation, useSearch } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCard from '@/components/PropertyCard';
@@ -89,6 +89,7 @@ export default function SearchResults({
 
   const { isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
+  const search = useSearch();
 
   // Get URL params from wouter
   const params = useParams<{
@@ -104,7 +105,7 @@ export default function SearchResults({
   // --- CORE SEARCH INTENT ---
   // We resolve the intent once from the URL state
   const searchIntent = useMemo(() => {
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = new URLSearchParams(search);
     // Merge props into params if they exist (for usage inside CityPage)
     // Note: This relies on the router params mainly.
     const effectiveParams = { ...params };
@@ -113,7 +114,7 @@ export default function SearchResults({
     if (propLocationId && !effectiveParams.locationId) effectiveParams.locationId = propLocationId;
 
     return resolveSearchIntent(location, effectiveParams, searchParams);
-  }, [location, window.location.search, params, propProvince, propCity, propLocationId]);
+  }, [location, search, params, propProvince, propCity, propLocationId]);
 
   // Derived state from Intent
   const filters: SearchFilters = useMemo(() => {
@@ -176,8 +177,10 @@ export default function SearchResults({
 
   // UI State
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [sortBy, setSortBy] = useState<SortOption>('relevance');
-  const [page, setPage] = useState(0);
+  // Sort and pagination are transactional URL state. View mode is deliberately
+  // presentation-local for this slice and is not part of the public query.
+  const sortBy = searchIntent.resultState.sort as SortOption;
+  const page = searchIntent.resultState.page;
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
@@ -324,6 +327,10 @@ export default function SearchResults({
     const updatedIntent: SearchIntent = {
       ...searchIntent,
       filters: nextFilters,
+      resultState: {
+        ...searchIntent.resultState,
+        page: 0,
+      },
     };
 
     // Sanitize: We do not allow the sidebar to change the geography level keys (province, city, suburb) via 'filters'.
@@ -332,7 +339,6 @@ export default function SearchResults({
 
     const newUrl = generateIntentUrl(updatedIntent);
     setLocation(newUrl);
-    setPage(0);
   };
 
   // This is a special handler for "active chips" removal which might be cleaner
@@ -344,9 +350,12 @@ export default function SearchResults({
     const updatedIntent = {
       ...searchIntent,
       filters: nextFilters,
+      resultState: {
+        ...searchIntent.resultState,
+        page: 0,
+      },
     };
     setLocation(generateIntentUrl(updatedIntent));
-    setPage(0);
   };
 
   const handleClearAllFilters = () => {
@@ -354,9 +363,12 @@ export default function SearchResults({
     const updatedIntent = {
       ...searchIntent,
       filters: {}, // Clear all optional filters
+      resultState: {
+        ...searchIntent.resultState,
+        page: 0,
+      },
     };
     setLocation(generateIntentUrl(updatedIntent));
-    setPage(0);
   };
 
   const handleListingSourceChange = (source?: SearchFilters['listingSource']) => {
@@ -370,10 +382,37 @@ export default function SearchResults({
     const updatedIntent: SearchIntent = {
       ...searchIntent,
       filters: nextFilters,
+      resultState: {
+        ...searchIntent.resultState,
+        page: 0,
+      },
     };
 
     setLocation(generateIntentUrl(updatedIntent));
-    setPage(0);
+  };
+
+  const handleSortChange = (nextSort: SortOption) => {
+    setLocation(
+      generateIntentUrl({
+        ...searchIntent,
+        resultState: {
+          sort: nextSort,
+          page: 0,
+        },
+      }),
+    );
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setLocation(
+      generateIntentUrl({
+        ...searchIntent,
+        resultState: {
+          ...searchIntent.resultState,
+          page: nextPage,
+        },
+      }),
+    );
   };
 
   const handleSaveSearch = () => {
@@ -426,11 +465,14 @@ export default function SearchResults({
         slug: undefined,
       },
       filters: nextFilters,
+      resultState: {
+        ...searchIntent.resultState,
+        page: 0,
+      },
     };
 
     const newUrl = generateIntentUrl(mapIntent);
     setLocation(newUrl);
-    setPage(0);
   };
 
   const mapResults = useMemo(
@@ -514,7 +556,7 @@ export default function SearchResults({
                 viewMode={viewMode}
                 sortBy={sortBy}
                 onViewModeChange={setViewMode}
-                onSortChange={setSortBy}
+                onSortChange={handleSortChange}
                 onOpenFilters={() => setIsMobileFilterOpen(true)}
               />
               <div className="mt-2">
@@ -642,7 +684,7 @@ export default function SearchResults({
                           <Button
                             variant="outline"
                             disabled={page === 0}
-                            onClick={() => setPage(p => Math.max(0, p - 1))}
+                            onClick={() => handlePageChange(Math.max(0, page - 1))}
                           >
                             Previous
                           </Button>
@@ -653,7 +695,7 @@ export default function SearchResults({
                             variant="outline"
                             disabled={!canAdvancePage}
                             onClick={() =>
-                              setPage(p => Math.min(PUBLIC_SEARCH_MAX_PAGE_INDEX, p + 1))
+                              handlePageChange(Math.min(PUBLIC_SEARCH_MAX_PAGE_INDEX, page + 1))
                             }
                           >
                             Next
@@ -707,7 +749,7 @@ export default function SearchResults({
         onOpenFilters={() => setIsMobileFilterOpen(true)}
         currentView={viewMode}
         onViewChange={setViewMode}
-        onSortChange={setSortBy}
+        onSortChange={handleSortChange}
         currentSort={sortBy}
         resultCount={resultCount}
       />
