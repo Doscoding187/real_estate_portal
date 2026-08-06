@@ -8,8 +8,8 @@ export type HeroTab = Exclude<PublicHeroJourneyKey, 'find_agent'>;
 export type HeroUiTab = PublicHeroJourneyKey;
 export type HeroJourneyDefinition = PublicHeroJourneyDefinition;
 
-export function normalizeHeroUiTab(raw: string): HeroUiTab {
-  return normalizePublicHeroJourney(raw);
+export function normalizeHeroUiTab(raw: string): HeroUiTab | '' {
+  return normalizePublicHeroJourney(raw) || '';
 }
 
 export function toEnhancedHeroTabLabel(tab: HeroTab): string {

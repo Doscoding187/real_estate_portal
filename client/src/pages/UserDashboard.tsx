@@ -24,6 +24,7 @@ import {
   getSavedSearchNotificationDescription,
   getSavedSearchSourceLabel,
 } from '@/lib/savedSearchUtils';
+import { buildCanonicalSearchUrl } from '@/lib/searchNavigation';
 import { trpc } from '@/lib/trpc';
 import type { SavedSearch } from '@shared/types';
 import {
@@ -84,9 +85,15 @@ type DeferredBuyability = {
 
 // Kept as typed empty sources while the legacy Buyability surface is retired.
 // The Journey Tracker must not call the unregistered `trpc.prospects.*` API.
-function deferredProspect(): DeferredProspect | null { return null; }
-function deferredProgress(): DeferredProgress | null { return null; }
-function deferredBuyability(): DeferredBuyability | null { return null; }
+function deferredProspect(): DeferredProspect | null {
+  return null;
+}
+function deferredProgress(): DeferredProgress | null {
+  return null;
+}
+function deferredBuyability(): DeferredBuyability | null {
+  return null;
+}
 type FavoriteCard = ReturnType<typeof normalizePropertyForUI> & {
   savedAt?: string | null;
   property?: Record<string, unknown>;
@@ -237,19 +244,7 @@ function parseDate(value?: string | null) {
 }
 
 function buildSearchHref(criteria: Record<string, unknown>) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(criteria || {})) {
-    if (value === undefined || value === null || value === '') continue;
-    if (Array.isArray(value)) {
-      value.forEach(item => {
-        if (item !== undefined && item !== null && item !== '') params.append(key, String(item));
-      });
-      continue;
-    }
-    params.set(key, String(value));
-  }
-  const query = params.toString();
-  return query ? `/properties?${query}` : '/properties';
+  return buildCanonicalSearchUrl(criteria);
 }
 
 function getCriteriaValue(criteria: RawCriteria, key: string) {
@@ -1269,13 +1264,15 @@ export default function UserDashboard() {
                   id="open-journey"
                   className="bg-slate-900 text-white hover:bg-slate-800"
                   onClick={() =>
-                    document.getElementById('prospect-journey-title')?.scrollIntoView({ behavior: 'smooth' })
+                    document
+                      .getElementById('prospect-journey-title')
+                      ?.scrollIntoView({ behavior: 'smooth' })
                   }
                 >
                   <Activity className="mr-2 h-4 w-4" />
                   View your journey
                 </Button>
-                <Button variant="outline" onClick={() => setLocation('/properties')}>
+                <Button variant="outline" onClick={() => setLocation('/')}>
                   <Search className="mr-2 h-4 w-4" />
                   Browse properties
                 </Button>
@@ -1366,7 +1363,9 @@ export default function UserDashboard() {
                       className="bg-white text-slate-950 hover:bg-slate-100"
                       onClick={() => {
                         if (bridgePlan.primaryHref === '#open-planner') {
-                          document.getElementById('prospect-journey-title')?.scrollIntoView({ behavior: 'smooth' });
+                          document
+                            .getElementById('prospect-journey-title')
+                            ?.scrollIntoView({ behavior: 'smooth' });
                           return;
                         }
                         if (bridgePlan.primaryHref === '#overview-seller-readiness') {
@@ -1430,7 +1429,14 @@ export default function UserDashboard() {
                     </div>
                   )}
 
-                  <Button variant="outline" onClick={() => document.getElementById('prospect-journey-title')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      document
+                        .getElementById('prospect-journey-title')
+                        ?.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  >
                     View journey tracker
                   </Button>
                 </CardContent>
@@ -2069,7 +2075,6 @@ export default function UserDashboard() {
                 </CardContent>
               </Card>
             </div>
-
           </TabsContent>
           <TabsContent value="homes" className="mt-6">
             {favoritesLoading ? (
@@ -2083,7 +2088,7 @@ export default function UserDashboard() {
                 <CardContent className="py-8 text-center">
                   <Heart className="mx-auto mb-4 h-12 w-12 text-slate-300" />
                   <p className="font-semibold text-slate-900">No saved homes yet</p>
-                  <Button className="mt-4" onClick={() => setLocation('/properties')}>
+                  <Button className="mt-4" onClick={() => setLocation('/')}>
                     Browse properties
                   </Button>
                 </CardContent>
@@ -2281,7 +2286,7 @@ export default function UserDashboard() {
                 <CardContent className="py-8 text-center">
                   <GitCompare className="mx-auto mb-4 h-12 w-12 text-slate-300" />
                   <p className="font-semibold text-slate-900">Nothing in compare yet</p>
-                  <Button className="mt-4" onClick={() => setLocation('/properties')}>
+                  <Button className="mt-4" onClick={() => setLocation('/')}>
                     Browse properties
                   </Button>
                 </CardContent>
@@ -2402,7 +2407,6 @@ export default function UserDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-
     </ProspectLayout>
   );
 }

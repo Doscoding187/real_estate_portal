@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useLocation, useSearch } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
@@ -60,7 +60,9 @@ import {
   unslugify,
 } from '@/lib/urlUtils';
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
+import { buildPropertiesCompatibilityRedirect } from '@/lib/searchNavigation';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
+import { parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { SearchCardResult } from '@/../../shared/types';
 import {
   BUY_PROPERTY_TYPES,
@@ -85,11 +87,23 @@ export default function SearchResults({
     provinceSlug?: string;
     citySlug?: string;
     fullAddress: string;
+    id?: string;
+    canonicalLocationId?: string;
   };
 
   const { isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   const search = useSearch();
+  const isLegacyPropertiesRoute = location.split('?')[0] === '/properties';
+  const legacyPropertiesRedirect = useMemo(
+    () => (isLegacyPropertiesRoute ? buildPropertiesCompatibilityRedirect(search) : null),
+    [isLegacyPropertiesRoute, search],
+  );
+
+  useEffect(() => {
+    if (!isLegacyPropertiesRoute || !legacyPropertiesRedirect) return;
+    setLocation(legacyPropertiesRedirect, { replace: true });
+  }, [isLegacyPropertiesRoute, legacyPropertiesRedirect, setLocation]);
 
   // Get URL params from wouter
   const params = useParams<{
@@ -125,50 +139,88 @@ export default function SearchResults({
       ...(searchIntent.geography.city && { city: searchIntent.geography.city }),
       ...(searchIntent.geography.suburb && { suburb: searchIntent.geography.suburb }),
       ...(searchIntent.geography.locationId && { locationId: searchIntent.geography.locationId }),
-      listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale',
+      ...(searchIntent.transactionType
+        ? { listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale' }
+        : {}),
     };
   }, [searchIntent]);
 
-  const normalizedLocationFilters = useMemo<NavbarLocation[]>(
-    () =>
-      (filters.locations ?? []).reduce<NavbarLocation[]>((acc, location) => {
-        if (typeof location === 'string') {
-          const slug = location.trim();
-          if (!slug) return acc;
-          const type: NavbarLocation['type'] = PROVINCE_SLUGS.includes(slug.toLowerCase())
-            ? 'province'
-            : 'city';
-          acc.push({
-            name: unslugify(slug),
-            slug,
-            type,
-            provinceSlug: type === 'province' ? slug : undefined,
-            citySlug: type === 'city' ? slug : undefined,
-            fullAddress: unslugify(slug),
-          });
-          return acc;
-        }
-
-        if (location && typeof location === 'object' && 'slug' in location) {
-          const slug = String(location.slug || '').trim();
-          if (!slug) return acc;
-          acc.push({
-            name: String((location as any).name || '').trim() || unslugify(slug),
-            slug,
-            type:
-              location.type === 'province' || location.type === 'city' || location.type === 'suburb'
-                ? location.type
-                : 'city',
-            citySlug: (location as any).citySlug,
-            provinceSlug: (location as any).provinceSlug,
-            fullAddress: String((location as any).fullAddress || '').trim() || unslugify(slug),
-          });
-        }
-
+  const normalizedLocationFilters = useMemo<NavbarLocation[]>(() => {
+    const locations = (filters.locations ?? []).reduce<NavbarLocation[]>((acc, location) => {
+      if (typeof location === 'string') {
+        const slug = location.trim();
+        if (!slug) return acc;
+        const type: NavbarLocation['type'] = PROVINCE_SLUGS.includes(slug.toLowerCase())
+          ? 'province'
+          : 'city';
+        acc.push({
+          name: unslugify(slug),
+          slug,
+          type,
+          provinceSlug: type === 'province' ? slug : undefined,
+          citySlug: type === 'city' ? slug : undefined,
+          fullAddress: unslugify(slug),
+        });
         return acc;
-      }, []),
-    [filters.locations],
-  );
+      }
+
+      if (location && typeof location === 'object' && 'slug' in location) {
+        const slug = String(location.slug || '').trim();
+        if (!slug) return acc;
+        acc.push({
+          name: String((location as any).name || '').trim() || unslugify(slug),
+          slug,
+          type:
+            location.type === 'province' || location.type === 'city' || location.type === 'suburb'
+              ? location.type
+              : 'city',
+          citySlug: (location as any).citySlug,
+          provinceSlug: (location as any).provinceSlug,
+          fullAddress: String((location as any).fullAddress || '').trim() || unslugify(slug),
+        });
+      }
+
+      return acc;
+    }, []);
+
+    const canonicalLocationId = searchIntent.geography.locationId;
+    const parsedCanonicalLocation = parseCanonicalLocationId(canonicalLocationId);
+    const geographySlug =
+      parsedCanonicalLocation?.level === 'province'
+        ? searchIntent.geography.province
+        : parsedCanonicalLocation?.level === 'city'
+          ? searchIntent.geography.city
+          : parsedCanonicalLocation?.level === 'suburb'
+            ? searchIntent.geography.suburb
+            : undefined;
+
+    if (canonicalLocationId && parsedCanonicalLocation && geographySlug) {
+      const alreadyPresent = locations.some(
+        location => location.canonicalLocationId === canonicalLocationId,
+      );
+      if (!alreadyPresent) {
+        locations.push({
+          id: canonicalLocationId,
+          canonicalLocationId,
+          name: unslugify(geographySlug),
+          slug: geographySlug,
+          type: parsedCanonicalLocation.level,
+          provinceSlug: searchIntent.geography.province,
+          citySlug: searchIntent.geography.city,
+          fullAddress: [
+            searchIntent.geography.suburb,
+            searchIntent.geography.city,
+            searchIntent.geography.province,
+          ]
+            .filter(Boolean)
+            .map(value => unslugify(String(value)))
+            .join(', '),
+        });
+      }
+    }
+
+    return locations;
+  }, [filters.locations, searchIntent.geography]);
 
   const normalizedLocationSlugs = useMemo(
     () => normalizedLocationFilters.map(location => location.slug),
@@ -277,7 +329,8 @@ export default function SearchResults({
     error: publicSearchError,
   } = trpc.properties.searchPublicInventory.useQuery(publicSearchQueryInput, {
     retry: false,
-    enabled: !searchIntent.validation,
+    enabled:
+      !isLegacyPropertiesRoute && Boolean(searchIntent.transactionType) && !searchIntent.validation,
   });
   const hasSearchError = Boolean(publicSearchError);
   // Filter metadata is intentionally omitted until it is calculated by the
@@ -533,6 +586,14 @@ export default function SearchResults({
 
     return PROPERTY_IMAGE_FALLBACK;
   };
+
+  if (isLegacyPropertiesRoute) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 text-center">
+        <p className="text-sm text-slate-600">Returning you to the canonical search journey…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

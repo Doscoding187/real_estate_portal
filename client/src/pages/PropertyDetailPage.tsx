@@ -39,6 +39,7 @@ import { PropertyImageGallery } from '@/components/property/PropertyImageGallery
 import { PropertyServiceActions } from '@/components/property/PropertyServiceActions';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
+import { buildCanonicalSearchUrl } from '@/lib/searchNavigation';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { BondCalculator } from '@/components/BondCalculator';
@@ -278,7 +279,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           <p className="text-slate-500 mb-6">
             The property you're looking for doesn't exist or has been removed.
           </p>
-          <Button onClick={() => setLocation('/properties')}>Back to Properties</Button>
+          <Button onClick={() => setLocation('/')}>Choose a search journey</Button>
         </div>
       </div>
     );
@@ -449,9 +450,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   if (property.listingType) {
     similarListingsQuery.set('listingType', String(property.listingType));
   }
-  const similarListingsHref = `/properties${
-    similarListingsQuery.toString() ? `?${similarListingsQuery.toString()}` : ''
-  }`;
+  const similarListingsHref = buildCanonicalSearchUrl(
+    Object.fromEntries(similarListingsQuery.entries()),
+  );
   const propertyImages = (Array.isArray(images) ? images : []).filter(
     (image): image is PropertyImageLike =>
       Boolean(

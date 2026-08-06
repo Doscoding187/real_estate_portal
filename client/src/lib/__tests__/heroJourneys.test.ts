@@ -32,13 +32,13 @@ describe('hero journey authority', () => {
     expect(normalizePublicHeroJourney('Rental')).toBe('rent');
     expect(normalizePublicHeroJourney('projects')).toBe('developments');
     expect(normalizePublicHeroJourney('Agents')).toBe('find_agent');
-    expect(normalizePublicHeroJourney('not-a-journey')).toBe('buy');
+    expect(normalizePublicHeroJourney('not-a-journey')).toBeNull();
   });
 
-  it('restores the explicit journey from the homepage URL and defaults safely', () => {
+  it('restores only an explicit journey from the homepage URL', () => {
     expect(parseHomepageJourney('?intent=rent')).toBe('rent');
-    expect(parseHomepageJourney('?intent=not-supported')).toBe('buy');
-    expect(parseHomepageJourney('')).toBe('buy');
+    expect(parseHomepageJourney('?intent=not-supported')).toBeNull();
+    expect(parseHomepageJourney('')).toBeNull();
     expect(buildHomepageJourneyUrl('buy')).toBe('/?intent=buy');
     expect(buildHomepageJourneyUrl('find_agent')).toBe('/agents');
     expect(isHomepageHeroJourneyEnabled('buy')).toBe(true);

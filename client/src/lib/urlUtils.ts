@@ -116,14 +116,17 @@ export interface SearchFilters {
   [key: string]: unknown;
 }
 
-import { generateIntentUrl, SearchIntent } from './searchIntent';
+import { generateIntentUrl, SearchIntent, type TransactionType } from './searchIntent';
 import { toAbsoluteUrl } from './seo/structuredData';
 import { normalizeTransactionalResultState } from '../../../shared/transactionalSearchState';
 
 // Helper to bridge SearchFilters -> SearchIntent for URL generation
 function filtersToIntent(filters: SearchFilters): SearchIntent {
+  const transactionType: TransactionType | null =
+    filters.listingType === 'rent' ? 'to-rent' : filters.listingType === 'sale' ? 'for-sale' : null;
+
   return {
-    transactionType: filters.listingType === 'rent' ? 'to-rent' : 'for-sale', // default
+    transactionType,
     geography: {
       level: filters.suburb
         ? 'suburb'
@@ -300,9 +303,9 @@ export function generateBreadcrumbs(filters: SearchFilters): BreadcrumbItem[] {
   // We must generate HREF for each crumb using GeneratePropertyUrl (which calls generateIntentUrl).
 
   const isRent = filters.listingType === 'rent';
-  const rootLabel = isRent ? 'For Rent' : 'For Sale';
-  // Root URL: /property-for-sale
-  const rootHref = generatePropertyUrl({ listingType: filters.listingType });
+  const hasTransaction = filters.listingType === 'rent' || filters.listingType === 'sale';
+  const rootLabel = isRent ? 'For Rent' : hasTransaction ? 'For Sale' : 'Explore';
+  const rootHref = hasTransaction ? generatePropertyUrl({ listingType: filters.listingType }) : '/';
 
   breadcrumbs.push({
     label: rootLabel,
