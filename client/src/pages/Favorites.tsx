@@ -83,7 +83,7 @@ export default function Favorites() {
           <EmptyState
             title="No favorites yet"
             description="Start browsing properties and save your favorites."
-            action={<Button onClick={() => setLocation('/properties')}>Browse properties</Button>}
+            action={<Button onClick={() => setLocation('/')}>Choose a search journey</Button>}
           />
         )}
       </PageFrame>

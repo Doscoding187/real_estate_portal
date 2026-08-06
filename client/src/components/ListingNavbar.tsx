@@ -2,9 +2,11 @@ import { Button } from './ui/button';
 import { Search, User, ChevronDown, X } from 'lucide-react';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import { Badge } from './ui/badge';
-import { useLocation } from 'wouter';
-import { useState } from 'react';
-import { generatePropertyUrl } from '@/lib/urlUtils';
+import { useLocation, useSearch } from 'wouter';
+import { useEffect, useMemo, useState } from 'react';
+import { buildPropertySearchUrl } from '@/lib/heroJourneySearch';
+import { getListingTypeForPath } from '@/lib/searchNavigation';
+import type { LocationNode } from '@/types/location';
 import { useAuth } from '@/_core/hooks/useAuth';
 
 interface ListingNavbarProps {
@@ -16,6 +18,8 @@ interface ListingNavbarProps {
     provinceSlug?: string;
     citySlug?: string;
     fullAddress: string;
+    id?: string;
+    canonicalLocationId?: string;
   }[];
 }
 
@@ -23,11 +27,20 @@ export function ListingNavbar({
   neutralSearch = false,
   defaultLocations = [],
 }: ListingNavbarProps) {
-  const [, setLocation] = useLocation();
+  const [currentPath, setLocation] = useLocation();
+  const search = useSearch();
   const { isAuthenticated } = useAuth();
-  const [listingType, setListingType] = useState<'sale' | 'rent' | null>(
-    neutralSearch ? null : 'sale',
+  const routeListingType = useMemo(
+    () => getListingTypeForPath(currentPath, search),
+    [currentPath, search],
   );
+  const [listingType, setListingType] = useState<'sale' | 'rent' | null>(
+    neutralSearch ? null : routeListingType,
+  );
+
+  useEffect(() => {
+    setListingType(neutralSearch ? null : routeListingType);
+  }, [neutralSearch, routeListingType]);
 
   // Multi-location state
   const [selectedLocations, setSelectedLocations] = useState<
@@ -38,6 +51,8 @@ export function ListingNavbar({
       provinceSlug?: string;
       citySlug?: string;
       fullAddress: string;
+      id?: string;
+      canonicalLocationId?: string;
     }[]
   >(Array.isArray(defaultLocations) ? defaultLocations : []);
 
@@ -50,34 +65,9 @@ export function ListingNavbar({
   const handleSearch = () => {
     if (!listingType) return;
 
-    // Intelligent Routing:
-    // 1. Single Province -> SEO Page
-    // 2. Single City/Suburb -> Interactive Results Page (Query Param)
-    // 3. Multiple -> Interactive Results Page (Query Param)
-
-    if (selectedLocations.length === 1) {
-      const loc = selectedLocations[0];
-      const isProvince =
-        loc.type === 'province' || (loc.type as any) === 'administrative_area_level_1'; // safety check
-
-      if (!isProvince) {
-        // Force interactive results for single city/suburb
-        const root = listingType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-        const params = new URLSearchParams();
-        params.set('locations', loc.slug);
-        // Add implicit filters if needed, but for now just location
-
-        setLocation(`${root}?${params.toString()}`);
-        return;
-      }
-    }
-
-    // Default Behavior (Provinces & Multiple Locations handled correctly by generatePropertyUrl or above check)
-    // - Provinces fallback to path-based SEO URL via generatePropertyUrl
-    // - Multiple locations default to ?locations=... via generatePropertyUrl
-    const url = generatePropertyUrl({
-      listingType,
-      locations: selectedLocations,
+    const url = buildPropertySearchUrl({
+      transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
+      selectedLocations: selectedLocations as LocationNode[],
     });
     setLocation(url);
   };
@@ -213,7 +203,7 @@ export function ListingNavbar({
           onClick={() => setLocation('/listings/create')}
         >
           Post property
-            <Badge className="bg-green-700 hover:bg-green-800 text-[10px] px-1 py-0 h-4 rounded text-white border-0">
+          <Badge className="bg-green-700 hover:bg-green-800 text-[10px] px-1 py-0 h-4 rounded text-white border-0">
             FREE
           </Badge>
         </Button>

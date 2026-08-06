@@ -123,7 +123,7 @@ export function EnhancedHero({
   // the explicit intent URL.
   const activeTab = controlledTab || internalTab;
   const hasExplicitJourney = String(activeTab || '').trim().length > 0;
-  const normalizedActiveTab = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) : '';
+  const normalizedActiveTab = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) || '' : '';
   const hasSelectedJourney = normalizedActiveTab.length > 0;
   const locationInputRef = useRef<HTMLInputElement>(null);
   const previousJourneyRef = useRef(normalizedActiveTab);

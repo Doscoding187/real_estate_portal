@@ -34,7 +34,7 @@ export default function CompareProperties() {
               You haven't selected any properties to compare yet. Add properties from the listings
               page to get started.
             </p>
-            <Button onClick={() => setLocation('/properties')} variant="default">
+            <Button onClick={() => setLocation('/')} variant="default">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Browse Properties
             </Button>
@@ -47,7 +47,7 @@ export default function CompareProperties() {
   // Filter properties by selected IDs
   const propertyItems = Array.isArray(properties)
     ? properties
-    : (properties as any)?.items ?? (properties as any)?.results ?? [];
+    : ((properties as any)?.items ?? (properties as any)?.results ?? []);
   const selectedProperties =
     propertyItems.filter((p: any) => comparedProperties.includes(p.id)) || [];
   const normalized = selectedProperties.map(normalizePropertyForUI).filter(p => p !== null);
@@ -86,7 +86,7 @@ export default function CompareProperties() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Compare Properties</h1>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setLocation('/properties')}>
+            <Button variant="outline" onClick={() => setLocation('/')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Properties
             </Button>

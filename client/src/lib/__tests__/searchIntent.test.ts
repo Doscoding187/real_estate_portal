@@ -68,6 +68,24 @@ describe('search intent location serialization', () => {
     expect(result.resultState).toEqual({ sort: 'price_asc', page: 2 });
   });
 
+  it('does not infer Buy for an unknown path without explicit transaction context', () => {
+    const result = resolveSearchIntent('/unknown-search', {}, new URLSearchParams());
+
+    expect(result.transactionType).toBeNull();
+    expect(result.validation?.code).toBe('missing-transaction-intent');
+  });
+
+  it('accepts explicit Rent context on a compatibility path', () => {
+    const result = resolveSearchIntent(
+      '/properties',
+      {},
+      new URLSearchParams('listingType=rent&city=johannesburg'),
+    );
+
+    expect(result.transactionType).toBe('to-rent');
+    expect(result.filters.listingType).toBe('rent');
+  });
+
   it('keeps province geography on the transactional root when a journey is declared', () => {
     const resultsIntent = resolveSearchIntent(
       '/property-for-sale?province=gauteng',

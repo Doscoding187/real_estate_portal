@@ -7,7 +7,6 @@ import {
   isHomepageHeroJourneyEnabled,
   normalizePublicHeroJourney,
   parseHomepageJourney,
-  type PublicHeroJourneyKey,
 } from '@/lib/publicNavigation';
 import { MetaControl } from '@/components/seo/MetaControl';
 import { HomeDesktopView } from '@/pages/home/HomeDesktopView';
@@ -31,7 +30,9 @@ export default function Home() {
   const rawIntent = new URLSearchParams(queryString).get('intent');
   const requestedJourney = normalizePublicHeroJourney(rawIntent);
   const hasCanonicalHomepageJourney =
-    rawIntent !== null && rawIntent.trim().toLowerCase() === requestedJourney;
+    requestedJourney !== null &&
+    rawIntent !== null &&
+    rawIntent.trim().toLowerCase() === requestedJourney;
   const activeJourney = hasCanonicalHomepageJourney ? parseHomepageJourney(queryString) : undefined;
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function Home() {
     }
 
     if (
+      requestedJourney === null ||
       !isHomepageHeroJourneyEnabled(requestedJourney) ||
       rawIntent.trim().toLowerCase() !== requestedJourney
     ) {
@@ -71,7 +73,8 @@ export default function Home() {
   ];
 
   const handleTabChange = (tab: string) => {
-    const normalizedTab: PublicHeroJourneyKey = normalizeHeroUiTab(tab);
+    const normalizedTab = normalizeHeroUiTab(tab);
+    if (!normalizedTab) return;
     const nextLocation = buildHomepageJourneyUrl(normalizedTab);
     const currentLocation = `${window.location.pathname}${window.location.search}`;
     if (currentLocation === nextLocation) return;
@@ -119,7 +122,7 @@ export default function Home() {
           <HomeMobileView
             activeHeroTab={effectiveHeroTab}
             heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/properties')}
+            onBrowseProperties={() => setLocation('/')}
             onProvinceChange={setSelectedProvince}
             onTabChange={handleTabChange}
             popularCities={popularCities}
@@ -130,7 +133,7 @@ export default function Home() {
           <HomeDesktopView
             activeHeroTab={effectiveHeroTab}
             heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/properties')}
+            onBrowseProperties={() => setLocation('/')}
             onProvinceChange={setSelectedProvince}
             onTabChange={handleTabChange}
             popularCities={popularCities}

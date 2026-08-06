@@ -7,6 +7,7 @@ import {
   getPublicNavigationActiveOwner,
   getSafeNextPath,
   getVisiblePublicNavigationGroups,
+  normalizePublicHeroJourney,
   PUBLIC_CITY_ENTRY,
   PUBLIC_NAVIGATION_MENUS,
 } from '@/lib/publicNavigation';
@@ -14,7 +15,13 @@ import {
 describe('public navigation authority', () => {
   it('labels the location discovery entry Locations across public surfaces', () => {
     expect(PUBLIC_CITY_ENTRY.label).toBe('Locations');
-    expect(PUBLIC_CITY_ENTRY.href).toBe('/property-for-sale');
+    expect(PUBLIC_CITY_ENTRY.href).toBe('/');
+  });
+
+  it('does not infer a journey from missing or unknown homepage intent', () => {
+    expect(normalizePublicHeroJourney(null)).toBeNull();
+    expect(normalizePublicHeroJourney('unknown')).toBeNull();
+    expect(normalizePublicHeroJourney('rent')).toBe('rent');
   });
 
   it('exposes only supported search query values', () => {

@@ -31,7 +31,9 @@ export type SearchIntentValidationCode =
   | 'canonical-location-required'
   | 'invalid-location-id'
   | 'location-identity-mismatch'
-  | 'multiple-locations-unsupported';
+  | 'multiple-locations-unsupported'
+  | 'missing-transaction-intent'
+  | 'invalid-transaction-intent';
 
 export interface SearchIntentValidation {
   code: SearchIntentValidationCode;
@@ -53,7 +55,7 @@ export interface SearchDefaults {
 }
 
 export interface SearchIntent {
-  transactionType: TransactionType;
+  transactionType: TransactionType | null;
   geography: GeographyIntent;
   filters: Record<string, any>; // The query params refing the search
   resultState: TransactionalResultState;
@@ -74,6 +76,8 @@ const SEARCH_VALIDATION_MESSAGES: Record<SearchIntentValidationCode, string> = {
   'location-identity-mismatch': 'The selected location does not match its canonical hierarchy.',
   'multiple-locations-unsupported':
     'Choose one canonical province, city, or suburb before searching.',
+  'missing-transaction-intent': 'Choose Buy or Rent before opening transactional results.',
+  'invalid-transaction-intent': 'The requested search journey is not supported.',
 };
 
 function getSearchIntentValidation(
@@ -90,6 +94,59 @@ export function createSearchIntentValidation(
   return { code, message: SEARCH_VALIDATION_MESSAGES[code] };
 }
 
+export interface ExplicitTransactionResolution {
+  transactionType: TransactionType | null;
+  invalid: boolean;
+}
+
+const TRANSACTION_TYPE_ALIASES: Record<string, TransactionType> = {
+  buy: 'for-sale',
+  sale: 'for-sale',
+  'for-sale': 'for-sale',
+  rent: 'to-rent',
+  rental: 'to-rent',
+  'to-rent': 'to-rent',
+  'for-rent': 'to-rent',
+  developments: 'developments',
+  development: 'developments',
+  projects: 'developments',
+};
+
+/**
+ * Resolves only declared transaction context. Missing or unknown context is
+ * deliberately not converted into Buy.
+ */
+export function resolveExplicitTransactionType(
+  path: string,
+  searchParams: URLSearchParams,
+): ExplicitTransactionResolution {
+  const pathname = path.split('?')[0] || '/';
+  const canonicalPathType: Record<string, TransactionType> = {
+    '/property-for-sale': 'for-sale',
+    '/property-to-rent': 'to-rent',
+    '/new-developments': 'developments',
+  };
+
+  const canonicalType = canonicalPathType[pathname];
+  if (canonicalType) return { transactionType: canonicalType, invalid: false };
+
+  const rawValues = ['intent', 'transactionType', 'listingType']
+    .map(key => searchParams.get(key)?.trim().toLowerCase())
+    .filter((value): value is string => Boolean(value));
+
+  if (rawValues.length === 0) return { transactionType: null, invalid: false };
+
+  const resolvedValues = rawValues.map(value => TRANSACTION_TYPE_ALIASES[value] ?? null);
+  if (resolvedValues.some(value => value === null)) {
+    return { transactionType: null, invalid: true };
+  }
+
+  const uniqueValues = new Set(resolvedValues);
+  if (uniqueValues.size !== 1) return { transactionType: null, invalid: true };
+
+  return { transactionType: resolvedValues[0], invalid: false };
+}
+
 /**
  * Resolves the search intent from the URL parameters and query string.
  * This is the SINGLE SOURCE OF TRUTH for converting URL state to UI state.
@@ -103,15 +160,16 @@ export function resolveSearchIntent(
   pathParams: Record<string, string | undefined>,
   searchParams: URLSearchParams,
 ): SearchIntent {
-  let transactionType: TransactionType = 'for-sale';
-  if (path.includes('property-to-rent') || path.includes('to-rent')) {
-    transactionType = 'to-rent';
-  } else if (path.includes('new-developments') || path.includes('developments')) {
-    transactionType = 'developments';
-  }
+  const transactionResolution = resolveExplicitTransactionType(path, searchParams);
+  const transactionType = transactionResolution.transactionType;
 
   const geography: GeographyIntent = { level: 'country' };
   let validation = getSearchIntentValidation(searchParams.get('searchError'));
+  if (transactionResolution.invalid) {
+    validation ||= createSearchIntentValidation('invalid-transaction-intent');
+  } else if (!transactionType) {
+    validation ||= createSearchIntentValidation('missing-transaction-intent');
+  }
   const resultState = parseTransactionalResultState(searchParams);
 
   const queryProvince = searchParams.get('province')?.trim().toLowerCase() || undefined;
@@ -256,7 +314,7 @@ export function resolveSearchIntent(
   const filters: Record<string, any> =
     transactionType === BUY_TRANSACTION_TYPE ? parseBuySearchParams(searchParams) : {};
 
-  if (transactionType !== BUY_TRANSACTION_TYPE) {
+  if (transactionType && transactionType !== BUY_TRANSACTION_TYPE) {
     if (locations.length > 0) filters.locations = locations;
     if (queryLocationIds.length > 0) filters.locationIds = queryLocationIds;
     if (querySuburbs.length > 1) {
@@ -301,7 +359,9 @@ export function resolveSearchIntent(
     });
   }
 
-  filters.listingType = transactionType === 'to-rent' ? 'rent' : 'sale';
+  if (transactionType) {
+    filters.listingType = transactionType === 'to-rent' ? 'rent' : 'sale';
+  }
 
   return {
     transactionType,
@@ -333,6 +393,8 @@ export function resolveSearchIntent(
  */
 export function generateIntentUrl(intent: SearchIntent): string {
   const { transactionType, geography, filters } = intent;
+
+  if (!transactionType) return '/';
 
   // 1. Determine base path
   let basePath = transactionType === 'to-rent' ? '/property-to-rent' : '/property-for-sale';

@@ -217,16 +217,18 @@ export function isHomepageHeroJourneyEnabled(key: PublicHeroJourneyKey): boolean
   return getPublicHeroJourney(key).homepageEnabled;
 }
 
-export function normalizePublicHeroJourney(raw: string | null | undefined): PublicHeroJourneyKey {
+export function normalizePublicHeroJourney(
+  raw: string | null | undefined,
+): PublicHeroJourneyKey | null {
   const normalized = String(raw || '')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '_');
 
-  return PUBLIC_HERO_JOURNEY_ALIASES[normalized] || DEFAULT_PUBLIC_HERO_JOURNEY;
+  return PUBLIC_HERO_JOURNEY_ALIASES[normalized] || null;
 }
 
-export function parseHomepageJourney(search: string): PublicHeroJourneyKey {
+export function parseHomepageJourney(search: string): PublicHeroJourneyKey | null {
   const params = new URLSearchParams(search.startsWith('?') ? search : `?${search}`);
   return normalizePublicHeroJourney(params.get('intent'));
 }
@@ -876,10 +878,10 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
 export const PUBLIC_CITY_ENTRY: PublicNavigationDestination = destination({
   id: 'city-entry',
   label: 'Locations',
-  href: '/property-for-sale',
+  href: '/',
   owner: 'location-engine',
   capability: 'LAUNCH_READY',
-  activeHref: '/property-for-sale',
+  activeHref: '/',
 });
 
 export const PUBLIC_NAVIGATION_ACTIONS = {
