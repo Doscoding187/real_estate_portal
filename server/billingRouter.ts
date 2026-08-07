@@ -20,9 +20,15 @@ import {
   type CanonicalSubscriptionStatus,
   type PaymentState,
 } from './services/billingFoundationService';
+import {
+  COMMERCIAL_AUDIENCES,
+  getCommercialCatalog,
+  type CommercialAudience,
+} from './services/commercialCatalogService';
 import { requireUser } from './_core/requireUser';
 
 const billingCycleSchema = z.enum(['monthly', 'annual']);
+const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
 
 const createCheckoutSessionSchema = z.object({
   planId: z.number().int().positive(),
@@ -97,6 +103,17 @@ export const billingRouter = {
   plans: publicProcedure
     .input(z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional())
     .query(async ({ input }) => listBillingPlans(input?.segment || 'agency')),
+
+  /**
+   * Read-only commercial catalog projection. This is the public commercial
+   * authority; it deliberately does not provision subscriptions or start
+   * checkout as part of a read.
+   */
+  commercialCatalog: publicProcedure
+    .input(z.object({ audience: commercialAudienceSchema.optional() }).optional())
+    .query(async ({ input }) =>
+      getCommercialCatalog(input?.audience as CommercialAudience | undefined),
+    ),
 
   bankDetails: protectedProcedure.query(() => getManualEftBankDetails()),
 

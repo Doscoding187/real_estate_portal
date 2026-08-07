@@ -140,69 +140,12 @@ export const subscriptionRouter = router({
    */
   createSubscription: protectedProcedure
     .input(createSubscriptionSchema)
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-
-      const plan = await subscriptionService.getPlanByPlanId(input.plan_id);
-      if (!plan) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Plan not found' });
-      }
-
-      // Here you would integrate with Stripe/Paystack
-      // For now, we'll create a basic subscription
-
-      const now = new Date();
-      const periodEnd = new Date(now);
-      if (input.billing_interval === 'yearly') {
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-      } else {
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-      }
-
-      const existing = await subscriptionService.getUserSubscription(getUserId(ctx));
-
-      if (existing) {
-        await db.execute(
-          `UPDATE user_subscriptions 
-           SET plan_id = ?, status = 'active_paid', amount_zar = ?, billing_interval = ?,
-               current_period_start = ?, current_period_end = ?, next_billing_date = ?, updated_at = NOW()
-           WHERE user_id = ?`,
-          [
-            input.plan_id,
-            plan.price_zar,
-            input.billing_interval,
-            now,
-            periodEnd,
-            periodEnd,
-            getUserId(ctx),
-          ],
-        );
-      } else {
-        await db.execute(
-          `INSERT INTO user_subscriptions 
-           (user_id, plan_id, status, amount_zar, billing_interval, current_period_start, current_period_end, next_billing_date)
-           VALUES (?, ?, 'active_paid', ?, ?, ?, ?, ?)`,
-          [
-            getUserId(ctx),
-            input.plan_id,
-            plan.price_zar,
-            input.billing_interval,
-            now,
-            periodEnd,
-            periodEnd,
-          ],
-        );
-      }
-
-      await subscriptionService.logSubscriptionEvent(getUserId(ctx), 'subscription_created', {
-        plan_id: input.plan_id,
-        amount: plan.price_zar,
+    .mutation(async () => {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Legacy paid subscription activation is disabled. Use the canonical billing authority and verified payment workflow.',
       });
-
-      const subscription = await subscriptionService.getUserSubscription(getUserId(ctx));
-      return { subscription, plan };
     }),
 
   /**

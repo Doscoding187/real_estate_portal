@@ -176,7 +176,7 @@ export async function expireTrial(userId: number): Promise<void> {
 
   // Downgrade to free/basic plan
   await db.execute(
-    `UPDATE user_subscriptions 
+    `UPDATE user_subscriptions
      SET plan_id = ?, status = 'trial_expired', previous_plan_id = ?, updated_at = NOW()
      WHERE user_id = ?`,
     [plan.downgrade_to_plan_id, subscription.plan_id, userId],
@@ -201,41 +201,28 @@ export async function upgradeSubscription(
   newPlanId: string,
   immediate: boolean = true,
 ): Promise<void> {
+  if (immediate) {
+    throw new Error(
+      'Legacy paid subscription upgrades are disabled. Use the canonical billing authority and verified payment workflow.',
+    );
+  }
+
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const subscription = await getUserSubscription(userId);
   if (!subscription) throw new Error('No active subscription');
 
-  const newPlan = await getPlanByPlanId(newPlanId);
-  if (!newPlan) throw new Error('Plan not found');
+  if (!(await getPlanByPlanId(newPlanId))) throw new Error('Plan not found');
 
-  if (immediate) {
-    await db.execute(
-      `UPDATE user_subscriptions 
-       SET plan_id = ?, status = 'active_paid', previous_plan_id = ?, updated_at = NOW()
-       WHERE user_id = ?`,
-      [newPlanId, subscription.plan_id, userId],
-    );
-
-    await logSubscriptionEvent(userId, 'subscription_upgraded', {
-      from_plan: subscription.plan_id,
-      to_plan: newPlanId,
-    });
-
-    // Update boost credits
-    if (newPlan.permissions.boost_credits) {
-      await updateBoostCredits(userId, newPlan.permissions.boost_credits);
-    }
-  } else {
-    // Schedule upgrade at period end
-    await db.execute(
-      `UPDATE user_subscriptions 
-       SET downgrade_scheduled = 0, updated_at = NOW()
-       WHERE user_id = ?`,
-      [userId],
-    );
-  }
+  // Preserve the non-paid compatibility operation: it only schedules a plan
+  // change and never represents successful payment or paid entitlement.
+  await db.execute(
+    `UPDATE user_subscriptions
+     SET downgrade_scheduled = 0, updated_at = NOW()
+     WHERE user_id = ?`,
+    [userId],
+  );
 }
 
 export async function downgradeSubscription(
@@ -401,20 +388,6 @@ async function initializeBoostCredits(userId: number, credits: number): Promise<
      VALUES (?, ?, 0, ?)
      ON DUPLICATE KEY UPDATE total_credits = ?, used_credits = 0, reset_at = ?`,
     [userId, credits, resetAt, credits, resetAt],
-  );
-}
-
-async function updateBoostCredits(userId: number, credits: number): Promise<void> {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const resetAt = new Date();
-  resetAt.setMonth(resetAt.getMonth() + 1);
-
-  await db.execute(
-    `UPDATE boost_credits SET total_credits = ?, reset_at = ?, updated_at = NOW()
-     WHERE user_id = ?`,
-    [credits, resetAt, userId],
   );
 }
 

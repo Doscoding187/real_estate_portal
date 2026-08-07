@@ -13,6 +13,19 @@ The recommended strategic boundary is Option B: Sponsored Placement Engine with 
 
 That recommendation remains a product hypothesis to prove. It should not be implemented as a universal Campaign Engine until the lifecycle evidence supports it.
 
+## S0 Canonical Commercial Authority Implementation
+
+The first Commercial Monetization S0 slice establishes the existing canonical billing family as the commercial nucleus; it does not introduce a parallel plan or payment system.
+
+- Public catalog reads are exposed through `billing.commercialCatalog` and project active public products from canonical `plans` plus `plan_entitlements`.
+- Prices are derived by the existing `billingFoundationService` calculation used by canonical manual-EFT invoicing. The catalog reports unsupported or incomplete pricing as unavailable rather than guessing or publishing UI-only overrides.
+- Benefits and limits are projected from the same entitlement defaults and `plan_entitlements` used by plan-access enforcement.
+- Successful paid state remains `canonical subscriptions + verified billing`; the agency manual-EFT invoice, proof, finance-review, activation and listing-entitlement path remains the payable authority.
+- The legacy paymentless paid-subscription creation, immediate-upgrade writes and local simulated webhook are contained. The legacy Stripe webhook is acknowledged without mutating its divergent legacy agency subscription/invoice records until an approved canonical provider adapter exists.
+- Public pricing surfaces, coupons, developer/provider/agent migrations, Search, Provincial Discovery and general campaign delivery remain deferred to later slices.
+
+This section records the implementation boundary; it does not approve final prices, VAT policy, public offers or a self-service advertising marketplace.
+
 ## Sponsored Placement Boundary Options
 
 | Option | Boundary | Strengths | Risks | Recommendation |

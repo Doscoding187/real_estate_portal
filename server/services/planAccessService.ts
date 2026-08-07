@@ -99,7 +99,7 @@ function parseJsonRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
-function parseEntitlementValue(value: unknown): EntitlementValue {
+export function parseEntitlementValue(value: unknown): EntitlementValue {
   if (value === null || value === undefined) return null;
   if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
     return value;

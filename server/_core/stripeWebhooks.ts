@@ -21,8 +21,29 @@ const emailService =
     ? MockEmailService
     : EmailService;
 
+/**
+ * The legacy Stripe handler writes agency_subscriptions, old invoices, and
+ * agency status columns. None of those records is the canonical paid-state
+ * authority used by billing entitlements. Keep the route acknowledged so a
+ * provider does not retry events, but do not let it create divergent
+ * commercial state until a canonical provider adapter is approved.
+ */
+export const LEGACY_STRIPE_WEBHOOK_DISABLED = true;
+
 // Webhook event handlers
 export const handleStripeWebhook = async (req: Request, res: Response) => {
+  if (LEGACY_STRIPE_WEBHOOK_DISABLED) {
+    console.warn(
+      '[CommercialAuthority] Legacy Stripe webhook disabled; event acknowledged without mutations.',
+    );
+    return res.status(200).json({
+      received: true,
+      status: 'legacy_stripe_disabled',
+      canonicalAuthority: 'canonical_billing',
+      mutationsApplied: 0,
+    });
+  }
+
   // Check if Stripe is configured
   if (!stripe) {
     console.warn('Stripe not configured, skipping webhook processing');

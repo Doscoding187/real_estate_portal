@@ -16,6 +16,11 @@ import { MockEmailService } from './_core/email/mockEmailService';
 import { ENV } from './_core/env';
 import { requireUser } from './_core/requireUser';
 
+// This local helper used to simulate a paid provider callback by mutating the
+// legacy agency shadow. Keep the route shape for local clients, but do not let
+// it create commercial state that resembles verified payment.
+export const LEGACY_DEV_WEBHOOK_DISABLED = true;
+
 export const devRouter = router({
   /**
    * Manually trigger webhook for local testing
@@ -30,7 +35,7 @@ export const devRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ENV.isProduction) {
+      if (ENV.isProduction || LEGACY_DEV_WEBHOOK_DISABLED) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Development endpoint unavailable' });
       }
 
