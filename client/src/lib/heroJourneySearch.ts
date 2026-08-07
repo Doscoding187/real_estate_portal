@@ -1,17 +1,15 @@
-import { isProvinceSearch, normalizeLocationKey } from './locationUtils';
+import { normalizeLocationKey } from './locationUtils';
 import { type SearchFilters } from './urlUtils';
 import type { LocationNode } from '@/types/location';
-import {
-  createSearchIntentValidation,
-  generateIntentUrl,
-  type SearchIntent,
-  type SearchIntentValidationCode,
-} from './searchIntent';
-import {
-  encodeCanonicalLocationId,
-  parseCanonicalLocationId,
-} from '../../../shared/locationAuthority';
+import { createSearchIntentValidation, type SearchIntentValidationCode } from './searchIntent';
 import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
+import {
+  buildTransactionalGeographyHref,
+  createCanonicalSearchLocation,
+  journeyForTransactionType,
+  type GeographySearchContext,
+} from './geographySearchHandoff';
+import type { SearchAreaSummary, SearchScope } from '../../../shared/searchScope';
 
 export const BUY_PROPERTY_TYPE_OPTIONS = [
   { value: 'house', label: 'House' },
@@ -31,6 +29,10 @@ const LEGACY_PROPERTY_TYPES = new Set([
 export interface PropertySearchInput {
   searchQuery?: string;
   selectedLocations?: readonly LocationNode[];
+  searchScope?: SearchScope;
+  searchAreaAvailability?: SearchAreaSummary['availability'];
+  localityRefinementId?: string;
+  searchScopeContext?: GeographySearchContext;
   propertyType?: string;
   minPrice?: string | number;
   maxPrice?: string | number;
@@ -101,70 +103,43 @@ function addSupportedLegacyFilters(input: PropertySearchInput, filters: SearchFi
   }
 }
 
-function addStructuredLocation(
-  location: LocationNode,
-  geography: SearchIntent['geography'],
-  requireCanonicalIdentity = false,
-) {
+function addStructuredLocation(location: LocationNode) {
   const slug = normalizeLocationKey(location.slug || location.name);
   if (!slug) return false;
 
-  const provinceSlug = normalizeLocationKey(location.provinceSlug || '');
-  const citySlug = normalizeLocationKey(location.citySlug || '');
-  const locationId = String(location.canonicalLocationId || location.id || '').trim();
-  const canonicalLocation = parseCanonicalLocationId(locationId);
-
-  if (
-    requireCanonicalIdentity &&
-    (!canonicalLocation || canonicalLocation.level !== location.type)
-  ) {
-    return false;
-  }
-
-  if (location.type === 'province') {
-    geography.level = 'province';
-    geography.province = slug;
-  } else if (location.type === 'city') {
-    geography.level = 'city';
-    geography.city = slug;
-    if (provinceSlug) geography.province = provinceSlug;
-  } else {
-    geography.level = 'suburb';
-    geography.suburb = slug;
-    if (citySlug) geography.city = citySlug;
-    if (provinceSlug) geography.province = provinceSlug;
-  }
-
-  if (canonicalLocation) {
-    geography.locationId = encodeCanonicalLocationId(canonicalLocation.level, canonicalLocation.id);
-  }
-  return true;
+  return createCanonicalSearchLocation({ ...location, slug });
 }
 
-function buildInvalidBuySearchUrl(code: SearchIntentValidationCode): string {
-  return generateIntentUrl({
-    transactionType: 'for-sale',
-    geography: { level: 'country' },
-    filters: {},
-    resultState: { sort: 'relevance', page: 0 },
-    defaults: { propertyCategory: 'residential', sort: 'relevance' },
-    routeMode: 'results',
-    validation: createSearchIntentValidation(code),
-  });
+function buildInvalidSearchUrl(transactionType: unknown, code: SearchIntentValidationCode): string {
+  const journey = journeyForTransactionType(transactionType);
+  if (!journey) return '/';
+
+  return (
+    buildTransactionalGeographyHref({
+      journey,
+      validation: createSearchIntentValidation(code),
+    }) || '/'
+  );
 }
 
 export function buildPropertySearchUrl({
   transactionType,
   searchQuery = '',
   selectedLocations = [],
+  searchScope,
+  searchAreaAvailability,
+  localityRefinementId,
+  searchScopeContext,
   propertyType,
   minPrice,
   maxPrice,
   minBedrooms,
   minBathrooms,
 }: PropertySearchInput & { transactionType: 'for-sale' | 'to-rent' }): string {
+  const journey = journeyForTransactionType(transactionType);
+  if (!journey) return '/';
+
   const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
-  const geography: SearchIntent['geography'] = { level: 'country' };
   const filters: SearchFilters = {};
 
   const filterInput = { propertyType, minPrice, maxPrice, minBedrooms, minBathrooms };
@@ -174,43 +149,32 @@ export function buildPropertySearchUrl({
     addSupportedLegacyFilters(filterInput, filters);
   }
 
-  if (transactionType === 'for-sale' && locations.length > 1) {
-    return buildInvalidBuySearchUrl('multiple-locations-unsupported');
+  if (locations.length > 1 || (locations.length > 0 && searchScope)) {
+    return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
   }
 
+  let canonicalSelection: { scope: SearchScope; context: GeographySearchContext } | undefined;
   if (locations.length > 0) {
-    const isCanonical = addStructuredLocation(
-      locations[0],
-      geography,
-      transactionType === 'for-sale',
-    );
-    if (transactionType === 'for-sale' && !isCanonical) {
-      return buildInvalidBuySearchUrl('canonical-location-required');
-    }
+    canonicalSelection = addStructuredLocation(locations[0]) || undefined;
+    if (!canonicalSelection)
+      return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
   } else if (transactionType === 'for-sale' && searchQuery.trim()) {
-    return buildInvalidBuySearchUrl('canonical-location-required');
-  } else {
-    const text = searchQuery.trim();
-    if (text) {
-      const province = isProvinceSearch(text);
-      if (province) {
-        geography.level = 'province';
-        geography.province = province;
-      } else {
-        geography.level = 'city';
-        geography.city = normalizeLocationKey(text);
-      }
-    }
+    return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
+  } else if (searchQuery.trim() && !searchScope) {
+    return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
   }
 
-  return generateIntentUrl({
-    transactionType,
-    geography,
-    filters,
-    resultState: { sort: 'relevance', page: 0 },
-    defaults: { propertyCategory: 'residential', sort: 'relevance' },
-    routeMode: 'results',
-  });
+  return (
+    buildTransactionalGeographyHref({
+      journey,
+      scope: searchScope || canonicalSelection?.scope,
+      searchAreaAvailability,
+      localityRefinementId,
+      context: searchScopeContext || canonicalSelection?.context,
+      filters,
+      resultState: { sort: 'relevance', page: 0 },
+    }) || '/'
+  );
 }
 
 export function buildBuySearchUrl(input: PropertySearchInput): string {

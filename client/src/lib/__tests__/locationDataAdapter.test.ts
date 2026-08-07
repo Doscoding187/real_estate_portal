@@ -276,9 +276,9 @@ describe('resolveLocationMenuCities', () => {
 });
 
 describe('FALLBACK_CITY_LINKS', () => {
-  it('is an array with 13 entries', () => {
+  it('is an array with 12 entries', () => {
     expect(Array.isArray(FALLBACK_CITY_LINKS)).toBe(true);
-    expect(FALLBACK_CITY_LINKS).toHaveLength(13);
+    expect(FALLBACK_CITY_LINKS).toHaveLength(12);
   });
 
   it('contains Johannesburg, Cape Town, Durban, Pretoria, Sandton', () => {
@@ -368,12 +368,12 @@ describe('FALLBACK_CITY_LINKS', () => {
     }
   });
 
-  it('the rent Cape Town entry uses the rent prefix', () => {
-    const rentCapeTown = FALLBACK_CITY_LINKS.find(
-      l => l.label === 'Cape Town' && l.href.startsWith('/property-to-rent'),
-    );
-    expect(rentCapeTown).toBeDefined();
-    expect(rentCapeTown!.href).toBe('/property-to-rent?city=cape-town&province=western-cape');
+  it('the Cape Town fallback remains neutral until a journey is selected', () => {
+    const capeTown = FALLBACK_CITY_LINKS.find(l => l.label === 'Cape Town');
+    expect(capeTown).toBeDefined();
+    expect(capeTown!.href).toBe('/western-cape/cape-town');
+    expect(capeTown!.href).not.toContain('/property-to-rent');
+    expect(capeTown!.href).not.toContain('/property-for-sale');
   });
 
   it('suburb fallback entries use full neutral province/city/suburb paths', () => {

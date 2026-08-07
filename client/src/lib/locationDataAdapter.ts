@@ -1,3 +1,9 @@
+import {
+  encodeCanonicalLocationId,
+  parseCanonicalLocationId,
+} from '../../../shared/locationAuthority';
+import { buildTransactionalGeographyHref } from './geographySearchHandoff';
+
 export type NavLocationType =
   | 'province'
   | 'city'
@@ -27,10 +33,6 @@ export interface PopularCitiesToNavLinksOptions extends CityToNavLinkOptions {
   limit?: number;
 }
 
-function transactionRoot(transactionType: 'sale' | 'rent'): string {
-  return transactionType === 'rent' ? '/property-to-rent' : '/property-for-sale';
-}
-
 function neutralLocationPath(provinceSlug: string, citySlug: string): string {
   return `/${provinceSlug}/${citySlug}`;
 }
@@ -57,7 +59,7 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
   },
   {
     label: 'Cape Town',
-    href: '/property-to-rent?city=cape-town&province=western-cape',
+    href: '/western-cape/cape-town',
     provinceSlug: 'western-cape',
     citySlug: 'cape-town',
     listingCount: undefined,
@@ -144,14 +146,6 @@ export const FALLBACK_CITY_LINKS: NavLocationLink[] = [
     listingCount: undefined,
     type: 'suburb',
   },
-  {
-    label: 'Cape Town',
-    href: '/western-cape/cape-town',
-    provinceSlug: 'western-cape',
-    citySlug: 'cape-town',
-    listingCount: undefined,
-    type: 'city',
-  },
 ];
 
 function resolveCityName(raw: Record<string, unknown>): string | null {
@@ -189,6 +183,20 @@ function resolveListingCount(raw: Record<string, unknown>): number | undefined {
   return Number.isFinite(num) && num >= 0 ? num : undefined;
 }
 
+function resolveCanonicalCityId(raw: Record<string, unknown>): string | undefined {
+  const candidate =
+    typeof raw.canonicalLocationId === 'string'
+      ? raw.canonicalLocationId
+      : typeof raw.id === 'number' && Number.isInteger(raw.id) && raw.id > 0
+        ? `city:${raw.id}`
+        : typeof raw.id === 'string'
+          ? raw.id
+          : undefined;
+
+  const parsed = parseCanonicalLocationId(candidate);
+  return parsed?.level === 'city' ? encodeCanonicalLocationId(parsed.level, parsed.id) : undefined;
+}
+
 export function cityToNavLink(
   city: unknown,
   options?: CityToNavLinkOptions,
@@ -206,19 +214,27 @@ export function cityToNavLink(
   if (!provinceSlug) return null;
 
   const txType = options?.transactionType ?? 'discovery';
-  const href =
-    txType === 'discovery'
-      ? neutralLocationPath(provinceSlug, slug)
-      : (() => {
-          const params = new URLSearchParams({
-            city: slug,
-            province: provinceSlug,
-          });
-          if (typeof raw.id === 'number' && Number.isInteger(raw.id)) {
-            params.set('locationId', `city:${raw.id}`);
-          }
-          return `${transactionRoot(txType)}?${params.toString()}`;
-        })();
+  if (txType === 'discovery') {
+    return {
+      label: name,
+      href: neutralLocationPath(provinceSlug, slug),
+      provinceSlug,
+      citySlug: slug,
+      listingCount,
+      type: 'city',
+    };
+  }
+
+  const canonicalLocationId = resolveCanonicalCityId(raw);
+  const href = canonicalLocationId
+    ? buildTransactionalGeographyHref({
+        journey: txType === 'rent' ? 'rent' : 'buy',
+        scope: { kind: 'metro_city', canonicalLocationId },
+        context: { province: provinceSlug, city: slug },
+      })
+    : undefined;
+
+  if (!href) return null;
 
   return {
     label: name,

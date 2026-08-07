@@ -90,6 +90,8 @@ export interface SearchFilters {
   suburb?: string;
   province?: string;
   locationId?: string; // Added to support P24 ID
+  searchAreaId?: string;
+  searchAreaAvailability?: import('../../../shared/searchScope').SearchAreaSummary['availability'];
   minPrice?: number;
   maxPrice?: number;
   minBedrooms?: number;
@@ -117,6 +119,10 @@ export interface SearchFilters {
 }
 
 import { generateIntentUrl, SearchIntent, type TransactionType } from './searchIntent';
+import {
+  buildTransactionalGeographyHref,
+  createCanonicalSearchScope,
+} from './geographySearchHandoff';
 import { toAbsoluteUrl } from './seo/structuredData';
 import { normalizeTransactionalResultState } from '../../../shared/transactionalSearchState';
 
@@ -151,6 +157,37 @@ function filtersToIntent(filters: SearchFilters): SearchIntent {
 
 // Generate SEO-friendly URL from filters
 export function generatePropertyUrl(filters: SearchFilters): string {
+  const journey =
+    filters.listingType === 'rent' ? 'rent' : filters.listingType === 'sale' ? 'buy' : undefined;
+  const scope = filters.searchAreaId
+    ? { kind: 'search_area' as const, searchAreaId: filters.searchAreaId }
+    : filters.locationId
+      ? createCanonicalSearchScope(filters.locationId)
+      : undefined;
+
+  if (filters.searchAreaId || (filters.locationId && journey)) {
+    if (!journey || !scope) return '/';
+
+    return (
+      buildTransactionalGeographyHref({
+        journey,
+        scope,
+        searchAreaAvailability: filters.searchAreaAvailability,
+        localityRefinementId: filters.searchAreaId ? filters.locationId : undefined,
+        context: {
+          province: filters.province,
+          city: filters.city,
+          suburb: filters.suburb,
+        },
+        filters,
+        resultState: {
+          sort: filters.sort as any,
+          page: filters.page as any,
+        },
+      }) || '/'
+    );
+  }
+
   // Use the single source of truth: searchIntent.ts
   const intent = filtersToIntent(filters);
   return generateIntentUrl(intent);
@@ -161,8 +198,6 @@ export function generatePropertyUrl(filters: SearchFilters): string {
  * This should return the "clean" URL without tracking params or transient state.
  */
 export function generateCanonicalUrl(filters: SearchFilters): string {
-  const intent = filtersToIntent(filters);
-
   // Canonical URL should be clean, maybe stripped of some filters?
   // P24 uses clean path + query params.
   // Spec says: "Any URL with query parameters... NoIndex" implied?
@@ -171,7 +206,7 @@ export function generateCanonicalUrl(filters: SearchFilters): string {
   // P24 canonical tags on search pages usually point to the version without sort orders etc., but keep vital filters.
   // For now, let's return the intent URL exactly as it represents the resource.
 
-  return toAbsoluteUrl(generateIntentUrl(intent));
+  return toAbsoluteUrl(generatePropertyUrl(filters));
 }
 
 // Parse URL params back to filters
