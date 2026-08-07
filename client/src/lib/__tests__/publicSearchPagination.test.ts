@@ -3,6 +3,7 @@ import {
   canAdvancePublicSearchPage,
   getPublicSearchReachablePageCount,
   isPublicSearchPageIndexAccepted,
+  normalizePublicSearchPageForTotal,
   PUBLIC_SEARCH_MAX_PAGE_INDEX,
   PUBLIC_SEARCH_MAX_REACHABLE_PAGES,
 } from '../../../../shared/publicSearchPagination';
@@ -26,5 +27,19 @@ describe('public search pagination contract', () => {
     expect(getPublicSearchReachablePageCount(25, 12)).toBe(3);
     expect(canAdvancePublicSearchPage(1, 25, 12)).toBe(true);
     expect(canAdvancePublicSearchPage(2, 25, 12)).toBe(false);
+  });
+
+  it('normalizes an overflow page to the final available page', () => {
+    expect(normalizePublicSearchPageForTotal(0, 25, 12)).toBe(0);
+    expect(normalizePublicSearchPageForTotal(2, 25, 12)).toBe(2);
+    expect(normalizePublicSearchPageForTotal(3, 25, 12)).toBe(2);
+    expect(normalizePublicSearchPageForTotal(101, 25, 12)).toBe(2);
+  });
+
+  it('keeps zero-result and malformed page state canonical', () => {
+    expect(normalizePublicSearchPageForTotal(101, 0, 12)).toBe(0);
+    expect(normalizePublicSearchPageForTotal(-1, 25, 12)).toBe(0);
+    expect(normalizePublicSearchPageForTotal(1.9, 25, 12)).toBe(1);
+    expect(normalizePublicSearchPageForTotal(0, 25, 12)).toBe(0);
   });
 });

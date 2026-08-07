@@ -30,6 +30,14 @@ interface PublicSearchInputLike {
 export function validatePublicSearchInput(
   input: PublicSearchInputLike,
 ): PublicSearchInputValidationIssue | undefined {
+  const listingType = input.listingType as unknown;
+  if (listingType !== undefined && listingType !== 'sale' && listingType !== 'rent') {
+    return {
+      path: 'listingType',
+      message: 'The public search journey must be Buy or Rent.',
+    };
+  }
+
   if (
     input.minPrice !== undefined &&
     input.maxPrice !== undefined &&

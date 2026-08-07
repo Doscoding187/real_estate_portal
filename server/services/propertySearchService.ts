@@ -971,6 +971,9 @@ export class PropertySearchService {
     if (filters.minBathrooms !== undefined) {
       conditions.push(gte(properties.bathrooms, filters.minBathrooms));
     }
+    if (filters.maxBathrooms !== undefined) {
+      conditions.push(lte(properties.bathrooms, filters.maxBathrooms));
+    }
 
     // Size filters (using area field for now)
     if (filters.minErfSize !== undefined) {

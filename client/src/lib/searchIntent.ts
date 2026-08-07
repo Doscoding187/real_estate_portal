@@ -415,9 +415,8 @@ export function resolveSearchIntent(
     });
   }
 
-  if (transactionType) {
-    filters.listingType = transactionType === 'to-rent' ? 'rent' : 'sale';
-  }
+  if (transactionType === 'for-sale') filters.listingType = 'sale';
+  if (transactionType === 'to-rent') filters.listingType = 'rent';
 
   return {
     transactionType,

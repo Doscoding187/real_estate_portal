@@ -28,6 +28,9 @@ interface DevelopmentDerivedListingFilters {
   minBedrooms?: number;
   maxBedrooms?: number;
   minBathrooms?: number;
+  maxBathrooms?: number;
+  minArea?: number;
+  maxArea?: number;
 }
 
 interface DevelopmentDerivedListingFilterCounts {
@@ -683,6 +686,15 @@ export class DevelopmentDerivedListingService {
           return null;
         }
 
+        const floorSize = toNumberOrNull(row.unitSize);
+        const erfSize = toNumberOrNull(row.yardSize);
+        const searchableArea = floorSize ?? erfSize;
+        if (filters.minArea !== undefined || filters.maxArea !== undefined) {
+          if (searchableArea === null) return null;
+          if (filters.minArea !== undefined && searchableArea < filters.minArea) return null;
+          if (filters.maxArea !== undefined && searchableArea > filters.maxArea) return null;
+        }
+
         if (searchAreaBoundary) {
           // Development records currently expose legacy suburb text rather
           // than a canonical suburb foreign key. Match only the exact names
@@ -734,14 +746,35 @@ export class DevelopmentDerivedListingService {
               ? null
               : toNumberOrNull(row.priceTo ?? row.basePriceTo);
 
-        if (filters.minPrice && price < filters.minPrice) return null;
-        if (filters.maxPrice && price > filters.maxPrice) return null;
+        if (filters.minPrice !== undefined && price < filters.minPrice) return null;
+        if (filters.maxPrice !== undefined && price > filters.maxPrice) return null;
 
         const bedrooms = toNumberOrNull(row.bedrooms) ?? undefined;
         const bathrooms = toNumberOrNull(row.bathrooms) ?? undefined;
-        if (filters.minBedrooms && (bedrooms ?? 0) < filters.minBedrooms) return null;
-        if (filters.maxBedrooms && (bedrooms ?? 0) > filters.maxBedrooms) return null;
-        if (filters.minBathrooms && (bathrooms ?? 0) < filters.minBathrooms) return null;
+        if (
+          filters.minBedrooms !== undefined &&
+          (bedrooms === undefined || bedrooms < filters.minBedrooms)
+        ) {
+          return null;
+        }
+        if (
+          filters.maxBedrooms !== undefined &&
+          (bedrooms === undefined || bedrooms > filters.maxBedrooms)
+        ) {
+          return null;
+        }
+        if (
+          filters.minBathrooms !== undefined &&
+          (bathrooms === undefined || bathrooms < filters.minBathrooms)
+        ) {
+          return null;
+        }
+        if (
+          filters.maxBathrooms !== undefined &&
+          (bathrooms === undefined || bathrooms > filters.maxBathrooms)
+        ) {
+          return null;
+        }
 
         const listedDate = new Date(row.unitCreatedAt || row.developmentCreatedAt || new Date());
         const mediaSignals = getMediaSignals(row.unitBaseMedia, row.developmentImages);
@@ -753,8 +786,8 @@ export class DevelopmentDerivedListingService {
         const description = deriveListingDescription(row);
         const highlights = deriveListingHighlights(row);
         const title = buildListingTitle(row, propertyType);
-        const floorSize = toNumberOrNull(row.unitSize) ?? undefined;
-        const erfSize = toNumberOrNull(row.yardSize) ?? undefined;
+        const normalizedFloorSize = floorSize ?? undefined;
+        const normalizedErfSize = erfSize ?? undefined;
         const availableUnits = toNumberOrNull(row.availableUnits) ?? undefined;
         const rankingScore = computeOrganicRankingScore({
           listedDate,
@@ -794,8 +827,8 @@ export class DevelopmentDerivedListingService {
           listingSource: 'development' as const,
           bedrooms,
           bathrooms,
-          floorSize,
-          erfSize,
+          floorSize: normalizedFloorSize,
+          erfSize: normalizedErfSize,
           description,
           highlights,
           image: mediaSignals.image,

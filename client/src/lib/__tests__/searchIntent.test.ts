@@ -75,6 +75,17 @@ describe('search intent location serialization', () => {
     expect(result.validation?.code).toBe('missing-transaction-intent');
   });
 
+  it('keeps Developments independent from transactional Buy/Rent filters', () => {
+    const result = resolveSearchIntent(
+      '/search',
+      {},
+      new URLSearchParams('intent=developments&city=johannesburg'),
+    );
+
+    expect(result.transactionType).toBe('developments');
+    expect(result.filters).not.toHaveProperty('listingType');
+  });
+
   it('accepts explicit Rent context on a compatibility path', () => {
     const result = resolveSearchIntent(
       '/properties',

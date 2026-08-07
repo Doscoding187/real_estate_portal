@@ -26,12 +26,18 @@ function QueryStateProbe() {
           sortOption: intent.resultState.sort,
           page: intent.resultState.page,
         }
-      : {
-          listingType: intent.transactionType === 'to-rent' ? 'rent' : 'sale',
-          searchAreaId: intent.geography.searchAreaId,
-          sortOption: intent.resultState.sort,
-          page: intent.resultState.page,
-        };
+      : intent.transactionType === 'to-rent'
+        ? {
+            listingType: 'rent',
+            searchAreaId: intent.geography.searchAreaId,
+            sortOption: intent.resultState.sort,
+            page: intent.resultState.page,
+          }
+        : {
+            searchAreaId: intent.geography.searchAreaId,
+            sortOption: intent.resultState.sort,
+            page: intent.resultState.page,
+          };
 
   return (
     <div>
@@ -141,5 +147,16 @@ describe('transactional result query reactivity', () => {
       searchAreaId: 'johannesburg-sandton',
     });
     expect(request).not.toHaveProperty('memberCanonicalLocationIds');
+  });
+
+  it('does not turn a missing or unsupported journey into a Buy request', () => {
+    for (const url of ['/gauteng?city=johannesburg', '/search?intent=developments']) {
+      window.history.replaceState({}, '', url);
+      render(<QueryStateProbe />);
+
+      const request = JSON.parse(screen.getByLabelText('public-request').textContent || '{}');
+      expect(request).not.toHaveProperty('listingType');
+      cleanup();
+    }
   });
 });

@@ -72,6 +72,7 @@ import {
 import {
   canAdvancePublicSearchPage,
   getPublicSearchReachablePageCount,
+  normalizePublicSearchPageForTotal,
   PUBLIC_SEARCH_MAX_PAGE_INDEX,
 } from '@/../../shared/publicSearchPagination';
 
@@ -264,6 +265,7 @@ export default function SearchResults({
   // is allowed to render.
   const publicSearchQueryInput = useMemo(() => {
     const isBuySearch = searchIntent.transactionType === 'for-sale';
+    const isRentSearch = searchIntent.transactionType === 'to-rent';
     const publicPropertyTypes = new Set([
       'apartment',
       'house',
@@ -302,9 +304,9 @@ export default function SearchResults({
       propertyType: isBuySearch ? buyFilters?.propertyType : propertyType,
       listingType: isBuySearch
         ? buyFilters?.listingType
-        : filters.listingType === 'rent'
+        : isRentSearch
           ? ('rent' as const)
-          : ('sale' as const),
+          : undefined,
       listingSource: isBuySearch ? buyFilters?.listingSource : filters.listingSource,
       minPrice: isBuySearch ? buyFilters?.minPrice : numericFilter(filters.minPrice),
       maxPrice: isBuySearch ? buyFilters?.maxPrice : numericFilter(filters.maxPrice),
@@ -332,14 +334,16 @@ export default function SearchResults({
     sortBy,
   ]);
 
+  const isTransactionalJourney =
+    searchIntent.transactionType === 'for-sale' || searchIntent.transactionType === 'to-rent';
+
   const {
     data: publicSearchResults,
     isLoading,
     error: publicSearchError,
   } = trpc.properties.searchPublicInventory.useQuery(publicSearchQueryInput, {
     retry: false,
-    enabled:
-      !isLegacyPropertiesRoute && Boolean(searchIntent.transactionType) && !searchIntent.validation,
+    enabled: !isLegacyPropertiesRoute && isTransactionalJourney && !searchIntent.validation,
   });
   const hasSearchError = Boolean(publicSearchError);
   // Filter metadata is intentionally omitted until it is calculated by the
@@ -349,8 +353,30 @@ export default function SearchResults({
   const renderedResults: SearchCardResult[] = (publicSearchResults?.cards ??
     []) as SearchCardResult[];
   const resultTotal = publicSearchResults?.total ?? 0;
+  const effectivePage = publicSearchResults
+    ? normalizePublicSearchPageForTotal(
+        publicSearchResults.page,
+        publicSearchResults.total,
+        publicSearchResults.pageSize,
+      )
+    : page;
   const locationContext = publicSearchResults?.locationContext;
   const locationMessage = publicSearchResults?.locationMessage ?? searchIntent.validation?.message;
+
+  useEffect(() => {
+    if (!publicSearchResults || effectivePage === page) return;
+
+    setLocation(
+      generateIntentUrl({
+        ...searchIntent,
+        resultState: {
+          ...searchIntent.resultState,
+          page: effectivePage,
+        },
+      }),
+      { replace: true },
+    );
+  }, [effectivePage, page, publicSearchResults, searchIntent, setLocation]);
 
   // Mutations
   const saveSearchMutation = trpc.savedSearch.create.useMutation({
@@ -548,10 +574,15 @@ export default function SearchResults({
 
           return {
             markerId:
-              card.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
+              card.kind === 'development'
+                ? -1 * (effectivePage * limit + index + 1)
+                : Number(card.id),
             href: card.href,
             property: {
-              id: card.kind === 'development' ? -1 * (page * limit + index + 1) : Number(card.id),
+              id:
+                card.kind === 'development'
+                  ? -1 * (effectivePage * limit + index + 1)
+                  : Number(card.id),
               title: card.title,
               price: card.price,
               propertyType: card.propertyType ?? 'unknown',
@@ -571,7 +602,7 @@ export default function SearchResults({
           };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null),
-    [limit, page, renderedResults],
+    [effectivePage, limit, renderedResults],
   );
 
   const resultCount = resultTotal;
@@ -579,7 +610,7 @@ export default function SearchResults({
   const pageTitle = useMemo(() => generatePageTitle(filters), [filters]);
   const pageDescription = useMemo(() => generateMetaDescription(filters), [filters]);
   const totalPages = getPublicSearchReachablePageCount(resultCount, limit);
-  const canAdvancePage = canAdvancePublicSearchPage(page, resultCount, limit);
+  const canAdvancePage = canAdvancePublicSearchPage(effectivePage, resultCount, limit);
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
 
@@ -754,19 +785,21 @@ export default function SearchResults({
                         <div className="flex items-center justify-center gap-4">
                           <Button
                             variant="outline"
-                            disabled={page === 0}
-                            onClick={() => handlePageChange(Math.max(0, page - 1))}
+                            disabled={effectivePage === 0}
+                            onClick={() => handlePageChange(Math.max(0, effectivePage - 1))}
                           >
                             Previous
                           </Button>
                           <span className="text-sm text-muted-foreground">
-                            Page {page + 1} of {Math.max(1, totalPages)}
+                            Page {effectivePage + 1} of {Math.max(1, totalPages)}
                           </span>
                           <Button
                             variant="outline"
                             disabled={!canAdvancePage}
                             onClick={() =>
-                              handlePageChange(Math.min(PUBLIC_SEARCH_MAX_PAGE_INDEX, page + 1))
+                              handlePageChange(
+                                Math.min(PUBLIC_SEARCH_MAX_PAGE_INDEX, effectivePage + 1),
+                              )
                             }
                           >
                             Next

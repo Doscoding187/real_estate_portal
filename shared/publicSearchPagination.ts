@@ -35,6 +35,32 @@ export function getPublicSearchReachablePageCount(total: number, pageSize: numbe
   );
 }
 
+/**
+ * Canonicalizes a page after the result universe is known.
+ *
+ * The public page cap is deliberately part of the reachable-page contract, so
+ * very large result sets retain their final capped page while smaller result
+ * sets normalize overflow to their actual last page.
+ */
+export function normalizePublicSearchPageForTotal(
+  page: unknown,
+  total: unknown,
+  pageSize: unknown,
+): number {
+  const normalizedPage = normalizePublicSearchPageIndex(page);
+  const normalizedTotal = Math.max(
+    0,
+    Math.floor(typeof total === 'number' && Number.isFinite(total) ? total : 0),
+  );
+  const reachablePageCount = getPublicSearchReachablePageCount(
+    normalizedTotal,
+    normalizePublicSearchPageSize(pageSize),
+  );
+
+  if (reachablePageCount === 0) return 0;
+  return Math.min(normalizedPage, reachablePageCount - 1);
+}
+
 export function canAdvancePublicSearchPage(page: number, total: number, pageSize: number): boolean {
   const pageCount = getPublicSearchReachablePageCount(total, pageSize);
   return isPublicSearchPageIndexAccepted(page) && page + 1 < pageCount;
