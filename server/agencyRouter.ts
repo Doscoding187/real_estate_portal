@@ -15,7 +15,6 @@ import {
   leadActivities,
   leads,
   plans,
-  agencySubscriptions,
   showings,
   subscriptions,
   properties,
@@ -3591,16 +3590,6 @@ export const agencyRouter = router({
       .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, user.agencyId)))
       .limit(1);
 
-    const [stripeSubscription] = await db
-      .select({
-        subscription: agencySubscriptions,
-        plan: plans,
-      })
-      .from(agencySubscriptions)
-      .leftJoin(plans, eq(agencySubscriptions.planId, plans.id))
-      .where(eq(agencySubscriptions.agencyId, user.agencyId))
-      .limit(1);
-
     const availablePlans = await db
       .select()
       .from(plans)
@@ -3614,7 +3603,6 @@ export const agencyRouter = router({
       },
       accessState,
       canonicalSubscription: canonicalSubscription || null,
-      stripeSubscription: stripeSubscription || null,
       plans: availablePlans,
     };
   }),

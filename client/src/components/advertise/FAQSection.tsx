@@ -19,21 +19,21 @@ const defaultFAQs: FAQ[] = [
     id: '1',
     question: 'How much does it cost to advertise on the platform?',
     answer:
-      'Pricing varies by partner type and plan tier. Agents can start from R499/month, developers from R2,999/month, and banks/service providers have custom enterprise plans. All plans include core features like listing promotion and lead management, with premium tiers offering advanced analytics and priority placement.',
+      'Current product pricing and next actions are shown in the commercial catalogue above. Some products are available through the assisted manual-EFT workflow, while other commercial paths are available by contacting our team.',
     order: 1,
   },
   {
     id: '2',
     question: 'What types of advertising opportunities are available?',
     answer:
-      'We offer multiple advertising formats including traditional property listings, Explore feed video ads, boost campaigns for increased visibility, featured placements on location pages, and sponsored content in our discovery engine. Each format is designed to reach high-intent property seekers at different stages of their journey.',
+      'Available commercial products are shown in the catalogue above. Product eligibility, benefits and activation terms come from the canonical commercial authority; contact our team about assisted products that are not yet listed publicly.',
     order: 2,
   },
   {
     id: '3',
     question: 'How do I get started with advertising?',
     answer:
-      'Getting started is simple: Create your partner profile, add your listings or content, and start receiving leads. Our onboarding team will guide you through the setup process, help optimize your profile, and provide training on our dashboard tools. Most partners are fully set up within 24-48 hours.',
+      'Choose an available product from the catalogue and follow its action. Agency products use the existing onboarding and manual-EFT invoice workflow; other products may require an assisted enquiry with our commercial team.',
     order: 3,
   },
   {
@@ -54,21 +54,21 @@ const defaultFAQs: FAQ[] = [
     id: '6',
     question: 'Can I manage multiple properties or developments?',
     answer:
-      'Yes! Our platform is built for scale. Agents can manage unlimited listings, developers can showcase multiple developments with unit-level detail, and agencies can collaborate with team members. All plans include bulk upload tools, media management, and centralized lead tracking.',
+      'The platform supports property and development workflows across the relevant participant types. Product-specific limits and included capabilities are shown only when they are configured in the commercial catalogue; contact our team if you need an assisted answer for your operation.',
     order: 6,
   },
   {
     id: '7',
     question: 'What kind of analytics and reporting do you provide?',
     answer:
-      'Our dashboard provides comprehensive analytics including views, engagement rates, lead conversion metrics, and ROI tracking. Premium plans include advanced insights like audience demographics, competitor benchmarking, and predictive analytics to optimize your advertising strategy.',
+      'Reporting availability depends on the product and entitlement configuration. The public catalogue shows authoritative benefits where they are configured, and our team can explain the current reporting path for an assisted commercial enquiry.',
     order: 7,
   },
   {
     id: '8',
     question: 'Is there a contract or can I cancel anytime?',
     answer:
-      'We offer flexible month-to-month plans with no long-term contracts. You can upgrade, downgrade, or cancel anytime. For annual commitments, we provide significant discounts (up to 20% off). Enterprise partners can discuss custom terms with our sales team.',
+      'Billing interval, cancellation and any applicable commercial terms are handled through the canonical billing workflow. The current MVP uses manual EFT, invoice evidence and finance verification; contact our team for the terms of a specific product.',
     order: 8,
   },
 ];

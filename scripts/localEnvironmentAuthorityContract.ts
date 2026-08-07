@@ -169,10 +169,6 @@ const CONTRACT_GROUPS: readonly ContractGroup[] = [
   ),
   group(
     [
-      'STRIPE_PUBLISHABLE_KEY',
-      'STRIPE_SECRET_KEY',
-      'STRIPE_WEBHOOK_SECRET',
-      'PAYSTACK_SECRET_KEY',
       'BILLING_EFT_ACCOUNT_NAME',
       'BILLING_EFT_ACCOUNT_NUMBER',
       'BILLING_EFT_ACCOUNT_TYPE',

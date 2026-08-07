@@ -29,30 +29,21 @@ describe('commercial monetization S0 authority containment', () => {
     expect(upgradeSection).not.toContain("status = 'active_paid'");
   });
 
-  it('acknowledges but does not apply legacy Stripe events', () => {
-    const source = readRepoFile('server/_core/stripeWebhooks.ts');
-    const handlerStart = source.indexOf('export const handleStripeWebhook');
-    const providerCheck = source.indexOf('// Check if Stripe is configured', handlerStart);
-    const guard = source.slice(handlerStart, providerCheck);
+  it('removes the historical Stripe webhook from the active server surface', () => {
+    const source = readRepoFile('server/_core/index.ts');
 
-    expect(source).toContain('export const LEGACY_STRIPE_WEBHOOK_DISABLED = true');
-    expect(guard).toContain('legacy_stripe_disabled');
-    expect(guard).toContain('canonicalAuthority');
-    expect(guard).toContain('mutationsApplied: 0');
-    expect(guard).not.toContain('.update(');
-    expect(guard).not.toContain('.insert(');
+    expect(source).not.toContain("from './stripeWebhooks'");
+    expect(source).not.toContain('/api/webhooks/stripe');
   });
 
-  it('keeps the local simulated webhook from creating paid-looking state', () => {
-    const source = readRepoFile('server/devRouter.ts');
-    const handlerStart = source.indexOf('triggerWebhookManual: protectedProcedure');
-    const mutationStart = source.indexOf('.mutation', handlerStart);
-    const agencyWrite = source.indexOf('.update(agencies)', mutationStart);
-    const guard = source.slice(mutationStart, agencyWrite);
+  it('does not expose a development payment-activation mutation', () => {
+    const router = readRepoFile('server/routers.ts');
+    const onboarding = readRepoFile('client/src/pages/OnboardingSuccess.tsx');
 
-    expect(source).toContain('export const LEGACY_DEV_WEBHOOK_DISABLED = true');
-    expect(guard).toContain('LEGACY_DEV_WEBHOOK_DISABLED');
-    expect(guard).toContain("code: 'NOT_FOUND'");
+    expect(router).not.toContain("import { devRouter } from './devRouter'");
+    expect(router).not.toContain('mutableAppRouterConfig.dev');
+    expect(onboarding).not.toContain('triggerWebhookManual');
+    expect(onboarding).not.toContain('Auto-triggering webhook');
   });
 
   it('exposes the catalog as a read-only canonical billing boundary', () => {

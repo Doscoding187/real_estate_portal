@@ -32,7 +32,6 @@ import { locationRouter } from './locationRouter';
 import { enhancedLocationRouter } from './enhancedLocationRouter';
 import { googleMapsRouter } from './googleMapsRouter';
 import { priceInsightsRouter } from './priceInsightsRouter';
-import { devRouter } from './devRouter';
 import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
@@ -1339,13 +1338,6 @@ const appRouterConfig = {
     }),
   }),
 } satisfies Parameters<typeof router>[0];
-
-const mutableAppRouterConfig = appRouterConfig as typeof appRouterConfig & {
-  dev?: typeof devRouter;
-};
-if (!ENV.isProduction) {
-  mutableAppRouterConfig.dev = devRouter;
-}
 
 export const appRouter = router(appRouterConfig);
 

@@ -21,10 +21,22 @@ The first Commercial Monetization S0 slice establishes the existing canonical bi
 - Prices are derived by the existing `billingFoundationService` calculation used by canonical manual-EFT invoicing. The catalog reports unsupported or incomplete pricing as unavailable rather than guessing or publishing UI-only overrides.
 - Benefits and limits are projected from the same entitlement defaults and `plan_entitlements` used by plan-access enforcement.
 - Successful paid state remains `canonical subscriptions + verified billing`; the agency manual-EFT invoice, proof, finance-review, activation and listing-entitlement path remains the payable authority.
-- The legacy paymentless paid-subscription creation, immediate-upgrade writes and local simulated webhook are contained. The legacy Stripe webhook is acknowledged without mutating its divergent legacy agency subscription/invoice records until an approved canonical provider adapter exists.
+- The legacy paymentless paid-subscription creation and immediate-upgrade writes are contained. The historical Stripe webhook and local simulated activation route are not part of the active server surface; no provider-specific paid state is authoritative.
 - Public pricing surfaces, coupons, developer/provider/agent migrations, Search, Provincial Discovery and general campaign delivery remain deferred to later slices.
 
 This section records the implementation boundary; it does not approve final prices, VAT policy, public offers or a self-service advertising marketplace.
+
+## S1 Canonical Public Commercial Surface
+
+The first public commercial surface now consumes the S0 authority rather than maintaining a second price catalogue.
+
+- `client/src/hooks/useCommercialCatalog.ts` is the typed client boundary for `billing.commercialCatalog`; it is read-only and does not start checkout or mutate account state.
+- `/advertise` renders the returned public products, canonical minor-unit prices, billing interval, plan benefits, entitlement limits and action mode. Loading, failure and empty states do not fall back to historical frontend prices.
+- The existing agency manual-EFT action is presented as agency onboarding; assisted/contact-sales products are not presented as instant checkout.
+- Historical Stripe runtime files, the Stripe webhook registration, the local paid-activation router, the legacy agency Stripe subscription projection and the unused Stripe package were removed from this workstream. Legacy tables and historical type/schema fields remain schema-retirement candidates and were not dropped.
+- The CMS pricing defaults and older subscription-plan surfaces remain outside the live `/advertise` path for a later adapt/retire decision; they are not canonical prices for the S1 surface.
+
+This section records the current implementation boundary. It does not introduce payment-provider integration, sponsored search, geography sponsorship or a campaign marketplace.
 
 ## Sponsored Placement Boundary Options
 
