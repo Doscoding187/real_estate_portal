@@ -40,6 +40,11 @@ import { PropertyServiceActions } from '@/components/property/PropertyServiceAct
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
 import { buildCanonicalSearchUrl } from '@/lib/searchNavigation';
+import {
+  getPrivateListingContactCopy,
+  isExplicitRentListing,
+  withRentalPeriod,
+} from '@/lib/rentPresentation';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { BondCalculator } from '@/components/BondCalculator';
@@ -127,6 +132,7 @@ interface PropertyPayload {
   title: string;
   description?: string;
   listingType?: SearchFilters['listingType'] | string;
+  transactionType?: string;
   province?: string;
   city?: string;
   suburb?: string;
@@ -375,6 +381,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const normalizedListerType = String(property.listerType || '')
     .trim()
     .toLowerCase();
+  const normalizedListingType = String(property.listingType || property.transactionType || '')
+    .trim()
+    .toLowerCase();
+  const isRentalListing = isExplicitRentListing(normalizedListingType);
+  const privateContactCopy = getPrivateListingContactCopy(normalizedListingType);
   const hasAgentIdentity = Boolean(agent?.id || agent?.name || property.agentId);
   const hasDeveloperIdentity = Boolean(developerBrand?.id || developerBrand?.brandName);
   const contactMode = hasAgentIdentity
@@ -386,7 +397,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         : 'unknown';
   const contactRoleLabel =
     contactMode === 'private'
-      ? 'Seller'
+      ? privateContactCopy.role
       : contactMode === 'developer'
         ? 'Developer'
         : contactMode === 'agent'
@@ -410,7 +421,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           ? {
               id: undefined,
               agencyId: undefined,
-              name: 'Private Seller',
+              name: privateContactCopy.identity,
               image: undefined,
               phone: undefined,
               whatsapp: undefined,
@@ -436,7 +447,23 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         : null
     : null;
 
-  const similarProperties = (similarPropertiesData ?? []).filter(p => p.id !== propertyId);
+  const similarProperties = (similarPropertiesData ?? []).filter(p => {
+    if (p.id === propertyId) return false;
+
+    // The detail page receives a broad legacy getAll feed. Keep the visible
+    // continuation in the same explicit transaction universe as the opened
+    // listing; do not let a rental detail silently recommend sale inventory.
+    if (normalizedListingType !== 'rent' && normalizedListingType !== 'sale') return true;
+
+    const candidateListingType = String(
+      (p as { listingType?: unknown; transactionType?: unknown }).listingType ||
+        (p as { listingType?: unknown; transactionType?: unknown }).transactionType ||
+        '',
+    )
+      .trim()
+      .toLowerCase();
+    return candidateListingType === normalizedListingType;
+  });
   const similarListingsQuery = new URLSearchParams();
   if (property.city) {
     similarListingsQuery.set('city', String(property.city));
@@ -523,13 +550,13 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           ? 'Verified Agent'
           : 'Registered Agent'
         : contactMode === 'private'
-          ? 'Owner Listed'
+          ? privateContactCopy.badge
           : null;
   const contactIntro =
     contactMode === 'developer'
       ? 'Reach the development contact for pricing, availability, and next steps.'
       : contactMode === 'private'
-        ? 'You are contacting the owner directly through Property Listify.'
+        ? privateContactCopy.intro
         : 'Connect directly with the agent handling this listing.';
   const agentAgencyLabel =
     contactMode === 'agent' ? String(contactIdentity?.agency || '').trim() || 'Independent' : '';
@@ -704,7 +731,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     { id: 'contact', label: 'Contact', enabled: contactMode !== 'unknown' },
     { id: 'location', label: 'Location' },
     { id: 'reviews', label: 'Reviews' },
-    { id: 'buyability-calculator', label: 'Calculator' },
+    ...(!isRentalListing ? [{ id: 'buyability-calculator', label: 'Calculator' }] : []),
   ].filter(item => item.enabled !== false);
   const scrollToSection = (sectionId: string) => {
     document.getElementById(sectionId)?.scrollIntoView({
@@ -834,17 +861,24 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           <aside
             id="overview"
             className="lg:col-span-5"
-            aria-label="Property price, qualification and buyer checks"
+            aria-label={
+              isRentalListing
+                ? 'Rental price and property details'
+                : 'Property price, qualification and buyer checks'
+            }
           >
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
               <div className="space-y-5 p-5 lg:p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                      Asking price
+                      {isRentalListing ? 'Monthly rent' : 'Asking price'}
                     </p>
                     <div className="mt-1 text-4xl font-extrabold leading-none tracking-tight text-slate-950">
-                      {formatCurrency(displayPrice, { compact: false })}
+                      {withRentalPeriod(
+                        formatCurrency(displayPrice, { compact: false }),
+                        normalizedListingType,
+                      )}
                     </div>
                   </div>
                   <Badge className="shrink-0 border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50">
@@ -853,27 +887,29 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                   </Badge>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-slate-500">Est. monthly repayment</p>
-                      <p className="mt-1 text-xs text-slate-500">Est. over 20 years at 10.5%</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-extrabold leading-none text-slate-950">
-                        {formatCurrency(displayRepayment, { compact: false })}
-                        <span className="text-xs font-semibold text-slate-500">/mo</span>
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-2 text-xs font-bold text-blue-700 transition hover:text-blue-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                        onClick={openQualification}
-                      >
-                        Get pre-qualified
-                      </button>
+                {!isRentalListing && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">Est. monthly repayment</p>
+                        <p className="mt-1 text-xs text-slate-500">Est. over 20 years at 10.5%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-extrabold leading-none text-slate-950">
+                          {formatCurrency(displayRepayment, { compact: false })}
+                          <span className="text-xs font-semibold text-slate-500">/mo</span>
+                        </p>
+                        <button
+                          type="button"
+                          className="mt-2 text-xs font-bold text-blue-700 transition hover:text-blue-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                          onClick={openQualification}
+                        >
+                          Get pre-qualified
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {propertyDetailItems.length > 0 && (
                   <div className="grid grid-cols-4 gap-2.5">
@@ -901,7 +937,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 {featureSpecItems.length > 0 && (
                   <div id="features" className="border-t border-slate-200 pt-5">
                     <div className="mb-4 flex items-end justify-between gap-3">
-                      <h2 className="text-sm font-extrabold text-slate-950">Key buyer checks</h2>
+                      <h2 className="text-sm font-extrabold text-slate-950">
+                        {isRentalListing ? 'Property details' : 'Key buyer checks'}
+                      </h2>
                       <p className="text-xs font-medium text-slate-500">
                         Comfort, utilities and security
                       </p>
@@ -942,18 +980,20 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
 
               {hasPrimaryContactAction && (
                 <div className="border-t border-slate-200 bg-white px-5 pb-5 lg:px-6 lg:pb-6">
-                  {qualificationStatusLabel && (
+                  {!isRentalListing && qualificationStatusLabel && (
                     <Badge className="mb-3 mt-5 border border-blue-200 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-50">
                       {qualificationStatusLabel}
                     </Badge>
                   )}
-                  <Button
-                    className="mt-2 h-12 w-full bg-orange-500 text-base font-bold text-white hover:bg-orange-600 focus-visible:ring-orange-500/30"
-                    onClick={openQualification}
-                  >
-                    <Shield className="mr-2 h-4 w-4" />
-                    Check if you qualify
-                  </Button>
+                  {!isRentalListing && (
+                    <Button
+                      className="mt-2 h-12 w-full bg-orange-500 text-base font-bold text-white hover:bg-orange-600 focus-visible:ring-orange-500/30"
+                      onClick={openQualification}
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      Check if you qualify
+                    </Button>
+                  )}
 
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     <Button
@@ -1006,10 +1046,14 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  Ownership & transaction details
+                  {isRentalListing
+                    ? 'Rental and property details'
+                    : 'Ownership & transaction details'}
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Seller-supplied figures. Confirm details before signing.
+                  {isRentalListing
+                    ? 'Listing-supplied details. Confirm availability and terms before agreeing.'
+                    : 'Seller-supplied figures. Confirm details before signing.'}
                 </p>
               </div>
             </div>
@@ -1401,12 +1445,17 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                     Ready to take the next step?
                   </p>
                   <div className="mt-2 text-2xl font-bold">
-                    {formatCurrency(displayPrice, { compact: false })}
+                    {withRentalPeriod(
+                      formatCurrency(displayPrice, { compact: false }),
+                      normalizedListingType,
+                    )}
                   </div>
-                  <p className="mt-1 text-sm text-slate-300">
-                    Est. {formatCurrency(displayRepayment, { compact: false })}/Pm
-                  </p>
-                  {qualificationStatusLabel && (
+                  {!isRentalListing && (
+                    <p className="mt-1 text-sm text-slate-300">
+                      Est. {formatCurrency(displayRepayment, { compact: false })}/mo
+                    </p>
+                  )}
+                  {!isRentalListing && qualificationStatusLabel && (
                     <Badge className="mt-3 border border-blue-300 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-50">
                       {qualificationStatusLabel}
                     </Badge>
@@ -1414,12 +1463,14 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 </div>
 
                 <div className="space-y-3 px-5 py-5">
-                  <Button
-                    className="h-11 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
-                    onClick={openQualification}
-                  >
-                    Check If You Qualify
-                  </Button>
+                  {!isRentalListing && (
+                    <Button
+                      className="h-11 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
+                      onClick={openQualification}
+                    >
+                      Check If You Qualify
+                    </Button>
+                  )}
                   {whatsappNumber && (
                     <Button
                       variant="outline"
@@ -1437,8 +1488,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                     Send Enquiry
                   </Button>
                   <p className="text-center text-xs leading-relaxed text-slate-500">
-                    Start with qualification, then enquire with your affordability context if you
-                    want a faster response.
+                    {isRentalListing
+                      ? 'Contact the listing representative about availability, viewings, and rental terms.'
+                      : 'Start with qualification, then enquire with your affordability context if you want a faster response.'}
                   </p>
                 </div>
               </div>
@@ -1556,7 +1608,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                       <>
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            {contactMode === 'developer' ? 'Developer Contact' : 'Seller Contact'}
+                            {contactMode === 'developer'
+                              ? 'Developer Contact'
+                              : contactMode === 'private'
+                                ? privateContactCopy.section
+                                : 'Listing Contact'}
                           </p>
                         </div>
                         <div className="flex items-start gap-4">
@@ -1649,7 +1705,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                       </>
                     )}
 
-                    {qualificationSnapshot && (
+                    {!isRentalListing && qualificationSnapshot && (
                       <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
                           Qualification Status
@@ -1667,23 +1723,27 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 </Card>
               )}
 
-              <div id="buyability-calculator">
-                <BondCalculator
-                  propertyPrice={displayPrice}
-                  showTransferCosts={true}
-                  compact={true}
-                  ctaLabel="Check If You Qualify"
-                  onCtaClick={openQualification}
-                />
-              </div>
+              {!isRentalListing && (
+                <>
+                  <div id="buyability-calculator">
+                    <BondCalculator
+                      propertyPrice={displayPrice}
+                      showTransferCosts={true}
+                      compact={true}
+                      ctaLabel="Check If You Qualify"
+                      onCtaClick={openQualification}
+                    />
+                  </div>
 
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-[11px] leading-relaxed text-amber-900">
-                  <strong>Disclaimer:</strong> These calculations are estimates only. Actual bond
-                  approval, interest rates, and transfer costs may vary based on individual
-                  circumstances and bank policies.
-                </p>
-              </div>
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-[11px] leading-relaxed text-amber-900">
+                      <strong>Disclaimer:</strong> These calculations are estimates only. Actual
+                      bond approval, interest rates, and transfer costs may vary based on individual
+                      circumstances and bank policies.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1757,7 +1817,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-lg font-bold text-slate-900">
-                            R {prop.price.toLocaleString()}
+                            {withRentalPeriod(
+                              `R ${prop.price.toLocaleString()}`,
+                              normalizedListingType,
+                            )}
                           </p>
                           {(prop.suburb || prop.city) && (
                             <p className="mt-1 text-xs text-slate-500">
@@ -1811,14 +1874,16 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       </div>
 
       {/* Modals */}
-      <PropertyQualificationDrawer
-        open={isQualificationOpen}
-        onOpenChange={setIsQualificationOpen}
-        propertyTitle={property.title}
-        propertyPrice={displayPrice}
-        onProceedToEnquiry={handleQualificationToEnquiry}
-        onProceedToWhatsApp={handleQualificationToWhatsApp}
-      />
+      {!isRentalListing && (
+        <PropertyQualificationDrawer
+          open={isQualificationOpen}
+          onOpenChange={setIsQualificationOpen}
+          propertyTitle={property.title}
+          propertyPrice={displayPrice}
+          onProceedToEnquiry={handleQualificationToEnquiry}
+          onProceedToWhatsApp={handleQualificationToWhatsApp}
+        />
+      )}
 
       <PropertyContactModal
         isOpen={isContactModalOpen}

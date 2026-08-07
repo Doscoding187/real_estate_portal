@@ -93,6 +93,28 @@ describe('PropertyCard - Property-Based Tests', () => {
     cleanup();
   });
 
+  it('qualifies an explicit Rent price as monthly and keeps unsupported values neutral', () => {
+    const baseProps: PropertyCardProps = {
+      id: 'rent-card',
+      title: 'Rental apartment',
+      price: 12000,
+      location: 'Rosebank, Johannesburg',
+      image: 'https://example.com/rent.jpg',
+      listingType: 'rent',
+      listerType: 'private',
+    };
+
+    render(<PropertyCard {...baseProps} />);
+    expect(screen.getByText(/R\s*12[\s,]000 \/ month/)).toBeInTheDocument();
+    expect(screen.getByText('Private Advertiser')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Contact Advertiser' })).toBeInTheDocument();
+    expect(screen.queryByText('Private Seller')).not.toBeInTheDocument();
+
+    cleanup();
+    render(<PropertyCard {...baseProps} listingType="shared_living" />);
+    expect(screen.getByText(/R\s*12[\s,]000(?! \/ month)/)).toBeInTheDocument();
+  });
+
   /**
    * Property Test 10: Required field display
    *
@@ -202,7 +224,10 @@ describe('PropertyCard - Property-Based Tests', () => {
             cleanup();
             render(<PropertyCard {...props} />);
 
-            const expectedArea = `${Number(props.area).toLocaleString('en-ZA')} m²`.replace(/\s+/g, ' ');
+            const expectedArea = `${Number(props.area).toLocaleString('en-ZA')} m²`.replace(
+              /\s+/g,
+              ' ',
+            );
             const areaText = screen.getByText(content => {
               return content.replace(/\s+/g, ' ').includes(expectedArea);
             });

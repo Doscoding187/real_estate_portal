@@ -779,7 +779,11 @@ export default function SearchResults({
                   allowedPropertyTypes={
                     searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
                   }
-                  showAmenities={searchIntent.transactionType !== 'for-sale'}
+                  // Public Buy/Rent inventory does not yet expose an
+                  // authoritative amenities predicate. Do not render a
+                  // Rent control that would be accepted by the URL but
+                  // ignored by the public query.
+                  showAmenities={false}
                   showLocationRefinement={searchIntent.transactionType !== 'for-sale'}
                 />
               </div>
@@ -856,6 +860,7 @@ export default function SearchResults({
                                 location: card.location,
                                 price: card.price,
                                 image: resolveCardImage(card),
+                                listingType: card.listingType,
                                 development: card.development,
                                 area: card.area,
                                 bedrooms: card.bedrooms,
@@ -978,7 +983,9 @@ export default function SearchResults({
         allowedPropertyTypes={
           searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
         }
-        showAmenities={searchIntent.transactionType !== 'for-sale'}
+        // Keep unsupported amenities out of the public Rent contract until
+        // the same predicate can feed both result and count queries.
+        showAmenities={false}
         showLocationRefinement={searchIntent.transactionType !== 'for-sale'}
       />
 

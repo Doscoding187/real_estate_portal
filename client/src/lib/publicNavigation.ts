@@ -139,7 +139,10 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     label: 'Shared Living',
     mobileLabel: 'Shared Living',
     kind: 'property-search',
-    destination: '/property-to-rent',
+    // Shared Living has an independent journey identity, but its executable
+    // search contract is not part of the public Buy/Rent runtime yet.
+    // Keep the definition neutral until that journey has its own authority.
+    destination: '/',
     homepageVisible: false,
     homepageEnabled: false,
     supportedFields: ['location', 'roomType', 'minPrice', 'maxPrice'],
@@ -420,7 +423,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
       capability: 'LAUNCH_READY',
       activeHref: '/property-to-rent',
     }),
-    actionItemIds: ['renters-shared-living'],
     groups: [
       {
         label: 'Know your rental options',
@@ -474,10 +476,9 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             id: 'renters-shared-living',
             label: 'Rooms and shared living',
             footerLabel: 'Explore shared living',
-            href: `${getPublicHeroJourney('shared_living').destination}?propertyType=shared_living`,
-            owner: 'rental-search',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/property-to-rent',
+            href: getPublicHeroJourney('shared_living').destination,
+            owner: 'shared-living-search',
+            capability: 'DEFERRED',
           }),
           destination({
             id: 'renters-commercial',

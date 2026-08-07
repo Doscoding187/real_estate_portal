@@ -1,11 +1,5 @@
 import { Button } from './ui/button';
-import {
-  Heart,
-  MapPin,
-  Image as ImageIcon,
-  PlayCircle,
-  Home,
-} from 'lucide-react';
+import { Heart, MapPin, Image as ImageIcon, PlayCircle, Home } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
@@ -14,6 +8,11 @@ import { ResponsiveHighlights } from './ResponsiveHighlights';
 import { getCompactPropertyFacts } from '@/lib/property';
 import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import { FallbackImage } from './FallbackImage';
+import {
+  getPrivateListingContactCopy,
+  isExplicitRentListing,
+  withRentalPeriod,
+} from '@/lib/rentPresentation';
 
 interface ImageUrls {
   thumbnail: string;
@@ -121,13 +120,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           : 'manual';
   const resolvedListerType =
     listerType ||
-    (agent
-      ? 'agent'
-      : resolvedListingSource === 'development'
-        ? undefined
-        : 'private');
+    (agent ? 'agent' : resolvedListingSource === 'development' ? undefined : 'private');
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
+  const isRentalListing = isExplicitRentListing(listingType);
+  const privateContactCopy = getPrivateListingContactCopy(listingType);
   const developmentHref = development?.slug
     ? `/development/${development.slug}`
     : development?.id
@@ -151,16 +148,21 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   const priceLabel =
     price > 0
       ? isDevelopmentListing
-        ? `From ${formatCurrency(price)}`
-        : formatCurrency(price)
+        ? withRentalPeriod(`From ${formatCurrency(price)}`, listingType)
+        : withRentalPeriod(formatCurrency(price), listingType)
       : 'Price on request';
   const contactButtonLabel = isDevelopmentListing
     ? 'Contact Developer'
     : isPrivateListing
-      ? 'Contact Seller'
+      ? privateContactCopy.action
       : 'Contact Agent';
   const displayBadges = Array.isArray(badges)
-    ? badges.filter(badge => !String(badge || '').toLowerCase().startsWith('part of '))
+    ? badges.filter(
+        badge =>
+          !String(badge || '')
+            .toLowerCase()
+            .startsWith('part of '),
+      )
     : [];
   const compactFacts = getCompactPropertyFacts(
     {
@@ -205,47 +207,47 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Badges - Top Left */}
         {!suppressBadges && (
           <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-          {/* Status Badge (Transactional) */}
-          {status && status !== 'Available' && (
-            <Badge
-              className={`border-0 backdrop-blur-md shadow-sm ${
-                status.toLowerCase().includes('sold')
-                  ? 'bg-red-600/90 text-white'
-                  : status.toLowerCase().includes('offer')
-                    ? 'bg-orange-600/90 text-white'
-                    : 'bg-emerald-600/90 text-white'
-              }`}
-            >
-              {status}
-            </Badge>
-          )}
-
-          {/* Property Type Badge */}
-          {propertyType && (
-            <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-900 border-0 shadow-sm font-semibold">
-              {propertyType}
-            </Badge>
-          )}
-
-          {/* Dynamic Badges */}
-          {displayBadges.map((badge, index) => {
-            const lower = badge.toLowerCase();
-            let colorClass = 'bg-blue-600/90 text-white'; // Default Marketing
-
-            if (lower.includes('price') || lower.includes('deal') || lower.includes('reduced')) {
-              colorClass = 'bg-emerald-600/90 text-white'; // Financial
-            } else if (lower.includes('exclusive') || lower.includes('new')) {
-              colorClass = 'bg-indigo-600/90 text-white'; // Marketing/Exclusive
-            } else if (lower.includes('sold') || lower.includes('archived')) {
-              colorClass = 'bg-slate-800/90 text-white'; // Inactive
-            }
-
-            return (
-              <Badge key={index} className={`${colorClass} backdrop-blur-sm border-0 shadow-sm`}>
-                {badge}
+            {/* Status Badge (Transactional) */}
+            {status && status !== 'Available' && (
+              <Badge
+                className={`border-0 backdrop-blur-md shadow-sm ${
+                  status.toLowerCase().includes('sold')
+                    ? 'bg-red-600/90 text-white'
+                    : status.toLowerCase().includes('offer')
+                      ? 'bg-orange-600/90 text-white'
+                      : 'bg-emerald-600/90 text-white'
+                }`}
+              >
+                {status}
               </Badge>
-            );
-          })}
+            )}
+
+            {/* Property Type Badge */}
+            {propertyType && (
+              <Badge className="bg-white/90 backdrop-blur-sm hover:bg-white text-slate-900 border-0 shadow-sm font-semibold">
+                {propertyType}
+              </Badge>
+            )}
+
+            {/* Dynamic Badges */}
+            {displayBadges.map((badge, index) => {
+              const lower = badge.toLowerCase();
+              let colorClass = 'bg-blue-600/90 text-white'; // Default Marketing
+
+              if (lower.includes('price') || lower.includes('deal') || lower.includes('reduced')) {
+                colorClass = 'bg-emerald-600/90 text-white'; // Financial
+              } else if (lower.includes('exclusive') || lower.includes('new')) {
+                colorClass = 'bg-indigo-600/90 text-white'; // Marketing/Exclusive
+              } else if (lower.includes('sold') || lower.includes('archived')) {
+                colorClass = 'bg-slate-800/90 text-white'; // Inactive
+              }
+
+              return (
+                <Badge key={index} className={`${colorClass} backdrop-blur-sm border-0 shadow-sm`}>
+                  {badge}
+                </Badge>
+              );
+            })}
           </div>
         )}
 
@@ -440,8 +442,12 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                   PS
                 </div>
                 <div>
-                  <div className="text-xs font-medium text-slate-900">Private Seller</div>
-                  <div className="text-[10px] text-slate-500">Private listing</div>
+                  <div className="text-xs font-medium text-slate-900">
+                    {privateContactCopy.identity}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {isRentalListing ? 'Private rental listing' : 'Private listing'}
+                  </div>
                 </div>
               </>
             )}
