@@ -1,4 +1,4 @@
-import { Building2, Home, MapPin, Search, SlidersHorizontal } from 'lucide-react';
+import { Building2, Home, MapPin, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Empty,
@@ -10,103 +10,96 @@ import {
 } from '@/components/ui/empty';
 import type { SearchFilters } from '@/lib/urlUtils';
 
-interface SearchResultsEmptyStateProps {
-  filters: SearchFilters;
-  locationContext?: {
-    type?: 'province' | 'city' | 'suburb';
-    hierarchy?: {
-      province?: string;
-      city?: string;
-      suburb?: string;
-    };
-    ids?: {
-      cityId?: string;
-    };
-  } | null;
-  locationMessage?: string;
-  onClearAllFilters: () => void;
-  onSwitchToSource: (source?: SearchFilters['listingSource']) => void;
-  onBroadenToCity?: () => void;
-  onBroadenToProvince?: () => void;
+export interface SearchFilterRecoveryAction {
+  key: string;
+  label: string;
+  keys: readonly string[];
 }
 
-function getEmptyStateCopy(filters: SearchFilters) {
-  if (filters.listingSource === 'manual') {
-    return {
-      icon: Home,
-      title: 'No property listings match this search',
-      description:
-        'There are no agent or private property listings matching these filters right now. Try broadening the search or switch to new developments in this area.',
-      primaryActionLabel: 'Show New Developments',
-      primaryActionSource: 'development' as const,
-    };
-  }
+function hasActiveFilter(filters: SearchFilters, keys: readonly string[]) {
+  return keys.some(key => {
+    const value = filters[key];
+    if (value === undefined || value === null || value === '') return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'boolean') return value;
+    return true;
+  });
+}
 
-  if (filters.listingSource === 'development') {
-    return {
-      icon: Building2,
-      title: 'No new developments match this search',
-      description:
-        'There are no development unit listings matching these filters right now. Try broadening the search or switch back to individual property listings.',
-      primaryActionLabel: 'Show Property Listings',
-      primaryActionSource: 'manual' as const,
-    };
-  }
+export function getZeroResultFilterActions(filters: SearchFilters): SearchFilterRecoveryAction[] {
+  const groups = [
+    { key: 'price', label: 'Clear price range', keys: ['minPrice', 'maxPrice'] },
+    { key: 'bedrooms', label: 'Clear bedroom filter', keys: ['minBedrooms', 'maxBedrooms'] },
+    { key: 'bathrooms', label: 'Clear bathroom filter', keys: ['minBathrooms', 'maxBathrooms'] },
+    { key: 'area', label: 'Clear size filter', keys: ['minArea', 'maxArea'] },
+    { key: 'propertyType', label: 'Clear property type', keys: ['propertyType'] },
+    { key: 'furnished', label: 'Clear furnished filter', keys: ['furnished'] },
+    { key: 'amenities', label: 'Clear amenities', keys: ['amenities'] },
+  ] as const;
 
-  return {
-    icon: Search,
-    title: 'No matching properties found',
-    description:
-      'We could not find any property listings or development inventory matching this exact search. Try clearing some filters or broadening the area.',
-    primaryActionLabel: 'Clear Filters & Broaden Search',
-    primaryActionSource: undefined,
-  };
+  return groups.filter(group => hasActiveFilter(filters, group.keys));
+}
+
+interface SearchResultsEmptyStateProps {
+  filters: SearchFilters;
+  transactionType: 'for-sale' | 'to-rent';
+  searchDescription: string;
+  onClearAllFilters: () => void;
+  onClearFilterKeys: (keys: readonly string[]) => void;
+  onSwitchToSource: (source?: SearchFilters['listingSource']) => void;
+  onChangeLocations?: () => void;
+  onBroadenToParent?: () => void;
+  parentRecoveryLabel?: string;
+  onStartOver?: () => void;
+}
+
+function getJourneyLabel(transactionType: SearchResultsEmptyStateProps['transactionType']) {
+  return transactionType === 'for-sale' ? 'homes for sale' : 'rentals';
 }
 
 export function SearchResultsEmptyState({
   filters,
-  locationContext,
+  transactionType,
+  searchDescription,
   onClearAllFilters,
+  onClearFilterKeys,
   onSwitchToSource,
-  onBroadenToCity,
-  onBroadenToProvince,
-  locationMessage,
+  onChangeLocations,
+  onBroadenToParent,
+  parentRecoveryLabel,
+  onStartOver,
 }: SearchResultsEmptyStateProps) {
-  const copy = getEmptyStateCopy(filters);
-  const Icon = copy.icon;
+  const filterRecoveryActions = getZeroResultFilterActions(filters);
+  const journeyLabel = getJourneyLabel(transactionType);
 
   return (
-    <Empty className="mx-auto max-w-2xl border border-slate-200 bg-white py-14">
+    <Empty
+      role="status"
+      data-testid="search-results-zero-state"
+      className="mx-auto max-w-2xl border border-slate-200 bg-white py-14"
+    >
       <EmptyHeader>
         <EmptyMedia variant="icon" className="bg-slate-100 text-slate-500">
-          <Icon className="h-6 w-6" />
+          <Search className="h-6 w-6" />
         </EmptyMedia>
-        <EmptyTitle className="text-slate-900">{copy.title}</EmptyTitle>
-        <EmptyDescription className="max-w-lg text-slate-600">
-          {locationMessage || copy.description}
-        </EmptyDescription>
+        <EmptyTitle className="text-slate-900">No matching {journeyLabel}</EmptyTitle>
+        <EmptyDescription className="max-w-lg text-slate-600">{searchDescription}</EmptyDescription>
       </EmptyHeader>
 
       <EmptyContent className="max-w-xl">
+        <p className="text-sm font-medium text-slate-700">Try adjusting your search:</p>
+
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-          {copy.primaryActionSource ? (
+          {filterRecoveryActions.map(action => (
             <Button
-              className="w-full gap-2 sm:w-auto"
-              onClick={() => onSwitchToSource(copy.primaryActionSource)}
+              key={action.key}
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => onClearFilterKeys(action.keys)}
             >
-              {copy.primaryActionSource === 'development' ? (
-                <Building2 className="h-4 w-4" />
-              ) : (
-                <Home className="h-4 w-4" />
-              )}
-              {copy.primaryActionLabel}
+              {action.label}
             </Button>
-          ) : (
-            <Button className="w-full gap-2 sm:w-auto" onClick={onClearAllFilters}>
-              <SlidersHorizontal className="h-4 w-4" />
-              {copy.primaryActionLabel}
-            </Button>
-          )}
+          ))}
 
           {filters.listingSource && (
             <Button
@@ -114,40 +107,105 @@ export function SearchResultsEmptyState({
               className="w-full sm:w-auto"
               onClick={() => onSwitchToSource(undefined)}
             >
-              Show All Results
+              Show all sources
             </Button>
           )}
 
-          <Button variant="outline" className="w-full sm:w-auto" onClick={onClearAllFilters}>
-            Clear Search Filters
+          <Button className="w-full gap-2 sm:w-auto" onClick={onClearAllFilters}>
+            <SlidersHorizontal className="h-4 w-4" />
+            Clear all filters
           </Button>
         </div>
 
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-          {locationContext?.type === 'suburb' &&
-            locationContext.ids?.cityId &&
-            locationContext.hierarchy?.city &&
-            onBroadenToCity && (
-              <Button variant="secondary" className="w-full gap-2 sm:w-auto" onClick={onBroadenToCity}>
-                <MapPin className="h-4 w-4" />
-                Search all {locationContext.hierarchy.city}
-              </Button>
-            )}
+        <div className="flex w-full flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:flex-wrap sm:justify-center">
+          {onChangeLocations && (
+            <Button
+              variant="secondary"
+              className="w-full gap-2 sm:w-auto"
+              onClick={onChangeLocations}
+            >
+              <MapPin className="h-4 w-4" />
+              Change locations
+            </Button>
+          )}
 
-          {locationContext?.type === 'city' &&
-            locationContext.hierarchy?.province &&
-            onBroadenToProvince && (
-              <Button
-                variant="secondary"
-                className="w-full gap-2 sm:w-auto"
-                onClick={onBroadenToProvince}
-              >
-                <MapPin className="h-4 w-4" />
-                Search all {locationContext.hierarchy.province}
-              </Button>
-            )}
+          {onBroadenToParent && parentRecoveryLabel && (
+            <Button
+              variant="secondary"
+              className="w-full gap-2 sm:w-auto"
+              onClick={onBroadenToParent}
+            >
+              <MapPin className="h-4 w-4" />
+              Search all {parentRecoveryLabel}
+            </Button>
+          )}
+
+          {filters.listingSource === 'manual' && (
+            <Button
+              variant="outline"
+              className="w-full gap-2 sm:w-auto"
+              onClick={() => onSwitchToSource('development')}
+            >
+              <Building2 className="h-4 w-4" />
+              Show new developments
+            </Button>
+          )}
+
+          {filters.listingSource === 'development' && (
+            <Button
+              variant="outline"
+              className="w-full gap-2 sm:w-auto"
+              onClick={() => onSwitchToSource('manual')}
+            >
+              <Home className="h-4 w-4" />
+              Show property listings
+            </Button>
+          )}
+
+          {onStartOver && (
+            <Button variant="ghost" className="w-full gap-2 sm:w-auto" onClick={onStartOver}>
+              <RotateCcw className="h-4 w-4" />
+              Start a new search
+            </Button>
+          )}
         </div>
       </EmptyContent>
+    </Empty>
+  );
+}
+
+interface SearchResultsUnavailableStateProps {
+  title: string;
+  description: string;
+  onStartOver?: () => void;
+}
+
+export function SearchResultsUnavailableState({
+  title,
+  description,
+  onStartOver,
+}: SearchResultsUnavailableStateProps) {
+  return (
+    <Empty
+      role="alert"
+      data-testid="search-results-unavailable-state"
+      className="mx-auto max-w-2xl border border-amber-200 bg-amber-50 py-14"
+    >
+      <EmptyHeader>
+        <EmptyMedia variant="icon" className="bg-amber-100 text-amber-700">
+          <Search className="h-6 w-6" />
+        </EmptyMedia>
+        <EmptyTitle className="text-amber-950">{title}</EmptyTitle>
+        <EmptyDescription className="max-w-lg text-amber-900">{description}</EmptyDescription>
+      </EmptyHeader>
+
+      {onStartOver && (
+        <EmptyContent>
+          <Button variant="outline" onClick={onStartOver}>
+            Start a new search
+          </Button>
+        </EmptyContent>
+      )}
     </Empty>
   );
 }

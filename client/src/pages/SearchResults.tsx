@@ -50,7 +50,10 @@ import {
   ViewMode,
   SortOption,
 } from '@/components/search';
-import { SearchResultsEmptyState } from '@/components/search/SearchResultsEmptyState';
+import {
+  SearchResultsEmptyState,
+  SearchResultsUnavailableState,
+} from '@/components/search/SearchResultsEmptyState';
 import { SearchFallbackNotice } from '@/components/search/SearchFallbackNotice';
 import { ListingResultCard } from '@/components/property-results/ListingResultCard';
 
@@ -64,6 +67,14 @@ import {
   unslugify,
 } from '@/lib/urlUtils';
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
+import {
+  buildParentRecoveryIntent,
+  buildZeroResultDescription,
+  clearAllOptionalSearchFilters,
+  clearSearchIntentFilters,
+  getExplicitParentRecoveryTarget,
+  getSearchResultsDisplayState,
+} from '@/lib/searchZeroResultRecovery';
 import { buildPropertiesCompatibilityRedirect } from '@/lib/searchNavigation';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/locationAuthority';
@@ -381,6 +392,10 @@ export default function SearchResults({
     : page;
   const locationContext = publicSearchResults?.locationContext;
   const locationMessage = publicSearchResults?.locationMessage ?? searchIntent.validation?.message;
+  const searchAreaContext = publicSearchResults?.searchAreaContext;
+  const searchAreaContexts = publicSearchResults?.searchAreaContexts;
+  const multiLocationContext = publicSearchResults?.multiLocationContext;
+  const pageNeedsNormalization = Boolean(publicSearchResults && effectivePage !== page);
   const navbarLocations = useMemo(() => {
     const multiContext = publicSearchResults?.multiLocationContext;
     if (multiContext) {
@@ -406,6 +421,28 @@ export default function SearchResults({
     publicSearchResults?.locationContext,
     publicSearchResults?.multiLocationContext,
   ]);
+
+  const zeroResultDescription = useMemo(() => {
+    if (searchIntent.transactionType !== 'for-sale' && searchIntent.transactionType !== 'to-rent') {
+      return '';
+    }
+
+    return buildZeroResultDescription({
+      transactionType: searchIntent.transactionType,
+      locationName: locationContext?.name,
+      locationNames: multiLocationContext?.locations.map(location => location.name),
+      searchAreaName:
+        searchAreaContext?.label || searchAreaContexts?.map(context => context.label).join(' and '),
+    });
+  }, [
+    locationContext?.name,
+    multiLocationContext?.locations,
+    searchAreaContext?.label,
+    searchAreaContexts,
+    searchIntent.transactionType,
+  ]);
+
+  const parentRecoveryTarget = getExplicitParentRecoveryTarget(locationContext, searchAreaContext);
 
   useEffect(() => {
     if (!publicSearchResults || effectivePage === page) return;
@@ -475,32 +512,32 @@ export default function SearchResults({
 
   // This is a special handler for "active chips" removal which might be cleaner
   const handleRemoveFilter = (key: keyof SearchFilters) => {
-    const nextFilters = { ...searchIntent.filters };
-    delete nextFilters[key];
+    setLocation(generateIntentUrl(clearSearchIntentFilters(searchIntent, [String(key)])));
+  };
 
-    // Recursively remove from URL state
-    const updatedIntent = {
-      ...searchIntent,
-      filters: nextFilters,
-      resultState: {
-        ...searchIntent.resultState,
-        page: 0,
-      },
-    };
-    setLocation(generateIntentUrl(updatedIntent));
+  const handleClearFilterKeys = (keys: readonly string[]) => {
+    setLocation(generateIntentUrl(clearSearchIntentFilters(searchIntent, keys)));
   };
 
   const handleClearAllFilters = () => {
-    // Keep only listing type (which is transactional)
-    const updatedIntent = {
-      ...searchIntent,
-      filters: {}, // Clear all optional filters
-      resultState: {
-        ...searchIntent.resultState,
-        page: 0,
-      },
-    };
-    setLocation(generateIntentUrl(updatedIntent));
+    setLocation(generateIntentUrl(clearAllOptionalSearchFilters(searchIntent)));
+  };
+
+  const handleBroadenToParent = () => {
+    if (!parentRecoveryTarget) return;
+    setLocation(generateIntentUrl(buildParentRecoveryIntent(searchIntent, parentRecoveryTarget)));
+  };
+
+  const handleChangeLocations = () => {
+    const input = document.getElementById('listing-navbar-location-input');
+    if (input instanceof HTMLInputElement) {
+      input.focus();
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+
+  const handleStartOver = () => {
+    setLocation('/');
   };
 
   const handleListingSourceChange = (source?: SearchFilters['listingSource']) => {
@@ -659,6 +696,17 @@ export default function SearchResults({
   const canAdvancePage = canAdvancePublicSearchPage(effectivePage, resultCount, limit);
   const hasRenderableResults =
     viewMode === 'map' ? mapResults.length > 0 : renderedResults.length > 0;
+  const displayState = getSearchResultsDisplayState({
+    isLoading,
+    hasError: hasSearchError,
+    isTransactionalJourney,
+    hasValidation: Boolean(searchIntent.validation),
+    hasResponse: Boolean(publicSearchResults),
+    locationState: publicSearchResults?.locationState,
+    total: resultTotal,
+    hasRenderableResults,
+    pageNeedsNormalization,
+  });
 
   const resolveCardImage = (card: SearchCardResult) => {
     const direct = typeof card.image === 'string' ? card.image.trim() : '';
@@ -741,11 +789,16 @@ export default function SearchResults({
             <div className="col-span-1">
               {/* Results Grid */}
               <div className="">
-                {isLoading ? (
+                {displayState === 'loading' ? (
                   <div className="flex items-center justify-center py-20">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                   </div>
-                ) : hasSearchError ? (
+                ) : displayState === 'page-normalizing' ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <p className="text-sm text-slate-600">Updating the result page…</p>
+                  </div>
+                ) : displayState === 'error' ? (
                   <div
                     role="alert"
                     className="mx-auto max-w-2xl border border-rose-200 bg-rose-50 px-6 py-14 text-center"
@@ -758,7 +811,37 @@ export default function SearchResults({
                       Try again
                     </Button>
                   </div>
-                ) : hasRenderableResults ? (
+                ) : displayState === 'invalid' ? (
+                  <SearchResultsUnavailableState
+                    title={
+                      !isTransactionalJourney
+                        ? searchIntent.transactionType
+                          ? 'Search journey unavailable'
+                          : 'Choose Buy or Rent'
+                        : 'Search request needs attention'
+                    }
+                    description={
+                      searchIntent.validation?.message ||
+                      'This search cannot open transactional inventory yet.'
+                    }
+                    onStartOver={handleStartOver}
+                  />
+                ) : displayState === 'unavailable' ? (
+                  <SearchResultsUnavailableState
+                    title="Search location unavailable"
+                    description={
+                      locationMessage ||
+                      'The selected geography is unavailable for this transactional search.'
+                    }
+                    onStartOver={handleStartOver}
+                  />
+                ) : displayState === 'integrity' ? (
+                  <SearchResultsUnavailableState
+                    title="Results temporarily unavailable"
+                    description="The search returned a result total but no page of results. Please try again."
+                    onStartOver={handleStartOver}
+                  />
+                ) : displayState === 'results' ? (
                   <>
                     {viewMode === 'list' && (
                       <div className="flex flex-col gap-4 sm:gap-5 lg:gap-6">
@@ -857,35 +940,17 @@ export default function SearchResults({
                 ) : (
                   <SearchResultsEmptyState
                     filters={filters}
-                    locationContext={locationContext as any}
-                    locationMessage={locationMessage}
+                    transactionType={
+                      searchIntent.transactionType === 'for-sale' ? 'for-sale' : 'to-rent'
+                    }
+                    searchDescription={zeroResultDescription}
                     onClearAllFilters={handleClearAllFilters}
+                    onClearFilterKeys={handleClearFilterKeys}
                     onSwitchToSource={handleListingSourceChange}
-                    onBroadenToCity={
-                      locationContext &&
-                      locationContext.type === 'suburb' &&
-                      locationContext.ids?.cityId &&
-                      locationContext.hierarchy?.city
-                        ? () => {
-                            const newFilters = { ...filters };
-                            delete newFilters.suburb;
-                            newFilters.city = locationContext.hierarchy.city;
-                            handleFilterChange(newFilters);
-                          }
-                        : undefined
-                    }
-                    onBroadenToProvince={
-                      locationContext &&
-                      locationContext.type === 'city' &&
-                      locationContext.hierarchy?.province
-                        ? () => {
-                            const newFilters = { ...filters };
-                            delete newFilters.city;
-                            newFilters.province = locationContext.hierarchy.province;
-                            handleFilterChange(newFilters);
-                          }
-                        : undefined
-                    }
+                    onChangeLocations={handleChangeLocations}
+                    onBroadenToParent={parentRecoveryTarget ? handleBroadenToParent : undefined}
+                    parentRecoveryLabel={parentRecoveryTarget?.label}
+                    onStartOver={handleStartOver}
                   />
                 )}
               </div>
