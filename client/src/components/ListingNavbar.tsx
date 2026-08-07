@@ -279,6 +279,7 @@ export function ListingNavbar({
               <LocationAutosuggest
                 selectedLocations={selectedLocations as LocationNode[]}
                 onRemove={removeLocationAtIndex}
+                inputId="listing-navbar-location-input"
                 placeholder={selectedLocations.length > 0 ? 'Add more...' : 'City, Suburb, or Area'}
                 inputClassName="w-full py-2 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent border-none h-full focus-visible:ring-0 shadow-none px-1"
                 className="w-full h-full"
