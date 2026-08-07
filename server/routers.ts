@@ -544,6 +544,7 @@ const appRouterConfig = {
           suburb: z.array(z.string().trim().max(120)).max(10).optional(),
           locations: z.array(z.string().trim().max(120)).max(10).optional(),
           locationId: z.string().trim().max(128).optional(),
+          searchAreaId: z.string().trim().max(120).optional(),
           propertyType: z
             .enum([
               'apartment',

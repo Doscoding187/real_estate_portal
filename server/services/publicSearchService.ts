@@ -9,9 +9,21 @@ import {
 } from '../../shared/publicSearchPagination';
 import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
+import type { SearchAreaSummary } from '../../shared/searchScope';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
 import { locationResolver, type ResolvedLocation } from './locationResolverService';
 import { propertySearchService } from './propertySearchService';
+import {
+  searchAreaAuthority,
+  type SearchAreaResolution,
+  type SearchAreaFailureReason,
+  type ResolveSearchAreaOptions,
+} from './searchAreaAuthority';
+import {
+  buildSearchAreaQueryBoundary,
+  narrowSearchAreaQueryBoundary,
+  type SearchAreaQueryBoundary,
+} from './searchAreaQueryBoundary';
 
 export interface PublicSearchInventoryInput {
   province?: string;
@@ -19,6 +31,7 @@ export interface PublicSearchInventoryInput {
   suburb?: string[];
   locations?: string[];
   locationId?: string;
+  searchAreaId?: string;
   propertyType?: string;
   listingType?: 'sale' | 'rent';
   listingSource?: 'manual' | 'development';
@@ -63,7 +76,8 @@ export interface PublicSearchInventoryResult {
       suburbId?: number;
     };
   };
-  locationState: 'not_requested' | 'resolved' | 'unresolved' | 'ambiguous';
+  searchAreaContext?: SearchAreaSummary;
+  locationState: 'not_requested' | 'resolved' | 'unresolved' | 'ambiguous' | 'unavailable';
   locationMessage?: string;
   sourceCounts: {
     manual: number;
@@ -74,6 +88,7 @@ export interface PublicSearchInventoryResult {
 function hasLocationIntent(input: PublicSearchInventoryInput): boolean {
   return Boolean(
     input.locationId ||
+    input.searchAreaId ||
     input.province ||
     input.city ||
     input.suburb?.length ||
@@ -107,7 +122,7 @@ function toLocationContext(
 
 function emptyLocationResult(
   input: PublicSearchInventoryInput,
-  status: 'unresolved' | 'ambiguous',
+  status: 'unresolved' | 'ambiguous' | 'unavailable',
   message: string,
 ) {
   const page = normalizePublicSearchPageIndex(input.page);
@@ -122,6 +137,25 @@ function emptyLocationResult(
     locationMessage: message,
     sourceCounts: { manual: 0, development: 0 },
   } satisfies PublicSearchInventoryResult;
+}
+
+function searchAreaFailureMessage(reason: SearchAreaFailureReason): string {
+  if (reason === 'unsupported_journey') {
+    return 'This Search Area does not support the selected journey.';
+  }
+
+  if (reason === 'preview_only') {
+    return 'This Search Area is only available in preview and cannot be searched yet.';
+  }
+
+  return 'This Search Area is unavailable for search.';
+}
+
+export interface SearchAreaResolver {
+  resolveSearchArea: (
+    searchAreaId: string,
+    options?: ResolveSearchAreaOptions,
+  ) => Promise<SearchAreaResolution>;
 }
 
 function buildSearchBounds(input: PublicSearchInventoryInput) {
@@ -197,6 +231,8 @@ function sourceSort(sortOption: PublicSearchBlendSortOption): SortOption {
 }
 
 export class PublicSearchService {
+  constructor(private readonly searchAreaResolver: SearchAreaResolver = searchAreaAuthority) {}
+
   async searchInventory(input: PublicSearchInventoryInput): Promise<PublicSearchInventoryResult> {
     const validationIssue = validatePublicSearchInput(input);
     if (validationIssue) {
@@ -209,10 +245,84 @@ export class PublicSearchService {
     const sourceSortOption = sourceSort(sortOption);
 
     let location: ResolvedLocation | null = null;
+    let searchAreaBoundary: SearchAreaQueryBoundary | undefined;
+    let searchAreaContext: PublicSearchInventoryResult['searchAreaContext'];
     let locationState: PublicSearchInventoryResult['locationState'] = 'not_requested';
     let locationMessage: string | undefined;
 
-    if (hasLocationIntent(input)) {
+    if (input.searchAreaId) {
+      if (!input.listingType) {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'Choose Buy or Rent before searching within a Search Area.',
+        );
+      }
+
+      const searchAreaJourney = input.listingType === 'sale' ? 'buy' : 'rent';
+      const resolution = await this.searchAreaResolver.resolveSearchArea(input.searchAreaId, {
+        journey: searchAreaJourney,
+      });
+
+      if (resolution.status === 'unavailable') {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          searchAreaFailureMessage(resolution.reason),
+        );
+      }
+
+      searchAreaBoundary = buildSearchAreaQueryBoundary(resolution) ?? undefined;
+      if (!searchAreaBoundary) {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'This Search Area has no safe canonical query boundary.',
+        );
+      }
+
+      searchAreaContext = resolution.summary;
+      locationState = 'resolved';
+
+      if (input.locationId) {
+        const refinement = await locationResolver.resolvePublicLocation({
+          locationId: input.locationId,
+        });
+
+        if (refinement.status !== 'resolved' || !refinement.location) {
+          return emptyLocationResult(
+            input,
+            refinement.status === 'ambiguous' ? 'ambiguous' : 'unresolved',
+            refinement.message ||
+              'That locality could not be resolved within the selected Search Area.',
+          );
+        }
+
+        if (refinement.location.level !== 'suburb') {
+          return emptyLocationResult(
+            input,
+            'unavailable',
+            'A Search Area can only be refined by a canonical locality.',
+          );
+        }
+
+        const narrowedBoundary = narrowSearchAreaQueryBoundary(
+          searchAreaBoundary,
+          input.locationId,
+        );
+        if (!narrowedBoundary) {
+          return emptyLocationResult(
+            input,
+            'unavailable',
+            'That locality is not an approved member of the selected Search Area.',
+          );
+        }
+
+        searchAreaBoundary = narrowedBoundary;
+        location = refinement.location;
+        locationMessage = refinement.message;
+      }
+    } else if (hasLocationIntent(input)) {
       if (
         !input.province &&
         !input.city &&
@@ -259,20 +369,36 @@ export class PublicSearchService {
 
     const [manualResults, developmentResults] = await Promise.all([
       manualEnabled
-        ? propertySearchService.searchProperties(
-            filters,
-            sourceSortOption,
-            sourcePage,
-            sourcePageSize,
-          )
+        ? searchAreaBoundary
+          ? propertySearchService.searchProperties(
+              filters,
+              sourceSortOption,
+              sourcePage,
+              sourcePageSize,
+              searchAreaBoundary,
+            )
+          : propertySearchService.searchProperties(
+              filters,
+              sourceSortOption,
+              sourcePage,
+              sourcePageSize,
+            )
         : null,
       developmentEnabled
-        ? developmentDerivedListingService.searchListings(
-            developmentFilters,
-            sourceSortOption,
-            sourcePage,
-            sourcePageSize,
-          )
+        ? searchAreaBoundary
+          ? developmentDerivedListingService.searchListings(
+              developmentFilters,
+              sourceSortOption,
+              sourcePage,
+              sourcePageSize,
+              searchAreaBoundary,
+            )
+          : developmentDerivedListingService.searchListings(
+              developmentFilters,
+              sourceSortOption,
+              sourcePage,
+              sourcePageSize,
+            )
         : null,
     ]);
 
@@ -309,6 +435,7 @@ export class PublicSearchService {
       pageSize,
       hasMore: canAdvancePublicSearchPage(page, total, pageSize),
       locationContext,
+      searchAreaContext,
       locationState,
       locationMessage,
       sourceCounts: {

@@ -3,6 +3,7 @@ import {
   encodeCanonicalLocationId,
   parseCanonicalLocationId,
 } from '../../../shared/locationAuthority';
+import { isSearchAreaId } from '../../../shared/searchScope';
 import {
   BUY_TRANSACTION_TYPE,
   parseBuySearchParams,
@@ -24,7 +25,13 @@ import {
  */
 
 export type TransactionType = 'for-sale' | 'to-rent' | 'developments';
-export type GeographyLevel = 'province' | 'city' | 'suburb' | 'development' | 'country';
+export type GeographyLevel =
+  | 'province'
+  | 'city'
+  | 'search_area'
+  | 'suburb'
+  | 'development'
+  | 'country';
 export type SearchRouteMode = 'seo' | 'results';
 
 export type SearchIntentValidationCode =
@@ -32,6 +39,8 @@ export type SearchIntentValidationCode =
   | 'invalid-location-id'
   | 'location-identity-mismatch'
   | 'multiple-locations-unsupported'
+  | 'invalid-search-area-id'
+  | 'search-area-location-conflict'
   | 'missing-transaction-intent'
   | 'invalid-transaction-intent';
 
@@ -46,6 +55,7 @@ export interface GeographyIntent {
   city?: string;
   suburb?: string;
   locationId?: string;
+  searchAreaId?: string;
   slug?: string; // For development specific pages or as fallback
 }
 
@@ -76,6 +86,8 @@ const SEARCH_VALIDATION_MESSAGES: Record<SearchIntentValidationCode, string> = {
   'location-identity-mismatch': 'The selected location does not match its canonical hierarchy.',
   'multiple-locations-unsupported':
     'Choose one canonical province, city, or suburb before searching.',
+  'invalid-search-area-id': 'The selected Search Area does not match its stable identity.',
+  'search-area-location-conflict': 'A Search Area may only be refined by one canonical locality.',
   'missing-transaction-intent': 'Choose Buy or Rent before opening transactional results.',
   'invalid-transaction-intent': 'The requested search journey is not supported.',
 };
@@ -175,6 +187,8 @@ export function resolveSearchIntent(
   const queryProvince = searchParams.get('province')?.trim().toLowerCase() || undefined;
   const queryCity = searchParams.get('city')?.trim().toLowerCase() || undefined;
   const queryLocationId = searchParams.get('locationId')?.trim() || undefined;
+  const querySearchAreaId = searchParams.get('searchAreaId')?.trim() || undefined;
+  const hasSearchArea = Boolean(querySearchAreaId && isSearchAreaId(querySearchAreaId));
   const canonicalQueryLocation = parseCanonicalLocationId(queryLocationId);
   const queryLocationIds = searchParams
     .getAll('locationIds')
@@ -198,6 +212,27 @@ export function resolveSearchIntent(
     };
   }
 
+  if (querySearchAreaId && !hasSearchArea) {
+    validation ||= {
+      code: 'invalid-search-area-id',
+      message: SEARCH_VALIDATION_MESSAGES['invalid-search-area-id'],
+    };
+  }
+
+  if (
+    hasSearchArea &&
+    (queryProvince ||
+      queryCity ||
+      querySuburbs.length > 0 ||
+      queryLocationIds.length > 0 ||
+      locations.length > 0)
+  ) {
+    validation ||= {
+      code: 'search-area-location-conflict',
+      message: SEARCH_VALIDATION_MESSAGES['search-area-location-conflict'],
+    };
+  }
+
   if (querySuburbs.length > 1 || queryLocationIds.length > 0 || locations.length > 1) {
     validation ||= {
       code: 'multiple-locations-unsupported',
@@ -205,32 +240,45 @@ export function resolveSearchIntent(
     };
   }
 
-  if (querySuburb && querySuburbs.length === 1) {
-    geography.level = 'suburb';
-    geography.suburb = querySuburb;
-  }
+  if (hasSearchArea) {
+    geography.searchAreaId = querySearchAreaId;
+    geography.level = canonicalQueryLocation?.level === 'suburb' ? 'suburb' : 'search_area';
+    if (canonicalQueryLocation?.level === 'suburb') {
+      geography.locationId = queryLocationId;
+    } else if (canonicalQueryLocation) {
+      validation ||= {
+        code: 'search-area-location-conflict',
+        message: SEARCH_VALIDATION_MESSAGES['search-area-location-conflict'],
+      };
+    }
+  } else {
+    if (querySuburb && querySuburbs.length === 1) {
+      geography.level = 'suburb';
+      geography.suburb = querySuburb;
+    }
 
-  if (queryCity) {
-    if (!geography.suburb) geography.level = 'city';
-    geography.city = queryCity;
-  }
+    if (queryCity) {
+      if (!geography.suburb) geography.level = 'city';
+      geography.city = queryCity;
+    }
 
-  if (queryProvince) {
-    if (!geography.city && !geography.suburb) geography.level = 'province';
-    geography.province = queryProvince;
-  }
+    if (queryProvince) {
+      if (!geography.city && !geography.suburb) geography.level = 'province';
+      geography.province = queryProvince;
+    }
 
-  if (canonicalQueryLocation) {
-    geography.locationId = queryLocationId;
-    if (!queryProvince && !queryCity && !querySuburb) {
-      geography.level = canonicalQueryLocation.level;
-    } else {
-      const deepestQueryLevel = querySuburb ? 'suburb' : queryCity ? 'city' : 'province';
-      if (deepestQueryLevel !== canonicalQueryLocation.level) {
-        validation ||= {
-          code: 'location-identity-mismatch',
-          message: SEARCH_VALIDATION_MESSAGES['location-identity-mismatch'],
-        };
+    if (canonicalQueryLocation) {
+      geography.locationId = queryLocationId;
+      if (!queryProvince && !queryCity && !querySuburb) {
+        geography.level = canonicalQueryLocation.level;
+      } else {
+        const deepestQueryLevel = querySuburb ? 'suburb' : queryCity ? 'city' : 'province';
+        if (deepestQueryLevel !== canonicalQueryLocation.level) {
+          validation ||= {
+            code: 'location-identity-mismatch',
+            message: SEARCH_VALIDATION_MESSAGES['location-identity-mismatch'],
+          };
+        }
       }
     }
   }
@@ -241,6 +289,7 @@ export function resolveSearchIntent(
     !geography.province &&
     !geography.city &&
     !geography.suburb &&
+    !geography.searchAreaId &&
     !locations.length &&
     !queryLocationId
   ) {
@@ -300,7 +349,13 @@ export function resolveSearchIntent(
 
   // A single legacy locations slug remains readable for compatibility, but
   // S1 never generates it and never treats it as canonical identity.
-  if (!geography.province && !geography.city && !geography.suburb && locations.length === 1) {
+  if (
+    !geography.province &&
+    !geography.city &&
+    !geography.suburb &&
+    !geography.searchAreaId &&
+    locations.length === 1
+  ) {
     const [locationSlug] = locations;
     if (PROVINCE_SLUGS.includes(locationSlug)) {
       geography.level = 'province';
@@ -332,6 +387,7 @@ export function resolveSearchIntent(
         key === 'locationIds' ||
         key === 'locations' ||
         key === 'locations[]' ||
+        key === 'searchAreaId' ||
         key === 'searchError' ||
         key === SEARCH_RESULT_SORT_PARAM ||
         key === SEARCH_RESULT_PAGE_PARAM
@@ -474,10 +530,24 @@ export function generateIntentUrl(intent: SearchIntent): string {
     normalizedSuburbs.forEach(suburb => queryParams.append('suburb', suburb));
   }
 
+  if (geography.searchAreaId && isSearchAreaId(geography.searchAreaId)) {
+    queryParams.set('searchAreaId', geography.searchAreaId);
+    queryParams.delete('province');
+    queryParams.delete('city');
+    queryParams.delete('suburb');
+    queryParams.delete('locations');
+    queryParams.delete('locations[]');
+  }
+
   // ============================================================
   // Transactional searches always use the root route. Bare geography paths
   // belong to neutral discovery and are built by locationDiscovery.ts.
   // ============================================================
+
+  if (geography.searchAreaId) {
+    const queryString = queryParams.toString();
+    return `${basePath}${queryString ? `?${queryString}` : ''}`;
+  }
 
   if (geography.suburb) {
     // Suburb search → Query-based SRP

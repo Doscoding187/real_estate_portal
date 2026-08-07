@@ -28,6 +28,7 @@ import type {
   SearchCardResult,
 } from '../../shared/types';
 import { locationResolver, ResolvedLocation } from './locationResolverService';
+import type { SearchAreaQueryBoundary } from './searchAreaQueryBoundary';
 
 // Cache key prefix for property searches
 const CACHE_PREFIX = 'property:search:v2:';
@@ -254,9 +255,21 @@ export class PropertySearchService {
     sortOption: SortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
+    queryBoundary?: SearchAreaQueryBoundary,
   ): Promise<SearchResults> {
+    if (queryBoundary && queryBoundary.memberSuburbIds.length === 0) {
+      return {
+        properties: [],
+        cards: [],
+        total: 0,
+        page,
+        pageSize,
+        hasMore: false,
+      };
+    }
+
     // Generate cache key
-    const cacheKey = this.generateCacheKey(filters, sortOption, page, pageSize);
+    const cacheKey = this.generateCacheKey(filters, sortOption, page, pageSize, queryBoundary);
 
     // Try to get from cache
     const cached = await redisCache.get<SearchResults>(cacheKey);
@@ -293,10 +306,18 @@ export class PropertySearchService {
       cityName?: string;
       suburbId?: number;
       suburbName?: string;
-    }> = [];
+    }> = queryBoundary
+      ? queryBoundary.memberSuburbIds.map((suburbId, index) => ({
+          suburbId,
+          suburbName: queryBoundary.memberSuburbNames[index],
+        }))
+      : [];
     let resolvedLocation: ResolvedLocation | null = null;
 
-    if (filters.canonicalLocation) {
+    if (queryBoundary) {
+      // Search Area boundaries are already resolved by the server authority.
+      // Never fall back to a parent or to text when the boundary is present.
+    } else if (filters.canonicalLocation) {
       locationIds.push({
         provinceId: filters.canonicalLocation.provinceId,
         cityId: filters.canonicalLocation.cityId,
@@ -1078,10 +1099,12 @@ export class PropertySearchService {
     sortOption: SortOption,
     page: number,
     pageSize: number,
+    queryBoundary?: SearchAreaQueryBoundary,
   ): string {
     const filterStr = JSON.stringify(filters);
     const hash = this.simpleHash(filterStr);
-    return `${CACHE_PREFIX}${hash}:${sortOption}:${page}:${pageSize}`;
+    const boundaryKey = queryBoundary ? `:${queryBoundary.authorityKey}` : '';
+    return `${CACHE_PREFIX}${hash}${boundaryKey}:${sortOption}:${page}:${pageSize}`;
   }
 
   /**

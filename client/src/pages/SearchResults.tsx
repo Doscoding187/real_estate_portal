@@ -298,6 +298,7 @@ export default function SearchResults({
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
       locations: isBuySearch ? undefined : normalizedLocationSlugs,
       locationId: filters.locationId,
+      searchAreaId: searchIntent.geography.searchAreaId,
       propertyType: isBuySearch ? buyFilters?.propertyType : propertyType,
       listingType: isBuySearch
         ? buyFilters?.listingType
@@ -321,7 +322,15 @@ export default function SearchResults({
       page,
       pageSize: limit,
     };
-  }, [filters, limit, normalizedLocationSlugs, page, searchIntent.transactionType, sortBy]);
+  }, [
+    filters,
+    limit,
+    normalizedLocationSlugs,
+    page,
+    searchIntent.geography.searchAreaId,
+    searchIntent.transactionType,
+    sortBy,
+  ]);
 
   const {
     data: publicSearchResults,
@@ -515,6 +524,7 @@ export default function SearchResults({
         city: undefined,
         suburb: undefined,
         locationId: undefined,
+        searchAreaId: undefined,
         slug: undefined,
       },
       filters: nextFilters,
