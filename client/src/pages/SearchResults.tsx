@@ -1,6 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useLocation, useSearch } from 'wouter';
-import { ListingNavbar } from '@/components/ListingNavbar';
+import {
+  ListingNavbar,
+  reconstructCanonicalLocations,
+  type ListingNavbarLocation,
+} from '@/components/ListingNavbar';
 import { SidebarFilters } from '@/components/SidebarFilters';
 import PropertyCard from '@/components/PropertyCard';
 import { GooglePropertyMap } from '@/components/maps/GooglePropertyMap';
@@ -62,7 +66,7 @@ import {
 import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
 import { buildPropertiesCompatibilityRedirect } from '@/lib/searchNavigation';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
-import { parseCanonicalLocationId } from '@shared/locationAuthority';
+import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { SearchCardResult } from '@/../../shared/types';
 import {
   BUY_PROPERTY_TYPES,
@@ -81,17 +85,6 @@ export default function SearchResults({
   city: propCity,
   locationId: propLocationId,
 }: { province?: string; city?: string; locationId?: string } = {}) {
-  type NavbarLocation = {
-    name: string;
-    slug: string;
-    type: 'province' | 'city' | 'suburb';
-    provinceSlug?: string;
-    citySlug?: string;
-    fullAddress: string;
-    id?: string;
-    canonicalLocationId?: string;
-  };
-
   const { isAuthenticated } = useAuth();
   const [location, setLocation] = useLocation();
   const search = useSearch();
@@ -146,12 +139,12 @@ export default function SearchResults({
     };
   }, [searchIntent]);
 
-  const normalizedLocationFilters = useMemo<NavbarLocation[]>(() => {
-    const locations = (filters.locations ?? []).reduce<NavbarLocation[]>((acc, location) => {
+  const normalizedLocationFilters = useMemo<ListingNavbarLocation[]>(() => {
+    const locations = (filters.locations ?? []).reduce<ListingNavbarLocation[]>((acc, location) => {
       if (typeof location === 'string') {
         const slug = location.trim();
         if (!slug) return acc;
-        const type: NavbarLocation['type'] = PROVINCE_SLUGS.includes(slug.toLowerCase())
+        const type: ListingNavbarLocation['type'] = PROVINCE_SLUGS.includes(slug.toLowerCase())
           ? 'province'
           : 'city';
         acc.push({
@@ -219,6 +212,22 @@ export default function SearchResults({
         });
       }
     }
+
+    (searchIntent.geography.locationIds || []).forEach(canonicalLocationId => {
+      if (locations.some(location => location.canonicalLocationId === canonicalLocationId)) return;
+      const parsed = parseCanonicalLocationId(canonicalLocationId);
+      if (!parsed) return;
+      const type: ListingNavbarLocation['type'] =
+        parsed.level === 'province' ? 'province' : parsed.level === 'city' ? 'city' : 'suburb';
+      locations.push({
+        id: canonicalLocationId,
+        canonicalLocationId,
+        name: canonicalLocationId,
+        slug: canonicalLocationId,
+        type,
+        fullAddress: canonicalLocationId,
+      });
+    });
 
     return locations;
   }, [filters.locations, searchIntent.geography]);
@@ -298,9 +307,16 @@ export default function SearchResults({
       city: filters.city,
       province: filters.province,
       suburb: typeof filters.suburb === 'string' ? [filters.suburb] : filters.suburb,
-      locations: isBuySearch ? undefined : normalizedLocationSlugs,
+      locations:
+        searchIntent.geography.level === 'multi_location'
+          ? undefined
+          : isBuySearch
+            ? undefined
+            : normalizedLocationSlugs,
       locationId: filters.locationId,
+      locationIds: searchIntent.geography.locationIds,
       searchAreaId: searchIntent.geography.searchAreaId,
+      searchAreaIds: searchIntent.geography.searchAreaIds,
       propertyType: isBuySearch ? buyFilters?.propertyType : propertyType,
       listingType: isBuySearch
         ? buyFilters?.listingType
@@ -329,6 +345,9 @@ export default function SearchResults({
     limit,
     normalizedLocationSlugs,
     page,
+    searchIntent.geography.level,
+    searchIntent.geography.locationIds,
+    searchIntent.geography.searchAreaIds,
     searchIntent.geography.searchAreaId,
     searchIntent.transactionType,
     sortBy,
@@ -362,6 +381,31 @@ export default function SearchResults({
     : page;
   const locationContext = publicSearchResults?.locationContext;
   const locationMessage = publicSearchResults?.locationMessage ?? searchIntent.validation?.message;
+  const navbarLocations = useMemo(() => {
+    const multiContext = publicSearchResults?.multiLocationContext;
+    if (multiContext) {
+      return reconstructCanonicalLocations(multiContext.locations);
+    }
+
+    const locationContext = publicSearchResults?.locationContext;
+    if (!locationContext) return normalizedLocationFilters;
+
+    const parentCanonicalLocationId =
+      locationContext.type === 'city'
+        ? encodeCanonicalLocationId('province', locationContext.ids.provinceId)
+        : locationContext.type === 'suburb' && locationContext.ids.cityId
+          ? encodeCanonicalLocationId('city', locationContext.ids.cityId)
+          : undefined;
+
+    return normalizedLocationFilters.map(location => ({
+      ...location,
+      parentCanonicalLocationId,
+    }));
+  }, [
+    normalizedLocationFilters,
+    publicSearchResults?.locationContext,
+    publicSearchResults?.multiLocationContext,
+  ]);
 
   useEffect(() => {
     if (!publicSearchResults || effectivePage === page) return;
@@ -550,7 +594,9 @@ export default function SearchResults({
         city: undefined,
         suburb: undefined,
         locationId: undefined,
+        locationIds: undefined,
         searchAreaId: undefined,
+        searchAreaIds: undefined,
         slug: undefined,
       },
       filters: nextFilters,
@@ -639,7 +685,7 @@ export default function SearchResults({
   return (
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} title={pageTitle} description={pageDescription} />
-      <ListingNavbar defaultLocations={normalizedLocationFilters} />
+      <ListingNavbar defaultLocations={navbarLocations} />
 
       <div className="container pb-32 pt-24 lg:pb-12">
         <div className="mx-auto w-full max-w-[1280px]">

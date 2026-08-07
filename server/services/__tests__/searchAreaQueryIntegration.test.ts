@@ -308,4 +308,164 @@ describe('Search Area public query integration', () => {
     expect(mockSearchProperties).not.toHaveBeenCalled();
     expect(mockSearchListings).not.toHaveBeenCalled();
   });
+
+  it('passes canonical sibling locations as one server-derived OR boundary for Buy', async () => {
+    mockResolvePublicLocation.mockResolvedValueOnce(resolvedSuburb).mockResolvedValueOnce({
+      ...resolvedSuburb,
+      location: {
+        ...resolvedSuburb.location,
+        suburb: { id: 35, name: 'Rosebank', slug: 'rosebank', cityId: 12 },
+      },
+    });
+
+    const result = await publicSearchService.searchInventory({
+      locationIds: ['suburb:35', 'suburb:34'],
+      listingType: 'sale',
+      page: 0,
+      pageSize: 2,
+    });
+
+    const propertyBoundary = mockSearchProperties.mock.calls[0]?.[4];
+    const developmentBoundary = mockSearchListings.mock.calls[0]?.[4];
+    expect(propertyBoundary).toEqual(developmentBoundary);
+    expect(propertyBoundary).toMatchObject({
+      kind: 'canonical_locations',
+      level: 'suburb',
+      parentCanonicalLocationId: 'city:12',
+      members: [
+        expect.objectContaining({ canonicalLocationId: 'suburb:34', suburbId: 34 }),
+        expect.objectContaining({ canonicalLocationId: 'suburb:35', suburbId: 35 }),
+      ],
+    });
+    expect(propertyBoundary).not.toHaveProperty('memberCanonicalLocationIds');
+    expect(
+      result.multiLocationContext?.locations.map(location => location.canonicalLocationId),
+    ).toEqual(['suburb:34', 'suburb:35']);
+  });
+
+  it('keeps Rent multi-location scope distinct and fails the whole request when one member is invalid', async () => {
+    mockResolvePublicLocation.mockResolvedValueOnce(resolvedSuburb).mockResolvedValueOnce({
+      ...resolvedSuburb,
+      location: {
+        ...resolvedSuburb.location,
+        suburb: { id: 35, name: 'Rosebank', slug: 'rosebank', cityId: 12 },
+      },
+    });
+
+    await publicSearchService.searchInventory({
+      locationIds: ['suburb:34', 'suburb:35'],
+      listingType: 'rent',
+    });
+    expect(mockResolvePublicLocation).toHaveBeenCalledTimes(2);
+    expect(mockSearchProperties.mock.calls[0]?.[0]).toMatchObject({ listingType: 'rent' });
+
+    vi.clearAllMocks();
+    mockResolvePublicLocation.mockResolvedValueOnce(resolvedSuburb).mockResolvedValueOnce({
+      status: 'unresolved' as const,
+      location: null,
+      message: 'Rosebank is unavailable.',
+    });
+
+    const invalidResult = await publicSearchService.searchInventory({
+      locationIds: ['suburb:34', 'suburb:99'],
+      listingType: 'rent',
+    });
+    expect(invalidResult).toMatchObject({ cards: [], total: 0, locationState: 'unresolved' });
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
+
+  it('does not widen mixed-parent canonical siblings', async () => {
+    mockResolvePublicLocation.mockResolvedValueOnce(resolvedSuburb).mockResolvedValueOnce({
+      ...resolvedSuburb,
+      location: {
+        ...resolvedSuburb.location,
+        city: { id: 99, name: 'Cape Town', slug: 'cape-town', provinceId: 2 },
+        suburb: { id: 35, name: 'Sea Point', slug: 'sea-point', cityId: 99 },
+        province: { id: 2, name: 'Western Cape', slug: 'western-cape', code: 'WC' },
+      },
+    });
+
+    const result = await publicSearchService.searchInventory({
+      locationIds: ['suburb:34', 'suburb:35'],
+      listingType: 'sale',
+    });
+
+    expect(result).toMatchObject({ cards: [], total: 0, locationState: 'unavailable' });
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
+
+  it('unions explicit Search Area identities server-side without exposing memberships', async () => {
+    const secondSearchArea = {
+      ...resolvedSearchArea,
+      summary: {
+        ...resolvedSearchArea.summary,
+        searchAreaId: 'johannesburg-rosebank',
+        label: 'Rosebank',
+      },
+      definition: {
+        ...resolvedSearchArea.definition,
+        searchAreaId: 'johannesburg-rosebank',
+        authorityKey: 'search-area:johannesburg-rosebank:v1',
+        anchorCanonicalLocationId: 'suburb:35',
+        memberCanonicalLocationIds: ['suburb:35'],
+        anchor: {
+          ...resolvedSearchArea.definition.anchor,
+          canonicalLocationId: 'suburb:35',
+          name: 'Rosebank',
+          slug: 'rosebank',
+        },
+        members: [
+          {
+            ...resolvedSearchArea.definition.members[1],
+            canonicalLocationId: 'suburb:35',
+            name: 'Rosebank',
+            slug: 'rosebank',
+          },
+        ],
+      },
+    };
+    mockResolveSearchArea
+      .mockResolvedValueOnce(resolvedSearchArea)
+      .mockResolvedValueOnce(secondSearchArea);
+
+    await publicSearchService.searchInventory({
+      searchAreaIds: ['johannesburg-rosebank', 'johannesburg-sandton'],
+      listingType: 'sale',
+    });
+
+    const boundary = mockSearchProperties.mock.calls[0]?.[4];
+    expect(boundary).toMatchObject({
+      memberCanonicalLocationIds: ['suburb:34', 'suburb:35'],
+      memberSuburbIds: [34, 35],
+    });
+    expect(boundary).not.toHaveProperty('searchAreaIds');
+    expect(boundary).not.toHaveProperty('members[0].canonicalLocationId');
+  });
+
+  it('fails the complete Search Area OR when one selected area is preview-only', async () => {
+    mockResolveSearchArea
+      .mockResolvedValueOnce({
+        ...resolvedSearchArea,
+        status: 'preview' as const,
+        summary: {
+          ...resolvedSearchArea.summary,
+          lifecycle: 'preview' as const,
+          availability: 'preview' as const,
+        },
+        definition: { ...resolvedSearchArea.definition, lifecycle: 'preview' as const },
+      })
+      .mockResolvedValueOnce(resolvedSearchArea);
+
+    const result = await publicSearchService.searchInventory({
+      searchAreaIds: ['johannesburg-sandton', 'johannesburg-rosebank'],
+      listingType: 'rent',
+    });
+
+    expect(result).toMatchObject({ cards: [], total: 0, locationState: 'unavailable' });
+    expect(result.locationMessage).toContain('preview');
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
 });

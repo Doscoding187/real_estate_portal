@@ -294,4 +294,59 @@ describe('search intent location serialization', () => {
     );
     expect(conflicting.validation?.code).toBe('search-area-location-conflict');
   });
+
+  it('round-trips deterministic canonical multi-location URL state', () => {
+    const intent = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams('locationIds=suburb%3A35&locationIds=suburb%3A34&sort=price_desc'),
+    );
+
+    expect(intent.validation).toBeUndefined();
+    expect(intent.geography).toMatchObject({
+      level: 'multi_location',
+      locationIds: ['suburb:34', 'suburb:35'],
+    });
+
+    const generated = generateIntentUrl(intent);
+    expect(generated).toBe(
+      '/property-for-sale?sort=price_desc&locationIds=suburb%3A34&locationIds=suburb%3A35',
+    );
+    const roundTripped = resolveSearchIntent(
+      new URL(generated, 'https://listify.test').pathname,
+      {},
+      new URL(generated, 'https://listify.test').searchParams,
+    );
+    expect(roundTripped.geography).toMatchObject(intent.geography);
+  });
+
+  it('canonicalizes duplicate multi-location URL state to one backwards-compatible location', () => {
+    const intent = resolveSearchIntent(
+      '/property-to-rent',
+      {},
+      new URLSearchParams('locationIds=suburb%3A34&locationIds=suburb%3A34'),
+    );
+
+    expect(intent.validation).toBeUndefined();
+    expect(intent.geography).toMatchObject({ level: 'suburb', locationId: 'suburb:34' });
+    expect(generateIntentUrl(intent)).toBe('/property-to-rent?locationId=suburb%3A34');
+  });
+
+  it('rejects mixed-level or malformed multi-location URL state without widening', () => {
+    const mixed = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams('locationIds=city%3A12&locationIds=suburb%3A34'),
+    );
+    const malformed = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams('locationIds=suburb%3A34&locationIds=google-place-id'),
+    );
+
+    expect(mixed.validation?.code).toBe('invalid-multi-location');
+    expect(malformed.validation?.code).toBe('invalid-multi-location');
+    expect(mixed.geography.level).toBe('country');
+    expect(malformed.geography.level).toBe('country');
+  });
 });

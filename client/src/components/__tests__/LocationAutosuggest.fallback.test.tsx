@@ -35,6 +35,7 @@ describe('LocationAutosuggest database fallback', () => {
           id: 12,
           name: 'Sandton',
           type: 'suburb',
+          cityId: 12,
           cityName: 'Johannesburg',
           provinceName: 'Gauteng',
         },
@@ -67,6 +68,7 @@ describe('LocationAutosuggest database fallback', () => {
       type: 'suburb',
       provinceSlug: 'gauteng',
       citySlug: 'johannesburg',
+      parentCanonicalLocationId: 'city:12',
       canonicalPath:
         '/property-for-sale?locationId=suburb%3A12&suburb=sandton&city=johannesburg&province=gauteng',
     });
@@ -107,5 +109,26 @@ describe('LocationAutosuggest database fallback', () => {
 
     fireEvent.click(input);
     expect(input).toHaveFocus();
+  });
+
+  it('blocks an eleventh selection when the reconstructed selection already has ten locations', () => {
+    const onSelect = vi.fn();
+    const selectedLocations = Array.from({ length: 10 }, (_, index) => ({
+      id: `suburb:${index + 1}`,
+      name: `Area ${index + 1}`,
+      slug: `area-${index + 1}`,
+      type: 'suburb' as const,
+    }));
+
+    render(
+      <LocationAutosuggest
+        onSelect={onSelect}
+        selectedLocations={selectedLocations}
+        maxLocations={10}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText('Limit reached')).toBeInTheDocument();
+    expect(onSelect).not.toHaveBeenCalled();
   });
 });

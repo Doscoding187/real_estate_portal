@@ -12,6 +12,7 @@ import {
   parseSearchScope,
   type SearchAreaSummary,
   type SearchScope,
+  type SearchScopeMember,
 } from '../../../shared/searchScope';
 import { generateIntentUrl, type SearchIntent, type SearchIntentValidation } from './searchIntent';
 
@@ -25,7 +26,7 @@ export interface GeographySearchContext {
 }
 
 export interface CanonicalSearchLocation {
-  scope: SearchScope;
+  scope: SearchScopeMember;
   context: GeographySearchContext;
 }
 
@@ -36,6 +37,8 @@ export interface TransactionalGeographyHandoff {
   scope?: SearchScope;
   /** Required when scope.kind is search_area; preview summaries cannot navigate. */
   searchAreaAvailability?: SearchAreaSummary['availability'];
+  /** Required for multi-Search-Area handoffs; one safe summary per selected ID. */
+  searchAreaAvailabilityById?: Readonly<Record<string, SearchAreaSummary['availability']>>;
   /** S2B-M.2 validates this locality against the server-owned Search Area members. */
   localityRefinementId?: string;
   /** Slugs are display context only; canonical IDs remain the scope authority. */
@@ -76,7 +79,9 @@ function stripGeographyFilters(filters: Record<string, unknown> | undefined) {
     'locations',
     'locations[]',
     'searchAreaId',
+    'searchAreaIds',
     'searchAreaAvailability',
+    'searchAreaAvailabilityById',
   ]) {
     delete safeFilters[key];
   }
@@ -178,7 +183,23 @@ export function buildTransactionalGeographyHref(
     return undefined;
   }
 
-  if (scope?.kind !== 'search_area' && input.searchAreaAvailability !== undefined) {
+  if (scope?.kind === 'multi_location') {
+    if (input.searchAreaAvailability !== undefined || input.localityRefinementId !== undefined) {
+      return undefined;
+    }
+
+    const searchAreaMembers = scope.members.filter(
+      member => member.kind === 'search_area',
+    ) as Array<{ kind: 'search_area'; searchAreaId: string }>;
+    if (
+      searchAreaMembers.length > 0 &&
+      searchAreaMembers.some(
+        member => input.searchAreaAvailabilityById?.[member.searchAreaId] !== 'available',
+      )
+    ) {
+      return undefined;
+    }
+  } else if (scope?.kind !== 'search_area' && input.searchAreaAvailability !== undefined) {
     return undefined;
   }
 
@@ -207,6 +228,18 @@ export function buildTransactionalGeographyHref(
     geography.level = localityRefinementId ? 'suburb' : 'search_area';
     geography.searchAreaId = scope.searchAreaId;
     if (localityRefinementId) geography.locationId = localityRefinementId;
+  } else if (scope?.kind === 'multi_location') {
+    geography.level = 'multi_location';
+    const canonicalMembers = scope.members.filter(member => member.kind !== 'search_area') as Array<
+      Exclude<(typeof scope.members)[number], { kind: 'search_area' }>
+    >;
+    if (canonicalMembers.length > 0) {
+      geography.locationIds = canonicalMembers.map(member => member.canonicalLocationId);
+    } else {
+      geography.searchAreaIds = scope.members
+        .filter(member => member.kind === 'search_area')
+        .map(member => member.searchAreaId);
+    }
   }
 
   return generateIntentUrl({

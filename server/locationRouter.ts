@@ -37,7 +37,7 @@ export const locationRouter = router({
       // Version the cache key when the authoritative location source changes.
       // Public search IDs must always resolve to the province/city/suburb
       // hierarchy, never to an arbitrary property row.
-      const cacheKey = `v3:${input.query}_${input.type}_${input.limit}`;
+      const cacheKey = `v4:${input.query}_${input.type}_${input.limit}`;
       const [cached] = await db
         .select()
         .from(locationSearchCache)
@@ -77,6 +77,7 @@ export const locationRouter = router({
           .select({
             id: cities.id,
             name: cities.name,
+            provinceId: provinces.id,
             provinceName: provinces.name,
             provinceCode: provinces.code,
             type: sql`'city'`,
@@ -97,6 +98,7 @@ export const locationRouter = router({
           .select({
             id: suburbs.id,
             name: suburbs.name,
+            cityId: cities.id,
             cityName: cities.name,
             provinceName: provinces.name,
             provinceCode: provinces.code,

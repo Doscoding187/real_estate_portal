@@ -176,6 +176,50 @@ describe('DevelopmentDerivedListingService', () => {
     });
   });
 
+  it('uses one canonical sibling boundary for development-derived OR filtering and totals', async () => {
+    const result = await developmentDerivedListingService.searchListings(
+      { listingType: 'sale' },
+      'date_desc',
+      1,
+      20,
+      {
+        kind: 'canonical_locations',
+        authorityKey: 'canonical-location-union:v1:suburb:suburb:34,suburb:35',
+        level: 'suburb',
+        parentCanonicalLocationId: 'city:12',
+        parentName: 'Johannesburg',
+        members: [
+          {
+            canonicalLocationId: 'suburb:34',
+            level: 'suburb',
+            name: 'Sandton',
+            provinceId: 1,
+            provinceName: 'Gauteng',
+            cityId: 12,
+            cityName: 'Johannesburg',
+            suburbId: 34,
+            suburbName: 'Sandton',
+          },
+          {
+            canonicalLocationId: 'suburb:35',
+            level: 'suburb',
+            name: 'Berea',
+            provinceId: 1,
+            provinceName: 'Gauteng',
+            cityId: 12,
+            cityName: 'Johannesburg',
+            suburbId: 35,
+            suburbName: 'Berea',
+          },
+        ],
+      },
+    );
+
+    expect(result.total).toBe(1);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].suburb).toBe('Berea');
+  });
+
   it('applies map bounds to development-derived listings', async () => {
     mockOrderBy.mockResolvedValueOnce([
       {
