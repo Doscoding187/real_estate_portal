@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAccountAuthHref,
   getCanonicalAccountDestination,
+  getPublicHeroJourney,
   getLoginRedirectPath,
   getPublicNavigationActiveOwner,
   getSafeNextPath,
@@ -90,7 +91,6 @@ describe('public navigation authority', () => {
         '/property-to-rent?propertyType=apartment',
         '/property-to-rent?propertyType=house',
         '/property-to-rent?propertyType=townhouse',
-        '/property-to-rent?propertyType=shared_living',
         '/property-to-rent?propertyType=commercial',
         '/favorites',
         '/compare',
@@ -99,7 +99,17 @@ describe('public navigation authority', () => {
     );
     expect(visibleItems.some(item => item.href.includes('propertyType=student'))).toBe(false);
     expect(visibleItems.some(item => item.href.includes('short-term'))).toBe(false);
+    expect(visibleItems.some(item => item.href.includes('shared_living'))).toBe(false);
+    expect(visibleItems.some(item => item.href === '/property-to-rent')).toBe(true);
     expect(visibleItems.some(item => /alert|enquir/i.test(item.label))).toBe(false);
+  });
+
+  it('keeps Shared Living independent from the Rent transaction route until its contract exists', () => {
+    expect(normalizePublicHeroJourney('shared_living')).toBe('shared_living');
+    expect(getPublicHeroJourney('shared_living').destination).toBe('/');
+    expect(
+      PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'renters')?.actionItemIds,
+    ).toBeUndefined();
   });
 
   it('keeps Explore as one canonical public entry rather than a public menu of modes or publishing actions', () => {

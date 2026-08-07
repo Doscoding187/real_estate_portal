@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -209,5 +211,23 @@ describe('EnhancedHero explicit journey selection', () => {
     screen
       .getAllByRole('button', { name: 'Search', exact: true })
       .forEach(button => expect(button).not.toBeDisabled());
+  });
+
+  it('does not expose unsupported lease-term or furnished Rent controls', () => {
+    render(<EnhancedHero activeTab="rent" />);
+
+    expect(screen.queryByText('Lease Term')).not.toBeInTheDocument();
+    expect(screen.queryByText('Furnished Only')).not.toBeInTheDocument();
+
+    const source = readFileSync(
+      path.join(process.cwd(), 'client/src/components/EnhancedHero.tsx'),
+      'utf8',
+    );
+    const rentPanelStart = source.indexOf("{activeTab === 'rent' && (");
+    const developmentsPanelStart = source.indexOf("{activeTab === 'developments' && (");
+    const rentPanel = source.slice(rentPanelStart, developmentsPanelStart);
+
+    expect(rentPanel).not.toContain('Lease Term');
+    expect(rentPanel).not.toContain('Furnished Only');
   });
 });

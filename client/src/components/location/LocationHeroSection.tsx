@@ -4,7 +4,6 @@ import { Search, Home, Building2, Key, Users, LandPlot, Store, Plus } from 'luci
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -63,7 +62,6 @@ const filterConfig = {
   },
   rental: {
     propertyTypes: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Room', 'Studio'],
-    leaseTerms: ['Month-to-month', '6 months', '12 months', '24+ months'],
   },
   developments: {
     types: [
@@ -131,8 +129,6 @@ export function LocationHeroSection({
     propertyTypes: [] as string[],
     priceMin: '',
     priceMax: '',
-    furnished: false,
-    leaseTerm: '',
     developmentType: '',
     developmentStatus: '',
     landType: '',
@@ -404,27 +400,6 @@ export function LocationHeroSection({
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Lease Term
-                      </Label>
-                      <Select
-                        value={filters.leaseTerm}
-                        onValueChange={val => handleFilterChange('leaseTerm', val)}
-                      >
-                        <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="Any Term" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Any Term</SelectItem>
-                          {filterConfig.rental.leaseTerms.map(term => (
-                            <SelectItem key={term} value={term}>
-                              {term}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-semibold text-muted-foreground uppercase">
                         Max Budget
                       </Label>
                       <Select
@@ -441,16 +416,6 @@ export function LocationHeroSection({
                           <SelectItem value="50000">R 50,000+</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="flex items-center space-x-2 h-10 mt-6">
-                      <Checkbox
-                        id="furnished"
-                        checked={filters.furnished}
-                        onCheckedChange={checked => handleFilterChange('furnished', checked)}
-                      />
-                      <Label htmlFor="furnished" className="font-normal cursor-pointer">
-                        Furnished Only
-                      </Label>
                     </div>
                   </>
                 )}
