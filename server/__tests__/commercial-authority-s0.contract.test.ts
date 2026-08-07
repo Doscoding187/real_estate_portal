@@ -29,6 +29,17 @@ describe('commercial monetization S0 authority containment', () => {
     expect(upgradeSection).not.toContain("status = 'active_paid'");
   });
 
+  it('does not expose the retired developer free-trial or legacy plan authority', () => {
+    const router = readRepoFile('server/subscriptionRouter.ts');
+    const service = readRepoFile('server/services/subscriptionService.ts');
+
+    expect(router).toContain('rejectLegacyDeveloperTrialCategory');
+    expect(router).toContain('Legacy agent and developer subscription administration is retired');
+    expect(router).toContain("plan.category !== 'developer'");
+    expect(router).toContain("sp.category NOT IN ('agent', 'developer')");
+    expect(service).toContain('Legacy developer free trials are retired');
+  });
+
   it('removes the historical Stripe webhook from the active server surface', () => {
     const source = readRepoFile('server/_core/index.ts');
 

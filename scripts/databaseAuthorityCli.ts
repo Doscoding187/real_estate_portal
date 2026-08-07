@@ -17,6 +17,10 @@ import {
   verifyCanonicalGeography,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
 import {
+  prepareCanonicalCommercialReferenceData,
+  verifyCanonicalCommercialReference,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalCommercial';
+import {
   prepareSearchToLeadScenario,
   verifySearchToLeadScenario,
 } from '../server/_core/databaseAuthority/dataAdapters/searchToLeadScenario';
@@ -224,9 +228,14 @@ async function run(command: Command): Promise<void> {
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
       const evidence = isReference
-        ? isPrepare
-          ? await prepareCanonicalGeography({ authority, decision, connection })
-          : await verifyCanonicalGeography({ authority, decision, connection })
+        ? {
+            geography: isPrepare
+              ? await prepareCanonicalGeography({ authority, decision, connection })
+              : await verifyCanonicalGeography({ authority, decision, connection }),
+            commercial: isPrepare
+              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+              : await verifyCanonicalCommercialReference({ authority, decision, connection }),
+          }
         : isPrepare
           ? await prepareSearchToLeadScenario({ authority, decision, connection })
           : await verifySearchToLeadScenario({ authority, decision, connection });

@@ -166,7 +166,7 @@ export interface PlanLimits {
 }
 
 // Developer Subscription Types
-export type SubscriptionTier = 'free_trial' | 'basic' | 'premium';
+export type SubscriptionTier = 'free_trial' | 'launch_access' | 'basic' | 'premium';
 export type DeveloperSubscriptionStatus = 'active' | 'cancelled' | 'expired';
 
 export interface DeveloperSubscription {
@@ -187,6 +187,7 @@ export interface DeveloperSubscription {
 export interface DeveloperSubscriptionLimits {
   id: number;
   subscriptionId: number;
+  developmentPortfolioUnlimited: boolean;
   maxDevelopments: number;
   maxLeadsPerMonth: number;
   maxTeamMembers: number;
@@ -218,6 +219,12 @@ export interface DeveloperCommercialState {
   planDisplayName: string;
   status: string;
   entitled: boolean;
+  commercialTerm: {
+    kind: 'free_trial' | 'paid_launch_access' | 'recurring_subscription';
+    durationDays: number | null;
+    requiresVerifiedPayment: boolean;
+    autoRenews: boolean;
+  };
   trialStatus: 'active' | 'expired' | 'none';
   trialEndsAt: string | null;
   trialDaysRemaining: number | null;

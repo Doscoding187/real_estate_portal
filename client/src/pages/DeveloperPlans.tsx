@@ -38,6 +38,7 @@ import {
 } from '@/lib/commercialCatalog';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const PLAN_STYLES = [
   {
@@ -62,7 +63,7 @@ const PLAN_STYLES = [
 
 function formatLimitValue(value: CommercialProduct['limits'][string]): string {
   if (typeof value === 'boolean') return value ? 'Included' : 'Not included';
-  if (typeof value === 'number') return value >= 999999 ? 'Unlimited' : String(value);
+  if (typeof value === 'number') return String(value);
   return value == null || value === '' ? 'Not configured' : String(value);
 }
 
@@ -78,9 +79,23 @@ export default function DeveloperPlans() {
   const { data: subscription } = trpc.developer.getSubscription.useQuery(undefined, {
     staleTime: 60_000,
   });
+  const requestLaunchInvoice = trpc.billing.requestDeveloperLaunchAccessInvoice.useMutation({
+    onSuccess: result => {
+      setSelectedProduct(null);
+      toast.success('Invoice ready', {
+        description: `${result.invoice.invoiceNumber} is ready for manual EFT payment.`,
+      });
+      setLocation(`/developer/subscription?invoiceId=${result.invoice.id}`);
+    },
+    onError: error => {
+      toast.error(error.message || 'Launch Access invoice could not be issued');
+    },
+  });
 
   const products = catalog?.products || [];
-  const currentPlanId = subscription?.commercial?.planId ?? null;
+  const currentPlanId = subscription?.commercial?.entitled
+    ? (subscription.commercial.planId ?? null)
+    : null;
 
   const handleSelectProduct = (product: CommercialProduct) => {
     const action = getCommercialActionPresentation(product);
@@ -90,6 +105,14 @@ export default function DeveloperPlans() {
 
   const continueWithProduct = () => {
     if (!selectedProduct) return;
+    if (
+      selectedProduct.audience === 'developer' &&
+      selectedProduct.term.kind === 'paid_launch_access' &&
+      selectedProduct.action.mode === 'request_invoice'
+    ) {
+      requestLaunchInvoice.mutate();
+      return;
+    }
     const action = getCommercialActionPresentation(selectedProduct);
     if (action.href) setLocation(action.href);
     setSelectedProduct(null);
@@ -205,11 +228,19 @@ export default function DeveloperPlans() {
                           <span className="text-4xl font-bold text-slate-900">{price.label}</span>
                           {price.period && <span className="text-slate-500">{price.period}</span>}
                         </div>
-                        {product.trial.available && product.trial.days > 0 && (
-                          <p className="mt-2 text-sm font-medium text-purple-600">
-                            Includes a {product.trial.days}-day trial
-                          </p>
-                        )}
+                        {product.term.kind === 'paid_launch_access' &&
+                          product.term.durationDays !== null && (
+                            <p className="mt-2 text-sm font-medium text-blue-600">
+                              Paid Launch Access · {product.term.durationDays} days
+                            </p>
+                          )}
+                        {product.term.kind === 'free_trial' &&
+                          product.trial.available &&
+                          product.trial.days > 0 && (
+                            <p className="mt-2 text-sm font-medium text-purple-600">
+                              Includes a {product.trial.days}-day trial
+                            </p>
+                          )}
                         {product.pricing.displayIncludesVat === true && (
                           <p className="mt-1 text-xs text-slate-500">
                             Displayed price includes VAT
@@ -311,7 +342,9 @@ export default function DeveloperPlans() {
             <Button variant="outline" onClick={() => setSelectedProduct(null)}>
               Cancel
             </Button>
-            <Button onClick={continueWithProduct}>Continue</Button>
+            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending}>
+              {requestLaunchInvoice.isPending ? 'Requesting invoice…' : 'Continue'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

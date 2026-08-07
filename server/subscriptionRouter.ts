@@ -14,7 +14,9 @@ function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
 }
 
-function rejectLegacyAgentCommercialPath(ctx: { user: { id: number; role?: string | null } | null }) {
+function rejectLegacyAgentCommercialPath(ctx: {
+  user: { id: number; role?: string | null } | null;
+}) {
   if (requireUser(ctx).role === 'agent') {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
@@ -22,6 +24,33 @@ function rejectLegacyAgentCommercialPath(ctx: { user: { id: number; role?: strin
         'Legacy agent subscription operations are retired. Use the canonical billing and commercial catalog authorities.',
     });
   }
+}
+
+function rejectLegacyDeveloperCommercialPath(ctx: {
+  user: { id: number; role?: string | null } | null;
+}) {
+  if (requireUser(ctx).role === 'property_developer') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Legacy developer subscription operations are retired. Use Developer Launch Access through the canonical commercial catalog and verified billing authority.',
+    });
+  }
+}
+
+function rejectLegacyDeveloperTrialCategory() {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message:
+      'Legacy developer free trials are retired. Use Developer Launch Access through the canonical commercial catalog and verified billing authority.',
+  });
+}
+
+function rejectLegacyUserCommercialPath(ctx: {
+  user: { id: number; role?: string | null } | null;
+}) {
+  rejectLegacyAgentCommercialPath(ctx);
+  rejectLegacyDeveloperCommercialPath(ctx);
 }
 
 // =====================================================
@@ -81,7 +110,7 @@ export const subscriptionRouter = router({
     )
     .query(async ({ input }) => {
       const plans = await subscriptionService.getAllPlans(input?.category);
-      return plans.filter(plan => plan.category !== 'agent');
+      return plans.filter(plan => plan.category !== 'agent' && plan.category !== 'developer');
     }),
 
   /**
@@ -89,7 +118,7 @@ export const subscriptionRouter = router({
    */
   getPlan: publicProcedure.input(z.object({ plan_id: z.string() })).query(async ({ input }) => {
     const plan = await subscriptionService.getPlanByPlanId(input.plan_id);
-    if (!plan || plan.category === 'agent') {
+    if (!plan || plan.category === 'agent' || plan.category === 'developer') {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Plan not found' });
     }
     return plan;
@@ -104,7 +133,9 @@ export const subscriptionRouter = router({
   togglePlanStatus: protectedProcedure.input(z.any()).mutation(async () => ({ ok: true })),
   getPaymentProofs: protectedProcedure.input(z.any()).query(async () => ({ proofs: [] as any[] })),
   verifyPayment: protectedProcedure.input(z.any()).mutation(async () => ({ ok: true })),
-  getCurrentSubscription: protectedProcedure.input(z.void()).query(async () => ({ subscription: null })),
+  getCurrentSubscription: protectedProcedure
+    .input(z.void())
+    .query(async () => ({ subscription: null })),
   getMyInvoices: protectedProcedure
     .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }))
     .query(async () => ({ invoices: [] as any[], total: 0 })),
@@ -120,7 +151,7 @@ export const subscriptionRouter = router({
    * Get current user's subscription
    */
   getMySubscription: protectedProcedure.query(async ({ ctx }) => {
-    rejectLegacyAgentCommercialPath(ctx);
+    rejectLegacyUserCommercialPath(ctx);
     const subscription = await subscriptionService.getUserSubscriptionWithPlan(getUserId(ctx));
     return subscription;
   }),
@@ -130,6 +161,7 @@ export const subscriptionRouter = router({
    */
   startTrial: protectedProcedure.input(startTrialSchema).mutation(async ({ ctx, input }) => {
     if (input.category === 'agent') rejectLegacyAgentCommercialPath(ctx);
+    if (input.category === 'developer') rejectLegacyDeveloperTrialCategory();
     try {
       const subscription = await subscriptionService.startTrial(getUserId(ctx), input.category);
       const plan = await subscriptionService.getPlanByPlanId(subscription.plan_id);
@@ -150,21 +182,19 @@ export const subscriptionRouter = router({
   /**
    * Create paid subscription
    */
-  createSubscription: protectedProcedure
-    .input(createSubscriptionSchema)
-    .mutation(async () => {
-      throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message:
-          'Legacy paid subscription activation is disabled. Use the canonical billing authority and verified payment workflow.',
-      });
-    }),
+  createSubscription: protectedProcedure.input(createSubscriptionSchema).mutation(async () => {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Legacy paid subscription activation is disabled. Use the canonical billing authority and verified payment workflow.',
+    });
+  }),
 
   /**
    * Upgrade subscription
    */
   upgrade: protectedProcedure.input(upgradeSchema).mutation(async ({ ctx, input }) => {
-    rejectLegacyAgentCommercialPath(ctx);
+    rejectLegacyUserCommercialPath(ctx);
     try {
       await subscriptionService.upgradeSubscription(
         getUserId(ctx),
@@ -185,7 +215,7 @@ export const subscriptionRouter = router({
    * Downgrade subscription
    */
   downgrade: protectedProcedure.input(downgradeSchema).mutation(async ({ ctx, input }) => {
-    rejectLegacyAgentCommercialPath(ctx);
+    rejectLegacyUserCommercialPath(ctx);
     try {
       await subscriptionService.downgradeSubscription(
         getUserId(ctx),
@@ -208,7 +238,7 @@ export const subscriptionRouter = router({
   cancel: protectedProcedure
     .input(z.object({ immediate: z.boolean().default(false) }))
     .mutation(async ({ ctx, input }) => {
-      rejectLegacyAgentCommercialPath(ctx);
+      rejectLegacyUserCommercialPath(ctx);
       const db = await getDb();
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
@@ -244,7 +274,7 @@ export const subscriptionRouter = router({
    * Check feature access
    */
   checkFeature: protectedProcedure.input(checkFeatureSchema).query(async ({ ctx, input }) => {
-    rejectLegacyAgentCommercialPath(ctx);
+    rejectLegacyUserCommercialPath(ctx);
     const access = await subscriptionService.checkFeatureAccess(
       getUserId(ctx),
       input.permission as any,
@@ -256,7 +286,7 @@ export const subscriptionRouter = router({
    * Check usage limit
    */
   checkLimit: protectedProcedure.input(checkLimitSchema).query(async ({ ctx, input }) => {
-    rejectLegacyAgentCommercialPath(ctx);
+    rejectLegacyUserCommercialPath(ctx);
     const limitCheck = await subscriptionService.checkLimit(
       getUserId(ctx),
       input.limit_type,
@@ -271,8 +301,11 @@ export const subscriptionRouter = router({
   getUpgradePrompt: protectedProcedure
     .input(z.object({ blocked_feature: z.string() }))
     .query(async ({ ctx, input }) => {
-      rejectLegacyAgentCommercialPath(ctx);
-      const prompt = await subscriptionService.getUpgradePrompt(getUserId(ctx), input.blocked_feature);
+      rejectLegacyUserCommercialPath(ctx);
+      const prompt = await subscriptionService.getUpgradePrompt(
+        getUserId(ctx),
+        input.blocked_feature,
+      );
       return prompt;
     }),
 
@@ -284,7 +317,7 @@ export const subscriptionRouter = router({
    * Get current usage
    */
   getUsage: protectedProcedure.query(async ({ ctx }) => {
-    rejectLegacyAgentCommercialPath(ctx);
+    rejectLegacyUserCommercialPath(ctx);
     const db = await getDb();
     if (!db)
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
@@ -320,10 +353,10 @@ export const subscriptionRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      if (input.category === 'agent') {
+      if (input.category === 'agent' || input.category === 'developer') {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'Legacy agent subscription administration is retired.',
+          message: 'Legacy agent and developer subscription administration is retired.',
         });
       }
       const db = await getDb();
@@ -335,7 +368,7 @@ export const subscriptionRouter = router({
         FROM user_subscriptions us
         JOIN subscription_plans sp ON us.plan_id = sp.plan_id
         JOIN users u ON us.user_id = u.id
-        WHERE sp.category <> 'agent'
+        WHERE sp.category NOT IN ('agent', 'developer')
       `;
       const params: any[] = [];
 
@@ -369,7 +402,7 @@ export const subscriptionRouter = router({
       SELECT status, COUNT(*) as count
       FROM user_subscriptions us
       JOIN subscription_plans sp ON us.plan_id = sp.plan_id
-      WHERE sp.category <> 'agent'
+      WHERE sp.category NOT IN ('agent', 'developer')
       GROUP BY status
     `);
 
@@ -378,7 +411,7 @@ export const subscriptionRouter = router({
       SELECT sp.category, COUNT(*) as count, SUM(us.amount_zar) as total_revenue
       FROM user_subscriptions us
       JOIN subscription_plans sp ON us.plan_id = sp.plan_id
-      WHERE us.status = 'active_paid' AND sp.category <> 'agent'
+      WHERE us.status = 'active_paid' AND sp.category NOT IN ('agent', 'developer')
       GROUP BY sp.category
     `);
 
@@ -387,7 +420,7 @@ export const subscriptionRouter = router({
       SELECT SUM(amount_zar) as total_mrr
       FROM user_subscriptions us
       JOIN subscription_plans sp ON us.plan_id = sp.plan_id
-      WHERE us.status = 'active_paid' AND us.billing_interval = 'monthly' AND sp.category <> 'agent'
+      WHERE us.status = 'active_paid' AND us.billing_interval = 'monthly' AND sp.category NOT IN ('agent', 'developer')
     `);
 
     const mrr = ((mrrData as any[])[0]?.total_mrr || 0) / 100; // Convert from cents
@@ -409,10 +442,12 @@ export const subscriptionRouter = router({
       if (!db)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
       const [rows] = await db.execute('SELECT role FROM users WHERE id = ?', [input.user_id]);
-      if ((rows as Array<{ role?: string }>)[0]?.role === 'agent') {
+      if (
+        ['agent', 'property_developer'].includes((rows as Array<{ role?: string }>)[0]?.role || '')
+      ) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
-          message: 'Legacy agent trial administration is retired.',
+          message: 'Legacy agent and developer trial administration is retired.',
         });
       }
       await subscriptionService.expireTrial(input.user_id);

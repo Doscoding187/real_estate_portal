@@ -108,6 +108,12 @@ export async function startTrial(
   userId: number,
   category: PlanCategory,
 ): Promise<UserSubscription> {
+  if (category === 'developer') {
+    throw new Error(
+      'Legacy developer free trials are retired. Use Developer Launch Access through the canonical commercial catalog and verified billing authority.',
+    );
+  }
+
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 

@@ -47,7 +47,12 @@ export function getCommercialPricePresentation(
 
   return {
     label,
-    period: product.pricing.billingInterval === 'annual' ? '/year' : '/month',
+    period:
+      product.pricing.billingInterval === 'annual'
+        ? '/year'
+        : product.pricing.billingInterval === 'once'
+          ? ' once-off'
+          : '/month',
     kind: 'fixed',
   };
 }

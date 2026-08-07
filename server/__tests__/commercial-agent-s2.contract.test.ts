@@ -43,10 +43,12 @@ describe('commercial monetization S2 agent authority', () => {
 
     expect(router).toContain('rejectLegacyAgentCommercialPath');
     expect(router).toContain('Legacy agent subscription operations are retired');
-    expect(router).toContain("return plans.filter(plan => plan.category !== 'agent')");
-    expect(router).toContain("WHERE sp.category <> 'agent'");
-    expect(router).toContain("if (input.category === 'agent') rejectLegacyAgentCommercialPath(ctx)");
-    expect(router).toContain('Legacy agent trial administration is retired');
+    expect(router).toContain("plan.category !== 'agent' && plan.category !== 'developer'");
+    expect(router).toContain("WHERE sp.category NOT IN ('agent', 'developer')");
+    expect(router).toContain(
+      "if (input.category === 'agent') rejectLegacyAgentCommercialPath(ctx)",
+    );
+    expect(router).toContain('Legacy agent and developer trial administration is retired');
   });
 
   it('keeps agent publication tied to an active canonical agent plan', () => {

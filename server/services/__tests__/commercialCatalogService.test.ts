@@ -98,6 +98,57 @@ describe('commercial catalog projection', () => {
     });
   });
 
+  it('projects paid Developer Launch Access without a free-trial or zero-price claim', () => {
+    const product = buildCommercialProduct(
+      plan({
+        id: 43,
+        name: 'developer_launch_access',
+        displayName: 'Developer Launch Access',
+        description: 'Paid 90-day launch access',
+        segment: 'developer',
+        price: 149_900,
+        priceMonthly: 0,
+        trialDays: 0,
+        metadata: {
+          commercial_product_key: 'developer_launch_access',
+          commercial_term_kind: 'paid_launch_access',
+          commercial_term_duration_days: 90,
+          commercial_requires_verified_payment: true,
+          commercial_auto_renews: false,
+          commercial_pricing_mode: 'fixed',
+          commercial_action_mode: 'request_invoice',
+          commercial_price_configured: true,
+          commercial_launch_fee_minor: 149_900,
+          commercial_billing_interval: 'once_off',
+          catalogVisibility: 'public',
+        },
+      }),
+      { unlimited_development_portfolio: true },
+    );
+
+    expect(product.productKey).toBe('developer_launch_access');
+    expect(product.term).toEqual({
+      kind: 'paid_launch_access',
+      durationDays: 90,
+      requiresVerifiedPayment: true,
+      autoRenews: false,
+    });
+    expect(product.trial).toEqual({ days: 0, available: false });
+    expect(product.limits).toEqual({ unlimited_development_portfolio: true });
+    expect(product.pricing).toMatchObject({
+      mode: 'fixed',
+      billingInterval: 'once',
+      basePrice: { amountMinor: 149_900, currency: 'ZAR' },
+      monthly: null,
+      annual: null,
+    });
+    expect(product.action).toMatchObject({
+      mode: 'request_invoice',
+      target: { kind: 'route', value: '/contact' },
+    });
+    expect(product.promotion).toMatchObject({ status: 'not_configured', offer: null });
+  });
+
   it('excludes inactive and explicitly local/internal plans from a public catalog', () => {
     expect(isPublicCommercialPlan(plan({ isActive: 0 }))).toBe(false);
     expect(isPublicCommercialPlan(plan({ metadata: { localOnly: true } }))).toBe(false);

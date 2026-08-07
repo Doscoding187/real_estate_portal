@@ -1840,7 +1840,7 @@ export const developerRouter = router({
           throw new TRPCError({
             code: 'FORBIDDEN',
             message:
-              limitCheck.max > 0
+              limitCheck.max !== null && limitCheck.max > 0
                 ? `Development limit reached for ${limitCheck.tier}. Request a canonical developer plan change to create more developments.`
                 : 'A canonical developer product and development entitlement are required before creating a development.',
             cause: {

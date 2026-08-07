@@ -65,11 +65,11 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it('accepts the repository 0000 -> 0001 manifest with exact ancestry', () => {
+  it('accepts the repository 0000 -> 0001 -> 0002 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const [baseline, incremental] = manifest.orderedMigrations;
+    const [baseline, incremental, launchAccess] = manifest.orderedMigrations;
 
     expect(baseline).toMatchObject({
       sequence: 0,
@@ -86,7 +86,16 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe(incremental.filename);
+    expect(launchAccess).toMatchObject({
+      sequence: 2,
+      filename: '0002_paid_launch_access_invoice_term.sql',
+      parent: incremental.filename,
+      parentChecksum: incremental.checksum,
+      checksum: '84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(manifest.expectedHead.filename).toBe(launchAccess.filename);
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

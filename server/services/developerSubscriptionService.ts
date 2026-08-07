@@ -13,7 +13,6 @@ import {
   SubscriptionTier,
 } from '../../shared/types.ts';
 import {
-  getDeveloperTrialPlan,
   getPlanAccessProjectionForDeveloperId,
   getEntitlementBoolean,
   getEntitlementNumber,
@@ -21,7 +20,7 @@ import {
   type EntitlementMap,
   type PlanAccessProjection,
 } from './planAccessService';
-import { setSubscriptionPlanForOwner } from './planAccessService';
+import { resolveCommercialTerm } from './commercialTerm';
 
 type DeveloperLimitType = 'developments' | 'leads' | 'teamMembers';
 
@@ -63,6 +62,9 @@ function getCanonicalLimits(
   return {
     id: 0,
     subscriptionId: anchorId,
+    developmentPortfolioUnlimited: getEntitlementBooleanFromKeys(entitlements, [
+      'unlimited_development_portfolio',
+    ]),
     maxDevelopments: getEntitlementNumberFromKeys(entitlements, [
       'max_developments',
       'max_active_developments',
@@ -93,6 +95,12 @@ function getCanonicalLimits(
 }
 
 function toCompatibilityTier(projection: PlanAccessProjection): SubscriptionTier {
+  if (
+    projection.currentPlan &&
+    resolveCommercialTerm(projection.currentPlan).kind === 'paid_launch_access'
+  ) {
+    return 'launch_access';
+  }
   if (projection.subscription?.status === 'trial') return 'free_trial';
 
   const planName = projection.currentPlan?.name.toLowerCase() || '';
@@ -130,40 +138,34 @@ function getUsageDefaults(anchorId: number): DeveloperSubscriptionUsage {
   };
 }
 
+export function evaluateDeveloperLimitAccess(input: {
+  entitled: boolean;
+  current: number;
+  max: number | null;
+  unlimited: boolean;
+}): boolean {
+  return input.entitled && (input.unlimited || (input.max !== null && input.current < input.max));
+}
+
 export class DeveloperSubscriptionService {
   /**
-   * Establishes canonical developer trial state when a configured canonical
-   * developer product exists. The legacy tables are not used to decide
-   * product, status, price, trial dates, or entitlement.
+   * Reads the canonical developer commercial state. Developer onboarding is
+   * not a free-trial activation path: Launch Access begins only after a
+   * verified canonical payment activates the subscription.
    */
   async ensureSubscription(developerId: number): Promise<DeveloperSubscriptionWithDetails | null> {
-    const existing = await this.getSubscription(developerId);
-    return existing || this.createSubscription(developerId);
+    return this.getSubscription(developerId);
   }
 
   /**
-   * Creates the canonical developer trial. A missing canonical developer
-   * product is an explicit configuration gap, not a reason to revive the old
-   * free_trial constants.
+   * Retained only as an explicit compatibility failure. A developer product
+   * selection or onboarding call must never create a free trial or active paid
+   * state as a side effect.
    */
-  async createSubscription(developerId: number): Promise<DeveloperSubscriptionWithDetails | null> {
-    const existing = await this.getSubscription(developerId);
-    if (existing) return existing;
-
-    const trialPlan = await getDeveloperTrialPlan();
-    if (!trialPlan) return null;
-
-    await setSubscriptionPlanForOwner({
-      ownerType: 'developer',
-      ownerId: developerId,
-      planId: trialPlan.id,
-      status: 'trial',
-      metadata: {
-        source: 'developer_canonical_trial_bootstrap',
-      },
-    });
-
-    return this.getSubscription(developerId);
+  async createSubscription(_developerId: number): Promise<never> {
+    throw new Error(
+      'Developer free-trial provisioning is retired; activate Launch Access only from verified canonical payment.',
+    );
   }
 
   /**
@@ -210,6 +212,7 @@ export class DeveloperSubscriptionService {
         planDisplayName: projection.currentPlan.displayName,
         status: canonicalStatus,
         entitled: isSubscriptionEntitled(canonicalStatus),
+        commercialTerm: resolveCommercialTerm(projection.currentPlan),
         trialStatus: projection.trialStatus,
         trialEndsAt: projection.trialEndsAt,
         trialDaysRemaining: projection.trialDaysRemaining,
@@ -231,19 +234,27 @@ export class DeveloperSubscriptionService {
   async checkLimit(
     developerId: number,
     limitType: DeveloperLimitType,
-  ): Promise<{ allowed: boolean; current: number; max: number; tier: string }> {
+  ): Promise<{
+    allowed: boolean;
+    current: number;
+    max: number | null;
+    unlimited: boolean;
+    tier: string;
+  }> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) {
-      return { allowed: false, current: 0, max: 0, tier: 'unavailable' };
+      return { allowed: false, current: 0, max: 0, unlimited: false, tier: 'unavailable' };
     }
 
     let current: number;
-    let max: number;
+    let max: number | null;
+    let unlimited = false;
 
     switch (limitType) {
       case 'developments':
         current = subscription.usage.developmentsCount;
-        max = subscription.limits.maxDevelopments;
+        unlimited = subscription.limits.developmentPortfolioUnlimited;
+        max = unlimited ? null : subscription.limits.maxDevelopments;
         break;
       case 'leads':
         current = subscription.usage.leadsThisMonth;
@@ -256,9 +267,15 @@ export class DeveloperSubscriptionService {
     }
 
     return {
-      allowed: subscription.commercial.entitled && current < max,
+      allowed: evaluateDeveloperLimitAccess({
+        entitled: subscription.commercial.entitled,
+        current,
+        max,
+        unlimited,
+      }),
       current,
       max,
+      unlimited,
       tier: subscription.commercial.planDisplayName,
     };
   }

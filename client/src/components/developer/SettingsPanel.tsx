@@ -298,7 +298,9 @@ const SettingsPanel: React.FC = () => {
                   <div className="text-sm text-gray-500">Developments</div>
                   <div className="font-medium">
                     {subscription ? (subscription.usage?.developmentsCount ?? 0) : '—'} /{' '}
-                    {subscription?.limits?.maxDevelopments ?? '—'}
+                    {subscription?.limits?.developmentPortfolioUnlimited
+                      ? 'Unlimited portfolio'
+                      : (subscription?.limits?.maxDevelopments ?? '—')}
                   </div>
                 </div>
                 <button

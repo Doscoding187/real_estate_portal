@@ -1,6 +1,11 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { agencyAdminProcedure, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
+import {
+  agencyAdminProcedure,
+  protectedProcedure,
+  publicProcedure,
+  superAdminProcedure,
+} from './_core/trpc';
 import { getDb } from './db';
 import { billingInvoices, billingPayments, plans, subscriptions } from '../drizzle/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
@@ -8,13 +13,16 @@ import {
   getAdminFinanceQueue,
   getAgencyBillingWorkspace,
   getBillingDocumentForUser,
+  getDeveloperBillingWorkspace,
   getManualEftBankDetails,
   listBillingPlans,
   requestAgencyCancellationAtPeriodEnd,
+  requestDeveloperLaunchAccessInvoice,
   restoreAgencySubscription,
   reviewManualPayment,
   startAgencyManualCheckout,
   submitAgencyPaymentProof,
+  submitDeveloperPaymentProof,
   updateSubscriptionLifecycle,
   type BillingCycle,
   type CanonicalSubscriptionStatus,
@@ -101,7 +109,9 @@ function requireAgencyId(ctx: { user?: { agencyId?: number | null } | null }): n
 
 export const billingRouter = {
   plans: publicProcedure
-    .input(z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional())
+    .input(
+      z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional(),
+    )
     .query(async ({ input }) => listBillingPlans(input?.segment || 'agency')),
 
   /**
@@ -120,6 +130,29 @@ export const billingRouter = {
   workspace: agencyAdminProcedure.query(async ({ ctx }) => {
     return getAgencyBillingWorkspace(requireUser(ctx));
   }),
+
+  developerWorkspace: protectedProcedure.query(async ({ ctx }) => {
+    return getDeveloperBillingWorkspace(requireUser(ctx));
+  }),
+
+  requestDeveloperLaunchAccessInvoice: protectedProcedure.mutation(async ({ ctx }) => {
+    return requestDeveloperLaunchAccessInvoice({ user: requireUser(ctx) });
+  }),
+
+  submitDeveloperPaymentProof: protectedProcedure
+    .input(submitPaymentProofSchema)
+    .mutation(async ({ ctx, input }) =>
+      submitDeveloperPaymentProof({
+        user: requireUser(ctx),
+        invoiceId: input.invoiceId,
+        amount: Math.round(input.amount),
+        bankReference: input.bankReference,
+        payerName: input.payerName,
+        paymentDate: input.paymentDate,
+        notes: input.notes,
+        file: input.file,
+      }),
+    ),
 
   startManualEftCheckout: agencyAdminProcedure
     .input(startManualCheckoutSchema)
@@ -178,7 +211,8 @@ export const billingRouter = {
 
   subscription: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
     const [row] = await db
       .select({ subscription: subscriptions, plan: plans })
@@ -196,7 +230,8 @@ export const billingRouter = {
 
   invoices: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
     return db
       .select()
@@ -207,7 +242,8 @@ export const billingRouter = {
 
   payments: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
     return db
       .select()
@@ -240,7 +276,8 @@ export const billingRouter = {
   admin: {
     plans: superAdminProcedure.query(async () => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       return db.select().from(plans).orderBy(plans.sortOrder);
     }),
 
@@ -249,7 +286,15 @@ export const billingRouter = {
         z
           .object({
             status: z
-              .enum(['submitted', 'under_review', 'verified', 'rejected', 'reversed', 'refunded', 'all'])
+              .enum([
+                'submitted',
+                'under_review',
+                'verified',
+                'rejected',
+                'reversed',
+                'refunded',
+                'all',
+              ])
               .default('under_review'),
             limit: z.number().int().positive().max(100).default(50),
             offset: z.number().int().min(0).default(0),
@@ -297,7 +342,8 @@ export const billingRouter = {
 
     billingOverview: superAdminProcedure.query(async () => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       const [revenue] = await db
         .select({ total: sql<number>`COALESCE(SUM(${billingInvoices.amountPaid}), 0)` })
@@ -306,7 +352,12 @@ export const billingRouter = {
       const [pendingPayments] = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(billingPayments)
-        .where(and(eq(billingPayments.paymentMethod, 'manual_eft'), eq(billingPayments.state, 'under_review')));
+        .where(
+          and(
+            eq(billingPayments.paymentMethod, 'manual_eft'),
+            eq(billingPayments.state, 'under_review'),
+          ),
+        );
       const [activeSubscriptions] = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(subscriptions)
