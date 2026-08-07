@@ -155,25 +155,25 @@ export function LocationHeroSection({
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const getSearchPath = (categoryId: string | null, locSlug: string, locName: string) => {
+  const getSearchPath = (categoryId: string | null, location: LocationNode) => {
     const effectiveCategoryId = categoryId || (neutralMode ? '' : 'buy');
     if (!effectiveCategoryId) return undefined;
 
     if (neutralMode && effectiveCategoryId === 'buy') {
-      return buildCanonicalBuyResultsPath(currentLocation);
+      return buildCanonicalBuyResultsPath(location);
     }
 
     const category = categories.find(c => c.id === effectiveCategoryId);
     if (!category) return '/';
 
     if (category.listingType === 'development') {
-      return `/new-developments?location=${encodeURIComponent(locName)}`;
+      return `/new-developments?location=${encodeURIComponent(location.name)}`;
     }
 
     if (category.listingType === 'sale' || category.listingType === 'rent') {
       return buildPropertySearchUrl({
         transactionType: category.listingType === 'rent' ? 'to-rent' : 'for-sale',
-        selectedLocations: [currentLocation],
+        selectedLocations: [location],
         propertyType: filters.propertyTypes[0],
         minPrice: filters.priceMin,
         maxPrice: filters.priceMax,
@@ -184,17 +184,17 @@ export function LocationHeroSection({
   };
 
   const handleSearch = () => {
-    const path = getSearchPath(activeTab, locationSlug, locationName);
+    const path = getSearchPath(activeTab, currentLocation);
     if (path) setLocation(path);
   };
 
   const handleLocationSelect = (selectedLoc: any) => {
     if (selectedLoc?.slug) {
       const path = neutralMode
-        ? activeTab === 'buy'
-          ? buildCanonicalBuyResultsPath(selectedLoc)
+        ? activeTab
+          ? getSearchPath(activeTab, selectedLoc)
           : buildLocationDiscoveryPath(selectedLoc)
-        : getSearchPath(activeTab, selectedLoc.slug, selectedLoc.name);
+        : getSearchPath(activeTab, selectedLoc);
       if (path) setLocation(path);
     }
   };
@@ -243,7 +243,8 @@ export function LocationHeroSection({
             {categories.map(category => {
               const Icon = category.icon;
               const isActive = activeTab === category.id;
-              const isUnavailableInNeutralMode = neutralMode && category.id !== 'buy';
+              const isUnavailableInNeutralMode =
+                neutralMode && category.id !== 'buy' && category.id !== 'rental';
               return (
                 <button
                   key={category.id}
@@ -766,9 +767,6 @@ export function LocationHeroSection({
                   onClick={() => {
                     if (link.path) {
                       setLocation(link.path);
-                    } else if (link.slug) {
-                      const path = getSearchPath(activeTab, link.slug, link.label);
-                      if (path) setLocation(path);
                     }
                   }}
                   className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-full hover:bg-blue-100 hover:text-blue-700 transition-colors"

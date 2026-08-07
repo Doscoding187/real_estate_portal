@@ -15,6 +15,7 @@ import { Footer } from '@/components/Footer';
 import { LocationSchema } from '@/components/location/LocationSchema';
 import { ProvincialComposer } from '@/components/provincial/ProvincialComposer';
 import { trpc } from '@/lib/trpc';
+import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 import { getProvincialConfig } from '@shared/provincialDiscovery';
 import '@/styles/provincial-discovery.css';
@@ -82,10 +83,10 @@ function ProvinceErrorState({ provinceName }: { provinceName: string }) {
             continue to the main search.
           </p>
           <Link
-            href="/property-for-sale"
+            href="/"
             className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#005ca8] px-5 py-3 text-sm font-bold text-white"
           >
-            Open property search <ArrowRight size={16} aria-hidden="true" />
+            Return to location discovery <ArrowRight size={16} aria-hidden="true" />
           </Link>
         </div>
       </main>
@@ -126,6 +127,26 @@ export default function ProvincePage({ params }: ProvincePageProps) {
       slug: market.city!.slug,
       canonicalLocationId: market.city!.canonicalLocationId,
     }));
+  const provinceScope = data.province.canonicalLocationId
+    ? ({
+        kind: 'province',
+        canonicalLocationId: data.province.canonicalLocationId,
+      } as const)
+    : undefined;
+  const buyProvinceHref = provinceScope
+    ? buildTransactionalGeographyHref({
+        journey: 'buy',
+        scope: provinceScope,
+        context: { province: data.province.slug },
+      })
+    : undefined;
+  const rentProvinceHref = provinceScope
+    ? buildTransactionalGeographyHref({
+        journey: 'rent',
+        scope: provinceScope,
+        context: { province: data.province.slug },
+      })
+    : undefined;
 
   return (
     <div className="provincial-page pt-16">
@@ -444,9 +465,18 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                   complete public result set.
                 </p>
               </div>
-              <Link href="/property-for-sale?province=gauteng" className="provincial-section__link">
-                Open full search <ArrowRight size={15} aria-hidden="true" />
-              </Link>
+              <div className="flex flex-wrap items-center gap-4 text-sm font-bold">
+                {buyProvinceHref ? (
+                  <Link href={buyProvinceHref} className="provincial-section__link">
+                    Open Buy search <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                ) : null}
+                {rentProvinceHref ? (
+                  <Link href={rentProvinceHref} className="provincial-section__link">
+                    Open Rent search <ArrowRight size={15} aria-hidden="true" />
+                  </Link>
+                ) : null}
+              </div>
             </div>
             <div className="provincial-inventory">
               <div>
@@ -513,9 +543,18 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                     come from the same public result authority as the search page.
                   </p>
                 </div>
-                <Link href="/property-for-sale?province=gauteng">
-                  Browse all public listings <ArrowRight size={15} aria-hidden="true" />
-                </Link>
+                <div className="flex flex-wrap gap-4">
+                  {buyProvinceHref ? (
+                    <Link href={buyProvinceHref}>
+                      Browse Buy listings <ArrowRight size={15} aria-hidden="true" />
+                    </Link>
+                  ) : null}
+                  {rentProvinceHref ? (
+                    <Link href={rentProvinceHref}>
+                      Browse Rent listings <ArrowRight size={15} aria-hidden="true" />
+                    </Link>
+                  ) : null}
+                </div>
               </aside>
             </div>
           </div>
@@ -538,9 +577,9 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                 Start with a supported Buy or Rent journey, then save the criteria that matter to
                 you.
               </p>
-              <Link href="/property-for-sale?province=gauteng">
-                Set up a search <ArrowRight size={14} aria-hidden="true" />
-              </Link>
+              <a href="#provincial-composer-title">
+                Choose Buy or Rent <ArrowRight size={14} aria-hidden="true" />
+              </a>
             </article>
             <article className="provincial-trust__card">
               <span className="provincial-trust__icon">

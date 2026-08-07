@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, Star, ArrowRight, MapPin } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { trpc } from '@/lib/trpc';
+import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
+import { buildLocationDiscoveryPath } from '@/lib/locationDiscovery';
 
 const cities = [
   'Cape Town',
@@ -171,6 +173,23 @@ export function TopLocalities({
       enabled: Boolean(provinceSlug && citySlug),
     },
   );
+  const cityId = toNumber((data as any)?.city?.id);
+  const cityCanonicalLocationId =
+    typeof (data as any)?.city?.canonicalLocationId === 'string'
+      ? String((data as any).city.canonicalLocationId)
+      : cityId > 0
+        ? `city:${cityId}`
+        : undefined;
+  const cityDiscoveryHref = cityCanonicalLocationId
+    ? buildLocationDiscoveryPath({
+        id: cityCanonicalLocationId,
+        canonicalLocationId: cityCanonicalLocationId,
+        slug: citySlug,
+        name: selectedCity,
+        type: 'city',
+        provinceSlug,
+      })
+    : undefined;
 
   const localities = useMemo(() => {
     const rows = ((data as any)?.topLocalities || []) as Array<any>;
@@ -182,6 +201,8 @@ export function TopLocalities({
 
       return {
         id: toNumber(locality.id),
+        canonicalLocationId:
+          toNumber(locality.id) > 0 ? `suburb:${toNumber(locality.id)}` : undefined,
         name: String(locality.name || '-'),
         slug: locality.slug
           ? String(locality.slug)
@@ -201,6 +222,7 @@ export function TopLocalities({
       .slice(0, Math.max(0, 5 - live.length))
       .map((item, idx) => ({
         id: 0 - (idx + 1),
+        canonicalLocationId: undefined,
         name: item.name,
         slug: item.slug,
         avgSalePrice: 0,
@@ -253,7 +275,55 @@ export function TopLocalities({
             <div className="overflow-hidden rounded-xl" ref={emblaRef}>
               <div className="home-card-grid flex">
                 {compactLocalities.map((locality, idx) => {
-                  const localityUrl = `/${provinceSlug}/${citySlug}/${locality.slug}`;
+                  const localityUrl = locality.canonicalLocationId
+                    ? buildLocationDiscoveryPath({
+                        id: locality.canonicalLocationId,
+                        canonicalLocationId: locality.canonicalLocationId,
+                        slug: locality.slug,
+                        name: locality.name,
+                        type: 'suburb',
+                        provinceSlug,
+                        citySlug,
+                      })
+                    : undefined;
+                  const saleHref = locality.canonicalLocationId
+                    ? buildTransactionalGeographyHref({
+                        journey: 'buy',
+                        scope: {
+                          kind: 'locality',
+                          canonicalLocationId: locality.canonicalLocationId,
+                        },
+                        context: { province: provinceSlug, city: citySlug, suburb: locality.slug },
+                      })
+                    : undefined;
+                  const rentHref = locality.canonicalLocationId
+                    ? buildTransactionalGeographyHref({
+                        journey: 'rent',
+                        scope: {
+                          kind: 'locality',
+                          canonicalLocationId: locality.canonicalLocationId,
+                        },
+                        context: { province: provinceSlug, city: citySlug, suburb: locality.slug },
+                      })
+                    : undefined;
+                  const localityHeader = (
+                    <div className="flex items-center gap-3 mb-3 cursor-pointer">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
+                        <MapPin className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-[1.05rem] mb-0.5 text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                          {locality.name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="inline-flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <span className="font-bold text-yellow-700">Top suburb</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
 
                   return (
                     <div
@@ -262,24 +332,11 @@ export function TopLocalities({
                     >
                       <Card className="hover:shadow-xl transition-all duration-300 border-0 bg-white/50 backdrop-blur-sm group h-full">
                         <CardContent className="p-3.5 sm:p-4">
-                          <Link href={localityUrl}>
-                            <div className="flex items-center gap-3 mb-3 cursor-pointer">
-                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
-                                <MapPin className="h-5 w-5 text-white" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-[1.05rem] mb-0.5 text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-                                  {locality.name}
-                                </h3>
-                                <div className="flex items-center gap-2 text-xs">
-                                  <div className="inline-flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded-md border border-yellow-100">
-                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                    <span className="font-bold text-yellow-700">Top suburb</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
+                          {localityUrl ? (
+                            <Link href={localityUrl}>{localityHeader}</Link>
+                          ) : (
+                            localityHeader
+                          )}
 
                           <div className="grid grid-cols-2 gap-2 mb-3 p-2.5 bg-gray-50/80 rounded-lg border border-gray-100">
                             <div>
@@ -301,38 +358,48 @@ export function TopLocalities({
                           </div>
 
                           <div className="space-y-2">
-                            <Link
-                              href={`${localityUrl}?listingType=sale`}
-                              className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
-                            >
-                              <div className="min-w-0">
-                                <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
-                                  {formatListingLabel(locality.propertiesForSale, 'For Sale homes')}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground truncate">
-                                  in {locality.name}
-                                </p>
-                              </div>
-                              <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
-                                <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
-                              </div>
-                            </Link>
-                            <Link
-                              href={`${localityUrl}?listingType=rent`}
-                              className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
-                            >
-                              <div className="min-w-0">
-                                <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
-                                  {formatListingLabel(locality.propertiesForRent, 'For Rent homes')}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground truncate">
-                                  in {locality.name}
-                                </p>
-                              </div>
-                              <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
-                                <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
-                              </div>
-                            </Link>
+                            {saleHref && (
+                              <Link
+                                href={saleHref}
+                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
+                              >
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
+                                    {formatListingLabel(
+                                      locality.propertiesForSale,
+                                      'For Sale homes',
+                                    )}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    in {locality.name}
+                                  </p>
+                                </div>
+                                <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
+                                  <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
+                                </div>
+                              </Link>
+                            )}
+                            {rentHref && (
+                              <Link
+                                href={rentHref}
+                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-100 hover:border-blue-200 hover:shadow-sm transition-all group/link"
+                              >
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-xs text-gray-900 group-hover/link:text-blue-600 transition-colors truncate">
+                                    {formatListingLabel(
+                                      locality.propertiesForRent,
+                                      'For Rent homes',
+                                    )}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    in {locality.name}
+                                  </p>
+                                </div>
+                                <div className="h-6 w-6 rounded-full bg-gray-50 flex items-center justify-center group-hover/link:bg-blue-50 transition-colors flex-shrink-0">
+                                  <ArrowRight className="h-3 w-3 text-gray-400 group-hover/link:text-blue-600 group-hover/link:translate-x-0.5 transition-all" />
+                                </div>
+                              </Link>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -361,15 +428,17 @@ export function TopLocalities({
           </div>
         )}
 
-        <div className="mt-8 text-center md:text-left">
-          <Link
-            href={`/${provinceSlug}/${citySlug}`}
-            className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium outline-none text-white rounded-md gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
-          >
-            Explore All in {selectedCity}
-            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
+        {cityDiscoveryHref && (
+          <div className="mt-8 text-center md:text-left">
+            <Link
+              href={cityDiscoveryHref}
+              className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium outline-none text-white rounded-md gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
+            >
+              Explore All in {selectedCity}
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

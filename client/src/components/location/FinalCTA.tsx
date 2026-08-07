@@ -1,17 +1,29 @@
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
+import {
+  buildTransactionalGeographyHref,
+  type GeographySearchContext,
+} from '@/lib/geographySearchHandoff';
+import type { SearchScope } from '@shared/searchScope';
 
 interface FinalCTAProps {
   locationName: string;
-  provinceSlug: string;
-  citySlug?: string;
-  suburbSlug?: string;
+  scope: SearchScope;
+  context?: GeographySearchContext;
 }
 
-export function FinalCTA({ locationName, provinceSlug, citySlug, suburbSlug }: FinalCTAProps) {
-  // Construct links
-  const baseSearchUrl = `/properties/sale`; // Default search logic
-  // TODO: Add refined query params later if needed
+export function FinalCTA({ locationName, scope, context }: FinalCTAProps) {
+  const searchHandoff = (journey: 'buy' | 'rent', propertyType?: string) =>
+    buildTransactionalGeographyHref({
+      journey,
+      scope,
+      context,
+      filters: propertyType ? { propertyType } : undefined,
+    });
+
+  const houseHref = searchHandoff('buy', 'house');
+  const apartmentHref = searchHandoff('buy', 'apartment');
+  const rentHref = searchHandoff('rent');
 
   return (
     <div className="py-20 bg-primary-900 text-white text-center">
@@ -24,32 +36,38 @@ export function FinalCTA({ locationName, provinceSlug, citySlug, suburbSlug }: F
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href={`/properties/sale?property_type=house&location=${suburbSlug || citySlug || provinceSlug}`}
-          >
-            <Button
-              size="lg"
-              className="bg-white text-primary-900 hover:bg-slate-100 text-lg px-8 h-14"
-            >
-              Search Houses
-            </Button>
-          </Link>
-          <Link
-            href={`/properties/sale?property_type=apartment&location=${suburbSlug || citySlug || provinceSlug}`}
-          >
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white text-white hover:bg-white/10 text-lg px-8 h-14 bg-transparent"
-            >
-              Search Apartments
-            </Button>
-          </Link>
-          <Link href={`/properties/rent?location=${suburbSlug || citySlug || provinceSlug}`}>
-            <Button size="lg" variant="ghost" className="text-white hover:bg-white/10 text-lg h-14">
-              Browse Rentals
-            </Button>
-          </Link>
+          {houseHref && (
+            <Link href={houseHref}>
+              <Button
+                size="lg"
+                className="bg-white text-primary-900 hover:bg-slate-100 text-lg px-8 h-14"
+              >
+                Search Houses
+              </Button>
+            </Link>
+          )}
+          {apartmentHref && (
+            <Link href={apartmentHref}>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white text-white hover:bg-white/10 text-lg px-8 h-14 bg-transparent"
+              >
+                Search Apartments
+              </Button>
+            </Link>
+          )}
+          {rentHref && (
+            <Link href={rentHref}>
+              <Button
+                size="lg"
+                variant="ghost"
+                className="text-white hover:bg-white/10 text-lg h-14"
+              >
+                Browse Rentals
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </div>

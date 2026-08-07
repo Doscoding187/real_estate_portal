@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildBuySearchUrl, getPriceRangeError } from '@/lib/heroJourneySearch';
+import {
+  buildBuySearchUrl,
+  buildPropertySearchUrl,
+  getPriceRangeError,
+} from '@/lib/heroJourneySearch';
 import { resolveSearchIntent } from '@/lib/searchIntent';
 import type { LocationNode } from '@/types/location';
 
@@ -175,4 +179,30 @@ describe('Buy journey URL authority', () => {
       listingType: 'sale',
     });
   });
+});
+
+describe('transactional journey runtime closure', () => {
+  it('preserves explicit Rent navigation', () => {
+    const url = buildPropertySearchUrl({
+      transactionType: 'to-rent',
+      selectedLocations: [gauteng],
+    });
+
+    expect(url).toContain('/property-to-rent?');
+    expect(url).toContain('locationId=province%3A1');
+  });
+
+  it.each(['shared_living', 'developments', 'plot_land', 'commercial', 'unknown', '', null])(
+    'fails closed for unsupported runtime transaction type %s',
+    transactionType => {
+      const url = buildPropertySearchUrl({
+        transactionType: transactionType as never,
+        selectedLocations: [gauteng],
+      });
+
+      expect(url).toBe('/');
+      expect(url).not.toContain('/property-to-rent');
+      expect(url).not.toContain('/property-for-sale');
+    },
+  );
 });

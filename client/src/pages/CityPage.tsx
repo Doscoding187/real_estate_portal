@@ -54,7 +54,9 @@ export default function CityPage({
   const locationCanonicalPath = isLocationDiscovery
     ? `/${provinceSlug}/${citySlug}`
     : `${locationPathPrefix}/${provinceSlug}/${citySlug}`;
-  const [heroTab, setHeroTab] = React.useState<string | null>(isLocationDiscovery ? null : 'buy');
+  const [heroTab, setHeroTab] = React.useState<string | null>(
+    isLocationDiscovery ? null : locationPathPrefix === '/property-to-rent' ? 'rental' : 'buy',
+  );
   const campaignHierarchy = buildCampaignSlugHierarchy(`${provinceSlug}/${citySlug}`);
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
@@ -227,7 +229,13 @@ export default function CityPage({
         topLocalities={topLocalities}
         topLocalitiesShowcase={
           topLocalities && topLocalities.length > 0 ? (
-            <LocationTopLocalities localities={topLocalities} locationName={city.name} />
+            <LocationTopLocalities
+              localities={topLocalities}
+              locationName={city.name}
+              provinceSlug={provinceSlug}
+              citySlug={citySlug}
+              cityCanonicalLocationId={city.canonicalLocationId || `city:${city.id}`}
+            />
           ) : undefined
         }
         highDemandDevelopments={
@@ -308,7 +316,11 @@ export default function CityPage({
           </div>
         }
         sellerCTA={
-          <FinalCTA locationName={city.name} provinceSlug={provinceSlug} citySlug={citySlug} />
+          <FinalCTA
+            locationName={city.name}
+            scope={{ kind: 'metro_city', canonicalLocationId: `city:${city.id}` }}
+            context={{ province: provinceSlug, city: citySlug }}
+          />
         }
       />
     </>

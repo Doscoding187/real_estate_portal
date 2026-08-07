@@ -30,7 +30,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
-import { buildBuySearchUrl } from '@/lib/heroJourneySearch';
+import { buildPropertySearchUrl } from '@/lib/heroJourneySearch';
 
 export default function SuburbPage({
   params,
@@ -52,7 +52,9 @@ export default function SuburbPage({
   const suburbCanonicalPath = isLocationDiscovery
     ? `/${provinceSlug}/${citySlug}/${suburbSlug}`
     : `${cityCanonicalPath}/${suburbSlug}`;
-  const [heroTab, setHeroTab] = useState<string | null>(isLocationDiscovery ? null : 'buy');
+  const [heroTab, setHeroTab] = useState<string | null>(
+    isLocationDiscovery ? null : locationPathPrefix === '/property-to-rent' ? 'rental' : 'buy',
+  );
   const campaignHierarchy = buildCampaignSlugHierarchy(`${provinceSlug}/${citySlug}/${suburbSlug}`);
 
   const mapHeroTabToFeedTab = (tabId?: string | null): FeedTab => {
@@ -111,7 +113,8 @@ export default function SuburbPage({
   const subLocalities = (data as any)?.subLocalities ?? [];
   const insights = (data as any)?.insights ?? null;
   const reviews = (data as any)?.reviews ?? [];
-  const buildBuyResultsPath = buildBuySearchUrl({
+  const buildResultsPath = buildPropertySearchUrl({
+    transactionType: locationPathPrefix === '/property-to-rent' ? 'to-rent' : 'for-sale',
     selectedLocations: [
       {
         id: `suburb:${suburb.id}`,
@@ -235,7 +238,7 @@ export default function SuburbPage({
                           : `Browse a selection of properties for sale in ${suburb.name}.`}
                       </p>
                     </div>
-                    <Link href={buildBuyResultsPath}>
+                    <Link href={buildResultsPath}>
                       <Button variant="outline" className="hidden md:flex gap-2">
                         View all properties <ArrowRight className="h-4 w-4" />
                       </Button>
@@ -251,7 +254,7 @@ export default function SuburbPage({
                   </div>
 
                   <div className="mt-8 text-center md:hidden">
-                    <Link href={buildBuyResultsPath}>
+                    <Link href={buildResultsPath}>
                       <Button variant="outline" className="w-full gap-2">
                         View all properties <ArrowRight className="h-4 w-4" />
                       </Button>
