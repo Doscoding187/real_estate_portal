@@ -43,4 +43,57 @@ describe('public Search Area request validation', () => {
       });
     }
   });
+
+  it('accepts bounded canonical sibling selections for Buy and Rent', () => {
+    expect(
+      validatePublicSearchInput({
+        locationIds: ['suburb:35', 'suburb:34'],
+        listingType: 'sale',
+      }),
+    ).toBeUndefined();
+    expect(
+      validatePublicSearchInput({
+        locationIds: ['city:13', 'city:12'],
+        listingType: 'rent',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('rejects mixed authority, mixed level, invalid and excessive selections', () => {
+    expect(
+      validatePublicSearchInput({
+        locationIds: ['suburb:34', 'city:12'],
+        listingType: 'sale',
+      }),
+    ).toMatchObject({ path: 'locationIds' });
+    expect(
+      validatePublicSearchInput({
+        locationIds: ['suburb:34', 'not-canonical'],
+        listingType: 'sale',
+      }),
+    ).toMatchObject({ path: 'locationIds' });
+    expect(
+      validatePublicSearchInput({
+        locationIds: ['suburb:34', 'suburb:35'],
+        searchAreaIds: ['johannesburg-sandton'],
+        listingType: 'sale',
+      }),
+    ).toMatchObject({ path: 'locationIds' });
+    expect(
+      validatePublicSearchInput({
+        locationIds: Array.from({ length: 11 }, (_, index) => `suburb:${index + 1}`),
+        listingType: 'sale',
+      }),
+    ).toMatchObject({ path: 'locationIds' });
+  });
+
+  it('rejects mixed geography fields instead of silently widening the OR', () => {
+    expect(
+      validatePublicSearchInput({
+        locationIds: ['suburb:34', 'suburb:35'],
+        city: 'johannesburg',
+        listingType: 'rent',
+      }),
+    ).toMatchObject({ path: 'locationIds' });
+  });
 });

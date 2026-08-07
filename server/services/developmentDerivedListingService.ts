@@ -8,7 +8,7 @@ import type {
   SearchCardResult,
   SortOption,
 } from '../../shared/types';
-import type { SearchAreaQueryBoundary } from './searchAreaQueryBoundary';
+import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
 
 interface DevelopmentDerivedListingFilters {
   province?: string;
@@ -219,6 +219,43 @@ function matchesNormalizedFieldSet(value: unknown, expectedValues?: string[]): b
   if (!normalizedValue) return false;
 
   return expectedValues.some(expected => normalizedValue === normalizeLocationText(expected));
+}
+
+function matchesQueryBoundary(
+  row: { province?: unknown; city?: unknown; suburb?: unknown },
+  boundary: PublicSearchQueryBoundary,
+): boolean {
+  if (boundary.kind === 'canonical_members') {
+    return (
+      matchesNormalizedField(row.city, boundary.parentCityName) &&
+      matchesNormalizedFieldSet(row.suburb, [...boundary.memberSuburbNames])
+    );
+  }
+
+  if (boundary.level === 'province') {
+    return matchesNormalizedFieldSet(
+      row.province,
+      boundary.members.map(member => member.provinceName),
+    );
+  }
+
+  if (boundary.level === 'city') {
+    return (
+      matchesNormalizedField(row.province, boundary.parentName) &&
+      matchesNormalizedFieldSet(
+        row.city,
+        boundary.members.map(member => member.cityName || ''),
+      )
+    );
+  }
+
+  return (
+    matchesNormalizedField(row.city, boundary.parentName) &&
+    matchesNormalizedFieldSet(
+      row.suburb,
+      boundary.members.map(member => member.suburbName || ''),
+    )
+  );
 }
 
 function mapStructuralTypeToPropertyType(
@@ -585,7 +622,7 @@ export class DevelopmentDerivedListingService {
     sortOption: SortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
-    searchAreaBoundary?: SearchAreaQueryBoundary,
+    searchAreaBoundary?: PublicSearchQueryBoundary,
   ): Promise<DevelopmentDerivedListingSearchResults> {
     const db = await getDb();
     if (!db) {
@@ -700,12 +737,7 @@ export class DevelopmentDerivedListingService {
           // than a canonical suburb foreign key. Match only the exact names
           // resolved from the server-owned canonical member IDs and the
           // resolved parent city; never widen to a text or parent search.
-          if (!matchesNormalizedField(row.city, searchAreaBoundary.parentCityName)) {
-            return null;
-          }
-          if (!matchesNormalizedFieldSet(row.suburb, [...searchAreaBoundary.memberSuburbNames])) {
-            return null;
-          }
+          if (!matchesQueryBoundary(row, searchAreaBoundary)) return null;
         } else {
           if (!matchesNormalizedField(row.province, filters.province)) {
             return null;

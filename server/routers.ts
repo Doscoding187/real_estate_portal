@@ -538,55 +538,59 @@ const appRouterConfig = {
      */
     searchPublicInventory: publicProcedure
       .input(
-        z.object({
-          province: z.string().trim().max(120).optional(),
-          city: z.string().trim().max(120).optional(),
-          suburb: z.array(z.string().trim().max(120)).max(10).optional(),
-          locations: z.array(z.string().trim().max(120)).max(10).optional(),
-          locationId: z.string().trim().max(128).optional(),
-          searchAreaId: z.string().trim().max(120).optional(),
-          propertyType: z
-            .enum([
-              'apartment',
-              'house',
-              'villa',
-              'plot',
-              'commercial',
-              'townhouse',
-              'cluster_home',
-              'farm',
-              'shared_living',
-            ])
-            .optional(),
-          listingType: z.enum(['sale', 'rent']).optional(),
-          listingSource: z.enum(['manual', 'development']).optional(),
-          minPrice: z.number().nonnegative().optional(),
-          maxPrice: z.number().nonnegative().optional(),
-          minBedrooms: z.number().nonnegative().optional(),
-          maxBedrooms: z.number().nonnegative().optional(),
-          minBathrooms: z.number().nonnegative().optional(),
-          maxBathrooms: z.number().nonnegative().optional(),
-          minArea: z.number().nonnegative().optional(),
-          maxArea: z.number().nonnegative().optional(),
-          minLat: z.number().optional(),
-          maxLat: z.number().optional(),
-          minLng: z.number().optional(),
-          maxLng: z.number().optional(),
-          sortOption: z
-            .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc'])
-            .default('relevance'),
-          page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
-          pageSize: z.number().int().min(1).max(50).default(12),
-        }).superRefine((input, context) => {
-          const issue = validatePublicSearchInput(input);
-          if (!issue) return;
+        z
+          .object({
+            province: z.string().trim().max(120).optional(),
+            city: z.string().trim().max(120).optional(),
+            suburb: z.array(z.string().trim().max(120)).max(10).optional(),
+            locations: z.array(z.string().trim().max(120)).max(10).optional(),
+            locationId: z.string().trim().max(128).optional(),
+            locationIds: z.array(z.string().trim().max(128)).max(10).optional(),
+            searchAreaId: z.string().trim().max(120).optional(),
+            searchAreaIds: z.array(z.string().trim().max(120)).max(10).optional(),
+            propertyType: z
+              .enum([
+                'apartment',
+                'house',
+                'villa',
+                'plot',
+                'commercial',
+                'townhouse',
+                'cluster_home',
+                'farm',
+                'shared_living',
+              ])
+              .optional(),
+            listingType: z.enum(['sale', 'rent']).optional(),
+            listingSource: z.enum(['manual', 'development']).optional(),
+            minPrice: z.number().nonnegative().optional(),
+            maxPrice: z.number().nonnegative().optional(),
+            minBedrooms: z.number().nonnegative().optional(),
+            maxBedrooms: z.number().nonnegative().optional(),
+            minBathrooms: z.number().nonnegative().optional(),
+            maxBathrooms: z.number().nonnegative().optional(),
+            minArea: z.number().nonnegative().optional(),
+            maxArea: z.number().nonnegative().optional(),
+            minLat: z.number().optional(),
+            maxLat: z.number().optional(),
+            minLng: z.number().optional(),
+            maxLng: z.number().optional(),
+            sortOption: z
+              .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc'])
+              .default('relevance'),
+            page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).default(0),
+            pageSize: z.number().int().min(1).max(50).default(12),
+          })
+          .superRefine((input, context) => {
+            const issue = validatePublicSearchInput(input);
+            if (!issue) return;
 
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: [issue.path],
-            message: issue.message,
-          });
-        }),
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: [issue.path],
+              message: issue.message,
+            });
+          }),
       )
       .query(async ({ input }) => {
         const { publicSearchService } = await import('./services/publicSearchService');
@@ -876,7 +880,7 @@ const appRouterConfig = {
           ? await db.getListingMedia(linkedListingId)
           : [];
         const linkedPropertyDetails = publicLinkedListing
-          ? ((publicLinkedListing.propertyDetails as any) || {})
+          ? (publicLinkedListing.propertyDetails as any) || {}
           : {};
 
         const bucketName = ENV.s3BucketName || 'listify-properties-sa';
@@ -884,7 +888,9 @@ const appRouterConfig = {
         const cdnUrl = ENV.cloudFrontUrl || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
 
         const propertyImages = rawImages.map(img => {
-          const imageUrl = img.imageUrl.startsWith('http') ? img.imageUrl : `${cdnUrl}/${img.imageUrl}`;
+          const imageUrl = img.imageUrl.startsWith('http')
+            ? img.imageUrl
+            : `${cdnUrl}/${img.imageUrl}`;
           return {
             ...img,
             imageUrl,
@@ -1070,7 +1076,7 @@ const appRouterConfig = {
                   return {};
                 }
               })()
-            : ((property as any).propertySettings || {})),
+            : (property as any).propertySettings || {}),
           ownershipType: linkedPropertyDetails.ownershipType,
           powerBackup: linkedPropertyDetails.powerBackup,
           security: linkedPropertyDetails.security || linkedPropertyDetails.securityLevel,
@@ -1093,7 +1099,7 @@ const appRouterConfig = {
                   return {};
                 }
               })()
-            : ((property as any).propertyDetails || {})),
+            : (property as any).propertyDetails || {}),
           ...linkedPropertyDetails,
           bedrooms: resolvedBedrooms,
           bathrooms: resolvedBathrooms,
@@ -1126,7 +1132,8 @@ const appRouterConfig = {
             displayPrice: resolvedPrice,
             listingType: resolvedListingType,
             transactionType: resolvedListingType,
-            propertyType: (property as any).propertyType || (publicLinkedListing as any)?.propertyType,
+            propertyType:
+              (property as any).propertyType || (publicLinkedListing as any)?.propertyType,
             bedrooms: resolvedBedrooms,
             bathrooms: resolvedBathrooms,
             area: resolvedArea,
@@ -1134,9 +1141,12 @@ const appRouterConfig = {
             erfSizeM2: linkedPropertyDetails.erfSizeM2,
             suburb: (publicLinkedListing as any)?.suburb || (property as any).suburb || undefined,
             city: (publicLinkedListing as any)?.city || (property as any).city || undefined,
-            province: (publicLinkedListing as any)?.province || (property as any).province || undefined,
-            address: (publicLinkedListing as any)?.address || (property as any).address || undefined,
-            zipCode: (publicLinkedListing as any)?.postalCode || (property as any).zipCode || undefined,
+            province:
+              (publicLinkedListing as any)?.province || (property as any).province || undefined,
+            address:
+              (publicLinkedListing as any)?.address || (property as any).address || undefined,
+            zipCode:
+              (publicLinkedListing as any)?.postalCode || (property as any).zipCode || undefined,
             latitude: (publicLinkedListing as any)?.latitude || (property as any).latitude,
             longitude: (publicLinkedListing as any)?.longitude || (property as any).longitude,
             amenities: uniqueAmenities.length > 0 ? uniqueAmenities : linkedAmenities,

@@ -1,5 +1,5 @@
 import { parseCanonicalLocationId } from './locationAuthority';
-import { isSearchAreaId } from './searchScope';
+import { isSearchAreaId, MULTI_LOCATION_MAX, MULTI_LOCATION_MIN } from './searchScope';
 
 export interface PublicSearchInputValidationIssue {
   path: string;
@@ -12,7 +12,9 @@ interface PublicSearchInputLike {
   suburb?: string[];
   locations?: string[];
   locationId?: string;
+  locationIds?: string[];
   searchAreaId?: string;
+  searchAreaIds?: string[];
   listingType?: 'sale' | 'rent';
   minPrice?: number;
   maxPrice?: number;
@@ -86,6 +88,86 @@ export function validatePublicSearchInput(
     };
   }
 
+  if (input.searchAreaIds?.some(searchAreaId => !isSearchAreaId(searchAreaId))) {
+    return {
+      path: 'searchAreaIds',
+      message: 'Every Search Area ID must use a stable Property Listify identity.',
+    };
+  }
+
+  if (input.locationIds?.some(locationId => !parseCanonicalLocationId(locationId))) {
+    return {
+      path: 'locationIds',
+      message: 'Every selected location must use a canonical Property Listify identity.',
+    };
+  }
+
+  if ((input.locationIds?.length || 0) > MULTI_LOCATION_MAX) {
+    return {
+      path: 'locationIds',
+      message: `A multi-location search cannot contain more than ${MULTI_LOCATION_MAX} locations.`,
+    };
+  }
+
+  if ((input.searchAreaIds?.length || 0) > MULTI_LOCATION_MAX) {
+    return {
+      path: 'searchAreaIds',
+      message: `A multi-location search cannot contain more than ${MULTI_LOCATION_MAX} Search Areas.`,
+    };
+  }
+
+  if (input.locationIds?.length && input.searchAreaIds?.length) {
+    return {
+      path: 'locationIds',
+      message: 'A multi-location search cannot mix canonical locations and Search Areas.',
+    };
+  }
+
+  if (input.locationIds !== undefined && input.locationIds.length < MULTI_LOCATION_MIN) {
+    return {
+      path: 'locationIds',
+      message: `A multi-location search requires at least ${MULTI_LOCATION_MIN} selected locations.`,
+    };
+  }
+
+  if (input.searchAreaIds !== undefined && input.searchAreaIds.length < MULTI_LOCATION_MIN) {
+    return {
+      path: 'searchAreaIds',
+      message: `A multi-location search requires at least ${MULTI_LOCATION_MIN} selected Search Areas.`,
+    };
+  }
+
+  const multiLocationIds = input.locationIds || [];
+  const parsedMultiLocationIds = multiLocationIds
+    .map(locationId => parseCanonicalLocationId(locationId))
+    .filter((value): value is NonNullable<typeof value> => Boolean(value));
+  if (
+    parsedMultiLocationIds.length > 1 &&
+    new Set(parsedMultiLocationIds.map(location => location.level)).size !== 1
+  ) {
+    return {
+      path: 'locationIds',
+      message: 'Multi-location selections must use one geographic level.',
+    };
+  }
+
+  if ((input.locationIds?.length || 0) > 0 || (input.searchAreaIds?.length || 0) > 0) {
+    if (
+      input.locationId ||
+      input.searchAreaId ||
+      input.province ||
+      input.city ||
+      input.suburb?.length ||
+      input.locations?.length
+    ) {
+      return {
+        path: 'locationIds',
+        message:
+          'Multi-location searches cannot combine selected locations with another geography authority.',
+      };
+    }
+  }
+
   if (input.locationId && !canonicalLocation) {
     return {
       path: 'locationId',
@@ -95,7 +177,12 @@ export function validatePublicSearchInput(
 
   if (
     input.searchAreaId &&
-    (input.province || input.city || input.suburb?.length || input.locations?.length)
+    (input.province ||
+      input.city ||
+      input.suburb?.length ||
+      input.locations?.length ||
+      input.locationIds?.length ||
+      input.searchAreaIds?.length)
   ) {
     return {
       path: 'searchAreaId',

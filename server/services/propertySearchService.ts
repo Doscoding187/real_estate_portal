@@ -28,12 +28,42 @@ import type {
   SearchCardResult,
 } from '../../shared/types';
 import { locationResolver, ResolvedLocation } from './locationResolverService';
-import type { SearchAreaQueryBoundary } from './searchAreaQueryBoundary';
+import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
 
 // Cache key prefix for property searches
 const CACHE_PREFIX = 'property:search:v2:';
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
+
+type QueryLocationIds = Array<{
+  provinceId?: number;
+  provinceName?: string;
+  cityId?: number;
+  cityName?: string;
+  suburbId?: number;
+  suburbName?: string;
+  canonicalOnly?: boolean;
+}>;
+
+function queryLocationIdsFromBoundary(boundary: PublicSearchQueryBoundary): QueryLocationIds {
+  if (boundary.kind === 'canonical_members') {
+    return boundary.memberSuburbIds.map((suburbId, index) => ({
+      suburbId,
+      suburbName: boundary.memberSuburbNames[index],
+      canonicalOnly: true,
+    }));
+  }
+
+  return boundary.members.map(member => ({
+    provinceId: member.provinceId,
+    provinceName: member.provinceName,
+    cityId: member.cityId,
+    cityName: member.cityName,
+    suburbId: member.suburbId,
+    suburbName: member.suburbName,
+    canonicalOnly: true,
+  }));
+}
 
 function parseJsonObject(value: unknown): Record<string, any> {
   if (!value) return {};
@@ -57,9 +87,7 @@ function asPositiveNumber(value: unknown): number | undefined {
 
 function parseStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value
-      .map(v => String(v ?? '').trim())
-      .filter(Boolean);
+    return value.map(v => String(v ?? '').trim()).filter(Boolean);
   }
   if (typeof value !== 'string') return [];
   const trimmed = value.trim();
@@ -67,9 +95,7 @@ function parseStringList(value: unknown): string[] {
   try {
     const parsed = JSON.parse(trimmed);
     if (Array.isArray(parsed)) {
-      return parsed
-        .map(v => String(v ?? '').trim())
-        .filter(Boolean);
+      return parsed.map(v => String(v ?? '').trim()).filter(Boolean);
     }
   } catch {
     // fall through
@@ -142,11 +168,7 @@ function resolveMediaUrl(value: unknown): string | undefined {
   const trimmed = value.trim();
   if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return undefined;
 
-  if (
-    trimmed.startsWith('data:') ||
-    trimmed.startsWith('blob:') ||
-    /^https?:\/\//i.test(trimmed)
-  ) {
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || /^https?:\/\//i.test(trimmed)) {
     return trimmed;
   }
 
@@ -234,7 +256,9 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
     videoCount: Number(property.videoCount || 0),
     transactionType: property.transactionType || property.listingType,
     listedDate:
-      property.listedDate instanceof Date ? property.listedDate : new Date(property.listedDate || 0),
+      property.listedDate instanceof Date
+        ? property.listedDate
+        : new Date(property.listedDate || 0),
     latitude: Number.isFinite(Number(property.latitude)) ? Number(property.latitude) : undefined,
     longitude: Number.isFinite(Number(property.longitude)) ? Number(property.longitude) : undefined,
     propertyId: Number.isFinite(propertyId) && propertyId > 0 ? propertyId : undefined,
@@ -255,9 +279,9 @@ export class PropertySearchService {
     sortOption: SortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
-    queryBoundary?: SearchAreaQueryBoundary,
+    queryBoundary?: PublicSearchQueryBoundary,
   ): Promise<SearchResults> {
-    if (queryBoundary && queryBoundary.memberSuburbIds.length === 0) {
+    if (queryBoundary && queryLocationIdsFromBoundary(queryBoundary).length === 0) {
       return {
         properties: [],
         cards: [],
@@ -299,18 +323,8 @@ export class PropertySearchService {
 
     // Resolve location slugs to IDs for optimal queries
     // NOTE: Wrapped in try-catch - if resolver fails, fall back to text queries
-    const locationIds: Array<{
-      provinceId?: number;
-      provinceName?: string;
-      cityId?: number;
-      cityName?: string;
-      suburbId?: number;
-      suburbName?: string;
-    }> = queryBoundary
-      ? queryBoundary.memberSuburbIds.map((suburbId, index) => ({
-          suburbId,
-          suburbName: queryBoundary.memberSuburbNames[index],
-        }))
+    const locationIds: QueryLocationIds = queryBoundary
+      ? queryLocationIdsFromBoundary(queryBoundary)
       : [];
     let resolvedLocation: ResolvedLocation | null = null;
 
@@ -327,45 +341,45 @@ export class PropertySearchService {
       try {
         // Priority 1: Multi-location Search (New P24 Style)
         if (filters.locations && filters.locations.length > 0) {
-        await Promise.all(
-          filters.locations.map(async slug => {
-            const resolved = await locationResolver.resolveLocation({
-              // We don't know the type, so we try to resolve purely by slug if possible
-              // The resolver might need an update or we try all slots.
-              // For now, let's assume the resolver can handle a generic slug lookup
-              // or we pass it as city/suburb specifically if we knew.
-              // BUT, since we only have a slug, we might need a smarter resolver method.
-              // Hack for now: try city first, then suburb?
-              // Actually, locationResolver usually takes {provinceSlug, citySlug, suburbSlug}
+          await Promise.all(
+            filters.locations.map(async slug => {
+              const resolved = await locationResolver.resolveLocation({
+                // We don't know the type, so we try to resolve purely by slug if possible
+                // The resolver might need an update or we try all slots.
+                // For now, let's assume the resolver can handle a generic slug lookup
+                // or we pass it as city/suburb specifically if we knew.
+                // BUT, since we only have a slug, we might need a smarter resolver method.
+                // Hack for now: try city first, then suburb?
+                // Actually, locationResolver usually takes {provinceSlug, citySlug, suburbSlug}
 
-              // Let's assume the slug could be anything.
-              // Ideally locationResolver should have `resolveSlug(slug)`
+                // Let's assume the slug could be anything.
+                // Ideally locationResolver should have `resolveSlug(slug)`
 
-              // For now, we'll try to guess based on context or just pass it as city (most common)
-              // or rely on a new resolver method if it existed.
-              // Current implementation of resolveLocation uses rigid hierarchy.
+                // For now, we'll try to guess based on context or just pass it as city (most common)
+                // or rely on a new resolver method if it existed.
+                // Current implementation of resolveLocation uses rigid hierarchy.
 
-              // Let's rely on the text fallback for now if resolution is hard,
-              // OR try to resolve each independently.
+                // Let's rely on the text fallback for now if resolution is hard,
+                // OR try to resolve each independently.
 
-              // Temporary strategy: Try resolving as city first (most high value), then suburb.
-              citySlug: slug,
-            });
+                // Temporary strategy: Try resolving as city first (most high value), then suburb.
+                citySlug: slug,
+              });
 
-            if (resolved) {
-              if (resolved.city || resolved.suburb || resolved.province) {
-                locationIds.push({
-                  provinceId: resolved.province?.id,
-                  provinceName: resolved.province?.name,
-                  cityId: resolved.city?.id,
-                  cityName: resolved.city?.name,
-                  suburbId: resolved.suburb?.id,
-                  suburbName: resolved.suburb?.name,
-                });
+              if (resolved) {
+                if (resolved.city || resolved.suburb || resolved.province) {
+                  locationIds.push({
+                    provinceId: resolved.province?.id,
+                    provinceName: resolved.province?.name,
+                    cityId: resolved.city?.id,
+                    cityName: resolved.city?.name,
+                    suburbId: resolved.suburb?.id,
+                    suburbName: resolved.suburb?.name,
+                  });
+                }
               }
-            }
-          }),
-        );
+            }),
+          );
         }
         // Priority 2: Hierarchical Search (Legacy / Single Location)
         else {
@@ -515,7 +529,9 @@ export class PropertySearchService {
       new Set(
         results
           .map((prop: any) => Number(prop.sourceListingId || 0))
-          .filter((listingId: number): listingId is number => Number.isFinite(listingId) && listingId > 0),
+          .filter(
+            (listingId: number): listingId is number => Number.isFinite(listingId) && listingId > 0,
+          ),
       ),
     );
     const sourceListingImages =
@@ -708,18 +724,20 @@ export class PropertySearchService {
           ? {
               id: developerBrandProfileId,
               brandName: builderName || 'Developer',
-              slug: String(prop.builderSlug || '').trim() || slugifyText(builderName || 'developer'),
+              slug:
+                String(prop.builderSlug || '').trim() || slugifyText(builderName || 'developer'),
               logoUrl: prop.builderLogoUrl || null,
               publicContactEmail: String(prop.builderPublicContactEmail || '').trim() || null,
             }
           : undefined;
 
-      const titleType: Property['titleType'] =
-        String(details.propertySetting || details.ownershipType || '').toLowerCase().includes(
-          'sectional',
-        )
-          ? 'sectional'
-          : 'freehold';
+      const titleType: Property['titleType'] = String(
+        details.propertySetting || details.ownershipType || '',
+      )
+        .toLowerCase()
+        .includes('sectional')
+        ? 'sectional'
+        : 'freehold';
 
       return {
         id: String(prop.id),
@@ -749,7 +767,9 @@ export class PropertySearchService {
         listedDate: new Date(prop.listedDate),
         listingSource: 'manual',
         listerType: hasAgentIdentity
-          ? ((prop.agencyName || sourceListingIdentity?.agencyName) ? 'agency' : 'agent')
+          ? prop.agencyName || sourceListingIdentity?.agencyName
+            ? 'agency'
+            : 'agent'
           : 'private',
         agent: hasAgentIdentity
           ? {
@@ -775,7 +795,8 @@ export class PropertySearchService {
             : undefined,
         developerBrand,
         development,
-        developmentId: Number.isFinite(developmentId) && developmentId > 0 ? developmentId : undefined,
+        developmentId:
+          Number.isFinite(developmentId) && developmentId > 0 ? developmentId : undefined,
         badges: uniqueStrings([
           ...storedBadges.map((badge: any) => String(badge ?? '').trim()),
           development?.name ? `Part of ${development.name}` : '',
@@ -847,14 +868,7 @@ export class PropertySearchService {
    */
   private buildFilterConditions(
     filters: PropertyFilters,
-    locationIds: Array<{
-      provinceId?: number;
-      provinceName?: string;
-      cityId?: number;
-      cityName?: string;
-      suburbId?: number;
-      suburbName?: string;
-    }> = [],
+    locationIds: QueryLocationIds = [],
   ): SQL[] {
     const conditions: SQL[] = [];
 
@@ -875,7 +889,7 @@ export class PropertySearchService {
         if (loc.suburbId) {
           locationConditions.push(eq(properties.suburbId, loc.suburbId));
         } else if (loc.cityId) {
-          if (loc.cityName && !filters.canonicalLocation) {
+          if (loc.cityName && !filters.canonicalLocation && !loc.canonicalOnly) {
             locationConditions.push(
               or(
                 eq(properties.cityId, loc.cityId),
@@ -886,7 +900,7 @@ export class PropertySearchService {
             locationConditions.push(eq(properties.cityId, loc.cityId));
           }
         } else if (loc.provinceId) {
-          if (loc.provinceName && !filters.canonicalLocation) {
+          if (loc.provinceName && !filters.canonicalLocation && !loc.canonicalOnly) {
             locationConditions.push(
               or(
                 eq(properties.provinceId, loc.provinceId),
@@ -1102,7 +1116,7 @@ export class PropertySearchService {
     sortOption: SortOption,
     page: number,
     pageSize: number,
-    queryBoundary?: SearchAreaQueryBoundary,
+    queryBoundary?: PublicSearchQueryBoundary,
   ): string {
     const filterStr = JSON.stringify(filters);
     const hash = this.simpleHash(filterStr);

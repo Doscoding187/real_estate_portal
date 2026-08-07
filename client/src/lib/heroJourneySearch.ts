@@ -7,9 +7,14 @@ import {
   buildTransactionalGeographyHref,
   createCanonicalSearchLocation,
   journeyForTransactionType,
+  type CanonicalSearchLocation,
   type GeographySearchContext,
 } from './geographySearchHandoff';
-import type { SearchAreaSummary, SearchScope } from '../../../shared/searchScope';
+import {
+  createMultiLocationSearchScope,
+  type SearchAreaSummary,
+  type SearchScope,
+} from '../../../shared/searchScope';
 
 export const BUY_PROPERTY_TYPE_OPTIONS = [
   { value: 'house', label: 'House' },
@@ -149,12 +154,26 @@ export function buildPropertySearchUrl({
     addSupportedLegacyFilters(filterInput, filters);
   }
 
-  if (locations.length > 1 || (locations.length > 0 && searchScope)) {
-    return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
-  }
-
   let canonicalSelection: { scope: SearchScope; context: GeographySearchContext } | undefined;
-  if (locations.length > 0) {
+  let multiLocationScope: SearchScope | undefined;
+  if (locations.length > 0 && searchScope) {
+    return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
+  } else if (locations.length > 1) {
+    const canonicalSelections = locations.map(addStructuredLocation);
+    const validSelections = canonicalSelections.filter(
+      (selection): selection is CanonicalSearchLocation => Boolean(selection),
+    );
+    if (validSelections.length !== canonicalSelections.length) {
+      return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
+    }
+
+    multiLocationScope = createMultiLocationSearchScope(
+      validSelections.map(selection => selection.scope),
+    );
+    if (!multiLocationScope) {
+      return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
+    }
+  } else if (locations.length > 0) {
     canonicalSelection = addStructuredLocation(locations[0]) || undefined;
     if (!canonicalSelection)
       return buildInvalidSearchUrl(transactionType, 'canonical-location-required');
@@ -167,7 +186,7 @@ export function buildPropertySearchUrl({
   return (
     buildTransactionalGeographyHref({
       journey,
-      scope: searchScope || canonicalSelection?.scope,
+      scope: searchScope || multiLocationScope || canonicalSelection?.scope,
       searchAreaAvailability,
       localityRefinementId,
       context: searchScopeContext || canonicalSelection?.context,

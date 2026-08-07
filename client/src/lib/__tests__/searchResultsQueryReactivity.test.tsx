@@ -15,26 +15,34 @@ function QueryStateProbe() {
   const filters = {
     ...intent.filters,
     locationId: intent.geography.locationId,
+    locationIds: intent.geography.locationIds,
     searchAreaId: intent.geography.searchAreaId,
+    searchAreaIds: intent.geography.searchAreaIds,
   };
   const publicRequest =
     intent.transactionType === 'for-sale'
       ? {
           ...toBuyPublicSearchFilters(filters),
           locationId: intent.geography.locationId,
+          locationIds: intent.geography.locationIds,
           searchAreaId: intent.geography.searchAreaId,
+          searchAreaIds: intent.geography.searchAreaIds,
           sortOption: intent.resultState.sort,
           page: intent.resultState.page,
         }
       : intent.transactionType === 'to-rent'
         ? {
             listingType: 'rent',
+            locationIds: intent.geography.locationIds,
             searchAreaId: intent.geography.searchAreaId,
+            searchAreaIds: intent.geography.searchAreaIds,
             sortOption: intent.resultState.sort,
             page: intent.resultState.page,
           }
         : {
             searchAreaId: intent.geography.searchAreaId,
+            locationIds: intent.geography.locationIds,
+            searchAreaIds: intent.geography.searchAreaIds,
             sortOption: intent.resultState.sort,
             page: intent.resultState.page,
           };
@@ -158,5 +166,22 @@ describe('transactional result query reactivity', () => {
       expect(request).not.toHaveProperty('listingType');
       cleanup();
     }
+  });
+
+  it('uses deterministic canonical multi-location identity in the public request', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/property-for-sale?locationIds=suburb%3A35&locationIds=suburb%3A34',
+    );
+    render(<QueryStateProbe />);
+
+    const request = JSON.parse(screen.getByLabelText('public-request').textContent || '{}');
+    expect(request).toMatchObject({
+      listingType: 'sale',
+      locationIds: ['suburb:34', 'suburb:35'],
+    });
+    expect(request).not.toHaveProperty('memberCanonicalLocationIds');
+    expect(request).not.toHaveProperty('locations');
   });
 });

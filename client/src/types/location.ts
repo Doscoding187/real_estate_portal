@@ -8,5 +8,7 @@ export interface LocationNode {
   provinceSlug?: string;
   citySlug?: string; // Helpful for context
   parentSlug?: string;
+  /** Canonical parent identity supplied by the location authority when available. */
+  parentCanonicalLocationId?: string;
   canonicalPath?: string;
 }

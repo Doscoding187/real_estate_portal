@@ -27,6 +27,15 @@ const sandton: LocationNode = {
   canonicalPath: '/property-for-sale?suburb=sandton&city=johannesburg&province=gauteng',
 };
 
+const rosebank: LocationNode = {
+  id: 'suburb:43',
+  name: 'Rosebank',
+  slug: 'rosebank',
+  type: 'suburb',
+  provinceSlug: 'gauteng',
+  citySlug: 'johannesburg',
+};
+
 const gauteng: LocationNode = {
   id: 'province:1',
   name: 'Gauteng',
@@ -89,7 +98,17 @@ describe('Buy journey URL authority', () => {
     expect(params.get('maxPrice')).toBe('2000000');
   });
 
-  it('rejects multiple structured locations instead of silently taking the first', () => {
+  it('serializes deliberate sibling locations as a canonical OR selection', () => {
+    const url = buildBuySearchUrl({ selectedLocations: [sandton, rosebank] });
+    const params = new URL(url, 'https://listify.test').searchParams;
+
+    expect(params.getAll('locationIds')).toEqual(['suburb:42', 'suburb:43']);
+    expect(params.get('locationId')).toBeNull();
+    expect(params.get('city')).toBeNull();
+    expect(params.get('suburb')).toBeNull();
+  });
+
+  it('rejects mixed-level selections instead of widening them to their parent', () => {
     const url = buildBuySearchUrl({ selectedLocations: [johannesburg, sandton] });
     const params = new URL(url, 'https://listify.test').searchParams;
 

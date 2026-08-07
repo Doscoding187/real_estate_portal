@@ -22,6 +22,8 @@ interface DatabaseLocationSuggestion {
   id: number;
   name: string;
   type: 'province' | 'city' | 'suburb';
+  provinceId?: number;
+  cityId?: number;
   provinceName?: string;
   cityName?: string;
 }
@@ -61,6 +63,7 @@ interface LocationAutosuggestProps {
   inputClassName?: string;
   showIcon?: boolean;
   maxLocations?: number;
+  renderSelectedLocations?: boolean;
   inputRef?: RefObject<HTMLInputElement>;
   inputAriaDescribedBy?: string;
   // Search Discovery Engine — foundation for future smart suggestions
@@ -80,6 +83,7 @@ export function LocationAutosuggest({
   inputClassName = '',
   showIcon = true,
   maxLocations = 5,
+  renderSelectedLocations = true,
   inputRef,
   inputAriaDescribedBy,
   discoverySuggestions,
@@ -262,6 +266,12 @@ export function LocationAutosuggest({
           : undefined;
     const citySlug =
       location.type === 'city' ? slug : location.cityName ? slugify(location.cityName) : undefined;
+    const parentCanonicalLocationId =
+      location.type === 'city' && Number.isInteger(location.provinceId)
+        ? encodeCanonicalLocationId('province', Number(location.provinceId))
+        : location.type === 'suburb' && Number.isInteger(location.cityId)
+          ? encodeCanonicalLocationId('city', Number(location.cityId))
+          : undefined;
 
     onSelect({
       id: encodeCanonicalLocationId(location.type, Number(location.id)),
@@ -270,6 +280,7 @@ export function LocationAutosuggest({
       type: location.type,
       provinceSlug,
       citySlug,
+      ...(parentCanonicalLocationId ? { parentCanonicalLocationId } : {}),
       canonicalPath: getCanonicalBuyLocationPath({
         type: location.type,
         slug,
@@ -350,23 +361,24 @@ export function LocationAutosuggest({
         className={`flex flex-wrap items-center gap-2 min-h-[44px] w-full rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-1 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-600/15 focus-within:ring-offset-0 ${inputClassName}`}
       >
         {/* Render Pills */}
-        {selectedLocations.map((loc, index) => (
-          <div
-            key={`${loc.id}-${index}`}
-            className="flex items-center gap-1.5 bg-blue-500 text-white text-sm px-3 py-1.5 rounded-md whitespace-nowrap shadow-sm animate-in fade-in zoom-in duration-200"
-            onClick={e => e.stopPropagation()}
-          >
-            <span className="font-medium truncate max-w-[150px]">{loc.name}</span>
-            <button
-              type="button"
-              onClick={() => onRemove?.(index)}
-              className="hover:bg-blue-600 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-300"
-              aria-label={`Remove ${loc.name}`}
+        {renderSelectedLocations &&
+          selectedLocations.map((loc, index) => (
+            <div
+              key={`${loc.id}-${index}`}
+              className="flex items-center gap-1.5 bg-blue-500 text-white text-sm px-3 py-1.5 rounded-md whitespace-nowrap shadow-sm animate-in fade-in zoom-in duration-200"
+              onClick={e => e.stopPropagation()}
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
+              <span className="font-medium truncate max-w-[150px]">{loc.name}</span>
+              <button
+                type="button"
+                onClick={() => onRemove?.(index)}
+                className="hover:bg-blue-600 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-300"
+                aria-label={`Remove ${loc.name}`}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
 
         {/* The actual Input - borderless */}
         <input

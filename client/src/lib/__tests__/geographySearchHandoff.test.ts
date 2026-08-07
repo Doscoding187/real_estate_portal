@@ -122,14 +122,39 @@ describe('geography to transactional search handoff', () => {
     ).toBeUndefined();
   });
 
-  it('does not accept multi-location scope data', () => {
+  it('serializes canonical multi-location scope IDs without member arrays', () => {
+    const href = buildTransactionalGeographyHref({
+      journey: 'buy',
+      scope: {
+        kind: 'multi_location',
+        members: [
+          { kind: 'locality', canonicalLocationId: 'suburb:35' },
+          { kind: 'locality', canonicalLocationId: 'suburb:34' },
+        ],
+      },
+    })!;
+    const parsed = new URL(href, 'https://listify.test');
+
+    expect(parsed.pathname).toBe('/property-for-sale');
+    expect(parsed.searchParams.getAll('locationIds')).toEqual(['suburb:34', 'suburb:35']);
+    expect(parsed.searchParams.get('memberCanonicalLocationIds')).toBeNull();
+  });
+
+  it('rejects a preview Search Area inside a multi-location handoff', () => {
     expect(
       buildTransactionalGeographyHref({
-        journey: 'buy',
+        journey: 'rent',
         scope: {
           kind: 'multi_location',
-          canonicalLocationIds: ['suburb:34', 'suburb:35'],
-        } as never,
+          members: [
+            { kind: 'search_area', searchAreaId: 'johannesburg-sandton' },
+            { kind: 'search_area', searchAreaId: 'johannesburg-rosebank' },
+          ],
+        },
+        searchAreaAvailabilityById: {
+          'johannesburg-sandton': 'preview',
+          'johannesburg-rosebank': 'available',
+        },
       }),
     ).toBeUndefined();
   });

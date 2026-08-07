@@ -6,26 +6,97 @@ import { useLocation, useSearch } from 'wouter';
 import { useEffect, useMemo, useState } from 'react';
 import { buildPropertySearchUrl } from '@/lib/heroJourneySearch';
 import { getListingTypeForPath } from '@/lib/searchNavigation';
+import { createCanonicalSearchLocation } from '@/lib/geographySearchHandoff';
 import type { LocationNode } from '@/types/location';
 import { useAuth } from '@/_core/hooks/useAuth';
 
+export interface ListingNavbarLocation {
+  name: string;
+  slug: string;
+  type: 'province' | 'city' | 'suburb';
+  provinceSlug?: string;
+  citySlug?: string;
+  fullAddress: string;
+  id?: string;
+  canonicalLocationId?: string;
+  parentCanonicalLocationId?: string;
+}
+
+const EMPTY_LISTING_NAVBAR_LOCATIONS: ListingNavbarLocation[] = [];
+
+export function reconstructCanonicalLocations(
+  locations: readonly (Pick<
+    ListingNavbarLocation,
+    'name' | 'slug' | 'type' | 'canonicalLocationId' | 'parentCanonicalLocationId'
+  > & { canonicalLocationId: string })[],
+): ListingNavbarLocation[] {
+  return locations
+    .map(location => ({
+      name: location.name,
+      slug: location.slug,
+      type: location.type,
+      fullAddress: location.name,
+      id: location.canonicalLocationId,
+      canonicalLocationId: location.canonicalLocationId,
+      parentCanonicalLocationId: location.parentCanonicalLocationId,
+    }))
+    .sort((left, right) =>
+      (left.canonicalLocationId || '').localeCompare(right.canonicalLocationId || ''),
+    );
+}
+
 interface ListingNavbarProps {
   neutralSearch?: boolean;
-  defaultLocations?: {
-    name: string;
-    slug: string;
-    type: 'province' | 'city' | 'suburb';
-    provinceSlug?: string;
-    citySlug?: string;
-    fullAddress: string;
-    id?: string;
-    canonicalLocationId?: string;
-  }[];
+  defaultLocations?: ListingNavbarLocation[];
+}
+
+/**
+ * Client-side compatibility guard only. The server remains authoritative for
+ * canonical sibling validation when the resulting search is submitted.
+ */
+export function canAddCanonicalLocation(
+  selectedLocations: readonly ListingNavbarLocation[],
+  candidate: LocationNode,
+): boolean {
+  const canonicalSelection = createCanonicalSearchLocation(candidate);
+  if (!canonicalSelection) return false;
+
+  const candidateIdentity =
+    'canonicalLocationId' in canonicalSelection.scope
+      ? canonicalSelection.scope.canonicalLocationId
+      : undefined;
+  if (!candidateIdentity) return false;
+
+  if (
+    selectedLocations.some(
+      location => (location.canonicalLocationId || location.id) === candidateIdentity,
+    )
+  ) {
+    return false;
+  }
+
+  return selectedLocations.every(location => {
+    const identity = location.canonicalLocationId || location.id;
+    if (!identity) return false;
+
+    const existingSelection = createCanonicalSearchLocation({ ...location, id: identity });
+    if (!existingSelection || existingSelection.scope.kind !== canonicalSelection.scope.kind) {
+      return false;
+    }
+
+    if (canonicalSelection.scope.kind === 'province') return true;
+
+    return Boolean(
+      location.parentCanonicalLocationId &&
+      candidate.parentCanonicalLocationId &&
+      location.parentCanonicalLocationId === candidate.parentCanonicalLocationId,
+    );
+  });
 }
 
 export function ListingNavbar({
   neutralSearch = false,
-  defaultLocations = [],
+  defaultLocations = EMPTY_LISTING_NAVBAR_LOCATIONS,
 }: ListingNavbarProps) {
   const [currentPath, setLocation] = useLocation();
   const search = useSearch();
@@ -43,18 +114,33 @@ export function ListingNavbar({
   }, [neutralSearch, routeListingType]);
 
   // Multi-location state
-  const [selectedLocations, setSelectedLocations] = useState<
-    {
-      name: string;
-      slug: string;
-      type: 'province' | 'city' | 'suburb';
-      provinceSlug?: string;
-      citySlug?: string;
-      fullAddress: string;
-      id?: string;
-      canonicalLocationId?: string;
-    }[]
-  >(Array.isArray(defaultLocations) ? defaultLocations : []);
+  const [selectedLocations, setSelectedLocations] = useState<ListingNavbarLocation[]>(
+    Array.isArray(defaultLocations) ? defaultLocations : [],
+  );
+
+  const defaultLocationKey = useMemo(
+    () =>
+      defaultLocations
+        .map(
+          location =>
+            `${location.canonicalLocationId || location.id || location.slug}:${location.name}:${location.type}:${location.parentCanonicalLocationId || ''}`,
+        )
+        .join('|'),
+    [defaultLocations],
+  );
+
+  useEffect(() => {
+    setSelectedLocations(currentLocations => {
+      const currentLocationKey = currentLocations
+        .map(
+          location =>
+            `${location.canonicalLocationId || location.id || location.slug}:${location.name}:${location.type}:${location.parentCanonicalLocationId || ''}`,
+        )
+        .join('|');
+
+      return currentLocationKey === defaultLocationKey ? currentLocations : defaultLocations;
+    });
+  }, [defaultLocationKey, defaultLocations]);
 
   // Buy/Rent Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -72,37 +158,58 @@ export function ListingNavbar({
     setLocation(url);
   };
 
-  const handleLocationSelect = (loc: any) => {
-    // 1. Avoid duplicates
-    if (selectedLocations.some(l => l.slug === loc.slug)) return;
+  const handleLocationSelect = (loc: LocationNode) => {
+    if (loc.type !== 'province' && loc.type !== 'city' && loc.type !== 'suburb') return;
 
-    let newLocations = [...selectedLocations];
+    const canonicalSelection = createCanonicalSearchLocation(loc);
+    if (!canonicalSelection) return;
 
-    // 2. Normalization: "Parent + Child -> Child"
-    // If adding a specific location (Child), remove its broader containers (Parent)
-    // because specificity overrides breadth in this UX model.
-    if (loc.type === 'suburb') {
-      newLocations = newLocations.filter(
-        l =>
-          !(l.type === 'city' && l.slug === loc.citySlug) &&
-          !(l.type === 'province' && l.slug === loc.provinceSlug),
-      );
-    } else if (loc.type === 'city') {
-      newLocations = newLocations.filter(
-        l => !(l.type === 'province' && l.slug === loc.provinceSlug),
-      );
-    }
+    const canonicalLocationId =
+      'canonicalLocationId' in canonicalSelection.scope
+        ? canonicalSelection.scope.canonicalLocationId
+        : undefined;
+    if (!canonicalLocationId) return;
 
-    newLocations.push(loc);
+    if (!canAddCanonicalLocation(selectedLocations, loc)) return;
 
-    // 3. Sort by Hierarchy (Province -> City -> Suburb)
+    if (selectedLocations.length >= 10) return;
+
+    const newLocation: ListingNavbarLocation = {
+      name: loc.name,
+      slug: loc.slug,
+      type: loc.type === 'province' ? 'province' : loc.type === 'city' ? 'city' : 'suburb',
+      provinceSlug: loc.provinceSlug,
+      citySlug: loc.citySlug,
+      fullAddress: loc.name,
+      id: canonicalLocationId,
+      canonicalLocationId,
+      parentCanonicalLocationId: loc.parentCanonicalLocationId,
+    };
+    let newLocations = [...selectedLocations, newLocation];
     newLocations.sort((a, b) => (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99));
 
     setSelectedLocations(newLocations);
   };
 
-  const removeLocation = (slug: string) => {
-    setSelectedLocations(prev => prev.filter(l => l.slug !== slug));
+  const removeLocation = (identity: string) => {
+    const nextLocations = selectedLocations.filter(
+      location => (location.canonicalLocationId || location.id || location.slug) !== identity,
+    );
+    setSelectedLocations(nextLocations);
+    if (listingType) {
+      setLocation(
+        buildPropertySearchUrl({
+          transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
+          selectedLocations: nextLocations as LocationNode[],
+        }),
+      );
+    }
+  };
+
+  const removeLocationAtIndex = (index: number) => {
+    const location = selectedLocations[index];
+    if (!location) return;
+    removeLocation(location.canonicalLocationId || location.id || location.slug);
   };
 
   return (
@@ -156,13 +263,13 @@ export function ListingNavbar({
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-[50%] flex-shrink-0">
               {selectedLocations.map(loc => (
                 <div
-                  key={loc.slug}
+                  key={loc.canonicalLocationId || loc.id || loc.slug}
                   className="flex-shrink-0 flex items-center bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-100 whitespace-nowrap"
                 >
                   <span>{loc.name}</span>
                   <X
                     className="h-3 w-3 ml-1 cursor-pointer hover:text-blue-900"
-                    onClick={() => removeLocation(loc.slug)}
+                    onClick={() => removeLocation(loc.canonicalLocationId || loc.id || loc.slug)}
                   />
                 </div>
               ))}
@@ -170,10 +277,14 @@ export function ListingNavbar({
 
             <div className="flex-1 min-w-[120px] relative">
               <LocationAutosuggest
+                selectedLocations={selectedLocations as LocationNode[]}
+                onRemove={removeLocationAtIndex}
                 placeholder={selectedLocations.length > 0 ? 'Add more...' : 'City, Suburb, or Area'}
                 inputClassName="w-full py-2 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent border-none h-full focus-visible:ring-0 shadow-none px-1"
                 className="w-full h-full"
                 showIcon={false}
+                maxLocations={10}
+                renderSelectedLocations={false}
                 onSelect={handleLocationSelect}
               />
             </div>
