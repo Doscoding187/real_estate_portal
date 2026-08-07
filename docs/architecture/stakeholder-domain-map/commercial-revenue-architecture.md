@@ -38,6 +38,33 @@ The first public commercial surface now consumes the S0 authority rather than ma
 
 This section records the current implementation boundary. It does not introduce payment-provider integration, sponsored search, geography sponsorship or a campaign marketplace.
 
+## S2 Canonical Independent-Agent Commercial Authority
+
+S2 converges independent-agent commercial state onto the same canonical billing family used by agencies. Agent products are active rows in canonical `plans` with `segment = agent`, their benefits and limits are read from `plan_entitlements`, and `billing.commercialCatalog` is the public product projection. Agent package selection now submits a canonical `planId`; it does not select a frontend tier or write a user-level paid status.
+
+- An agent trial is created as a canonical `subscriptions` row with `status = trial`, the selected plan's authoritative `trialDays`, and the plan's canonical entitlements. Trial dates are read from that subscription and expire through canonical plan-access evaluation.
+- A paid agent state is not created by package selection or the retired legacy router. The future paid path is canonical invoice/manual EFT, payment proof, finance verification, and canonical subscription activation; no payment provider is introduced in S2.
+- Agent entitlement reads no longer use `users.plan`, `users.subscriptionTier`, `users.subscriptionStatus`, legacy trial fields, or tier-derived minimums. Listing publication requires a canonical agent plan, an entitled canonical subscription/trial, an active eligible plan, the plan's `max_active_listings` entitlement, and the existing independent ownership, email, and profile-completion rules.
+- The legacy `subscription_plans`/`user_subscriptions` agent path is no longer a runtime authority. Agent calls through the old subscription router are rejected, its public plan reads exclude agent plans, and the obsolete presentation-only agent onboarding page was removed in favour of the canonical product/onboarding route.
+- Legacy user columns and legacy tables were not dropped. They are schema-retirement candidates until a separately approved destructive migration. Developer, service-provider, partner and general campaign commercial systems remain deliberately outside S2.
+
+### S2 Agent Commercial Disposition
+
+| Component | Disposition | S2 decision |
+| --- | --- | --- |
+| Canonical `plans`, `plan_entitlements`, `subscriptions` | KEEP | The single product, trial/subscription, benefit and limit authority |
+| `commercialCatalogService` / `billing.commercialCatalog` | KEEP | Shared read boundary for agent and agency products |
+| `agentOnboardingService` | ADAPT | Selects a canonical plan and creates canonical trial state; retains profile/onboarding workflow |
+| `agentEntitlementService` | ADAPT | Projects only canonical subscription/entitlement state while retaining non-commercial profile rules |
+| `listingPublicationEntitlementService` | KEEP / ADAPT | Existing enforcement retained and made explicit about canonical agent plan eligibility |
+| `users.plan`, trial and subscription fields | RETIRE | No longer read or written by agent commercial runtime; columns remain for later schema retirement |
+| `subscription_plans`, `user_subscriptions` | RETIRE | Agent runtime dependencies removed; tables remain for later schema retirement and deferred non-agent consumers |
+| Legacy subscription router/service | RETIRE for agents; KEEP for deferred legacy audiences | Agent operations are blocked; remaining non-agent consumers are not migrated in S2 |
+| Legacy public agent package/onboarding page | DELETE | Presentation-only duplicate pricing and unsupported trial/benefit claims |
+| `/subscription-plans` | ADAPT | Uses the canonical catalog for remaining public plan comparison instead of the legacy agent pricing authority |
+
+This section records authority convergence, not a final agent pricing strategy. Search remains organic, Provincial Discovery remains unchanged, and no paid placement or campaign lifecycle is enabled by S2.
+
 ## Sponsored Placement Boundary Options
 
 | Option | Boundary | Strengths | Risks | Recommendation |

@@ -50,6 +50,7 @@ export type SubscriptionSnapshot = {
   ownerType: SubscriptionOwnerType;
   ownerId: number;
   status: SubscriptionStatus;
+  createdAt: string | null;
   trialEndsAt: string | null;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
@@ -75,7 +76,6 @@ type DbHandle = Awaited<ReturnType<typeof getDb>>;
 type SubscriptionRow = typeof subscriptions.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 
-const DEFAULT_AGENT_PLAN = 'agent_starter';
 const DEFAULT_AGENCY_PLAN = 'agency_growth';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -130,6 +130,7 @@ function toSubscriptionSnapshot(row: SubscriptionRow): SubscriptionSnapshot {
     ownerType: row.ownerType as SubscriptionOwnerType,
     ownerId: Number(row.ownerId),
     status: row.status as SubscriptionStatus,
+    createdAt: row.createdAt || null,
     trialEndsAt: row.trialEndsAt || null,
     currentPeriodStart: row.currentPeriodStart || null,
     currentPeriodEnd: row.currentPeriodEnd || null,
@@ -209,22 +210,9 @@ function getOwnerContextForUser(user: UserRow): {
 async function getStarterPlan(db: DbHandle, ownerType: SubscriptionOwnerType) {
   if (!db) throw new Error('Database not available');
 
-  if (ownerType === 'agent') {
-    const [named] = await db
-      .select()
-      .from(plans)
-      .where(eq(plans.name, DEFAULT_AGENT_PLAN))
-      .limit(1);
-    if (named) return named;
-
-    const [segmentFallback] = await db
-      .select()
-      .from(plans)
-      .where(eq(plans.segment, 'agent'))
-      .orderBy(asc(plans.sortOrder))
-      .limit(1);
-    return segmentFallback || null;
-  }
+  // Independent agents must explicitly select a canonical product. Automatic
+  // plan provisioning is retained only for the existing agency bootstrap path.
+  if (ownerType !== 'agency') return null;
 
   const [named] = await db.select().from(plans).where(eq(plans.name, DEFAULT_AGENCY_PLAN)).limit(1);
   if (named) return named;
@@ -243,6 +231,7 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
   if (!db) throw new Error('Database not available');
 
   const { ownerType, ownerId } = getOwnerContextForUser(user);
+  if (ownerType !== 'agency') return null;
   const [existing] = await db
     .select()
     .from(subscriptions)
@@ -259,14 +248,8 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
     .toISOString()
     .slice(0, 19)
     .replace('T', ' ');
-  const trialEndsAt =
-    ownerType === 'agent' ? user.trialEndsAt || fallbackTrialEnd : fallbackTrialEnd;
-  const status: SubscriptionStatus =
-    ownerType === 'agent' && user.plan === 'paid'
-      ? 'active'
-      : ownerType === 'agent' && user.trialStatus === 'expired'
-        ? 'expired'
-        : 'trial';
+  const trialEndsAt = fallbackTrialEnd;
+  const status: SubscriptionStatus = 'trial';
 
   await db.insert(subscriptions).values({
     ownerType,
@@ -403,8 +386,7 @@ export async function getPlanAccessProjectionForUserId(
     .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
     .limit(1);
 
-  const shouldAutoProvision =
-    user.role === 'agent' || (user.role === 'agency_admin' && ownerType === 'agency');
+  const shouldAutoProvision = user.role === 'agency_admin' && ownerType === 'agency';
 
   if (!subscriptionRow && shouldAutoProvision) {
     subscriptionRow = await ensureDefaultSubscriptionForUser(user);
@@ -484,6 +466,10 @@ export async function setSubscriptionPlanForOwner(input: {
     throw new Error('Plan not found');
   }
 
+  if (planRow.segment !== input.ownerType) {
+    throw new Error('Plan is not eligible for this commercial owner');
+  }
+
   const nowTs = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const trialDays = Math.max(0, Number(planRow.trialDays || 0));
   const computedTrialEnd =
@@ -529,43 +515,6 @@ export async function setSubscriptionPlanForOwner(input: {
     .limit(1);
 
   return row ? toSubscriptionSnapshot(row) : null;
-}
-
-export async function initializeAgentStarterTrial(
-  userId: number,
-): Promise<SubscriptionSnapshot | null> {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) return null;
-
-  const [planRow] = await db
-    .select()
-    .from(plans)
-    .where(eq(plans.name, DEFAULT_AGENT_PLAN))
-    .limit(1);
-  if (!planRow) return null;
-
-  const trialDays = Math.max(1, Number(planRow.trialDays || 30));
-  const trialEnd = new Date(Date.now() + trialDays * MS_PER_DAY)
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ');
-
-  return await setSubscriptionPlanForOwner({
-    ownerType: 'agent',
-    ownerId: userId,
-    planId: planRow.id,
-    status: 'trial',
-    trialEndsAt: user.trialEndsAt || trialEnd,
-    billingCycleAnchor: user.trialEndsAt || trialEnd,
-    metadata: {
-      source: 'auth_register',
-      onboarding_plan: DEFAULT_AGENT_PLAN,
-    },
-    actorUserId: userId,
-  });
 }
 
 export async function getAgencyOwnerIdForUser(userId: number): Promise<number | null> {

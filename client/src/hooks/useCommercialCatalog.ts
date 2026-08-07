@@ -4,6 +4,7 @@ import { trpc } from '@/lib/trpc';
 
 export type CommercialCatalog = inferRouterOutputs<AppRouter>['billing']['commercialCatalog'];
 export type CommercialProduct = CommercialCatalog['products'][number];
+export type CommercialAudience = CommercialProduct['audience'];
 
 /**
  * Read the canonical commercial catalog without starting checkout or changing

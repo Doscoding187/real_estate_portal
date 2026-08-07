@@ -1,10 +1,7 @@
 import { type Request, type Response, Router } from 'express';
 import { ZodError, z } from 'zod';
 import { requireAuth } from '../_core/auth';
-import {
-  AGENT_ONBOARDING_TIER_VALUES,
-  agentOnboardingService,
-} from '../services/agentOnboardingService';
+import { agentOnboardingService } from '../services/agentOnboardingService';
 
 const router = Router();
 
@@ -16,7 +13,7 @@ type AuthenticatedRequest = Request & {
 };
 
 const selectPackageSchema = z.object({
-  tier: z.enum(AGENT_ONBOARDING_TIER_VALUES),
+  planId: z.number().int().positive(),
 });
 
 const profileSchema = z.object({
@@ -93,7 +90,7 @@ router.post('/select-package', async (req, res) => {
   try {
     const input = selectPackageSchema.parse(req.body);
     const userId = Number((req as AuthenticatedRequest).user.id);
-    const result = await agentOnboardingService.selectPackage(userId, input.tier);
+    const result = await agentOnboardingService.selectPackage(userId, input.planId);
     res.json(result);
   } catch (error) {
     respondForError(res, error);

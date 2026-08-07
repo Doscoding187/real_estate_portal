@@ -190,7 +190,7 @@ export default function AgentFunnelPage() {
       <SoftCaptureModal 
         isOpen={isCaptureModalOpen} 
         onClose={() => setIsCaptureModalOpen(false)} 
-        nextRoute="/advertise/sell/agents/onboarding" 
+        nextRoute="/role-selection"
       />
     </div>
   );

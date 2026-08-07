@@ -253,6 +253,18 @@ function resolveAction(
     };
   }
 
+  // Canonical agent products with a configured trial period are eligible for
+  // the authenticated onboarding trial flow. This is derived from the plan,
+  // not from a frontend tier label or user-level status field.
+  if (!configuredMode && plan.segment === 'agent' && trialDays > 0) {
+    return {
+      mode: 'trial',
+      target: { kind: 'route', value: '/role-selection' },
+      requiresAuthentication: false,
+      reason: 'Starts the canonical agent onboarding trial for this plan.',
+    };
+  }
+
   if (plan.segment === 'agency' && (monthly?.amountMinor || annual?.amountMinor)) {
     return {
       mode: 'manual_eft',

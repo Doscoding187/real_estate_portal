@@ -214,7 +214,12 @@ describe('listing publication entitlement service', () => {
           propertyTypes: 'house',
         },
       ],
-      [{ subscription: { status: 'trial', trialEndsAt: future }, plan: { id: 2 } }],
+      [
+        {
+          subscription: { status: 'trial', trialEndsAt: future },
+          plan: { id: 2, segment: 'agent', isActive: 1 },
+        },
+      ],
       publishingEntitlements,
     ]);
 

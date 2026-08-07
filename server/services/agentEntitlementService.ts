@@ -7,6 +7,7 @@ import {
   getEntitlementNumber,
   getPlanAccessProjectionForUserId,
   isPaidSubscriptionEntitled,
+  isSubscriptionEntitled,
   type EntitlementMap,
   type PlanAccessProjection,
   type PlanSnapshot,
@@ -15,7 +16,7 @@ import {
 
 export type AgentEntitlements = {
   plan: 'trial' | 'paid';
-  trialStatus: 'active' | 'expired';
+  trialStatus: 'active' | 'expired' | 'none';
   trialStartedAt: string | null;
   trialEndsAt: string | null;
   trialExpired: boolean;
@@ -53,95 +54,6 @@ export type ProfileCompletionResult = {
   hasAreas: boolean;
 };
 
-type AgentTier = 'free' | 'starter' | 'professional' | 'elite';
-
-function normalizeAgentTier(value: string | null | undefined): AgentTier | null {
-  const normalized = String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '')
-    .trim();
-
-  if (!normalized) return null;
-
-  if (normalized === 'free' || normalized === 'agentfree') return 'free';
-  if (normalized === 'starter' || normalized === 'agentstarter') return 'starter';
-  if (normalized === 'professional' || normalized === 'agentprofessional') return 'professional';
-  if (normalized === 'elite' || normalized === 'agentelite') return 'elite';
-
-  if (normalized === 'growth' || normalized === 'agentgrowth') return 'professional';
-  if (normalized === 'pro' || normalized === 'agentpro') return 'professional';
-  if (normalized === 'launch' || normalized === 'agentlaunch') return 'starter';
-  if (normalized === 'dominance' || normalized === 'agentdominance') return 'elite';
-
-  return null;
-}
-
-function getTierMinimumEntitlements(tier: AgentTier | null): EntitlementMap {
-  switch (tier) {
-    case 'elite':
-      return {
-        ...DEFAULT_FEATURE_ENTITLEMENTS,
-        max_active_listings: 999,
-        has_ai_insights: true,
-        has_area_intelligence: true,
-        has_commission_tracking: true,
-        has_revenue_dashboard: true,
-        has_priority_exposure: true,
-        has_benchmarking: true,
-      };
-    case 'professional':
-      return {
-        ...DEFAULT_FEATURE_ENTITLEMENTS,
-        max_active_listings: 40,
-        has_ai_insights: true,
-        has_commission_tracking: true,
-        has_revenue_dashboard: true,
-        has_priority_exposure: true,
-      };
-    case 'starter':
-      return {
-        ...DEFAULT_FEATURE_ENTITLEMENTS,
-        max_active_listings: 20,
-      };
-    case 'free':
-      return {
-        ...DEFAULT_FEATURE_ENTITLEMENTS,
-      };
-    default:
-      return {
-        ...DEFAULT_FEATURE_ENTITLEMENTS,
-      };
-  }
-}
-
-function applyTierEntitlementMinimums(
-  base: EntitlementMap,
-  tier: AgentTier | null,
-): EntitlementMap {
-  if (!tier) return base;
-  const minimums = getTierMinimumEntitlements(tier);
-  const merged: EntitlementMap = { ...base };
-
-  for (const [key, value] of Object.entries(minimums)) {
-    if (typeof value === 'boolean') {
-      if (value && !getEntitlementBoolean(base, key)) {
-        merged[key] = true;
-      }
-      continue;
-    }
-
-    if (typeof value === 'number') {
-      const current = getEntitlementNumber(base, key, 0);
-      if (value > 0 && current <= 0) {
-        merged[key] = value;
-      }
-      continue;
-    }
-  }
-
-  return merged;
-}
-
 function hasValue(value: unknown): boolean {
   if (typeof value !== 'string') return Boolean(value);
   return value.trim().length > 0;
@@ -161,19 +73,6 @@ function parseFlags(value: unknown): string[] {
   }
 
   return [];
-}
-
-function normalizeTrialStatus(user: typeof users.$inferSelect | null): 'active' | 'expired' {
-  if (!user) return 'expired';
-
-  const now = Date.now();
-  const trialEnd = user.trialEndsAt ? new Date(user.trialEndsAt).getTime() : null;
-
-  if (trialEnd && Number.isFinite(trialEnd)) {
-    return trialEnd > now ? 'active' : 'expired';
-  }
-
-  return user.trialStatus === 'expired' ? 'expired' : 'active';
 }
 
 function buildFallbackPlanAccess(user: typeof users.$inferSelect): PlanAccessProjection {
@@ -255,26 +154,11 @@ export async function getAgentEntitlementsForUserId(
 
   const effectivePlanAccess = planAccess || buildFallbackPlanAccess(user);
 
-  const tierFromSubscription = normalizeAgentTier(user.subscriptionTier);
-  const tierFromPlan =
-    normalizeAgentTier(effectivePlanAccess.currentPlan?.name) ||
-    normalizeAgentTier(effectivePlanAccess.currentPlan?.displayName);
-  const effectiveTier = tierFromSubscription || tierFromPlan;
-  const entitlementsWithTier = applyTierEntitlementMinimums(
-    effectivePlanAccess.entitlements,
-    effectiveTier,
-  );
-
-  const normalizedTrialStatus = normalizeTrialStatus(user);
-  const trialStatusFromPlan =
-    effectivePlanAccess.trialStatus === 'active' || effectivePlanAccess.trialStatus === 'expired'
-      ? effectivePlanAccess.trialStatus
-      : normalizedTrialStatus;
-  const trialStatus = trialStatusFromPlan;
-
-  if (user.trialStatus !== trialStatus) {
-    await db.update(users).set({ trialStatus }).where(eq(users.id, userId));
-  }
+  // Commercial access is projected exclusively from canonical subscriptions
+  // and plan_entitlements. The legacy users.plan/subscription fields are
+  // intentionally not read or synchronized here.
+  const entitlements = effectivePlanAccess.entitlements;
+  const trialStatus = effectivePlanAccess.trialStatus;
 
   const completion = calculateAgentProfileCompletion(agent || null);
   const persistedFlags = parseFlags(agent?.profileCompletionFlags);
@@ -297,37 +181,36 @@ export async function getAgentEntitlementsForUserId(
   const paidSubscriptionEntitled = isPaidSubscriptionEntitled(
     effectivePlanAccess.subscription?.status,
   );
-  const hasActivePaidPlan =
-    user.plan === 'paid' ||
-    paidSubscriptionEntitled ||
-    (effectivePlanAccess.ownerType === 'agency' && paidSubscriptionEntitled);
+  const hasActivePaidPlan = paidSubscriptionEntitled;
+  const hasCommercialAccess = isSubscriptionEntitled(effectivePlanAccess.subscription?.status);
   const trialExpired = !hasActivePaidPlan && trialStatus === 'expired';
   const profileCompletionScore = completion.score;
-  const maxActiveListings = getEntitlementNumber(entitlementsWithTier, 'max_active_listings', 0);
-  const hasAiInsights = getEntitlementBoolean(entitlementsWithTier, 'has_ai_insights');
-  const hasAreaIntelligence = getEntitlementBoolean(entitlementsWithTier, 'has_area_intelligence');
+  const maxActiveListings = getEntitlementNumber(entitlements, 'max_active_listings', 0);
+  const hasAiInsights = getEntitlementBoolean(entitlements, 'has_ai_insights');
+  const hasAreaIntelligence = getEntitlementBoolean(entitlements, 'has_area_intelligence');
   const hasCommissionTracking = getEntitlementBoolean(
-    entitlementsWithTier,
+    entitlements,
     'has_commission_tracking',
   );
-  const hasRevenueDashboard = getEntitlementBoolean(entitlementsWithTier, 'has_revenue_dashboard');
-  const hasTeamDashboard = getEntitlementBoolean(entitlementsWithTier, 'has_team_dashboard');
+  const hasRevenueDashboard = getEntitlementBoolean(entitlements, 'has_revenue_dashboard');
+  const hasTeamDashboard = getEntitlementBoolean(entitlements, 'has_team_dashboard');
   const hasRecruitmentFunnel = getEntitlementBoolean(
-    entitlementsWithTier,
+    entitlements,
     'has_recruitment_funnel',
   );
-  const hasBenchmarking = getEntitlementBoolean(entitlementsWithTier, 'has_benchmarking');
-  const hasPriorityExposure = getEntitlementBoolean(entitlementsWithTier, 'has_priority_exposure');
-  const planMode: 'trial' | 'paid' =
-    effectivePlanAccess.subscription?.status === 'trial' ||
-    (!hasActivePaidPlan && user.plan !== 'paid')
-      ? 'trial'
-      : 'paid';
+  const hasBenchmarking = getEntitlementBoolean(entitlements, 'has_benchmarking');
+  const hasPriorityExposure = getEntitlementBoolean(entitlements, 'has_priority_exposure');
+  const planMode: 'trial' | 'paid' = hasActivePaidPlan ? 'paid' : 'trial';
 
-  const canPublishByPlan = maxActiveListings !== 0;
+  const canPublishByPlan = maxActiveListings > 0;
   const canPublishListings =
-    emailVerified && !trialExpired && profileCompletionScore >= 70 && canPublishByPlan;
-  const canReceiveLeads = emailVerified && !trialExpired && hasValue(agent?.phone);
+    hasCommercialAccess &&
+    emailVerified &&
+    !trialExpired &&
+    profileCompletionScore >= 70 &&
+    canPublishByPlan;
+  const canReceiveLeads =
+    hasCommercialAccess && emailVerified && !trialExpired && hasValue(agent?.phone);
   const canAppearInDirectory =
     profileCompletionScore >= 80 &&
     completion.hasPhoto &&
@@ -337,8 +220,11 @@ export async function getAgentEntitlementsForUserId(
   return {
     plan: planMode,
     trialStatus,
-    trialStartedAt: user.trialStartedAt || null,
-    trialEndsAt: effectivePlanAccess.trialEndsAt || user.trialEndsAt || null,
+    trialStartedAt:
+      effectivePlanAccess.subscription && trialStatus !== 'none'
+        ? effectivePlanAccess.subscription.createdAt
+        : null,
+    trialEndsAt: effectivePlanAccess.trialEndsAt || null,
     trialExpired,
     emailVerified,
     profileCompletionScore,
@@ -353,9 +239,9 @@ export async function getAgentEntitlementsForUserId(
       trialEndsAt: effectivePlanAccess.trialEndsAt,
       daysRemaining: effectivePlanAccess.trialDaysRemaining,
     },
-    rawEntitlements: entitlementsWithTier,
+    rawEntitlements: entitlements,
     featureFlags: {
-      ...entitlementsWithTier,
+      ...entitlements,
       maxActiveListings,
       hasAiInsights,
       hasAreaIntelligence,
