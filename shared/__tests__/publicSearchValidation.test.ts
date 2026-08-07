@@ -35,4 +35,12 @@ describe('public Search Area request validation', () => {
       }),
     ).toMatchObject({ path: 'locationId' });
   });
+
+  it('rejects unsupported runtime journeys instead of normalizing them to Rent', () => {
+    for (const listingType of ['shared_living', 'developments', 'plot_land', 'commercial']) {
+      expect(validatePublicSearchInput({ listingType: listingType as never })).toMatchObject({
+        path: 'listingType',
+      });
+    }
+  });
 });

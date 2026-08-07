@@ -164,7 +164,10 @@ describe('Search Area public query integration', () => {
       'date_desc',
       1,
       2,
-      expect.objectContaining({ memberSuburbIds: [34, 35] }),
+      expect.objectContaining({
+        authorityKey: 'search-area:johannesburg-sandton:v1',
+        memberSuburbIds: [34, 35],
+      }),
     );
     expect(result).toMatchObject({
       locationState: 'resolved',
@@ -247,6 +250,39 @@ describe('Search Area public query integration', () => {
     });
 
     expect(result).toMatchObject({ cards: [], total: 0, locationState: 'unavailable' });
+    expect(result.locationMessage).toContain('preview');
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when an injected resolver returns a preview resolution', async () => {
+    mockResolveSearchArea.mockResolvedValueOnce({
+      ...resolvedSearchArea,
+      status: 'preview' as const,
+      summary: {
+        ...resolvedSearchArea.summary,
+        lifecycle: 'preview' as const,
+        availability: 'preview' as const,
+      },
+      definition: {
+        ...resolvedSearchArea.definition,
+        lifecycle: 'preview' as const,
+      },
+    });
+
+    const result = await new PublicSearchService({
+      resolveSearchArea: mockResolveSearchArea,
+    }).searchInventory({
+      searchAreaId: 'johannesburg-sandton',
+      listingType: 'sale',
+    });
+
+    expect(result).toMatchObject({
+      cards: [],
+      total: 0,
+      page: 0,
+      locationState: 'unavailable',
+    });
     expect(result.locationMessage).toContain('preview');
     expect(mockSearchProperties).not.toHaveBeenCalled();
     expect(mockSearchListings).not.toHaveBeenCalled();

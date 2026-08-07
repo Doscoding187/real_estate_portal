@@ -235,6 +235,44 @@ describe('DevelopmentDerivedListingService', () => {
     expect(result.items.map(item => item.unitTypeId)).toEqual(['inside-unit']);
   });
 
+  it('applies area filters before deriving both items and total', async () => {
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        listingType: 'sale',
+        minArea: 75,
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items).toHaveLength(0);
+    expect(result.total).toBe(0);
+    expect(result.total).toBe(result.items.length);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it('applies bathroom filters before deriving both items and total', async () => {
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        listingType: 'sale',
+        maxBathrooms: 1,
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items).toHaveLength(0);
+    expect(result.total).toBe(0);
+    expect(result.total).toBe(result.items.length);
+    expect(result.hasMore).toBe(false);
+  });
+
   it('only queries approved published developments with active unit inventory', async () => {
     await developmentDerivedListingService.searchListings(
       {

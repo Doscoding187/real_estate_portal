@@ -812,6 +812,7 @@ export interface PropertyFilters {
   minBedrooms?: number;
   maxBedrooms?: number;
   minBathrooms?: number;
+  maxBathrooms?: number;
 
   // Size filters
   minErfSize?: number;

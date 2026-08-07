@@ -6,10 +6,15 @@ import {
   canAdvancePublicSearchPage,
   normalizePublicSearchPageIndex,
   normalizePublicSearchPageSize,
+  normalizePublicSearchPageForTotal,
 } from '../../shared/publicSearchPagination';
 import type { PropertyFilters, SearchCardResult, SortOption } from '../../shared/types';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
 import type { SearchAreaSummary } from '../../shared/searchScope';
+import {
+  DEFAULT_SEARCH_RESULT_SORT,
+  isSearchResultSortOption,
+} from '../../shared/transactionalSearchState';
 import { developmentDerivedListingService } from './developmentDerivedListingService';
 import { locationResolver, type ResolvedLocation } from './locationResolverService';
 import { propertySearchService } from './propertySearchService';
@@ -125,8 +130,8 @@ function emptyLocationResult(
   status: 'unresolved' | 'ambiguous' | 'unavailable',
   message: string,
 ) {
-  const page = normalizePublicSearchPageIndex(input.page);
   const pageSize = normalizePublicSearchPageSize(input.pageSize);
+  const page = normalizePublicSearchPageForTotal(input.page, 0, pageSize);
   return {
     cards: [],
     total: 0,
@@ -198,6 +203,7 @@ function buildPublicFilters(
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
     minBathrooms: input.minBathrooms,
+    maxBathrooms: input.maxBathrooms,
     minErfSize: input.minArea,
     maxErfSize: input.maxArea,
     minFloorSize: input.minArea,
@@ -221,6 +227,9 @@ function buildDevelopmentFilters(
     minBedrooms: input.minBedrooms,
     maxBedrooms: input.maxBedrooms,
     minBathrooms: input.minBathrooms,
+    maxBathrooms: input.maxBathrooms,
+    minArea: input.minArea,
+    maxArea: input.maxArea,
     bounds: buildSearchBounds(input),
     locations: undefined,
   };
@@ -239,9 +248,19 @@ export class PublicSearchService {
       throw new Error(validationIssue.message);
     }
 
+    if (!input.listingType) {
+      return emptyLocationResult(
+        input,
+        'unavailable',
+        'Choose Buy or Rent before searching public inventory.',
+      );
+    }
+
     const page = normalizePublicSearchPageIndex(input.page);
     const pageSize = normalizePublicSearchPageSize(input.pageSize);
-    const sortOption: PublicSearchBlendSortOption = input.sortOption || 'relevance';
+    const sortOption: PublicSearchBlendSortOption = isSearchResultSortOption(input.sortOption)
+      ? input.sortOption
+      : DEFAULT_SEARCH_RESULT_SORT;
     const sourceSortOption = sourceSort(sortOption);
 
     let location: ResolvedLocation | null = null;
@@ -263,6 +282,10 @@ export class PublicSearchService {
       const resolution = await this.searchAreaResolver.resolveSearchArea(input.searchAreaId, {
         journey: searchAreaJourney,
       });
+
+      if (resolution.status === 'preview') {
+        return emptyLocationResult(input, 'unavailable', searchAreaFailureMessage('preview_only'));
+      }
 
       if (resolution.status === 'unavailable') {
         return emptyLocationResult(
@@ -364,43 +387,59 @@ export class PublicSearchService {
     const developmentFilters = buildDevelopmentFilters(input, location);
     const manualEnabled = input.listingSource !== 'development';
     const developmentEnabled = input.listingSource !== 'manual';
-    const sourcePageSize = manualEnabled && developmentEnabled ? (page + 1) * pageSize : pageSize;
-    const sourcePage = manualEnabled && developmentEnabled ? 1 : page + 1;
+    const fetchSourceResults = async (requestedPage: number) => {
+      const sourcePageSize =
+        manualEnabled && developmentEnabled ? (requestedPage + 1) * pageSize : pageSize;
+      const sourcePage = manualEnabled && developmentEnabled ? 1 : requestedPage + 1;
 
-    const [manualResults, developmentResults] = await Promise.all([
-      manualEnabled
-        ? searchAreaBoundary
-          ? propertySearchService.searchProperties(
-              filters,
-              sourceSortOption,
-              sourcePage,
-              sourcePageSize,
-              searchAreaBoundary,
-            )
-          : propertySearchService.searchProperties(
-              filters,
-              sourceSortOption,
-              sourcePage,
-              sourcePageSize,
-            )
-        : null,
-      developmentEnabled
-        ? searchAreaBoundary
-          ? developmentDerivedListingService.searchListings(
-              developmentFilters,
-              sourceSortOption,
-              sourcePage,
-              sourcePageSize,
-              searchAreaBoundary,
-            )
-          : developmentDerivedListingService.searchListings(
-              developmentFilters,
-              sourceSortOption,
-              sourcePage,
-              sourcePageSize,
-            )
-        : null,
-    ]);
+      return Promise.all([
+        manualEnabled
+          ? searchAreaBoundary
+            ? propertySearchService.searchProperties(
+                filters,
+                sourceSortOption,
+                sourcePage,
+                sourcePageSize,
+                searchAreaBoundary,
+              )
+            : propertySearchService.searchProperties(
+                filters,
+                sourceSortOption,
+                sourcePage,
+                sourcePageSize,
+              )
+          : null,
+        developmentEnabled
+          ? searchAreaBoundary
+            ? developmentDerivedListingService.searchListings(
+                developmentFilters,
+                sourceSortOption,
+                sourcePage,
+                sourcePageSize,
+                searchAreaBoundary,
+              )
+            : developmentDerivedListingService.searchListings(
+                developmentFilters,
+                sourceSortOption,
+                sourcePage,
+                sourcePageSize,
+              )
+          : null,
+      ]);
+    };
+
+    let [manualResults, developmentResults] = await fetchSourceResults(page);
+    let manualTotal = manualResults?.total || 0;
+    let developmentTotal = developmentResults?.total || 0;
+    let total = manualTotal + developmentTotal;
+    const canonicalPage = normalizePublicSearchPageForTotal(page, total, pageSize);
+
+    if (canonicalPage !== page) {
+      [manualResults, developmentResults] = await fetchSourceResults(canonicalPage);
+      manualTotal = manualResults?.total || 0;
+      developmentTotal = developmentResults?.total || 0;
+      total = manualTotal + developmentTotal;
+    }
 
     const manualCards = (manualResults?.cards || []) as SearchCardResult[];
     const developmentCards = (developmentResults?.cards || []) as SearchCardResult[];
@@ -421,17 +460,14 @@ export class PublicSearchService {
           : developmentCards;
     const cards =
       manualEnabled && developmentEnabled
-        ? blended.slice(page * pageSize, page * pageSize + pageSize)
+        ? blended.slice(canonicalPage * pageSize, canonicalPage * pageSize + pageSize)
         : blended;
-    const manualTotal = manualResults?.total || 0;
-    const developmentTotal = developmentResults?.total || 0;
-    const total = manualTotal + developmentTotal;
     const locationContext = location ? toLocationContext(location) : undefined;
 
     return {
       cards,
       total,
-      page,
+      page: canonicalPage,
       pageSize,
       hasMore: canAdvancePublicSearchPage(page, total, pageSize),
       locationContext,
