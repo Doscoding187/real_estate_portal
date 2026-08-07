@@ -12,6 +12,24 @@ const province: LocationNode = {
   provinceSlug: 'gauteng',
 };
 
+const westernCapeProvince: LocationNode = {
+  id: 'province:2',
+  canonicalLocationId: 'province:2',
+  name: 'Western Cape',
+  slug: 'western-cape',
+  type: 'province',
+  provinceSlug: 'western-cape',
+};
+
+const capeTown: LocationNode = {
+  id: 'city:4',
+  canonicalLocationId: 'city:4',
+  name: 'Cape Town',
+  slug: 'cape-town',
+  type: 'city',
+  provinceSlug: 'western-cape',
+};
+
 const sandton: LocationNode = {
   id: 'suburb:34',
   canonicalLocationId: 'suburb:34',
@@ -68,6 +86,33 @@ describe('provincial journey handoff', () => {
       listingType: 'rent',
       propertyType: 'apartment',
       maxPrice: 20_000,
+    });
+  });
+
+  it('reuses the same canonical handoff for Western Cape and Cape Town', () => {
+    const buyHref = buildProvincialJourneyHref({
+      journey: 'buy',
+      province: westernCapeProvince,
+    });
+    expect(buyHref).toBe('/property-for-sale?locationId=province%3A2&province=western-cape');
+
+    const rentHref = buildProvincialJourneyHref({
+      journey: 'rent',
+      province: westernCapeProvince,
+      selectedLocations: [capeTown],
+      filters: { propertyType: 'apartment', maxPrice: 20_000 },
+    });
+    expect(rentHref).toBe(
+      '/property-to-rent?propertyType=apartment&maxPrice=20000&locationId=city%3A4&city=cape-town&province=western-cape',
+    );
+
+    const { intent } = parseHref(rentHref!);
+    expect(intent.transactionType).toBe('to-rent');
+    expect(intent.geography).toMatchObject({
+      level: 'city',
+      locationId: 'city:4',
+      province: 'western-cape',
+      city: 'cape-town',
     });
   });
 

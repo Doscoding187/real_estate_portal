@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, ChevronDown, Compass, Home, KeyRound, MapPin } from 'lucide-react';
 import { useLocation, useSearch } from 'wouter';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
-import { hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
+import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
 import { buildProvincialJourneyHref } from '@/lib/provincialSearchHandoff';
 import type { LocationNode } from '@/types/location';
 import {
@@ -497,25 +497,25 @@ export function ProvincialComposer({
               type: 'city',
               provinceSlug: province.slug,
             };
+            const hasCanonicalMarket = Boolean(canonicalMarket?.canonicalLocationId);
             return (
               <button
                 key={market.slug}
                 type="button"
-                disabled={Boolean(activeJourney && !canonicalMarket?.canonicalLocationId)}
+                disabled={!hasCanonicalMarket}
                 onClick={() => {
+                  if (!hasCanonicalMarket) return;
                   const href = activeJourney
-                    ? canonicalMarket?.canonicalLocationId
-                      ? buildProvincialJourneyHref({
-                          journey: activeJourney.id,
-                          province: provinceLocation,
-                          selectedLocations: [marketLocation],
-                          filters: {
-                            propertyType: state.filters.propertyType,
-                            maxPrice: state.filters.maxPrice,
-                          },
-                        })
-                      : undefined
-                    : `/${province.slug}/${market.slug}`;
+                    ? buildProvincialJourneyHref({
+                        journey: activeJourney.id,
+                        province: provinceLocation,
+                        selectedLocations: [marketLocation],
+                        filters: {
+                          propertyType: state.filters.propertyType,
+                          maxPrice: state.filters.maxPrice,
+                        },
+                      })
+                    : buildLocationDiscoveryPath(marketLocation);
                   if (href) navigate(href);
                 }}
               >

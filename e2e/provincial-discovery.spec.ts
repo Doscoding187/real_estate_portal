@@ -104,6 +104,99 @@ const provincialFixture = {
   generatedAt: '2026-08-05T00:00:00.000Z',
 };
 
+const westernCapeInventory = {
+  state: 'sparse',
+  total: 1,
+  items: [
+    {
+      id: 'property-201',
+      href: '/property/201',
+      title: 'Light-filled Cape Town apartment',
+      location: 'Cape Town',
+      price: 2250000,
+      image: null,
+      bedrooms: 2,
+      bathrooms: 1,
+      area: 92,
+      propertyType: 'apartment',
+      listingType: 'sale',
+      listingSource: 'manual',
+    },
+  ],
+  sourceCounts: { manual: 1, development: 0 },
+  pageSize: 6,
+  authority: 'public-search',
+};
+
+const westernCapeFixture = {
+  province: {
+    // These are explicit canonical-form fixture identities. Production IDs
+    // come from the canonical geography authority rather than display labels.
+    id: 2,
+    canonicalLocationId: 'province:2',
+    name: 'Western Cape',
+    slug: 'western-cape',
+    code: 'WC',
+    latitude: null,
+    longitude: null,
+    description: null,
+  },
+  // The canonical reference currently exposes Cape Town as the only Western
+  // Cape city. Do not manufacture a second sibling merely to exercise OR.
+  cities: [
+    {
+      id: 4,
+      canonicalLocationId: 'city:4',
+      name: 'Cape Town',
+      slug: 'cape-town',
+      provinceSlug: 'western-cape',
+      latitude: null,
+      longitude: null,
+    },
+  ],
+  markets: [
+    {
+      slug: 'cape-town',
+      name: 'Cape Town',
+      eyebrow: 'Urban, coastal and peninsula markets',
+      description: 'A city-wide starting point for apartments, family homes and coastal living.',
+      areaSlugs: [],
+      city: { id: 4, canonicalLocationId: 'city:4', name: 'Cape Town', slug: 'cape-town' },
+      inventory: westernCapeInventory,
+      state: 'sparse',
+    },
+    {
+      slug: 'stellenbosch',
+      name: 'Stellenbosch',
+      eyebrow: 'Winelands market',
+      description: 'A configured market awaiting a canonical location identity.',
+      areaSlugs: [],
+      city: null,
+      inventory: null,
+      state: 'unavailable',
+    },
+  ],
+  journeyCounts: {
+    buy: { state: 'sparse', total: 1, sourceCounts: { manual: 1, development: 0 } },
+    rent: { state: 'sparse', total: 1, sourceCounts: { manual: 1, development: 0 } },
+    developments: { state: 'unavailable', total: null, sourceCounts: null },
+  },
+  inventoryPreview: westernCapeInventory,
+  marketSnapshot: {
+    state: 'unavailable',
+    title: 'Pricing snapshot is not published yet',
+    reason: 'No audited public price series is available for this preview.',
+    provenance: {
+      source: 'Property Listify public search inventory',
+      sampleSize: 0,
+      asOf: '2026-08-05T00:00:00.000Z',
+      note: 'Inventory totals are asking-listing counts, not concluded transactions or valuations.',
+    },
+  },
+  activeCountJourneys: ['buy', 'rent', 'developments'],
+  generatedAt: '2026-08-05T00:00:00.000Z',
+};
+
 const locationSuggestions = [
   { id: 2, name: 'Pretoria', type: 'city', provinceName: 'Gauteng' },
   { id: 3, name: 'Johannesburg', type: 'city', provinceName: 'Gauteng' },
@@ -111,11 +204,25 @@ const locationSuggestions = [
   { id: 5, name: 'Rosebank', type: 'suburb', provinceName: 'Gauteng', cityName: 'Johannesburg' },
 ];
 
+const westernCapeLocationSuggestions = [
+  {
+    id: 4,
+    name: 'Cape Town',
+    type: 'city',
+    provinceId: 2,
+    provinceName: 'Western Cape',
+  },
+];
+
 function trpcResult(data: unknown) {
   return { result: { data: { json: data } } };
 }
 
-async function installProvincialFixture(page: Page) {
+async function installProvincialFixture(
+  page: Page,
+  fixture = provincialFixture,
+  suggestions = locationSuggestions,
+) {
   await page.route('**/api/trpc/**', async (route: Route) => {
     const pathname = new URL(route.request().url()).pathname;
     const procedures = pathname.split('/api/trpc/')[1]?.split(',') || [];
@@ -132,13 +239,13 @@ async function installProvincialFixture(page: Page) {
 
     const results = procedures.map(procedure => {
       if (procedure === 'locationPages.getProvincialDiscoveryData') {
-        return trpcResult(provincialFixture);
+        return trpcResult(fixture);
       }
       if (procedure === 'locationPages.getHeroCampaign') {
         return trpcResult(null);
       }
       if (procedure === 'location.searchLocations') {
-        return trpcResult(locationSuggestions);
+        return trpcResult(suggestions);
       }
       return trpcResult(null);
     });
@@ -349,5 +456,144 @@ test.describe('Gauteng provincial discovery', () => {
     expect(overflow).toBeLessThanOrEqual(1025);
     await capture(page, 'neutral-gauteng-1024.png');
     await capture(page, 'neutral-gauteng-1024-first-screen.png', false);
+  });
+});
+
+test.describe('Western Cape provincial discovery acceptance', () => {
+  test.beforeEach(async ({ page }) => {
+    await installProvincialFixture(page, westernCapeFixture, westernCapeLocationSuggestions);
+  });
+
+  test('keeps neutral Western Cape discovery neutral and province-specific', async ({ page }) => {
+    await page.goto('/western-cape', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: 'Explore Western Cape' })).toBeVisible();
+    await expect(page.getByTestId('active-journey-state')).toHaveCount(0);
+    await expect(page.getByTestId('provincial-primary-cta')).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Choose journey' })).toBeDisabled();
+    await expect(page.getByRole('tab', { name: /^Buy/ })).toHaveAttribute('aria-selected', 'false');
+    await expect(page.getByRole('tab', { name: /^Rent/ })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    await expect(page.getByText('See what is available in Western Cape.')).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('Gauteng');
+
+    const axeResults = await new AxeBuilder({ page }).include('.provincial-composer').analyze();
+    expect(axeResults.violations).toEqual([]);
+
+    await capture(page, 'western-cape-neutral-1440.png');
+    await capture(page, 'western-cape-neutral-1440-first-screen.png', false);
+  });
+
+  test('keeps Western Cape composition coherent at tablet and mobile widths', async ({ page }) => {
+    for (const viewport of [
+      { width: 1024, height: 768, suffix: '1024' },
+      { width: 390, height: 844, suffix: '390' },
+    ]) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto('/western-cape', { waitUntil: 'domcontentloaded' });
+
+      await expect(page.getByRole('heading', { name: 'Explore Western Cape' })).toBeVisible();
+      await expect(
+        page.locator('.provincial-composer').getByRole('combobox', {
+          name: 'Search by city, suburb, or area',
+        }),
+      ).toBeVisible();
+      const overflow = await page.evaluate(() => ({
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+        bodyWidth: document.body.scrollWidth,
+      }));
+      expect(overflow.documentWidth).toBeLessThanOrEqual(overflow.viewportWidth + 1);
+      expect(overflow.bodyWidth).toBeLessThanOrEqual(overflow.viewportWidth + 1);
+
+      await capture(page, `western-cape-neutral-${viewport.suffix}.png`);
+      await capture(page, `western-cape-neutral-${viewport.suffix}-first-screen.png`, false);
+    }
+  });
+
+  test('hands explicit Western Cape Buy into province-scoped results', async ({ page }) => {
+    await page.goto('/western-cape', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: /^Buy/ }).click();
+
+    await expect(page.getByTestId('active-journey-state')).toHaveText(/Buy selected/);
+    await expect(page.getByTestId('provincial-location-helper')).toHaveText(
+      /keep the whole province selected/,
+    );
+    await capture(page, 'western-cape-buy-1440.png');
+
+    await page.getByTestId('provincial-primary-cta').click();
+    const resultUrl = new URL(page.url());
+    expect(resultUrl.pathname).toBe('/property-for-sale');
+    expect(resultUrl.searchParams.get('locationId')).toBe('province:2');
+    expect(resultUrl.searchParams.get('province')).toBe('western-cape');
+    expect(resultUrl.searchParams.get('city')).toBeNull();
+    expect(resultUrl.searchParams.get('suburb')).toBeNull();
+  });
+
+  test('hands explicit Western Cape Rent into province-scoped results without removed controls', async ({
+    page,
+  }) => {
+    await page.goto('/western-cape', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: /^Rent/ }).click();
+
+    await expect(page.getByTestId('active-journey-state')).toHaveText(/Rent selected/);
+    await expect(page.getByLabel('Property type')).toBeEnabled();
+    await expect(page.getByLabel('Budget')).toBeEnabled();
+    await expect(page.getByText('Lease term')).toHaveCount(0);
+    await expect(page.getByText('Furnished')).toHaveCount(0);
+    await capture(page, 'western-cape-rent-1440.png');
+
+    await page.getByTestId('provincial-primary-cta').click();
+    const resultUrl = new URL(page.url());
+    expect(resultUrl.pathname).toBe('/property-to-rent');
+    expect(resultUrl.searchParams.get('locationId')).toBe('province:2');
+    expect(resultUrl.searchParams.get('province')).toBe('western-cape');
+    expect(resultUrl.searchParams.get('listingType')).toBeNull();
+  });
+
+  test('preserves canonical Cape Town through Rent and URL reconstruction', async ({ page }) => {
+    await page.goto('/western-cape', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: /^Rent/ }).click();
+
+    const locationInput = page.locator('.provincial-composer input[role="combobox"]');
+    await locationInput.fill('Cape Town');
+    await expect(page.getByRole('option', { name: /Cape Town/ })).toBeVisible();
+    await page.getByRole('option', { name: /Cape Town/ }).click();
+    await page.getByLabel('Property type').selectOption('apartment');
+    await page.getByLabel('Budget').selectOption('20000');
+
+    await expect(page.getByRole('button', { name: 'Remove Cape Town' })).toBeVisible();
+    await expect(page.getByTestId('provincial-location-helper')).toHaveText(
+      /Canonical location preserved/,
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await capture(page, 'western-cape-rent-cape-town-1440.png');
+
+    await page.getByTestId('provincial-primary-cta').click();
+    const resultUrl = new URL(page.url());
+    expect(resultUrl.pathname).toBe('/property-to-rent');
+    expect(resultUrl.searchParams.get('locationId')).toBe('city:4');
+    expect(resultUrl.searchParams.get('city')).toBe('cape-town');
+    expect(resultUrl.searchParams.get('province')).toBe('western-cape');
+    expect(resultUrl.searchParams.get('propertyType')).toBe('apartment');
+    expect(resultUrl.searchParams.get('maxPrice')).toBe('20000');
+    expect(resultUrl.searchParams.get('listingType')).toBeNull();
+
+    await page.goto(
+      '/western-cape?journey=rent&province=western-cape&city=cape-town&locationId=city%3A4&propertyType=apartment&maxPrice=20000',
+      { waitUntil: 'domcontentloaded' },
+    );
+    await expect(page.getByTestId('active-journey-state')).toHaveText(/Rent selected/);
+    await expect(page.getByRole('button', { name: 'Remove Cape Town' })).toBeVisible();
+    await expect(page.getByLabel('Property type')).toHaveValue('apartment');
+    await expect(page.getByLabel('Budget')).toHaveValue('20000');
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('active-journey-state')).toHaveText(/Rent selected/);
+    await expect(page.getByRole('button', { name: 'Remove Cape Town' })).toBeVisible();
+    await expect(page.getByLabel('Property type')).toHaveValue('apartment');
+    await expect(page.getByLabel('Budget')).toHaveValue('20000');
   });
 });

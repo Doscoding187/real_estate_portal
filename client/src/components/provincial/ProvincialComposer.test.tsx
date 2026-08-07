@@ -96,6 +96,13 @@ const province = {
   slug: 'gauteng',
 };
 
+const westernCapeProvince = {
+  id: 2,
+  canonicalLocationId: 'province:2',
+  name: 'Western Cape',
+  slug: 'western-cape',
+};
+
 describe('ProvincialComposer', () => {
   beforeEach(() => {
     navigate.mockReset();
@@ -157,5 +164,29 @@ describe('ProvincialComposer', () => {
     expect(href).toContain('locationIds=suburb%3A34');
     expect(href).toContain('locationIds=suburb%3A35');
     expect(href).not.toContain('city=johannesburg');
+  });
+
+  it('does not expose an uncanonical market as a neutral destination shortcut', () => {
+    useLocationMock.mockReturnValue(['/western-cape', navigate]);
+
+    render(
+      <ProvincialComposer
+        config={PROVINCIAL_CONFIGS['western-cape']}
+        province={westernCapeProvince}
+        marketLocations={[
+          {
+            name: 'Cape Town',
+            slug: 'cape-town',
+            canonicalLocationId: 'city:4',
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Cape Town' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Stellenbosch' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stellenbosch' }));
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

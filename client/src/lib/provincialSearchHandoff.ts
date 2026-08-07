@@ -6,7 +6,11 @@ import {
   type GeographySearchContext,
 } from './geographySearchHandoff';
 import { generateIntentUrl, type SearchIntent } from './searchIntent';
-import { createMultiLocationSearchScope, type SearchScope } from '../../../shared/searchScope';
+import {
+  createMultiLocationSearchScope,
+  type SearchScope,
+  type SearchScopeMember,
+} from '../../../shared/searchScope';
 import { sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
 import type { ProvincialJourneyId } from '../../../shared/provincialDiscovery';
 
@@ -59,13 +63,31 @@ function contextForDevelopmentScope(
     };
   }
 
+  if (scope.kind === 'search_area') {
+    return {
+      level: 'search_area',
+      searchAreaId: scope.searchAreaId,
+    };
+  }
+
+  const searchAreaMembers = scope.members.filter(
+    (member): member is Extract<SearchScopeMember, { kind: 'search_area' }> =>
+      member.kind === 'search_area',
+  );
+  if (searchAreaMembers.length > 0) {
+    return {
+      level: 'multi_location',
+      searchAreaIds: searchAreaMembers.map(member => member.searchAreaId),
+    };
+  }
+
+  const canonicalMembers = scope.members.filter(
+    (member): member is Exclude<SearchScopeMember, { kind: 'search_area' }> =>
+      member.kind !== 'search_area',
+  );
   return {
     level: 'multi_location',
-    ...(scope.members[0]?.kind === 'search_area'
-      ? { searchAreaIds: scope.members.map(member => member.searchAreaId) }
-      : {
-          locationIds: scope.members.map(member => member.canonicalLocationId),
-        }),
+    locationIds: canonicalMembers.map(member => member.canonicalLocationId),
   };
 }
 
@@ -140,7 +162,7 @@ export function buildProvincialJourneyHref(
       journey: input.journey,
       scope: selection.scope,
       context: selection.context,
-      filters,
+      filters: { ...filters } as Record<string, unknown>,
       resultState: { sort: 'relevance', page: 0 },
     });
   }
