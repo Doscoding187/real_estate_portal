@@ -1,5 +1,12 @@
 import { and, asc, eq } from 'drizzle-orm';
-import { agencies, plans, planEntitlements, subscriptions, users } from '../../drizzle/schema';
+import {
+  agencies,
+  developers,
+  plans,
+  planEntitlements,
+  subscriptions,
+  users,
+} from '../../drizzle/schema';
 import { getDb } from '../db';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
@@ -190,14 +197,35 @@ function deriveTrialState(
   };
 }
 
-function getOwnerContextForUser(user: UserRow): {
+async function getOwnerContextForUser(
+  db: DbHandle,
+  user: UserRow,
+): Promise<{
   ownerType: SubscriptionOwnerType;
   ownerId: number;
-} {
+} | null> {
   if (user.role === 'agency_admin' && user.agencyId) {
     return {
       ownerType: 'agency',
       ownerId: Number(user.agencyId),
+    };
+  }
+
+  if (user.role === 'property_developer') {
+    const [developer] = await db
+      .select({ id: developers.id })
+      .from(developers)
+      .where(eq(developers.userId, user.id))
+      .limit(1);
+
+    // A developer subscription is owned by the developer profile, not the
+    // login row. Do not fall back to user.id: that would create a second,
+    // ambiguous owner identity for canonical subscriptions.
+    if (!developer) return null;
+
+    return {
+      ownerType: 'developer',
+      ownerId: Number(developer.id),
     };
   }
 
@@ -230,8 +258,9 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const { ownerType, ownerId } = getOwnerContextForUser(user);
-  if (ownerType !== 'agency') return null;
+  const ownerContext = await getOwnerContextForUser(db, user);
+  if (!ownerContext || ownerContext.ownerType !== 'agency') return null;
+  const { ownerType, ownerId } = ownerContext;
   const [existing] = await db
     .select()
     .from(subscriptions)
@@ -368,6 +397,25 @@ export async function getPlanByName(name: string): Promise<PlanSnapshot | null> 
   return row ? toPlanSnapshot(row) : null;
 }
 
+/**
+ * Resolve the canonical developer product used for a new trial, if one has
+ * actually been configured. S3 deliberately does not manufacture a plan or
+ * borrow the retired developer tier constants when the catalog is incomplete.
+ */
+export async function getDeveloperTrialPlan(): Promise<PlanSnapshot | null> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const rows = await db
+    .select()
+    .from(plans)
+    .where(and(eq(plans.segment, 'developer'), eq(plans.isActive, 1)))
+    .orderBy(asc(plans.sortOrder), asc(plans.id));
+
+  const trialPlan = rows.find(row => Number(row.trialDays || 0) > 0);
+  return trialPlan ? toPlanSnapshot(trialPlan) : null;
+}
+
 export async function getPlanAccessProjectionForUserId(
   userId: number,
 ): Promise<PlanAccessProjection | null> {
@@ -378,7 +426,9 @@ export async function getPlanAccessProjectionForUserId(
 
   if (!user) return null;
 
-  const { ownerType, ownerId } = getOwnerContextForUser(user);
+  const ownerContext = await getOwnerContextForUser(db, user);
+  if (!ownerContext) return null;
+  const { ownerType, ownerId } = ownerContext;
 
   let [subscriptionRow] = await db
     .select()
@@ -529,6 +579,26 @@ export async function getAgencyOwnerIdForUser(userId: number): Promise<number | 
     .where(eq(agencies.id, user.agencyId))
     .limit(1);
   return agency ? Number(agency.id) : null;
+}
+
+export async function getDeveloperUserId(developerId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [developer] = await db
+    .select({ userId: developers.userId })
+    .from(developers)
+    .where(eq(developers.id, developerId))
+    .limit(1);
+
+  return developer ? Number(developer.userId) : null;
+}
+
+export async function getPlanAccessProjectionForDeveloperId(
+  developerId: number,
+): Promise<PlanAccessProjection | null> {
+  const userId = await getDeveloperUserId(developerId);
+  return userId ? getPlanAccessProjectionForUserId(userId) : null;
 }
 
 export function isTrialState(status: SubscriptionStatus | null | undefined): boolean {

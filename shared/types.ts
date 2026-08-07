@@ -209,9 +209,26 @@ export interface DeveloperSubscriptionUsage {
   updatedAt: Date;
 }
 
+export interface DeveloperCommercialState {
+  ownerType: 'developer';
+  ownerId: number;
+  subscriptionId: number;
+  planId: number;
+  planName: string;
+  planDisplayName: string;
+  status: string;
+  entitled: boolean;
+  trialStatus: 'active' | 'expired' | 'none';
+  trialEndsAt: string | null;
+  trialDaysRemaining: number | null;
+  entitlements: Record<string, boolean | number | string | null>;
+}
+
 export interface DeveloperSubscriptionWithDetails extends DeveloperSubscription {
   limits: DeveloperSubscriptionLimits;
   usage: DeveloperSubscriptionUsage;
+  /** Canonical commercial state. Legacy fields above are compatibility shape only. */
+  commercial: DeveloperCommercialState;
 }
 
 // Notification types for the mission control dashboard
@@ -280,40 +297,6 @@ export interface DeveloperKPICache {
   calculatedAt: Date;
   expiresAt: Date;
 }
-
-// Tier configuration constants
-export const SUBSCRIPTION_TIER_LIMITS: Record<
-  SubscriptionTier,
-  Omit<DeveloperSubscriptionLimits, 'id' | 'subscriptionId' | 'createdAt' | 'updatedAt'>
-> = {
-  free_trial: {
-    maxDevelopments: 1,
-    maxLeadsPerMonth: 50,
-    maxTeamMembers: 1,
-    analyticsRetentionDays: 30,
-    crmIntegrationEnabled: false,
-    advancedAnalyticsEnabled: false,
-    bondIntegrationEnabled: false,
-  },
-  basic: {
-    maxDevelopments: 5,
-    maxLeadsPerMonth: 200,
-    maxTeamMembers: 5,
-    analyticsRetentionDays: 90,
-    crmIntegrationEnabled: false,
-    advancedAnalyticsEnabled: true,
-    bondIntegrationEnabled: true,
-  },
-  premium: {
-    maxDevelopments: 999999, // Effectively unlimited
-    maxLeadsPerMonth: 999999, // Effectively unlimited
-    maxTeamMembers: 50,
-    analyticsRetentionDays: 365,
-    crmIntegrationEnabled: true,
-    advancedAnalyticsEnabled: true,
-    bondIntegrationEnabled: true,
-  },
-};
 
 // Development Types
 export type DevelopmentType = 'residential' | 'commercial' | 'mixed_use' | 'estate' | 'complex';

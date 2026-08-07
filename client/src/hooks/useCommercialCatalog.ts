@@ -10,8 +10,8 @@ export type CommercialAudience = CommercialProduct['audience'];
  * Read the canonical commercial catalog without starting checkout or changing
  * any account, subscription, or entitlement state.
  */
-export function useCommercialCatalog() {
-  return trpc.billing.commercialCatalog.useQuery(undefined, {
+export function useCommercialCatalog(audience?: CommercialAudience) {
+  return trpc.billing.commercialCatalog.useQuery(audience ? { audience } : undefined, {
     retry: false,
     refetchOnWindowFocus: false,
     staleTime: 60_000,

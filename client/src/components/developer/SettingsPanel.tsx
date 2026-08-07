@@ -1,6 +1,8 @@
 // @ts-nocheck
 import React, { useState } from 'react';
 import { trpc } from '@/lib/trpc';
+import { useCommercialCatalog } from '@/hooks/useCommercialCatalog';
+import { formatCommercialPrice } from '@/lib/commercialCatalog';
 import { toast } from 'sonner';
 import { RefreshCw, Building2 } from 'lucide-react';
 
@@ -13,6 +15,7 @@ const SettingsPanel: React.FC = () => {
       staleTime: 0, // Always refetch on access
       refetchOnMount: true,
     });
+  const { data: catalog } = useCommercialCatalog('developer');
 
   // Reset development count mutation
   const resetCountMutation = trpc.developer.resetDevelopmentCount.useMutation({
@@ -46,12 +49,19 @@ const SettingsPanel: React.FC = () => {
     bio: 'Leading property developers specializing in high-end residential and commercial projects across South Africa.',
   });
 
-  const [billingInfo, setBillingInfo] = useState({
-    plan: 'Professional',
-    nextBilling: 'Nov 30, 2025',
-    amount: 'R2,499.00',
-    paymentMethod: 'Visa ending in 4532',
-  });
+  const currentProduct = catalog?.products.find(
+    product => product.source.planId === subscription?.commercial?.planId,
+  );
+  const billingInfo = {
+    plan: subscription?.commercial?.planDisplayName || 'No canonical developer plan',
+    nextBilling: subscription?.commercial?.trialEndsAt
+      ? new Date(subscription.commercial.trialEndsAt).toLocaleDateString('en-ZA')
+      : subscription?.currentPeriodEnd
+        ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-ZA')
+        : 'Not scheduled',
+    amount: formatCommercialPrice(currentProduct?.pricing.basePrice) || 'Pricing unavailable',
+    paymentMethod: 'Manual EFT — finance verification',
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -277,9 +287,9 @@ const SettingsPanel: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-16">
-                <div className="text-sm text-gray-500">Current Tier</div>
+                <div className="text-sm text-gray-500">Current Plan</div>
                 <div className="font-medium text-lg capitalize">
-                  {subscription?.tier?.replace('_', ' ') || 'Loading...'}
+                  {subscription?.commercial?.planDisplayName || 'No canonical developer plan'}
                 </div>
               </div>
 
@@ -287,8 +297,8 @@ const SettingsPanel: React.FC = () => {
                 <div>
                   <div className="text-sm text-gray-500">Developments</div>
                   <div className="font-medium">
-                    {subscription?.usage?.developmentsCount ?? 0} /{' '}
-                    {subscription?.limits?.maxDevelopments ?? 1}
+                    {subscription ? (subscription.usage?.developmentsCount ?? 0) : '—'} /{' '}
+                    {subscription?.limits?.maxDevelopments ?? '—'}
                   </div>
                 </div>
                 <button
@@ -304,16 +314,16 @@ const SettingsPanel: React.FC = () => {
               <div className="p-3 border border-gray-200 rounded-12">
                 <div className="text-sm text-gray-500">Leads This Month</div>
                 <div className="font-medium">
-                  {subscription?.usage?.leadsThisMonth ?? 0} /{' '}
-                  {subscription?.limits?.maxLeadsPerMonth ?? 50}
+                  {subscription ? (subscription.usage?.leadsThisMonth ?? 0) : '—'} /{' '}
+                  {subscription?.limits?.maxLeadsPerMonth ?? '—'}
                 </div>
               </div>
 
               <div className="p-3 border border-gray-200 rounded-12">
                 <div className="text-sm text-gray-500">Team Members</div>
                 <div className="font-medium">
-                  {subscription?.usage?.teamMembersCount ?? 0} /{' '}
-                  {subscription?.limits?.maxTeamMembers ?? 1}
+                  {subscription ? (subscription.usage?.teamMembersCount ?? 0) : '—'} /{' '}
+                  {subscription?.limits?.maxTeamMembers ?? '—'}
                 </div>
               </div>
             </div>

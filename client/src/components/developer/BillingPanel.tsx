@@ -15,8 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Crown,
-  Zap,
   Gift,
   Building2,
   Users,
@@ -30,25 +28,16 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Tier display configuration
-const TIER_CONFIG = {
-  free_trial: {
-    label: 'Free Trial',
+const PLAN_PRESENTATION = {
+  trial: {
     icon: Gift,
     color: 'bg-purple-100 text-purple-700 border-purple-200',
     gradient: 'from-purple-500 to-pink-500',
   },
-  basic: {
-    label: 'Basic',
-    icon: Zap,
+  standard: {
+    icon: Sparkles,
     color: 'bg-blue-100 text-blue-700 border-blue-200',
     gradient: 'from-blue-500 to-cyan-500',
-  },
-  premium: {
-    label: 'Premium',
-    icon: Crown,
-    color: 'bg-amber-100 text-amber-700 border-amber-200',
-    gradient: 'from-amber-500 to-orange-500',
   },
 };
 
@@ -62,7 +51,8 @@ export default function BillingPanel() {
     refetch,
   } = trpc.developer.getSubscription.useQuery(undefined, { staleTime: 0, refetchOnMount: true });
 
-  const subscription = subscriptionData?.subscription;
+  // The tRPC procedure returns the canonical developer projection directly.
+  const subscription = subscriptionData;
   const limits = subscription?.limits;
   const usage = subscription?.usage;
 
@@ -104,7 +94,7 @@ export default function BillingPanel() {
             <h3 className="text-lg font-semibold mb-2">No Active Subscription</h3>
             <p className="text-slate-600 mb-4">Start your free trial to access all features</p>
             <Button
-              onClick={() => setLocation('/subscription-plans')}
+              onClick={() => setLocation('/developer/plans')}
               className="bg-blue-600 hover:bg-blue-700"
             >
               <Sparkles className="w-4 h-4 mr-2" />
@@ -116,7 +106,8 @@ export default function BillingPanel() {
     );
   }
 
-  const tierConfig = TIER_CONFIG[subscription.tier] || TIER_CONFIG.free_trial;
+  const isTrial = subscription.commercial?.status === 'trial';
+  const tierConfig = isTrial ? PLAN_PRESENTATION.trial : PLAN_PRESENTATION.standard;
   const TierIcon = tierConfig.icon;
 
   return (
@@ -132,13 +123,13 @@ export default function BillingPanel() {
               </div>
               <div>
                 <CardTitle className="text-2xl flex items-center gap-2">
-                  {tierConfig.label}
+                  {subscription.commercial?.planDisplayName || 'Current developer plan'}
                   <Badge variant="outline" className={cn('ml-2', tierConfig.color)}>
-                    {subscription.status === 'active' ? 'Active' : subscription.status}
+                    {subscription.commercial?.status || 'Unavailable'}
                   </Badge>
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  {subscription.tier === 'free_trial' && daysRemaining !== null ? (
+                  {isTrial && daysRemaining !== null ? (
                     <span className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
                       {daysRemaining > 0 ? `${daysRemaining} days remaining` : 'Trial expired'}
@@ -154,7 +145,7 @@ export default function BillingPanel() {
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
-              {subscription.tier !== 'premium' && (
+              {isTrial && (
                 <Button
                   onClick={() => setLocation('/developer/plans')}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
@@ -293,7 +284,7 @@ export default function BillingPanel() {
       </Card>
 
       {/* Upgrade Prompt for Free Trial */}
-      {subscription.tier === 'free_trial' && (
+      {isTrial && (
         <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
           <CardContent className="py-6">
             <div className="flex items-start gap-4">
@@ -303,8 +294,8 @@ export default function BillingPanel() {
               <div className="flex-1">
                 <h3 className="font-semibold text-slate-900 mb-1">Ready to grow?</h3>
                 <p className="text-sm text-slate-600 mb-4">
-                  Upgrade to Basic or Premium to unlock more developments, leads, and premium
-                  features.
+                  Review the canonical developer products to request additional developments, leads,
+                  or features.
                 </p>
                 <Button
                   onClick={() => setLocation('/developer/plans')}

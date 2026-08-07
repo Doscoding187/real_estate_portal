@@ -14,7 +14,6 @@ import {
   CheckSquare,
   TrendingUp,
   Target,
-  Megaphone,
   Settings,
   ChevronDown,
   ChevronRight,
@@ -118,12 +117,6 @@ const MENU_SECTIONS: MenuSection[] = [
         label: 'Explore Analytics',
         icon: Video,
         path: '/developer/explore',
-      },
-      {
-        id: 'campaigns',
-        label: 'Campaigns',
-        icon: Megaphone,
-        path: '/developer/campaigns',
       },
       {
         id: 'performance',

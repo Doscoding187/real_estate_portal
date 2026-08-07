@@ -39,12 +39,10 @@ vi.mock('@/components/developer/LeadsManager', () => ({ default: () => 'Leads' }
 vi.mock('@/components/developer/SettingsPanel', () => ({ default: () => 'Settings' }));
 vi.mock('@/components/developer/TeamManagement', () => ({ default: () => 'Team' }));
 vi.mock('@/components/developer/AnalyticsPanel', () => ({ default: () => 'Analytics' }));
-vi.mock('@/components/developer/MarketingCampaigns', () => ({ default: () => 'Campaigns' }));
 vi.mock('@/components/developer/BillingPanel', () => ({ default: () => 'Billing' }));
 vi.mock('@/pages/CreateDevelopment', () => ({
   default: () => 'Canonical creation flow',
 }));
-vi.mock('@/pages/DeveloperCampaignsPage', () => ({ default: () => 'New campaign' }));
 vi.mock('@/pages/DeveloperPerformancePage', () => ({ default: () => 'Performance' }));
 vi.mock('@/pages/DeveloperPlans', () => ({ default: () => 'Plans' }));
 vi.mock('@/pages/DeveloperBrandProfilePage', () => ({ default: () => 'Brand profile' }));

@@ -1,108 +1,121 @@
-import { Router } from 'express';
+import { Request, Router } from 'express';
 import { developerSubscriptionService } from '../services/developerSubscriptionService';
+import { getDeveloperByUserId } from '../services/developerService';
 import { requireAuth } from '../middleware/auth';
 import { z } from 'zod';
 
 const router = Router();
 
-// Schema for tier update
 const updateTierSchema = z.object({
+  // Retained only so old clients receive an explicit assisted handoff rather
+  // than a breaking validation error. It never mutates commercial state.
   tier: z.enum(['free_trial', 'basic', 'premium']),
 });
 
-/**
- * GET /api/developers/:developerId/subscription
- * Get subscription details for a developer
- * Validates: Requirements 1.5
- */
+async function canAccessDeveloper(req: Request, developerId: number): Promise<boolean> {
+  const user = req.user;
+  if (!user?.id) return false;
+  if (user.role === 'super_admin') return true;
+
+  const profile = await getDeveloperByUserId(Number(user.id));
+  return Boolean(profile && Number(profile.id) === developerId);
+}
+
+function parseDeveloperId(value: string): number | null {
+  const developerId = Number.parseInt(value, 10);
+  return Number.isFinite(developerId) && developerId > 0 ? developerId : null;
+}
+
 router.get('/:developerId/subscription', requireAuth, async (req, res) => {
   try {
-    const developerId = parseInt(req.params.developerId);
+    const developerId = parseDeveloperId(req.params.developerId);
+    if (!developerId) {
+      return res.status(400).json({
+        error: { code: 'INVALID_DEVELOPER_ID', message: 'A valid developer id is required.' },
+      });
+    }
 
-    // Check if user has access to this developer account
-    // TODO: Add authorization check
+    if (!(await canAccessDeveloper(req, developerId))) {
+      return res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'You cannot access this developer subscription.' },
+      });
+    }
 
     const subscription = await developerSubscriptionService.getSubscription(developerId);
-
     if (!subscription) {
       return res.status(404).json({
         error: {
           code: 'SUBSCRIPTION_NOT_FOUND',
-          message: 'Subscription not found for this developer',
+          message: 'No canonical developer product or subscription is configured.',
         },
       });
     }
 
-    // Check trial expiration
     const trialStatus = await developerSubscriptionService.checkTrialExpiration(developerId);
-
-    res.json({
-      subscription,
-      trialStatus,
-    });
+    return res.json({ subscription, trialStatus });
   } catch (error) {
-    console.error('Error fetching subscription:', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to fetch subscription details',
-      },
+    console.error('Error fetching developer subscription:', error);
+    return res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch subscription details' },
     });
   }
 });
 
-/**
- * POST /api/developers/:developerId/subscription/upgrade
- * Upgrade subscription tier
- * Validates: Requirements 1.4, 13.5
- */
 router.post('/:developerId/subscription/upgrade', requireAuth, async (req, res) => {
   try {
-    const developerId = parseInt(req.params.developerId);
+    const developerId = parseDeveloperId(req.params.developerId);
+    if (!developerId) {
+      return res.status(400).json({
+        error: { code: 'INVALID_DEVELOPER_ID', message: 'A valid developer id is required.' },
+      });
+    }
 
-    // Validate request body
     const validation = updateTierSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Invalid tier specified',
+          message: 'Invalid legacy tier request.',
           details: validation.error.errors,
         },
       });
     }
 
-    const { tier } = validation.data;
+    if (!(await canAccessDeveloper(req, developerId))) {
+      return res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'You cannot change this developer subscription.' },
+      });
+    }
 
-    // Check if user has access to this developer account
-    // TODO: Add authorization check
-
-    const updatedSubscription = await developerSubscriptionService.updateTier(developerId, tier);
-
-    res.json({
-      subscription: updatedSubscription,
-      message: `Successfully upgraded to ${tier} tier`,
+    const subscription = await developerSubscriptionService.getSubscription(developerId);
+    return res.status(409).json({
+      error: {
+        code: 'CANONICAL_PLAN_CHANGE_REQUIRED',
+        message:
+          'Legacy tier changes are retired. Developer plan changes require an assisted canonical invoice and verified payment.',
+      },
+      subscription,
+      requestedTier: validation.data.tier,
+      status: 'sales_assisted',
     });
   } catch (error) {
-    console.error('Error upgrading subscription:', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to upgrade subscription',
-      },
+    console.error('Error handling developer subscription upgrade:', error);
+    return res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to request a subscription change' },
     });
   }
 });
 
-/**
- * GET /api/developers/:developerId/subscription/limits/:limitType
- * Check if developer can perform an action based on limits
- * Validates: Requirements 13.1, 13.4
- */
 router.get('/:developerId/subscription/limits/:limitType', requireAuth, async (req, res) => {
   try {
-    const developerId = parseInt(req.params.developerId);
+    const developerId = parseDeveloperId(req.params.developerId);
     const limitType = req.params.limitType as 'developments' | 'leads' | 'teamMembers';
+
+    if (!developerId) {
+      return res.status(400).json({
+        error: { code: 'INVALID_DEVELOPER_ID', message: 'A valid developer id is required.' },
+      });
+    }
 
     if (!['developments', 'leads', 'teamMembers'].includes(limitType)) {
       return res.status(400).json({
@@ -113,19 +126,18 @@ router.get('/:developerId/subscription/limits/:limitType', requireAuth, async (r
       });
     }
 
-    // Check if user has access to this developer account
-    // TODO: Add authorization check
+    if (!(await canAccessDeveloper(req, developerId))) {
+      return res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'You cannot access this developer subscription.' },
+      });
+    }
 
     const limitCheck = await developerSubscriptionService.checkLimit(developerId, limitType);
-
-    res.json(limitCheck);
+    return res.json(limitCheck);
   } catch (error) {
-    console.error('Error checking limit:', error);
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to check subscription limit',
-      },
+    console.error('Error checking developer subscription limit:', error);
+    return res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to check subscription limit' },
     });
   }
 });

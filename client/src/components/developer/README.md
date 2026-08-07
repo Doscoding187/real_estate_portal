@@ -10,7 +10,7 @@ Sections:
 - Leads: `LeadsManager.tsx`
 - Team: `TeamManagement.tsx`
 - Documents & Media: `DocumentsMedia.tsx`
-- Marketing: `MarketingCampaigns.tsx`
+- Marketing: deferred until an approved commercial placement product exists
 - Integrations: `IntegrationsPanel.tsx`
 - Billing: `BillingPanel.tsx`
 - Support: `SupportCenter.tsx`
@@ -24,7 +24,7 @@ Data wiring (next steps):
 - Replace placeholders with TRPC queries/mutations.
 - Hook Developments/Units/Leads tables to backend endpoints.
 - Add file upload and permissions to Documents & Media.
-- Connect Campaigns to your marketing service and billing provider.
+- Do not expose campaign checkout or paid placement claims until a commercial placement product is approved.
 
 Notes:
 
