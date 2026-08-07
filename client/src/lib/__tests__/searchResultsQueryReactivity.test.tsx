@@ -15,17 +15,20 @@ function QueryStateProbe() {
   const filters = {
     ...intent.filters,
     locationId: intent.geography.locationId,
+    searchAreaId: intent.geography.searchAreaId,
   };
   const publicRequest =
     intent.transactionType === 'for-sale'
       ? {
           ...toBuyPublicSearchFilters(filters),
           locationId: intent.geography.locationId,
+          searchAreaId: intent.geography.searchAreaId,
           sortOption: intent.resultState.sort,
           page: intent.resultState.page,
         }
       : {
           listingType: intent.transactionType === 'to-rent' ? 'rent' : 'sale',
+          searchAreaId: intent.geography.searchAreaId,
           sortOption: intent.resultState.sort,
           page: intent.resultState.page,
         };
@@ -122,5 +125,21 @@ describe('transactional result query reactivity', () => {
     });
     expect(screen.getByLabelText('page-control')).toHaveTextContent('0');
     expect(screen.getByLabelText('public-request')).toHaveTextContent('"listingType":"rent"');
+  });
+
+  it('forwards a Search Area identity without exposing member locations', () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/property-to-rent?searchAreaId=johannesburg-sandton&sort=date_desc',
+    );
+    render(<QueryStateProbe />);
+
+    const request = JSON.parse(screen.getByLabelText('public-request').textContent || '{}');
+    expect(request).toMatchObject({
+      listingType: 'rent',
+      searchAreaId: 'johannesburg-sandton',
+    });
+    expect(request).not.toHaveProperty('memberCanonicalLocationIds');
   });
 });

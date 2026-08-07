@@ -8,6 +8,7 @@ import type {
   SearchCardResult,
   SortOption,
 } from '../../shared/types';
+import type { SearchAreaQueryBoundary } from './searchAreaQueryBoundary';
 
 interface DevelopmentDerivedListingFilters {
   province?: string;
@@ -581,6 +582,7 @@ export class DevelopmentDerivedListingService {
     sortOption: SortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
+    searchAreaBoundary?: SearchAreaQueryBoundary,
   ): Promise<DevelopmentDerivedListingSearchResults> {
     const db = await getDb();
     if (!db) {
@@ -681,20 +683,33 @@ export class DevelopmentDerivedListingService {
           return null;
         }
 
-        if (!matchesNormalizedField(row.province, filters.province)) {
-          return null;
-        }
+        if (searchAreaBoundary) {
+          // Development records currently expose legacy suburb text rather
+          // than a canonical suburb foreign key. Match only the exact names
+          // resolved from the server-owned canonical member IDs and the
+          // resolved parent city; never widen to a text or parent search.
+          if (!matchesNormalizedField(row.city, searchAreaBoundary.parentCityName)) {
+            return null;
+          }
+          if (!matchesNormalizedFieldSet(row.suburb, [...searchAreaBoundary.memberSuburbNames])) {
+            return null;
+          }
+        } else {
+          if (!matchesNormalizedField(row.province, filters.province)) {
+            return null;
+          }
 
-        if (!matchesNormalizedField(row.city, filters.city)) {
-          return null;
-        }
+          if (!matchesNormalizedField(row.city, filters.city)) {
+            return null;
+          }
 
-        if (!matchesNormalizedFieldSet(row.suburb, filters.suburb)) {
-          return null;
-        }
+          if (!matchesNormalizedFieldSet(row.suburb, filters.suburb)) {
+            return null;
+          }
 
-        if (!matchesLocationSlugs(row, filters.locations)) {
-          return null;
+          if (!matchesLocationSlugs(row, filters.locations)) {
+            return null;
+          }
         }
 
         const propertyType = mapStructuralTypeToPropertyType(

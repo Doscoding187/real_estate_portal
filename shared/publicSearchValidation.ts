@@ -1,4 +1,5 @@
 import { parseCanonicalLocationId } from './locationAuthority';
+import { isSearchAreaId } from './searchScope';
 
 export interface PublicSearchInputValidationIssue {
   path: string;
@@ -11,6 +12,7 @@ interface PublicSearchInputLike {
   suburb?: string[];
   locations?: string[];
   locationId?: string;
+  searchAreaId?: string;
   listingType?: 'sale' | 'rent';
   minPrice?: number;
   maxPrice?: number;
@@ -68,10 +70,35 @@ export function validatePublicSearchInput(
   const canonicalLocation = input.locationId
     ? parseCanonicalLocationId(input.locationId)
     : undefined;
+
+  if (input.searchAreaId && !isSearchAreaId(input.searchAreaId)) {
+    return {
+      path: 'searchAreaId',
+      message: 'The Search Area ID must use a stable Property Listify identity.',
+    };
+  }
+
   if (input.locationId && !canonicalLocation) {
     return {
       path: 'locationId',
       message: 'The location ID must use a canonical Property Listify identity.',
+    };
+  }
+
+  if (
+    input.searchAreaId &&
+    (input.province || input.city || input.suburb?.length || input.locations?.length)
+  ) {
+    return {
+      path: 'searchAreaId',
+      message: 'Search Area requests cannot combine a Search Area with broad geography fields.',
+    };
+  }
+
+  if (input.searchAreaId && canonicalLocation && canonicalLocation.level !== 'suburb') {
+    return {
+      path: 'locationId',
+      message: 'A Search Area may only be refined by a canonical locality.',
     };
   }
 

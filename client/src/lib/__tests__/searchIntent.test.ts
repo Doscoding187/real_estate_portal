@@ -227,4 +227,60 @@ describe('search intent location serialization', () => {
       maxLng: 28.4,
     });
   });
+
+  it('parses and round-trips a Search Area without inventing a parent geography', () => {
+    const intent = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams('searchAreaId=johannesburg-sandton'),
+    );
+
+    expect(intent.geography).toMatchObject({
+      level: 'search_area',
+      searchAreaId: 'johannesburg-sandton',
+    });
+    expect(intent.filters).not.toHaveProperty('searchAreaId');
+    expect(generateIntentUrl(intent)).toBe('/property-for-sale?searchAreaId=johannesburg-sandton');
+
+    const reparsed = new URL(generateIntentUrl(intent), 'https://listify.test');
+    expect(
+      resolveSearchIntent(reparsed.pathname, {}, reparsed.searchParams).geography,
+    ).toMatchObject(intent.geography);
+  });
+
+  it('keeps an optional locality refinement distinct from its Search Area scope', () => {
+    const intent = resolveSearchIntent(
+      '/property-to-rent',
+      {},
+      new URLSearchParams('searchAreaId=johannesburg-sandton&locationId=suburb%3A34'),
+    );
+
+    expect(intent.geography).toMatchObject({
+      level: 'suburb',
+      searchAreaId: 'johannesburg-sandton',
+      locationId: 'suburb:34',
+    });
+    const generated = new URL(generateIntentUrl(intent), 'https://listify.test');
+    expect(generated.pathname).toBe('/property-to-rent');
+    expect(Object.fromEntries(generated.searchParams)).toMatchObject({
+      searchAreaId: 'johannesburg-sandton',
+      locationId: 'suburb:34',
+    });
+  });
+
+  it('fails closed for malformed or conflicting Search Area scope input', () => {
+    const malformed = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams('searchAreaId=Sandton%2Fpreview'),
+    );
+    expect(malformed.validation?.code).toBe('invalid-search-area-id');
+
+    const conflicting = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams('searchAreaId=johannesburg-sandton&city=johannesburg'),
+    );
+    expect(conflicting.validation?.code).toBe('search-area-location-conflict');
+  });
 });
