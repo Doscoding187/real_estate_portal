@@ -108,6 +108,7 @@ const locationSuggestions = [
   { id: 2, name: 'Pretoria', type: 'city', provinceName: 'Gauteng' },
   { id: 3, name: 'Johannesburg', type: 'city', provinceName: 'Gauteng' },
   { id: 4, name: 'Sandton', type: 'suburb', provinceName: 'Gauteng', cityName: 'Johannesburg' },
+  { id: 5, name: 'Rosebank', type: 'suburb', provinceName: 'Gauteng', cityName: 'Johannesburg' },
 ];
 
 function trpcResult(data: unknown) {
@@ -172,6 +173,7 @@ test.describe('Gauteng provincial discovery', () => {
     await expect(page.getByRole('tab', { name: /^Buy/ })).toHaveAttribute('aria-selected', 'false');
     await expect(page.getByRole('tab', { name: /Land & plots/ })).toBeDisabled();
     await expect(page.getByRole('tab', { name: /Commercial/ })).toBeDisabled();
+    await expect(page.getByRole('tab', { name: /Shared Living/ })).toBeDisabled();
 
     await capture(page, 'neutral-gauteng-1440.png');
     await capture(page, 'neutral-gauteng-1440-first-screen.png', false);
@@ -219,13 +221,63 @@ test.describe('Gauteng provincial discovery', () => {
       { waitUntil: 'domcontentloaded' },
     );
     await expect(page.getByTestId('active-journey-state')).toHaveText(/Buy selected/);
-    await expect(page.getByText('Pretoria, Gauteng')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove Pretoria' })).toBeVisible();
     await expect(page.getByLabel('Property type')).toHaveValue('house');
     await expect(page.getByLabel('Budget')).toHaveValue('2000000');
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('active-journey-state')).toHaveText(/Buy selected/);
-    await expect(page.getByText('Pretoria, Gauteng')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove Pretoria' })).toBeVisible();
+  });
+
+  test('preserves explicit Rent and does not expose removed Rent controls', async ({ page }) => {
+    await page.goto('/gauteng', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('tab', { name: /^Rent/ }).click();
+
+    await expect(page.getByLabel('Property type')).toBeEnabled();
+    await expect(page.getByLabel('Budget')).toBeEnabled();
+    await expect(page.getByText('Lease term')).toHaveCount(0);
+    await expect(page.getByText('Furnished')).toHaveCount(0);
+
+    const locationInput = page.locator('.provincial-composer input[role="combobox"]');
+    await locationInput.fill('Sandton');
+    await expect(page.getByRole('option', { name: /Sandton/ })).toBeVisible();
+    await page.getByRole('option', { name: /Sandton/ }).click();
+    await page.getByLabel('Property type').selectOption('apartment');
+    await page.getByLabel('Budget').selectOption('20000');
+    await capture(page, 'rent-selected-sandton-1440.png');
+    await page.getByTestId('provincial-primary-cta').click();
+
+    const resultUrl = new URL(page.url());
+    expect(resultUrl.pathname).toBe('/property-to-rent');
+    expect(resultUrl.searchParams.get('locationId')).toBe('suburb:4');
+    expect(resultUrl.searchParams.get('propertyType')).toBe('apartment');
+    expect(resultUrl.searchParams.get('maxPrice')).toBe('20000');
+    expect(resultUrl.searchParams.get('listingType')).toBeNull();
+  });
+
+  test('preserves deliberate sibling multi-location OR for Rent', async ({ page }) => {
+    await page.goto('/gauteng?journey=rent', { waitUntil: 'domcontentloaded' });
+
+    const locationInput = page.locator('.provincial-composer input[role="combobox"]');
+    await locationInput.fill('Sandton');
+    await page.getByRole('option', { name: /Sandton/ }).click();
+    await locationInput.fill('Rosebank');
+    await page.getByRole('option', { name: /Rosebank/ }).click();
+
+    await expect(page.getByRole('button', { name: 'Remove Sandton' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove Rosebank' })).toBeVisible();
+    await expect(page.getByTestId('provincial-location-helper')).toHaveText(
+      /Explicit OR: these locations stay separate/,
+    );
+
+    await capture(page, 'rent-multi-location-or-1440.png');
+    await page.getByTestId('provincial-primary-cta').click();
+    const resultUrl = new URL(page.url());
+    expect(resultUrl.pathname).toBe('/property-to-rent');
+    expect(resultUrl.searchParams.getAll('locationIds')).toEqual(['suburb:4', 'suburb:5']);
+    expect(resultUrl.searchParams.get('city')).toBeNull();
+    expect(resultUrl.searchParams.get('suburb')).toBeNull();
   });
 
   test('keeps sparse and unavailable data useful instead of rendering fake metrics', async ({
@@ -257,7 +309,7 @@ test.describe('Gauteng provincial discovery', () => {
     await expect(page.getByRole('option', { name: /Pretoria/ })).toBeVisible();
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Pretoria, Gauteng')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove Pretoria' })).toBeVisible();
     await expect(page.getByTestId('provincial-primary-cta')).toBeEnabled();
 
     const axeResults = await new AxeBuilder({ page }).include('.provincial-composer').analyze();

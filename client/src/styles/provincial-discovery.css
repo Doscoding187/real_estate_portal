@@ -414,6 +414,7 @@
   flex-shrink: 0;
 }
 .provincial-location-autosuggest {
+  flex: 1 1 auto;
   min-width: 0;
   width: 100%;
 }
@@ -552,6 +553,10 @@
   border-color: #8ab3d3;
   background: #eef6fc;
   color: #005ca8;
+}
+.provincial-quick-links button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .provincial-main {
