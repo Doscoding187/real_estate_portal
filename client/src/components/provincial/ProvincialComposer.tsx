@@ -310,6 +310,10 @@ export function ProvincialComposer({
     updateQuery({ [key]: value === 'all' ? undefined : value }, true);
   };
 
+  const hasValidScope = selectedLocations.length
+    ? selectedLocations.every(location => hasCanonicalLocationIdentity(location))
+    : hasCanonicalLocationIdentity(provinceLocation);
+
   const continueJourney = () => {
     if (!activeJourney || activeJourney.state !== 'active') return;
     if (state.invalidLocationIdentity) {
@@ -343,13 +347,17 @@ export function ProvincialComposer({
   const budgets = activeJourney?.id === 'rent' ? RENT_BUDGETS : BUY_BUDGETS;
   const isTransactional = activeJourney?.id === 'buy' || activeJourney?.id === 'rent';
   const canContinue =
-    Boolean(activeJourney) && !(activeJourney?.id === 'explore' && selectedLocations.length > 1);
+    Boolean(activeJourney) &&
+    hasValidScope &&
+    !(activeJourney?.id === 'explore' && selectedLocations.length > 1);
   const locationHelper =
     selectedLocations.length > 1
       ? 'Explicit OR: these locations stay separate in the results.'
       : selectedLocations.length === 1
         ? 'Canonical location preserved for your next journey.'
-        : 'Or keep the whole province selected.';
+        : hasValidScope
+          ? 'Or keep the whole province selected.'
+          : 'Province-wide search is unavailable until canonical geography is configured.';
 
   return (
     <section className="provincial-composer" aria-labelledby="provincial-composer-title">
@@ -477,7 +485,13 @@ export function ProvincialComposer({
           onClick={continueJourney}
           data-testid="provincial-primary-cta"
         >
-          <span>{activeJourney ? activeJourney.ctaLabel : 'Choose a journey above'}</span>
+          <span>
+            {activeJourney
+              ? canContinue
+                ? activeJourney.ctaLabel
+                : 'Province scope unavailable'
+              : 'Choose a journey above'}
+          </span>
           <ArrowRight aria-hidden="true" size={18} />
         </button>
       </div>

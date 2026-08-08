@@ -13,6 +13,7 @@ import { Link, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
 import { LocationSchema } from '@/components/location/LocationSchema';
+import { ProvincialBillboard } from '@/components/provincial/ProvincialBillboard';
 import { ProvincialComposer } from '@/components/provincial/ProvincialComposer';
 import { trpc } from '@/lib/trpc';
 import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
@@ -50,6 +51,14 @@ function inventoryStateLabel(state: string) {
   if (state === 'sparse') return 'Small live sample';
   if (state === 'empty') return 'No live inventory yet';
   return 'Inventory unavailable';
+}
+
+function formatDiscoveryLabel(value: string) {
+  return value
+    .split('-')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 function ProvinceLoadingState() {
@@ -119,7 +128,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
   if (isLoading) return <ProvinceLoadingState />;
   if (error || !data) return <ProvinceErrorState provinceName={config.name} />;
 
-  const campaignImage = heroCampaign?.imageUrl || config.heroFallbackImage;
+  const heroImage = config.heroFallbackImage;
   const marketLocations = data.markets
     .filter(market => Boolean(market.city?.canonicalLocationId))
     .map(market => ({
@@ -163,7 +172,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
         ]}
         stats={{ totalListings: data.inventoryPreview.total, avgPrice: 0 }}
         neutralMode
-        image={campaignImage}
+        image={heroImage}
         geo={
           data.province.latitude && data.province.longitude
             ? {
@@ -189,7 +198,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
       <section className="provincial-hero" aria-labelledby="province-page-title">
         <div
           className="provincial-hero__art"
-          style={{ backgroundImage: `url(${campaignImage})` }}
+          style={{ backgroundImage: `url(${heroImage})` }}
           aria-hidden="true"
         />
         <div className="provincial-hero__wash" aria-hidden="true" />
@@ -223,42 +232,19 @@ export default function ProvincePage({ params }: ProvincePageProps) {
             </div>
           </div>
 
-          {heroCampaign ? (
-            <a
-              className="provincial-hero__billboard provincial-hero__billboard--campaign"
-              href={heroCampaign.landingPageUrl || undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`Sponsored: ${heroCampaign.altText || `Explore this ${data.province.name} opportunity`}`}
-              style={{ backgroundImage: `url(${heroCampaign.imageUrl})` }}
-            >
-              <span className="provincial-hero__billboard-overlay">
-                <span className="provincial-hero__billboard-label">Sponsored</span>
-                <span>
-                  <strong className="sr-only">
-                    {heroCampaign.altText || `Featured ${data.province.name} opportunity`}
-                  </strong>
-                  <span className="provincial-hero__billboard-link">
-                    Discover the opportunity <ArrowRight size={15} aria-hidden="true" />
-                  </span>
-                </span>
-              </span>
-            </a>
-          ) : (
-            <div
-              className="provincial-hero__billboard"
-              aria-label={`${data.province.name} discovery guidance`}
-            >
-              <span className="provincial-hero__billboard-label">
-                <MapPin size={13} aria-hidden="true" /> Built for direct discovery
-              </span>
-              <h2>One place. Several ways forward.</h2>
-              <p>Choose a property journey, then type the location you already have in mind.</p>
-              <span className="provincial-hero__billboard-link">
-                Canonical geography, resolved for you <ArrowRight size={15} aria-hidden="true" />
-              </span>
-            </div>
-          )}
+          <div
+            className="provincial-hero__billboard"
+            aria-label={`${data.province.name} discovery guidance`}
+          >
+            <span className="provincial-hero__billboard-label">
+              <MapPin size={13} aria-hidden="true" /> Built for direct discovery
+            </span>
+            <h2>One place. Several ways forward.</h2>
+            <p>Choose a property journey, then type the location you already have in mind.</p>
+            <span className="provincial-hero__billboard-link">
+              Canonical geography, resolved for you <ArrowRight size={15} aria-hidden="true" />
+            </span>
+          </div>
         </div>
       </section>
 
@@ -286,9 +272,11 @@ export default function ProvincePage({ params }: ProvincePageProps) {
           <div className="provincial-markets">
             {data.markets.map(market => {
               const inventory = market.inventory;
-              const cityHref = market.city
-                ? `/${data.province.slug}/${market.city.slug}`
-                : undefined;
+              const hasCanonicalMarket = Boolean(market.city?.canonicalLocationId);
+              const cityHref =
+                hasCanonicalMarket && market.city
+                  ? `/${data.province.slug}/${market.city.slug}`
+                  : undefined;
               return (
                 <article key={market.slug} className="provincial-market-card">
                   <div className="provincial-market-card__body">
@@ -298,7 +286,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                         <h3>{market.name}</h3>
                       </div>
                       <span className="provincial-market-card__pill">
-                        {market.city ? 'Canonical market' : 'Not configured'}
+                        {hasCanonicalMarket ? 'Canonical market' : 'Not configured'}
                       </span>
                     </div>
                     <p className="provincial-market-card__description">{market.description}</p>
@@ -320,12 +308,12 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                     </div>
                     <div
                       className="provincial-market-card__areas"
-                      aria-label={`Known areas near ${market.name}`}
+                      aria-label={`Discovery cues for ${market.name}`}
                     >
                       {market.areaSlugs.length > 0 ? (
                         market.areaSlugs.map(area => (
                           <span key={area} className="provincial-market-card__area">
-                            {area.replace(/-/g, ' ')}
+                            {formatDiscoveryLabel(area)}
                           </span>
                         ))
                       ) : (
@@ -334,6 +322,12 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                         </span>
                       )}
                     </div>
+                    {market.areaSlugs.length > 0 ? (
+                      <p className="provincial-market-card__areas-note">
+                        Use these as orientation cues, then choose a canonical location in the
+                        composer when you are ready to search.
+                      </p>
+                    ) : null}
                   </div>
                   <div className="provincial-market-card__footer">
                     <span>
@@ -354,6 +348,8 @@ export default function ProvincePage({ params }: ProvincePageProps) {
             })}
           </div>
         </section>
+
+        <ProvincialBillboard campaign={heroCampaign} provinceName={data.province.name} />
 
         <section
           className="provincial-section provincial-section--tinted"
