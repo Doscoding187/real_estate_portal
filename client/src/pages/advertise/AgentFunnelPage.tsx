@@ -52,10 +52,10 @@ export default function AgentFunnelPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
                 <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 shadow-xl shadow-primary/20" onClick={handleCTAClick}>
-                  Start Your 14-Day Free Trial
+                  Request 90-Day Launch Access
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
-                <p className="text-sm text-slate-500 font-medium">No credit card required</p>
+                <p className="text-sm text-slate-500 font-medium">Manual EFT with finance verification</p>
               </div>
             </div>
             
@@ -178,7 +178,7 @@ export default function AgentFunnelPage() {
                 Join top-performing agents already leveraging our platform. Setup takes less than 5 minutes.
               </p>
               <Button size="lg" variant="secondary" onClick={handleCTAClick} className="text-xl h-16 px-12 text-primary bg-white hover:bg-slate-50 shadow-2xl transition-all hover:-translate-y-1">
-                Start Your Free Trial
+                Request Launch Access
                 <ArrowRight className="w-6 h-6 ml-3" />
               </Button>
            </div>

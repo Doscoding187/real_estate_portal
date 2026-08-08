@@ -37,7 +37,7 @@ describe('commercial monetization S0 authority containment', () => {
     expect(router).toContain('Legacy agent and developer subscription administration is retired');
     expect(router).toContain("plan.category !== 'developer'");
     expect(router).toContain("sp.category NOT IN ('agent', 'developer')");
-    expect(service).toContain('Legacy developer free trials are retired');
+    expect(service).toContain('Legacy free trials for launch audiences are retired');
   });
 
   it('removes the historical Stripe webhook from the active server surface', () => {

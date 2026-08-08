@@ -13,8 +13,9 @@ describe('commercial monetization S2 agent authority', () => {
     expect(route).toContain('planId: z.number().int().positive()');
     expect(route).not.toContain('AGENT_ONBOARDING_TIER_VALUES');
     expect(service).toContain("getCommercialCatalog('agent')");
-    expect(service).toContain("status: 'trial'");
-    expect(service).toContain('selected_product_id');
+    expect(service).toContain('Free agent trials are retired');
+    expect(service).toContain('manual-EFT invoice and verified payment');
+    expect(route).toContain('request-launch-access-invoice');
     expect(service).not.toContain('user.plan');
     expect(service).not.toContain('user.trialStatus');
     expect(service).not.toContain('user.trialStartedAt');

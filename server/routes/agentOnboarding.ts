@@ -2,6 +2,7 @@ import { type Request, type Response, Router } from 'express';
 import { ZodError, z } from 'zod';
 import { requireAuth } from '../_core/auth';
 import { agentOnboardingService } from '../services/agentOnboardingService';
+import { requestPaidLaunchAccessInvoice } from '../services/billingFoundationService';
 
 const router = Router();
 
@@ -91,6 +92,17 @@ router.post('/select-package', async (req, res) => {
     const input = selectPackageSchema.parse(req.body);
     const userId = Number((req as AuthenticatedRequest).user.id);
     const result = await agentOnboardingService.selectPackage(userId, input.planId);
+    res.json(result);
+  } catch (error) {
+    respondForError(res, error);
+  }
+});
+
+router.post('/request-launch-access-invoice', async (req, res) => {
+  try {
+    const planId = req.body?.planId === undefined ? undefined : selectPackageSchema.parse(req.body).planId;
+    const user = (req as AuthenticatedRequest).user;
+    const result = await requestPaidLaunchAccessInvoice({ user, planId });
     res.json(result);
   } catch (error) {
     respondForError(res, error);

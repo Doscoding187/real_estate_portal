@@ -8,7 +8,6 @@ import {
 import { getCommercialCatalog } from './commercialCatalogService';
 import {
   getPlanAccessProjectionForUserId,
-  setSubscriptionPlanForOwner,
   type PlanAccessProjection,
   type SubscriptionStatus,
 } from './planAccessService';
@@ -210,48 +209,14 @@ export class AgentOnboardingService {
     if (!selectedProduct) {
       throw new Error('Selected agent product is not available');
     }
-    if (selectedProduct.action.mode !== 'trial' || selectedProduct.trial.days <= 0) {
-      throw new Error('Selected agent product requires assisted billing');
+    if (selectedProduct.term.kind === 'free_trial') {
+      throw new Error(
+        'Free agent trials are retired. Request Agent Launch Access and complete manual-EFT verification.',
+      );
     }
-
-    const existingAccess = await getPlanAccessProjectionForUserId(userId);
-    if (existingAccess?.subscription && existingAccess.currentPlan) {
-      if (existingAccess.currentPlan.id === selectedProduct.source.planId) {
-        return this.getOnboardingStatus(userId);
-      }
-      throw new Error('An agent commercial plan has already been selected');
-    }
-
-    const now = new Date();
-    const trialEndsAt = new Date(
-      now.getTime() + selectedProduct.trial.days * 24 * 60 * 60 * 1000,
+    throw new Error(
+      'Agent Launch Access requires a manual-EFT invoice and verified payment before activation.',
     );
-    const trialEndsAtValue = trialEndsAt.toISOString();
-
-    await setSubscriptionPlanForOwner({
-      ownerType: 'agent',
-      ownerId: userId,
-      planId: selectedProduct.source.planId,
-      status: 'trial',
-      trialEndsAt: trialEndsAtValue,
-      billingCycleAnchor: trialEndsAtValue,
-      metadata: {
-        source: 'agent_select_canonical_product',
-        selected_product_id: selectedProduct.productId,
-        selected_plan_name: selectedProduct.name,
-      },
-      actorUserId: userId,
-    });
-
-    await db
-      .update(users)
-      .set({
-        onboardingStep: Math.max(Number(user.onboardingStep || 0), 1),
-        onboardingComplete: 0,
-      })
-      .where(eq(users.id, userId));
-
-    return this.getOnboardingStatus(userId);
   }
 
   async saveProfile(

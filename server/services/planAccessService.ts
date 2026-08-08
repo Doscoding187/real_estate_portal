@@ -524,6 +524,11 @@ export async function setSubscriptionPlanForOwner(input: {
    */
   verifiedPayment?: VerifiedCommercialPayment;
   /**
+   * A pending Launch Access subscription is safe to create before payment;
+   * it carries no entitlement until the canonical finance review activates it.
+   */
+  allowPendingPayment?: boolean;
+  /**
    * Optional caller-owned database handle. Bootstrap flows use this to keep
    * the commercial subscription in the same transaction as its owner.
    */
@@ -544,17 +549,20 @@ export async function setSubscriptionPlanForOwner(input: {
   const nextStatus = input.status || 'active';
   const term = resolveCommercialTerm(planRow);
   if (term.kind === 'paid_launch_access') {
-    if (nextStatus !== 'active' || !input.verifiedPayment) {
+    if (nextStatus === 'pending_payment' && input.allowPendingPayment) {
+      // Pending payment is intentionally non-entitled. Activation still
+      // requires the verified payment branch below.
+    } else if (nextStatus !== 'active' || !input.verifiedPayment) {
       throw new Error('Paid Launch Access requires activation through verified billing authority.');
-    }
-
-    const activationError = validatePaidLaunchAccessPayment(
-      term,
-      getConfiguredLaunchFeeMinor(planRow),
-      input.verifiedPayment,
-    );
-    if (activationError) {
-      throw new Error(activationError);
+    } else {
+      const activationError = validatePaidLaunchAccessPayment(
+        term,
+        getConfiguredLaunchFeeMinor(planRow),
+        input.verifiedPayment,
+      );
+      if (activationError) {
+        throw new Error(activationError);
+      }
     }
   }
 

@@ -195,7 +195,13 @@ export function filterCommercialPlans(
   audience?: CommercialAudience,
 ): CanonicalPlanRow[] {
   return rows.filter(
-    plan => (!audience || plan.segment === audience) && isPublicCommercialPlan(plan),
+    plan =>
+      (!audience || plan.segment === audience) &&
+      isPublicCommercialPlan(plan) &&
+      !(
+        (plan.segment === 'agent' || plan.segment === 'agency' || plan.segment === 'developer') &&
+        resolveCommercialTerm(plan).kind === 'free_trial'
+      ),
   );
 }
 

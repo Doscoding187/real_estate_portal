@@ -559,7 +559,7 @@ async function syncAgencyBillingShadow(
 async function upsertPendingSubscription(
   db: DbOrTx,
   input: {
-    ownerType: 'agency' | 'developer';
+    ownerType: 'agent' | 'agency' | 'developer';
     ownerId: number;
     requestedPlanId: number;
     actorUserId: number;
@@ -672,11 +672,16 @@ export async function listBillingPlans(segment: 'agency' | 'agent' | 'developer'
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
-  return db
+  const availablePlans = await db
     .select()
     .from(plans)
     .where(and(eq(plans.segment, segment), eq(plans.isActive, 1)))
     .orderBy(plans.sortOrder);
+
+  // Free-trial plans are not a launch-path product. Keep the generic term
+  // available to future internal products, but do not expose old automatic
+  // trial choices through the active billing-plan surface.
+  return availablePlans.filter(plan => resolveCommercialTerm(plan).kind !== 'free_trial');
 }
 
 async function assertDeveloperOwner(db: DbOrTx, user: BillingUser): Promise<number> {
@@ -698,77 +703,158 @@ async function assertDeveloperOwner(db: DbOrTx, user: BillingUser): Promise<numb
   return Number(developer.id);
 }
 
-async function lockDeveloperSubscription(db: DbOrTx, developerId: number) {
-  await db.execute(sql`
-    SELECT id
-    FROM subscriptions
-    WHERE owner_type = 'developer' AND owner_id = ${developerId}
-    FOR UPDATE
-  `);
-  const [subscription] = await db
-    .select()
-    .from(subscriptions)
-    .where(and(eq(subscriptions.ownerType, 'developer'), eq(subscriptions.ownerId, developerId)))
-    .limit(1);
-  return subscription || null;
+type LaunchBillingOwnerType = 'agent' | 'agency' | 'developer';
+
+type LaunchBillingOwner = {
+  ownerType: LaunchBillingOwnerType;
+  ownerId: number;
+  displayName: string;
+};
+
+function isLaunchBillingOwnerType(value: string): value is LaunchBillingOwnerType {
+  return value === 'agent' || value === 'agency' || value === 'developer';
 }
 
-async function lockDeveloperInvoice(db: DbOrTx, input: { invoiceId: number; developerId: number }) {
-  await db.execute(sql`
+async function resolveLaunchBillingOwner(
+  db: DbOrTx,
+  user: BillingUser,
+): Promise<LaunchBillingOwner> {
+  if (user.role === 'agent') {
+    const [agentUser] = await db
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+    if (!agentUser || agentUser.role !== 'agent') {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Agent billing requires an agent account.' });
+    }
+    return {
+      ownerType: 'agent',
+      ownerId: Number(agentUser.id),
+      displayName: agentUser.name || agentUser.email || `Agent ${agentUser.id}`,
+    };
+  }
+
+  if (user.role === 'agency_admin') {
+    const agencyId = assertAgencyAdmin(user);
+    const agency = await getAgencyOrThrow(db, agencyId);
+    return { ownerType: 'agency', ownerId: agencyId, displayName: agency.name };
+  }
+
+  if (user.role === 'property_developer') {
+    const developerId = await assertDeveloperOwner(db, user);
+    return {
+      ownerType: 'developer',
+      ownerId: developerId,
+      displayName: user.name || user.email || `Developer ${developerId}`,
+    };
+  }
+
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message: 'Launch Access billing is restricted to an owning agent, agency or developer account.',
+  });
+}
+
+async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) {
+  if (owner.ownerType === 'agency') {
+    return lockAgencyBillingState(tx, owner.ownerId);
+  }
+
+  if (owner.ownerType === 'agent') {
+    await tx.execute(sql`SELECT id FROM users WHERE id = ${owner.ownerId} FOR UPDATE`);
+  } else {
+    await tx.execute(sql`SELECT id FROM developers WHERE id = ${owner.ownerId} FOR UPDATE`);
+  }
+  await tx.execute(sql`
+    SELECT id
+    FROM subscriptions
+    WHERE owner_type = ${owner.ownerType} AND owner_id = ${owner.ownerId}
+    FOR UPDATE
+  `);
+  const [subscription] = await tx
+    .select()
+    .from(subscriptions)
+    .where(
+      and(eq(subscriptions.ownerType, owner.ownerType), eq(subscriptions.ownerId, owner.ownerId)),
+    )
+    .limit(1);
+  return { subscription: subscription || null };
+}
+
+async function lockLaunchInvoice(
+  tx: BillingTx,
+  input: { invoiceId: number; owner: LaunchBillingOwner },
+) {
+  await tx.execute(sql`
     SELECT id
     FROM billing_invoices
     WHERE id = ${input.invoiceId}
-      AND owner_type = 'developer'
-      AND owner_id = ${input.developerId}
+      AND owner_type = ${input.owner.ownerType}
+      AND owner_id = ${input.owner.ownerId}
     FOR UPDATE
   `);
-  const [invoice] = await db
-    .select()
-    .from(billingInvoices)
-    .where(
-      and(
-        eq(billingInvoices.id, input.invoiceId),
-        eq(billingInvoices.ownerType, 'developer'),
-        eq(billingInvoices.ownerId, input.developerId),
-      ),
-    )
-    .limit(1);
-  if (!invoice) throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer invoice not found.' });
-  return invoice;
+  return getInvoiceForOwnerOrThrow(
+    tx,
+    input.invoiceId,
+    input.owner.ownerType,
+    input.owner.ownerId,
+  );
 }
 
-async function getDeveloperLaunchPlan(db: DbOrTx): Promise<PlanRow> {
-  const candidates = await db
-    .select()
-    .from(plans)
-    .where(and(eq(plans.segment, 'developer'), eq(plans.isActive, 1)))
-    .orderBy(plans.sortOrder, plans.id);
+async function getLaunchPlanForOwner(
+  db: DbOrTx,
+  ownerType: LaunchBillingOwnerType,
+  requestedPlanId?: number,
+): Promise<PlanRow> {
+  const segment = ownerType === 'agency' ? 'agency' : ownerType;
+  const candidates = requestedPlanId
+    ? await db.select().from(plans).where(eq(plans.id, requestedPlanId)).limit(1)
+    : await db
+        .select()
+        .from(plans)
+        .where(and(eq(plans.segment, segment), eq(plans.isActive, 1)))
+        .orderBy(plans.sortOrder, plans.id);
   const plan = candidates.find(candidate => {
+    const term = resolveCommercialTerm(candidate);
     return (
-      getCommercialProductKey(candidate) === 'developer_launch_access' &&
-      resolveCommercialTerm(candidate).kind === 'paid_launch_access'
+      candidate.isActive === 1 &&
+      candidate.segment === segment &&
+      getCommercialProductKey(candidate) === `${ownerType}_launch_access` &&
+      term.kind === 'paid_launch_access'
     );
   });
   if (!plan) {
     throw new TRPCError({
       code: 'NOT_FOUND',
-      message: 'Developer Launch Access is not configured in the canonical commercial catalog.',
+      message: `${ownerType[0].toUpperCase()}${ownerType.slice(1)} Launch Access is not configured in the canonical commercial catalog.`,
+    });
+  }
+  const term = resolveCommercialTerm(plan);
+  const launchFee = getConfiguredLaunchFeeMinor(plan);
+  if (term.durationDays !== 90 || term.autoRenews || launchFee === null || launchFee <= 0) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `${plan.displayName} is not configured with its approved 90-day once-off terms.`,
     });
   }
   return plan;
 }
 
 /**
- * Issue the canonical once-off Developer Launch Access invoice. This is an
- * assisted manual-EFT request: it creates pending commercial state only and
- * never activates a subscription.
+ * Issue a canonical once-off Launch Access invoice for any supported supply
+ * owner. The function creates pending commercial state only; verified finance
+ * review is the only activation boundary.
  */
-export async function requestDeveloperLaunchAccessInvoice(input: { user: BillingUser }) {
+export async function requestPaidLaunchAccessInvoice(input: {
+  user: BillingUser;
+  planId?: number;
+}) {
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
-  const developerId = await assertDeveloperOwner(db, input.user);
+  const owner = await resolveLaunchBillingOwner(db, input.user);
   const bankDetails = getManualEftBankDetails();
   if (!bankDetails.canIssueInvoices) {
     throw new TRPCError({
@@ -778,20 +864,15 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
   }
 
   return db.transaction(async tx => {
-    const plan = await getDeveloperLaunchPlan(tx);
+    const plan = await getLaunchPlanForOwner(tx, owner.ownerType, input.planId);
     const term = resolveCommercialTerm(plan);
-    const launchFee = getConfiguredLaunchFeeMinor(plan);
-    if (term.kind !== 'paid_launch_access' || term.durationDays !== 90 || launchFee === null) {
-      throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: 'Developer Launch Access is not configured with its approved commercial terms.',
-      });
-    }
+    const launchFee = getConfiguredLaunchFeeMinor(plan)!;
+    const lockedState = await lockLaunchBillingState(tx, owner);
+    const lockedSubscription = lockedState.subscription;
 
-    const lockedSubscription = await lockDeveloperSubscription(tx, developerId);
     if (
       lockedSubscription &&
-      ['active', 'grace_period'].includes(lockedSubscription.status) &&
+      ACTIVE_SUBSCRIPTION_STATUSES.has(lockedSubscription.status as CanonicalSubscriptionStatus) &&
       !isPaidCommercialTermExpired(
         term,
         lockedSubscription.status,
@@ -800,18 +881,14 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
     ) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'Developer Launch Access is already active for this account.',
+        message: `${plan.displayName} is already active for this account.`,
       });
     }
 
     if (
       lockedSubscription &&
-      ['active', 'grace_period'].includes(lockedSubscription.status) &&
-      isPaidCommercialTermExpired(
-        term,
-        lockedSubscription.status,
-        lockedSubscription.currentPeriodEnd,
-      )
+      ACTIVE_SUBSCRIPTION_STATUSES.has(lockedSubscription.status as CanonicalSubscriptionStatus) &&
+      isPaidCommercialTermExpired(term, lockedSubscription.status, lockedSubscription.currentPeriodEnd)
     ) {
       await tx
         .update(subscriptions)
@@ -819,17 +896,18 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
         .where(eq(subscriptions.id, lockedSubscription.id));
     }
 
+    const productKey = getCommercialProductKey(plan);
     const subscriptionResult = await upsertPendingSubscription(tx, {
-      ownerType: 'developer',
-      ownerId: developerId,
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
       requestedPlanId: plan.id,
       actorUserId: input.user.id,
       metadata: {
         billing_provider: 'manual_eft',
         requested_plan_id: plan.id,
-        commercial_product_key: 'developer_launch_access',
+        commercial_product_key: productKey,
         commercial_term_kind: 'paid_launch_access',
-        commercial_term_duration_days: 90,
+        commercial_term_duration_days: term.durationDays,
         commercial_auto_renews: false,
         requested_billing_cycle: 'once_off',
       },
@@ -840,8 +918,8 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
       .from(billingInvoices)
       .where(
         and(
-          eq(billingInvoices.ownerType, 'developer'),
-          eq(billingInvoices.ownerId, developerId),
+          eq(billingInvoices.ownerType, owner.ownerType),
+          eq(billingInvoices.ownerId, owner.ownerId),
           eq(billingInvoices.subscriptionId, subscriptionResult.subscription.id),
           inArray(billingInvoices.status, ['issued', 'submitted', 'partially_paid', 'overdue']),
         ),
@@ -852,15 +930,17 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
       const sameTerms =
         outstandingInvoice.planId === plan.id &&
         outstandingInvoice.commercialTermKind === 'paid_launch_access' &&
-        Number(outstandingInvoice.amountDue) === launchFee;
+        Number(outstandingInvoice.amountDue) === launchFee &&
+        String(outstandingInvoice.currency || '') === String(plan.currency || 'ZAR');
       if (!sameTerms) {
         throw new TRPCError({
           code: 'CONFLICT',
-          message: 'An outstanding Developer Launch Access invoice already exists.',
+          message: `An outstanding ${plan.displayName} invoice already exists with different commercial terms.`,
         });
       }
       return {
-        developerId,
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
         plan,
         subscription: subscriptionResult.subscription,
         invoice: outstandingInvoice,
@@ -870,8 +950,8 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
       };
     }
 
-    const invoiceNumber = buildInvoiceNumber('developer', developerId);
-    const paymentReference = buildPaymentReference('developer', developerId);
+    const invoiceNumber = buildInvoiceNumber(owner.ownerType, owner.ownerId);
+    const paymentReference = buildPaymentReference(owner.ownerType, owner.ownerId);
     const priceSnapshot = buildInvoicePriceSnapshot({
       plan,
       billingCycle: 'monthly',
@@ -883,13 +963,16 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
     const [invoiceInsert] = await tx
       .insert(billingInvoices)
       .values({
-        ownerType: 'developer',
-        ownerId: developerId,
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
         subscriptionId: subscriptionResult.subscription.id,
         planId: plan.id,
         invoiceNumber,
         paymentReference,
         status: 'issued',
+        // The legacy column only supports recurring cycles. The authoritative
+        // commercialTermKind and once-off metadata below make this a fixed
+        // Launch Access invoice, never a monthly recurring charge.
         billingCycle: 'monthly',
         commercialTermKind: 'paid_launch_access',
         amountDue: launchFee,
@@ -902,15 +985,15 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
         periodEnd: null,
         lineItems: [
           {
-            description: 'Developer Launch Access · 90 days · once-off',
+            description: `${plan.displayName} · 90 days · once-off`,
             planId: plan.id,
             planName: plan.name,
             planDisplayName: plan.displayName,
             segment: plan.segment,
-            commercialProductKey: 'developer_launch_access',
+            commercialProductKey: productKey,
             commercialTermKind: 'paid_launch_access',
-            commercialTermDurationDays: 90,
-            billingCycle: 'monthly',
+            commercialTermDurationDays: term.durationDays,
+            billingCycle: 'once_off',
             billingInterval: 'once_off',
             currency: plan.currency || 'ZAR',
             amount: launchFee,
@@ -923,12 +1006,12 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
           billing_provider: 'manual_eft',
           payment_adapter: 'manual_eft',
           price_locked_at_invoice: true,
-          price_snapshot: priceSnapshot,
+          price_snapshot: { ...priceSnapshot, billingInterval: 'once_off' },
           requested_plan_id: plan.id,
           requested_billing_cycle: 'once_off',
-          commercial_product_key: 'developer_launch_access',
+          commercial_product_key: productKey,
           commercial_term_kind: 'paid_launch_access',
-          commercial_term_duration_days: 90,
+          commercial_term_duration_days: term.durationDays,
           commercial_auto_renews: false,
           entitlement_starts_on_verified_activation: true,
           dedicated_advertising_budget_included: false,
@@ -940,23 +1023,39 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
     const invoiceId = Number(invoiceInsert.id);
 
     await logBillingEvent(tx, {
-      ownerType: 'developer',
-      ownerId: developerId,
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
       subscriptionId: subscriptionResult.subscription.id,
       invoiceId,
       actorUserId: input.user.id,
       eventType: 'invoice_issued',
-      message: `Manual EFT invoice ${invoiceNumber} issued for Developer Launch Access.`,
+      message: `Manual EFT invoice ${invoiceNumber} issued for ${plan.displayName}.`,
       afterData: {
         planId: plan.id,
         invoiceNumber,
         paymentReference,
         amountDue: launchFee,
-        billingCycle: 'monthly',
+        billingInterval: 'once_off',
         commercialTermKind: 'paid_launch_access',
-        commercialTermDurationDays: 90,
+        commercialTermDurationDays: term.durationDays,
       },
     });
+
+    if (owner.ownerType === 'agency') {
+      await syncAgencyBillingShadow(tx, {
+        agencyId: owner.ownerId,
+        planId: plan.id,
+        status: subscriptionResult.subscription.status as CanonicalSubscriptionStatus,
+        periodEnd: subscriptionResult.subscription.currentPeriodEnd || null,
+      });
+      await notifyAgencyUsers(tx, {
+        agencyId: owner.ownerId,
+        type: 'invoice_issued',
+        title: 'Launch Access invoice issued',
+        content: `Invoice ${invoiceNumber} has been issued for ${centsToRand(launchFee)} once-off Launch Access.`,
+        data: { invoiceId, invoiceNumber, paymentReference },
+      });
+    }
 
     const [invoice] = await tx
       .select()
@@ -964,7 +1063,8 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
       .where(eq(billingInvoices.id, invoiceId))
       .limit(1);
     return {
-      developerId,
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
       plan,
       subscription: subscriptionResult.subscription,
       invoice,
@@ -973,6 +1073,12 @@ export async function requestDeveloperLaunchAccessInvoice(input: { user: Billing
       reused: false,
     };
   });
+}
+
+/** Compatibility wrapper retained for the existing Developer billing surface. */
+export async function requestDeveloperLaunchAccessInvoice(input: { user: BillingUser }) {
+  const result = await requestPaidLaunchAccessInvoice(input);
+  return { ...result, developerId: result.ownerId };
 }
 
 export async function startAgencyManualCheckout(input: {
@@ -993,6 +1099,19 @@ export async function startAgencyManualCheckout(input: {
       message: bankDetails.configurationMessage || 'Manual EFT bank details are not configured.',
     });
   }
+  const [selectedAgencyPlan] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.id, input.planId))
+    .limit(1);
+  if (
+    selectedAgencyPlan &&
+    selectedAgencyPlan.segment === 'agency' &&
+    resolveCommercialTerm(selectedAgencyPlan).kind === 'paid_launch_access'
+  ) {
+    return requestPaidLaunchAccessInvoice({ user: input.user, planId: input.planId });
+  }
+
   const proofStorage = getBillingProofStorageStatus();
   if (!proofStorage.configured) {
     throw new TRPCError({
@@ -1315,7 +1434,54 @@ export async function getAgencyBillingWorkspace(user: BillingUser) {
   };
 }
 
-export async function submitAgencyPaymentProof(input: {
+export async function getAgentBillingWorkspace(user: BillingUser) {
+  const db = await getDb();
+  if (!db)
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+  const owner = await resolveLaunchBillingOwner(db, user);
+  if (owner.ownerType !== 'agent') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Agent billing workspace is agent-only.' });
+  }
+  const [subscriptionWithPlan] = await db
+    .select({ subscription: subscriptions, plan: plans })
+    .from(subscriptions)
+    .leftJoin(plans, eq(subscriptions.planId, plans.id))
+    .where(and(eq(subscriptions.ownerType, 'agent'), eq(subscriptions.ownerId, owner.ownerId)))
+    .limit(1);
+  const invoiceRows = await db
+    .select()
+    .from(billingInvoices)
+    .where(and(eq(billingInvoices.ownerType, 'agent'), eq(billingInvoices.ownerId, owner.ownerId)))
+    .orderBy(desc(billingInvoices.createdAt))
+    .limit(25);
+  const invoiceIds = invoiceRows.map(invoice => invoice.id);
+  const paymentRows = invoiceIds.length
+    ? await db
+        .select()
+        .from(billingPayments)
+        .where(inArray(billingPayments.invoiceId, invoiceIds))
+        .orderBy(desc(billingPayments.createdAt))
+        .limit(50)
+    : [];
+
+  return {
+    agentId: owner.ownerId,
+    plans: await listBillingPlans('agent'),
+    subscription: subscriptionWithPlan?.subscription || null,
+    currentPlan: subscriptionWithPlan?.plan || null,
+    activeInvoice:
+      invoiceRows.find(invoice =>
+        ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status),
+      ) || null,
+    invoices: invoiceRows,
+    payments: paymentRows,
+    bankDetails: getManualEftBankDetails(),
+    proofStorage: getBillingProofStorageStatus(),
+  };
+}
+
+type LaunchPaymentProofInput = {
   user: BillingUser;
   invoiceId: number;
   amount: number;
@@ -1329,7 +1495,226 @@ export async function submitAgencyPaymentProof(input: {
     sizeBytes: number;
     contentBase64: string;
   };
-}) {
+};
+
+/**
+ * Shared owner-scoped manual-EFT proof workflow for fixed-term Launch Access.
+ * The owner lock and invoice predicate are deliberately resolved together so
+ * an agent, agency or developer cannot submit proof against another owner's
+ * invoice.
+ */
+export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentProofInput) {
+  const db = await getDb();
+  if (!db)
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+  const owner = await resolveLaunchBillingOwner(db, input.user);
+  const mimeType = input.file.mimeType.trim().toLowerCase();
+  if (!ALLOWED_PROOF_MIME_TYPES.has(mimeType)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Unsupported proof-of-payment file type.',
+    });
+  }
+  if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
+  }
+  if (!Number.isFinite(input.amount) || input.amount <= 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Payment amount must be greater than zero.',
+    });
+  }
+
+  const fileBuffer = Buffer.from(input.file.contentBase64, 'base64');
+  if (fileBuffer.length !== input.file.sizeBytes || fileBuffer.length > MAX_PROOF_BYTES) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file size mismatch.' });
+  }
+
+  return db.transaction(async tx => {
+    const { subscription: lockedSubscription } = await lockLaunchBillingState(tx, owner);
+    const invoice = await lockLaunchInvoice(tx, { invoiceId: input.invoiceId, owner });
+    if (
+      invoice.subscriptionId &&
+      lockedSubscription &&
+      invoice.subscriptionId !== lockedSubscription.id
+    ) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Invoice subscription no longer matches the billing owner.',
+      });
+    }
+    if (invoice.commercialTermKind !== 'paid_launch_access') {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Launch Access requires a once-off canonical invoice.',
+      });
+    }
+    if (!['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Invoice cannot accept payment proof while ${invoice.status}.`,
+      });
+    }
+
+    const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
+    const [paymentInsert] = await tx
+      .insert(billingPayments)
+      .values({
+        invoiceId: invoice.id,
+        subscriptionId: invoice.subscriptionId || null,
+        ownerType: invoice.ownerType,
+        ownerId: invoice.ownerId,
+        paymentMethod: 'manual_eft',
+        state: 'under_review',
+        amount: Math.round(input.amount),
+        currency: invoice.currency,
+        paymentReference: invoice.paymentReference,
+        bankReference: input.bankReference || null,
+        payerName: input.payerName || null,
+        paymentDate: input.paymentDate ? toDbTimestamp(input.paymentDate) : nowDb(),
+        submittedBy: input.user.id,
+        idempotencyKey,
+        metadata: {
+          notes: input.notes || null,
+          upload_source: `${owner.ownerType}_billing_workspace`,
+          commercial_product_key: getCommercialProductKeyFromInvoice(invoice),
+        },
+      })
+      .$returningId();
+
+    const paymentId = Number(paymentInsert.id);
+    const sha256Hash = createHash('sha256').update(fileBuffer).digest('hex');
+    const extension = safeFileExtension(input.file.filename, mimeType);
+    const storageKey = path.join(
+      owner.ownerType,
+      String(owner.ownerId),
+      `${paymentId}-${randomReferencePart(4)}${extension}`,
+    );
+    let storedDocument: Awaited<ReturnType<typeof storeBillingProofDocument>>;
+    try {
+      storedDocument = await storeBillingProofDocument({
+        storageKey,
+        buffer: fileBuffer,
+        mimeType,
+        originalFileName: input.file.filename,
+      });
+    } catch (error) {
+      if (error instanceof BillingProofStorageConfigurationError) {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+      }
+      throw error;
+    }
+
+    const [documentInsert] = await tx
+      .insert(billingPaymentDocuments)
+      .values({
+        paymentId,
+        invoiceId: invoice.id,
+        ownerType: invoice.ownerType,
+        ownerId: invoice.ownerId,
+        storageKey: storedDocument.storageKey,
+        originalFileName: input.file.filename,
+        mimeType,
+        fileSizeBytes: fileBuffer.length,
+        sha256Hash,
+        visibility: 'private',
+        status: 'active',
+        uploadedBy: input.user.id,
+        metadata: {
+          source: 'manual_eft_upload',
+          excluded_from_public_media: true,
+          ...storedDocument.metadata,
+        },
+      })
+      .$returningId();
+
+    await tx
+      .update(billingInvoices)
+      .set({
+        status: 'submitted',
+        updatedBy: input.user.id,
+      })
+      .where(eq(billingInvoices.id, invoice.id));
+
+    let nextSubscriptionStatus: CanonicalSubscriptionStatus = 'payment_under_review';
+    let nextSubscriptionPeriodEnd: string | null = null;
+    if (invoice.subscriptionId) {
+      const [currentSubscription] = await tx
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.id, invoice.subscriptionId))
+        .limit(1);
+      const currentStatus = currentSubscription?.status as CanonicalSubscriptionStatus | undefined;
+      const shouldPreserveAccess = currentStatus
+        ? ACTIVE_SUBSCRIPTION_STATUSES.has(currentStatus)
+        : false;
+      nextSubscriptionStatus = shouldPreserveAccess ? currentStatus! : 'payment_under_review';
+      nextSubscriptionPeriodEnd = currentSubscription?.currentPeriodEnd || null;
+
+      if (!shouldPreserveAccess) {
+        await tx
+          .update(subscriptions)
+          .set({
+            status: 'payment_under_review',
+            updatedBy: input.user.id,
+          })
+          .where(eq(subscriptions.id, invoice.subscriptionId));
+      }
+    }
+
+    if (owner.ownerType === 'agency') {
+      await syncAgencyBillingShadow(tx, {
+        agencyId: owner.ownerId,
+        planId: invoice.planId,
+        status: nextSubscriptionStatus,
+        periodEnd: nextSubscriptionPeriodEnd,
+      });
+    }
+
+    await logBillingEvent(tx, {
+      ownerType: invoice.ownerType,
+      ownerId: invoice.ownerId,
+      subscriptionId: invoice.subscriptionId,
+      invoiceId: invoice.id,
+      paymentId,
+      actorUserId: input.user.id,
+      eventType: 'payment_proof_received',
+      message: `Proof of payment received for ${invoice.invoiceNumber}.`,
+      afterData: {
+        paymentId,
+        documentId: Number(documentInsert.id),
+        amount: input.amount,
+        state: 'under_review',
+        subscriptionStatus: nextSubscriptionStatus,
+      },
+    });
+
+    if (owner.ownerType === 'agency') {
+      await notifyAgencyUsers(tx, {
+        agencyId: owner.ownerId,
+        type: 'proof_received',
+        title: 'Proof received',
+        content: `Proof of payment for ${invoice.invoiceNumber} has been submitted for review.`,
+        data: { invoiceId: invoice.id, paymentId },
+      });
+    }
+
+    return { success: true, paymentId, documentId: Number(documentInsert.id) };
+  });
+}
+
+function getCommercialProductKeyFromInvoice(invoice: InvoiceRow): string {
+  const metadata = parseJsonRecord(invoice.metadata);
+  return String(metadata.commercial_product_key || `invoice_${invoice.id}`);
+}
+
+/**
+ * Existing recurring agency billing proof workflow. Launch Access uses the
+ * shared owner-scoped function above, while this path deliberately continues
+ * to accept canonical recurring agency invoices.
+ */
+export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
@@ -1450,10 +1835,7 @@ export async function submitAgencyPaymentProof(input: {
 
     await tx
       .update(billingInvoices)
-      .set({
-        status: 'submitted',
-        updatedBy: input.user.id,
-      })
+      .set({ status: 'submitted', updatedBy: input.user.id })
       .where(eq(billingInvoices.id, invoice.id));
 
     let nextSubscriptionStatus: CanonicalSubscriptionStatus = 'payment_under_review';
@@ -1474,10 +1856,7 @@ export async function submitAgencyPaymentProof(input: {
       if (!shouldPreserveAccess) {
         await tx
           .update(subscriptions)
-          .set({
-            status: 'payment_under_review',
-            updatedBy: input.user.id,
-          })
+          .set({ status: 'payment_under_review', updatedBy: input.user.id })
           .where(eq(subscriptions.id, invoice.subscriptionId));
       }
     }
@@ -1562,185 +1941,9 @@ export async function getDeveloperBillingWorkspace(user: BillingUser) {
   };
 }
 
-/**
- * Developer-owned manual-EFT proof submission. The payment remains under
- * finance review; this function never activates Launch Access.
- */
-export async function submitDeveloperPaymentProof(input: {
-  user: BillingUser;
-  invoiceId: number;
-  amount: number;
-  bankReference?: string;
-  payerName?: string;
-  paymentDate?: string;
-  notes?: string;
-  file: {
-    filename: string;
-    mimeType: string;
-    sizeBytes: number;
-    contentBase64: string;
-  };
-}) {
-  const db = await getDb();
-  if (!db)
-    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
-
-  const developerId = await assertDeveloperOwner(db, input.user);
-  const mimeType = input.file.mimeType.trim().toLowerCase();
-  if (!ALLOWED_PROOF_MIME_TYPES.has(mimeType)) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Unsupported proof-of-payment file type.',
-    });
-  }
-  if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
-  }
-  if (!Number.isFinite(input.amount) || input.amount <= 0) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Payment amount must be greater than zero.',
-    });
-  }
-
-  const fileBuffer = Buffer.from(input.file.contentBase64, 'base64');
-  if (fileBuffer.length !== input.file.sizeBytes || fileBuffer.length > MAX_PROOF_BYTES) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file size mismatch.' });
-  }
-
-  return db.transaction(async tx => {
-    const lockedSubscription = await lockDeveloperSubscription(tx, developerId);
-    const invoice = await lockDeveloperInvoice(tx, { invoiceId: input.invoiceId, developerId });
-    if (
-      invoice.subscriptionId &&
-      lockedSubscription &&
-      invoice.subscriptionId !== lockedSubscription.id
-    ) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'Invoice subscription no longer matches the developer account.',
-      });
-    }
-    if (invoice.commercialTermKind !== 'paid_launch_access') {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'Developer Launch Access requires a once-off canonical invoice.',
-      });
-    }
-    if (!['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Invoice cannot accept payment proof while ${invoice.status}.`,
-      });
-    }
-
-    const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
-    const [paymentInsert] = await tx
-      .insert(billingPayments)
-      .values({
-        invoiceId: invoice.id,
-        subscriptionId: invoice.subscriptionId || null,
-        ownerType: invoice.ownerType,
-        ownerId: invoice.ownerId,
-        paymentMethod: 'manual_eft',
-        state: 'under_review',
-        amount: Math.round(input.amount),
-        currency: invoice.currency,
-        paymentReference: invoice.paymentReference,
-        bankReference: input.bankReference || null,
-        payerName: input.payerName || null,
-        paymentDate: input.paymentDate ? toDbTimestamp(input.paymentDate) : nowDb(),
-        submittedBy: input.user.id,
-        idempotencyKey,
-        metadata: {
-          notes: input.notes || null,
-          upload_source: 'developer_billing_workspace',
-          commercial_product_key: 'developer_launch_access',
-        },
-      })
-      .$returningId();
-
-    const paymentId = Number(paymentInsert.id);
-    const sha256Hash = createHash('sha256').update(fileBuffer).digest('hex');
-    const extension = safeFileExtension(input.file.filename, mimeType);
-    const storageKey = path.join(
-      'developer',
-      String(developerId),
-      `${paymentId}-${randomReferencePart(4)}${extension}`,
-    );
-    let storedDocument: Awaited<ReturnType<typeof storeBillingProofDocument>>;
-    try {
-      storedDocument = await storeBillingProofDocument({
-        storageKey,
-        buffer: fileBuffer,
-        mimeType,
-        originalFileName: input.file.filename,
-      });
-    } catch (error) {
-      if (error instanceof BillingProofStorageConfigurationError) {
-        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
-      }
-      throw error;
-    }
-
-    const [documentInsert] = await tx
-      .insert(billingPaymentDocuments)
-      .values({
-        paymentId,
-        invoiceId: invoice.id,
-        ownerType: invoice.ownerType,
-        ownerId: invoice.ownerId,
-        storageKey: storedDocument.storageKey,
-        originalFileName: input.file.filename,
-        mimeType,
-        fileSizeBytes: fileBuffer.length,
-        sha256Hash,
-        visibility: 'private',
-        status: 'active',
-        uploadedBy: input.user.id,
-        metadata: {
-          source: 'manual_eft_upload',
-          excluded_from_public_media: true,
-          ...storedDocument.metadata,
-        },
-      })
-      .$returningId();
-
-    await tx
-      .update(billingInvoices)
-      .set({ status: 'submitted', updatedBy: input.user.id })
-      .where(eq(billingInvoices.id, invoice.id));
-
-    if (invoice.subscriptionId) {
-      const currentStatus = lockedSubscription?.status as CanonicalSubscriptionStatus | undefined;
-      if (!currentStatus || !ACTIVE_SUBSCRIPTION_STATUSES.has(currentStatus)) {
-        await tx
-          .update(subscriptions)
-          .set({ status: 'payment_under_review', updatedBy: input.user.id })
-          .where(eq(subscriptions.id, invoice.subscriptionId));
-      }
-    }
-
-    await logBillingEvent(tx, {
-      ownerType: invoice.ownerType,
-      ownerId: invoice.ownerId,
-      subscriptionId: invoice.subscriptionId,
-      invoiceId: invoice.id,
-      paymentId,
-      actorUserId: input.user.id,
-      eventType: 'payment_proof_received',
-      message: `Proof of payment received for ${invoice.invoiceNumber}.`,
-      afterData: {
-        paymentId,
-        documentId: Number(documentInsert.id),
-        amount: input.amount,
-        state: 'under_review',
-        subscriptionStatus: 'payment_under_review',
-      },
-    });
-
-    return { success: true, paymentId, documentId: Number(documentInsert.id) };
-  });
+/** Compatibility wrapper retained for the existing Developer billing surface. */
+export async function submitDeveloperPaymentProof(input: LaunchPaymentProofInput) {
+  return submitPaidLaunchAccessPaymentProof(input);
 }
 
 export async function getAdminFinanceQueue(input: {
@@ -1959,6 +2162,39 @@ export async function reviewManualPayment(input: {
         throw new TRPCError({
           code: 'CONFLICT',
           message: 'Invoice subscription no longer matches the agency account.',
+        });
+      }
+    } else if (isLaunchBillingOwnerType(paymentLookup.ownerType)) {
+      const owner: LaunchBillingOwner = {
+        ownerType: paymentLookup.ownerType,
+        ownerId: paymentLookup.ownerId,
+        displayName: '',
+      };
+      const { subscription: lockedSubscription } = await lockLaunchBillingState(tx, owner);
+      const [lockedPaymentWithInvoice] = await tx
+        .select({ payment: billingPayments, invoice: billingInvoices })
+        .from(billingPayments)
+        .innerJoin(billingInvoices, eq(billingPayments.invoiceId, billingInvoices.id))
+        .where(eq(billingPayments.id, input.paymentId))
+        .limit(1);
+      if (!lockedPaymentWithInvoice)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Payment not found.' });
+      invoice = await lockLaunchInvoice(tx, {
+        invoiceId: lockedPaymentWithInvoice.invoice.id,
+        owner,
+      });
+      beforePayment = await lockInvoicePayment(tx, {
+        paymentId: input.paymentId,
+        invoiceId: invoice.id,
+      });
+      if (
+        lockedSubscription &&
+        invoice.subscriptionId &&
+        invoice.subscriptionId !== lockedSubscription.id
+      ) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Invoice subscription no longer matches the billing owner.',
         });
       }
     } else {
@@ -2454,7 +2690,9 @@ export async function getBillingDocumentForUser(input: { user: BillingUser; docu
       : [];
   const isOwningDeveloperUser =
     document.ownerType === 'developer' && Number(developerProfile?.id || 0) === document.ownerId;
-  if (!isFinanceAdmin && !isOwningAgencyUser && !isOwningDeveloperUser) {
+  const isOwningAgentUser =
+    document.ownerType === 'agent' && input.user.role === 'agent' && input.user.id === document.ownerId;
+  if (!isFinanceAdmin && !isOwningAgencyUser && !isOwningDeveloperUser && !isOwningAgentUser) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Document is private.' });
   }
 

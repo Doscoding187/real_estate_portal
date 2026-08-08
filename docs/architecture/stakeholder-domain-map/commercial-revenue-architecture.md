@@ -42,8 +42,8 @@ This section records the current implementation boundary. It does not introduce 
 
 S2 converges independent-agent commercial state onto the same canonical billing family used by agencies. Agent products are active rows in canonical `plans` with `segment = agent`, their benefits and limits are read from `plan_entitlements`, and `billing.commercialCatalog` is the public product projection. Agent package selection now submits a canonical `planId`; it does not select a frontend tier or write a user-level paid status.
 
-- An agent trial is created as a canonical `subscriptions` row with `status = trial`, the selected plan's authoritative `trialDays`, and the plan's canonical entitlements. Trial dates are read from that subscription and expire through canonical plan-access evaluation.
-- A paid agent state is not created by package selection or the retired legacy router. The future paid path is canonical invoice/manual EFT, payment proof, finance verification, and canonical subscription activation; no payment provider is introduced in S2.
+- At the S2 checkpoint, an agent trial was created as a canonical `subscriptions` row with `status = trial`, the selected plan's authoritative `trialDays`, and the plan's canonical entitlements. S4 supersedes that automatic launch-path behavior with paid `agent_launch_access`; the generic free-trial capability remains only for a future product that explicitly requires it.
+- A paid agent state is not created by package selection or the retired legacy router. The approved paid path is canonical invoice/manual EFT, payment proof, finance verification, and canonical subscription activation; S4 supplies the shared 90-day Launch Access implementation without introducing a payment provider.
 - Agent entitlement reads no longer use `users.plan`, `users.subscriptionTier`, `users.subscriptionStatus`, legacy trial fields, or tier-derived minimums. Listing publication requires a canonical agent plan, an entitled canonical subscription/trial, an active eligible plan, the plan's `max_active_listings` entitlement, and the existing independent ownership, email, and profile-completion rules.
 - The legacy `subscription_plans`/`user_subscriptions` agent path is no longer a runtime authority. Agent calls through the old subscription router are rejected, its public plan reads exclude agent plans, and the obsolete presentation-only agent onboarding page was removed in favour of the canonical product/onboarding route.
 - Legacy user columns and legacy tables were not dropped. They are schema-retirement candidates until a separately approved destructive migration. Developer, service-provider, partner and general campaign commercial systems remain deliberately outside S2.
@@ -94,7 +94,7 @@ S3 makes property developers first-class owners in the canonical commercial fami
 | Hard-coded developer plan array and package prices       | DELETE                            | Replaced by the canonical catalog                                                                            |
 | Developer campaign/boost routes and presentation         | DELETE / DEFER                    | No credible paid campaign lifecycle or payment authority exists                                              |
 
-S3 deliberately does not generalize the agency invoice workflow to developers. The next payment step remains a product decision: either add a narrow developer owner path to the existing manual-EFT billing authority or keep developer products as assisted contact/request-invoice products until that decision is approved. Service-provider monetization, structured offers/promotions, campaign placement products, Search and Provincial Discovery remain outside S3.
+At the S3 checkpoint, the agency invoice workflow had not yet been generalized to developers. S4 now provides the shared owner-scoped manual-EFT Launch Access path for agent, agency and developer products. Service-provider monetization, structured offers/promotions, campaign placement products, Search and Provincial Discovery remain outside S4.
 
 ### S3 Schema Retirement Candidates
 
@@ -115,6 +115,43 @@ The founder-approved developer launch model supersedes the S3 assumption of an a
 - The legacy developer `startTrial`, plan, subscription, upgrade, downgrade, cancellation, usage and trial-administration routes are contained from developer users and the public legacy plan surface; the historical `subscription_plans`/`user_subscriptions` tables remain only as schema-retirement candidates and cannot activate or report canonical developer commercial state.
 
 No payment provider, promotion engine, dedicated development campaign, guaranteed lead/media commitment, agent/agency migration, service-provider convergence, Search change or Provincial Discovery change is included in S3.1. Dedicated advertising spend is not included in the R1,499 Launch Access fee.
+
+## S4 Paid Launch Access Generalization
+
+S4 extends the reusable paid fixed-term commercial term to the launch audiences without creating audience-specific lifecycle services. The approved launch ladder is:
+
+| Product | Audience | Canonical once-off amount | Term | Renewal |
+| --- | --- | ---: | --- | --- |
+| `agent_launch_access` | Agent | `49900` ZAR (R499) | `paid_launch_access`, 90 days | None |
+| `agency_launch_access` | Agency | `99900` ZAR (R999) | `paid_launch_access`, 90 days | None |
+| `developer_launch_access` | Developer | `149900` ZAR (R1,499) | `paid_launch_access`, 90 days | None |
+
+All three products are canonical plan/reference data consumed by `billing.commercialCatalog`. Product selection and invoice creation create only pending commercial state. Payment-proof submission remains under review. Finance verification is the activation authority; it starts the fixed 90-day period, writes the canonical paid subscription and entitlement, and records no automatic renewal or recurring conversion. The normal post-launch product remains a deliberate future commercial action.
+
+Agent and agency Launch Access is a full supported-capability learning cohort, not an artificially lower recurring tier. The adapter provisions explicit first-class Launch Access entitlements directly: Agent `max_active_listings = 50`; Agency `max_active_listings = 500`; and the supported runtime feature capabilities identified for each audience. Existing plans may be inspected as capability evidence, but they are not required and never donate Launch Access limits or authority. The `commercial_feature_access_policy = all_supported_canonical_capabilities` and `commercial_resource_limit_policy = explicit_launch_safeguard` metadata make that policy explicit. Developer Launch Access retains its explicit `unlimited_development_portfolio` entitlement. Usage meters remain operational measurement and cannot grant or override commercial entitlement.
+
+### S4 Full-Access Capability Matrix
+
+| Audience | Enabled during active Launch Access | Resource-limited safeguards | Not implemented / not promised |
+| --- | --- | --- | --- |
+| Agent | Listing creation and management subject to normal publication controls; lead/enquiry workflows; public profile/directory presence; implemented analytics, revenue and commission workspaces; supported Agent feature capabilities explicitly provisioned by Launch Access | Explicit `max_active_listings = 50`; profile, email, ownership and verification rules remain independent | Paid Search ranking, priority exposure, sponsored/boosted placement, guaranteed leads/traffic, dedicated media spend, roadmap-only AI/benchmarking claims |
+| Agency | Agency inventory management; team/account workflows; lead/enquiry and routing workflows; agency profile/directory; implemented reporting, analytics and management workflows; supported Agency capabilities explicitly provisioned by Launch Access | Explicit `max_active_listings = 500`; ownership, verification, authorization and anti-abuse controls remain mandatory | Paid Search ranking, priority exposure, sponsored/boosted placement, guaranteed leads/traffic, dedicated media spend, unsupported future feature claims |
+
+The adapter deliberately excludes `has_priority_exposure` from Launch Access projection because no approved paid-ranking or placement contract exists. Feature access is therefore broad where the repository has a real supported capability; “full access” does not convert mock, presentation-only or future functionality into a commercial promise.
+
+### Product-Learning Readiness
+
+Existing operational signals can already support a first Launch cohort review: listing creation/publication and listing performance metrics; lead/enquiry creation, routing, stage changes and CRM activity; showings and offer/deal activity; Agent Analytics/Earnings usage through the existing product data; and Agency workspace, inventory, lead and activity/reporting records. Launch products carry `commercial_learning_cohort = launch_access` so later reporting can identify the cohort without introducing a second analytics authority.
+
+There is not yet reliable direct feature-adoption telemetry for every capability view or action—for example, team-dashboard views, advanced reporting views, AI/area-intelligence interaction, benchmarking, or repeated lead-routing use as a product feature. S4 does not build a new analytics platform. A later bounded instrumentation slice should add cohort-scoped feature events and connect them to activation, listing activity, enquiries and post-day-90 conversion before permanent tier boundaries are designed.
+
+The canonical billing foundation now supports owner-scoped agent and agency manual-EFT records, invoices and proof documents. An agent can access only its own billing records; agency records remain agency-scoped, with finance retaining review authority. Agent and agency recurring billing behavior remains available separately; Launch Access invoices use `commercial_term_kind = paid_launch_access` and explicit once-off metadata so the historical monthly/annual storage enum cannot be interpreted as the commercial term.
+
+Reference-data provisioning is independent of Agent and Agency source-plan rows. A clean canonical baseline directly creates the three approved Launch Access products and their explicit entitlements; local-demo and test plans are not consulted or promoted to commercial authority. This keeps Launch Access usable as a first-class launch product while preserving the distinction between capability evidence and commercial authority.
+
+Automatic agent and agency free-trial provisioning is no longer an active launch path. Their legacy free-trial selection/start routes are rejected or filtered, while generic free-trial capability remains available only for a future product that explicitly requires it. No customer is activated by registration, onboarding, product selection, invoice creation or proof upload.
+
+The active public commercial surfaces use canonical catalog values. Historical monthly prices and the agency “locked-in pricing” promise are not commercial authority and are no longer presented as live launch terms. Launch Access does not include guaranteed leads, paid-media spend, search priority or dedicated campaigns. No payment provider, service-provider monetization, campaign monetization, Search change or Provincial Discovery change is included in S4.
 
 ## Sponsored Placement Boundary Options
 

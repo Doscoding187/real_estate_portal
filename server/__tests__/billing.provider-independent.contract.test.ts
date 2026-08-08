@@ -98,7 +98,7 @@ describe('provider-independent billing foundation contract', () => {
 
   it('does not activate access when proof is uploaded for review', () => {
     const uploadPath = billingService.slice(
-      billingService.indexOf('export async function submitAgencyPaymentProof'),
+      billingService.indexOf('export async function submitPaidLaunchAccessPaymentProof'),
       billingService.indexOf('export async function getAdminFinanceQueue'),
     );
 

@@ -77,7 +77,7 @@ export default function AgencyComingSoonPage() {
               <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-4" />
               <h2 className="text-xl font-bold text-slate-900 mb-2">You're on the list.</h2>
               <p className="text-slate-600">
-                We'll notify you personally when Agency access opens. Founding partners get priority onboarding and locked-in pricing.
+                We'll notify you personally when Agency access opens. Founding partners get priority onboarding and access to the approved launch terms.
               </p>
             </div>
           ) : (

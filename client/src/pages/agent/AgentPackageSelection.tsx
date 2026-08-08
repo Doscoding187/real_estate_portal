@@ -4,7 +4,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { APP_TITLE } from '@/const';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
 import {
   formatCommercialLimitLabel,
   getCommercialActionPresentation,
@@ -28,17 +28,6 @@ type AgentOnboardingStatus = {
   trialEndsAt: string | null;
 };
 
-function formatTrialEndDate(value: string | null) {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleDateString('en-ZA', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 function planIcon(index: number) {
   if (index === 0) return Briefcase;
   if (index === 1) return Rocket;
@@ -54,7 +43,7 @@ function formatLimitValue(value: unknown) {
 function getProductPresentation(product: CommercialProduct) {
   const price = getCommercialPricePresentation(product);
   const action = getCommercialActionPresentation(product);
-  const selectable = product.trial.available && product.action.mode === 'trial';
+  const selectable = false;
   const benefitLines = product.benefits.length
     ? product.benefits
     : ['Benefits are configured from the canonical commercial plan.'];
@@ -71,19 +60,20 @@ export default function AgentPackageSelection() {
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
   const catalog = useCommercialCatalog();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [status, setStatus] = useState<AgentOnboardingStatus | null>(null);
+  const [, setStatus] = useState<AgentOnboardingStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const agentProducts = useMemo(
-    () => (catalog.data?.products || []).filter(product => product.audience === 'agent'),
+    () =>
+      (catalog.data?.products || []).filter(
+        product => product.audience === 'agent' && product.term.kind === 'paid_launch_access',
+      ),
     [catalog.data?.products],
   );
   const selectedProduct = agentProducts.find(product => product.source.planId === selectedProductId);
   const selectedPresentation = selectedProduct
     ? getProductPresentation(selectedProduct)
     : null;
-  const trialEnd = formatTrialEndDate(status?.trialEndsAt || null);
 
   useEffect(() => {
     if (new URLSearchParams(search).get('verified') === 'true') {
@@ -125,36 +115,8 @@ export default function AgentPackageSelection() {
 
   useEffect(() => {
     if (selectedProductId !== null || agentProducts.length === 0) return;
-    const firstTrialProduct = agentProducts.find(
-      product => getProductPresentation(product).selectable,
-    );
-    setSelectedProductId(firstTrialProduct?.source.planId || agentProducts[0].source.planId);
+    setSelectedProductId(agentProducts[0].source.planId);
   }, [agentProducts, selectedProductId]);
-
-  const handleSelectPackage = async () => {
-    if (!selectedProduct || !selectedPresentation?.selectable) return;
-
-    setIsSubmitting(true);
-    try {
-      const result = await apiFetch<AgentOnboardingStatus>('/agent/select-package', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: selectedProduct.source.planId }),
-      });
-
-      setStatus(result);
-      toast.success(`${selectedProduct.displayName} selected. Your canonical trial is active.`);
-      setLocation('/agent/setup');
-    } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(error.body?.error || `Could not select the product (${error.status})`);
-      } else {
-        toast.error(error instanceof Error ? error.message : 'Could not select the product');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (loading || statusLoading || catalog.isLoading) {
     return (
@@ -222,9 +184,9 @@ export default function AgentPackageSelection() {
             Choose the product that fits your next season.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            Product pricing, trials, benefits, and limits below come from Property Listify&apos;s
-            canonical commercial catalog. Selecting a trial creates canonical subscription state;
-            it does not activate paid access.
+            Product pricing, term, benefits, and limits below come from Property Listify&apos;s
+            canonical commercial catalog. Launch Access is a paid 90-day term activated only after
+            manual-EFT payment is verified.
           </p>
         </section>
 
@@ -272,11 +234,9 @@ export default function AgentPackageSelection() {
                       <span className="pb-1 text-sm text-white/65">{presentation.price.period}</span>
                     ) : null}
                   </div>
-                  {product.trial.available ? (
-                    <p className="mt-2 text-xs leading-5 text-white/65">
-                      {product.trial.days}-day trial, as configured on the canonical plan.
-                    </p>
-                  ) : null}
+                  <p className="mt-2 text-xs leading-5 text-white/65">
+                    Paid Launch Access · {product.term.durationDays || 90} days · no automatic renewal.
+                  </p>
                 </div>
 
                 <ul className="mt-5 flex-1 space-y-3">
@@ -294,14 +254,13 @@ export default function AgentPackageSelection() {
                   <Button
                     type="button"
                     variant={isSelected ? 'default' : 'outline'}
-                    disabled={!presentation.selectable}
-                    onClick={() => setSelectedProductId(product.source.planId)}
+                    onClick={() =>
+                      presentation.action.href
+                        ? setLocation(presentation.action.href)
+                        : setLocation('/contact')
+                    }
                   >
-                    {presentation.selectable
-                      ? isSelected
-                        ? 'Selected'
-                        : 'Select product'
-                      : presentation.action.label}
+                    {presentation.action.label}
                   </Button>
                   {!presentation.selectable && presentation.action.href ? (
                     <a
@@ -324,13 +283,13 @@ export default function AgentPackageSelection() {
                 Selected product
               </p>
               <h2 className="mt-3 font-serif text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
-                {selectedProduct?.displayName || 'Select a trial product'}
+                {selectedProduct?.displayName || 'Select a Launch Access product'}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70 sm:text-base">
-                Your canonical trial begins only when you continue. Profile verification and
-                completion rules remain separate from commercial entitlement.
+                Request an invoice to begin the assisted manual-EFT flow. The 90-day entitlement
+                starts only after finance verifies payment; profile and publication rules remain
+                separate from commercial entitlement.
               </p>
-              {trialEnd ? <p className="mt-3 text-xs text-white/50">Current trial ends {trialEnd}.</p> : null}
             </div>
 
             <div className="flex flex-col gap-4 lg:min-w-[290px] lg:items-end">
@@ -345,19 +304,13 @@ export default function AgentPackageSelection() {
               <Button
                 size="lg"
                 className="h-12 rounded-2xl bg-white px-6 text-slate-950 hover:bg-white/90"
-                disabled={isSubmitting || !selectedPresentation?.selectable}
-                onClick={() => void handleSelectPackage()}
+                onClick={() =>
+                  selectedPresentation?.action.href
+                    ? setLocation(selectedPresentation.action.href)
+                    : setLocation('/contact')
+                }
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Starting canonical trial...
-                  </>
-                ) : (
-                  <>
-                    Start canonical trial <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
+                Request invoice <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <p className="text-xs leading-5 text-white/40 lg:text-right">
                 Paid activation remains assisted and requires verified commercial state.

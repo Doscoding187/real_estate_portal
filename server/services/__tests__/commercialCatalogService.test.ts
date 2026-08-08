@@ -18,7 +18,7 @@ function plan(overrides: Partial<PlanRow> = {}): PlanRow {
     priceMonthly: 99_000,
     currency: 'ZAR',
     interval: 'month',
-    trialDays: 14,
+    trialDays: 0,
     metadata: null,
     stripePriceId: null,
     features: JSON.stringify(['Agency workspace', 'Lead routing']),
@@ -174,5 +174,18 @@ describe('commercial catalog projection', () => {
       plan(),
       developerPlan,
     ]);
+  });
+
+  it('does not publish retired free-trial products for launch audiences', () => {
+    const agentTrial = plan({
+      id: 44,
+      name: 'agent_trial',
+      displayName: 'Agent Trial',
+      segment: 'agent',
+      trialDays: 14,
+    });
+
+    expect(filterCommercialPlans([agentTrial], 'agent')).toEqual([]);
+    expect(filterCommercialPlans([agentTrial])).toEqual([]);
   });
 });

@@ -108,9 +108,9 @@ export async function startTrial(
   userId: number,
   category: PlanCategory,
 ): Promise<UserSubscription> {
-  if (category === 'developer') {
+  if (category === 'agent' || category === 'agency' || category === 'developer') {
     throw new Error(
-      'Legacy developer free trials are retired. Use Developer Launch Access through the canonical commercial catalog and verified billing authority.',
+      'Legacy free trials for launch audiences are retired. Use the canonical commercial catalog and verified billing authority.',
     );
   }
 

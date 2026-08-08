@@ -11,17 +11,20 @@ import { billingInvoices, billingPayments, plans, subscriptions } from '../drizz
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   getAdminFinanceQueue,
+  getAgentBillingWorkspace,
   getAgencyBillingWorkspace,
   getBillingDocumentForUser,
   getDeveloperBillingWorkspace,
   getManualEftBankDetails,
   listBillingPlans,
   requestAgencyCancellationAtPeriodEnd,
+  requestPaidLaunchAccessInvoice,
   requestDeveloperLaunchAccessInvoice,
   restoreAgencySubscription,
   reviewManualPayment,
   startAgencyManualCheckout,
   submitAgencyPaymentProof,
+  submitPaidLaunchAccessPaymentProof,
   submitDeveloperPaymentProof,
   updateSubscriptionLifecycle,
   type BillingCycle,
@@ -135,6 +138,16 @@ export const billingRouter = {
     return getDeveloperBillingWorkspace(requireUser(ctx));
   }),
 
+  agentWorkspace: protectedProcedure.query(async ({ ctx }) => {
+    return getAgentBillingWorkspace(requireUser(ctx));
+  }),
+
+  requestLaunchAccessInvoice: protectedProcedure
+    .input(z.object({ planId: z.number().int().positive().optional() }).optional())
+    .mutation(async ({ ctx, input }) =>
+      requestPaidLaunchAccessInvoice({ user: requireUser(ctx), planId: input?.planId }),
+    ),
+
   requestDeveloperLaunchAccessInvoice: protectedProcedure.mutation(async ({ ctx }) => {
     return requestDeveloperLaunchAccessInvoice({ user: requireUser(ctx) });
   }),
@@ -143,6 +156,21 @@ export const billingRouter = {
     .input(submitPaymentProofSchema)
     .mutation(async ({ ctx, input }) =>
       submitDeveloperPaymentProof({
+        user: requireUser(ctx),
+        invoiceId: input.invoiceId,
+        amount: Math.round(input.amount),
+        bankReference: input.bankReference,
+        payerName: input.payerName,
+        paymentDate: input.paymentDate,
+        notes: input.notes,
+        file: input.file,
+      }),
+    ),
+
+  submitLaunchAccessPaymentProof: protectedProcedure
+    .input(submitPaymentProofSchema)
+    .mutation(async ({ ctx, input }) =>
+      submitPaidLaunchAccessPaymentProof({
         user: requireUser(ctx),
         invoiceId: input.invoiceId,
         amount: Math.round(input.amount),

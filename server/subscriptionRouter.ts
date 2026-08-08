@@ -46,6 +46,14 @@ function rejectLegacyDeveloperTrialCategory() {
   });
 }
 
+function rejectLegacyAgencyTrialCategory() {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message:
+      'Legacy agency free trials are retired. Request Agency Launch Access through the canonical commercial catalog and verified billing authority.',
+  });
+}
+
 function rejectLegacyUserCommercialPath(ctx: {
   user: { id: number; role?: string | null } | null;
 }) {
@@ -161,6 +169,7 @@ export const subscriptionRouter = router({
    */
   startTrial: protectedProcedure.input(startTrialSchema).mutation(async ({ ctx, input }) => {
     if (input.category === 'agent') rejectLegacyAgentCommercialPath(ctx);
+    if (input.category === 'agency') rejectLegacyAgencyTrialCategory();
     if (input.category === 'developer') rejectLegacyDeveloperTrialCategory();
     try {
       const subscription = await subscriptionService.startTrial(getUserId(ctx), input.category);
