@@ -21,6 +21,10 @@ import {
   verifySearchToLeadScenario,
 } from '../server/_core/databaseAuthority/dataAdapters/searchToLeadScenario';
 import {
+  prepareListingPreviewFixture,
+  verifyListingPreviewFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/listingPreviewFixture';
+import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
@@ -56,7 +60,9 @@ type Command =
   | 'reference:prepare'
   | 'reference:verify'
   | 'scenario:prepare'
-  | 'scenario:verify';
+  | 'scenario:verify'
+  | 'listing-preview:prepare'
+  | 'listing-preview:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -210,8 +216,27 @@ async function run(command: Command): Promise<void> {
     command === 'reference:prepare' ||
     command === 'reference:verify' ||
     command === 'scenario:prepare' ||
-    command === 'scenario:verify'
+    command === 'scenario:verify' ||
+    command === 'listing-preview:prepare' ||
+    command === 'listing-preview:verify'
   ) {
+    if (command.startsWith('listing-preview:')) {
+      const isPrepare = command.endsWith(':prepare');
+      const operation = isPrepare ? 'demo-seed' : 'verification';
+      const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+      const decision = authorizationFor(authority);
+      const connection = await createAuthoritySqlConnection(authority, decision);
+      try {
+        const evidence = isPrepare
+          ? await prepareListingPreviewFixture({ authority, decision, connection })
+          : await verifyListingPreviewFixture({ authority, decision, connection });
+        print(evidence);
+      } finally {
+        await connection.end();
+      }
+      return;
+    }
+
     const isReference = command.startsWith('reference:');
     const isPrepare = command.endsWith(':prepare');
     const operation = isPrepare
@@ -274,6 +299,8 @@ const commands = new Set<Command>([
   'reference:verify',
   'scenario:prepare',
   'scenario:verify',
+  'listing-preview:prepare',
+  'listing-preview:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

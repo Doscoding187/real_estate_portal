@@ -9,6 +9,7 @@ import { persist } from 'zustand/middleware';
 import type {
   ListingWizardState,
   ListingAction,
+  ListingIntent,
   PropertyType,
   PricingFields,
   PropertyDetails,
@@ -17,17 +18,20 @@ import type {
   ValidationError,
   ListingBadge,
 } from '../../../shared/listing-types';
+import { listingIntentToAction } from '../../../shared/listing-types';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
 interface ListingWizardStore extends ListingWizardState {
   // Navigation
   goToStep: (step: number) => void;
-  nextStep: () => void;
+  nextStep: () => boolean;
   prevStep: () => void;
   markStepComplete: (step: number) => void;
+  canAdvanceFromStep: (step: number) => boolean;
 
-  // Step 1: Action
+  // Step 1: Listing intent (mapped to the legacy action transport field)
+  setListingIntent: (intent: ListingIntent) => void;
   setAction: (action: ListingAction) => void;
 
   // Step 1.5: Badges
@@ -93,6 +97,210 @@ const initialState: ListingWizardState = {
   status: 'draft',
 };
 
+type WizardNavigationState = Pick<
+  ListingWizardState,
+  | 'action'
+  | 'propertyType'
+  | 'title'
+  | 'description'
+  | 'pricing'
+  | 'location'
+  | 'media'
+  | 'mainMediaId'
+>;
+
+const hasPositiveAmount = (value: unknown): boolean =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0;
+
+const propertyDetailsForType = (propertyType: PropertyType): readonly string[] => {
+  const commonResidential = [
+    'bedrooms',
+    'bathrooms',
+    'parkingType',
+    'parkingCount',
+    'garages',
+    'amenities',
+    'amenitiesFeatures',
+  ];
+
+  switch (propertyType) {
+    case 'apartment':
+      return [
+        ...commonResidential,
+        'unitSizeM2',
+        'floorNumber',
+        'propertySettings',
+        'levies',
+        'ratesTaxes',
+        'balcony',
+        'petFriendly',
+      ];
+    case 'house':
+      return [
+        ...commonResidential,
+        'houseAreaM2',
+        'erfSizeM2',
+        'garden',
+        'pool',
+        'boundaryWalls',
+        'security',
+        'ratesTaxes',
+      ];
+    case 'townhouse':
+    case 'cluster_home':
+      return [
+        ...commonResidential,
+        'unitSizeM2',
+        'houseAreaM2',
+        'erfSizeM2',
+        'floorNumber',
+        'garden',
+        'pool',
+        'security',
+        'ratesTaxes',
+      ];
+    case 'farm':
+      return [
+        'landSizeHa',
+        'landSizeUnit',
+        'zoningAgricultural',
+        'waterSources',
+        'waterSource',
+        'electricitySupply',
+        'irrigation',
+        'farmSuitability',
+        'residenceIncluded',
+        'amenitiesFeatures',
+      ];
+    case 'plot':
+    case 'land':
+      return [
+        'landSizeM2OrHa',
+        'landSizeUnit',
+        'zoning',
+        'servicesAvailable',
+        'topography',
+        'developmentRights',
+        'boundaryFences',
+        'amenitiesFeatures',
+      ];
+    case 'commercial':
+      return [
+        'subtype',
+        'floorAreaM2',
+        'parkingBays',
+        'floorLevel',
+        'loadingBays',
+        'powerSupply',
+        'zoningBusinessUse',
+        'amenitiesCommercial',
+        'pricePerM2',
+        'amenitiesFeatures',
+      ];
+    case 'shared_living':
+      return [
+        'roomsAvailable',
+        'bathroomTypePerRoom',
+        'kitchenType',
+        'occupancyType',
+        'furnished',
+        'internetIncluded',
+        'depositRequired',
+        'amenitiesFeatures',
+      ];
+    default:
+      return ['amenitiesFeatures'];
+  }
+};
+
+const additionalInfoForType = (propertyType: PropertyType): readonly string[] => {
+  const common = ['amenitiesFeatures'];
+  const residential = [
+    'furnishingStatus',
+    'flooring',
+    'petPolicy',
+    'roofType',
+    'wallType',
+    'windowType',
+    'security',
+    'securityFeatures',
+    'outdoorFeatures',
+  ];
+
+  switch (propertyType) {
+    case 'apartment':
+    case 'house':
+    case 'townhouse':
+    case 'cluster_home':
+      return [...common, ...residential];
+    case 'farm':
+      return [...common, 'arableLandHa', 'grazingLandHa', 'irrigationType', 'waterSources', 'fencing', 'topography'];
+    case 'commercial':
+      return [...common, 'grade', 'airConditioning', 'internetAccess', 'loadingDocks', 'truckAccess', 'parkingRatio'];
+    case 'shared_living':
+      return [...common, 'houseRules', 'billsIncluded', 'minimumStayMonths'];
+    case 'plot':
+    case 'land':
+    default:
+      return common;
+  }
+};
+
+const retainKeys = (value: unknown, keys: readonly string[]): Record<string, any> | undefined => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const source = value as Record<string, any>;
+  const retained = Object.fromEntries(
+    keys.filter(key => source[key] !== undefined).map(key => [key, source[key]]),
+  );
+  return Object.keys(retained).length > 0 ? retained : undefined;
+};
+
+/**
+ * The wizard shell owns forward-navigation prerequisites. Individual steps
+ * still own their detailed validation, but the shell must never let a user
+ * bypass a required step by clicking Next or a future progress step.
+ */
+export const canAdvanceFromStep = (state: WizardNavigationState, step: number): boolean => {
+  switch (step) {
+    case 1:
+      // Auction remains a legacy transport value, not a current Step 1 intent.
+      return state.action === 'sell' || state.action === 'rent';
+    case 2:
+      return Boolean(state.propertyType);
+    case 3:
+      return state.title.trim().length >= 10 && state.description.trim().length >= 50;
+    case 4:
+      // Additional information is conditional and may be empty for MVP.
+      return true;
+    case 5: {
+      const pricing = state.pricing as Record<string, unknown> | undefined;
+      if (!pricing) return false;
+      if (state.action === 'sell') return hasPositiveAmount(pricing.askingPrice);
+      if (state.action === 'rent') {
+        return hasPositiveAmount(pricing.monthlyRent) && hasPositiveAmount(pricing.deposit);
+      }
+      // Preserve the legacy auction shape for already-loaded records without
+      // making it selectable from the current authoring journey.
+      return hasPositiveAmount(pricing.startingBid);
+    }
+    case 6: {
+      const location = state.location;
+      return Boolean(
+        location &&
+        location.address.trim() &&
+        location.city.trim() &&
+        location.province.trim() &&
+        Number.isFinite(location.latitude) &&
+        Number.isFinite(location.longitude),
+      );
+    }
+    case 7:
+      return state.media.length > 0 && Boolean(state.mainMediaId);
+    default:
+      return false;
+  }
+};
+
 export const useListingWizardStore = create<ListingWizardStore>()(
   persist(
     (set, get) => ({
@@ -100,15 +308,47 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Navigation
       goToStep: step => {
-        const maxStep = Math.max(...get().completedSteps, get().currentStep);
-        if (step <= maxStep + 1) {
+        const state = get();
+        const current = state.currentStep;
+
+        if (step < 1 || step > 8) return;
+
+        // Backward navigation remains freely available.
+        if (step <= current) {
           set({ currentStep: step });
+          return;
+        }
+
+        const completedPrerequisites = Array.from(
+          { length: step - 1 },
+          (_, index) => index + 1,
+        ).every(prerequisite => state.completedSteps.includes(prerequisite));
+        const canOpenCompletedStep = state.completedSteps.includes(step) && completedPrerequisites;
+        const canOpenNextStep = step === current + 1 && canAdvanceFromStep(state, current);
+
+        if (canOpenCompletedStep || canOpenNextStep) {
+          set({
+            currentStep: step,
+            completedSteps: canOpenNextStep
+              ? Array.from(new Set([...state.completedSteps, current])).sort((a, b) => a - b)
+              : state.completedSteps,
+          });
         }
       },
 
       nextStep: () => {
-        const current = get().currentStep;
-        set({ currentStep: current + 1 });
+        const state = get();
+        const current = state.currentStep;
+
+        if (current >= 8 || !canAdvanceFromStep(state, current)) return false;
+
+        set({
+          currentStep: current + 1,
+          completedSteps: Array.from(new Set([...state.completedSteps, current])).sort(
+            (a, b) => a - b,
+          ),
+        });
+        return true;
       },
 
       prevStep: () => {
@@ -118,6 +358,8 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
       },
 
+      canAdvanceFromStep: step => canAdvanceFromStep(get(), step),
+
       markStepComplete: step => {
         const completed = get().completedSteps;
         if (!completed.includes(step)) {
@@ -125,7 +367,12 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
       },
 
-      // Step 1: Action
+      // Step 1: Listing intent
+      setListingIntent: intent => {
+        set({ action: listingIntentToAction(intent), pricing: undefined });
+      },
+
+      // Legacy/API transport compatibility
       setAction: action => {
         set({ action });
         // Clear pricing when action changes
@@ -139,9 +386,25 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Step 2: Property Type
       setPropertyType: propertyType => {
-        set({ propertyType });
-        // Clear property details when type changes
-        set({ propertyDetails: undefined });
+        const state = get();
+        if (state.propertyType === propertyType) return;
+
+        set({
+          propertyType,
+          // Keep only facts whose semantics survive the type change. Basic
+          // information and badges are entirely type/category-driven in the
+          // current engine, so retaining either would create hidden stale
+          // payload state.
+          propertyDetails: retainKeys(state.propertyDetails, propertyDetailsForType(propertyType)) as
+            | Partial<PropertyDetails>
+            | undefined,
+          additionalInfo: retainKeys(
+            state.additionalInfo,
+            additionalInfoForType(propertyType),
+          ) as any,
+          basicInfo: undefined,
+          badges: [],
+        });
       },
 
       // Basic Info

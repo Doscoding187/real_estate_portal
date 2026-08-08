@@ -68,6 +68,7 @@ import {
   assertListingPublicationEntitled,
   isSameListingCommercialOwner,
 } from './services/listingPublicationEntitlementService';
+import { toPublicPropertyType } from '../shared/property-taxonomy';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -2852,7 +2853,7 @@ export async function approveListing(
   const propertyValues: any = {
     title: listing.title,
     description: listing.description,
-    propertyType: listing.propertyType,
+    propertyType: toPublicPropertyType(String(listing.propertyType)),
     listingType:
       listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     transactionType:
@@ -3188,7 +3189,7 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     // Map price based on action type
     price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
     listingType: listing.action, // 'sell', 'rent', 'auction'
-    propertyType: listing.propertyType,
+    propertyType: toPublicPropertyType(String(listing.propertyType)),
     // Extract from propertyDetails JSON
     bedrooms: propertyDetails.bedrooms || 0,
     bathrooms: propertyDetails.bathrooms || 0,

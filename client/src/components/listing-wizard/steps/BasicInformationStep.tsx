@@ -227,7 +227,7 @@ const BasicInformationStep: React.FC = () => {
           <h3 className="text-lg font-bold text-slate-800">
             {propertyType === 'farm'
               ? 'Farm Type'
-              : propertyType === 'land'
+              : propertyType === 'land' || propertyType === 'plot'
                 ? 'Land Type'
                 : 'Property Category'}
           </h3>
@@ -303,7 +303,7 @@ const BasicInformationStep: React.FC = () => {
               </Card>
             ))}
           </div>
-        ) : propertyType === 'land' ? (
+        ) : propertyType === 'land' || propertyType === 'plot' ? (
           /* Land-specific categories */
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
@@ -595,7 +595,7 @@ const BasicInformationStep: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Apartment Highlights */}
-            {propertyType === 'apartment' && (
+            {['apartment', 'townhouse', 'cluster_home'].includes(propertyType) && (
               <>
                 <div>
                   <Label htmlFor="bedrooms" className="text-slate-700">
@@ -625,7 +625,7 @@ const BasicInformationStep: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="unitSizeM2" className="text-slate-700">
-                    Unit Size (m²) *
+                    {propertyType === 'apartment' ? 'Unit Size (m²) *' : 'Property Size (m²) *'}
                   </Label>
                   <Input
                     id="unitSizeM2"
@@ -638,7 +638,7 @@ const BasicInformationStep: React.FC = () => {
                 </div>
                 <div>
                   <Label htmlFor="floorNumber" className="text-slate-700">
-                    Floor Number *
+                    {propertyType === 'apartment' ? 'Floor Number *' : 'Level / Floor *'}
                   </Label>
                   <Input
                     id="floorNumber"
@@ -944,7 +944,8 @@ const BasicInformationStep: React.FC = () => {
       )}
 
       {/* Possession Status & Additional Details */}
-      {action === 'sell' && (propertyType === 'house' || propertyType === 'apartment') && (
+      {action === 'sell' &&
+        ['house', 'apartment', 'townhouse', 'cluster_home'].includes(propertyType) && (
         <Card className="p-6 bg-white/50 backdrop-blur-sm border-slate-200/60 shadow-sm">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
             <div className="p-2 bg-purple-100 rounded-lg">

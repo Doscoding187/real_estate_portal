@@ -36,6 +36,7 @@ import { devRouter } from './devRouter';
 import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
+import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -548,19 +549,7 @@ const appRouterConfig = {
             locationIds: z.array(z.string().trim().max(128)).max(10).optional(),
             searchAreaId: z.string().trim().max(120).optional(),
             searchAreaIds: z.array(z.string().trim().max(120)).max(10).optional(),
-            propertyType: z
-              .enum([
-                'apartment',
-                'house',
-                'villa',
-                'plot',
-                'commercial',
-                'townhouse',
-                'cluster_home',
-                'farm',
-                'shared_living',
-              ])
-              .optional(),
+            propertyType: z.enum(PUBLIC_PROPERTY_TYPES).optional(),
             listingType: z.enum(['sale', 'rent']).optional(),
             listingSource: z.enum(['manual', 'development']).optional(),
             minPrice: z.number().nonnegative().optional(),

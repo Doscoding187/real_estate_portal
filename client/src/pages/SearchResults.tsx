@@ -79,6 +79,8 @@ import { buildPropertiesCompatibilityRedirect } from '@/lib/searchNavigation';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { SearchCardResult } from '@/../../shared/types';
+import type { PublicPropertyType } from '@shared/property-taxonomy';
+import { PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import {
   BUY_PROPERTY_TYPES,
   sanitizeBuySearchFilters,
@@ -286,29 +288,10 @@ export default function SearchResults({
   const publicSearchQueryInput = useMemo(() => {
     const isBuySearch = searchIntent.transactionType === 'for-sale';
     const isRentSearch = searchIntent.transactionType === 'to-rent';
-    const publicPropertyTypes = new Set([
-      'apartment',
-      'house',
-      'villa',
-      'plot',
-      'commercial',
-      'townhouse',
-      'cluster_home',
-      'farm',
-      'shared_living',
-    ]);
+    const publicPropertyTypes: ReadonlySet<string> = new Set(PUBLIC_PROPERTY_TYPES);
     const propertyType =
       typeof filters.propertyType === 'string' && publicPropertyTypes.has(filters.propertyType)
-        ? (filters.propertyType as
-            | 'apartment'
-            | 'house'
-            | 'villa'
-            | 'plot'
-            | 'commercial'
-            | 'townhouse'
-            | 'cluster_home'
-            | 'farm'
-            | 'shared_living')
+        ? (filters.propertyType as PublicPropertyType)
         : undefined;
     const numericFilter = (value: unknown) =>
       typeof value === 'number' && Number.isFinite(value) ? value : undefined;

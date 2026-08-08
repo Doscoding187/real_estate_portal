@@ -31,7 +31,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
   // ============================================================================
   engine.addRule({
     field: 'action',
-    validator: required('Please select an action (Sell, Rent, or Auction)'),
+    validator: required('Please choose For Sale or To Rent'),
     message: 'Action is required',
     trigger: 'submit',
   });
@@ -243,7 +243,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     message: 'Invalid bedrooms',
     trigger: 'blur',
     condition: (context?: ValidationContext) =>
-      ['apartment', 'house'].includes(context?.propertyType || ''),
+      ['apartment', 'house', 'townhouse', 'cluster_home'].includes(context?.propertyType || ''),
   });
 
   // Bathrooms (for residential properties)
@@ -258,7 +258,7 @@ export const createListingValidationEngine = (): ValidationEngine => {
     message: 'Invalid bathrooms',
     trigger: 'blur',
     condition: (context?: ValidationContext) =>
-      ['apartment', 'house'].includes(context?.propertyType || ''),
+      ['apartment', 'house', 'townhouse', 'cluster_home'].includes(context?.propertyType || ''),
   });
 
   // Area/Size validation (various fields based on property type)
@@ -271,7 +271,8 @@ export const createListingValidationEngine = (): ValidationEngine => {
     ),
     message: 'Invalid unit size',
     trigger: 'blur',
-    condition: (context?: ValidationContext) => context?.propertyType === 'apartment',
+    condition: (context?: ValidationContext) =>
+      ['apartment', 'townhouse', 'cluster_home'].includes(context?.propertyType || ''),
   });
 
   engine.addRule({

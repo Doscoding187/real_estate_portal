@@ -157,12 +157,9 @@ const ListingWizard: React.FC = () => {
       if (listing.startingBid) pricing.startingBid = Number(listing.startingBid);
       if (listing.reservePrice) pricing.reservePrice = Number(listing.reservePrice);
       if (listing.leaseTerms) pricing.leaseTerms = listing.leaseTerms;
-      if (listing.availableFrom)
-        pricing.availableFrom = new Date(listing.availableFrom);
-      if (listing.utilitiesIncluded)
-        pricing.utilitiesIncluded = Boolean(listing.utilitiesIncluded);
-      if (listing.auctionDateTime)
-        pricing.auctionDateTime = new Date(listing.auctionDateTime);
+      if (listing.availableFrom) pricing.availableFrom = new Date(listing.availableFrom);
+      if (listing.utilitiesIncluded) pricing.utilitiesIncluded = Boolean(listing.utilitiesIncluded);
+      if (listing.auctionDateTime) pricing.auctionDateTime = new Date(listing.auctionDateTime);
       if (listing.auctionTermsDocumentUrl)
         pricing.auctionTermsDocumentUrl = listing.auctionTermsDocumentUrl;
       if (listing.negotiable) pricing.negotiable = Boolean(listing.negotiable);
@@ -517,7 +514,9 @@ const ListingWizard: React.FC = () => {
       case 5:
         return <PricingStep />;
       case 6:
-        return <LocationStep addressHint={sellerProspectPrefill?.propertyLocation?.address || ''} />;
+        return (
+          <LocationStep addressHint={sellerProspectPrefill?.propertyLocation?.address || ''} />
+        );
       case 7:
         return <MediaUploadStep />;
       case 8:
@@ -532,7 +531,7 @@ const ListingWizard: React.FC = () => {
 
   // Step titles for progress indicator
   const stepTitles = [
-    'Action',
+    'Intent',
     'Type',
     'Basic Info',
     'Additional Info',
@@ -543,8 +542,15 @@ const ListingWizard: React.FC = () => {
   ];
 
   // Generate steps for progress indicator with error highlighting
+  const canAdvanceFromCurrentStep = store.canAdvanceFromStep(store.currentStep);
   const progressSteps = useMemo(() => {
-    const steps = generateSteps(stepTitles, store.currentStep, store.completedSteps);
+    const steps = generateSteps(
+      stepTitles,
+      store.currentStep,
+      store.completedSteps,
+      undefined,
+      canAdvanceFromCurrentStep,
+    );
 
     // Add error counts if validation errors exist
     if (validationErrors && validationErrors.affectedSteps.length > 0) {
@@ -560,7 +566,13 @@ const ListingWizard: React.FC = () => {
     }
 
     return steps;
-  }, [stepTitles, store.currentStep, store.completedSteps, validationErrors]);
+  }, [
+    stepTitles,
+    store.currentStep,
+    store.completedSteps,
+    validationErrors,
+    canAdvanceFromCurrentStep,
+  ]);
 
   // Calculate readiness
   const readiness = useMemo(() => {
@@ -747,7 +759,9 @@ const ListingWizard: React.FC = () => {
                   </p>
                 </div>
                 {readinessMissingItems.length === 0 ? (
-                  <p className="mt-3 text-sm text-green-700">All readiness requirements are complete.</p>
+                  <p className="mt-3 text-sm text-green-700">
+                    All readiness requirements are complete.
+                  </p>
                 ) : (
                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                     {readinessMissingItems.map((item, index) => (
@@ -775,7 +789,7 @@ const ListingWizard: React.FC = () => {
                   Previous
                 </Button>
 
-                {/* Save Draft Button */}
+                {/* Local-only draft checkpoint until durable server drafts are implemented. */}
                 <Button
                   variant="outline"
                   onClick={handleSaveDraft}
@@ -785,12 +799,12 @@ const ListingWizard: React.FC = () => {
                   {draftSaved ? (
                     <>
                       <Check className="h-4 w-4" />
-                      Saved
+                      Saved on this device
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      {isSavingDraft ? 'Saving...' : 'Save Draft'}
+                      {isSavingDraft ? 'Saving...' : 'Save on this device'}
                     </>
                   )}
                 </Button>
@@ -799,7 +813,7 @@ const ListingWizard: React.FC = () => {
               {store.currentStep < 8 ? (
                 <Button
                   onClick={store.nextStep}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canAdvanceFromCurrentStep}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
                 >
                   Next

@@ -478,6 +478,11 @@
       "purpose": "Bounded additive consent, idempotency, and lead-delivery state for the public search-to-lead journey."
     },
     {
+      "path": "server/migrations/0002_canonical_property_taxonomy.sql",
+      "classification": "canonical active",
+      "purpose": "Approved exceptional expansion of the authored listing property-type vocabulary for PLE-2B taxonomy compatibility."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

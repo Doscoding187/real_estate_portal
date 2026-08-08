@@ -1,11 +1,53 @@
+import type {
+  CanonicalPropertyType,
+  LegacySourcePropertyType,
+  ListingPropertyType,
+  PropertyListingIntent,
+} from './property-taxonomy';
+
+export { PROPERTY_TYPE_TEMPLATES } from './property-taxonomy';
+export type {
+  ActiveManualPropertyType,
+  CanonicalPropertyType,
+  LegacySourcePropertyType,
+  ListingPropertyType,
+  PublicPropertyType,
+  PropertyListingIntent,
+} from './property-taxonomy';
+
 /**
  * Smart Listing Wizard - TypeScript Types
  *
  * Comprehensive type definitions for the listing creation wizard
  */
 
-// Step 1: Action Types
+// Step 1: Listing intent
+//
+// The authoring experience exposes the consumer-facing commercial intent. The
+// existing ListingAction values remain the transport contract for now so that
+// the bounded Step 1 correction does not silently rewrite legacy API payloads.
+export type ListingIntent = PropertyListingIntent;
 export type ListingAction = 'sell' | 'rent' | 'auction';
+
+export const LISTING_INTENT_TO_ACTION: Record<
+  ListingIntent,
+  Extract<ListingAction, 'sell' | 'rent'>
+> = {
+  sale: 'sell',
+  rent: 'rent',
+};
+
+export const listingIntentToAction = (
+  intent: ListingIntent,
+): Extract<ListingAction, 'sell' | 'rent'> => LISTING_INTENT_TO_ACTION[intent];
+
+export const listingActionToIntent = (
+  action: ListingAction | null | undefined,
+): ListingIntent | undefined => {
+  if (action === 'sell') return 'sale';
+  if (action === 'rent') return 'rent';
+  return undefined;
+};
 
 // Listing Badges
 export type ListingBadge =
@@ -23,7 +65,12 @@ export type ListingBadge =
   | 'export_quality';
 
 // Step 2: Property Types
-export type PropertyType = 'apartment' | 'house' | 'farm' | 'land' | 'commercial' | 'shared_living';
+//
+// `ListingPropertyType` is the complete source-column compatibility contract.
+// `CanonicalPropertyType` is the product vocabulary; `land` and
+// `shared_living` remain readable legacy source values and are not active
+// physical-type choices in the current manual authoring UI.
+export type PropertyType = ListingPropertyType;
 
 // Property-specific field types
 export interface ApartmentFields {
@@ -620,54 +667,6 @@ export const VALIDATION_RULES = {
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
   },
 } as const;
-
-// Property type templates (for UI)
-export const PROPERTY_TYPE_TEMPLATES: Record<
-  PropertyType,
-  {
-    label: string;
-    icon: string;
-    description: string;
-    requiredFields: string[];
-  }
-> = {
-  apartment: {
-    label: 'Apartment',
-    icon: 'Building2',
-    description: 'Flats, units, and sectional title properties',
-    requiredFields: ['bedrooms', 'bathrooms', 'unitSizeM2', 'propertySettings'],
-  },
-  house: {
-    label: 'House',
-    icon: 'Home',
-    description: 'Freestanding homes with land',
-    requiredFields: ['bedrooms', 'bathrooms', 'erfSizeM2', 'houseAreaM2'],
-  },
-  farm: {
-    label: 'Farm',
-    icon: 'Wheat',
-    description: 'Agricultural properties and farms',
-    requiredFields: ['landSizeHa', 'farmSuitability'],
-  },
-  land: {
-    label: 'Land/Plot',
-    icon: 'Map',
-    description: 'Vacant land and development plots',
-    requiredFields: ['landSizeM2OrHa', 'zoning'],
-  },
-  commercial: {
-    label: 'Commercial',
-    icon: 'Store',
-    description: 'Office, retail, industrial properties',
-    requiredFields: ['subtype', 'floorAreaM2'],
-  },
-  shared_living: {
-    label: 'Shared Living',
-    icon: 'Users',
-    description: 'Student accommodation, co-living spaces',
-    requiredFields: ['roomsAvailable', 'bathroomTypePerRoom'],
-  },
-};
 
 // Badge templates (for UI)
 export const BADGE_TEMPLATES: Record<

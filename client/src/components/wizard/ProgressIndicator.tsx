@@ -223,12 +223,17 @@ export const generateSteps = (
   currentStep: number,
   completedSteps: number[],
   errorSteps?: number[],
+  canAdvanceFromCurrentStep = false,
 ): Step[] => {
   return stepTitles.map((title, index) => {
     const stepNumber = index + 1;
     const isComplete = completedSteps.includes(stepNumber) || stepNumber < currentStep;
     const isCurrent = stepNumber === currentStep;
-    const isAccessible = isComplete || isCurrent || stepNumber === currentStep + 1;
+    const isAccessible =
+      isComplete ||
+      isCurrent ||
+      completedSteps.includes(stepNumber) ||
+      (stepNumber === currentStep + 1 && canAdvanceFromCurrentStep);
     const hasError = errorSteps?.includes(stepNumber) || false;
 
     return {

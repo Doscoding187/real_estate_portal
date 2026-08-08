@@ -35,7 +35,10 @@ export const listings = mysqlTable(
     propertyType: mysqlEnum([
       'apartment',
       'house',
+      'townhouse',
+      'cluster_home',
       'farm',
+      'plot',
       'land',
       'commercial',
       'shared_living',

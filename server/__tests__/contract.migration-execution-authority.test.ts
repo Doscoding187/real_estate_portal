@@ -288,7 +288,13 @@ describe('migration execution authority', () => {
       parent: baseline?.filename,
       parentChecksum: baseline?.checksum,
     });
-    expect(executionManifest.expectedHead).toBe(incremental?.filename);
+    const latest = executionManifest.migrations.at(-1);
+    expect(latest).toMatchObject({
+      filename: '0002_canonical_property_taxonomy.sql',
+      parent: incremental?.filename,
+      parentChecksum: incremental?.checksum,
+    });
+    expect(executionManifest.expectedHead).toBe(latest?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

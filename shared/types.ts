@@ -1,4 +1,5 @@
 import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from './db-enums';
+import type { PublicPropertyType } from './property-taxonomy';
 
 export type SubscriptionStatus =
   | 'incomplete'
@@ -737,7 +738,7 @@ export interface Property {
   suburb: string;
   city: string;
   province: string;
-  propertyType: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
+  propertyType: PublicPropertyType;
   listingType: 'sale' | 'rent';
   listingSource?: 'manual' | 'development';
   listerType?: 'agent' | 'agency' | 'private';

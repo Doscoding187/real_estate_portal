@@ -25,6 +25,10 @@ import {
   assertListingPublicationEntitled,
   ListingPublicationEntitlementError,
 } from './services/listingPublicationEntitlementService';
+import {
+  getListingAuthoringValidationMessage,
+  LISTING_PROPERTY_TYPES,
+} from '../shared/property-taxonomy';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -156,14 +160,7 @@ function normalizePropertyDetailsForPublicContract(
 
 // Validation schemas
 const listingActionSchema = z.enum(['sell', 'rent', 'auction']);
-const propertyTypeSchema = z.enum([
-  'apartment',
-  'house',
-  'farm',
-  'land',
-  'commercial',
-  'shared_living',
-]);
+const propertyTypeSchema = z.enum(LISTING_PROPERTY_TYPES);
 
 const listingMediaInputSchema = z.object({
   // Existing media uses `existing:<listing_media.id>`; new uploads use their
@@ -182,7 +179,7 @@ const listingMediaInputSchema = z.object({
   processingStatus: z.enum(['pending', 'processing', 'completed', 'failed']).optional().nullable(),
 });
 
-const createListingSchema = z.object({
+const createListingSchemaBase = z.object({
   action: listingActionSchema,
   propertyType: propertyTypeSchema,
   title: z.string().min(10).max(255),
@@ -237,6 +234,17 @@ const createListingSchema = z.object({
   media: z.array(listingMediaInputSchema).optional(),
   status: z.enum(['draft', 'pending_review']).optional(),
   sellerProspectId: z.number().int().positive().optional(),
+});
+
+const createListingSchema = createListingSchemaBase.superRefine((input, context) => {
+  const message = getListingAuthoringValidationMessage(input.action, input.propertyType);
+  if (!message) return;
+
+  context.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: ['propertyType'],
+    message,
+  });
 });
 
 export const listingRouter = router({
@@ -451,7 +459,7 @@ export const listingRouter = router({
     .input(
       z.object({
         id: z.number(),
-        ...createListingSchema.partial().shape,
+        ...createListingSchemaBase.partial().shape,
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -469,6 +477,22 @@ export const listingRouter = router({
             message: 'Not authorized to update this listing',
           });
         }
+
+        const taxonomyChanged =
+          (input.action !== undefined && input.action !== listing.action) ||
+          (input.propertyType !== undefined && input.propertyType !== listing.propertyType);
+        if (taxonomyChanged) {
+          const nextAction = input.action ?? listing.action;
+          const nextPropertyType = input.propertyType ?? listing.propertyType;
+          const taxonomyMessage = getListingAuthoringValidationMessage(
+            nextAction,
+            nextPropertyType,
+          );
+          if (taxonomyMessage) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: taxonomyMessage });
+          }
+        }
+
         const requiresReviewBeforePublicUpdate =
           listing.status === 'published' || listing.status === 'approved';
 
