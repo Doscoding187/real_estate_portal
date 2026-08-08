@@ -59,6 +59,15 @@ function publicResult(input: { city?: string; listingType?: string; pageSize?: n
   };
 }
 
+const provincesWithoutCanonicalReference = [
+  'eastern-cape',
+  'free-state',
+  'limpopo',
+  'mpumalanga',
+  'north-west',
+  'northern-cape',
+] as const;
+
 describe('provincial discovery read model', () => {
   beforeEach(() => {
     getProvinceData.mockResolvedValue({
@@ -120,4 +129,16 @@ describe('provincial discovery read model', () => {
     expect(result?.markets[0].state).toBe('empty');
     expect(result?.marketSnapshot.state).toBe('unavailable');
   });
+
+  it.each(provincesWithoutCanonicalReference)(
+    'returns no transactional read model for %s when canonical province data is absent',
+    async slug => {
+      getProvinceData.mockResolvedValueOnce(null);
+
+      const result = await provincialDiscoveryService.getProvinceData(slug);
+
+      expect(result).toBeNull();
+      expect(searchInventory).not.toHaveBeenCalled();
+    },
+  );
 });
