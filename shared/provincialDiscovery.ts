@@ -68,7 +68,7 @@ const BUY_JOURNEY: ProvincialJourneyConfig = {
   id: 'buy',
   label: 'Buy',
   shortLabel: 'Homes for sale',
-  description: 'Compare live homes and apartments across Gauteng.',
+  description: 'Compare live homes and apartments across the province.',
   ctaLabel: 'See homes for sale',
   state: 'active',
 };
@@ -110,6 +110,85 @@ const COMING_SOON_JOURNEY = (id: ProvincialJourneyId, label: string, reason: str
   unavailableReason: reason,
 });
 
+function deferredJourneys(): ProvincialJourneyConfig[] {
+  return [
+    COMING_SOON_JOURNEY(
+      'land',
+      'Land & plots',
+      'Land inventory is not yet a bounded public journey.',
+    ),
+    COMING_SOON_JOURNEY(
+      'commercial',
+      'Commercial',
+      'Commercial inventory is not yet a bounded public journey.',
+    ),
+    COMING_SOON_JOURNEY(
+      'shared_living',
+      'Shared Living',
+      'Shared Living remains a separate journey until its public search contract is ready.',
+    ),
+  ];
+}
+
+function standardJourneys(): ProvincialJourneyConfig[] {
+  return [BUY_JOURNEY, RENT_JOURNEY, DEVELOPMENTS_JOURNEY, EXPLORE_JOURNEY, ...deferredJourneys()];
+}
+
+function createGenericProvinceConfig(input: {
+  slug: string;
+  name: string;
+  code: string;
+  shortProposition: string;
+  heroKicker: string;
+  heroFallbackImage: string;
+  majorMarkets: readonly ProvincialMarketConfig[];
+}): ProvincialConfig {
+  return {
+    ...input,
+    supportedJourneys: standardJourneys(),
+    featuredNeeds: [
+      {
+        id: `${input.slug}-buy`,
+        label: `Buy in ${input.name}`,
+        description: 'Open the live public Buy journey at province or location level.',
+        journey: 'buy',
+        state: 'active',
+      },
+      {
+        id: `${input.slug}-rent`,
+        label: `Rent in ${input.name}`,
+        description: 'Keep Rent explicit, then refine by a canonical place when useful.',
+        journey: 'rent',
+        state: 'active',
+      },
+      {
+        id: `${input.slug}-explore`,
+        label: `Explore ${input.name} locations`,
+        description: 'Start with a city or locality without being forced through every level.',
+        journey: 'explore',
+        state: 'active',
+      },
+    ],
+    seo: {
+      heading: `Property discovery in ${input.name}`,
+      summary: `${input.name} is a province-level starting point for understanding the market, choosing a property journey and refining directly to a supported location.`,
+      faqs: [
+        {
+          question: 'Can I search a location without walking the full hierarchy?',
+          answer:
+            'Yes. Choose a canonical city, suburb or locality suggestion. Its existing identity is preserved when you continue into the selected journey.',
+        },
+        {
+          question: 'Why are some journeys unavailable?',
+          answer:
+            'Only journeys with a real public destination are active. Deferred journeys remain visible with an honest explanation rather than producing a different search.',
+        },
+      ],
+    },
+    modules: { marketSnapshot: false, inventoryPreview: true, developmentPreview: true },
+  };
+}
+
 export const PROVINCIAL_CONFIGS = {
   gauteng: {
     slug: 'gauteng',
@@ -134,6 +213,11 @@ export const PROVINCIAL_CONFIGS = {
         'commercial',
         'Commercial',
         'Commercial inventory is not yet a bounded public journey.',
+      ),
+      COMING_SOON_JOURNEY(
+        'shared_living',
+        'Shared Living',
+        'Shared Living remains a separate journey until its public search contract is ready.',
       ),
     ],
     majorMarkets: [
@@ -222,7 +306,13 @@ export const PROVINCIAL_CONFIGS = {
     heroKicker: 'The southern gateway · Cape Town and beyond',
     heroFallbackImage:
       'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=2200&q=85',
-    supportedJourneys: [BUY_JOURNEY, RENT_JOURNEY, DEVELOPMENTS_JOURNEY, EXPLORE_JOURNEY],
+    supportedJourneys: [
+      BUY_JOURNEY,
+      RENT_JOURNEY,
+      DEVELOPMENTS_JOURNEY,
+      EXPLORE_JOURNEY,
+      ...deferredJourneys(),
+    ],
     majorMarkets: [
       {
         slug: 'cape-town',
@@ -251,7 +341,7 @@ export const PROVINCIAL_CONFIGS = {
     seo: {
       heading: 'Property discovery in the Western Cape',
       summary:
-        'The same provincial contract can support a metro-led coastal market without changing the Gauteng page contract.',
+        'A metro-led coastal market can use the same province-level discovery contract without forcing a different geography journey.',
       faqs: [],
     },
     modules: { marketSnapshot: true, inventoryPreview: true, developmentPreview: true },
@@ -265,7 +355,7 @@ export const PROVINCIAL_CONFIGS = {
     heroKicker: 'A measured start · Discover what is actually available',
     heroFallbackImage:
       'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85',
-    supportedJourneys: [BUY_JOURNEY, EXPLORE_JOURNEY],
+    supportedJourneys: [BUY_JOURNEY, RENT_JOURNEY, EXPLORE_JOURNEY, ...deferredJourneys()],
     majorMarkets: [
       {
         slug: 'kimberley',
@@ -292,6 +382,146 @@ export const PROVINCIAL_CONFIGS = {
     },
     modules: { marketSnapshot: false, inventoryPreview: true, developmentPreview: false },
   },
+  'kwazulu-natal': createGenericProvinceConfig({
+    slug: 'kwazulu-natal',
+    name: 'KwaZulu-Natal',
+    code: 'KZN',
+    shortProposition: 'A province-wide starting point for Durban, the coast and inland markets.',
+    heroKicker: 'The warm coast · Durban and beyond',
+    heroFallbackImage:
+      'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=2200&q=85',
+    majorMarkets: [
+      {
+        slug: 'durban',
+        name: 'Durban',
+        eyebrow: 'The coastal metro',
+        description: 'Coastal neighbourhoods, established suburbs and connected urban stock.',
+        areaSlugs: ['umhlanga', 'berea', 'ballito'],
+      },
+      {
+        slug: 'pietermaritzburg',
+        name: 'Pietermaritzburg',
+        eyebrow: 'The inland capital',
+        description: 'A more measured inland market with its own neighbourhood character.',
+        areaSlugs: [],
+      },
+    ],
+  }),
+  'eastern-cape': createGenericProvinceConfig({
+    slug: 'eastern-cape',
+    name: 'Eastern Cape',
+    code: 'EC',
+    shortProposition:
+      'Find a clear starting point across the province’s coastal and inland markets.',
+    heroKicker: 'The eastern coastline · Gqeberha to East London',
+    heroFallbackImage:
+      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85',
+    majorMarkets: [
+      {
+        slug: 'gqeberha',
+        name: 'Gqeberha',
+        eyebrow: 'The Algoa Bay market',
+        description: 'A coastal urban market with established residential neighbourhoods.',
+        areaSlugs: [],
+      },
+      {
+        slug: 'east-london',
+        name: 'East London',
+        eyebrow: 'The Buffalo City market',
+        description: 'Coastal and suburban property choices around a focused urban centre.',
+        areaSlugs: [],
+      },
+    ],
+  }),
+  'free-state': createGenericProvinceConfig({
+    slug: 'free-state',
+    name: 'Free State',
+    code: 'FS',
+    shortProposition:
+      'A straightforward province-level route into homes, rentals and local markets.',
+    heroKicker: 'The central heartland · Start with Bloemfontein',
+    heroFallbackImage:
+      'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=2200&q=85',
+    majorMarkets: [
+      {
+        slug: 'bloemfontein',
+        name: 'Bloemfontein',
+        eyebrow: 'The provincial centre',
+        description: 'A focused city market where location context helps customers orient quickly.',
+        areaSlugs: [],
+      },
+    ],
+  }),
+  limpopo: createGenericProvinceConfig({
+    slug: 'limpopo',
+    name: 'Limpopo',
+    code: 'LP',
+    shortProposition:
+      'Discover the province at the pace of the places and properties you are considering.',
+    heroKicker: 'The northern gateway · Start with Polokwane',
+    heroFallbackImage:
+      'https://images.unsplash.com/photo-1511497584788-876760111969?auto=format&fit=crop&w=2200&q=85',
+    majorMarkets: [
+      {
+        slug: 'polokwane',
+        name: 'Polokwane',
+        eyebrow: 'The provincial centre',
+        description: 'A practical starting point for urban and surrounding property choices.',
+        areaSlugs: [],
+      },
+    ],
+  }),
+  mpumalanga: createGenericProvinceConfig({
+    slug: 'mpumalanga',
+    name: 'Mpumalanga',
+    code: 'MP',
+    shortProposition:
+      'Compare the province’s main markets and move into a deliberate property journey.',
+    heroKicker: 'The highveld edge · Mbombela and beyond',
+    heroFallbackImage:
+      'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=2200&q=85',
+    majorMarkets: [
+      {
+        slug: 'mbombela',
+        name: 'Mbombela',
+        eyebrow: 'The provincial centre',
+        description: 'A focused market with a clear city-first discovery path.',
+        areaSlugs: [],
+      },
+      {
+        slug: 'emalahleni',
+        name: 'eMalahleni',
+        eyebrow: 'The eastern highveld',
+        description: 'A connected inland market for customers comparing local options.',
+        areaSlugs: [],
+      },
+    ],
+  }),
+  'north-west': createGenericProvinceConfig({
+    slug: 'north-west',
+    name: 'North West',
+    code: 'NW',
+    shortProposition: 'A province-level discovery hub for urban, commuter and regional markets.',
+    heroKicker: 'The western corridor · Rustenburg and beyond',
+    heroFallbackImage:
+      'https://images.unsplash.com/photo-1533130061792-64b345e4a833?auto=format&fit=crop&w=2200&q=85',
+    majorMarkets: [
+      {
+        slug: 'rustenburg',
+        name: 'Rustenburg',
+        eyebrow: 'The platinum belt',
+        description: 'A regional market with a clear starting point for homes and rentals.',
+        areaSlugs: [],
+      },
+      {
+        slug: 'potchefstroom',
+        name: 'Potchefstroom',
+        eyebrow: 'The university town',
+        description: 'A distinct town market worth exploring on its own terms.',
+        areaSlugs: [],
+      },
+    ],
+  }),
 } satisfies Record<string, ProvincialConfig>;
 
 export function getProvincialConfig(slug: string): ProvincialConfig | undefined {
@@ -326,6 +556,7 @@ export interface ProvincialLocationQueryState {
   journey?: ProvincialJourneyId;
   unsupportedJourney?: string;
   locationId?: string;
+  locationIds?: string[];
   locationLevel?: 'province' | 'city' | 'suburb';
   provinceSlug?: string;
   citySlug?: string;
@@ -363,6 +594,8 @@ function readJourney(
     development: 'developments',
     explore: 'explore',
     areas: 'explore',
+    shared_living: 'shared_living',
+    shared: 'shared_living',
   };
   const journey = aliases[raw];
   return journey ? { journey } : { unsupportedJourney: raw };
@@ -385,12 +618,23 @@ export function resolveProvincialQueryState(
       .trim()
       .toLowerCase() || undefined;
   const locationId = String(searchParams.get('locationId') || '').trim() || undefined;
+  const locationIds = searchParams
+    .getAll('locationIds')
+    .map(value => value.trim())
+    .filter(Boolean);
   const parsedLocationId = parseCanonicalLocationId(locationId);
+  const parsedLocationIds = locationIds.map(parseCanonicalLocationId);
+  const multiLocationLevel =
+    parsedLocationIds.length > 0 && parsedLocationIds.every(Boolean)
+      ? parsedLocationIds.every(value => value?.level === parsedLocationIds[0]?.level)
+        ? parsedLocationIds[0]?.level
+        : undefined
+      : undefined;
   const requestedLevel = suburbSlug
     ? 'suburb'
     : citySlug
       ? 'city'
-      : parsedLocationId?.level || 'province';
+      : parsedLocationId?.level || multiLocationLevel || 'province';
 
   const filters = sanitizeBuySearchFilters({
     propertyType: searchParams.get('propertyType') || undefined,
@@ -412,7 +656,8 @@ export function resolveProvincialQueryState(
   return {
     ...journeyState,
     locationId,
-    locationLevel: parsedLocationId?.level,
+    ...(locationIds.length > 0 ? { locationIds } : {}),
+    locationLevel: parsedLocationId?.level || multiLocationLevel,
     provinceSlug,
     citySlug,
     suburbSlug,
@@ -423,7 +668,9 @@ export function resolveProvincialQueryState(
       ...(maxBathrooms !== undefined ? { maxBathrooms } : {}),
     },
     invalidLocationIdentity: Boolean(
-      locationId && (!parsedLocationId || parsedLocationId.level !== requestedLevel),
+      (locationId && (!parsedLocationId || parsedLocationId.level !== requestedLevel)) ||
+      (locationIds.length > 0 &&
+        (Boolean(locationId) || parsedLocationIds.some(value => !value) || !multiLocationLevel)),
     ),
   };
 }

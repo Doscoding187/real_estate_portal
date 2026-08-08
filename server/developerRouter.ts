@@ -1404,25 +1404,10 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'shared_living') {
-          const { propertySearchService } = await import('./services/propertySearchService');
-          const sharedListingTypes: Array<'rent' | 'sale'> = ['rent'];
-          const results = await Promise.all(
-            sharedListingTypes.map(listingType =>
-              propertySearchService.searchProperties(
-                {
-                  province: locationFilter.province,
-                  city: locationFilter.city,
-                  suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
-                  listingType,
-                } as any,
-                'date_desc',
-                1,
-                limit,
-              ),
-            ),
-          );
-          const merged = results.flatMap(r => r.properties || []).slice(0, limit);
-          return { items: merged.map(mapListing), source: 'listings' };
+          // Shared Living has its own journey identity. Until its executable
+          // inventory contract exists, fail closed instead of using Rent as a
+          // proxy and returning an unrelated rental feed.
+          return { items: [], source: 'listings' };
         }
 
         // commercial

@@ -338,6 +338,91 @@ describe('DevelopmentDerivedListingService', () => {
     expect(parts.params).toEqual(expect.arrayContaining([1, 'approved', 1, 'for_sale']));
   });
 
+  it('returns development-derived Rent inventory only for an explicit for_rent source', async () => {
+    const rentRow = {
+      developmentId: 84,
+      developmentName: 'Rental Heights',
+      developmentSlug: 'rental-heights',
+      developmentStatus: 'launching-soon',
+      developmentType: 'residential',
+      transactionType: 'for_rent',
+      city: 'Johannesburg',
+      suburb: 'Rosebank',
+      province: 'Gauteng',
+      structuralType: 'apartment',
+      bedrooms: 2,
+      bathrooms: 1,
+      monthlyRentFrom: '12000.00',
+      monthlyRentTo: '14000.00',
+      developmentImages: '[]',
+      unitBaseMedia: '{}',
+      developmentCreatedAt: new Date('2026-04-01T00:00:00.000Z'),
+      unitCreatedAt: new Date('2026-04-02T00:00:00.000Z'),
+      availableUnits: 4,
+      totalUnits: 8,
+      unitTypeId: 'unit-rent-2-bed',
+    };
+
+    mockOrderBy.mockImplementationOnce(async () => {
+      const whereClause = mockWhere.mock.calls[mockWhere.mock.calls.length - 1]?.[0];
+      const parts = collectSqlParts(whereClause);
+      expect(parts.params).toContain('for_rent');
+      return [rentRow];
+    });
+
+    const result = await developmentDerivedListingService.searchListings(
+      {
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        listingType: 'rent',
+      },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({
+      listingType: 'rent',
+      transactionType: 'for_rent',
+      price: 12000,
+    });
+  });
+
+  it.each(['for_sale', 'unknown', undefined])(
+    'does not admit a %s development source into a Rent query',
+    async sourceTransactionType => {
+      const sourceRow = { transactionType: sourceTransactionType };
+      mockOrderBy.mockImplementationOnce(async () => {
+        const whereClause = mockWhere.mock.calls[mockWhere.mock.calls.length - 1]?.[0];
+        const parts = collectSqlParts(whereClause);
+
+        expect(parts.params).toContain('for_rent');
+        return sourceRow.transactionType === 'for_rent' ? [sourceRow] : [];
+      });
+
+      const result = await developmentDerivedListingService.searchListings(
+        {
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          listingType: 'rent',
+        },
+        'date_desc',
+        1,
+        20,
+      );
+
+      const whereClause = mockWhere.mock.calls[mockWhere.mock.calls.length - 1]?.[0];
+      const parts = collectSqlParts(whereClause);
+
+      expect(parts.params).toContain('for_rent');
+      expect(result.items).toHaveLength(0);
+      expect(result.total).toBe(0);
+      expect(sourceTransactionType).not.toBe('for_rent');
+    },
+  );
+
   it('prefers richer unit content when applying organic date-desc ranking', async () => {
     mockOrderBy.mockResolvedValueOnce([
       {

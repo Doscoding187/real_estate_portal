@@ -57,7 +57,7 @@ function ProvinceLoadingState() {
     <div
       className="provincial-page provincial-page__skeleton"
       aria-busy="true"
-      aria-label="Loading Gauteng discovery"
+      aria-label="Loading province discovery"
     >
       <ListingNavbar neutralSearch />
       <div className="provincial-page__skeleton-hero" />
@@ -200,7 +200,10 @@ export default function ProvincePage({ params }: ProvincePageProps) {
             <p className="provincial-eyebrow">{config.heroKicker}</p>
             <h1 id="province-page-title">Explore {data.province.name}</h1>
             <p className="provincial-hero__proposition">{config.shortProposition}</p>
-            <div className="provincial-hero__signal" aria-label="Gauteng discovery signals">
+            <div
+              className="provincial-hero__signal"
+              aria-label={`${data.province.name} discovery signals`}
+            >
               <span>
                 <strong>
                   {data.inventoryPreview.total > 0
@@ -226,14 +229,14 @@ export default function ProvincePage({ params }: ProvincePageProps) {
               href={heroCampaign.landingPageUrl || undefined}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`Sponsored: ${heroCampaign.altText || 'Explore this Gauteng opportunity'}`}
+              aria-label={`Sponsored: ${heroCampaign.altText || `Explore this ${data.province.name} opportunity`}`}
               style={{ backgroundImage: `url(${heroCampaign.imageUrl})` }}
             >
               <span className="provincial-hero__billboard-overlay">
                 <span className="provincial-hero__billboard-label">Sponsored</span>
                 <span>
                   <strong className="sr-only">
-                    {heroCampaign.altText || 'Featured Gauteng opportunity'}
+                    {heroCampaign.altText || `Featured ${data.province.name} opportunity`}
                   </strong>
                   <span className="provincial-hero__billboard-link">
                     Discover the opportunity <ArrowRight size={15} aria-hidden="true" />
@@ -242,7 +245,10 @@ export default function ProvincePage({ params }: ProvincePageProps) {
               </span>
             </a>
           ) : (
-            <div className="provincial-hero__billboard" aria-label="Gauteng discovery guidance">
+            <div
+              className="provincial-hero__billboard"
+              aria-label={`${data.province.name} discovery guidance`}
+            >
               <span className="provincial-hero__billboard-label">
                 <MapPin size={13} aria-hidden="true" /> Built for direct discovery
               </span>
@@ -395,61 +401,66 @@ export default function ProvincePage({ params }: ProvincePageProps) {
           </div>
         </section>
 
-        <section className="provincial-rail provincial-section" aria-labelledby="snapshot-heading">
-          <div className="provincial-section__heading">
-            <div>
-              <p className="provincial-eyebrow">What is live now</p>
-              <h2 id="snapshot-heading">A useful snapshot, without invented certainty.</h2>
-              <p>
-                These are public inventory signals, not concluded sales or valuations. Pricing stays
-                unavailable until the method is defensible.
-              </p>
+        {config.modules.marketSnapshot ? (
+          <section
+            className="provincial-rail provincial-section"
+            aria-labelledby="snapshot-heading"
+          >
+            <div className="provincial-section__heading">
+              <div>
+                <p className="provincial-eyebrow">What is live now</p>
+                <h2 id="snapshot-heading">A useful snapshot, without invented certainty.</h2>
+                <p>
+                  These are public inventory signals, not concluded sales or valuations. Pricing
+                  stays unavailable until the method is defensible.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="provincial-snapshot">
-            <article className="provincial-snapshot__card">
-              <p className="provincial-snapshot__label">For sale</p>
-              <p className="provincial-snapshot__value">
-                {journeyCountLabel(data.journeyCounts.buy)}
-              </p>
-              <p className="provincial-snapshot__meta">
-                Public Buy inventory · same search authority used by results.
-              </p>
-            </article>
-            <article className="provincial-snapshot__card">
-              <p className="provincial-snapshot__label">For rent</p>
-              <p className="provincial-snapshot__value">
-                {journeyCountLabel(data.journeyCounts.rent)}
-              </p>
-              <p className="provincial-snapshot__meta">
-                Public Rent inventory · availability can change between visits.
-              </p>
-            </article>
-            <article className="provincial-snapshot__card">
-              <p className="provincial-snapshot__label">Developments</p>
-              <p className="provincial-snapshot__value">
-                {journeyCountLabel(data.journeyCounts.developments)}
-              </p>
-              <p className="provincial-snapshot__meta">
-                Approved public development-derived inventory.
-              </p>
-            </article>
-            <article
-              className="provincial-snapshot__card provincial-snapshot__card--unavailable"
-              data-testid="market-statistics-unavailable"
-            >
-              <p className="provincial-snapshot__label">Asking-price series</p>
-              <p className="provincial-snapshot__value">Not published yet</p>
-              <p className="provincial-snapshot__meta">
-                No audited sample is exposed by this slice. That is different from a zero or an
-                average.
-              </p>
-            </article>
-          </div>
-          <p className="provincial-snapshot__note">
-            <Info size={14} aria-hidden="true" /> {data.marketSnapshot.provenance.note}
-          </p>
-        </section>
+            <div className="provincial-snapshot">
+              <article className="provincial-snapshot__card">
+                <p className="provincial-snapshot__label">For sale</p>
+                <p className="provincial-snapshot__value">
+                  {journeyCountLabel(data.journeyCounts.buy)}
+                </p>
+                <p className="provincial-snapshot__meta">
+                  Public Buy inventory · same search authority used by results.
+                </p>
+              </article>
+              <article className="provincial-snapshot__card">
+                <p className="provincial-snapshot__label">For rent</p>
+                <p className="provincial-snapshot__value">
+                  {journeyCountLabel(data.journeyCounts.rent)}
+                </p>
+                <p className="provincial-snapshot__meta">
+                  Public Rent inventory · availability can change between visits.
+                </p>
+              </article>
+              <article className="provincial-snapshot__card">
+                <p className="provincial-snapshot__label">Developments</p>
+                <p className="provincial-snapshot__value">
+                  {journeyCountLabel(data.journeyCounts.developments)}
+                </p>
+                <p className="provincial-snapshot__meta">
+                  Approved public development-derived inventory.
+                </p>
+              </article>
+              <article
+                className="provincial-snapshot__card provincial-snapshot__card--unavailable"
+                data-testid="market-statistics-unavailable"
+              >
+                <p className="provincial-snapshot__label">Asking-price series</p>
+                <p className="provincial-snapshot__value">Not published yet</p>
+                <p className="provincial-snapshot__meta">
+                  No audited sample is exposed by this slice. That is different from a zero or an
+                  average.
+                </p>
+              </article>
+            </div>
+            <p className="provincial-snapshot__note">
+              <Info size={14} aria-hidden="true" /> {data.marketSnapshot.provenance.note}
+            </p>
+          </section>
+        ) : null}
 
         <section
           className="provincial-section provincial-section--tinted"
@@ -459,7 +470,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
             <div className="provincial-section__heading">
               <div>
                 <p className="provincial-eyebrow">A small live sample</p>
-                <h2 id="inventory-heading">See what is available in Gauteng.</h2>
+                <h2 id="inventory-heading">See what is available in {data.province.name}.</h2>
                 <p>
                   Preview cards are deliberately bounded. Continue into the relevant journey for the
                   complete public result set.
@@ -617,9 +628,9 @@ export default function ProvincePage({ params }: ProvincePageProps) {
               <h2 id="seo-heading">{config.seo.heading}</h2>
               <p>{config.seo.summary}</p>
               <p>
-                Gauteng works best as a neutral starting point: compare a market if you are still
-                orienting yourself, or preserve the place and intent you already have when you are
-                ready to act.
+                {data.province.name} works best as a neutral starting point: compare a market if you
+                are still orienting yourself, or preserve the place and intent you already have when
+                you are ready to act.
               </p>
             </div>
             <div>

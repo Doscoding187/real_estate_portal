@@ -58,7 +58,9 @@ describe('EnhancedNavbar renter discovery menu', () => {
 
     expect(region.querySelector('.public-navbar__renter-menu')).toBeInTheDocument();
     expect(region.querySelector('.public-navbar__mega-grid')).toBeNull();
-    expect(within(region).getAllByRole('link', { name: 'Find rentals in my budget' })).toHaveLength(1);
+    expect(within(region).getAllByRole('link', { name: 'Find rentals in my budget' })).toHaveLength(
+      1,
+    );
     expect(within(region).getByRole('link', { name: 'Find rentals in my budget' })).toHaveAttribute(
       'href',
       '/property-to-rent',
@@ -75,10 +77,14 @@ describe('EnhancedNavbar renter discovery menu', () => {
       'href',
       '/property-to-rent?propertyType=townhouse',
     );
-    expect(within(region).getByRole('link', { name: 'Rooms and shared living' })).toHaveAttribute(
-      'href',
-      '/property-to-rent?propertyType=shared_living',
-    );
+    expect(
+      within(region).queryByRole('link', { name: 'Rooms and shared living' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(region)
+        .queryAllByRole('link')
+        .some(link => link.getAttribute('href')?.includes('shared_living')),
+    ).toBe(false);
     expect(
       within(region).getByRole('link', { name: 'Commercial property to rent' }),
     ).toHaveAttribute('href', '/property-to-rent?propertyType=commercial');
@@ -110,7 +116,9 @@ describe('EnhancedNavbar renter discovery menu', () => {
       'href',
       '/agents',
     );
-    expect(within(region).getByText(/save, compare and manage your rental journey/i)).toBeInTheDocument();
+    expect(
+      within(region).getByText(/save, compare and manage your rental journey/i),
+    ).toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'Sign in to continue' })).toHaveAttribute(
       'href',
       '/login?mode=signin&next=/favorites',
@@ -126,7 +134,9 @@ describe('EnhancedNavbar renter discovery menu', () => {
     });
 
     const region = await openRentersMenu();
-    expect(within(region).queryByRole('link', { name: 'Sign in to continue' })).not.toBeInTheDocument();
+    expect(
+      within(region).queryByRole('link', { name: 'Sign in to continue' }),
+    ).not.toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'Saved rentals' })).toHaveAttribute(
       'href',
       '/favorites',
@@ -136,13 +146,19 @@ describe('EnhancedNavbar renter discovery menu', () => {
   it('keeps its footer, keyboard behaviour, and interactive semantics intact', async () => {
     const region = await openRentersMenu();
 
-    expect(within(region).getByRole('link', { name: 'Explore shared living' })).toHaveAttribute(
-      'href',
-      '/property-to-rent?propertyType=shared_living',
-    );
+    expect(
+      within(region).queryByRole('link', { name: 'Explore shared living' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(region)
+        .queryAllByRole('link')
+        .some(link => link.getAttribute('href')?.includes('shared_living')),
+    ).toBe(false);
     expect(region.querySelectorAll('button a, a button')).toHaveLength(0);
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('region', { name: 'For Renters navigation' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'For Renters navigation' }),
+    ).not.toBeInTheDocument();
   });
 
   it('exposes the governed renter destinations in mobile navigation', async () => {
@@ -155,10 +171,14 @@ describe('EnhancedNavbar renter discovery menu', () => {
       'href',
       '/property-to-rent',
     );
-    expect(within(drawer!).getByRole('link', { name: 'Rooms and shared living' })).toHaveAttribute(
-      'href',
-      '/property-to-rent?propertyType=shared_living',
-    );
+    expect(
+      within(drawer!).queryByRole('link', { name: 'Rooms and shared living' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(drawer!)
+        .queryAllByRole('link')
+        .some(link => link.getAttribute('href')?.includes('shared_living')),
+    ).toBe(false);
     expect(within(drawer!).getByRole('link', { name: /Saved rentals/ })).toHaveAttribute(
       'href',
       '/favorites',

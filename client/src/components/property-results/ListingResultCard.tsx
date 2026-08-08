@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Bed, Bath, House, LandPlot, Mail, Building2, MessageCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { PROPERTY_IMAGE_FALLBACK, withApiBase } from '@/lib/mediaUtils';
+import {
+  getPrivateListingContactCopy,
+  isExplicitRentListing,
+  withRentalPeriod,
+} from '@/lib/rentPresentation';
 
 export interface ListingResultCardData {
   id: string;
@@ -24,6 +29,7 @@ export interface ListingResultCardData {
   floor?: string;
   highlights?: string[];
   description?: string;
+  listingType?: 'sale' | 'rent' | string;
   listingSource?: 'manual' | 'development';
   listerType?: 'agent' | 'agency' | 'private';
   contactRole?: 'agent' | 'developer' | 'private';
@@ -39,11 +45,17 @@ export interface ListingResultCardData {
   contactEmail?: string;
 }
 
-function formatPrice(price: number, options?: { from?: boolean }) {
+function formatPrice(
+  price: number,
+  options?: { from?: boolean; listingType?: ListingResultCardData['listingType'] },
+) {
   const normalizedPrice = Number(price || 0);
   if (normalizedPrice <= 0) return 'Price on request';
   const formattedPrice = `R ${normalizedPrice.toLocaleString()}`;
-  return options?.from ? `From ${formattedPrice}` : formattedPrice;
+  return withRentalPeriod(
+    options?.from ? `From ${formattedPrice}` : formattedPrice,
+    options?.listingType,
+  );
 }
 
 export function ListingResultCard({ data }: { data: ListingResultCardData }) {
@@ -66,13 +78,18 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       : undefined);
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
-  const identityDisplayName = data.postedBy?.trim()
-    ? data.postedBy.trim()
-    : isDevelopmentListing
-      ? 'Developer Team'
-      : isPrivateListing
-        ? 'Private Seller'
-        : 'Listing Agent';
+  const isRentalListing = isExplicitRentListing(data.listingType);
+  const privateContactCopy = getPrivateListingContactCopy(data.listingType);
+  const identityDisplayName =
+    isPrivateListing && isRentalListing
+      ? privateContactCopy.identity
+      : data.postedBy?.trim()
+        ? data.postedBy.trim()
+        : isDevelopmentListing
+          ? 'Developer Team'
+          : isPrivateListing
+            ? 'Private Seller'
+            : 'Listing Agent';
   const hasAgentName = identityDisplayName !== '-';
   const agentInitials = hasAgentName
     ? identityDisplayName
@@ -96,12 +113,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const contactCtaLabel = isDevelopmentListing
     ? 'Contact Developer'
     : isPrivateListing
-      ? 'Contact Seller'
+      ? privateContactCopy.action
       : 'Contact Agent';
   const whatsappTarget = String(data.contactWhatsapp || data.contactPhone || '').trim();
   const emailTarget = String(data.contactEmail || '').trim();
-  const resolvedImage =
-    withApiBase(data.image) || PROPERTY_IMAGE_FALLBACK;
+  const resolvedImage = withApiBase(data.image) || PROPERTY_IMAGE_FALLBACK;
   const resolvedAvatar = withApiBase(data.agentAvatarUrl);
   const modalTitle = isDevelopmentListing ? developmentName || data.title : data.title;
   const whatsappPrefill = `Hi, I'm interested in ${modalTitle}. Please share more details.`;
@@ -186,7 +202,10 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             )}
 
             <p className="mt-3 text-lg font-semibold tracking-tight text-blue-600 sm:text-xl">
-              {formatPrice(data.price, { from: isDevelopmentListing })}
+              {formatPrice(data.price, {
+                from: isDevelopmentListing,
+                listingType: data.listingType,
+              })}
             </p>
 
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 pr-2">

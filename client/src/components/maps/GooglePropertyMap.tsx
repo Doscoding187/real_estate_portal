@@ -8,6 +8,7 @@ import {
 } from '@react-google-maps/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { withRentalPeriod } from '@/lib/rentPresentation';
 import { Loader2, MapPin, Navigation } from 'lucide-react';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 
@@ -216,11 +217,14 @@ export function GooglePropertyMap({
               </div>
               <p className="text-blue-600 font-bold text-sm mb-1">
                 {selectedProperty.listingSource === 'development' ? 'From ' : ''}
-                {new Intl.NumberFormat('en-ZA', {
-                  style: 'currency',
-                  currency: 'ZAR',
-                  maximumFractionDigits: 0,
-                }).format(selectedProperty.price)}
+                {withRentalPeriod(
+                  new Intl.NumberFormat('en-ZA', {
+                    style: 'currency',
+                    currency: 'ZAR',
+                    maximumFractionDigits: 0,
+                  }).format(selectedProperty.price),
+                  selectedProperty.listingType,
+                )}
               </p>
               <p className="text-xs text-slate-500 mb-2">
                 {selectedProperty.bedrooms} Bed • {selectedProperty.bathrooms} Bath •{' '}

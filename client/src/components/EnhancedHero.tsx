@@ -4,7 +4,6 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -173,8 +172,6 @@ export function EnhancedHero({
     priceMax: '',
 
     // Rental filters
-    furnished: false,
-    leaseTerm: '',
     budgetMin: '',
     budgetMax: '',
 
@@ -228,7 +225,6 @@ export function EnhancedHero({
           'Student Accommodation',
         ],
       },
-      leaseTerms: ['Month-to-month', '6 months', '12 months', '24+ months'],
     },
     developments: {
       types: [
@@ -794,28 +790,6 @@ export function EnhancedHero({
 
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Lease Term
-                            </Label>
-                            <Select
-                              value={filters.leaseTerm}
-                              onValueChange={val => handleFilterChange('leaseTerm', val)}
-                            >
-                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                                <SelectValue placeholder="Any Term" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">Any Term</SelectItem>
-                                {filterConfig.rent.leaseTerms.map(term => (
-                                  <SelectItem key={term} value={term}>
-                                    {term}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                               Max Budget
                             </Label>
                             <Select
@@ -832,17 +806,6 @@ export function EnhancedHero({
                                 <SelectItem value="50000">R 50,000+</SelectItem>
                               </SelectContent>
                             </Select>
-                          </div>
-
-                          <div className="flex items-center space-x-2 h-10 mt-6">
-                            <Checkbox
-                              id="furnished"
-                              checked={filters.furnished}
-                              onCheckedChange={checked => handleFilterChange('furnished', checked)}
-                            />
-                            <Label htmlFor="furnished" className="font-normal cursor-pointer">
-                              Furnished Only
-                            </Label>
                           </div>
                         </>
                       )}
