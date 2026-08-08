@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { LocationNode } from '@/types/location';
 import { PROVINCIAL_CONFIGS } from '@shared/provincialDiscovery';
 
 const { navigate, useLocationMock, useSearchMock } = vi.hoisted(() => ({
@@ -14,14 +15,29 @@ vi.mock('wouter', () => ({
 }));
 
 vi.mock('@/components/LocationAutosuggest', () => ({
-  LocationAutosuggest: ({ onSelect, placeholder }: any) => (
+  LocationAutosuggest: ({
+    onSelect,
+    placeholder,
+    selectedLocations = [],
+    onRemove,
+  }: {
+    onSelect?: (location: LocationNode) => void;
+    placeholder?: string;
+    selectedLocations?: LocationNode[];
+    onRemove?: (index: number) => void;
+  }) => (
     <div>
+      {selectedLocations.map((location, index) => (
+        <button key={location.id} type="button" onClick={() => onRemove?.(index)}>
+          Remove {location.name}
+        </button>
+      ))}
       <input aria-label="Location search" placeholder={placeholder} />
       <button
         type="button"
         data-testid="select-pretoria"
         onClick={() =>
-          onSelect({
+          onSelect?.({
             id: 'city:2',
             canonicalLocationId: 'city:2',
             name: 'Pretoria',
@@ -32,6 +48,40 @@ vi.mock('@/components/LocationAutosuggest', () => ({
         }
       >
         Choose Pretoria
+      </button>
+      <button
+        type="button"
+        data-testid="select-sandton"
+        onClick={() =>
+          onSelect?.({
+            id: 'suburb:34',
+            canonicalLocationId: 'suburb:34',
+            name: 'Sandton',
+            slug: 'sandton',
+            type: 'suburb',
+            provinceSlug: 'gauteng',
+            citySlug: 'johannesburg',
+          })
+        }
+      >
+        Choose Sandton
+      </button>
+      <button
+        type="button"
+        data-testid="select-rosebank"
+        onClick={() =>
+          onSelect?.({
+            id: 'suburb:35',
+            canonicalLocationId: 'suburb:35',
+            name: 'Rosebank',
+            slug: 'rosebank',
+            type: 'suburb',
+            provinceSlug: 'gauteng',
+            citySlug: 'johannesburg',
+          })
+        }
+      >
+        Choose Rosebank
       </button>
     </div>
   ),
@@ -44,6 +94,13 @@ const province = {
   canonicalLocationId: 'province:1',
   name: 'Gauteng',
   slug: 'gauteng',
+};
+
+const westernCapeProvince = {
+  id: 2,
+  canonicalLocationId: 'province:2',
+  name: 'Western Cape',
+  slug: 'western-cape',
 };
 
 describe('ProvincialComposer', () => {
@@ -60,6 +117,7 @@ describe('ProvincialComposer', () => {
     expect(screen.getByTestId('provincial-primary-cta')).toBeDisabled();
     expect(screen.getByRole('tab', { name: /Buy/i })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: /Land & plots/i })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Shared Living/i })).toBeDisabled();
   });
 
   it('writes Buy intent to the province URL and preserves canonical location selection', () => {
@@ -88,5 +146,47 @@ describe('ProvincialComposer', () => {
       '/gauteng?locationId=city%3A2&province=gauteng&city=pretoria',
       { replace: false },
     );
+  });
+
+  it('keeps Rent as Rent and preserves deliberate sibling OR selections', () => {
+    useSearchMock.mockReturnValue('journey=rent');
+    render(<ProvincialComposer config={PROVINCIAL_CONFIGS.gauteng} province={province} />);
+
+    expect(screen.queryByLabelText(/Lease term/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Furnished/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('select-sandton'));
+    fireEvent.click(screen.getByTestId('select-rosebank'));
+    fireEvent.click(screen.getByTestId('provincial-primary-cta'));
+
+    const href = navigate.mock.calls.at(-1)?.[0] as string;
+    expect(href).toContain('/property-to-rent?');
+    expect(href).toContain('locationIds=suburb%3A34');
+    expect(href).toContain('locationIds=suburb%3A35');
+    expect(href).not.toContain('city=johannesburg');
+  });
+
+  it('does not expose an uncanonical market as a neutral destination shortcut', () => {
+    useLocationMock.mockReturnValue(['/western-cape', navigate]);
+
+    render(
+      <ProvincialComposer
+        config={PROVINCIAL_CONFIGS['western-cape']}
+        province={westernCapeProvince}
+        marketLocations={[
+          {
+            name: 'Cape Town',
+            slug: 'cape-town',
+            canonicalLocationId: 'city:4',
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Cape Town' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Stellenbosch' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stellenbosch' }));
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

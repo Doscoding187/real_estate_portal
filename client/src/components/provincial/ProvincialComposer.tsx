@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, ChevronDown, Compass, Home, KeyRound, MapPin, X } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Compass, Home, KeyRound, MapPin } from 'lucide-react';
 import { useLocation, useSearch } from 'wouter';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
-import { buildLocationDiscoveryPath } from '@/lib/locationDiscovery';
-import { buildBuySearchUrl, buildPropertySearchUrl } from '@/lib/heroJourneySearch';
+import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
+import { buildProvincialJourneyHref } from '@/lib/provincialSearchHandoff';
 import type { LocationNode } from '@/types/location';
 import {
   resolveProvincialQueryState,
@@ -27,6 +27,8 @@ interface ProvincialComposerProps {
     canonicalLocationId?: string | null;
   }[];
 }
+
+const EMPTY_MARKET_LOCATIONS: NonNullable<ProvincialComposerProps['marketLocations']> = [];
 
 const JOURNEY_ICONS = {
   buy: Home,
@@ -68,35 +70,51 @@ function humanizeSlug(value?: string) {
     .join(' ');
 }
 
-function locationNodeFromQuery(
+function locationNodeFromCanonicalId(
+  canonicalLocationId: string,
   state: ReturnType<typeof resolveProvincialQueryState>,
   province: ProvincialComposerProps['province'],
+  knownLocations: ReadonlyMap<string, LocationNode>,
 ): LocationNode | null {
-  const canonical = parseCanonicalLocationId(state.locationId);
-  const level =
-    state.locationLevel || (state.suburbSlug ? 'suburb' : state.citySlug ? 'city' : 'province');
-  if (!canonical && level !== 'province') return null;
+  const canonical = parseCanonicalLocationId(canonicalLocationId);
+  if (!canonical) return null;
 
-  const deepestSlug =
-    state.suburbSlug ||
-    state.citySlug ||
-    state.provinceSlug ||
-    (canonical ? `${canonical.level}-${canonical.id}` : undefined);
-  if (!deepestSlug) return null;
+  const knownLocation = knownLocations.get(canonicalLocationId);
+  if (knownLocation) return knownLocation;
 
-  const canonicalId =
-    canonical?.level === 'province' || level === 'province'
-      ? province.canonicalLocationId
-      : state.locationId;
+  const level = canonical.level;
+  const slug =
+    level === 'province'
+      ? province.slug
+      : level === 'city'
+        ? state.citySlug || ''
+        : state.suburbSlug || '';
+  const name = slug ? humanizeSlug(slug) : `${humanizeSlug(level)} ${canonical.id}`;
   return {
-    id: canonicalId || `${level}:0`,
-    canonicalLocationId: canonicalId,
-    name: humanizeSlug(deepestSlug),
-    slug: deepestSlug,
+    id: canonicalLocationId,
+    canonicalLocationId,
+    name,
+    slug,
     type: level,
-    provinceSlug: state.provinceSlug || province.slug,
+    provinceSlug: province.slug,
     citySlug: state.citySlug,
   };
+}
+
+function locationsFromQuery(
+  state: ReturnType<typeof resolveProvincialQueryState>,
+  province: ProvincialComposerProps['province'],
+  knownLocations: ReadonlyMap<string, LocationNode>,
+): LocationNode[] {
+  const canonicalLocationIds = state.locationIds?.length
+    ? state.locationIds
+    : state.locationId
+      ? [state.locationId]
+      : [];
+
+  return canonicalLocationIds
+    .map(locationId => locationNodeFromCanonicalId(locationId, state, province, knownLocations))
+    .filter((location): location is LocationNode => Boolean(location));
 }
 
 function journeyFromConfig(config: ProvincialConfig, id?: ProvincialJourneyId) {
@@ -106,24 +124,74 @@ function journeyFromConfig(config: ProvincialConfig, id?: ProvincialJourneyId) {
 export function ProvincialComposer({
   config,
   province,
-  marketLocations = [],
+  marketLocations = EMPTY_MARKET_LOCATIONS,
 }: ProvincialComposerProps) {
   const [location, navigate] = useLocation();
   const search = useSearch();
-  const [selectedLocation, setSelectedLocation] = useState<LocationNode | null>(null);
+  const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
   const [locationError, setLocationError] = useState('');
+  const [locationMemory, setLocationMemory] = useState<Map<string, LocationNode>>(() => new Map());
+
+  const provinceLocation = useMemo<LocationNode>(
+    () => ({
+      id: province.canonicalLocationId,
+      canonicalLocationId: province.canonicalLocationId,
+      name: province.name,
+      slug: province.slug,
+      type: 'province',
+      provinceSlug: province.slug,
+    }),
+    [province],
+  );
+  const knownLocations = useMemo(() => {
+    const locations = new Map<string, LocationNode>();
+    marketLocations.forEach(market => {
+      if (market.canonicalLocationId) {
+        locations.set(market.canonicalLocationId, {
+          id: market.canonicalLocationId,
+          canonicalLocationId: market.canonicalLocationId,
+          name: market.name,
+          slug: market.slug,
+          type: 'city',
+          provinceSlug: province.slug,
+          citySlug: market.slug,
+        });
+      }
+    });
+    return locations;
+  }, [marketLocations, province.slug]);
 
   const state = useMemo(() => resolveProvincialQueryState(new URLSearchParams(search)), [search]);
   const requestedJourney = journeyFromConfig(config, state.journey);
   const activeJourney = requestedJourney?.state === 'active' ? requestedJourney : undefined;
-  const selectedLocationFromQuery = useMemo(
-    () => locationNodeFromQuery(state, province),
-    [province, state],
+  const hasLocationQuery = Boolean(state.locationId || state.locationIds?.length);
+  const selectedLocationsFromQuery = useMemo(
+    () =>
+      locationsFromQuery(
+        state,
+        province,
+        new Map([...knownLocations, ...locationMemory.entries()]),
+      ),
+    [knownLocations, locationMemory, province, state],
   );
 
   useEffect(() => {
-    setSelectedLocation(selectedLocationFromQuery);
-  }, [selectedLocationFromQuery]);
+    if (!hasLocationQuery) return;
+
+    setLocationMemory(previous => {
+      const next = new Map(previous);
+      let changed = false;
+      selectedLocationsFromQuery.forEach(selected => {
+        const canonicalId = selected.canonicalLocationId || selected.id;
+        if (next.get(canonicalId) !== selected) {
+          next.set(canonicalId, selected);
+          changed = true;
+        }
+      });
+      return changed ? next : previous;
+    });
+    setSelectedLocations(selectedLocationsFromQuery);
+  }, [hasLocationQuery, selectedLocationsFromQuery]);
 
   const updateQuery = (updates: Record<string, string | undefined>, replace = false) => {
     const currentSearch = typeof window !== 'undefined' ? window.location.search : search;
@@ -143,6 +211,34 @@ export function ProvincialComposer({
     updateQuery({ journey: journey.id });
   };
 
+  const writeLocationQuery = (nextLocations: readonly LocationNode[], replace = false) => {
+    const currentSearch = typeof window !== 'undefined' ? window.location.search : search;
+    const next = new URLSearchParams(currentSearch);
+    next.delete('locationId');
+    next.delete('locationIds');
+    next.delete('city');
+    next.delete('suburb');
+
+    if (nextLocations.length === 1) {
+      const [selected] = nextLocations;
+      const canonicalLocationId = selected.canonicalLocationId || selected.id;
+      next.set('locationId', canonicalLocationId);
+      next.set('province', selected.provinceSlug || province.slug);
+      if (selected.type === 'city' || selected.type === 'suburb') {
+        next.set('city', selected.citySlug || selected.slug);
+      }
+      if (selected.type === 'suburb') next.set('suburb', selected.slug);
+    } else if (nextLocations.length > 1) {
+      next.set('province', province.slug);
+      nextLocations.forEach(selected => {
+        next.append('locationIds', selected.canonicalLocationId || selected.id);
+      });
+    }
+
+    const query = next.toString();
+    navigate(`${location}${query ? `?${query}` : ''}`, { replace });
+  };
+
   const selectLocation = (nextLocation: LocationNode) => {
     const canonical = parseCanonicalLocationId(nextLocation.canonicalLocationId || nextLocation.id);
     if (!canonical || canonical.level !== nextLocation.type) {
@@ -152,80 +248,66 @@ export function ProvincialComposer({
       return;
     }
 
-    const nextState = {
-      locationId: nextLocation.canonicalLocationId || nextLocation.id,
-      province: nextLocation.provinceSlug || province.slug,
-      city:
-        nextLocation.type === 'city' || nextLocation.type === 'suburb'
-          ? nextLocation.citySlug || nextLocation.slug
-          : undefined,
-      suburb: nextLocation.type === 'suburb' ? nextLocation.slug : undefined,
-    };
+    const selectedProvince = String(nextLocation.provinceSlug || '')
+      .trim()
+      .toLowerCase();
+    if (
+      (nextLocation.type === 'province' &&
+        (nextLocation.canonicalLocationId || nextLocation.id) !== province.canonicalLocationId) ||
+      (nextLocation.type !== 'province' && selectedProvince && selectedProvince !== province.slug)
+    ) {
+      setLocationError(`Choose a location within ${province.name}.`);
+      return;
+    }
+
+    const existingNonProvince = selectedLocations.filter(selected => selected.type !== 'province');
+    if (
+      nextLocation.type !== 'province' &&
+      existingNonProvince.some(selected => selected.type !== nextLocation.type)
+    ) {
+      setLocationError('Choose locations at the same level so the explicit OR stays precise.');
+      return;
+    }
+
+    const nextSelection =
+      nextLocation.type === 'province'
+        ? [nextLocation]
+        : [...existingNonProvince, nextLocation].filter(
+            (selected, index, locations) =>
+              locations.findIndex(
+                candidate =>
+                  (candidate.canonicalLocationId || candidate.id) ===
+                  (selected.canonicalLocationId || selected.id),
+              ) === index,
+          );
+
+    if (nextSelection.length > 10) {
+      setLocationError('Choose up to ten locations in one deliberate OR search.');
+      return;
+    }
+
+    nextSelection.forEach(selected => {
+      setLocationMemory(previous => {
+        const next = new Map(previous);
+        const canonicalId = selected.canonicalLocationId || selected.id;
+        next.set(canonicalId, selected);
+        return next;
+      });
+    });
     setLocationError('');
-    setSelectedLocation(nextLocation);
-    updateQuery(nextState);
+    setSelectedLocations(nextSelection);
+    writeLocationQuery(nextSelection);
   };
 
-  const clearLocation = () => {
-    setSelectedLocation(null);
+  const removeLocation = (index: number) => {
+    const nextSelection = selectedLocations.filter((_, locationIndex) => locationIndex !== index);
+    setSelectedLocations(nextSelection);
     setLocationError('');
-    updateQuery({ locationId: undefined, city: undefined, suburb: undefined }, true);
+    writeLocationQuery(nextSelection, true);
   };
 
   const updateFilter = (key: string, value: string) => {
     updateQuery({ [key]: value === 'all' ? undefined : value }, true);
-  };
-
-  const provinceLocation: LocationNode = {
-    id: province.canonicalLocationId,
-    canonicalLocationId: province.canonicalLocationId,
-    name: province.name,
-    slug: province.slug,
-    type: 'province',
-    provinceSlug: province.slug,
-  };
-
-  const effectiveLocation = selectedLocation || provinceLocation;
-  const hasCanonicalSelectedLocation = Boolean(
-    parseCanonicalLocationId(effectiveLocation.canonicalLocationId || effectiveLocation.id),
-  );
-
-  const buildJourneyHref = (journeyId: ProvincialJourneyId, locationNode = effectiveLocation) => {
-    if (journeyId === 'explore') {
-      return buildLocationDiscoveryPath(locationNode) || `/${province.slug}`;
-    }
-
-    if (journeyId === 'buy') {
-      return buildBuySearchUrl({
-        selectedLocations: [locationNode],
-        propertyType: state.filters.propertyType,
-        minPrice: state.filters.minPrice,
-        maxPrice: state.filters.maxPrice,
-        minBedrooms: state.filters.minBedrooms,
-        minBathrooms: state.filters.minBathrooms,
-      });
-    }
-
-    if (journeyId === 'rent') {
-      return buildPropertySearchUrl({
-        transactionType: 'to-rent',
-        selectedLocations: [locationNode],
-        propertyType: state.filters.propertyType,
-        minPrice: state.filters.minPrice,
-        maxPrice: state.filters.maxPrice,
-      });
-    }
-
-    if (journeyId === 'developments') {
-      const params = new URLSearchParams({ province: province.slug });
-      if (locationNode.type === 'city' || locationNode.type === 'suburb') {
-        params.set('city', locationNode.citySlug || locationNode.slug);
-      }
-      if (locationNode.type === 'suburb') params.set('suburb', locationNode.slug);
-      return `/new-developments?${params.toString()}`;
-    }
-
-    return undefined;
   };
 
   const continueJourney = () => {
@@ -236,22 +318,38 @@ export function ProvincialComposer({
       );
       return;
     }
-    if (!hasCanonicalSelectedLocation) {
+    const effectiveLocations = selectedLocations.length ? selectedLocations : [provinceLocation];
+    if (!effectiveLocations.every(locationNode => hasCanonicalLocationIdentity(locationNode))) {
       setLocationError('Choose a supported location or keep the province selected.');
       return;
     }
-    const href = buildJourneyHref(activeJourney.id);
+    if (activeJourney.id === 'explore' && effectiveLocations.length > 1) {
+      setLocationError('Choose one location to explore, or select Buy or Rent for an OR search.');
+      return;
+    }
+    const href = buildProvincialJourneyHref({
+      journey: activeJourney.id,
+      province: provinceLocation,
+      selectedLocations,
+      filters: {
+        propertyType: state.filters.propertyType,
+        maxPrice: state.filters.maxPrice,
+      },
+    });
     if (!href) return;
     navigate(href);
   };
 
   const budgets = activeJourney?.id === 'rent' ? RENT_BUDGETS : BUY_BUDGETS;
   const isTransactional = activeJourney?.id === 'buy' || activeJourney?.id === 'rent';
-  const locationLabel = selectedLocation
-    ? selectedLocation.type === 'province'
-      ? selectedLocation.name
-      : `${selectedLocation.name}, ${province.name}`
-    : `Anywhere in ${province.name}`;
+  const canContinue =
+    Boolean(activeJourney) && !(activeJourney?.id === 'explore' && selectedLocations.length > 1);
+  const locationHelper =
+    selectedLocations.length > 1
+      ? 'Explicit OR: these locations stay separate in the results.'
+      : selectedLocations.length === 1
+        ? 'Canonical location preserved for your next journey.'
+        : 'Or keep the whole province selected.';
 
   return (
     <section className="provincial-composer" aria-labelledby="provincial-composer-title">
@@ -307,34 +405,21 @@ export function ProvincialComposer({
           <label htmlFor="provincial-location-input">Where in {province.name}?</label>
           <div className="provincial-location-control">
             <MapPin aria-hidden="true" size={18} />
-            {selectedLocation ? (
-              <div className="provincial-location-chip">
-                <span>{locationLabel}</span>
-                <button
-                  type="button"
-                  aria-label={`Remove ${selectedLocation.name}`}
-                  onClick={clearLocation}
-                >
-                  <X aria-hidden="true" size={15} />
-                </button>
-              </div>
-            ) : (
-              <LocationAutosuggest
-                placeholder={`Search a city, suburb or area`}
-                inputId="provincial-location-input"
-                selectedLocations={[]}
-                onSelect={selectLocation}
-                inputAriaDescribedBy={locationError ? 'provincial-location-error' : undefined}
-                className="provincial-location-autosuggest"
-                inputClassName="provincial-location-input"
-                showIcon={false}
-              />
-            )}
+            <LocationAutosuggest
+              placeholder={`Search a city, suburb or area`}
+              inputId="provincial-location-input"
+              selectedLocations={selectedLocations}
+              onSelect={selectLocation}
+              onRemove={removeLocation}
+              maxLocations={10}
+              inputAriaDescribedBy={locationError ? 'provincial-location-error' : undefined}
+              className="provincial-location-autosuggest"
+              inputClassName="provincial-location-input"
+              showIcon={false}
+            />
           </div>
-          <p className="provincial-field__helper">
-            {selectedLocation
-              ? 'Canonical location preserved for your next journey.'
-              : 'Or keep the whole province selected.'}
+          <p className="provincial-field__helper" data-testid="provincial-location-helper">
+            {locationHelper}
           </p>
           {locationError && (
             <p id="provincial-location-error" className="provincial-field__error" role="alert">
@@ -388,7 +473,7 @@ export function ProvincialComposer({
         <button
           type="button"
           className="provincial-composer__cta"
-          disabled={!activeJourney}
+          disabled={!canContinue}
           onClick={continueJourney}
           data-testid="provincial-primary-cta"
         >
@@ -412,17 +497,25 @@ export function ProvincialComposer({
               type: 'city',
               provinceSlug: province.slug,
             };
+            const hasCanonicalMarket = Boolean(canonicalMarket?.canonicalLocationId);
             return (
               <button
                 key={market.slug}
                 type="button"
+                disabled={!hasCanonicalMarket}
                 onClick={() => {
-                  const href =
-                    activeJourney &&
-                    activeJourney.state === 'active' &&
-                    canonicalMarket?.canonicalLocationId
-                      ? buildJourneyHref(activeJourney.id, marketLocation)
-                      : `/${province.slug}/${market.slug}`;
+                  if (!hasCanonicalMarket) return;
+                  const href = activeJourney
+                    ? buildProvincialJourneyHref({
+                        journey: activeJourney.id,
+                        province: provinceLocation,
+                        selectedLocations: [marketLocation],
+                        filters: {
+                          propertyType: state.filters.propertyType,
+                          maxPrice: state.filters.maxPrice,
+                        },
+                      })
+                    : buildLocationDiscoveryPath(marketLocation);
                   if (href) navigate(href);
                 }}
               >

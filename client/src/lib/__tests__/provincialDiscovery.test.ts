@@ -45,6 +45,18 @@ describe('provincial discovery contract', () => {
     expect(state.invalidLocationIdentity).toBe(false);
   });
 
+  it('keeps explicit canonical sibling IDs as a multi-location province refinement', () => {
+    const state = resolveProvincialQueryState(
+      new URLSearchParams(
+        'journey=rent&province=gauteng&locationIds=suburb%3A34&locationIds=suburb%3A35',
+      ),
+    );
+
+    expect(state.locationIds).toEqual(['suburb:34', 'suburb:35']);
+    expect(state.locationLevel).toBe('suburb');
+    expect(state.invalidLocationIdentity).toBe(false);
+  });
+
   it('removes unsupported Buy filters and records unsupported journeys without activating them', () => {
     const filters = resolveProvincialQueryState(
       new URLSearchParams('journey=commercial&propertyType=plot&minPrice=2000000&maxPrice=1000000'),
@@ -53,6 +65,20 @@ describe('provincial discovery contract', () => {
     expect(filters.journey).toBeUndefined();
     expect(filters.unsupportedJourney).toBe('commercial');
     expect(filters.filters).toEqual({});
+  });
+
+  it('keeps Shared Living independent and deferred rather than treating it as Rent', () => {
+    const state = resolveProvincialQueryState(new URLSearchParams('journey=shared_living'));
+
+    expect(state.journey).toBe('shared_living');
+    expect(PROVINCIAL_CONFIGS.gauteng.supportedJourneys).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'shared_living', state: 'unavailable' }),
+      ]),
+    );
+    expect(
+      PROVINCIAL_CONFIGS.gauteng.supportedJourneys.find(journey => journey.id === 'rent')?.state,
+    ).toBe('active');
   });
 
   it('validates the Gauteng, structurally different Western Cape and sparse Northern Cape configs', () => {
@@ -64,5 +90,18 @@ describe('provincial discovery contract', () => {
       'pretoria',
     ]);
     expect(PROVINCIAL_CONFIGS['northern-cape'].modules.marketSnapshot).toBe(false);
+    expect(Object.keys(PROVINCIAL_CONFIGS)).toEqual(
+      expect.arrayContaining([
+        'gauteng',
+        'western-cape',
+        'kwazulu-natal',
+        'eastern-cape',
+        'free-state',
+        'limpopo',
+        'mpumalanga',
+        'north-west',
+        'northern-cape',
+      ]),
+    );
   });
 });
