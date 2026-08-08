@@ -459,6 +459,17 @@ export async function getPropertyById(id: number) {
   return result[0];
 }
 
+function assertListingBackedPropertyProjectionIsReadOnly(
+  property: Pick<Property, 'sourceListingId'>,
+  operation: string,
+) {
+  if (property.sourceListingId == null) return;
+
+  throw new Error(
+    `Listing-backed public property projections are read-only; use the canonical listing lifecycle to ${operation}.`,
+  );
+}
+
 export async function getPropertyImages(propertyId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -511,6 +522,8 @@ export async function updateProperty(
   if (property.ownerId !== userId && !isAdmin) {
     throw new Error('Unauthorized: You can only update your own properties');
   }
+
+  assertListingBackedPropertyProjectionIsReadOnly(property, 'update this inventory');
 
   // Normalize location fields for consistent querying
   const normalizedUpdates = normalizeLocationFields(updates);
@@ -576,6 +589,8 @@ export async function deleteProperty(
   if (property.ownerId !== userId && !isAdmin) {
     throw new Error('Unauthorized: You can only delete your own properties');
   }
+
+  assertListingBackedPropertyProjectionIsReadOnly(property, 'delete this inventory');
 
   // Cascade delete will handle propertyImages
   await db.delete(properties).where(eq(properties.id, propertyId));
@@ -2989,6 +3004,11 @@ export async function rejectListing(
 export async function archiveProperty(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+
+  const property = await getPropertyById(id);
+  if (!property) throw new Error('Property not found');
+  assertListingBackedPropertyProjectionIsReadOnly(property, 'archive this inventory');
+
   await db
     .update(properties)
     .set({
@@ -3005,31 +3025,39 @@ export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db
-    .update(properties)
-    .set({
-      status: 'archived',
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(properties.sourceListingId, id));
+  const listing = await getListingById(id);
+  if (!listing) throw new Error('Listing not found');
+  if (['published', 'approved'].includes(String(listing.status))) {
+    throw new Error('Published listings must be archived through the canonical lifecycle.');
+  }
 
-  // Delete related media first to avoid foreign key constraint errors
-  await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
+  await db.transaction(async tx => {
+    await tx
+      .update(properties)
+      .set({
+        status: 'archived',
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      })
+      .where(eq(properties.sourceListingId, id));
 
-  // Delete from approval queue if exists
-  await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, id));
+    // Delete related media first to avoid foreign key constraint errors
+    await tx.delete(listingMedia).where(eq(listingMedia.listingId, id));
 
-  // Delete analytics
-  await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, id));
+    // Delete from approval queue if exists
+    await tx.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, id));
 
-  // Delete leads
-  await db.delete(listingLeads).where(eq(listingLeads.listingId, id));
+    // Delete analytics
+    await tx.delete(listingAnalytics).where(eq(listingAnalytics.listingId, id));
 
-  // Delete viewings
-  await db.delete(listingViewings).where(eq(listingViewings.listingId, id));
+    // Delete leads
+    await tx.delete(listingLeads).where(eq(listingLeads.listingId, id));
 
-  // Now delete the listing
-  await db.delete(listings).where(eq(listings.id, id));
+    // Delete viewings
+    await tx.delete(listingViewings).where(eq(listingViewings.listingId, id));
+
+    // Now delete the listing
+    await tx.delete(listings).where(eq(listings.id, id));
+  });
 }
 
 /**
@@ -3038,21 +3066,64 @@ export async function deleteListing(id: number) {
 export async function archiveListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  await db
-    .update(listings)
-    .set({
-      status: 'archived' as any,
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(listings.id, id));
 
-  await db
-    .update(properties)
-    .set({
-      status: 'archived',
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(properties.sourceListingId, id));
+  const archivedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await db.transaction(async tx => {
+    await tx
+      .update(listings)
+      .set({
+        status: 'archived' as any,
+        archivedAt,
+        updatedAt: archivedAt,
+      })
+      .where(eq(listings.id, id));
+
+    await tx
+      .update(properties)
+      .set({
+        status: 'archived',
+        updatedAt: archivedAt,
+      })
+      .where(eq(properties.sourceListingId, id));
+  });
+}
+
+/**
+ * Update canonical listing custody and its public projection together.
+ *
+ * Agent assignment is an authored-listing decision. The public property row
+ * is updated only as the derived projection of that decision, in the same
+ * transaction, so a projection-only custody write cannot drift from source.
+ */
+export async function updateListingAgentAssignment(
+  listingId: number,
+  agentId: number | null,
+) {
+  await updateListingAgentAssignments([listingId], agentId);
+}
+
+export async function updateListingAgentAssignments(
+  listingIds: number[],
+  agentId: number | null,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const uniqueListingIds = [...new Set(listingIds.map(Number).filter(id => Number.isSafeInteger(id) && id > 0))];
+  if (uniqueListingIds.length === 0) return;
+
+  const updatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await db.transaction(async tx => {
+    await tx
+      .update(listings)
+      .set({ agentId, updatedAt })
+      .where(inArray(listings.id, uniqueListingIds));
+
+    await tx
+      .update(properties)
+      .set({ agentId, updatedAt })
+      .where(inArray(properties.sourceListingId, uniqueListingIds));
+  });
 }
 
 /**

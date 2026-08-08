@@ -166,6 +166,7 @@ import {
   rejectListing,
   replaceListingMedia,
   syncPublishedListingMediaToPropertyMirror,
+  updateListingAgentAssignment,
 } from '../db';
 import { assertListingPublicationEntitled } from '../services/listingPublicationEntitlementService';
 
@@ -485,9 +486,15 @@ describe('archiveListing (lower-level)', () => {
   it('cascades archive status to linked property projection', async () => {
     await archiveListing(9001);
 
+    const listingUpdates = fakeDb.calls.filter(
+      c => c.type === 'update' && c.table === 'listings',
+    );
     const propUpdates = fakeDb.calls.filter(
       c => c.type === 'update' && c.table === 'properties',
     );
+    expect(listingUpdates[0].set).toMatchObject({
+      status: 'archived',
+    });
     expect(propUpdates.length).toBeGreaterThanOrEqual(1);
     expect(propUpdates[0].set).toMatchObject({
       status: 'archived',
@@ -495,6 +502,26 @@ describe('archiveListing (lower-level)', () => {
     // Prove the cascade uses sourceListingId in its WHERE
     expect(propUpdates[0].whereCols).toContain('sourceListingId');
     expect(assertListingPublicationEntitled).not.toHaveBeenCalled();
+  });
+
+  it('updates authored agent custody and the linked public projection together', async () => {
+    await updateListingAgentAssignment(9002, 77);
+
+    const listingUpdates = fakeDb.calls.filter(
+      c => c.type === 'update' && c.table === 'listings',
+    );
+    const propUpdates = fakeDb.calls.filter(
+      c => c.type === 'update' && c.table === 'properties',
+    );
+
+    expect(listingUpdates[0]).toMatchObject({
+      set: { agentId: 77 },
+    });
+    expect(listingUpdates[0].whereCols).toContain('id');
+    expect(propUpdates[0]).toMatchObject({
+      set: { agentId: 77 },
+    });
+    expect(propUpdates[0].whereCols).toContain('sourceListingId');
   });
 });
 
@@ -576,6 +603,7 @@ describe('listing publication entitlement final guard', () => {
 
 describe('deleteListing (lower-level)', () => {
   it('soft-archives linked property projection before deleting listing', async () => {
+    fakeDb.setNextSelectResult([listingRow({ id: 10001, status: 'draft' })]);
     await deleteListing(10001);
 
     const propUpdates = fakeDb.calls.filter(

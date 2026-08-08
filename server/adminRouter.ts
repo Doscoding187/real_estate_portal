@@ -4,6 +4,9 @@ import {
   getDb,
   getPlatformAnalytics,
   getListingStats,
+  approveListing,
+  archiveListing,
+  rejectListing,
   updateProperty,
   getPlatformSetting,
   setPlatformSetting,
@@ -1086,6 +1089,45 @@ export const adminRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
       if (!db) throw new Error('Database not available');
+
+      const [property] = await db
+        .select({ sourceListingId: properties.sourceListingId })
+        .from(properties)
+        .where(eq(properties.id, input.propertyId))
+        .limit(1);
+
+      if (!property) throw new Error('Property not found');
+
+      if (property.sourceListingId != null) {
+        const listingId = Number(property.sourceListingId);
+        if (input.action === 'approve') {
+          await approveListing(listingId, ctx.user.id, input.reason);
+        } else if (input.action === 'reject') {
+          await rejectListing(
+            listingId,
+            ctx.user.id,
+            input.reason || 'Property moderation rejected',
+          );
+        } else {
+          await archiveListing(listingId);
+        }
+
+        await logAudit({
+          userId: ctx.user.id,
+          action:
+            input.action === 'approve' ? AuditActions.APPROVE_PROPERTY : AuditActions.REJECT_PROPERTY,
+          targetType: 'listing',
+          targetId: listingId,
+          metadata: {
+            propertyId: input.propertyId,
+            reason: input.reason,
+            lifecycleAction: input.action,
+          },
+          req: ctx.req,
+        });
+
+        return { success: true };
+      }
 
       let newStatus: string;
       switch (input.action) {

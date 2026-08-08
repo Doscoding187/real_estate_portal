@@ -1281,6 +1281,14 @@ const appRouterConfig = {
           throw new Error('Unauthorized');
         }
 
+        if (property.sourceListingId != null) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'Listing-backed public properties are read-only. Update the source listing through the canonical listing workflow.',
+          });
+        }
+
         // Update property
         await db.updateProperty(
           input.id,
@@ -1310,7 +1318,15 @@ const appRouterConfig = {
           throw new Error('Unauthorized');
         }
 
-        // Delete property
+        if (property.sourceListingId != null) {
+          // A public property is a projection of its authored listing. Preserve
+          // the source and durable history by routing removal through the
+          // canonical archive lifecycle instead of deleting the projection.
+          await db.archiveListing(Number(property.sourceListingId));
+          return { success: true, status: 'archived' as const };
+        }
+
+        // Unlinked historical properties retain their legacy deletion path.
         await db.deleteProperty(input.id, user.id, user.role ?? undefined);
 
         return { success: true };

@@ -752,7 +752,16 @@ export const listingRouter = router({
           });
         }
 
-        // Hard delete
+        // Published inventory is customer-visible supply. Removing it must
+        // preserve the source record and durable history, and must cascade
+        // through the canonical source-to-public lifecycle.
+        if (['published', 'approved'].includes(String(listing.status))) {
+          await db.archiveListing(input.id);
+          return { success: true, status: 'archived' as const };
+        }
+
+        // Private drafts and unresolved submissions may still use the legacy
+        // hard-delete path until the broader revision architecture replaces it.
         await db.deleteListing(input.id);
 
         return { success: true };
