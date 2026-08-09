@@ -333,8 +333,6 @@ describe('publicSearchService contract', () => {
         canonicalLocation: { provinceId: 1, cityId: 12, suburbId: 34 },
         minFloorSize: 70,
         maxFloorSize: 120,
-        minErfSize: 70,
-        maxErfSize: 120,
         minPrice: 5_000,
         maxBathrooms: 3,
       }),
@@ -355,6 +353,35 @@ describe('publicSearchService contract', () => {
       12,
     );
     expect(result.total).toBe(5);
+  });
+
+  it('routes explicit public size filters to their matching canonical measurements', async () => {
+    mockResolvePublicLocation.mockResolvedValueOnce(resolvedSuburb);
+
+    await publicSearchService.searchInventory({
+      locationId: 'suburb:34',
+      listingType: 'sale',
+      minFloorSize: 80,
+      maxFloorSize: 140,
+      minErfSize: 300,
+      maxErfSize: 900,
+      minLandSize: 10_000,
+      maxLandSize: 25_000,
+    });
+
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.objectContaining({
+        minFloorSize: 80,
+        maxFloorSize: 140,
+        minErfSize: 300,
+        maxErfSize: 900,
+        minLandSize: 10_000,
+        maxLandSize: 25_000,
+      }),
+      'date_desc',
+      1,
+      12,
+    );
   });
 
   it('keeps the inventory boundary and count stable when page or sort changes', async () => {

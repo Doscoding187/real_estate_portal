@@ -234,7 +234,9 @@ export function EnhancedSidebarFilters({
   // Handler for title type changes
   const handleTitleTypeChange = useCallback(
     (type: 'freehold' | 'sectional', checked: boolean) => {
-      const currentTypes = filters.titleType || [];
+      const currentTypes = (filters.titleType || []).filter(
+        (value): value is 'freehold' | 'sectional' => value !== undefined,
+      );
       let newTypes: ('freehold' | 'sectional')[];
 
       if (checked) {

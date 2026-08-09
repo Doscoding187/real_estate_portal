@@ -329,6 +329,12 @@ export const properties = mysqlTable(
       () => developerBrandProfiles.id,
       { onDelete: 'set null' },
     ),
+    /** Canonical normalized internal/floor area for manual and public reads. */
+    internalAreaM2: decimal('internal_area_m2', { precision: 14, scale: 2 }),
+    /** Canonical normalized erf/stand area; never the dwelling area. */
+    erfSizeM2: decimal('erf_size_m2', { precision: 14, scale: 2 }),
+    /** Canonical normalized farm/smallholding land extent. */
+    landAreaM2: decimal('land_area_m2', { precision: 14, scale: 2 }),
   },
   table => [
     index('price_idx').on(table.price),
@@ -343,6 +349,9 @@ export const properties = mysqlTable(
     index('idx_properties_suburbId').on(table.suburbId),
     index('idx_properties_cityId_status').on(table.cityId, table.status),
     index('idx_properties_cityId_area').on(table.cityId, table.area),
+    index('idx_properties_internal_area_m2').on(table.internalAreaM2),
+    index('idx_properties_erf_size_m2').on(table.erfSizeM2),
+    index('idx_properties_land_area_m2').on(table.landAreaM2),
     index('idx_properties_location_id').on(table.locationId),
     index('idx_properties_sourceListingId').on(table.sourceListingId),
   ],

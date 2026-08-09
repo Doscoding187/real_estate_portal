@@ -18,7 +18,14 @@ import type {
   ValidationError,
   ListingBadge,
 } from '../../../shared/listing-types';
-import { listingIntentToAction } from '../../../shared/listing-types';
+import { listingActionToIntent, listingIntentToAction } from '../../../shared/listing-types';
+import {
+  retainCorePropertyInformationForType,
+  validateCorePropertyInformation,
+} from '../../../shared/core-property-information';
+import {
+  buildFeaturesContextFromWizardState,
+} from '../../../shared/features-context';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
@@ -104,6 +111,8 @@ type WizardNavigationState = Pick<
   | 'title'
   | 'description'
   | 'pricing'
+  | 'propertyDetails'
+  | 'basicInfo'
   | 'location'
   | 'media'
   | 'mainMediaId'
@@ -112,147 +121,20 @@ type WizardNavigationState = Pick<
 const hasPositiveAmount = (value: unknown): boolean =>
   typeof value === 'number' && Number.isFinite(value) && value > 0;
 
-const propertyDetailsForType = (propertyType: PropertyType): readonly string[] => {
-  const commonResidential = [
-    'bedrooms',
-    'bathrooms',
-    'parkingType',
-    'parkingCount',
-    'garages',
-    'amenities',
-    'amenitiesFeatures',
-  ];
-
-  switch (propertyType) {
-    case 'apartment':
-      return [
-        ...commonResidential,
-        'unitSizeM2',
-        'floorNumber',
-        'propertySettings',
-        'levies',
-        'ratesTaxes',
-        'balcony',
-        'petFriendly',
-      ];
-    case 'house':
-      return [
-        ...commonResidential,
-        'houseAreaM2',
-        'erfSizeM2',
-        'garden',
-        'pool',
-        'boundaryWalls',
-        'security',
-        'ratesTaxes',
-      ];
-    case 'townhouse':
-    case 'cluster_home':
-      return [
-        ...commonResidential,
-        'unitSizeM2',
-        'houseAreaM2',
-        'erfSizeM2',
-        'floorNumber',
-        'garden',
-        'pool',
-        'security',
-        'ratesTaxes',
-      ];
-    case 'farm':
-      return [
-        'landSizeHa',
-        'landSizeUnit',
-        'zoningAgricultural',
-        'waterSources',
-        'waterSource',
-        'electricitySupply',
-        'irrigation',
-        'farmSuitability',
-        'residenceIncluded',
-        'amenitiesFeatures',
-      ];
-    case 'plot':
-    case 'land':
-      return [
-        'landSizeM2OrHa',
-        'landSizeUnit',
-        'zoning',
-        'servicesAvailable',
-        'topography',
-        'developmentRights',
-        'boundaryFences',
-        'amenitiesFeatures',
-      ];
-    case 'commercial':
-      return [
-        'subtype',
-        'floorAreaM2',
-        'parkingBays',
-        'floorLevel',
-        'loadingBays',
-        'powerSupply',
-        'zoningBusinessUse',
-        'amenitiesCommercial',
-        'pricePerM2',
-        'amenitiesFeatures',
-      ];
-    case 'shared_living':
-      return [
-        'roomsAvailable',
-        'bathroomTypePerRoom',
-        'kitchenType',
-        'occupancyType',
-        'furnished',
-        'internetIncluded',
-        'depositRequired',
-        'amenitiesFeatures',
-      ];
-    default:
-      return ['amenitiesFeatures'];
-  }
-};
-
-const additionalInfoForType = (propertyType: PropertyType): readonly string[] => {
-  const common = ['amenitiesFeatures'];
-  const residential = [
-    'furnishingStatus',
-    'flooring',
-    'petPolicy',
-    'roofType',
-    'wallType',
-    'windowType',
-    'security',
-    'securityFeatures',
-    'outdoorFeatures',
-  ];
-
-  switch (propertyType) {
-    case 'apartment':
-    case 'house':
-    case 'townhouse':
-    case 'cluster_home':
-      return [...common, ...residential];
-    case 'farm':
-      return [...common, 'arableLandHa', 'grazingLandHa', 'irrigationType', 'waterSources', 'fencing', 'topography'];
-    case 'commercial':
-      return [...common, 'grade', 'airConditioning', 'internetAccess', 'loadingDocks', 'truckAccess', 'parkingRatio'];
-    case 'shared_living':
-      return [...common, 'houseRules', 'billsIncluded', 'minimumStayMonths'];
-    case 'plot':
-    case 'land':
-    default:
-      return common;
-  }
-};
-
-const retainKeys = (value: unknown, keys: readonly string[]): Record<string, any> | undefined => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
-  const source = value as Record<string, any>;
-  const retained = Object.fromEntries(
-    keys.filter(key => source[key] !== undefined).map(key => [key, source[key]]),
+const retainFeaturesForState = (
+  additionalInfo: unknown,
+  propertyDetails: unknown,
+  intent: ListingIntent | undefined,
+  propertyType: PropertyType | undefined,
+) => {
+  if (!propertyType) return undefined;
+  const context = buildFeaturesContextFromWizardState(
+    additionalInfo,
+    propertyDetails,
+    intent,
+    propertyType,
   );
-  return Object.keys(retained).length > 0 ? retained : undefined;
+  return { featuresContext: context };
 };
 
 /**
@@ -268,7 +150,16 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
     case 2:
       return Boolean(state.propertyType);
     case 3:
-      return state.title.trim().length >= 10 && state.description.trim().length >= 50;
+      return (
+        state.title.trim().length >= 10 &&
+        state.description.trim().length >= 50 &&
+        validateCorePropertyInformation(
+          listingActionToIntent(state.action),
+          state.propertyType,
+          state.propertyDetails,
+          state.basicInfo,
+        ).length === 0
+      );
     case 4:
       // Additional information is conditional and may be empty for MVP.
       return true;
@@ -369,14 +260,32 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Step 1: Listing intent
       setListingIntent: intent => {
-        set({ action: listingIntentToAction(intent), pricing: undefined });
+        const state = get();
+        set({
+          action: listingIntentToAction(intent),
+          pricing: undefined,
+          additionalInfo: retainFeaturesForState(
+            state.additionalInfo,
+            state.propertyDetails,
+            intent,
+            state.propertyType,
+          ),
+        });
       },
 
       // Legacy/API transport compatibility
       setAction: action => {
-        set({ action });
-        // Clear pricing when action changes
-        set({ pricing: undefined });
+        const state = get();
+        set({
+          action,
+          pricing: undefined,
+          additionalInfo: retainFeaturesForState(
+            state.additionalInfo,
+            state.propertyDetails,
+            listingActionToIntent(action),
+            state.propertyType,
+          ),
+        });
       },
 
       // Step 1.5: Badges
@@ -389,19 +298,27 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         const state = get();
         if (state.propertyType === propertyType) return;
 
+        const retainedCore = retainCorePropertyInformationForType(
+          state.propertyType,
+          propertyType,
+          state.propertyDetails,
+          state.basicInfo,
+        );
+
         set({
           propertyType,
-          // Keep only facts whose semantics survive the type change. Basic
-          // information and badges are entirely type/category-driven in the
-          // current engine, so retaining either would create hidden stale
-          // payload state.
-          propertyDetails: retainKeys(state.propertyDetails, propertyDetailsForType(propertyType)) as
-            | Partial<PropertyDetails>
-            | undefined,
-          additionalInfo: retainKeys(
+          // Keep only facts whose semantics survive the type change. The
+          // canonical Step 3 object owns invalidation; legacy flat fields are
+          // never allowed to carry an area or farm fact into another type.
+          propertyDetails: retainedCore
+            ? ({ corePropertyInformation: retainedCore } as Partial<PropertyDetails>)
+            : undefined,
+          additionalInfo: retainFeaturesForState(
             state.additionalInfo,
-            additionalInfoForType(propertyType),
-          ) as any,
+            retainedCore ? { corePropertyInformation: retainedCore } : undefined,
+            listingActionToIntent(state.action),
+            propertyType,
+          ),
           basicInfo: undefined,
           badges: [],
         });
@@ -567,11 +484,23 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
 
         if (state.currentStep >= 3) {
-          // Step 3 is Listing Badges - no required fields
+          const coreIssues = validateCorePropertyInformation(
+            listingActionToIntent(state.action),
+            state.propertyType,
+            state.propertyDetails,
+            state.basicInfo,
+          );
+          errors.push(
+            ...coreIssues.map(issue => ({
+              field: `propertyDetails.${issue.field}`,
+              message: issue.message,
+            })),
+          );
         }
 
         if (state.currentStep >= 4) {
-          // Step 4 is Property Details - no required fields at step level
+          // Additional Information remains conditional and optional for this
+          // bounded core-facts slice.
         }
 
         if (state.currentStep >= 5) {

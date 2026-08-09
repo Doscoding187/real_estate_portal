@@ -24,9 +24,16 @@ const baseState: ListingWizardSubmitState = {
     parkingCount: 2,
   },
   additionalInfo: {
-    flooring: 'wood',
-    securityFeatures: ['electric_fence'],
-    outdoorFeatures: ['garden'],
+    featuresContext: {
+      version: 1,
+      spaces: ['garden'],
+      context: { setting: 'estate', controlledAccess: 'controlled' },
+      utilities: { electricitySupply: 'prepaid', internetAccess: 'fibre' },
+      security: { status: 'known', features: ['electric_fence'] },
+      highlights: ['modern_finishes'],
+      customFeatures: [],
+      customHighlights: ['Quiet cul-de-sac'],
+    },
   },
   location: {
     address: '1 Main Road',
@@ -182,22 +189,30 @@ describe('buildListingWizardSubmitPayload', () => {
     });
   });
 
-  it('maps supported propertyDetails and additionalInfo into submitted details', () => {
+  it('maps the typed Features & Context contract without flattening it', () => {
     const payload = buildListingWizardSubmitPayload(baseState);
 
     expect(payload.propertyDetails).toMatchObject({
       bedrooms: 4,
       bathrooms: 2.5,
+      internalAreaM2: 240,
       houseAreaM2: 240,
+      erfAreaM2: 600,
       erfSizeM2: 600,
-      flooring: 'wood',
-      flooringType: 'wood',
-      securityFeatures: ['electric_fence'],
-      outdoorFeatures: ['garden'],
+      featuresContext: {
+        version: 1,
+        spaces: ['garden'],
+        utilities: { electricitySupply: 'prepaid', internetAccess: 'fibre' },
+        security: { status: 'known', features: ['electric_fence'] },
+        highlights: ['modern_finishes'],
+        customHighlights: ['Quiet cul-de-sac'],
+      },
     });
+    expect(payload.propertyDetails).not.toHaveProperty('flooring');
+    expect(payload.propertyDetails).not.toHaveProperty('securityFeatures');
   });
 
-  it('does not silently erase sibling property detail fields when normalizing aliases', () => {
+  it('preserves pricing aliases while dropping stale legacy Step 4 fields', () => {
     const payload = buildListingWizardSubmitPayload({
       ...baseState,
       pricing: {
@@ -224,9 +239,11 @@ describe('buildListingWizardSubmitPayload', () => {
       leviesHoaOperatingCosts: 1800,
       ratesAndTaxes: 2100,
       ratesTaxes: 2100,
-      prepaidElectricity: true,
-      fibreReady: true,
     });
+    expect(payload.propertyDetails).not.toHaveProperty('electricitySupply');
+    expect(payload.propertyDetails).not.toHaveProperty('internetAccess');
+    expect(payload.propertyDetails).not.toHaveProperty('prepaidElectricity');
+    expect(payload.propertyDetails).not.toHaveProperty('fibreReady');
   });
 
   it('handles missing optional sections without throwing', () => {
@@ -240,7 +257,13 @@ describe('buildListingWizardSubmitPayload', () => {
     });
 
     expect(payload.pricing).toEqual({});
-    expect(payload.propertyDetails).toEqual({});
+    expect(payload.propertyDetails.corePropertyInformation).toMatchObject({
+      version: 1,
+      bedrooms: { status: 'unknown' },
+      bathrooms: { status: 'unknown' },
+      internalArea: { status: 'unknown', unit: 'm2' },
+      erfArea: { status: 'unknown', unit: 'm2' },
+    });
     expect(payload.mediaIds).toEqual([]);
     expect(payload.mainMediaId).toBeUndefined();
     expect(payload.media).toEqual([]);
@@ -310,7 +333,7 @@ describe('buildListingWizardSubmitPayload', () => {
     expect(state).toEqual(original);
   });
 
-  it('matches the previous inline submit behavior for a representative listing state', () => {
+  it('emits the canonical core object for a representative listing state', () => {
     const state = {
       ...baseState,
       pricing: {
@@ -321,7 +344,14 @@ describe('buildListingWizardSubmitPayload', () => {
       } as any,
     };
 
-    expect(buildListingWizardSubmitPayload(state)).toEqual(buildPreviousInlinePayload(state));
+    const payload = buildListingWizardSubmitPayload(state);
+    expect(payload.propertyDetails.corePropertyInformation).toMatchObject({
+      bedrooms: { status: 'known', value: 4 },
+      bathrooms: { status: 'known', value: 2.5 },
+      internalArea: { status: 'known', valueM2: 240, unit: 'm2' },
+      erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+    });
+    expect(payload.propertyDetails).not.toHaveProperty('propertyCategory');
   });
 
   it('does not leak wizard-only basicInfo fields into submitted propertyDetails', () => {
@@ -345,7 +375,7 @@ describe('buildListingWizardSubmitPayload', () => {
     expect(payload.propertyDetails).not.toHaveProperty('occupancyDate');
   });
 
-  it('matches the previous inline submit behavior even when basicInfo is populated', () => {
+  it('keeps basicInfo out while still emitting canonical facts', () => {
     const state: FullWizardSubmitState = {
       ...baseState,
       basicInfo: {
@@ -357,6 +387,9 @@ describe('buildListingWizardSubmitPayload', () => {
       },
     };
 
-    expect(buildListingWizardSubmitPayload(state)).toEqual(buildPreviousInlinePayload(state));
+    const payload = buildListingWizardSubmitPayload(state);
+    expect(payload.propertyDetails).not.toHaveProperty('title');
+    expect(payload.propertyDetails).not.toHaveProperty('province');
+    expect(payload.propertyDetails).toHaveProperty('corePropertyInformation');
   });
 });

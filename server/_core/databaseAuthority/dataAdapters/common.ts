@@ -15,7 +15,7 @@ import type { ResolvedDatabaseAuthority } from '../types';
 import { assertOwnedDisposableTarget, identityFromAuthority } from '../lifecycle';
 import { readWorktreeDatabaseProfile, writeWorktreeDatabaseProfile } from '../worktreeProfile';
 
-export const ACCEPTED_MIGRATION_HEAD = '0002_canonical_property_taxonomy.sql' as const;
+export const ACCEPTED_MIGRATION_HEAD = '0003_canonical_property_measurements.sql' as const;
 
 export type AdapterEvidence = {
   adapter: string;

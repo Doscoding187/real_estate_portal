@@ -37,6 +37,7 @@ import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
 import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
+import { normalizeFeaturesContext } from '../shared/features-context';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -423,6 +424,12 @@ const appRouterConfig = {
           minBathrooms: z.number().optional(), // Added
           minArea: z.number().optional(),
           maxArea: z.number().optional(),
+          minErfSize: z.number().nonnegative().optional(),
+          maxErfSize: z.number().nonnegative().optional(),
+          minFloorSize: z.number().nonnegative().optional(),
+          maxFloorSize: z.number().nonnegative().optional(),
+          minLandSize: z.number().nonnegative().optional(),
+          maxLandSize: z.number().nonnegative().optional(),
           status: z.enum(['available', 'sold', 'rented', 'pending']).optional(),
           ownershipType: z.array(z.enum(OWNERSHIP_TYPES)).optional(),
           structuralType: z.array(z.enum(STRUCTURAL_TYPES)).optional(),
@@ -457,8 +464,12 @@ const appRouterConfig = {
           minBedrooms: input.minBedrooms,
           maxBedrooms: input.maxBedrooms,
           minBathrooms: input.minBathrooms,
-          minErfSize: input.minArea, // Map area to erfSize/floorSize as generic size filter
-          maxErfSize: input.maxArea,
+          minErfSize: input.minErfSize,
+          maxErfSize: input.maxErfSize,
+          minFloorSize: input.minFloorSize ?? input.minArea,
+          maxFloorSize: input.maxFloorSize ?? input.maxArea,
+          minLandSize: input.minLandSize,
+          maxLandSize: input.maxLandSize,
           status: input.status ? [input.status as any] : undefined, // Service expects array
           amenities: input.amenities, // Note: Service might need update if it processes amenities differently, but looks okay
           // postedBy handling might differ or need explicit mapping if service supports it
@@ -560,6 +571,12 @@ const appRouterConfig = {
             maxBathrooms: z.number().nonnegative().optional(),
             minArea: z.number().nonnegative().optional(),
             maxArea: z.number().nonnegative().optional(),
+            minFloorSize: z.number().nonnegative().optional(),
+            maxFloorSize: z.number().nonnegative().optional(),
+            minErfSize: z.number().nonnegative().optional(),
+            maxErfSize: z.number().nonnegative().optional(),
+            minLandSize: z.number().nonnegative().optional(),
+            maxLandSize: z.number().nonnegative().optional(),
             minLat: z.number().optional(),
             maxLat: z.number().optional(),
             minLng: z.number().optional(),
@@ -902,6 +919,7 @@ const appRouterConfig = {
         const images = listingImages.length > 0 ? listingImages : propertyImages;
 
         let amenities: string[] = [];
+        let storedPropertySettings: Record<string, any> = {};
         try {
           if (typeof property.amenities === 'string' && !property.amenities.startsWith('[')) {
             amenities.push(property.amenities);
@@ -914,10 +932,17 @@ const appRouterConfig = {
               typeof property.propertySettings === 'string'
                 ? JSON.parse(property.propertySettings)
                 : property.propertySettings;
+            storedPropertySettings = settings || {};
 
-            if (settings.propertyHighlights && Array.isArray(settings.propertyHighlights)) {
-              amenities = [...amenities, ...settings.propertyHighlights];
-            }
+            const storedFeaturesContext = normalizeFeaturesContext(
+              settings?.featuresContext,
+              settings,
+            );
+            amenities = [
+              ...amenities,
+              ...storedFeaturesContext.spaces,
+              ...storedFeaturesContext.security.features,
+            ];
           }
         } catch (e) {
           console.error('Failed to parse legacy amenities', e);
@@ -1050,22 +1075,18 @@ const appRouterConfig = {
           Number(linkedPropertyDetails.landSizeM2OrHa || 0) ||
           0;
 
-        const linkedAmenities =
-          linkedPropertyDetails.amenitiesFeatures ||
-          linkedPropertyDetails.amenities ||
-          linkedPropertyDetails.propertyHighlights ||
-          [];
+        const linkedFeaturesContext = normalizeFeaturesContext(
+          linkedPropertyDetails.featuresContext,
+          linkedPropertyDetails,
+        );
+        const linkedAmenities = [
+          ...linkedFeaturesContext.spaces,
+          ...linkedFeaturesContext.security.features,
+        ];
 
         const normalizedPropertySettings = {
-          ...(typeof (property as any).propertySettings === 'string'
-            ? (() => {
-                try {
-                  return JSON.parse((property as any).propertySettings);
-                } catch {
-                  return {};
-                }
-              })()
-            : (property as any).propertySettings || {}),
+          ...storedPropertySettings,
+          featuresContext: linkedFeaturesContext,
           ownershipType: linkedPropertyDetails.ownershipType,
           powerBackup: linkedPropertyDetails.powerBackup,
           security: linkedPropertyDetails.security || linkedPropertyDetails.securityLevel,
@@ -1090,6 +1111,7 @@ const appRouterConfig = {
               })()
             : (property as any).propertyDetails || {}),
           ...linkedPropertyDetails,
+          featuresContext: linkedFeaturesContext,
           bedrooms: resolvedBedrooms,
           bathrooms: resolvedBathrooms,
           area: resolvedArea,

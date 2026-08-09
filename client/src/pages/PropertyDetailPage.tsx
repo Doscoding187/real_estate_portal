@@ -11,6 +11,7 @@ import { useGuestActivity } from '@/contexts/GuestActivityContext';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { formatFullPropertyLocation } from '@/lib/propertyLocationDisplay';
 import {
   MapPin,
@@ -25,6 +26,7 @@ import {
   Car,
   Wifi,
   Dumbbell,
+  Sparkles,
   Trees,
   Shield,
   Zap,
@@ -65,6 +67,7 @@ import {
   getCompactPropertyFacts,
   getPropertyBuyerChecklist,
   getPropertyFeatureChecklistItems,
+  getPropertyFeaturesContextGroups,
   getPropertyRunningCostFacts,
 } from '@/lib/property';
 
@@ -158,6 +161,9 @@ interface PropertyPayload {
   latitude?: number | string;
   longitude?: number | string;
   area?: number;
+  internalAreaM2?: number | string | null;
+  erfSizeM2?: number | string | null;
+  landAreaM2?: number | string | null;
   mainImage?: string;
   agent?: ContactIdentityLite;
 }
@@ -509,9 +515,25 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       displayOrder: image.displayOrder,
     }))
     .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-  const houseSizeM2 = parseStrictNumber(rawPropertyDetails.houseAreaM2);
-  const erfSizeM2 = parseStrictNumber(rawPropertyDetails.erfSizeM2);
-  const unitSizeM2 = parseStrictNumber(rawPropertyDetails.unitSizeM2);
+  const coreDetails =
+    rawPropertyDetails.corePropertyInformation &&
+    typeof rawPropertyDetails.corePropertyInformation === 'object'
+      ? (rawPropertyDetails.corePropertyInformation as Record<string, any>)
+      : {};
+  const canonicalInternalArea =
+    coreDetails.internalArea?.status === 'known'
+      ? coreDetails.internalArea.valueM2
+      : property.internalAreaM2;
+  const canonicalErfArea =
+    coreDetails.erfArea?.status === 'known' ? coreDetails.erfArea.valueM2 : property.erfSizeM2;
+  const canonicalLandArea =
+    coreDetails.farmLandArea?.status === 'known'
+      ? coreDetails.farmLandArea.normalizedM2
+      : property.landAreaM2;
+  const houseSizeM2 = parseStrictNumber(canonicalInternalArea ?? rawPropertyDetails.houseAreaM2);
+  const erfSizeM2 = parseStrictNumber(canonicalErfArea ?? rawPropertyDetails.erfSizeM2);
+  const unitSizeM2 = parseStrictNumber(canonicalInternalArea ?? rawPropertyDetails.unitSizeM2);
+  const landAreaM2 = parseStrictNumber(canonicalLandArea ?? rawPropertyDetails.landAreaM2);
   const displayPrice = Number(property.price) || 0;
   const displayLocationLabel = formatFullPropertyLocation({
     address: property.address,
@@ -623,6 +645,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const propertyDetailItems = getCompactPropertyFacts(property, 4);
   const featureSpecItems = getPropertyBuyerChecklist(property);
   const propertyFeatureChecklistItems = getPropertyFeatureChecklistItems(property).slice(0, 18);
+  const propertyFeatureGroups = getPropertyFeaturesContextGroups(property);
   const runningCostItems = getPropertyRunningCostFacts(property);
   const openQualification = () => {
     setIsQualificationOpen(true);
@@ -712,6 +735,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           ? { name: 'Floor Size', value: houseSizeM2 || unitSizeM2 || 0, unitText: 'm2' }
           : null,
         erfSizeM2 ? { name: 'Erf Size', value: erfSizeM2, unitText: 'm2' } : null,
+        landAreaM2 ? { name: 'Farm / land size', value: landAreaM2, unitText: 'm2' } : null,
         specs.ownershipType
           ? { name: 'Ownership Type', value: String(specs.ownershipType).replace(/_/g, ' ') }
           : null,
@@ -1296,15 +1320,73 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               </Card>
             )}
 
-            {/* 2.3 Property Features & Specifications */}
-            {propertyFeatureChecklistItems.length > 0 && (
+            {/* 2.3 Canonical Features & Context */}
+            {propertyFeatureGroups.length > 0 ? (
+              <div id={featureSpecItems.length === 0 ? 'features' : undefined} className="space-y-4">
+                {propertyFeatureGroups.map(group => {
+                  const GroupIcon =
+                    group.key === 'security'
+                      ? Shield
+                      : group.key === 'utilities'
+                        ? Zap
+                        : group.key === 'highlights'
+                          ? Sparkles
+                          : group.key === 'context'
+                            ? Home
+                            : CheckCircle2;
+                  return (
+                    <Card key={group.key} className="border-slate-200 shadow-sm">
+                      <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-xl bg-blue-50 p-2 text-blue-700">
+                            <GroupIcon className="h-5 w-5" aria-hidden="true" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                              {group.title}
+                            </CardTitle>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                              {group.description}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+                          {group.items.map(item => (
+                            <div
+                              key={item.key}
+                              className={cn(
+                                'flex min-h-[44px] items-center justify-between gap-3 rounded-xl border px-3 py-2.5',
+                                group.key === 'highlights' || item.source === 'highlight'
+                                  ? 'border-amber-100 bg-amber-50/60'
+                                  : 'border-slate-100 bg-slate-50',
+                              )}
+                            >
+                              <span className="text-sm font-semibold leading-snug text-slate-900">
+                                {item.label}
+                              </span>
+                              {item.value && (
+                                <span className="shrink-0 text-xs font-medium text-slate-500">
+                                  {item.value}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : propertyFeatureChecklistItems.length > 0 ? (
               <Card
                 id={featureSpecItems.length === 0 ? 'features' : undefined}
                 className="border-slate-200 shadow-sm"
               >
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Property Features & Specifications
+                    Property Features &amp; Specifications
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
@@ -1326,72 +1408,28 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            {/* 2.3 Additional Rooms */}
-            {propertyFeatureChecklistItems.length === 0 &&
-              specs.additionalRooms &&
-              specs.additionalRooms.length > 0 && (
-                <Card
-                  id={featureSpecItems.length === 0 ? 'features' : undefined}
-                  className="border-slate-200 shadow-sm"
-                >
-                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                    <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                      Additional Rooms & Specifications
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex flex-wrap gap-2">
-                      {specs.additionalRooms.map(room => (
-                        <Badge
-                          key={room}
-                          variant="secondary"
-                          className="bg-blue-50 text-slate-900 hover:bg-blue-100 border-0 px-4 py-1.5 rounded-full font-medium"
-                        >
-                          {room}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-            {/* 2.4 Amenities */}
-            {propertyFeatureChecklistItems.length === 0 && highlights.length > 0 && (
-              <Card
-                id={
-                  featureSpecItems.length === 0 &&
-                  (!specs.additionalRooms || specs.additionalRooms.length === 0)
-                    ? 'features'
-                    : undefined
-                }
-                className="border-slate-200 shadow-sm"
-              >
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            ) : highlights.length > 0 ? (
+              <Card id={featureSpecItems.length === 0 ? 'features' : undefined} className="border-slate-200 shadow-sm">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Amenities & Features
+                    Property Features &amp; Specifications
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div
-                    className={`grid gap-y-3 gap-x-4 ${
-                      highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
-                    }`}
-                  >
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {highlights.map((amenity: string, index: number) => {
                       const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                       return (
-                        <div key={index} className="flex items-center gap-3">
+                        <div key={index} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
                           <IconComponent className="h-5 w-5 text-blue-600" />
-                          <span className="capitalize text-slate-700 font-medium">{amenity}</span>
+                          <span className="font-medium capitalize text-slate-700">{amenity}</span>
                         </div>
                       );
                     })}
                   </div>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
             {/* 2.5 Developer Brand Section (when property is linked to a brand profile) */}
             {(property.developerBrand || property.developerBrandProfile) && (

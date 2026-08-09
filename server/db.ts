@@ -69,6 +69,11 @@ import {
   isSameListingCommercialOwner,
 } from './services/listingPublicationEntitlementService';
 import { toPublicPropertyType } from '../shared/property-taxonomy';
+import {
+  buildCanonicalCorePropertyDetails,
+  buildCorePropertyInformation,
+} from '../shared/core-property-information';
+import { normalizeFeaturesContext } from '../shared/features-context';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -2828,19 +2833,36 @@ export async function approveListing(
     }
   }
 
-  const bedrooms = Number(details.bedrooms) || 0;
-  const bathrooms = Number(details.bathrooms) || 0;
+  const core = buildCorePropertyInformation(String(listing.propertyType) as any, details);
+  const featuresContext = normalizeFeaturesContext(details.featuresContext, details);
+  const canonicalDetails = {
+    ...details,
+    featuresContext,
+    ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, details),
+  };
+  const knownNumber = (fact: any): number | null =>
+    fact?.status === 'known' && Number.isFinite(Number(fact.value)) ? Number(fact.value) : null;
+  const knownMeasurement = (fact: any): number | null =>
+    fact?.status === 'known' && Number.isFinite(Number(fact.valueM2))
+      ? Number(fact.valueM2)
+      : null;
+  const bedrooms = knownNumber(core.bedrooms) ?? (Number(details.bedrooms) || 0);
+  const bathrooms = knownNumber(core.bathrooms) ?? (Number(details.bathrooms) || 0);
+  const internalAreaM2 = knownMeasurement(core.internalArea);
+  const erfSizeM2 = knownMeasurement(core.erfArea);
+  const landAreaM2 =
+    core.farmLandArea?.status === 'known' ? Number(core.farmLandArea.normalizedM2) : null;
 
-  // Determine area (prioritize building size, not land size)
+  // `area` remains a legacy compatibility field. The typed columns below are
+  // the authority for new public search/detail consumers.
   const area =
-    Number(details.unitSizeM2) || Number(details.houseAreaM2) || Number(details.floorAreaM2) || 0;
+    internalAreaM2 ??
+    (Number(details.unitSizeM2) || Number(details.houseAreaM2) || Number(details.floorAreaM2) || 0);
 
   // Map amenities
   const amenitiesList = [
-    ...(details.amenities || []),
-    ...(details.amenitiesFeatures || []),
-    ...(details.securityFeatures || []),
-    ...(details.outdoorFeatures || []),
+    ...featuresContext.spaces,
+    ...featuresContext.security.features,
   ];
   const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
 
@@ -2862,6 +2884,9 @@ export async function approveListing(
     bedrooms: bedrooms,
     bathrooms: bathrooms,
     area: area,
+    internalAreaM2,
+    erfSizeM2,
+    landAreaM2,
     address: listing.address,
     city: listing.city,
     province: listing.province,
@@ -2876,7 +2901,7 @@ export async function approveListing(
     agentId: listing.agentId,
     ownerId: listing.ownerId,
     sourceListingId: listingId,
-    propertySettings: JSON.stringify(details),
+    propertySettings: JSON.stringify(canonicalDetails),
     levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
     ratesAndTaxes: Number(details.ratesAndTaxes) || Number(details.ratesTaxes) || null,
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
@@ -3181,6 +3206,17 @@ export async function getAgentByUserId(userId: number) {
  */
 export function transformListingToProperty(listing: any, media: any[] = []) {
   const propertyDetails = (listing.propertyDetails as any) || {};
+  const canonicalDetails = {
+    ...propertyDetails,
+    featuresContext: normalizeFeaturesContext(propertyDetails.featuresContext, propertyDetails),
+    ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, propertyDetails),
+  };
+
+  const featuresContext = canonicalDetails.featuresContext;
+  const structuredFeatures = [
+    ...featuresContext.spaces,
+    ...featuresContext.security.features,
+  ];
 
   return {
     id: listing.id,
@@ -3190,37 +3226,45 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
     listingType: listing.action, // 'sell', 'rent', 'auction'
     propertyType: toPublicPropertyType(String(listing.propertyType)),
+    propertySettings: canonicalDetails,
+    propertyDetails: canonicalDetails,
     // Extract from propertyDetails JSON
-    bedrooms: propertyDetails.bedrooms || 0,
-    bathrooms: propertyDetails.bathrooms || 0,
+    bedrooms: canonicalDetails.bedrooms || 0,
+    bathrooms: canonicalDetails.bathrooms || 0,
     area:
-      propertyDetails.unitSizeM2 || propertyDetails.houseAreaM2 || propertyDetails.floorAreaM2 || 0,
-    yardSize: propertyDetails.erfSizeM2 || propertyDetails.landSizeM2OrHa || 0,
+      canonicalDetails.internalAreaM2 ||
+      canonicalDetails.unitSizeM2 ||
+      canonicalDetails.houseAreaM2 ||
+      canonicalDetails.floorAreaM2 ||
+      0,
+    yardSize: canonicalDetails.erfAreaM2 || canonicalDetails.erfSizeM2 || canonicalDetails.landAreaM2 || 0,
     amenities: [
-      ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
-      ...(Array.isArray(propertyDetails.amenitiesFeatures)
-        ? propertyDetails.amenitiesFeatures
+      ...structuredFeatures,
+      ...(Array.isArray(canonicalDetails.amenities) ? canonicalDetails.amenities : []),
+      ...(Array.isArray(canonicalDetails.amenitiesFeatures)
+        ? canonicalDetails.amenitiesFeatures
         : []),
-      ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
-      ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
-      ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
-      ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
-      propertyDetails.waterHeating,
-      propertyDetails.waterSupply,
+      ...(Array.isArray(canonicalDetails.securityFeatures) ? canonicalDetails.securityFeatures : []),
+      ...(Array.isArray(canonicalDetails.kitchenFeatures) ? canonicalDetails.kitchenFeatures : []),
+      ...(Array.isArray(canonicalDetails.outdoorFeatures) ? canonicalDetails.outdoorFeatures : []),
+      ...(Array.isArray(canonicalDetails.energyFeatures) ? canonicalDetails.energyFeatures : []),
+      canonicalDetails.waterHeating,
+      canonicalDetails.waterSupply,
     ]
       .filter(Boolean)
       .flat(),
     features: [
-      ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
-      ...(Array.isArray(propertyDetails.amenitiesFeatures)
-        ? propertyDetails.amenitiesFeatures
+      ...structuredFeatures,
+      ...(Array.isArray(canonicalDetails.amenities) ? canonicalDetails.amenities : []),
+      ...(Array.isArray(canonicalDetails.amenitiesFeatures)
+        ? canonicalDetails.amenitiesFeatures
         : []),
-      ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
-      ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
-      ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
-      ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
-      propertyDetails.waterHeating,
-      propertyDetails.waterSupply,
+      ...(Array.isArray(canonicalDetails.securityFeatures) ? canonicalDetails.securityFeatures : []),
+      ...(Array.isArray(canonicalDetails.kitchenFeatures) ? canonicalDetails.kitchenFeatures : []),
+      ...(Array.isArray(canonicalDetails.outdoorFeatures) ? canonicalDetails.outdoorFeatures : []),
+      ...(Array.isArray(canonicalDetails.energyFeatures) ? canonicalDetails.energyFeatures : []),
+      canonicalDetails.waterHeating,
+      canonicalDetails.waterSupply,
     ]
       .filter(Boolean)
       .flat(),

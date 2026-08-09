@@ -3,6 +3,7 @@ import { validateListingWorkflowPayload } from './listingWorkflowValidation';
 import { calculateListingReadiness } from '@/lib/readiness';
 import { calculateListingQualityScore, getQualityTier } from '@/lib/quality';
 import type { ListingWorkflowData, ListingFieldError } from '@shared/listing-workflow-types';
+import { buildCanonicalCorePropertyDetails, buildCorePropertyInformation } from '@shared/core-property-information';
 
 export interface SubmitReadinessResult {
   ready: boolean;
@@ -49,6 +50,9 @@ function getActionPrice(data: ListingWorkflowData): number {
  */
 function getPropertyArea(data: ListingWorkflowData): number {
   if (!data.propertyDetails) return 0;
+  const core = buildCorePropertyInformation(data.propertyType, data.propertyDetails, (data as any).basicInfo);
+  if (core.internalArea?.status === 'known') return Number(core.internalArea.valueM2) || 0;
+  if (core.farmLandArea?.status === 'known') return Number(core.farmLandArea.normalizedM2) || 0;
   const d = data.propertyDetails as Record<string, any>;
   switch (data.propertyType) {
     case 'apartment':
@@ -140,7 +144,9 @@ export async function calculateSubmitReadinessDryRun(
     media: data.media,
     description: data.description,
     propertyType: data.propertyType,
-    propertyDetails: data.propertyDetails,
+    propertyDetails:
+      builtPayload?.propertyDetails ||
+      buildCanonicalCorePropertyDetails(data.propertyType, data.propertyDetails, (data as any).basicInfo),
   };
   const readinessResult = calculateListingReadiness(readinessInput);
 
@@ -156,7 +162,9 @@ export async function calculateSubmitReadinessDryRun(
     latitude: data.location?.latitude,
     longitude: data.location?.longitude,
     floorSize,
-    propertyDetails: data.propertyDetails,
+    propertyDetails:
+      builtPayload?.propertyDetails ||
+      buildCanonicalCorePropertyDetails(data.propertyType, data.propertyDetails, (data as any).basicInfo),
   };
   const qualityResult = calculateListingQualityScore(qualityInput);
   const tierResult = getQualityTier(qualityResult.score);

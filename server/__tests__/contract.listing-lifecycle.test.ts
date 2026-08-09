@@ -123,7 +123,15 @@ const mockListing = (overrides: Record<string, any> = {}) => ({
   latitude: -26.2041,
   longitude: 28.0473,
   pricing: { askingPrice: 2500000 },
-  propertyDetails: { bedrooms: 4, bathrooms: 2 },
+  propertyDetails: {
+    corePropertyInformation: {
+      version: 1,
+      bedrooms: { status: 'known', value: 4 },
+      bathrooms: { status: 'known', value: 2 },
+      internalArea: { status: 'known', valueM2: 250, unit: 'm2' },
+      erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+    },
+  },
   featured: 0,
   readinessScore: 100,
   qualityScore: 90,
@@ -348,6 +356,31 @@ describe('listing lifecycle — canonical identity contract', () => {
 
     // Submit must have been called with the same ID
     expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+  });
+
+  it('rejects submission when canonical core property facts are incomplete', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 3003;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({
+        id: LISTING_ID,
+        propertyDetails: {
+          corePropertyInformation: {
+            version: 1,
+            bedrooms: { status: 'known', value: 4 },
+            bathrooms: { status: 'known', value: 2 },
+            internalArea: { status: 'unknown', unit: 'm2' },
+            erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+          },
+        },
+      }),
+    );
+
+    await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    expect(mockDb.submitListingForReview).not.toHaveBeenCalled();
   });
 
   it('does not let verified-agent fast-track bypass the canonical entitlement assertion', async () => {

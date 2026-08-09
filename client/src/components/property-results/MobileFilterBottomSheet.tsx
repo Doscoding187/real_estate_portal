@@ -232,13 +232,15 @@ export function MobileFilterBottomSheet({
 
   const handleTitleTypeChange = useCallback(
     (type: 'freehold' | 'sectional', checked: boolean) => {
-      const currentTypes = filters.titleType || [];
+      const currentTypes = (filters.titleType || []).filter(
+        (value): value is 'freehold' | 'sectional' => value !== undefined,
+      );
       let newTypes: ('freehold' | 'sectional')[];
 
       if (checked) {
         newTypes = [...currentTypes, type];
       } else {
-        newTypes = currentTypes.filter((t: 'freehold' | 'sectional') => t !== type);
+        newTypes = currentTypes.filter(t => t !== type);
       }
 
       onFilterChange({

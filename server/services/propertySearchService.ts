@@ -29,6 +29,8 @@ import type {
 } from '../../shared/types';
 import { locationResolver, ResolvedLocation } from './locationResolverService';
 import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
+import { buildCorePropertyInformation } from '../../shared/core-property-information';
+import { normalizeFeaturesContext } from '../../shared/features-context';
 
 // Cache key prefix for property searches
 const CACHE_PREFIX = 'property:search:v2:';
@@ -138,13 +140,14 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): nu
 
 function deriveLoadSheddingSolutions(details: Record<string, any>): LoadSheddingSolution[] {
   const solutions = new Set<LoadSheddingSolution>();
-  const powerBackup = String(details.powerBackup ?? '').toLowerCase();
+  const canonical = normalizeFeaturesContext(details.featuresContext, details);
+  const powerBackup = String(canonical.utilities.backupPower ?? details.powerBackup ?? '').toLowerCase();
+  if (powerBackup === 'none') solutions.add('none');
   if (powerBackup.includes('solar')) solutions.add('solar');
   if (powerBackup.includes('generator')) solutions.add('generator');
   if (powerBackup.includes('inverter') || powerBackup.includes('battery')) {
     solutions.add('inverter');
   }
-  if (solutions.size === 0) solutions.add('none');
   return Array.from(solutions);
 }
 
@@ -231,6 +234,9 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
     description: property.description || undefined,
     bedrooms: property.bedrooms || undefined,
     bathrooms: property.bathrooms || undefined,
+    internalAreaM2: property.internalAreaM2 || property.floorSize || undefined,
+    erfSizeM2: property.erfSizeM2 || property.erfSize || undefined,
+    landAreaM2: property.landAreaM2 || property.landSize || undefined,
     area: property.floorSize || property.area || undefined,
     yardSize: property.erfSize || property.yardSize || undefined,
     propertyType: property.propertyType,
@@ -448,17 +454,24 @@ export class PropertySearchService {
         developerId: developments.developerId,
         developerName: developers.name,
         developerLogo: developers.logo,
-        erfSize: sql<number>`CAST(${properties.area} AS SIGNED)`,
-        floorSize: sql<number>`CAST(${properties.area} AS SIGNED)`,
-        titleType: sql<'freehold' | 'sectional'>`'freehold'`, // Default until migration
+        // New listings use typed measurement columns. COALESCE keeps old
+        // published rows searchable through the legacy `area` field until
+        // their source listing is republished with canonical facts.
+        erfSize: sql<number>`CAST(COALESCE(${properties.erfSizeM2}, ${properties.area}) AS DECIMAL(14,2))`,
+        floorSize: sql<number>`CAST(COALESCE(${properties.internalAreaM2}, ${properties.area}) AS DECIMAL(14,2))`,
+        landSize: sql<number>`CAST(COALESCE(${properties.landAreaM2}, ${properties.area}) AS DECIMAL(14,2))`,
+        internalAreaM2: properties.internalAreaM2,
+        erfSizeM2: properties.erfSizeM2,
+        landAreaM2: properties.landAreaM2,
+        titleType: sql<null>`NULL`,
         levy: properties.levies,
         rates: properties.ratesAndTaxes,
-        securityEstate: sql<boolean>`false`, // Default until migration
-        petFriendly: sql<boolean>`false`, // Default until migration
-        fibreReady: sql<boolean>`false`, // Default until migration
+        securityEstate: sql<null>`NULL`,
+        petFriendly: sql<null>`NULL`,
+        fibreReady: sql<null>`NULL`,
         loadSheddingSolutions: sql<
           Array<'solar' | 'generator' | 'inverter' | 'none'>
-        >`JSON_ARRAY('none')`,
+        >`JSON_ARRAY()`,
         videoCount: sql<number>`CASE WHEN ${properties.videoUrl} IS NOT NULL THEN 1 ELSE 0 END`,
         status: properties.status,
         listedDate: properties.createdAt,
@@ -609,18 +622,30 @@ export class PropertySearchService {
     // Transform results to Property type
     const transformedProperties: Property[] = results.map((prop: any) => {
       const details = parseJsonObject(prop.propertySettings);
+      const featuresContext = normalizeFeaturesContext(details.featuresContext, details);
+      const hasCanonicalStep4 =
+        details.featuresContext && typeof details.featuresContext === 'object';
+      const core = buildCorePropertyInformation(prop.propertyType, details);
+      const coreInternalArea =
+        core.internalArea?.status === 'known' ? Number(core.internalArea.valueM2) : undefined;
+      const coreErfArea = core.erfArea?.status === 'known' ? Number(core.erfArea.valueM2) : undefined;
+      const coreLandArea =
+        core.farmLandArea?.status === 'known' ? Number(core.farmLandArea.normalizedM2) : undefined;
       const floorSize =
-        asPositiveNumber(details.unitSizeM2) ||
-        asPositiveNumber(details.houseAreaM2) ||
-        asPositiveNumber(details.floorAreaM2) ||
+        coreInternalArea ||
+        asPositiveNumber(prop.internalAreaM2) ||
         asPositiveNumber(prop.floorSize);
       const erfSize =
-        asPositiveNumber(details.erfSizeM2) ||
-        asPositiveNumber(details.landSizeM2OrHa) ||
-        (asPositiveNumber(details.landSizeHa) ? Number(details.landSizeHa) * 10000 : undefined) ||
+        coreErfArea ||
+        asPositiveNumber(prop.erfSizeM2) ||
         asPositiveNumber(prop.erfSize);
+      const landSize =
+        coreLandArea || asPositiveNumber(prop.landAreaM2) || asPositiveNumber(prop.landSize);
 
-      const securityTokens = parseStringList(details.securityFeatures).map(v => v.toLowerCase());
+      const securityTokens = (hasCanonicalStep4
+        ? featuresContext.security.features
+        : parseStringList(details.securityFeatures)
+      ).map(v => v.toLowerCase());
       const amenityTokens = [
         ...parseStringList(details.amenities),
         ...parseStringList(details.amenitiesFeatures),
@@ -628,29 +653,51 @@ export class PropertySearchService {
       ].map(v => v.toLowerCase());
 
       const internetAvailability = String(
-        details.internetAvailability ?? details.internetAccess ?? '',
+        hasCanonicalStep4
+          ? featuresContext.utilities.internetAccess ?? ''
+          : details.internetAvailability ?? details.internetAccess ?? '',
       ).toLowerCase();
-      const securityLabel = String(details.security ?? details.securityLevel ?? '').toLowerCase();
 
-      const securityEstate =
-        securityLabel.includes('estate') ||
-        securityLabel.includes('24') ||
-        securityTokens.includes('security_estate');
-      const petFriendly =
-        details.petFriendly === true ||
-        details.petPolicy === 'allowed' ||
-        details.petPolicy === 'by_arrangement';
-      const fibreReady =
-        internetAvailability.includes('fibre') ||
-        internetAvailability.includes('fiber') ||
-        amenityTokens.some(token => token.includes('fibre') || token.includes('fiber'));
+      const explicitSecurityEstate =
+        details.securityEstate === true ? true : details.securityEstate === false ? false : undefined;
+      const canonicalPetPolicy = hasCanonicalStep4 ? featuresContext.petPolicy : undefined;
+      const petFriendly = hasCanonicalStep4
+        ? canonicalPetPolicy === 'allowed'
+          ? true
+          : canonicalPetPolicy === 'not_allowed'
+            ? false
+            : undefined
+        : details.petFriendly === true
+          ? true
+          : details.petFriendly === false || details.petPolicy === 'no_pets'
+            ? false
+            : details.petPolicy === 'allowed'
+              ? true
+              : undefined;
+      const fibreReady = hasCanonicalStep4
+        ? featuresContext.utilities.internetAccess === 'fibre'
+          ? true
+          : featuresContext.utilities.internetAccess === 'none'
+            ? false
+            : undefined
+        : details.fibreReady === true
+          ? true
+          : details.fibreReady === false
+            ? false
+            : amenityTokens.some(token => token.includes('fibre') || token.includes('fiber'))
+              ? true
+              : undefined;
 
       const highlights = uniqueStrings([
-        ...parseStringList(prop.highlights),
-        ...parseStringList(details.propertyHighlights),
-        ...parseStringList(details.amenitiesFeatures),
-        ...parseStringList(details.securityFeatures),
-        ...parseStringList(details.outdoorFeatures),
+        ...(hasCanonicalStep4
+          ? featuresContext.highlights.map(value => value.replace(/_/g, ' '))
+          : [
+              ...parseStringList(prop.highlights),
+              ...parseStringList(details.propertyHighlights),
+              ...parseStringList(details.amenitiesFeatures),
+              ...parseStringList(details.securityFeatures),
+              ...parseStringList(details.outdoorFeatures),
+            ]),
       ]);
 
       const primaryImage: Array<{ url: string; thumbnailUrl: string }> = [];
@@ -731,13 +778,12 @@ export class PropertySearchService {
             }
           : undefined;
 
-      const titleType: Property['titleType'] = String(
-        details.propertySetting || details.ownershipType || '',
-      )
-        .toLowerCase()
-        .includes('sectional')
-        ? 'sectional'
-        : 'freehold';
+      const titleType: Property['titleType'] =
+        String(details.ownershipType || details.titleType || '').toLowerCase().includes('sectional')
+          ? 'sectional'
+          : String(details.ownershipType || details.titleType || '').toLowerCase().includes('freehold')
+            ? 'freehold'
+            : undefined;
 
       return {
         id: String(prop.id),
@@ -751,12 +797,15 @@ export class PropertySearchService {
         listingType: prop.listingType as Property['listingType'],
         bedrooms: prop.bedrooms || undefined,
         bathrooms: prop.bathrooms || undefined,
+        internalAreaM2: floorSize || undefined,
+        erfSizeM2: erfSize || undefined,
+        landAreaM2: landSize || undefined,
         erfSize: erfSize || undefined,
         floorSize: floorSize || undefined,
         titleType,
         levy: prop.levy || undefined,
         rates: prop.rates || undefined,
-        securityEstate,
+        securityEstate: explicitSecurityEstate,
         petFriendly,
         fibreReady,
         loadSheddingSolutions: deriveLoadSheddingSolutions(details),
@@ -805,7 +854,7 @@ export class PropertySearchService {
         longitude: prop.longitude || 0,
         highlights,
         area: floorSize || undefined,
-        yardSize: erfSize || undefined,
+        yardSize: erfSize || landSize || undefined,
         address: prop.address || undefined,
         propertySettings: details,
       } as any;
@@ -989,18 +1038,38 @@ export class PropertySearchService {
       conditions.push(lte(properties.bathrooms, filters.maxBathrooms));
     }
 
-    // Size filters (using area field for now)
+    // Size filters use the canonical typed public measurements. The legacy
+    // `area` fallback preserves older rows but is intentionally compatibility
+    // only; new projections populate the specific columns.
     if (filters.minErfSize !== undefined) {
-      conditions.push(gte(properties.area, filters.minErfSize));
+      conditions.push(
+        gte(sql`COALESCE(${properties.erfSizeM2}, ${properties.area})`, filters.minErfSize),
+      );
     }
     if (filters.maxErfSize !== undefined) {
-      conditions.push(lte(properties.area, filters.maxErfSize));
+      conditions.push(
+        lte(sql`COALESCE(${properties.erfSizeM2}, ${properties.area})`, filters.maxErfSize),
+      );
     }
     if (filters.minFloorSize !== undefined) {
-      conditions.push(gte(properties.area, filters.minFloorSize));
+      conditions.push(
+        gte(sql`COALESCE(${properties.internalAreaM2}, ${properties.area})`, filters.minFloorSize),
+      );
     }
     if (filters.maxFloorSize !== undefined) {
-      conditions.push(lte(properties.area, filters.maxFloorSize));
+      conditions.push(
+        lte(sql`COALESCE(${properties.internalAreaM2}, ${properties.area})`, filters.maxFloorSize),
+      );
+    }
+    if (filters.minLandSize !== undefined) {
+      conditions.push(
+        gte(sql`COALESCE(${properties.landAreaM2}, ${properties.area})`, filters.minLandSize),
+      );
+    }
+    if (filters.maxLandSize !== undefined) {
+      conditions.push(
+        lte(sql`COALESCE(${properties.landAreaM2}, ${properties.area})`, filters.maxLandSize),
+      );
     }
 
     // Ownership Type (from Developments table)

@@ -56,6 +56,12 @@ export interface PublicSearchInventoryInput {
   maxBathrooms?: number;
   minArea?: number;
   maxArea?: number;
+  minFloorSize?: number;
+  maxFloorSize?: number;
+  minErfSize?: number;
+  maxErfSize?: number;
+  minLandSize?: number;
+  maxLandSize?: number;
   minLat?: number;
   maxLat?: number;
   minLng?: number;
@@ -284,10 +290,15 @@ function buildPublicFilters(
     maxBedrooms: input.maxBedrooms,
     minBathrooms: input.minBathrooms,
     maxBathrooms: input.maxBathrooms,
-    minErfSize: input.minArea,
-    maxErfSize: input.maxArea,
-    minFloorSize: input.minArea,
-    maxFloorSize: input.maxArea,
+    // `minArea` remains the legacy/current UI contract for internal/floor
+    // area. Explicit fields prevent an internal-area filter from silently
+    // becoming an erf or farm-land filter.
+    minErfSize: input.minErfSize,
+    maxErfSize: input.maxErfSize,
+    minFloorSize: input.minFloorSize ?? input.minArea,
+    maxFloorSize: input.maxFloorSize ?? input.maxArea,
+    minLandSize: input.minLandSize,
+    maxLandSize: input.maxLandSize,
     bounds: buildSearchBounds(input),
   };
 }

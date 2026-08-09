@@ -8,7 +8,15 @@ const completeData: ListingWorkflowData = {
   title: 'Modern Family Home',
   description: 'Beautiful 4-bedroom family home in a prime location with modern finishes throughout. This home features an open-plan living area and a modern kitchen.',
   pricing: { askingPrice: 2500000, negotiable: true } as any,
-  propertyDetails: { bedrooms: 4, bathrooms: 2, houseAreaM2: 250 },
+  propertyDetails: {
+    corePropertyInformation: {
+      version: 1,
+      bedrooms: { status: 'known', value: 4 },
+      bathrooms: { status: 'known', value: 2 },
+      internalArea: { status: 'known', valueM2: 250, unit: 'm2' },
+      erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+    },
+  },
   additionalInfo: { furnishingStatus: 'fully_furnished', petPolicy: 'allowed' },
   basicInfo: { propertyCategory: 'existing', possessionStatus: 'immediate' },
   location: {

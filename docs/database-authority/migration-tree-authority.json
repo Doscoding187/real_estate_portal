@@ -483,6 +483,11 @@
       "purpose": "Approved exceptional expansion of the authored listing property-type vocabulary for PLE-2B taxonomy compatibility."
     },
     {
+      "path": "server/migrations/0003_canonical_property_measurements.sql",
+      "classification": "canonical active",
+      "purpose": "Additive public read-model measurements preserving internal, erf/stand, and normalized farm-land semantics for PLE-3B core property facts."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

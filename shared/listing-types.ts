@@ -4,6 +4,8 @@ import type {
   ListingPropertyType,
   PropertyListingIntent,
 } from './property-taxonomy';
+import type { CorePropertyInformation } from './core-property-information';
+import type { FeaturesContext } from './features-context';
 
 export { PROPERTY_TYPE_TEMPLATES } from './property-taxonomy';
 export type {
@@ -233,6 +235,8 @@ export type WaterHeating =
 
 // Extended property details interface
 export interface ExtendedPropertyDetails {
+  /** Canonical Step 3 facts; older flat fields remain read-compatible. */
+  corePropertyInformation?: CorePropertyInformation;
   // Basic property details
   propertySetting: PropertySetting;
   bedrooms?: number;
@@ -376,6 +380,9 @@ export type HouseRule =
 export type BillIncluded = 'water' | 'electricity' | 'wifi' | 'cleaning' | 'gas';
 
 export interface AdditionalInformation {
+  /** Canonical PLE-4B Step 4 contract. Legacy flat fields below remain readable. */
+  featuresContext?: FeaturesContext;
+
   // Residential (House / Apartment)
   furnishingStatus?: FurnishingStatus;
   flooring?: FlooringType;

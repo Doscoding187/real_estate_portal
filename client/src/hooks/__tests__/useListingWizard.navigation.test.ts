@@ -106,9 +106,17 @@ describe('useListingWizardStore navigation contract', () => {
         erfSizeM2: 500,
       });
       result.current.setAdditionalInfo({
+        featuresContext: {
+          version: 1,
+          spaces: ['laundry_room', 'garden'],
+          context: {},
+          utilities: { backupPower: 'solar' },
+          security: { status: 'known', features: [] },
+          highlights: ['natural_light'],
+          customFeatures: [],
+          customHighlights: [],
+        },
         furnishingStatus: 'unfurnished',
-        grade: 'a_grade',
-        amenitiesFeatures: ['solar'],
       });
       result.current.setBasicInfo({ propertyCategory: 'existing', landSizeUnit: 'm2' });
       result.current.setBadges(['ready_to_move']);
@@ -116,12 +124,24 @@ describe('useListingWizardStore navigation contract', () => {
     });
 
     expect(result.current.propertyDetails).toEqual({
-      bedrooms: 3,
-      bathrooms: 2,
+      corePropertyInformation: {
+        version: 1,
+        bedrooms: { status: 'known', value: 3 },
+        bathrooms: { status: 'known', value: 2 },
+        internalArea: { status: 'known', valueM2: 210, unit: 'm2' },
+      },
     });
     expect(result.current.additionalInfo).toEqual({
-      furnishingStatus: 'unfurnished',
-      amenitiesFeatures: ['solar'],
+      featuresContext: {
+        version: 1,
+        spaces: ['laundry_room'],
+        context: {},
+        utilities: { backupPower: 'solar' },
+        security: { status: 'known', features: [] },
+        highlights: ['natural_light'],
+        customFeatures: [],
+        customHighlights: [],
+      },
     });
     expect(result.current.basicInfo).toBeUndefined();
     expect(result.current.badges).toEqual([]);

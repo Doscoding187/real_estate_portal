@@ -42,6 +42,7 @@ import { ArrowLeft, ArrowRight, Home, Save, Check, AlertTriangle, ListChecks } f
 import { toast } from 'sonner';
 import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
 import { calculateListingReadiness } from '@/lib/readiness';
+import { buildCanonicalCorePropertyDetails } from '@/../../shared/core-property-information';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { buildListingWizardSubmitPayload } from '@/lib/listingWizardSubmitMapper';
 
@@ -73,7 +74,14 @@ const ListingWizard: React.FC = () => {
       title: store.title,
       description: store.description,
       pricing: store.pricing,
-      propertyDetails: store.propertyDetails,
+      propertyDetails: {
+        ...store.propertyDetails,
+        ...buildCanonicalCorePropertyDetails(
+          store.propertyType,
+          store.propertyDetails,
+          store.basicInfo,
+        ),
+      },
       location: store.location,
       media: store.media,
       badges: store.badges,
@@ -172,12 +180,9 @@ const ListingWizard: React.FC = () => {
         // Also map to basicInfo/additionalInfo if needed, or just rely on propertyDetails
         // The wizard seems to split these, so we might need to map them back if they are stored separately in the store
         // But setPropertyDetails should handle the main ones.
-        // Check if we need to populate additionalInfo for features
-        if ((listing.propertyDetails as any).features) {
-          store.setAdditionalInfo({
-            propertyHighlights: (listing.propertyDetails as any).features || [],
-            // Map other fields if necessary
-          });
+        const savedFeaturesContext = (listing.propertyDetails as any).featuresContext;
+        if (savedFeaturesContext) {
+          store.setAdditionalInfo({ featuresContext: savedFeaturesContext });
         }
       }
 
@@ -534,7 +539,7 @@ const ListingWizard: React.FC = () => {
     'Intent',
     'Type',
     'Basic Info',
-    'Additional Info',
+    'Features',
     'Pricing',
     'Location',
     'Media',
@@ -686,16 +691,16 @@ const ListingWizard: React.FC = () => {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-center flex-1">
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                  <h1 className="mb-3 text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent sm:text-4xl">
                     Create New Listing
                   </h1>
-                  <p className="text-gray-600 text-lg">
+                  <p className="text-base text-gray-600 sm:text-lg">
                     Follow the steps to create your property listing
                   </p>
                 </div>
                 {/* Auto-save status indicator */}
                 {store.currentStep > 1 && (
-                  <div className="absolute top-8 right-8 flex items-center gap-4">
+                  <div className="relative mt-4 flex items-center justify-center gap-4 md:absolute md:top-8 md:right-8 md:mt-0 md:justify-end">
                     <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
                       <ReadinessIndicator
                         score={readiness.score}

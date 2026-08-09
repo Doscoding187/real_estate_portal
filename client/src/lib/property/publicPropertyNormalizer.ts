@@ -28,6 +28,13 @@ import type {
   SearchCardDeveloperBrandRef,
   SearchCardIdentity,
 } from '@/../../shared/types';
+import {
+  getStep4HighlightLabel,
+  getStep4SecurityFeatureLabel,
+  getStep4SpaceLabel,
+  normalizeFeaturesContext,
+} from '@/../../shared/features-context';
+import type { FeaturesContext } from '@/../../shared/features-context';
 
 export type PropertyFact = {
   key: string;
@@ -95,6 +102,18 @@ export type PublicPropertyCard = {
 };
 
 export type PropertyLike = Record<string, any>;
+
+function getCanonicalCore(property: PropertyLike): Record<string, any> {
+  const details = getDetails(property);
+  return details.corePropertyInformation && typeof details.corePropertyInformation === 'object'
+    ? details.corePropertyInformation
+    : {};
+}
+
+function knownCoreMeasurement(core: Record<string, any>, field: string): number | undefined {
+  const fact = core[field];
+  return fact?.status === 'known' ? parsePositiveNumber(fact.valueM2) : undefined;
+}
 
 export type PropertyFeatureSpecCategory =
   | 'cost'
@@ -170,6 +189,15 @@ const plural = (value: number, singular: string, shortSingular = singular) => ({
 
 const getDetails = (property: PropertyLike) => parseObject(property.propertyDetails);
 const getSettings = (property: PropertyLike) => parseObject(property.propertySettings);
+
+function getFeaturesContext(property: PropertyLike): FeaturesContext {
+  const details = getDetails(property);
+  const settings = getSettings(property);
+  return normalizeFeaturesContext(
+    property.featuresContext || details.featuresContext || settings.featuresContext,
+    { ...settings, ...details, ...property },
+  );
+}
 
 const resolveType = (property: PropertyLike) =>
   String(property.propertyType || getDetails(property).propertyType || '').toLowerCase();
@@ -301,17 +329,29 @@ export function getPropertyCardBadges(property: PropertyLike): string[] {
 export function getPropertyFacts(property: PropertyLike): PropertyFact[] {
   const details = getDetails(property);
   const settings = getSettings(property);
+  const core = getCanonicalCore(property);
   const type = resolveType(property);
   const facts: PropertyFact[] = [];
 
   const bedrooms = parsePositiveNumber(property.bedrooms ?? details.bedrooms);
   const bathrooms = parsePositiveNumber(property.bathrooms ?? details.bathrooms);
-  const unitSize = parsePositiveNumber(property.unitSizeM2 ?? details.unitSizeM2 ?? property.area);
-  const houseSize = parsePositiveNumber(property.houseAreaM2 ?? details.houseAreaM2 ?? property.area);
-  const floorSize = parsePositiveNumber(property.floorAreaM2 ?? details.floorAreaM2 ?? property.area);
-  const erfSize = parsePositiveNumber(property.erfSizeM2 ?? details.erfSizeM2 ?? property.yardSize);
+  const internalArea =
+    knownCoreMeasurement(core, 'internalArea') ??
+    parsePositiveNumber(property.internalAreaM2 ?? property.area);
+  const unitSize = parsePositiveNumber(property.unitSizeM2 ?? details.unitSizeM2 ?? internalArea);
+  const houseSize = parsePositiveNumber(property.houseAreaM2 ?? details.houseAreaM2 ?? internalArea);
+  const floorSize = parsePositiveNumber(
+    property.floorAreaM2 ?? details.floorAreaM2 ?? internalArea ?? property.area,
+  );
+  const erfSize = parsePositiveNumber(
+    knownCoreMeasurement(core, 'erfArea') ?? property.erfSizeM2 ?? details.erfSizeM2 ?? property.yardSize,
+  );
   const landSize = parsePositiveNumber(
-    property.landSizeM2OrHa ?? details.landSizeM2OrHa ?? details.landSizeM2,
+    (core.farmLandArea?.status === 'known' ? core.farmLandArea.normalizedM2 : undefined) ??
+      property.landAreaM2 ??
+      property.landSizeM2OrHa ??
+      details.landSizeM2OrHa ??
+      details.landSizeM2,
   );
   const floorLevel = property.floorLevel ?? details.floorLevel ?? property.floor;
   const parkingCount = parsePositiveNumber(
@@ -716,16 +756,222 @@ export function getPropertyFeatureChecklistItems(
   return Array.from(items.values()).slice(0, 18);
 }
 
+export type PropertyFeaturesContextGroupItem = {
+  key: string;
+  label: string;
+  value?: string;
+  source: 'structured' | 'custom' | 'highlight';
+};
+
+export type PropertyFeaturesContextGroup = {
+  key: 'spaces' | 'context' | 'utilities' | 'security' | 'highlights';
+  title: string;
+  description: string;
+  items: PropertyFeaturesContextGroupItem[];
+};
+
+const STEP4_UTILITY_LABELS: Record<string, string> = {
+  electricitySupply: 'Electricity supply',
+  backupPower: 'Backup power',
+  waterSupply: 'Water supply',
+  waterHeating: 'Water heating',
+  internetAccess: 'Internet access',
+};
+
+const STEP4_UTILITY_VALUES: Record<string, Record<string, string>> = {
+  electricitySupply: {
+    prepaid: 'Prepaid',
+    municipal: 'Municipal supply',
+    eskom: 'Eskom direct',
+    off_grid: 'Off-grid',
+    unknown: 'Not sure',
+  },
+  backupPower: {
+    none: 'None',
+    generator: 'Generator',
+    inverter: 'Inverter',
+    solar: 'Solar system',
+    ups: 'UPS',
+    unknown: 'Not sure',
+  },
+  waterSupply: {
+    municipal: 'Municipal supply',
+    prepaid: 'Prepaid',
+    borehole: 'Borehole',
+    unknown: 'Not sure',
+  },
+  waterHeating: {
+    electric_geyser: 'Electric geyser',
+    solar_geyser: 'Solar geyser',
+    hybrid: 'Hybrid system',
+    unknown: 'Not sure',
+  },
+  internetAccess: {
+    fibre: 'Fibre available',
+    adsl: 'ADSL',
+    satellite: 'Satellite',
+    none: 'No fixed internet',
+    unknown: 'Not sure',
+  },
+};
+
+const STEP4_CONTEXT_LABELS: Record<string, string> = {
+  standalone: 'Standalone property',
+  complex: 'Complex or managed building',
+  estate: 'Estate or managed community',
+  controlled: 'Controlled or gated access',
+  not_controlled: 'No controlled access',
+  unknown: 'Not sure',
+};
+
+export function getPropertyFeaturesContextGroups(
+  property: PropertyLike,
+): PropertyFeaturesContextGroup[] {
+  const context = getFeaturesContext(property);
+  const groups: PropertyFeaturesContextGroup[] = [];
+  const spaces: PropertyFeaturesContextGroupItem[] = context.spaces.map(value => ({
+    key: `space-${value}`,
+    label: getStep4SpaceLabel(value),
+    source: 'structured',
+  }));
+  spaces.push(
+    ...context.customFeatures.map((value, index) => ({
+      key: `custom-${index}-${value}`,
+      label: value,
+      source: 'custom' as const,
+    })),
+  );
+  if (spaces.length > 0) {
+    groups.push({
+      key: 'spaces',
+      title: 'Spaces & Features',
+      description: 'Practical spaces and property features supplied by the advertiser.',
+      items: spaces,
+    });
+  }
+
+  const propertyContext = [
+    context.context.setting,
+    context.context.controlledAccess,
+  ]
+    .filter(value => value && value !== 'unknown')
+    .map((value, index) => ({
+      key: `context-${index}-${value}`,
+      label: STEP4_CONTEXT_LABELS[value as string] || titleCase(value),
+      source: 'structured' as const,
+    }));
+  if (propertyContext.length > 0) {
+    groups.push({
+      key: 'context',
+      title: 'Property Context',
+      description: 'How the property sits within its immediate setting.',
+      items: propertyContext,
+    });
+  }
+
+  const utilities = Object.entries(context.utilities)
+    .filter(([, value]) => value && value !== 'unknown')
+    .map(([key, value]) => ({
+      key: `utility-${key}`,
+      label: STEP4_UTILITY_LABELS[key] || titleCase(key),
+      value: STEP4_UTILITY_VALUES[key]?.[value as string] || titleCase(value),
+      source: 'structured' as const,
+    }));
+  if (utilities.length > 0) {
+    groups.push({
+      key: 'utilities',
+      title: 'Utilities & Resilience',
+      description: 'Infrastructure details that can affect day-to-day living.',
+      items: utilities,
+    });
+  }
+
+  if (context.security.status === 'known') {
+    const securityItems = context.security.features.map(value => ({
+      key: `security-${value}`,
+      label: getStep4SecurityFeatureLabel(value),
+      source: 'structured' as const,
+    }));
+    if (securityItems.length === 0) {
+      securityItems.push({
+        key: 'security-none-selected',
+        label: 'No additional security features selected',
+        source: 'structured' as const,
+      });
+    }
+    groups.push({
+      key: 'security',
+      title: 'Security',
+      description: 'Specific security characteristics supplied by the advertiser.',
+      items: securityItems,
+    });
+  }
+
+  const customHighlights = context.customHighlights.map((value, index) => ({
+    key: `custom-highlight-${index}-${value}`,
+    label: value,
+    source: 'custom' as const,
+  }));
+  if (context.highlights.length > 0 || customHighlights.length > 0) {
+    groups.push({
+      key: 'highlights',
+      title: 'Listing Highlights',
+      description: 'Optional presentation characteristics, not verified search facts.',
+      items: [
+        ...context.highlights.map(value => ({
+          key: `highlight-${value}`,
+          label: getStep4HighlightLabel(value),
+          source: 'highlight' as const,
+        })),
+        ...customHighlights,
+      ],
+    });
+  }
+
+  return groups;
+}
+
 
 export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeatureSpecItem[] {
   const details = getDetails(property);
   const settings = getSettings(property);
+  const hasCanonicalStep4 = [property, details, settings].some(
+    source => source?.featuresContext && typeof source.featuresContext === 'object',
+  );
   const specs: PropertyFeatureSpecItem[] = [];
   const seen = new Set<string>();
 
   const valueFor = (...keys: string[]) => {
     for (const source of [property, details, settings]) {
       for (const key of keys) {
+        if (
+          hasCanonicalStep4 &&
+          new Set([
+            'electricitySupply',
+            'electricitySource',
+            'prepaidElectricity',
+            'waterSupply',
+            'powerBackup',
+            'backupPower',
+            'waterHeating',
+            'internetAccess',
+            'internetAvailability',
+            'fibreReady',
+            'security',
+            'securityLevel',
+            'securityFeatures',
+            'ownershipType',
+            'parkingType',
+            'parking',
+            'petFriendly',
+            'petPolicy',
+            'propertyHighlights',
+            'additionalRooms',
+            'outdoorFeatures',
+          ]).has(key)
+        ) {
+          continue;
+        }
         const value = source?.[key];
         if (!isBlankDisplayValue(value)) return value;
       }
@@ -765,6 +1011,32 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
     if (!value) return;
     addSpec({ key, label, value, icon, priority, category });
   };
+
+  if (hasCanonicalStep4) {
+    for (const group of getPropertyFeaturesContextGroups(property)) {
+      const category: PropertyFeatureSpecCategory =
+        group.key === 'utilities'
+          ? 'utility'
+          : group.key === 'security'
+            ? 'security'
+            : 'lifestyle';
+      group.items.forEach((item, index) => {
+        addSpec({
+          key: `features-context-${group.key}-${item.key}`,
+          label: item.label,
+          value: item.value || 'Yes',
+          icon:
+            group.key === 'utilities'
+              ? Zap
+              : group.key === 'security'
+                ? Shield
+                : Sparkles,
+          priority: index + 1,
+          category,
+        });
+      });
+    }
+  }
 
   const levies = parsePositiveNumber(valueFor('levies', 'leviesHoaOperatingCosts'));
   const ratesAndTaxes = parsePositiveNumber(valueFor('ratesAndTaxes', 'ratesTaxes'));
@@ -1027,25 +1299,27 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
     'borehole',
   ]);
 
-  const lifestyleAmenities = [
-    ...((Array.isArray(valueFor('amenities')) ? valueFor('amenities') : []) as unknown[]),
-    ...((Array.isArray(valueFor('amenitiesFeatures')) ? valueFor('amenitiesFeatures') : []) as unknown[]),
-    ...((Array.isArray(valueFor('propertyHighlights')) ? valueFor('propertyHighlights') : []) as unknown[]),
-  ]
-    .map(item => String(item || '').trim())
-    .filter(Boolean)
-    .filter(item => !buyerChecklistAmenityTokens.has(item.toLowerCase()));
+  if (!hasCanonicalStep4) {
+    const lifestyleAmenities = [
+      ...((Array.isArray(valueFor('amenities')) ? valueFor('amenities') : []) as unknown[]),
+      ...((Array.isArray(valueFor('amenitiesFeatures')) ? valueFor('amenitiesFeatures') : []) as unknown[]),
+      ...((Array.isArray(valueFor('propertyHighlights')) ? valueFor('propertyHighlights') : []) as unknown[]),
+    ]
+      .map(item => String(item || '').trim())
+      .filter(Boolean)
+      .filter(item => !buyerChecklistAmenityTokens.has(item.toLowerCase()));
 
-  const uniqueLifestyleAmenities = Array.from(new Set(lifestyleAmenities));
-  if (uniqueLifestyleAmenities.length > 0) {
-    addSpec({
-      key: 'lifestyle-amenities',
-      label: 'Lifestyle Amenities',
-      value: formatFeatureValue(uniqueLifestyleAmenities) || uniqueLifestyleAmenities.join(', '),
-      icon: Sparkles,
-      priority: 185,
-      category: 'lifestyle',
-    });
+    const uniqueLifestyleAmenities = Array.from(new Set(lifestyleAmenities));
+    if (uniqueLifestyleAmenities.length > 0) {
+      addSpec({
+        key: 'lifestyle-amenities',
+        label: 'Lifestyle Amenities',
+        value: formatFeatureValue(uniqueLifestyleAmenities) || uniqueLifestyleAmenities.join(', '),
+        icon: Sparkles,
+        priority: 185,
+        category: 'lifestyle',
+      });
+    }
   }
 
   return specs.sort((left, right) => left.priority - right.priority);
@@ -1153,6 +1427,7 @@ export type PropertyRunningCostFact = {
 };
 
 const toChecklistValue = (value: unknown) => {
+  if (value === 'unknown' || value === 'not_sure') return undefined;
   const formatted = formatFeatureValue(value);
   return formatted && formatted.length > 0 ? formatted : undefined;
 };
@@ -1160,6 +1435,10 @@ const toChecklistValue = (value: unknown) => {
 export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyerChecklistItem[] {
   const details = getDetails(property);
   const settings = getSettings(property);
+  const featuresContext = getFeaturesContext(property);
+  const hasCanonicalStep4 = [property, details, settings].some(
+    source => source?.featuresContext && typeof source.featuresContext === 'object',
+  );
 
   const valueFor = (...keys: string[]) => {
     for (const source of [property, details, settings]) {
@@ -1180,8 +1459,12 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
   };
 
   const prepaidElectricity = parseBoolean(valueFor('prepaidElectricity'));
-  const electricitySource = valueFor('electricitySupply', 'electricitySource');
-  const electricity =
+  const electricitySource = hasCanonicalStep4
+    ? featuresContext.utilities.electricitySupply
+    : valueFor('electricitySupply', 'electricitySource');
+  const electricity = hasCanonicalStep4
+    ? checklistValue(electricitySource)
+    :
     prepaidElectricity === true
       ? { value: 'Prepaid', status: 'confirmed' as const }
       : prepaidElectricity === false && electricitySource
@@ -1191,8 +1474,12 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
           : checklistValue(electricitySource);
 
   const fibreReady = parseBoolean(valueFor('fibreReady'));
-  const internetAccess = valueFor('internetAccess', 'internetAvailability');
-  const internet =
+  const internetAccess = hasCanonicalStep4
+    ? featuresContext.utilities.internetAccess
+    : valueFor('internetAccess', 'internetAvailability');
+  const internet = hasCanonicalStep4
+    ? checklistValue(internetAccess)
+    :
     fibreReady === true
       ? { value: 'Fibre Ready', status: 'confirmed' as const }
       : fibreReady === false
@@ -1211,7 +1498,9 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
           : { value: 'To confirm', status: 'missing' as const };
 
   const petFriendly = parseBoolean(valueFor('petFriendly', 'petPolicy'));
-  const petPolicy =
+  const petPolicy = hasCanonicalStep4
+    ? checklistValue(featuresContext.petPolicy)
+    :
     petFriendly === true
       ? { value: 'Allowed', status: 'confirmed' as const }
       : petFriendly === false
@@ -1219,7 +1508,7 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
         : checklistValue(valueFor('petPolicy'));
   const ownership = checklistValue(valueFor('ownershipType', 'titleType', 'tenureType'));
 
-  return [
+  const checklist: PropertyBuyerChecklistItem[] = [
     {
       key: 'electricity',
       label: 'Electricity',
@@ -1232,14 +1521,18 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
       label: 'Backup Power',
       icon: BatteryCharging,
       category: 'utility',
-      ...checklistValue(valueFor('powerBackup', 'backupPower')),
+      ...(hasCanonicalStep4
+        ? checklistValue(featuresContext.utilities.backupPower)
+        : checklistValue(valueFor('powerBackup', 'backupPower'))),
     },
     {
       key: 'water-supply',
       label: 'Water Supply',
       icon: Droplets,
       category: 'utility',
-      ...checklistValue(valueFor('waterSupply')),
+      ...(hasCanonicalStep4
+        ? checklistValue(featuresContext.utilities.waterSupply)
+        : checklistValue(valueFor('waterSupply'))),
     },
     {
       key: 'water-backup',
@@ -1253,7 +1546,17 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
       label: 'Security',
       icon: Shield,
       category: 'security',
-      ...checklistValue(valueFor('security', 'securityLevel')),
+      ...(hasCanonicalStep4
+        ? featuresContext.security.status === 'known'
+          ? {
+              value:
+                featuresContext.security.features.length > 0
+                  ? featuresContext.security.features.map(getStep4SecurityFeatureLabel).join(', ')
+                  : 'No additional security features selected',
+              status: 'confirmed' as const,
+            }
+          : { value: 'To confirm', status: 'missing' as const }
+        : checklistValue(valueFor('security', 'securityLevel'))),
     },
     {
       key: 'internet-fibre',
@@ -1284,6 +1587,11 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
       ...ownership,
     },
   ];
+
+  const isRent = String(property.listingType || property.transactionType || property.action || '') === 'rent';
+  return hasCanonicalStep4 && !isRent
+    ? checklist.filter(item => item.key !== 'pet-policy')
+    : checklist;
 }
 
 export function getPropertyRunningCostFacts(property: PropertyLike): PropertyRunningCostFact[] {
@@ -1364,7 +1672,8 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
     bedrooms: parsePositiveNumber(property.bedrooms ?? getDetails(property).bedrooms),
     bathrooms: parsePositiveNumber(property.bathrooms ?? getDetails(property).bathrooms),
     area: parsePositiveNumber(
-      property.area ??
+      property.internalAreaM2 ??
+        property.area ??
         property.unitSizeM2 ??
         property.houseAreaM2 ??
         property.floorAreaM2 ??
@@ -1373,7 +1682,9 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
         getDetails(property).floorAreaM2,
     ),
     yardSize: parsePositiveNumber(
-      property.yardSize ??
+      property.erfSizeM2 ??
+        property.landAreaM2 ??
+        property.yardSize ??
         property.erfSizeM2 ??
         property.landSizeM2OrHa ??
         getDetails(property).erfSizeM2 ??

@@ -212,6 +212,15 @@ describe('validateListingWorkflowPayload', () => {
       title: 'Beautiful Family Home',
       description: 'Beautiful 4-bedroom family home with 2 bathrooms, modern kitchen, and a large garden in prime location.',
       pricing: { askingPrice: 2500000 },
+      propertyDetails: {
+        corePropertyInformation: {
+          version: 1,
+          bedrooms: { status: 'known', value: 4 },
+          bathrooms: { status: 'known', value: 2 },
+          internalArea: { status: 'known', valueM2: 250, unit: 'm2' },
+          erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+        },
+      },
       location: {
         address: '42 Oak Avenue',
         city: 'Johannesburg',

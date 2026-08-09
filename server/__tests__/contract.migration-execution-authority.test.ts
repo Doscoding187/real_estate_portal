@@ -289,10 +289,11 @@ describe('migration execution authority', () => {
       parentChecksum: baseline?.checksum,
     });
     const latest = executionManifest.migrations.at(-1);
+    const taxonomy = executionManifest.migrations.find(entry => entry.sequence === 2);
     expect(latest).toMatchObject({
-      filename: '0002_canonical_property_taxonomy.sql',
-      parent: incremental?.filename,
-      parentChecksum: incremental?.checksum,
+      filename: '0003_canonical_property_measurements.sql',
+      parent: taxonomy?.filename,
+      parentChecksum: taxonomy?.checksum,
     });
     expect(executionManifest.expectedHead).toBe(latest?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);

@@ -1,6 +1,12 @@
 import type { inferRouterInputs } from '@trpc/server';
 import type { AppRouter } from '../../../server/routers';
 import type { ListingWizardState } from '../../../shared/listing-types';
+import { buildCanonicalCorePropertyDetails } from '../../../shared/core-property-information';
+import { listingActionToIntent } from '../../../shared/listing-types';
+import {
+  buildFeaturesContextFromWizardState,
+  LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+} from '../../../shared/features-context';
 
 export type ListingWizardSubmitPayload = inferRouterInputs<AppRouter>['listing']['create'];
 
@@ -10,6 +16,7 @@ export type ListingWizardSubmitState = Pick<
   | 'propertyType'
   | 'title'
   | 'description'
+  | 'basicInfo'
   | 'pricing'
   | 'propertyDetails'
   | 'additionalInfo'
@@ -95,9 +102,37 @@ const buildSubmittedPropertyDetails = (
   state: ListingWizardSubmitState,
   pricing: ListingWizardSubmitPayload['pricing'],
 ) => {
-  const propertyDetails = {
+  // Step 3 has one typed authority. Do not serialize the historical
+  // `basicInfo` object or arbitrary Step 3 state; only the approved core facts
+  // and the separately-owned Additional Information contract cross the API
+  // boundary. Legacy flat aliases are generated from the typed core object.
+  const historicalDetails = {
     ...((state.propertyDetails || {}) as Record<string, unknown>),
-    ...((state.additionalInfo || {}) as Record<string, unknown>),
+  };
+  for (const key of [
+    'propertyCategory',
+    'developerName',
+    'developmentName',
+    'selectedDeveloperId',
+    'selectedDevelopmentId',
+    'landSizeUnit',
+    'landSizeHa',
+    'landSizeM2OrHa',
+    'badges',
+    ...LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+  ]) {
+    delete historicalDetails[key];
+  }
+
+  const propertyDetails = {
+    ...historicalDetails,
+    featuresContext: buildFeaturesContextFromWizardState(
+      state.additionalInfo,
+      state.propertyDetails,
+      listingActionToIntent(state.action),
+      state.propertyType,
+    ),
+    ...buildCanonicalCorePropertyDetails(state.propertyType, state.propertyDetails, state.basicInfo),
   };
 
   return normalizePropertyDetailsForPublicContract(propertyDetails, pricing);

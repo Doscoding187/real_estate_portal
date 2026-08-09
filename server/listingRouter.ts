@@ -29,6 +29,16 @@ import {
   getListingAuthoringValidationMessage,
   LISTING_PROPERTY_TYPES,
 } from '../shared/property-taxonomy';
+import {
+  buildCanonicalCorePropertyDetails,
+  validateCorePropertyInformation,
+} from '../shared/core-property-information';
+import { listingActionToIntent } from '../shared/listing-types';
+import {
+  LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+  normalizeFeaturesContext,
+  validateFeaturesContext,
+} from '../shared/features-context';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -117,6 +127,7 @@ const fillMissing = (target: Record<string, any>, key: string, value: unknown) =
 function normalizePropertyDetailsForPublicContract(
   propertyDetails: Record<string, any> | null | undefined,
   pricing: Record<string, any> | null | undefined,
+  propertyType?: string,
 ) {
   const normalized = { ...(propertyDetails || {}) };
   const pricingData = pricing || {};
@@ -154,6 +165,22 @@ function normalizePropertyDetailsForPublicContract(
   ) {
     normalized.fibreReady = true;
   }
+
+  if (Object.prototype.hasOwnProperty.call(normalized, 'featuresContext')) {
+    const canonicalFeaturesContext = normalizeFeaturesContext(
+      normalized.featuresContext,
+      normalized,
+    );
+    for (const key of LEGACY_STEP4_PROPERTY_DETAIL_KEYS) {
+      if (key !== 'featuresContext') delete normalized[key];
+    }
+    normalized.featuresContext = canonicalFeaturesContext;
+  }
+
+  // Rebuild the canonical Step 3 object at the server boundary as well. This
+  // prevents a direct API caller from bypassing the wizard's typed payload
+  // mapping while retaining legacy flat aliases for existing consumers.
+  Object.assign(normalized, buildCanonicalCorePropertyDetails(propertyType as any, normalized));
 
   return normalized;
 }
@@ -238,13 +265,27 @@ const createListingSchemaBase = z.object({
 
 const createListingSchema = createListingSchemaBase.superRefine((input, context) => {
   const message = getListingAuthoringValidationMessage(input.action, input.propertyType);
-  if (!message) return;
+  if (message) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['propertyType'],
+      message,
+    });
+  }
 
-  context.addIssue({
-    code: z.ZodIssueCode.custom,
-    path: ['propertyType'],
-    message,
-  });
+  const featureIssues = validateFeaturesContext(
+    input.propertyDetails.featuresContext,
+    listingActionToIntent(input.action),
+    input.propertyType,
+    input.propertyDetails.corePropertyInformation,
+  );
+  for (const issue of featureIssues) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['propertyDetails', 'featuresContext', ...issue.field.split('.')],
+      message: issue.message,
+    });
+  }
 });
 
 export const listingRouter = router({
@@ -376,6 +417,7 @@ export const listingRouter = router({
       const propertyDetails = normalizePropertyDetailsForPublicContract(
         input.propertyDetails,
         input.pricing,
+        input.propertyType,
       );
 
       // Create listing in database with auto-populated location IDs
@@ -481,15 +523,31 @@ export const listingRouter = router({
         const taxonomyChanged =
           (input.action !== undefined && input.action !== listing.action) ||
           (input.propertyType !== undefined && input.propertyType !== listing.propertyType);
+        const nextPropertyType = input.propertyType ?? listing.propertyType;
         if (taxonomyChanged) {
           const nextAction = input.action ?? listing.action;
-          const nextPropertyType = input.propertyType ?? listing.propertyType;
           const taxonomyMessage = getListingAuthoringValidationMessage(
             nextAction,
             nextPropertyType,
           );
           if (taxonomyMessage) {
             throw new TRPCError({ code: 'BAD_REQUEST', message: taxonomyMessage });
+          }
+        }
+
+        if (input.propertyDetails?.featuresContext !== undefined) {
+          const featureIssues = validateFeaturesContext(
+            input.propertyDetails.featuresContext,
+            listingActionToIntent(input.action ?? listing.action),
+            nextPropertyType,
+            input.propertyDetails.corePropertyInformation ??
+              (listing.propertyDetails as any)?.corePropertyInformation,
+          );
+          if (featureIssues.length > 0) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: featureIssues.map(issue => issue.message).join(' '),
+            });
           }
         }
 
@@ -522,6 +580,7 @@ export const listingRouter = router({
           updatePayload.propertyDetails = normalizePropertyDetailsForPublicContract(
             input.propertyDetails || ((listing.propertyDetails as any) ?? {}),
             input.pricing || null,
+            nextPropertyType,
           );
         }
 
@@ -1118,6 +1177,36 @@ export const listingRouter = router({
         // Check readiness before allowing submission
         const fullListing = await db.getListingById(input.listingId);
         const media = await db.getListingMedia(input.listingId);
+
+        if (fullListing.action === 'sell' || fullListing.action === 'rent') {
+          const featureIssues = validateFeaturesContext(
+            (fullListing.propertyDetails as any)?.featuresContext,
+            fullListing.action === 'sell' ? 'sale' : 'rent',
+            fullListing.propertyType,
+            (fullListing.propertyDetails as any)?.corePropertyInformation,
+          );
+          if (featureIssues.length > 0) {
+            const message = featureIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_features_context', message, {
+              fields: featureIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          const coreIssues = validateCorePropertyInformation(
+            fullListing.action === 'sell' ? 'sale' : 'rent',
+            fullListing.propertyType,
+            fullListing.propertyDetails,
+          );
+          if (coreIssues.length > 0) {
+            const message = coreIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_core_property_information', message, {
+              fields: coreIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+        }
+
         const readiness = calculateListingReadiness({ ...fullListing, media });
 
         if (readiness.score < 75) {

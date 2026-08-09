@@ -9,6 +9,12 @@ import type {
   AuctionPricing,
   ListingWizardState,
 } from '@shared/listing-types';
+import { buildCanonicalCorePropertyDetails } from '@shared/core-property-information';
+import { listingActionToIntent } from '@shared/listing-types';
+import {
+  buildFeaturesContextFromWizardState,
+  LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+} from '@shared/features-context';
 
 /**
  * Shape expected by server/listingRouter.ts createListingSchema.
@@ -32,13 +38,10 @@ export interface ListingSubmitPayload {
  *
  * Merge rules (matching V1 ListingWizard.tsx handleSubmit):
  *
- * 1. `propertyDetails` = store.propertyDetails ∪ store.additionalInfo
- *    - additionalInfo fields (furnishing, security, outdoor features, etc.) are
- *      spread into the JSON column so the backend persists them.
- *    - store.basicInfo is intentionally NOT merged: it contains fields that
- *      duplicate top-level (title, description), location (province, city,
- *      suburb, streetAddress), and pricing (depositAmount, leaseTerm,
- *      occupationDate).  V1 has the same exclusion.
+ * 1. `propertyDetails` = approved Core Property Information ∪ canonical Features & Context
+ *    - the typed Step 3 core contract is mapped explicitly;
+ *    - Step 4 is mapped through the typed Features & Context contract;
+ *    - unrelated historical `basicInfo` fields never cross this boundary.
  *
  * 2. `pricing` preserves the full PricingFields union — the backend router writes
  *    each field to its own column. Only the fields relevant to the selected action
@@ -60,10 +63,37 @@ export function buildListingSubmitPayloadFromWizardState(
   const action = state.action!;
   const propertyType = state.propertyType!;
 
-  // NOTE: store.basicInfo is deliberately excluded (see doc comment above)
-  const propertyDetails: Record<string, any> = {
+  const historicalDetails: Record<string, any> = {
     ...(state.propertyDetails as Record<string, any> | undefined),
-    ...(state.additionalInfo as Record<string, any> | undefined),
+  };
+  for (const key of [
+    'propertyCategory',
+    'developerName',
+    'developmentName',
+    'selectedDeveloperId',
+    'selectedDevelopmentId',
+    'landSizeUnit',
+    'landSizeHa',
+    'landSizeM2OrHa',
+    'badges',
+    ...LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+  ]) {
+    delete historicalDetails[key];
+  }
+
+  const propertyDetails: Record<string, any> = {
+    ...historicalDetails,
+    featuresContext: buildFeaturesContextFromWizardState(
+      state.additionalInfo,
+      state.propertyDetails,
+      listingActionToIntent(action),
+      propertyType,
+    ),
+    ...buildCanonicalCorePropertyDetails(
+      propertyType,
+      state.propertyDetails,
+      state.basicInfo,
+    ),
   };
 
   const mediaIds = (state.media ?? [])
