@@ -104,4 +104,22 @@ describe('provincial discovery contract', () => {
       ]),
     );
   });
+
+  it.each(Object.entries(PROVINCIAL_CONFIGS))(
+    'keeps the %s province configuration neutral and journey-ready',
+    (slug, config) => {
+      expect(config.slug).toBe(slug);
+      expect(validateProvincialConfig(config)).toEqual([]);
+      expect(config.supportedJourneys).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: 'buy', state: 'active' }),
+          expect.objectContaining({ id: 'rent', state: 'active' }),
+        ]),
+      );
+
+      const neutralState = resolveProvincialQueryState(new URLSearchParams(`province=${slug}`));
+      expect(neutralState.journey).toBeUndefined();
+      expect(neutralState.unsupportedJourney).toBeUndefined();
+    },
+  );
 });

@@ -214,6 +214,25 @@ const westernCapeLocationSuggestions = [
   },
 ];
 
+const provincialCampaign = {
+  imageUrl: '/placeholders/development_placeholder_1_1763712033438.png',
+  landingPageUrl: 'https://example.com/campaigns/western-cape-harbour-point',
+  altText: 'Harbour Point residences',
+  title: 'A considered new address by the water',
+  subtitle: 'A featured development opportunity, presented separately from organic discovery.',
+  ctaText: 'Explore the opportunity',
+  campaignType: 'new_development',
+};
+
+const provincesWithoutCanonicalReference = {
+  'eastern-cape': 'Eastern Cape',
+  'free-state': 'Free State',
+  limpopo: 'Limpopo',
+  mpumalanga: 'Mpumalanga',
+  'north-west': 'North West',
+  'northern-cape': 'Northern Cape',
+} as const;
+
 function trpcResult(data: unknown) {
   return { result: { data: { json: data } } };
 }
@@ -222,6 +241,7 @@ async function installProvincialFixture(
   page: Page,
   fixture = provincialFixture,
   suggestions = locationSuggestions,
+  campaign: typeof provincialCampaign | null = null,
 ) {
   await page.route('**/api/trpc/**', async (route: Route) => {
     const pathname = new URL(route.request().url()).pathname;
@@ -242,13 +262,33 @@ async function installProvincialFixture(
         return trpcResult(fixture);
       }
       if (procedure === 'locationPages.getHeroCampaign') {
-        return trpcResult(null);
+        return trpcResult(campaign);
       }
       if (procedure === 'location.searchLocations') {
         return trpcResult(suggestions);
       }
       return trpcResult(null);
     });
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(results.length === 1 ? results[0] : results),
+    });
+  });
+}
+
+async function installUnavailableCanonicalProvinceFixture(page: Page) {
+  await page.route('**/api/trpc/**', async (route: Route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const procedures = pathname.split('/api/trpc/')[1]?.split(',') || [];
+
+    if (!procedures.some(procedure => procedure.startsWith('locationPages.'))) {
+      await route.continue();
+      return;
+    }
+
+    const results = procedures.map(() => trpcResult(null));
 
     await route.fulfill({
       status: 200,
@@ -281,6 +321,7 @@ test.describe('Gauteng provincial discovery', () => {
     await expect(page.getByRole('tab', { name: /Land & plots/ })).toBeDisabled();
     await expect(page.getByRole('tab', { name: /Commercial/ })).toBeDisabled();
     await expect(page.getByRole('tab', { name: /Shared Living/ })).toBeDisabled();
+    await expect(page.getByTestId('provincial-billboard')).toHaveCount(0);
 
     await capture(page, 'neutral-gauteng-1440.png');
     await capture(page, 'neutral-gauteng-1440-first-screen.png', false);
@@ -459,6 +500,68 @@ test.describe('Gauteng provincial discovery', () => {
   });
 });
 
+test.describe('Provincial discovery Phase 2 commercial presentation', () => {
+  test.beforeEach(async ({ page }) => {
+    await installProvincialFixture(
+      page,
+      provincialFixture,
+      locationSuggestions,
+      provincialCampaign,
+    );
+  });
+
+  test('keeps sponsored presentation separate from organic discovery and search intent', async ({
+    page,
+  }) => {
+    for (const viewport of [
+      { width: 1440, height: 900, suffix: '1440' },
+      { width: 1024, height: 768, suffix: '1024' },
+      { width: 390, height: 844, suffix: '390' },
+    ]) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto('/gauteng', { waitUntil: 'domcontentloaded' });
+
+      await expect(page.getByTestId('active-journey-state')).toHaveCount(0);
+      const billboard = page.getByTestId('provincial-billboard');
+      await expect(billboard).toBeVisible();
+      await expect(billboard).toHaveAttribute('data-commercial-surface', 'sponsored');
+      await expect(billboard).toContainText('Sponsored');
+      await expect(page.getByTestId('provincial-billboard-cta')).toHaveAttribute(
+        'target',
+        '_blank',
+      );
+      await expect(page.getByTestId('provincial-billboard-cta')).toHaveAttribute(
+        'href',
+        provincialCampaign.landingPageUrl,
+      );
+
+      const sectionOrder = await page.evaluate(() => {
+        const marketSection = document.getElementById('markets-heading')?.closest('section');
+        const billboardSection = document.querySelector('[data-testid="provincial-billboard"]');
+        const needsSection = document.getElementById('needs-heading')?.closest('section');
+        return [marketSection, billboardSection, needsSection].map(node =>
+          node ? Array.from(document.querySelectorAll('main section')).indexOf(node) : -1,
+        );
+      });
+      expect(sectionOrder[0]).toBeGreaterThanOrEqual(0);
+      expect(sectionOrder[0]).toBeLessThan(sectionOrder[1]);
+      expect(sectionOrder[1]).toBeLessThan(sectionOrder[2]);
+
+      await billboard.scrollIntoViewIfNeeded();
+      await capture(page, `gauteng-billboard-${viewport.suffix}.png`, false);
+    }
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/gauteng?journey=rent', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('active-journey-state')).toHaveText(/Rent selected/);
+    await expect(page.getByTestId('provincial-billboard-cta')).toHaveAttribute(
+      'href',
+      provincialCampaign.landingPageUrl,
+    );
+    expect(new URL(page.url()).searchParams.get('journey')).toBe('rent');
+  });
+});
+
 test.describe('Western Cape provincial discovery acceptance', () => {
   test.beforeEach(async ({ page }) => {
     await installProvincialFixture(page, westernCapeFixture, westernCapeLocationSuggestions);
@@ -596,4 +699,30 @@ test.describe('Western Cape provincial discovery acceptance', () => {
     await expect(page.getByLabel('Property type')).toHaveValue('apartment');
     await expect(page.getByLabel('Budget')).toHaveValue('20000');
   });
+});
+
+test.describe('Provinces without canonical reference coverage', () => {
+  test.beforeEach(async ({ page }) => {
+    await installUnavailableCanonicalProvinceFixture(page);
+  });
+
+  for (const [slug, name] of Object.entries(provincesWithoutCanonicalReference)) {
+    test(`${name} stays unavailable instead of fabricating a transaction`, async ({ page }) => {
+      for (const query of ['', '?journey=buy', '?journey=rent']) {
+        await page.goto(`/${slug}${query}`, { waitUntil: 'domcontentloaded' });
+
+        await expect(
+          page.getByRole('heading', { name: `${name} is temporarily unavailable` }),
+        ).toBeVisible();
+        await expect(page.getByTestId('provincial-primary-cta')).toHaveCount(0);
+        await expect(page.getByRole('tab', { name: /^Buy/ })).toHaveCount(0);
+        await expect(page.getByRole('tab', { name: /^Rent/ })).toHaveCount(0);
+        await expect(page.getByTestId('active-journey-state')).toHaveCount(0);
+        await expect(
+          page.getByRole('link', { name: /Return to location discovery/ }),
+        ).toBeVisible();
+        expect(new URL(page.url()).pathname).toBe(`/${slug}`);
+      }
+    });
+  }
 });

@@ -103,6 +103,15 @@ const westernCapeProvince = {
   slug: 'western-cape',
 };
 
+const provincesWithoutCanonicalReference = [
+  'eastern-cape',
+  'free-state',
+  'limpopo',
+  'mpumalanga',
+  'north-west',
+  'northern-cape',
+] as const;
+
 describe('ProvincialComposer', () => {
   beforeEach(() => {
     navigate.mockReset();
@@ -188,5 +197,78 @@ describe('ProvincialComposer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Stellenbosch' }));
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it.each(provincesWithoutCanonicalReference)(
+    'disables province-wide Buy and Rent handoff for %s without canonical identity',
+    slug => {
+      const config = PROVINCIAL_CONFIGS[slug];
+      const province = {
+        id: 0,
+        canonicalLocationId: '',
+        name: config.name,
+        slug,
+      };
+
+      useLocationMock.mockReturnValue([`/${slug}`, navigate]);
+      useSearchMock.mockReturnValue('journey=buy');
+      const { rerender } = render(<ProvincialComposer config={config} province={province} />);
+
+      expect(screen.getByTestId('active-journey-state')).toHaveTextContent('Buy selected');
+      expect(screen.getByTestId('provincial-location-helper')).toHaveTextContent(
+        /Province-wide search is unavailable/,
+      );
+      expect(screen.getByTestId('provincial-primary-cta')).toBeDisabled();
+      fireEvent.click(screen.getByTestId('provincial-primary-cta'));
+      expect(navigate).not.toHaveBeenCalled();
+
+      useSearchMock.mockReturnValue('journey=rent');
+      rerender(<ProvincialComposer config={config} province={province} />);
+
+      expect(screen.getByTestId('active-journey-state')).toHaveTextContent('Rent selected');
+      expect(screen.getByTestId('provincial-primary-cta')).toBeDisabled();
+    },
+  );
+
+  it('keeps a canonical KwaZulu-Natal province scope available for Buy', () => {
+    useLocationMock.mockReturnValue(['/kwazulu-natal', navigate]);
+    useSearchMock.mockReturnValue('journey=buy');
+
+    const { rerender } = render(
+      <ProvincialComposer
+        config={PROVINCIAL_CONFIGS['kwazulu-natal']}
+        province={{
+          id: 3,
+          canonicalLocationId: 'province:3',
+          name: 'KwaZulu-Natal',
+          slug: 'kwazulu-natal',
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('provincial-primary-cta')).toBeEnabled();
+    fireEvent.click(screen.getByTestId('provincial-primary-cta'));
+    expect(navigate).toHaveBeenLastCalledWith(expect.stringContaining('/property-for-sale?'));
+    expect(navigate).toHaveBeenLastCalledWith(expect.stringContaining('locationId=province%3A3'));
+
+    navigate.mockReset();
+    useSearchMock.mockReturnValue('journey=rent');
+    rerender(
+      <ProvincialComposer
+        config={PROVINCIAL_CONFIGS['kwazulu-natal']}
+        province={{
+          id: 3,
+          canonicalLocationId: 'province:3',
+          name: 'KwaZulu-Natal',
+          slug: 'kwazulu-natal',
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('active-journey-state')).toHaveTextContent('Rent selected');
+    expect(screen.getByTestId('provincial-primary-cta')).toBeEnabled();
+    fireEvent.click(screen.getByTestId('provincial-primary-cta'));
+    expect(navigate).toHaveBeenLastCalledWith(expect.stringContaining('/property-to-rent?'));
+    expect(navigate).toHaveBeenLastCalledWith(expect.stringContaining('locationId=province%3A3'));
   });
 });
