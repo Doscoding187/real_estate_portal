@@ -4,6 +4,8 @@ import {
   formatCommercialPrice,
   getCommercialActionPresentation,
   getCommercialPricePresentation,
+  getCommercialPresentationLimits,
+  getCommercialTermPresentation,
 } from './commercialCatalog';
 
 function makeProduct(overrides: Partial<CommercialProduct> = {}) {
@@ -21,6 +23,12 @@ function makeProduct(overrides: Partial<CommercialProduct> = {}) {
     limits: {},
     entitlements: {},
     trial: { days: 0, available: false },
+    term: {
+      kind: 'paid_launch_access',
+      durationDays: 90,
+      requiresVerifiedPayment: true,
+      autoRenews: false,
+    },
     pricing: {
       mode: 'fixed',
       currency: 'ZAR',
@@ -61,6 +69,24 @@ describe('commercial catalog client formatting', () => {
     });
   });
 
+  it('formats the canonical fixed-term access period and renewal policy', () => {
+    expect(getCommercialTermPresentation(makeProduct())).toEqual({
+      label: '90 days',
+      renewalLabel: 'No automatic renewal',
+    });
+  });
+
+  it('does not present the developer non-applicable listing sentinel as a limit', () => {
+    const developer = makeProduct({
+      audience: 'developer',
+      limits: { max_active_listings: 0, unlimited_development_portfolio: true },
+    });
+
+    expect(getCommercialPresentationLimits(developer)).toEqual([
+      ['unlimited_development_portfolio', true],
+    ]);
+  });
+
   it('does not fabricate a price for assisted or unavailable products', () => {
     expect(
       getCommercialPricePresentation(
@@ -98,5 +124,18 @@ describe('commercial catalog client formatting', () => {
         }),
       ),
     ).toEqual({ label: 'Contact sales', href: '/contact', disabled: false });
+
+    expect(
+      getCommercialActionPresentation(
+        makeProduct({
+          action: {
+            mode: 'request_invoice',
+            target: { kind: 'route', value: '/contact' },
+            requiresAuthentication: false,
+            reason: 'Assisted Launch Access invoice.',
+          },
+        }),
+      ),
+    ).toEqual({ label: 'Request Launch Access invoice', href: '/contact', disabled: false });
   });
 });

@@ -1,268 +1,198 @@
-import React, { useState, lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { EnhancedNavbar } from '@/components/EnhancedNavbar';
 import { Footer } from '@/components/Footer';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { StructuredData } from '@/components/advertise/StructuredData';
-import { TrendingUp, Users, Star, Award } from 'lucide-react';
 import { useAdvertiseAnalytics } from '@/hooks/useAdvertiseAnalytics';
+import { useCommercialCatalog } from '@/hooks/useCommercialCatalog';
 import { SectionErrorBoundary } from '@/components/advertise/AdvertiseErrorBoundary';
-import {
-  HeroSectionSkeleton,
-  FAQSectionSkeleton,
-  SectionLoader,
-} from '@/components/advertise/SkeletonLoaders';
+import { FAQSectionSkeleton, SectionLoader } from '@/components/advertise/SkeletonLoaders';
+import { DashboardShowcaseSection } from '@/components/advertise/DashboardShowcaseSection';
 
-// Lazy load below-the-fold sections for better performance with error handling
-const FinalCTASection = lazy(() =>
-  import('@/components/advertise/FinalCTASection')
-    .then(module => {
-      console.log('✓ FinalCTASection loaded successfully');
-      return module;
-    })
-    .catch(error => {
-      console.error('✗ Failed to load FinalCTASection:', error);
-      throw error;
-    }),
-);
+const FinalCTASection = lazy(() => import('@/components/advertise/FinalCTASection'));
 
-const FAQSection = lazy(() =>
-  import('@/components/advertise/FAQSection')
-    .then(module => {
-      console.log('✓ FAQSection loaded successfully');
-      return module;
-    })
-    .catch(error => {
-      console.error('✗ Failed to load FAQSection:', error);
-      throw error;
-    }),
-);
+const FAQSection = lazy(() => import('@/components/advertise/FAQSection'));
 
 const ValuePropositionSection = lazy(() =>
-  import('@/components/advertise/ValuePropositionSection')
-    .then(module => ({ default: module.ValuePropositionSection }))
+  import('@/components/advertise/ValuePropositionSection').then(module => ({
+    default: module.ValuePropositionSection,
+  })),
 );
 
 const HowItWorksSection = lazy(() =>
-  import('@/components/advertise/HowItWorksSection')
-    .then(module => ({ default: module.HowItWorksSection }))
+  import('@/components/advertise/HowItWorksSection').then(module => ({
+    default: module.HowItWorksSection,
+  })),
 );
 
 const PricingPreviewSection = lazy(() =>
-  import('@/components/advertise/PricingPreviewSection')
-    .then(module => ({ default: module.PricingPreviewSection }))
+  import('@/components/advertise/PricingPreviewSection').then(module => ({
+    default: module.PricingPreviewSection,
+  })),
 );
 
 const ExtendedNetworkSection = lazy(() =>
-  import('@/components/advertise/ExtendedNetworkSection')
-    .then(module => ({ default: module.ExtendedNetworkSection }))
+  import('@/components/advertise/ExtendedNetworkSection').then(module => ({
+    default: module.ExtendedNetworkSection,
+  })),
 );
 
 const SegmentationLayer = lazy(() =>
-  import('@/components/advertise/SegmentationLayer')
-    .then(module => ({ default: module.SegmentationLayer }))
+  import('@/components/advertise/SegmentationLayer').then(module => ({
+    default: module.SegmentationLayer,
+  })),
 );
 
 const EcosystemSection = lazy(() =>
-  import('@/components/advertise/EcosystemSection')
-    .then(module => ({ default: module.EcosystemSection }))
+  import('@/components/advertise/EcosystemSection').then(module => ({
+    default: module.EcosystemSection,
+  })),
 );
 
-// Import the initial above-the-fold section components statically
 import { TrustStripSection } from '@/components/advertise/TrustStripSection';
 import { LiveDemandSection } from '@/components/advertise/LiveDemandSection';
-import { DemandCaptureModal } from '@/components/advertise/DemandCaptureModal';
 import { HeroSection } from '@/components/advertise/HeroSection';
-import { useMobileStickyCTA } from '@/components/advertise/MobileStickyCTA';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 
 export default function AdvertiseWithUs() {
-  // Set up analytics tracking (tracks page view and scroll depth automatically)
   useAdvertiseAnalytics();
-
-  const isMobileStickyCTAVisible = useMobileStickyCTA('hero-section');
-
-  // Loading and error states
-  const [heroLoading, setHeroLoading] = useState(false);
-  const [isCaptureModalOpen, setIsCaptureModalOpen] = useState(false);
-
-  // Sample billboard banner
-  const billboard = {
-    imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
-    alt: 'Luxury development showcase',
-    developmentName: 'Sandton Heights',
-    tagline: 'Premium Living in the Heart of Sandton',
-    ctaLabel: 'View Development',
-    href: '/developments/sandton-heights',
-  };
-
-  // Sample trust signals
-  const trustSignals = [
-    { type: 'text' as const, content: 'Trusted by 500+ Developers' },
-    { type: 'text' as const, content: '2M+ Monthly Visitors' },
-    { type: 'text' as const, content: '150k+ Leads Generated' },
-  ];
-
-  // Sample metrics for social proof
-  const metrics = [
-    {
-      value: '150,000+',
-      label: 'Verified Leads Generated',
-      icon: TrendingUp,
-    },
-    {
-      value: '25,000+',
-      label: 'Properties Promoted',
-      icon: Star,
-    },
-    {
-      value: '4.8/5',
-      label: 'Partner Satisfaction',
-      icon: Award,
-    },
-    {
-      value: '500+',
-      label: 'Active Partners',
-      icon: Users,
-    },
-  ];
+  const { data: commercialCatalog } = useCommercialCatalog();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <DemandCaptureModal 
-        isOpen={isCaptureModalOpen} 
-        onClose={() => setIsCaptureModalOpen(false)} 
-      />
-      {/* SEO Meta Tags */}
+    <div className="flex min-h-screen flex-col bg-white">
       <SEOHead
-        title="Advertise With Us | Property Platform"
-        description="Select your industry to explore tailored advertising and acquisition solutions on South Africa's fastest-growing property platform."
+        title="Launch Access | Property Listify"
+        description="Bring property or development inventory onto Property Listify, make it discoverable, capture enquiries and follow up in the right business workspace."
         canonicalUrl={toAbsoluteUrl('/advertise')}
       />
-      <StructuredData
-        pageUrl={toAbsoluteUrl('/advertise')}
-        organizationName="Property Listify"
-      />
+      <StructuredData pageUrl={toAbsoluteUrl('/advertise')} organizationName="Property Listify" />
 
       <EnhancedNavbar />
 
-      <main id="main-content" className="flex-1 flex flex-col pt-24 pb-16 advertise-page bg-white">
-        {/* Hero Section */}
+      <main id="main-content" className="flex-1 advertise-page bg-white">
         <SectionErrorBoundary sectionName="Hero Section">
-          <section id="hero-section" aria-labelledby="hero-heading">
-            {heroLoading ? (
-              <HeroSectionSkeleton />
-            ) : (
-              <HeroSection
-                headline="Reach High-Intent Property Buyers Across South Africa"
-                subheadline="Advertise your properties, developments, and services to thousands of verified home seekers. AI-powered visibility, verified leads, and full dashboard control."
-                primaryCTA={{
-                  label: 'Get Started',
-                  href: '/role-selection',
-                  variant: 'primary' as const,
-                }}
-                secondaryCTA={{
-                  label: 'See Buyers Near You',
-                  onClick: () => setIsCaptureModalOpen(true),
-                  variant: 'secondary' as const,
-                }}
-                stats={[
-                  { value: '150k', suffix: '+', label: 'Verified Leads' },
-                  { value: '25k', suffix: '+', label: 'Properties Promoted' },
-                  { value: '4.8', suffix: '/5', label: 'Partner Satisfaction' }
-                ]}
-              />
-            )}
+          <section id="hero-section" aria-labelledby="hero-headline">
+            <HeroSection
+              eyebrow="90-Day Launch Access"
+              headline={
+                <>
+                  Reach property seekers.
+                  <br />
+                  Capture enquiries.
+                  <br />
+                  Run your <span className="text-blue-300">property pipeline.</span>
+                </>
+              }
+              subheadline="Publish and manage inventory, participate in Property Listify discovery, capture property interest and follow up in the right business workspace."
+              primaryCTA={{
+                label: 'Explore Launch Access',
+                href: '#audience-gateways',
+                variant: 'primary',
+              }}
+              secondaryCTA={{
+                label: 'See the dashboard',
+                href: '#dashboard-showcase',
+                variant: 'secondary',
+              }}
+              stats={[
+                { value: '90', suffix: ' days', label: 'launch access' },
+                { value: 'Once-off', label: 'pricing' },
+                { value: 'No auto', label: 'renewal' },
+              ]}
+            />
           </section>
         </SectionErrorBoundary>
 
-        {/* Trust Strip Section */}
         <SectionErrorBoundary sectionName="Trust Strip">
-          <section id="trust-strip" aria-labelledby="trust-strip-heading">
-            <TrustStripSection badges={[
-              '500+ Active Partners',
-              '10,000+ Properties Promoted',
-              '50,000+ Verified Leads',
-              '95% Partner Satisfaction'
-            ]} />
+          <section id="trust-strip" aria-label="Launch Access reassurance">
+            <TrustStripSection
+              badges={['Manual EFT payment', 'Finance-verified activation', 'No automatic renewal']}
+            />
           </section>
         </SectionErrorBoundary>
 
-        {/* Live Demand Section */}
-        <SectionErrorBoundary sectionName="Live Demand">
+        <SectionErrorBoundary sectionName="Dashboard Showcase">
+          <DashboardShowcaseSection />
+        </SectionErrorBoundary>
+
+        <SectionErrorBoundary sectionName="Enquiry Journey">
           <section id="live-demand" aria-labelledby="live-demand-heading">
-            <LiveDemandSection onCaptureClick={() => setIsCaptureModalOpen(true)} />
+            <LiveDemandSection />
           </section>
         </SectionErrorBoundary>
 
-        {/* Ecosystem Section */}
-        <SectionErrorBoundary sectionName="Ecosystem">
-          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading ecosystem..." />}>
+        <SectionErrorBoundary sectionName="Audience Gateways">
+          <Suspense
+            fallback={<SectionLoader minHeight="500px" message="Loading business paths..." />}
+          >
+            <SegmentationLayer />
+          </Suspense>
+        </SectionErrorBoundary>
+
+        <SectionErrorBoundary sectionName="Platform Journey">
+          <Suspense
+            fallback={<SectionLoader minHeight="300px" message="Loading platform journey..." />}
+          >
             <section id="ecosystem" aria-labelledby="ecosystem-heading">
               <EcosystemSection />
             </section>
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* Segmentation Layer */}
-        <SectionErrorBoundary sectionName="Segmentation Layer">
-          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading segmentation..." />}>
-            <section id="segmentation" aria-labelledby="segmentation-heading">
-              <SegmentationLayer />
-            </section>
-          </Suspense>
-        </SectionErrorBoundary>
-
-        {/* Value Proposition Section */}
         <SectionErrorBoundary sectionName="Value Proposition">
-          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading value proposition..." />}>
+          <Suspense
+            fallback={<SectionLoader minHeight="300px" message="Loading value proposition..." />}
+          >
             <section id="value-proposition" aria-labelledby="value-proposition-heading">
               <ValuePropositionSection />
             </section>
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* How It Works Section */}
         <SectionErrorBoundary sectionName="How It Works">
-          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading pipeline..." />}>
+          <Suspense
+            fallback={<SectionLoader minHeight="300px" message="Loading the property journey..." />}
+          >
             <section id="how-it-works" aria-labelledby="how-it-works-heading">
               <HowItWorksSection />
             </section>
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* Extended Network Section */}
-        <SectionErrorBoundary sectionName="Extended Network">
-          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading network..." />}>
+        <SectionErrorBoundary sectionName="Discovery Reach">
+          <Suspense
+            fallback={<SectionLoader minHeight="300px" message="Loading discovery surfaces..." />}
+          >
             <section id="extended-network" aria-labelledby="extended-network-heading">
               <ExtendedNetworkSection />
             </section>
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* Pricing Preview Section - Now inline */}
         <SectionErrorBoundary sectionName="Pricing Preview">
-          <Suspense fallback={<SectionLoader minHeight="300px" message="Loading pricing..." />}>
+          <Suspense
+            fallback={<SectionLoader minHeight="600px" message="Loading Launch Access..." />}
+          >
             <section id="pricing-preview" aria-labelledby="pricing-preview-heading">
               <PricingPreviewSection />
             </section>
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* Final CTA Section - Lazy loaded */}
         <SectionErrorBoundary sectionName="Final CTA">
           <Suspense
-            fallback={<SectionLoader minHeight="300px" message="Loading final call-to-action..." />}
+            fallback={<SectionLoader minHeight="300px" message="Loading the next step..." />}
           >
             <section id="final-cta" aria-labelledby="final-cta-heading">
               <FinalCTASection
-                headline="Start Receiving Buyer Leads This Week"
-                subtext="Don't let your competitors capture your market share. Join hundreds of successful partners already plugged into South Africa's most active property demand network."
+                headline="Ready to start your 90-Day Launch Access?"
+                subtext="Bring your inventory onto Property Listify, make it discoverable, capture enquiries and experience the strongest supported business tools for 90 days."
                 primaryCTA={{
-                  label: 'Claim Your Market Access',
-                  href: '/role-selection',
+                  label: 'Explore Launch Access',
+                  href: '#pricing-preview',
                 }}
                 secondaryCTA={{
-                  label: 'Schedule a Demo',
+                  label: 'Contact Property Listify',
                   href: '/contact',
                 }}
               />
@@ -270,11 +200,10 @@ export default function AdvertiseWithUs() {
           </Suspense>
         </SectionErrorBoundary>
 
-        {/* FAQ Section - Lazy loaded */}
         <SectionErrorBoundary sectionName="FAQ">
           <Suspense fallback={<FAQSectionSkeleton />}>
             <section id="faq" aria-labelledby="faq-heading">
-              <FAQSection />
+              <FAQSection commercialProducts={commercialCatalog?.products} />
             </section>
           </Suspense>
         </SectionErrorBoundary>

@@ -8,13 +8,16 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, Star, TrendingUp } from 'lucide-react';
+import { Check, TrendingUp } from 'lucide-react';
 import { staggerContainer, staggerItem } from '@/lib/animations/advertiseAnimations';
 import {
   formatCommercialAudience,
   formatCommercialLimitLabel,
+  formatCommercialLimitValue,
   getCommercialActionPresentation,
   getCommercialPricePresentation,
+  getCommercialPresentationLimits,
+  getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 
@@ -100,9 +103,40 @@ function CatalogEmptyState() {
   );
 }
 
+function productAccent(audience: CommercialProduct['audience']) {
+  if (audience === 'agency') {
+    return {
+      border: 'border-orange-200',
+      badge: 'bg-orange-50 text-orange-700',
+      term: 'border-orange-100 bg-orange-50/70 text-orange-700',
+      check: 'text-orange-600',
+      button: 'bg-orange-500 text-white hover:bg-orange-600 focus-visible:ring-orange-300',
+    };
+  }
+
+  if (audience === 'developer') {
+    return {
+      border: 'border-emerald-200',
+      badge: 'bg-emerald-50 text-emerald-700',
+      term: 'border-emerald-100 bg-emerald-50/70 text-emerald-700',
+      check: 'text-emerald-600',
+      button: 'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-300',
+    };
+  }
+
+  return {
+    border: 'border-blue-200',
+    badge: 'bg-blue-50 text-blue-700',
+    term: 'border-blue-100 bg-blue-50/70 text-blue-700',
+    check: 'text-blue-600',
+    button: 'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-300',
+  };
+}
+
 function ProductBenefits({ product }: { product: CommercialProduct }) {
   const benefits = product.benefits.filter(Boolean);
-  const limits = Object.entries(product.limits).filter(([, value]) => value !== null);
+  const limits = getCommercialPresentationLimits(product);
+  const accent = productAccent(product.audience);
 
   if (!benefits.length && !limits.length) {
     return (
@@ -119,12 +153,9 @@ function ProductBenefits({ product }: { product: CommercialProduct }) {
           {benefits.map((benefit, index) => (
             <li key={`${product.productId}-benefit-${index}`} className="flex items-start gap-3">
               <div className="mt-0.5 flex-shrink-0">
-                <Check
-                  className={`h-5 w-5 ${product.popular ? 'text-indigo-500' : 'text-emerald-500'}`}
-                  aria-hidden="true"
-                />
+                <Check className={`h-5 w-5 ${accent.check}`} aria-hidden="true" />
               </div>
-              <span className="text-sm font-medium text-slate-600">{benefit}</span>
+              <span className="text-base font-medium leading-7 text-slate-600">{benefit}</span>
             </li>
           ))}
         </ul>
@@ -139,7 +170,9 @@ function ProductBenefits({ product }: { product: CommercialProduct }) {
             {limits.map(([key, value]) => (
               <div key={`${product.productId}-limit-${key}`} className="flex justify-between gap-4">
                 <dt className="text-slate-500">{formatCommercialLimitLabel(key)}</dt>
-                <dd className="font-semibold text-slate-700">{String(value)}</dd>
+                <dd className="font-semibold text-slate-700">
+                  {formatCommercialLimitValue(value)}
+                </dd>
               </div>
             ))}
           </dl>
@@ -151,7 +184,9 @@ function ProductBenefits({ product }: { product: CommercialProduct }) {
 
 function ProductCard({ product }: { product: CommercialProduct }) {
   const price = getCommercialPricePresentation(product);
+  const term = getCommercialTermPresentation(product);
   const action = getCommercialActionPresentation(product);
+  const accent = productAccent(product.audience);
   const taxLabel =
     product.pricing.displayIncludesVat === true
       ? 'VAT included'
@@ -162,29 +197,23 @@ function ProductCard({ product }: { product: CommercialProduct }) {
   return (
     <motion.div
       data-testid="commercial-product-card"
+      data-product-key={product.productKey}
       variants={staggerItem}
-      className={`relative flex flex-col overflow-hidden rounded-3xl border bg-white shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-        product.popular
-          ? 'z-10 border-indigo-500 shadow-indigo-100 ring-2 ring-indigo-500/20 lg:scale-105'
-          : 'border-slate-200 lg:my-4'
-      }`}
+      className={`relative flex flex-col overflow-hidden rounded-3xl border bg-white shadow-xl transition-all duration-300 hover:-translate-y-1 ${accent.border} lg:my-4`}
     >
-      {product.popular && (
-        <div className="flex items-center justify-center gap-1 bg-indigo-500 py-1.5 text-center text-xs font-bold uppercase tracking-wider text-white">
-          <Star className="h-3 w-3 fill-current" aria-hidden="true" />
-          Most Popular
-        </div>
-      )}
-
       <div className="flex-grow p-8">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h4 className="text-xl font-bold text-slate-900">{product.displayName}</h4>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-600">
+          <h4 className="text-xl font-bold leading-tight text-slate-900 md:text-2xl">
+            {product.displayName}
+          </h4>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${accent.badge}`}
+          >
             {formatCommercialAudience(product.audience)}
           </span>
         </div>
         {product.description && (
-          <p className="mb-6 text-sm text-slate-500">{product.description}</p>
+          <p className="mb-6 text-base leading-7 text-slate-500">{product.description}</p>
         )}
 
         <div
@@ -193,6 +222,16 @@ function ProductCard({ product }: { product: CommercialProduct }) {
         >
           <span className="text-4xl font-extrabold text-slate-900">{price.label}</span>
           {price.period && <span className="ml-1 font-medium text-slate-500">{price.period}</span>}
+        </div>
+
+        <div className={`mb-8 rounded-2xl border p-4 ${accent.term}`}>
+          <div className="flex items-baseline justify-between gap-4">
+            <span className="text-sm font-medium">Access term</span>
+            <span className="font-bold text-slate-900">{term.label}</span>
+          </div>
+          {term.renewalLabel && (
+            <p className="mt-1 text-right text-xs font-medium">{term.renewalLabel}</p>
+          )}
         </div>
 
         {taxLabel && <p className="-mt-5 mb-6 text-xs text-slate-500">{taxLabel}</p>}
@@ -210,11 +249,7 @@ function ProductCard({ product }: { product: CommercialProduct }) {
         {action.href ? (
           <a
             href={action.href}
-            className={`flex w-full items-center justify-center rounded-xl px-6 py-4 font-semibold shadow-md transition-all hover:shadow-lg ${
-              product.popular
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
-            }`}
+            className={`flex w-full items-center justify-center rounded-xl px-6 py-4 font-semibold shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 hover:shadow-lg ${accent.button}`}
           >
             {action.label}
           </a>
@@ -233,11 +268,15 @@ function ProductCard({ product }: { product: CommercialProduct }) {
 }
 
 export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
-  title = 'Commercial options for your business',
-  subtitle = 'Current products, prices and next actions come from the Property Listify commercial catalogue.',
+  title = 'Choose your 90-Day Launch Access',
+  subtitle = 'Bring your inventory onto Property Listify, make it discoverable, capture enquiries and use the strongest supported business tools for 90 days.',
 }) => {
   const { data: catalog, isLoading, isError, refetch } = useCommercialCatalog();
-  const products = catalog?.products ?? [];
+  const products = (catalog?.products ?? []).filter(
+    product =>
+      product.term.kind === 'paid_launch_access' &&
+      ['agent', 'agency', 'developer'].includes(product.audience),
+  );
 
   return (
     <section
@@ -247,7 +286,7 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
     >
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
-          className="relative mb-16 overflow-hidden rounded-3xl bg-indigo-600 p-8 text-center text-white shadow-2xl md:p-12"
+          className="relative mb-16 overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-indigo-700 p-8 text-center text-white shadow-2xl md:p-12"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
@@ -260,38 +299,34 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
             id="pricing-preview-heading"
             className="relative z-10 mb-6 text-3xl font-extrabold md:text-4xl"
           >
-            Make your next commercial step clear.
+            Launch Access, clearly defined.
           </h2>
           <p className="relative z-10 mx-auto mb-10 max-w-3xl text-lg font-medium text-indigo-100 md:text-xl">
-            Product availability, pricing and activation paths are supplied by the canonical
-            commercial catalogue.
+            Every product below is a once-off 90-day access term. Payment is manual EFT and access
+            starts only after finance verifies the payment.
           </p>
 
           <div className="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <div className="rounded-2xl border border-indigo-500/30 bg-indigo-700/50 p-6 backdrop-blur-sm">
-              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-indigo-200">
-                Pricing authority
+            <div className="rounded-2xl border border-white/15 bg-blue-700/40 p-6 backdrop-blur-sm">
+              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-blue-100">
+                Access term
               </div>
-              <div className="text-3xl font-extrabold text-white">Live catalogue</div>
-              <div className="mt-2 text-xs text-indigo-300">Current server-side product data</div>
+              <div className="text-3xl font-extrabold text-white">90 days</div>
+              <div className="mt-2 text-xs text-blue-100">Starts after verified activation</div>
             </div>
-            <div className="transform rounded-2xl border border-emerald-500/30 bg-emerald-600/50 p-6 backdrop-blur-sm md:-translate-y-2">
-              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-emerald-100">
-                Product access
+            <div className="transform rounded-2xl border border-white/30 bg-white/10 p-6 backdrop-blur-sm md:-translate-y-2">
+              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-blue-100">
+                Payment
               </div>
-              <div className="text-4xl font-extrabold text-emerald-400">Plan-backed</div>
-              <div className="mt-2 text-xs text-emerald-200">
-                Benefits and limits from entitlements
-              </div>
+              <div className="text-4xl font-extrabold text-white">Once-off</div>
+              <div className="mt-2 text-xs text-blue-100">Manual EFT with a payment reference</div>
             </div>
-            <div className="rounded-2xl border border-indigo-500/30 bg-indigo-700/50 p-6 backdrop-blur-sm">
-              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-indigo-200">
+            <div className="rounded-2xl border border-white/15 bg-indigo-700/40 p-6 backdrop-blur-sm">
+              <div className="mb-1 text-sm font-medium uppercase tracking-wider text-indigo-100">
                 Activation
               </div>
-              <div className="text-3xl font-extrabold text-white">Assisted</div>
-              <div className="mt-2 text-xs text-indigo-300">
-                Manual EFT and finance verification
-              </div>
+              <div className="text-3xl font-extrabold text-white">Verified</div>
+              <div className="mt-2 text-xs text-indigo-100">No automatic renewal</div>
             </div>
           </div>
         </motion.div>
@@ -323,7 +358,7 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
         ) : (
           <motion.div
             data-testid="commercial-catalog-products"
-            className="mx-auto grid max-w-6xl grid-cols-1 gap-8 lg:grid-cols-3"
+            className="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-3"
             variants={staggerContainer}
             initial="initial"
             whileInView="animate"
@@ -343,8 +378,9 @@ export const PricingPreviewSection: React.FC<PricingPreviewSectionProps> = ({
           transition={{ delay: 0.6 }}
         >
           <p className="text-sm text-slate-500">
-            Promotions and tax terms appear only when configured by the canonical commercial
-            authority. Payment is currently assisted through manual EFT and finance verification.
+            Product names, prices, terms, benefits and limits are read from
+            billing.commercialCatalog. Payment is assisted through manual EFT and finance
+            verification.
           </p>
         </motion.div>
       </div>

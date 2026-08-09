@@ -1,3 +1,5 @@
+import LaunchAccessAudiencePage from './LaunchAccessAudiencePage';
+
 export default function DeveloperFunnelPage() {
-  return <div>Developer Funnel placeholder</div>;
+  return <LaunchAccessAudiencePage audience="developer" />;
 }
