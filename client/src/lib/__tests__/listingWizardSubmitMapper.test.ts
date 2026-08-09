@@ -212,7 +212,7 @@ describe('buildListingWizardSubmitPayload', () => {
     expect(payload.propertyDetails).not.toHaveProperty('securityFeatures');
   });
 
-  it('preserves pricing aliases while dropping stale legacy Step 4 fields', () => {
+  it('writes one canonical pricing contract while dropping stale pricing aliases', () => {
     const payload = buildListingWizardSubmitPayload({
       ...baseState,
       pricing: {
@@ -235,11 +235,20 @@ describe('buildListingWizardSubmitPayload', () => {
       bathrooms: 2,
       parkingCount: 2,
       parkingBays: 2,
-      levies: 1800,
-      leviesHoaOperatingCosts: 1800,
-      ratesAndTaxes: 2100,
-      ratesTaxes: 2100,
+      pricingContract: {
+        version: 1,
+        intent: 'sale',
+        askingPrice: 3250000,
+        recurringCosts: {
+          ratesAndTaxes: { status: 'known', amount: 2100, cadence: 'monthly' },
+          otherMandatoryCharge: { status: 'known', amount: 1800, cadence: 'monthly' },
+        },
+      },
     });
+    expect(payload.propertyDetails).not.toHaveProperty('levies');
+    expect(payload.propertyDetails).not.toHaveProperty('leviesHoaOperatingCosts');
+    expect(payload.propertyDetails).not.toHaveProperty('ratesAndTaxes');
+    expect(payload.propertyDetails).not.toHaveProperty('ratesTaxes');
     expect(payload.propertyDetails).not.toHaveProperty('electricitySupply');
     expect(payload.propertyDetails).not.toHaveProperty('internetAccess');
     expect(payload.propertyDetails).not.toHaveProperty('prepaidElectricity');

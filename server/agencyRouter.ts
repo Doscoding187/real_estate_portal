@@ -1606,11 +1606,20 @@ const listingInventoryFiltersSchema = z.object({
 });
 
 function priceForListing(row: {
+  action?: string | null;
   askingPrice?: string | number | null;
   monthlyRent?: string | number | null;
   startingBid?: string | number | null;
 }) {
-  const value = row.askingPrice || row.monthlyRent || row.startingBid || null;
+  const action = String(row.action || '').toLowerCase();
+  const value =
+    action === 'rent'
+      ? row.monthlyRent
+      : action === 'auction'
+        ? row.startingBid
+        : action === 'sell'
+          ? row.askingPrice
+          : row.askingPrice ?? row.monthlyRent ?? row.startingBid ?? null;
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }

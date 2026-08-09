@@ -74,6 +74,12 @@ import {
   buildCorePropertyInformation,
 } from '../shared/core-property-information';
 import { normalizeFeaturesContext } from '../shared/features-context';
+import {
+  buildPricingContract,
+  getMoneyFactAmount,
+  getPrimaryPrice,
+  validatePricingContract,
+} from '../shared/pricing-contract';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -136,6 +142,26 @@ function toMysqlDateTime(value: Date | string = new Date()): string {
     return new Date().toISOString().slice(0, 19).replace('T', ' ');
   }
   return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function getPricingProjection(
+  action: string | undefined,
+  pricing: Record<string, unknown> | null | undefined,
+  propertyDetails: Record<string, unknown> | null | undefined,
+) {
+  const contract = buildPricingContract(action, pricing, propertyDetails);
+  const recurringCosts = contract?.intent === 'sale' ? contract.recurringCosts : {};
+  const levyFact =
+    recurringCosts.bodyCorporateLevy ||
+    recurringCosts.hoaEstateLevy ||
+    recurringCosts.otherMandatoryCharge;
+
+  return {
+    contract,
+    price: getPrimaryPrice(action, pricing, propertyDetails) ?? 0,
+    ratesAndTaxes: getMoneyFactAmount(recurringCosts.ratesAndTaxes) ?? null,
+    legacyLevy: getMoneyFactAmount(levyFact) ?? null,
+  };
 }
 
 // Export a synchronous db object that throws if not initialized
@@ -1539,7 +1565,12 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
   return rows.map(({ listing }) => ({
     id: listing.id,
     title: listing.title,
-    price: Number(listing.askingPrice || listing.monthlyRent || listing.startingBid || 0) || null,
+    price:
+      getPrimaryPrice(
+        String(listing.action),
+        listing as unknown as Record<string, unknown>,
+        (listing.propertyDetails as Record<string, unknown> | null | undefined) || {},
+      ) ?? null,
     status: listing.status,
     city: listing.city,
     views: null,
@@ -2106,6 +2137,21 @@ export async function createListing(
         coords: { lat: listingData.latitude, lng: listingData.longitude },
       });
 
+      const pricingContract = buildPricingContract(
+        listingData.action,
+        listingData.pricing as Record<string, unknown>,
+        listingData.propertyDetails as Record<string, unknown>,
+        { preferEmbedded: false },
+      );
+      const salePrice =
+        pricingContract?.intent === 'sale' ? pricingContract.askingPrice : undefined;
+      const rentPrice =
+        pricingContract?.intent === 'rent' ? pricingContract.monthlyRent : undefined;
+      const depositAmount =
+        pricingContract?.intent === 'rent'
+          ? getMoneyFactAmount(pricingContract.deposit)
+          : undefined;
+
       const insertValues: any = {
         ownerId: listingData.userId,
         agentId: agentId,
@@ -2116,17 +2162,16 @@ export async function createListing(
         description: listingData.description,
 
         // Map pricing fields
-        askingPrice: listingData.pricing.askingPrice
-          ? String(listingData.pricing.askingPrice)
-          : null,
-        negotiable: listingData.pricing.negotiable ? 1 : 0,
+        askingPrice: salePrice !== undefined ? String(salePrice) : null,
+        negotiable:
+          pricingContract?.intent === 'sale' && pricingContract.negotiability === 'negotiable'
+            ? 1
+            : 0,
         transferCostEstimate: listingData.pricing.transferCostEstimate
           ? String(listingData.pricing.transferCostEstimate)
           : null,
-        monthlyRent: listingData.pricing.monthlyRent
-          ? String(listingData.pricing.monthlyRent)
-          : null,
-        deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
+        monthlyRent: rentPrice !== undefined ? String(rentPrice) : null,
+        deposit: depositAmount !== undefined ? String(depositAmount) : null,
         leaseTerms: listingData.pricing.leaseTerms || null,
         availableFrom: listingData.pricing.availableFrom
           ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ')
@@ -2284,27 +2329,41 @@ export async function getListingById(listingId: number) {
 
   if (!listing) return null;
 
-  // Construct pricing object from individual columns
-  const pricing = {
-    askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
-    negotiable: listing.negotiable === 1,
-    transferCostEstimate: listing.transferCostEstimate
-      ? Number(listing.transferCostEstimate)
-      : undefined,
-    monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
-    deposit: listing.deposit ? Number(listing.deposit) : undefined,
-    leaseTerms: listing.leaseTerms,
-    availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
-    utilitiesIncluded: listing.utilitiesIncluded === 1,
-    startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
-    reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
-    auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
-    auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
-  };
-
   // propertyDetails is already an object if using json() type in schema
   // but if it's null, we should handle it
   const propertyDetails = listing.propertyDetails || {};
+
+  // Construct compatibility pricing from individual columns, then expose the
+  // versioned contract when one is present in the approved property details.
+  const pricing = {
+    askingPrice: listing.askingPrice != null ? Number(listing.askingPrice) : undefined,
+    negotiable: listing.negotiable === 1,
+    transferCostEstimate:
+      listing.transferCostEstimate != null ? Number(listing.transferCostEstimate) : undefined,
+    monthlyRent: listing.monthlyRent != null ? Number(listing.monthlyRent) : undefined,
+    deposit: listing.deposit != null ? Number(listing.deposit) : undefined,
+    leaseTerms: listing.leaseTerms,
+    availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
+    utilitiesIncluded: listing.utilitiesIncluded === 1,
+    startingBid: listing.startingBid != null ? Number(listing.startingBid) : undefined,
+    reservePrice: listing.reservePrice != null ? Number(listing.reservePrice) : undefined,
+    auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
+    auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
+  } as Record<string, unknown>;
+  const pricingContract = buildPricingContract(
+    listing.action,
+    pricing,
+    propertyDetails as Record<string, unknown>,
+  );
+  if (pricingContract) {
+    pricing.pricingContract = pricingContract;
+    if (pricingContract.intent === 'sale') {
+      pricing.negotiability = pricingContract.negotiability;
+      pricing.recurringCosts = pricingContract.recurringCosts;
+    } else {
+      pricing.depositFact = pricingContract.deposit;
+    }
+  }
 
   return {
     ...listing,
@@ -2355,24 +2414,36 @@ export async function getUserListings(
             : `${cdnUrl}/${images[0].originalUrl}`
           : null;
 
-      const pricing = {
-        askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
+      const propertyDetails = listing.propertyDetails || {};
+      const pricing: Record<string, unknown> = {
+        askingPrice: listing.askingPrice != null ? Number(listing.askingPrice) : undefined,
         negotiable: listing.negotiable === 1,
-        transferCostEstimate: listing.transferCostEstimate
-          ? Number(listing.transferCostEstimate)
-          : undefined,
-        monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
-        deposit: listing.deposit ? Number(listing.deposit) : undefined,
+        transferCostEstimate:
+          listing.transferCostEstimate != null ? Number(listing.transferCostEstimate) : undefined,
+        monthlyRent: listing.monthlyRent != null ? Number(listing.monthlyRent) : undefined,
+        deposit: listing.deposit != null ? Number(listing.deposit) : undefined,
         leaseTerms: listing.leaseTerms,
         availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
         utilitiesIncluded: listing.utilitiesIncluded === 1,
-        startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
-        reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
+        startingBid: listing.startingBid != null ? Number(listing.startingBid) : undefined,
+        reservePrice: listing.reservePrice != null ? Number(listing.reservePrice) : undefined,
         auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
         auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
       };
-
-      const propertyDetails = listing.propertyDetails || {};
+      const pricingContract = buildPricingContract(
+        listing.action,
+        pricing,
+        propertyDetails as Record<string, unknown>,
+      );
+      if (pricingContract) {
+        pricing.pricingContract = pricingContract;
+        if (pricingContract.intent === 'sale') {
+          pricing.negotiability = pricingContract.negotiability;
+          pricing.recurringCosts = pricingContract.recurringCosts;
+        } else {
+          pricing.depositFact = pricingContract.deposit;
+        }
+      }
 
       return {
         ...listing,
@@ -2409,22 +2480,47 @@ export async function updateListing(listingId: number, updateData: any) {
 
   // Map pricing fields if present
   if (updateData.pricing) {
-    if (updateData.pricing.askingPrice !== undefined)
-      updateFields.askingPrice = updateData.pricing.askingPrice
-        ? String(updateData.pricing.askingPrice)
-        : null;
-    if (updateData.pricing.negotiable !== undefined)
-      updateFields.negotiable = updateData.pricing.negotiable ? 1 : 0;
+    const pricingContract = buildPricingContract(
+      updateData.action,
+      updateData.pricing,
+      updateData.propertyDetails,
+      { preferEmbedded: false },
+    );
+    const salePrice =
+      pricingContract?.intent === 'sale' ? pricingContract.askingPrice : undefined;
+    const rentPrice =
+      pricingContract?.intent === 'rent' ? pricingContract.monthlyRent : undefined;
+    const depositAmount =
+      pricingContract?.intent === 'rent'
+        ? getMoneyFactAmount(pricingContract.deposit)
+        : undefined;
+
+    if (updateData.action === 'sell') {
+      updateFields.askingPrice = salePrice !== undefined ? String(salePrice) : null;
+      updateFields.monthlyRent = null;
+      updateFields.deposit = null;
+      updateFields.negotiable =
+        pricingContract?.intent === 'sale' && pricingContract.negotiability === 'negotiable'
+          ? 1
+          : 0;
+    } else if (updateData.action === 'rent') {
+      updateFields.askingPrice = null;
+      updateFields.monthlyRent = rentPrice !== undefined ? String(rentPrice) : null;
+      updateFields.deposit = depositAmount !== undefined ? String(depositAmount) : null;
+      updateFields.negotiable = 0;
+    } else {
+      if (updateData.pricing.askingPrice !== undefined)
+        updateFields.askingPrice = updateData.pricing.askingPrice
+          ? String(updateData.pricing.askingPrice)
+          : null;
+      if (updateData.pricing.negotiable !== undefined)
+        updateFields.negotiable = updateData.pricing.negotiable ? 1 : 0;
+    }
     if (updateData.pricing.transferCostEstimate !== undefined)
-      updateFields.transferCostEstimate = updateData.pricing.transferCostEstimate
-        ? String(updateData.pricing.transferCostEstimate)
-        : null;
-    if (updateData.pricing.monthlyRent !== undefined)
-      updateFields.monthlyRent = updateData.pricing.monthlyRent
-        ? String(updateData.pricing.monthlyRent)
-        : null;
-    if (updateData.pricing.deposit !== undefined)
-      updateFields.deposit = updateData.pricing.deposit ? String(updateData.pricing.deposit) : null;
+      updateFields.transferCostEstimate =
+        updateData.pricing.transferCostEstimate !== null
+          ? String(updateData.pricing.transferCostEstimate)
+          : null;
     if (updateData.pricing.leaseTerms !== undefined)
       updateFields.leaseTerms = updateData.pricing.leaseTerms;
     if (updateData.pricing.availableFrom !== undefined)
@@ -2470,6 +2566,18 @@ export async function submitListingForReview(listingId: number) {
     throw new Error(`Listing cannot be submitted from status "${transitionListing.status}"`);
   }
 
+  const listing = await getListingById(listingId);
+  if (!listing) throw new Error('Listing not found');
+  const pricingIssues = validatePricingContract(
+    String((transitionListing as any).action),
+    (listing as any)?.pricing,
+    (listing as any)?.propertyDetails,
+    { mode: 'publish', enforceInputShape: false },
+  );
+  if (pricingIssues.length > 0) {
+    throw new Error(pricingIssues.map(issue => issue.message).join(' '));
+  }
+
   // This is the transition boundary for every caller, including agency routes,
   // generic routes, scripts, and lower-level tests.
   await assertListingPublicationEntitled(db, { listingId, operation: 'submit' });
@@ -2483,10 +2591,6 @@ export async function submitListingForReview(listingId: number) {
       updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     })
     .where(eq(listings.id, listingId));
-
-  // Get listing to find owner
-  const listing = await getListingById(listingId);
-  if (!listing) throw new Error('Listing not found');
 
   // Add to approval queue
   await db.insert(listingApprovalQueue).values({
@@ -2775,6 +2879,16 @@ export async function approveListing(
     operation: source === 'fast_track' ? 'fast_track' : 'admin_approval',
   });
 
+  const pricingIssues = validatePricingContract(
+    String((listing as any).action),
+    (listing as any).pricing,
+    (listing as any).propertyDetails,
+    { mode: 'publish', enforceInputShape: false },
+  );
+  if (pricingIssues.length > 0) {
+    throw new Error(pricingIssues.map(issue => issue.message).join(' '));
+  }
+
   // A revision is a private listing-engine draft. Approval applies its public fields to
   // the original canonical listing/projection; the revision itself never becomes public.
   if ((listing as any).revisionOfListingId) {
@@ -2788,16 +2902,43 @@ export async function approveListing(
     if (!isSameListingCommercialOwner(listingCommercialOwner, originalCommercialOwner)) {
       throw new Error('Listing revision commercial owner does not match the original listing');
     }
+    const approvedPricingProjection = getPricingProjection(
+      String((listing as any).action),
+      (listing as any).pricing,
+      (listing as any).propertyDetails,
+    );
+    const approvedPropertyDetails = {
+      ...(((listing as any).propertyDetails as Record<string, unknown>) || {}),
+      ...(approvedPricingProjection.contract
+        ? { pricingContract: approvedPricingProjection.contract }
+        : {}),
+    };
     const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
     await db.update(listings).set({
       askingPrice: (listing as any).askingPrice,
+      negotiable: (listing as any).negotiable,
+      transferCostEstimate: (listing as any).transferCostEstimate,
       monthlyRent: (listing as any).monthlyRent,
+      deposit: (listing as any).deposit,
+      leaseTerms: (listing as any).leaseTerms,
+      availableFrom: (listing as any).availableFrom,
+      utilitiesIncluded: (listing as any).utilitiesIncluded,
       startingBid: (listing as any).startingBid,
-      propertyDetails: (listing as any).propertyDetails,
+      reservePrice: (listing as any).reservePrice,
+      auctionDateTime: (listing as any).auctionDateTime,
+      auctionTermsDocumentUrl: (listing as any).auctionTermsDocumentUrl,
+      propertyDetails: approvedPropertyDetails,
       title: listing.title, description: listing.description, updatedAt: approvedAt,
     } as any).where(eq(listings.id, originalListingId));
-    const publicPrice = (listing as any).askingPrice || (listing as any).monthlyRent || (listing as any).startingBid || 0;
-    await db.update(properties).set({ price: publicPrice, title: listing.title, description: listing.description, updatedAt: approvedAt } as any)
+    await db.update(properties).set({
+      price: approvedPricingProjection.price,
+      title: listing.title,
+      description: listing.description,
+      propertySettings: JSON.stringify(approvedPropertyDetails),
+      levies: approvedPricingProjection.legacyLevy,
+      ratesAndTaxes: approvedPricingProjection.ratesAndTaxes,
+      updatedAt: approvedAt,
+    } as any)
       .where(and(eq(properties.sourceListingId, originalListingId), isNotNull(properties.sourceListingId)));
     await db.update(listings).set({ status: 'archived' as any, approvalStatus: 'approved' as any, reviewedBy, reviewedAt: approvedAt, updatedAt: approvedAt } as any).where(eq(listings.id, listingId));
     await db.update(listingApprovalQueue).set({ status: 'approved' as any, reviewedBy, reviewedAt: approvedAt, reviewNotes: notes }).where(eq(listingApprovalQueue.listingId, listingId));
@@ -2815,10 +2956,6 @@ export async function approveListing(
       console.error('Failed to parse pricing:', e);
     }
   }
-
-  // Determine price based on listing type
-  let price = 0;
-  price = pricingData.askingPrice || pricingData.monthlyRent || pricingData.startingBid || 0;
 
   // Parse propertyDetails JSON if it's a string
   let details: any = {};
@@ -2840,6 +2977,14 @@ export async function approveListing(
     featuresContext,
     ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, details),
   };
+  const pricingProjection = getPricingProjection(
+    String(listing.action),
+    pricingData,
+    canonicalDetails,
+  );
+  if (pricingProjection.contract) {
+    canonicalDetails.pricingContract = pricingProjection.contract;
+  }
   const knownNumber = (fact: any): number | null =>
     fact?.status === 'known' && Number.isFinite(Number(fact.value)) ? Number(fact.value) : null;
   const knownMeasurement = (fact: any): number | null =>
@@ -2880,7 +3025,7 @@ export async function approveListing(
       listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     transactionType:
       listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
-    price: price,
+    price: pricingProjection.price,
     bedrooms: bedrooms,
     bathrooms: bathrooms,
     area: area,
@@ -2902,8 +3047,10 @@ export async function approveListing(
     ownerId: listing.ownerId,
     sourceListingId: listingId,
     propertySettings: JSON.stringify(canonicalDetails),
-    levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
-    ratesAndTaxes: Number(details.ratesAndTaxes) || Number(details.ratesTaxes) || null,
+    // These columns are legacy compatibility projections. Public pricing
+    // detail reads the versioned contract stored in propertySettings.
+    levies: pricingProjection.legacyLevy,
+    ratesAndTaxes: pricingProjection.ratesAndTaxes,
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
@@ -3223,7 +3370,12 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     title: listing.title,
     description: listing.description,
     // Map price based on action type
-    price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
+    price:
+      getPrimaryPrice(
+        listing.action,
+        listing.pricing || listing,
+        canonicalDetails,
+      ) || 0,
     listingType: listing.action, // 'sell', 'rent', 'auction'
     propertyType: toPublicPropertyType(String(listing.propertyType)),
     propertySettings: canonicalDetails,
@@ -3369,6 +3521,7 @@ export async function searchListings(params: ListingSearchParams) {
   if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType as any));
 
   // Listing type filter (map to action)
+  let actionFilter: string | undefined;
   if (params.listingType) {
     const actionMap: Record<string, string> = {
       sale: 'sell',
@@ -3377,15 +3530,26 @@ export async function searchListings(params: ListingSearchParams) {
       rent_to_buy: 'rent',
       shared_living: 'rent',
     };
-    const action = actionMap[params.listingType] || params.listingType;
-    conditions.push(eq(listings.action, action as any));
+    actionFilter = actionMap[params.listingType] || params.listingType;
+    conditions.push(eq(listings.action, actionFilter as any));
   }
 
   // Price filters - handle different price fields based on action
   if (params.minPrice || params.maxPrice) {
     const priceConditions: SQL[] = [];
 
-    if (params.minPrice) {
+    const priceColumn =
+      actionFilter === 'sell'
+        ? listings.askingPrice
+        : actionFilter === 'rent'
+          ? listings.monthlyRent
+          : actionFilter === 'auction'
+            ? listings.startingBid
+            : undefined;
+
+    if (priceColumn && params.minPrice) {
+      priceConditions.push(gte(priceColumn, params.minPrice.toString()));
+    } else if (!priceColumn && params.minPrice) {
       priceConditions.push(
         or(
           gte(listings.askingPrice, params.minPrice.toString()),
@@ -3395,7 +3559,9 @@ export async function searchListings(params: ListingSearchParams) {
       );
     }
 
-    if (params.maxPrice) {
+    if (priceColumn && params.maxPrice) {
+      priceConditions.push(lte(priceColumn, params.maxPrice.toString()));
+    } else if (!priceColumn && params.maxPrice) {
       priceConditions.push(
         or(
           lte(listings.askingPrice, params.maxPrice.toString()),

@@ -70,6 +70,7 @@ import {
   getPropertyFeaturesContextGroups,
   getPropertyRunningCostFacts,
 } from '@/lib/property';
+import { buildPricingContract, getMoneyFactAmount } from '@/../../shared/pricing-contract';
 
 interface PropertyDetailProps {
   propertyId?: number;
@@ -150,6 +151,7 @@ interface PropertyPayload {
   features?: string | string[];
   propertySettings?: string | PropertySpecs;
   propertyDetails?: string | Record<string, unknown>;
+  pricingContract?: unknown;
   developerBrand?: DeveloperBrandLite;
   developerBrandProfile?: DeveloperBrandLite;
   listerType?: string;
@@ -535,6 +537,14 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const unitSizeM2 = parseStrictNumber(canonicalInternalArea ?? rawPropertyDetails.unitSizeM2);
   const landAreaM2 = parseStrictNumber(canonicalLandArea ?? rawPropertyDetails.landAreaM2);
   const displayPrice = Number(property.price) || 0;
+  const publicPricingContract = buildPricingContract(
+    isRentalListing ? 'rent' : 'sell',
+    property as unknown as Record<string, unknown>,
+    rawPropertyDetails,
+  );
+  const rentDepositFact =
+    publicPricingContract?.intent === 'rent' ? publicPricingContract.deposit : undefined;
+  const rentDepositAmount = getMoneyFactAmount(rentDepositFact);
   const displayLocationLabel = formatFullPropertyLocation({
     address: property.address,
     suburb: property.suburb,
@@ -904,6 +914,26 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                         normalizedListingType,
                       )}
                     </div>
+                    {publicPricingContract?.intent === 'sale' &&
+                      publicPricingContract.negotiability !== 'unknown' && (
+                        <p className="mt-2 text-xs font-semibold text-slate-500">
+                          {publicPricingContract.negotiability === 'negotiable'
+                            ? 'Price negotiable'
+                            : 'Price not negotiable'}
+                        </p>
+                      )}
+                    {isRentalListing && rentDepositFact && (
+                      <p className="mt-2 text-xs font-semibold text-slate-500">
+                        Deposit:{' '}
+                        {rentDepositFact.status === 'known' && rentDepositAmount !== undefined
+                          ? formatCurrency(rentDepositAmount)
+                          : rentDepositFact.status === 'zero'
+                            ? 'R0 (no deposit)'
+                            : rentDepositFact.status === 'unknown'
+                              ? 'To confirm'
+                              : 'Not applicable'}
+                      </p>
+                    )}
                   </div>
                   <Badge className="shrink-0 border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50">
                     <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
@@ -1065,7 +1095,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           </div>
         </div>
 
-        {(specs.ownershipType || runningCostItems.some(item => item.status === 'confirmed')) && (
+        {(specs.ownershipType || runningCostItems.length > 0) && (
           <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -1098,7 +1128,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               )}
 
               {runningCostItems
-                .filter(item => item.status === 'confirmed')
+                .filter(item => item.status !== 'not_applicable')
                 .map(item => {
                   const Icon = item.icon;
                   return (

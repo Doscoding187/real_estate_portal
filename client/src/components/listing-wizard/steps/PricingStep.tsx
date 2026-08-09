@@ -1,33 +1,524 @@
 /**
- * Step 4: Dynamic Pricing Fields
+ * Step 5: Pricing & Costs
  *
- * Adapts pricing fields based on action type (sell/rent/auction)
+ * Sale and Rent use separate commercial contracts. Auction remains renderable
+ * only for historical records; it is not a live Step 1 authoring choice.
  */
 
 import React from 'react';
+import { CalendarIcon, Coins } from 'lucide-react';
+import { format } from 'date-fns';
 import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-import { CalendarIcon, Coins } from 'lucide-react';
-import { format } from 'date-fns';
-import { BondCalculator } from '@/components/BondCalculator';
-import { calculateTransferCosts, calculateMonthlyRepayment } from '@/lib/bond-calculator';
-import type { SellPricing, RentPricing, AuctionPricing } from '@/../../shared/listing-types';
+import CurrencyInput from '@/components/listing-wizard/CurrencyInput';
+import type { AuctionPricing, RentPricing, SellPricing } from '@/../../shared/listing-types';
+import {
+  normalizeMoneyFact,
+  type MoneyFactStatus,
+  type RecurringChargeFact,
+  type RecurringCostKey,
+  type Negotiability,
+} from '@/../../shared/pricing-contract';
+
+const COSTS: Array<{ key: RecurringCostKey; label: string; help: string; cadence?: boolean }> = [
+  {
+    key: 'ratesAndTaxes',
+    label: 'Rates & taxes',
+    help: 'Municipal property charges. Do not estimate if you are not sure.',
+  },
+  {
+    key: 'bodyCorporateLevy',
+    label: 'Body corporate levy',
+    help: 'Only add this when the property has a confirmed body corporate charge.',
+  },
+  {
+    key: 'hoaEstateLevy',
+    label: 'HOA / estate levy',
+    help: 'Only add this when a homeowners or estate levy applies.',
+  },
+  {
+    key: 'specialLevy',
+    label: 'Special levy',
+    help: 'Use the cadence selector for a one-off or non-monthly charge.',
+    cadence: true,
+  },
+  {
+    key: 'otherMandatoryCharge',
+    label: 'Other mandatory charge',
+    help: 'A required recurring property charge that does not fit the categories above.',
+    cadence: true,
+  },
+];
+
+const COST_STATUS_OPTIONS: Array<{ value: MoneyFactStatus | ''; label: string }> = [
+  { value: '', label: 'Not answered' },
+  { value: 'known', label: 'Known amount' },
+  { value: 'zero', label: 'Confirmed R0' },
+  { value: 'unknown', label: 'Not sure' },
+  { value: 'not_applicable', label: 'Not applicable' },
+];
+
+const CADENCE_OPTIONS = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'annual', label: 'Annual' },
+  { value: 'once', label: 'One-off' },
+  { value: 'unknown', label: 'Cadence not sure' },
+] as const;
+
+const formatAmount = (value?: number | null) =>
+  value === undefined || value === null
+    ? ''
+    : `R ${value.toLocaleString('en-ZA', { maximumFractionDigits: 2 })}`;
+
+function RecurringCostRow({
+  cost,
+  fact,
+  onChange,
+}: {
+  cost: (typeof COSTS)[number];
+  fact?: RecurringChargeFact;
+  onChange: (fact: RecurringChargeFact | undefined) => void;
+}) {
+  const status = fact?.status || '';
+  const handleStatus = (nextStatus: MoneyFactStatus | '') => {
+    if (!nextStatus) {
+      onChange(undefined);
+      return;
+    }
+    onChange({
+      status: nextStatus,
+      ...(nextStatus === 'known' && fact?.amount !== undefined ? { amount: fact.amount } : {}),
+      ...(cost.cadence ? { cadence: fact?.cadence || 'monthly' } : {}),
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <Label
+            htmlFor={`pricing-${cost.key}-status`}
+            className="text-sm font-semibold text-slate-800"
+          >
+            {cost.label}
+          </Label>
+          <p className="mt-1 text-xs text-slate-500">{cost.help}</p>
+        </div>
+        <select
+          id={`pricing-${cost.key}-status`}
+          aria-label={`${cost.label} status`}
+          value={status}
+          onChange={event => handleStatus(event.target.value as MoneyFactStatus | '')}
+          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+        >
+          {COST_STATUS_OPTIONS.map(option => (
+            <option key={option.value || 'empty'} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {fact?.status === 'known' && (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label htmlFor={`pricing-${cost.key}-amount`} className="text-xs text-slate-600">
+              Amount (R)
+            </Label>
+            <CurrencyInput
+              id={`pricing-${cost.key}-amount`}
+              aria-label={`${cost.label} amount`}
+              value={fact.amount}
+              onValueChange={amount =>
+                onChange({
+                  ...fact,
+                  status: 'known',
+                  amount: amount ?? undefined,
+                })
+              }
+              placeholder="0"
+              className="mt-1"
+            />
+          </div>
+          {cost.cadence && (
+            <div>
+              <Label htmlFor={`pricing-${cost.key}-cadence`} className="text-xs text-slate-600">
+                Frequency
+              </Label>
+              <select
+                id={`pricing-${cost.key}-cadence`}
+                aria-label={`${cost.label} frequency`}
+                value={fact.cadence || 'monthly'}
+                onChange={event =>
+                  onChange({
+                    ...fact,
+                    status: 'known',
+                    cadence: event.target.value as RecurringChargeFact['cadence'],
+                  })
+                }
+                className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              >
+                {CADENCE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+      {fact?.status === 'zero' && (
+        <p className="mt-2 text-xs font-medium text-slate-600">
+          Confirmed as R0 — not an unknown amount.
+        </p>
+      )}
+      {fact?.status === 'unknown' && (
+        <p className="mt-2 text-xs font-medium text-amber-700">
+          This will be shown as “To confirm” to prospects.
+        </p>
+      )}
+    </div>
+  );
+}
+
+const SellPricingForm: React.FC<{
+  pricing?: SellPricing;
+  setPricing: (pricing: SellPricing) => void;
+}> = ({ pricing = {}, setPricing }) => {
+  const update = (patch: Partial<SellPricing>) => setPricing({ ...pricing, ...patch });
+  const recurringCosts = pricing.recurringCosts || {};
+
+  const updateCost = (key: RecurringCostKey, fact: RecurringChargeFact | undefined) => {
+    const nextCosts = { ...recurringCosts };
+    if (fact) nextCosts[key] = fact;
+    else delete nextCosts[key];
+    update({ recurringCosts: nextCosts });
+  };
+
+  const negotiability: Negotiability =
+    pricing.negotiability ||
+    (pricing.negotiable === true
+      ? 'negotiable'
+      : pricing.negotiable === false
+        ? 'not_negotiable'
+        : 'unknown');
+
+  return (
+    <Card className="space-y-6 p-5 sm:p-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-600">
+          Pricing & Costs
+        </p>
+        <h3 className="mt-1 text-xl font-semibold text-slate-900">Set the sale terms</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Give buyers a clear asking price and any ownership costs you know.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="askingPrice" className="text-sm font-semibold text-slate-800">
+          Asking price (R) <span className="text-red-500">*</span>
+        </Label>
+        <CurrencyInput
+          id="askingPrice"
+          aria-label="Asking price in Rand"
+          value={pricing.askingPrice}
+          onValueChange={askingPrice => update({ askingPrice })}
+          placeholder="2 500 000"
+          className="mt-2 h-12 text-lg"
+        />
+        {pricing.askingPrice !== undefined && (
+          <p className="mt-1 text-xs text-slate-500">{formatAmount(pricing.askingPrice)}</p>
+        )}
+      </div>
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-semibold text-slate-800">Is the price negotiable?</legend>
+        <div
+          className="grid gap-2 sm:grid-cols-3"
+          role="radiogroup"
+          aria-label="Price negotiability"
+        >
+          {(
+            [
+              ['negotiable', 'Negotiable'],
+              ['not_negotiable', 'Not negotiable'],
+              ['unknown', 'Not sure'],
+            ] as const
+          ).map(([value, label]) => (
+            <label
+              key={value}
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition ${
+                negotiability === value
+                  ? 'border-blue-500 bg-blue-50 text-blue-800'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200'
+              }`}
+            >
+              <input
+                type="radio"
+                name="negotiability"
+                value={value}
+                checked={negotiability === value}
+                onChange={() =>
+                  update({ negotiability: value, negotiable: value === 'negotiable' })
+                }
+                className="h-4 w-4 accent-blue-600"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <section
+        className="space-y-3 border-t border-slate-100 pt-5"
+        aria-labelledby="ownership-costs-heading"
+      >
+        <div>
+          <div className="flex items-center gap-2">
+            <Coins className="h-4 w-4 text-amber-600" />
+            <h4 id="ownership-costs-heading" className="text-base font-semibold text-slate-900">
+              Ownership costs
+            </h4>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">
+            Add only charges that apply. Property type does not determine these costs.
+          </p>
+        </div>
+        <div className="space-y-2">
+          {COSTS.map(cost => (
+            <RecurringCostRow
+              key={cost.key}
+              cost={cost}
+              fact={recurringCosts[cost.key]}
+              onChange={fact => updateCost(cost.key, fact)}
+            />
+          ))}
+        </div>
+      </section>
+
+      <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-900">
+        <strong>Pricing is your decision.</strong> Compare similar properties and use figures you
+        can support. Buyers can confirm costs before making an offer.
+      </div>
+    </Card>
+  );
+};
+
+const RentPricingForm: React.FC<{
+  pricing?: RentPricing;
+  setPricing: (pricing: RentPricing) => void;
+}> = ({ pricing = {}, setPricing }) => {
+  const update = (patch: Partial<RentPricing>) => setPricing({ ...pricing, ...patch });
+  const depositFact = pricing.depositFact || normalizeMoneyFact(pricing.deposit);
+  const depositStatus = depositFact?.status || '';
+
+  const updateDepositStatus = (status: MoneyFactStatus | '') => {
+    if (!status) {
+      update({ depositFact: undefined });
+      return;
+    }
+    update({
+      depositFact: {
+        status,
+        ...(status === 'known' && depositFact?.amount !== undefined
+          ? { amount: depositFact.amount }
+          : {}),
+        provenance: 'advertiser',
+      },
+    });
+  };
+
+  return (
+    <Card className="space-y-6 p-5 sm:p-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-600">
+          Pricing & Costs
+        </p>
+        <h3 className="mt-1 text-xl font-semibold text-slate-900">Set the rental terms</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Give prospective tenants a clear monthly rent and deposit position.
+        </p>
+      </div>
+
+      <div>
+        <Label htmlFor="monthlyRent" className="text-sm font-semibold text-slate-800">
+          Monthly rent (R) <span className="text-red-500">*</span>
+        </Label>
+        <CurrencyInput
+          id="monthlyRent"
+          aria-label="Monthly rent in Rand"
+          value={pricing.monthlyRent}
+          onValueChange={monthlyRent => update({ monthlyRent })}
+          placeholder="18 000"
+          className="mt-2 h-12 text-lg"
+        />
+        {pricing.monthlyRent !== undefined && (
+          <p className="mt-1 text-xs text-slate-500">{formatAmount(pricing.monthlyRent)} / month</p>
+        )}
+      </div>
+
+      <div className="space-y-3 border-t border-slate-100 pt-5">
+        <div>
+          <Label htmlFor="deposit-status" className="text-sm font-semibold text-slate-800">
+            Deposit <span className="text-red-500">*</span>
+          </Label>
+          <p className="mt-1 text-sm text-slate-500">
+            Choose what you know. Not sure is different from no deposit.
+          </p>
+        </div>
+        <select
+          id="deposit-status"
+          aria-label="Deposit status"
+          value={depositStatus}
+          onChange={event => updateDepositStatus(event.target.value as MoneyFactStatus | '')}
+          className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+        >
+          <option value="">Choose a deposit position</option>
+          <option value="known">Known amount</option>
+          <option value="zero">Confirmed no deposit (R0)</option>
+          <option value="unknown">Not sure</option>
+        </select>
+        {depositFact?.status === 'known' && (
+          <CurrencyInput
+            id="deposit"
+            aria-label="Deposit amount in Rand"
+            value={depositFact.amount}
+            onValueChange={amount =>
+              update({
+                depositFact: { ...depositFact, status: 'known', amount, provenance: 'advertiser' },
+              })
+            }
+            placeholder="10 000"
+          />
+        )}
+        {depositFact?.status === 'zero' && (
+          <p className="text-xs font-medium text-slate-600">
+            Confirmed as R0 — no deposit is required.
+          </p>
+        )}
+        {depositFact?.status === 'unknown' && (
+          <p className="text-xs font-medium text-amber-700">
+            This will be shown as “To confirm” to prospects.
+          </p>
+        )}
+        {pricing.monthlyRent !== undefined && depositFact?.status !== 'known' && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="px-0 text-blue-700 hover:bg-transparent hover:text-blue-800"
+            onClick={() =>
+              update({
+                depositFact: {
+                  status: 'known',
+                  amount: pricing.monthlyRent,
+                  provenance: 'advertiser',
+                },
+              })
+            }
+          >
+            Use one month of rent as the deposit
+          </Button>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-900">
+        <strong>Keep it clear.</strong> Rental availability, lease duration and utility
+        responsibility will be confirmed in a later step.
+      </div>
+    </Card>
+  );
+};
+
+const AuctionPricingForm: React.FC<{
+  pricing?: AuctionPricing;
+  setPricing: (pricing: AuctionPricing) => void;
+}> = ({ pricing = {} as AuctionPricing, setPricing }) => {
+  const [auctionDate, setAuctionDate] = React.useState<Date | undefined>(
+    pricing.auctionDateTime ? new Date(pricing.auctionDateTime) : undefined,
+  );
+  const update = (patch: Partial<AuctionPricing>) => setPricing({ ...pricing, ...patch });
+
+  return (
+    <Card className="space-y-5 p-5 sm:p-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+          Historical listing
+        </p>
+        <h3 className="mt-1 text-xl font-semibold text-slate-900">Auction pricing</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Auction is retained for legacy records and is not a current live authoring choice.
+        </p>
+      </div>
+      <div>
+        <Label htmlFor="startingBid">Starting bid (R)</Label>
+        <CurrencyInput
+          id="startingBid"
+          value={pricing.startingBid}
+          onValueChange={startingBid => update({ startingBid: startingBid as number })}
+          placeholder="1 500 000"
+          className="mt-2"
+        />
+      </div>
+      <div>
+        <Label htmlFor="reservePrice">Reserve price (R)</Label>
+        <CurrencyInput
+          id="reservePrice"
+          value={pricing.reservePrice}
+          onValueChange={reservePrice => update({ reservePrice })}
+          placeholder="Optional"
+          className="mt-2"
+        />
+      </div>
+      <div>
+        <Label>Auction date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="mt-2 w-full justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {auctionDate ? format(auctionDate, 'PPP') : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={auctionDate}
+              onSelect={date => {
+                setAuctionDate(date);
+                if (date) update({ auctionDateTime: date });
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div>
+        <Label htmlFor="auctionTerms">Auction terms document URL</Label>
+        <Input
+          id="auctionTerms"
+          value={pricing.auctionTermsDocumentUrl || ''}
+          onChange={event => update({ auctionTermsDocumentUrl: event.target.value })}
+          placeholder="Optional"
+          className="mt-2"
+        />
+      </div>
+    </Card>
+  );
+};
 
 const PricingStep: React.FC = () => {
   const { action, pricing, setPricing } = useListingWizardStore();
 
   if (!action) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        Please select an action type first (Sell/Rent/Auction)
-      </div>
+      <div className="py-8 text-center text-gray-500">Please select For Sale or To Rent first.</div>
     );
   }
 
@@ -43,509 +534,6 @@ const PricingStep: React.FC = () => {
         <AuctionPricingForm pricing={pricing as AuctionPricing} setPricing={setPricing} />
       )}
     </div>
-  );
-};
-
-// SELL Pricing Form
-const SellPricingForm: React.FC<{
-  pricing?: SellPricing;
-  setPricing: (pricing: any) => void;
-}> = ({ pricing = {} as SellPricing, setPricing }) => {
-  const [showBondCalculator, setShowBondCalculator] = React.useState(false);
-  const [estimatedBondRepayment, setEstimatedBondRepayment] = React.useState<number | null>(null);
-
-  const handleChange = (field: keyof SellPricing, value: any) => {
-    setPricing({ ...pricing, [field]: value });
-  };
-
-  // Auto-calculate transfer costs using accurate SA rates
-  React.useEffect(() => {
-    if (pricing.askingPrice && !pricing.transferCostEstimate) {
-      // Temporarily disable transfer cost calculation
-      // const costs = calculateTransferCosts(pricing.askingPrice);
-      // handleChange('transferCostEstimate', costs.total);
-    }
-  }, [pricing.askingPrice]);
-
-  // Calculate estimated bond repayment for display
-  React.useEffect(() => {
-    if (pricing.askingPrice) {
-      const monthlyPayment = calculateMonthlyRepayment(
-        pricing.askingPrice, // 0% deposit assumption
-        11.75, // Current SA prime rate
-        20, // 20 year term
-      );
-      setEstimatedBondRepayment(monthlyPayment);
-    }
-  }, [pricing.askingPrice]);
-
-  return (
-    <Card className="p-6 space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Sale Pricing</h3>
-        <div className="space-y-4">
-          {/* Asking Price */}
-          <div>
-            <Label htmlFor="askingPrice">
-              Asking Price (R) <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="askingPrice"
-              type="number"
-              value={pricing.askingPrice || ''}
-              onChange={e => handleChange('askingPrice', parseFloat(e.target.value))}
-              placeholder="e.g., 2500000"
-              min="0"
-              step="1000"
-            />
-            {pricing.askingPrice && (
-              <p className="text-sm text-gray-500 mt-1">
-                R {pricing.askingPrice.toLocaleString('en-ZA')}
-              </p>
-            )}
-          </div>
-
-          {/* Estimated Bond Repayment Preview */}
-          {estimatedBondRepayment && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-green-900">Estimated Bond Repayment</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBondCalculator(!showBondCalculator)}
-                >
-                  {showBondCalculator ? 'Hide' : 'View'} Calculator
-                </Button>
-              </div>
-              <div className="text-2xl font-bold text-green-600">
-                R {Math.round(estimatedBondRepayment).toLocaleString('en-ZA')} /month
-              </div>
-              <p className="text-xs text-gray-600 mt-1">
-                Based on 0% deposit over 20 years at 11.75% p.a.
-              </p>
-            </div>
-          )}
-
-          {/* Negotiable */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="negotiable"
-              checked={pricing.negotiable || false}
-              onCheckedChange={v => handleChange('negotiable', v)}
-            />
-            <Label htmlFor="negotiable" className="font-normal">
-              Price is negotiable
-            </Label>
-          </div>
-
-          {/* Transfer Cost Estimate - REMOVED */}
-          {/* <div>
-            <Label htmlFor="transferCostEstimate">Transfer Cost Estimate (R)</Label>
-            <Input
-              id="transferCostEstimate"
-              type="number"
-              value={pricing.transferCostEstimate || ''}
-              onChange={e => {
-                const value = e.target.value ? parseFloat(e.target.value) : null;
-                handleChange('transferCostEstimate', value);
-              }}
-              placeholder="Estimated transfer and bond costs"
-              min="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Includes transfer duty, bond costs, and legal fees (auto-calculated)
-            </p>
-          </div> */}
-        </div>
-      </div>
-
-      {/* Monthly Costs */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Coins className="w-5 h-5 text-amber-600" />
-          Monthly Costs
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="ratesAndTaxes">Rates & Taxes (R/month)</Label>
-            <Input
-              id="ratesAndTaxes"
-              type="number"
-              value={(pricing as any).ratesAndTaxes || ''}
-              onChange={e => handleChange('ratesAndTaxes' as any, parseFloat(e.target.value))}
-              placeholder="e.g., 2500"
-              min="0"
-            />
-          </div>
-          <div>
-            <Label htmlFor="levies">Levies (R/month)</Label>
-            <Input
-              id="levies"
-              type="number"
-              value={(pricing as any).levies || ''}
-              onChange={e => handleChange('levies' as any, parseFloat(e.target.value))}
-              placeholder="e.g., 1500"
-              min="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">If in complex, estate, or sectional title</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Bond Calculator */}
-      {showBondCalculator && pricing.askingPrice && (
-        <BondCalculator propertyPrice={pricing.askingPrice} showTransferCosts={true} />
-      )}
-
-      {/* Pricing Tips */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">💡 Pricing Tips</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Research comparable properties in your area</li>
-          <li>• Consider recent market trends and demand</li>
-          <li>• Factor in unique features and condition</li>
-          <li>• Consult with a real estate agent for valuation</li>
-        </ul>
-      </div>
-    </Card>
-  );
-};
-
-// RENT Pricing Form
-const RentPricingForm: React.FC<{
-  pricing?: RentPricing;
-  setPricing: (pricing: any) => void;
-}> = ({ pricing = {} as RentPricing, setPricing }) => {
-  const [availableDate, setAvailableDate] = React.useState<Date | undefined>(
-    pricing.availableFrom ? new Date(pricing.availableFrom) : undefined,
-  );
-
-  const handleChange = (field: keyof RentPricing, value: any) => {
-    setPricing({ ...pricing, [field]: value });
-  };
-
-  return (
-    <Card className="p-6 space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Rental Pricing</h3>
-        <div className="space-y-4">
-          {/* Monthly Rent */}
-          <div>
-            <Label htmlFor="monthlyRent">
-              Monthly Rent (R) <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="monthlyRent"
-              type="number"
-              value={pricing.monthlyRent || ''}
-              onChange={e => handleChange('monthlyRent', parseFloat(e.target.value))}
-              placeholder="e.g., 12000"
-              min="0"
-              step="100"
-            />
-            {pricing.monthlyRent && (
-              <p className="text-sm text-gray-500 mt-1">
-                R {pricing.monthlyRent.toLocaleString('en-ZA')} per month
-              </p>
-            )}
-          </div>
-
-          {/* Deposit */}
-          <div>
-            <Label htmlFor="deposit">
-              Deposit (R) <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="deposit"
-              type="number"
-              value={pricing.deposit || ''}
-              onChange={e => handleChange('deposit', parseFloat(e.target.value))}
-              placeholder="Usually 1-2 months rent"
-              min="0"
-            />
-            {pricing.monthlyRent && !pricing.deposit && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-1"
-                onClick={() => handleChange('deposit', pricing.monthlyRent)}
-              >
-                Use 1 month rent
-              </Button>
-            )}
-          </div>
-
-          {/* Lease Terms */}
-          <div>
-            <Label htmlFor="leaseTerms">Lease Terms</Label>
-            <Input
-              id="leaseTerms"
-              value={pricing.leaseTerms || ''}
-              onChange={e => handleChange('leaseTerms', e.target.value)}
-              placeholder="e.g., 12 months minimum"
-            />
-          </div>
-
-          {/* Available From */}
-          <div>
-            <Label>Available From</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {availableDate ? format(availableDate, 'PPP') : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={availableDate}
-                  onSelect={date => {
-                    setAvailableDate(date);
-                    handleChange('availableFrom', date);
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Utilities Included */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="utilitiesIncluded"
-              checked={pricing.utilitiesIncluded || false}
-              onCheckedChange={v => handleChange('utilitiesIncluded', v)}
-            />
-            <Label htmlFor="utilitiesIncluded" className="font-normal">
-              Utilities included in rent (water, electricity, etc.)
-            </Label>
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly Costs */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Coins className="w-5 h-5 text-amber-600" />
-          Monthly Costs
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="rent-ratesAndTaxes">Rates & Taxes (R/month)</Label>
-            <Input
-              id="rent-ratesAndTaxes"
-              type="number"
-              value={(pricing as any).ratesAndTaxes || ''}
-              onChange={e => handleChange('ratesAndTaxes' as any, parseFloat(e.target.value))}
-              placeholder="e.g., 2500"
-              min="0"
-            />
-          </div>
-          <div>
-            <Label htmlFor="rent-levies">Levies (R/month)</Label>
-            <Input
-              id="rent-levies"
-              type="number"
-              value={(pricing as any).levies || ''}
-              onChange={e => handleChange('levies' as any, parseFloat(e.target.value))}
-              placeholder="e.g., 1500"
-              min="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">If in complex, estate, or sectional title</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Rental Tips */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">💡 Rental Tips</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Competitive pricing attracts quality tenants faster</li>
-          <li>• Standard deposit is 1-2 months rent</li>
-          <li>• Clearly state what utilities are included</li>
-          <li>• Consider offering flexible lease terms</li>
-        </ul>
-      </div>
-    </Card>
-  );
-};
-
-// AUCTION Pricing Form
-const AuctionPricingForm: React.FC<{
-  pricing?: AuctionPricing;
-  setPricing: (pricing: any) => void;
-}> = ({ pricing = {} as AuctionPricing, setPricing }) => {
-  const [auctionDate, setAuctionDate] = React.useState<Date | undefined>(
-    pricing.auctionDateTime ? new Date(pricing.auctionDateTime) : undefined,
-  );
-
-  const handleChange = (field: keyof AuctionPricing, value: any) => {
-    setPricing({ ...pricing, [field]: value });
-  };
-
-  return (
-    <Card className="p-6 space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Auction Details</h3>
-        <div className="space-y-4">
-          {/* Starting Bid */}
-          <div>
-            <Label htmlFor="startingBid">
-              Starting Bid (R) <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="startingBid"
-              type="number"
-              value={pricing.startingBid || ''}
-              onChange={e => handleChange('startingBid', parseFloat(e.target.value))}
-              placeholder="e.g., 1500000"
-              min="0"
-              step="1000"
-            />
-            {pricing.startingBid && (
-              <p className="text-sm text-gray-500 mt-1">
-                R {pricing.startingBid.toLocaleString('en-ZA')}
-              </p>
-            )}
-          </div>
-
-          {/* Reserve Price */}
-          <div>
-            <Label htmlFor="reservePrice">Reserve Price (R)</Label>
-            <Input
-              id="reservePrice"
-              type="number"
-              value={pricing.reservePrice || ''}
-              onChange={e => handleChange('reservePrice', parseFloat(e.target.value))}
-              placeholder="Minimum acceptable price"
-              min="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Optional: The minimum price you'll accept (not shown to bidders)
-            </p>
-          </div>
-
-          {/* Auction Date & Time */}
-          <div>
-            <Label>
-              Auction Date & Time <span className="text-red-500">*</span>
-            </Label>
-            <div className="flex gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex-1 justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {auctionDate ? format(auctionDate, 'PPP') : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={auctionDate}
-                    onSelect={date => {
-                      setAuctionDate(date);
-                      handleChange('auctionDateTime', date);
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <Input
-                type="time"
-                className="w-32"
-                onChange={e => {
-                  if (auctionDate) {
-                    const [hours, minutes] = e.target.value.split(':');
-                    const newDate = new Date(auctionDate);
-                    newDate.setHours(parseInt(hours), parseInt(minutes));
-                    setAuctionDate(newDate);
-                    handleChange('auctionDateTime', newDate);
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Auction Terms Document */}
-          <div>
-            <Label htmlFor="auctionTerms">Auction Terms Document (Optional)</Label>
-            <Input
-              id="auctionTerms"
-              type="file"
-              accept=".pdf"
-              onChange={e => {
-                // Handle file upload
-                const file = e.target.files?.[0];
-                if (file) {
-                  // TODO: Upload file and get URL
-                  console.log('Upload auction terms:', file);
-                }
-              }}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Upload PDF with auction terms and conditions
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly Costs */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Coins className="w-5 h-5 text-amber-600" />
-          Monthly Costs
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="auction-ratesAndTaxes">Rates & Taxes (R/month)</Label>
-            <Input
-              id="auction-ratesAndTaxes"
-              type="number"
-              value={(pricing as any).ratesAndTaxes || ''}
-              onChange={e => handleChange('ratesAndTaxes' as any, parseFloat(e.target.value))}
-              placeholder="e.g., 2500"
-              min="0"
-            />
-          </div>
-          <div>
-            <Label htmlFor="auction-levies">Levies (R/month)</Label>
-            <Input
-              id="auction-levies"
-              type="number"
-              value={(pricing as any).levies || ''}
-              onChange={e => handleChange('levies' as any, parseFloat(e.target.value))}
-              placeholder="e.g., 1500"
-              min="0"
-            />
-            <p className="text-xs text-gray-500 mt-1">If in complex, estate, or sectional title</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Auction Tips */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">💡 Auction Tips</h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Set a realistic starting bid to attract bidders</li>
-          <li>• Reserve price protects you from low offers</li>
-          <li>• Schedule auction at convenient times</li>
-          <li>• Provide clear terms and conditions</li>
-          <li>• Market extensively before auction date</li>
-        </ul>
-      </div>
-
-      {/* Warning */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-sm text-yellow-800">
-          <strong>⚠️ Important:</strong> Once the auction is live, you cannot change the starting
-          bid or reserve price. Make sure all details are correct before publishing.
-        </p>
-      </div>
-    </Card>
   );
 };
 

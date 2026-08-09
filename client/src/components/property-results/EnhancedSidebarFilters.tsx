@@ -83,7 +83,6 @@ const LOAD_SHEDDING_SOLUTIONS = [
 
 // Default ranges
 const DEFAULT_PRICE_RANGE: [number, number] = [0, 50000000];
-const DEFAULT_LEVY_RANGE: [number, number] = [0, 10000];
 const DEFAULT_ERF_SIZE_RANGE: [number, number] = [0, 5000];
 const DEFAULT_FLOOR_SIZE_RANGE: [number, number] = [0, 1000];
 
@@ -107,11 +106,6 @@ export function EnhancedSidebarFilters({
     filters.maxPrice ?? DEFAULT_PRICE_RANGE[1],
   ]);
 
-  const [levyRange, setLevyRange] = useState<[number, number]>([
-    0,
-    filters.maxLevy ?? DEFAULT_LEVY_RANGE[1],
-  ]);
-
   const [erfSizeRange, setErfSizeRange] = useState<[number, number]>([
     filters.minErfSize ?? DEFAULT_ERF_SIZE_RANGE[0],
     filters.maxErfSize ?? DEFAULT_ERF_SIZE_RANGE[1],
@@ -129,10 +123,6 @@ export function EnhancedSidebarFilters({
       filters.maxPrice ?? DEFAULT_PRICE_RANGE[1],
     ]);
   }, [filters.minPrice, filters.maxPrice]);
-
-  useEffect(() => {
-    setLevyRange([0, filters.maxLevy ?? DEFAULT_LEVY_RANGE[1]]);
-  }, [filters.maxLevy]);
 
   useEffect(() => {
     setErfSizeRange([
@@ -159,21 +149,6 @@ export function EnhancedSidebarFilters({
         ...filters,
         minPrice: value[0] > 0 ? value[0] : undefined,
         maxPrice: value[1] < DEFAULT_PRICE_RANGE[1] ? value[1] : undefined,
-      });
-    },
-    [filters, onFilterChange],
-  );
-
-  // Handler for levy range changes
-  const handleLevyChange = useCallback((value: number[]) => {
-    setLevyRange([0, value[1]]);
-  }, []);
-
-  const handleLevyCommit = useCallback(
-    (value: number[]) => {
-      onFilterChange({
-        ...filters,
-        maxLevy: value[1] < DEFAULT_LEVY_RANGE[1] ? value[1] : undefined,
       });
     },
     [filters, onFilterChange],
@@ -304,7 +279,6 @@ export function EnhancedSidebarFilters({
   const handleResetFilters = useCallback(() => {
     onFilterChange({});
     setPriceRange(DEFAULT_PRICE_RANGE);
-    setLevyRange(DEFAULT_LEVY_RANGE);
     setErfSizeRange(DEFAULT_ERF_SIZE_RANGE);
     setFloorSizeRange(DEFAULT_FLOOR_SIZE_RANGE);
   }, [onFilterChange]);
@@ -315,7 +289,6 @@ export function EnhancedSidebarFilters({
     if (filters.propertyType?.length) count++;
     if (filters.titleType?.length) count++;
     if (filters.minPrice || filters.maxPrice) count++;
-    if (filters.maxLevy) count++;
     if (filters.minBedrooms) count++;
     if (filters.minErfSize || filters.maxErfSize) count++;
     if (filters.minFloorSize || filters.maxFloorSize) count++;
@@ -465,38 +438,6 @@ export function EnhancedSidebarFilters({
                   </div>
                 );
               })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* Levy Range (for Sectional Title) */}
-        <AccordionItem value="levy">
-          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Max Monthly Levy
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="px-2 pt-2 pb-6">
-              <p className="text-xs text-slate-500 mb-3">For sectional title properties</p>
-              <Slider
-                value={[levyRange[1]]}
-                max={DEFAULT_LEVY_RANGE[1]}
-                step={500}
-                min={0}
-                onValueChange={value => handleLevyChange([0, value[0]])}
-                onValueCommit={value => handleLevyCommit([0, value[0]])}
-                className="mb-4"
-              />
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>R0</span>
-                <span className="font-medium text-slate-700">
-                  {levyRange[1] >= DEFAULT_LEVY_RANGE[1]
-                    ? 'No limit'
-                    : `R${levyRange[1].toLocaleString()}/month`}
-                </span>
-              </div>
             </div>
           </AccordionContent>
         </AccordionItem>

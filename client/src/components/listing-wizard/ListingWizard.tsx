@@ -45,6 +45,7 @@ import { calculateListingReadiness } from '@/lib/readiness';
 import { buildCanonicalCorePropertyDetails } from '@/../../shared/core-property-information';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { buildListingWizardSubmitPayload } from '@/lib/listingWizardSubmitMapper';
+import { buildPricingContract } from '@/../../shared/pricing-contract';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -157,20 +158,41 @@ const ListingWizard: React.FC = () => {
 
       // Set pricing
       const pricing: any = {};
-      if (listing.askingPrice) pricing.askingPrice = Number(listing.askingPrice);
-      if (listing.monthlyRent) pricing.monthlyRent = Number(listing.monthlyRent);
-      if (listing.deposit) pricing.deposit = Number(listing.deposit);
-      if (listing.transferCostEstimate)
-        pricing.transferCostEstimate = Number(listing.transferCostEstimate);
-      if (listing.startingBid) pricing.startingBid = Number(listing.startingBid);
-      if (listing.reservePrice) pricing.reservePrice = Number(listing.reservePrice);
-      if (listing.leaseTerms) pricing.leaseTerms = listing.leaseTerms;
-      if (listing.availableFrom) pricing.availableFrom = new Date(listing.availableFrom);
-      if (listing.utilitiesIncluded) pricing.utilitiesIncluded = Boolean(listing.utilitiesIncluded);
-      if (listing.auctionDateTime) pricing.auctionDateTime = new Date(listing.auctionDateTime);
-      if (listing.auctionTermsDocumentUrl)
-        pricing.auctionTermsDocumentUrl = listing.auctionTermsDocumentUrl;
-      if (listing.negotiable) pricing.negotiable = Boolean(listing.negotiable);
+      const sourcePricing = listing.pricing || listing;
+      if (sourcePricing.askingPrice !== null && sourcePricing.askingPrice !== undefined)
+        pricing.askingPrice = Number(sourcePricing.askingPrice);
+      if (sourcePricing.monthlyRent !== null && sourcePricing.monthlyRent !== undefined)
+        pricing.monthlyRent = Number(sourcePricing.monthlyRent);
+      if (sourcePricing.deposit !== null && sourcePricing.deposit !== undefined)
+        pricing.deposit = Number(sourcePricing.deposit);
+      if (sourcePricing.transferCostEstimate !== null && sourcePricing.transferCostEstimate !== undefined)
+        pricing.transferCostEstimate = Number(sourcePricing.transferCostEstimate);
+      if (sourcePricing.startingBid !== null && sourcePricing.startingBid !== undefined)
+        pricing.startingBid = Number(sourcePricing.startingBid);
+      if (sourcePricing.reservePrice !== null && sourcePricing.reservePrice !== undefined)
+        pricing.reservePrice = Number(sourcePricing.reservePrice);
+      if (sourcePricing.leaseTerms) pricing.leaseTerms = sourcePricing.leaseTerms;
+      if (sourcePricing.availableFrom) pricing.availableFrom = new Date(sourcePricing.availableFrom);
+      if (sourcePricing.utilitiesIncluded !== undefined)
+        pricing.utilitiesIncluded = Boolean(sourcePricing.utilitiesIncluded);
+      if (sourcePricing.auctionDateTime) pricing.auctionDateTime = new Date(sourcePricing.auctionDateTime);
+      if (sourcePricing.auctionTermsDocumentUrl)
+        pricing.auctionTermsDocumentUrl = sourcePricing.auctionTermsDocumentUrl;
+      if (sourcePricing.negotiable !== undefined)
+        pricing.negotiable = Boolean(sourcePricing.negotiable);
+
+      const pricingContract = buildPricingContract(
+        listing.action,
+        sourcePricing,
+        listing.propertyDetails,
+      );
+      if (pricingContract?.intent === 'sale') {
+        pricing.negotiability = pricingContract.negotiability;
+        pricing.recurringCosts = pricingContract.recurringCosts;
+      }
+      if (pricingContract?.intent === 'rent') {
+        pricing.depositFact = pricingContract.deposit;
+      }
 
       store.setPricing(pricing);
 
@@ -583,6 +605,7 @@ const ListingWizard: React.FC = () => {
   const readiness = useMemo(() => {
     // Map store to listing object expected by readiness calculator
     const listingCandidate = {
+      action: store.action,
       address: store.location?.address,
       latitude: store.location?.latitude,
       longitude: store.location?.longitude,

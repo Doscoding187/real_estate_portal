@@ -6,6 +6,11 @@ import type {
 } from './property-taxonomy';
 import type { CorePropertyInformation } from './core-property-information';
 import type { FeaturesContext } from './features-context';
+import type {
+  MoneyFact,
+  Negotiability,
+  RecurringCosts,
+} from './pricing-contract';
 
 export { PROPERTY_TYPE_TEMPLATES } from './property-taxonomy';
 export type {
@@ -281,17 +286,28 @@ export type PropertyDetails =
 
 // Step 3: Pricing Fields
 export interface SellPricing {
-  askingPrice: number;
-  negotiable: boolean;
+  askingPrice?: number;
+  /** Legacy boolean read compatibility. New authoring uses negotiability. */
+  negotiable?: boolean;
+  negotiability?: Negotiability;
+  recurringCosts?: RecurringCosts;
   transferCostEstimate?: number;
+  /** Legacy flat aliases are retained for existing readers only. */
+  ratesAndTaxes?: number;
+  levies?: number;
 }
 
 export interface RentPricing {
-  monthlyRent: number;
-  deposit: number;
+  monthlyRent?: number;
+  /** Legacy numeric read compatibility. New authoring uses depositFact. */
+  deposit?: number;
+  depositFact?: MoneyFact;
   leaseTerms?: string;
   availableFrom?: Date;
-  utilitiesIncluded: boolean;
+  utilitiesIncluded?: boolean;
+  /** Legacy flat aliases are retained for existing readers only. */
+  ratesAndTaxes?: number;
+  levies?: number;
 }
 
 export interface AuctionPricing {

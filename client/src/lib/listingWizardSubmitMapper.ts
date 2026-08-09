@@ -7,6 +7,7 @@ import {
   buildFeaturesContextFromWizardState,
   LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
 } from '../../../shared/features-context';
+import { buildPricingContract } from '../../../shared/pricing-contract';
 
 export type ListingWizardSubmitPayload = inferRouterInputs<AppRouter>['listing']['create'];
 
@@ -58,16 +59,24 @@ const normalizePricingForSubmit = (
 
 const normalizePropertyDetailsForPublicContract = (
   propertyDetails: Record<string, unknown>,
+  action: ListingWizardSubmitState['action'],
   pricing: ListingWizardSubmitPayload['pricing'],
 ) => {
   const normalized = { ...propertyDetails };
 
-  fillMissing(normalized, 'levies', pricing.levies ?? normalized.leviesHoaOperatingCosts);
-  fillMissing(normalized, 'leviesHoaOperatingCosts', normalized.levies ?? pricing.levies);
+  const pricingContract = buildPricingContract(
+    action,
+    pricing as Record<string, unknown>,
+    normalized,
+    { preferEmbedded: false },
+  );
+  if (pricingContract) normalized.pricingContract = pricingContract;
 
-  const ratesValue = pricing.ratesAndTaxes ?? normalized.ratesAndTaxes ?? normalized.ratesTaxes;
-  fillMissing(normalized, 'ratesAndTaxes', ratesValue);
-  fillMissing(normalized, 'ratesTaxes', ratesValue);
+  // New authoring has one governed pricing authority. These legacy aliases
+  // remain readable by compatibility code but are not written alongside it.
+  for (const key of ['levies', 'leviesHoaOperatingCosts', 'ratesAndTaxes', 'ratesTaxes']) {
+    delete normalized[key];
+  }
 
   const parkingValue = normalized.parkingCount ?? normalized.parkingBays;
   fillMissing(normalized, 'parkingCount', parkingValue);
@@ -135,7 +144,7 @@ const buildSubmittedPropertyDetails = (
     ...buildCanonicalCorePropertyDetails(state.propertyType, state.propertyDetails, state.basicInfo),
   };
 
-  return normalizePropertyDetailsForPublicContract(propertyDetails, pricing);
+  return normalizePropertyDetailsForPublicContract(propertyDetails, state.action, pricing);
 };
 
 const getMediaId = (media: ListingWizardSubmitState['media'][number]) => media.id?.toString() || '';

@@ -26,6 +26,7 @@ import {
 import {
   buildFeaturesContextFromWizardState,
 } from '../../../shared/features-context';
+import { validatePricingContract } from '../../../shared/pricing-contract';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
@@ -118,9 +119,6 @@ type WizardNavigationState = Pick<
   | 'mainMediaId'
 >;
 
-const hasPositiveAmount = (value: unknown): boolean =>
-  typeof value === 'number' && Number.isFinite(value) && value > 0;
-
 const retainFeaturesForState = (
   additionalInfo: unknown,
   propertyDetails: unknown,
@@ -166,13 +164,21 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
     case 5: {
       const pricing = state.pricing as Record<string, unknown> | undefined;
       if (!pricing) return false;
-      if (state.action === 'sell') return hasPositiveAmount(pricing.askingPrice);
-      if (state.action === 'rent') {
-        return hasPositiveAmount(pricing.monthlyRent) && hasPositiveAmount(pricing.deposit);
+      if (state.action === 'sell' || state.action === 'rent') {
+        return (
+          validatePricingContract(state.action, pricing, state.propertyDetails, {
+            mode: 'publish',
+            enforceInputShape: true,
+          }).length === 0
+        );
       }
       // Preserve the legacy auction shape for already-loaded records without
       // making it selectable from the current authoring journey.
-      return hasPositiveAmount(pricing.startingBid);
+      return (
+        typeof pricing.startingBid === 'number' &&
+        Number.isFinite(pricing.startingBid) &&
+        pricing.startingBid > 0
+      );
     }
     case 6: {
       const location = state.location;
@@ -520,6 +526,14 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           // Step 6 is Pricing Details - validate pricing information
           if (!state.pricing) {
             errors.push({ field: 'pricing', message: 'Please provide pricing information' });
+          } else if (state.action === 'sell' || state.action === 'rent') {
+            const pricingIssues = validatePricingContract(
+              state.action,
+              state.pricing as Record<string, unknown>,
+              state.propertyDetails,
+              { mode: 'publish', enforceInputShape: true },
+            );
+            errors.push(...pricingIssues);
           }
         }
 

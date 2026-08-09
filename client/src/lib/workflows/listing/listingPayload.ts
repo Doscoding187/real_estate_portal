@@ -15,6 +15,7 @@ import {
   buildFeaturesContextFromWizardState,
   LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
 } from '@shared/features-context';
+import { buildPricingContract } from '@shared/pricing-contract';
 
 /**
  * Shape expected by server/listingRouter.ts createListingSchema.
@@ -43,9 +44,10 @@ export interface ListingSubmitPayload {
  *    - Step 4 is mapped through the typed Features & Context contract;
  *    - unrelated historical `basicInfo` fields never cross this boundary.
  *
- * 2. `pricing` preserves the full PricingFields union — the backend router writes
- *    each field to its own column. Only the fields relevant to the selected action
- *    will be populated; others remain undefined.
+ * 2. `pricing` preserves the full PricingFields union for the transport
+ *    boundary. The versioned action-specific contract inside `propertyDetails`
+ *    is the new semantic authority; legacy typed columns remain compatibility
+ *    projections for existing readers.
  *
  * 3. `location` passes LocationData directly (address, lat/lng, city, province,
  *    placeId, addressComponents for server-side hierarchy auto-population).
@@ -95,6 +97,17 @@ export function buildListingSubmitPayloadFromWizardState(
       state.basicInfo,
     ),
   };
+
+  const pricingContract = buildPricingContract(
+    action,
+    state.pricing as Record<string, unknown> | undefined,
+    propertyDetails,
+    { preferEmbedded: false },
+  );
+  if (pricingContract) propertyDetails.pricingContract = pricingContract;
+  for (const key of ['levies', 'leviesHoaOperatingCosts', 'ratesAndTaxes', 'ratesTaxes']) {
+    delete propertyDetails[key];
+  }
 
   const mediaIds = (state.media ?? [])
     .map((m) => m.id)

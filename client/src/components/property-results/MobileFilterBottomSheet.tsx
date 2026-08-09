@@ -65,7 +65,6 @@ const LOAD_SHEDDING_SOLUTIONS = [
 
 // Default ranges
 const DEFAULT_PRICE_RANGE: [number, number] = [0, 50000000];
-const DEFAULT_LEVY_RANGE: [number, number] = [0, 10000];
 const DEFAULT_ERF_SIZE_RANGE: [number, number] = [0, 5000];
 
 type SnapPoint = 'half' | 'full' | 'closed';
@@ -100,11 +99,6 @@ export function MobileFilterBottomSheet({
     filters.maxPrice ?? DEFAULT_PRICE_RANGE[1],
   ]);
 
-  const [levyRange, setLevyRange] = useState<[number, number]>([
-    0,
-    filters.maxLevy ?? DEFAULT_LEVY_RANGE[1],
-  ]);
-
   const [erfSizeRange, setErfSizeRange] = useState<[number, number]>([
     filters.minErfSize ?? DEFAULT_ERF_SIZE_RANGE[0],
     filters.maxErfSize ?? DEFAULT_ERF_SIZE_RANGE[1],
@@ -116,7 +110,6 @@ export function MobileFilterBottomSheet({
       filters.minPrice ?? DEFAULT_PRICE_RANGE[0],
       filters.maxPrice ?? DEFAULT_PRICE_RANGE[1],
     ]);
-    setLevyRange([0, filters.maxLevy ?? DEFAULT_LEVY_RANGE[1]]);
     setErfSizeRange([
       filters.minErfSize ?? DEFAULT_ERF_SIZE_RANGE[0],
       filters.maxErfSize ?? DEFAULT_ERF_SIZE_RANGE[1],
@@ -313,16 +306,6 @@ export function MobileFilterBottomSheet({
     [filters, onFilterChange],
   );
 
-  const handleLevyCommit = useCallback(
-    (value: number[]) => {
-      onFilterChange({
-        ...filters,
-        maxLevy: value[1] < DEFAULT_LEVY_RANGE[1] ? value[1] : undefined,
-      });
-    },
-    [filters, onFilterChange],
-  );
-
   const handleErfSizeCommit = useCallback(
     (value: number[]) => {
       onFilterChange({
@@ -337,7 +320,6 @@ export function MobileFilterBottomSheet({
   const handleResetFilters = useCallback(() => {
     onFilterChange({});
     setPriceRange(DEFAULT_PRICE_RANGE);
-    setLevyRange(DEFAULT_LEVY_RANGE);
     setErfSizeRange(DEFAULT_ERF_SIZE_RANGE);
   }, [onFilterChange]);
 
@@ -352,7 +334,6 @@ export function MobileFilterBottomSheet({
     if (filters.propertyType?.length) count++;
     if (filters.titleType?.length) count++;
     if (filters.minPrice || filters.maxPrice) count++;
-    if (filters.maxLevy) count++;
     if (filters.minBedrooms) count++;
     if (filters.minErfSize || filters.maxErfSize) count++;
     if (filters.securityEstate) count++;
@@ -531,31 +512,6 @@ export function MobileFilterBottomSheet({
                       </button>
                     );
                   })}
-                </div>
-              </div>
-
-              {/* Max Levy */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <DollarSign className="h-4 w-4 text-gray-600" />
-                  <label className="text-sm font-semibold text-gray-900">Max Monthly Levy</label>
-                </div>
-                <Slider
-                  value={[levyRange[1]]}
-                  max={DEFAULT_LEVY_RANGE[1]}
-                  step={500}
-                  min={0}
-                  onValueChange={value => setLevyRange([0, value[0]])}
-                  onValueCommit={value => handleLevyCommit([0, value[0]])}
-                  className="mb-2"
-                />
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>R0</span>
-                  <span className="font-medium">
-                    {levyRange[1] >= DEFAULT_LEVY_RANGE[1]
-                      ? 'No limit'
-                      : `R${levyRange[1].toLocaleString()}/month`}
-                  </span>
                 </div>
               </div>
 

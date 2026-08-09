@@ -630,7 +630,7 @@ describe('listing lifecycle — canonical identity contract', () => {
         action === 'sell'
           ? { askingPrice: 2000000 }
           : action === 'rent'
-            ? { monthlyRent: 15000 }
+            ? { monthlyRent: 15000, depositFact: { status: 'unknown' } }
             : { startingBid: 1000000 };
 
       vi.mocked(mockDb.getListingById).mockResolvedValue(

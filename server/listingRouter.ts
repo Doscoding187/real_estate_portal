@@ -39,6 +39,11 @@ import {
   normalizeFeaturesContext,
   validateFeaturesContext,
 } from '../shared/features-context';
+import {
+  buildPricingContract,
+  getPrimaryPrice,
+  validatePricingContract,
+} from '../shared/pricing-contract';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -127,18 +132,21 @@ const fillMissing = (target: Record<string, any>, key: string, value: unknown) =
 function normalizePropertyDetailsForPublicContract(
   propertyDetails: Record<string, any> | null | undefined,
   pricing: Record<string, any> | null | undefined,
+  action?: string,
   propertyType?: string,
 ) {
   const normalized = { ...(propertyDetails || {}) };
-  const pricingData = pricing || {};
 
-  fillMissing(normalized, 'levies', pricingData.levies ?? normalized.leviesHoaOperatingCosts);
-  fillMissing(normalized, 'leviesHoaOperatingCosts', normalized.levies ?? pricingData.levies);
+  const pricingContract = buildPricingContract(action, pricing, normalized, {
+    preferEmbedded: false,
+  });
+  if (pricingContract) normalized.pricingContract = pricingContract;
 
-  const ratesValue =
-    pricingData.ratesAndTaxes ?? normalized.ratesAndTaxes ?? normalized.ratesTaxes;
-  fillMissing(normalized, 'ratesAndTaxes', ratesValue);
-  fillMissing(normalized, 'ratesTaxes', ratesValue);
+  // New writes have one versioned pricing authority. Historical aliases are
+  // handled only as read compatibility by buildPricingContract.
+  for (const key of ['levies', 'leviesHoaOperatingCosts', 'ratesAndTaxes', 'ratesTaxes']) {
+    delete normalized[key];
+  }
 
   const parkingValue = normalized.parkingCount ?? normalized.parkingBays;
   fillMissing(normalized, 'parkingCount', parkingValue);
@@ -215,12 +223,15 @@ const createListingSchemaBase = z.object({
     // Sell fields
     askingPrice: z.number().optional(),
     negotiable: z.boolean().optional(),
+    negotiability: z.enum(['negotiable', 'not_negotiable', 'unknown']).optional(),
     transferCostEstimate: z.number().nullable().optional(),
     levies: z.number().optional(),
     ratesAndTaxes: z.number().optional(),
+    recurringCosts: z.record(z.string(), z.any()).optional(),
     // Rent fields
     monthlyRent: z.number().optional(),
     deposit: z.number().optional(),
+    depositFact: z.record(z.string(), z.any()).optional(),
     leaseTerms: z.string().optional(),
     availableFrom: z.date().optional(),
     utilitiesIncluded: z.boolean().optional(),
@@ -283,6 +294,20 @@ const createListingSchema = createListingSchemaBase.superRefine((input, context)
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['propertyDetails', 'featuresContext', ...issue.field.split('.')],
+      message: issue.message,
+    });
+  }
+
+  const pricingIssues = validatePricingContract(
+    input.action,
+    input.pricing,
+    input.propertyDetails,
+    { mode: 'draft', enforceInputShape: true },
+  );
+  for (const issue of pricingIssues) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pricing', ...issue.field.split('.')],
       message: issue.message,
     });
   }
@@ -417,6 +442,7 @@ export const listingRouter = router({
       const propertyDetails = normalizePropertyDetailsForPublicContract(
         input.propertyDetails,
         input.pricing,
+        input.action,
         input.propertyType,
       );
 
@@ -551,6 +577,22 @@ export const listingRouter = router({
           }
         }
 
+        const pricingIssues = validatePricingContract(
+          input.action ?? listing.action,
+          input.pricing ?? (listing.pricing as any),
+          input.propertyDetails ?? ((listing.propertyDetails as any) ?? {}),
+          {
+            mode: 'draft',
+            enforceInputShape: input.pricing !== undefined,
+          },
+        );
+        if (pricingIssues.length > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: pricingIssues.map(issue => issue.message).join(' '),
+          });
+        }
+
         const requiresReviewBeforePublicUpdate =
           listing.status === 'published' || listing.status === 'approved';
 
@@ -580,6 +622,7 @@ export const listingRouter = router({
           updatePayload.propertyDetails = normalizePropertyDetailsForPublicContract(
             input.propertyDetails || ((listing.propertyDetails as any) ?? {}),
             input.pricing || null,
+            input.action ?? listing.action,
             nextPropertyType,
           );
         }
@@ -717,7 +760,12 @@ export const listingRouter = router({
 
         // Normalize price field for PropertyDetail compatibility
         // PropertyDetail expects a single 'price' field
-        const price = listing.askingPrice || listing.monthlyRent || listing.startingBid || 0;
+        const price =
+          getPrimaryPrice(
+            listing.action,
+            listing.pricing as Record<string, unknown>,
+            listing.propertyDetails as Record<string, unknown>,
+          ) || 0;
 
         // Map listing fields to property-compatible format
         const propertyCompatibleListing = {
@@ -1179,6 +1227,20 @@ export const listingRouter = router({
         const media = await db.getListingMedia(input.listingId);
 
         if (fullListing.action === 'sell' || fullListing.action === 'rent') {
+          const pricingIssues = validatePricingContract(
+            fullListing.action,
+            fullListing.pricing as Record<string, unknown>,
+            fullListing.propertyDetails as Record<string, unknown>,
+            { mode: 'publish', enforceInputShape: false },
+          );
+          if (pricingIssues.length > 0) {
+            const message = pricingIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_pricing', message, {
+              fields: pricingIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
           const featureIssues = validateFeaturesContext(
             (fullListing.propertyDetails as any)?.featuresContext,
             fullListing.action === 'sell' ? 'sale' : 'rent',

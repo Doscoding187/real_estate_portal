@@ -35,6 +35,12 @@ import {
   normalizeFeaturesContext,
 } from '@/../../shared/features-context';
 import type { FeaturesContext } from '@/../../shared/features-context';
+import {
+  buildPricingContract,
+  getMoneyFactAmount,
+  getPrimaryPrice,
+  type MoneyFactStatus,
+} from '@/../../shared/pricing-contract';
 
 export type PropertyFact = {
   key: string;
@@ -252,22 +258,55 @@ export function getPropertyCardImage(property: PropertyLike): string {
 
 export function getPropertyCardPrice(property: PropertyLike): PropertyCardPrice {
   const listingType = String(property.listingType || property.transactionType || property.action || '');
-  const amount =
-    parsePositiveNumber(property.displayPrice) ||
-    parsePositiveNumber(property.price) ||
-    parsePositiveNumber(property.askingPrice) ||
-    parsePositiveNumber(property.monthlyRent) ||
-    parsePositiveNumber(property.startingBid) ||
-    parsePositiveNumber(property.pricing?.askingPrice) ||
-    parsePositiveNumber(property.pricing?.monthlyRent) ||
-    parsePositiveNumber(property.pricing?.startingBid) ||
-    0;
+  const normalizedListingType = listingType.toLowerCase();
+  const action =
+    normalizedListingType === 'sale'
+      ? 'sell'
+      : normalizedListingType === 'rent'
+        ? 'rent'
+        : normalizedListingType;
+  const details = getDetails(property);
+  const settings = getSettings(property);
+  const canonicalPricing = buildPricingContract(
+    action,
+    property as Record<string, unknown>,
+    { ...settings, ...details },
+  );
+  const canonicalAmount = getPrimaryPrice(
+    action,
+    property as Record<string, unknown>,
+    { ...settings, ...details },
+  );
+  const legacyAmount =
+    normalizedListingType === 'rent'
+      ? parsePositiveNumber(property.displayPrice) ||
+        parsePositiveNumber(property.price) ||
+        parsePositiveNumber(property.monthlyRent) ||
+        parsePositiveNumber(property.pricing?.monthlyRent)
+      : normalizedListingType === 'auction'
+        ? parsePositiveNumber(property.displayPrice) ||
+          parsePositiveNumber(property.price) ||
+          parsePositiveNumber(property.startingBid) ||
+          parsePositiveNumber(property.pricing?.startingBid)
+        : normalizedListingType === 'sale' || normalizedListingType === 'sell'
+          ? parsePositiveNumber(property.displayPrice) ||
+            parsePositiveNumber(property.price) ||
+            parsePositiveNumber(property.askingPrice) ||
+            parsePositiveNumber(property.pricing?.askingPrice)
+          : parsePositiveNumber(property.displayPrice) ||
+            parsePositiveNumber(property.price) ||
+            parsePositiveNumber(property.askingPrice) ||
+            parsePositiveNumber(property.monthlyRent) ||
+            parsePositiveNumber(property.startingBid);
+  // If an embedded contract exists but contains no publishable primary price,
+  // do not resurrect a different action's legacy column on the card.
+  const amount = (canonicalAmount ?? (canonicalPricing ? 0 : legacyAmount)) || 0;
 
   if (amount <= 0) {
     return { amount: 0, label: 'Price on request', qualifier: 'request', listingType };
   }
 
-  if (listingType === 'rent') {
+  if (normalizedListingType === 'rent') {
     return {
       amount,
       label: `${formatCurrency(amount)} / month`,
@@ -276,7 +315,7 @@ export function getPropertyCardPrice(property: PropertyLike): PropertyCardPrice 
     };
   }
 
-  if (listingType === 'auction') {
+  if (normalizedListingType === 'auction') {
     return {
       amount,
       label: `From ${formatCurrency(amount)}`,
@@ -1038,27 +1077,31 @@ export function getPropertyFeatureSpecs(property: PropertyLike): PropertyFeature
     }
   }
 
-  const levies = parsePositiveNumber(valueFor('levies', 'leviesHoaOperatingCosts'));
-  const ratesAndTaxes = parsePositiveNumber(valueFor('ratesAndTaxes', 'ratesTaxes'));
-  if (levies) {
-    addSpec({
-      key: 'levies',
-      label: 'Levies',
-      value: formatCurrency(levies),
-      icon: Building2,
-      priority: 10,
-      category: 'cost',
-    });
-  }
-  if (ratesAndTaxes) {
-    addSpec({
-      key: 'rates-and-taxes',
-      label: 'Rates & Taxes',
-      value: formatCurrency(ratesAndTaxes),
-      icon: Building2,
-      priority: 20,
-      category: 'cost',
-    });
+  const canonicalPricingContract =
+    property.pricingContract || details.pricingContract || settings.pricingContract;
+  if (!canonicalPricingContract) {
+    const levies = parsePositiveNumber(valueFor('levies', 'leviesHoaOperatingCosts'));
+    const ratesAndTaxes = parsePositiveNumber(valueFor('ratesAndTaxes', 'ratesTaxes'));
+    if (levies) {
+      addSpec({
+        key: 'levies',
+        label: 'Levies',
+        value: formatCurrency(levies),
+        icon: Building2,
+        priority: 10,
+        category: 'cost',
+      });
+    }
+    if (ratesAndTaxes) {
+      addSpec({
+        key: 'rates-and-taxes',
+        label: 'Rates & Taxes',
+        value: formatCurrency(ratesAndTaxes),
+        icon: Building2,
+        priority: 20,
+        category: 'cost',
+      });
+    }
   }
 
   const electricitySupply = valueFor('electricitySupply', 'electricitySource');
@@ -1422,7 +1465,7 @@ export type PropertyRunningCostFact = {
   label: string;
   value: string;
   icon: LucideIcon;
-  status: PropertyBuyerChecklistStatus;
+  status: 'confirmed' | 'missing' | 'unknown' | 'not_applicable';
   note?: string;
 };
 
@@ -1597,33 +1640,65 @@ export function getPropertyBuyerChecklist(property: PropertyLike): PropertyBuyer
 export function getPropertyRunningCostFacts(property: PropertyLike): PropertyRunningCostFact[] {
   const details = getDetails(property);
   const settings = getSettings(property);
+  const rawListingType = String(
+    property.listingType || property.transactionType || property.action || '',
+  ).toLowerCase();
+  const action = rawListingType === 'sale' ? 'sell' : rawListingType === 'rent' ? 'rent' : rawListingType;
+  const contract = buildPricingContract(action, property, { ...settings, ...details });
 
-  const valueFor = (...keys: string[]) => {
-    for (const source of [property, details, settings]) {
-      for (const key of keys) {
-        const value = source?.[key];
-        if (!isBlankDisplayValue(value)) return value;
-      }
-    }
-    return undefined;
+  if (!contract || contract.intent !== 'sale') return [];
+
+  const cadenceSuffix = (cadence?: string) => {
+    if (cadence === 'annual') return '/yr';
+    if (cadence === 'once') return ' once';
+    if (cadence === 'monthly') return '/mo';
+    return '';
   };
 
-  const toCostFact = (key: string, label: string, rawValue: unknown): PropertyRunningCostFact => {
-    const amount = parsePositiveNumber(rawValue);
+  const toCostFact = (
+    key: string,
+    label: string,
+    fact: { status: MoneyFactStatus; amount?: number; cadence?: string } | undefined,
+  ): PropertyRunningCostFact | null => {
+    if (!fact) return null;
+    const amount = getMoneyFactAmount(fact);
+    const status =
+      fact.status === 'known' || fact.status === 'zero'
+        ? 'confirmed'
+        : fact.status === 'unknown'
+          ? 'unknown'
+          : 'not_applicable';
     return {
       key,
       label,
       icon: Building2,
-      value: amount ? `${formatCurrency(amount)}/mo` : 'To confirm',
-      status: amount ? 'confirmed' : 'missing',
-      note: amount ? 'Seller supplied' : 'Confirm before offer',
+      value:
+        status === 'confirmed' && amount !== undefined
+          ? `${formatCurrency(amount)}${cadenceSuffix(fact.cadence)}`
+          : status === 'unknown'
+            ? 'To confirm'
+            : 'Not applicable',
+      status,
+      note:
+        status === 'confirmed'
+          ? 'Advertiser supplied'
+          : status === 'unknown'
+            ? 'Confirm before offer'
+            : undefined,
     };
   };
 
   return [
-    toCostFact('levies', 'Levies', valueFor('levies', 'leviesHoaOperatingCosts')),
-    toCostFact('rates-and-taxes', 'Rates & Taxes', valueFor('ratesAndTaxes', 'ratesTaxes')),
-  ];
+    toCostFact('rates-and-taxes', 'Rates & Taxes', contract.recurringCosts.ratesAndTaxes),
+    toCostFact('body-corporate-levy', 'Body Corporate Levy', contract.recurringCosts.bodyCorporateLevy),
+    toCostFact('hoa-estate-levy', 'HOA / Estate Levy', contract.recurringCosts.hoaEstateLevy),
+    toCostFact('special-levy', 'Special Levy', contract.recurringCosts.specialLevy),
+    toCostFact(
+      'other-mandatory-charge',
+      'Other Mandatory Charge',
+      contract.recurringCosts.otherMandatoryCharge,
+    ),
+  ].filter((fact): fact is PropertyRunningCostFact => Boolean(fact));
 }
 
 

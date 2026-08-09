@@ -38,6 +38,7 @@ import { getActiveDistributionIdentityFlags } from './services/distributionIdent
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
 import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
 import { normalizeFeaturesContext } from '../shared/features-context';
+import { buildPricingContract, getPrimaryPrice } from '../shared/pricing-contract';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -1043,19 +1044,30 @@ const appRouterConfig = {
           }
         }
 
-        const linkedPrice =
-          Number((publicLinkedListing as any)?.askingPrice || 0) ||
-          Number((publicLinkedListing as any)?.monthlyRent || 0) ||
-          Number((publicLinkedListing as any)?.startingBid || 0) ||
-          0;
-
-        const resolvedPrice = Number((property as any).price || 0) || linkedPrice || 0;
-
         const resolvedListingType =
           (property as any).listingType ||
           (property as any).transactionType ||
           (publicLinkedListing as any)?.action ||
           'sale';
+
+        const pricingAction =
+          resolvedListingType === 'sale' ? 'sell' : resolvedListingType === 'rent' ? 'rent' : resolvedListingType;
+        const linkedPricingContract = publicLinkedListing
+          ? buildPricingContract(
+              pricingAction,
+              (publicLinkedListing as any).pricing,
+              linkedPropertyDetails,
+            )
+          : undefined;
+        const linkedPrice = publicLinkedListing
+          ? getPrimaryPrice(
+              pricingAction,
+              (publicLinkedListing as any).pricing,
+              linkedPropertyDetails,
+            )
+          : undefined;
+        const resolvedPrice =
+          linkedPrice !== undefined ? linkedPrice : Number((property as any).price || 0) || 0;
 
         const resolvedBedrooms =
           Number((property as any).bedrooms || 0) ||
@@ -1115,6 +1127,7 @@ const appRouterConfig = {
           bedrooms: resolvedBedrooms,
           bathrooms: resolvedBathrooms,
           area: resolvedArea,
+          ...(linkedPricingContract ? { pricingContract: linkedPricingContract } : {}),
         };
 
         const resolvedMainImage =
@@ -1141,6 +1154,7 @@ const appRouterConfig = {
             description: (property as any).description || (publicLinkedListing as any)?.description,
             price: resolvedPrice,
             displayPrice: resolvedPrice,
+            ...(linkedPricingContract ? { pricingContract: linkedPricingContract } : {}),
             listingType: resolvedListingType,
             transactionType: resolvedListingType,
             propertyType:

@@ -1,3 +1,5 @@
+import { getPrimaryPrice } from '../../shared/pricing-contract';
+
 export type ReadinessResult = {
   score: number;
   missing: {
@@ -25,10 +27,10 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   }
 
   // 2. Pricing (20%)
-  if (
-    (listing.askingPrice && Number(listing.askingPrice) > 0) ||
-    (listing.monthlyRent && Number(listing.monthlyRent) > 0)
-  ) {
+  const primaryPrice = listing.action
+    ? getPrimaryPrice(listing.action, listing.pricing || listing, listing.propertyDetails)
+    : Number(listing.askingPrice ?? listing.monthlyRent ?? 0) || undefined;
+  if (primaryPrice !== undefined && primaryPrice > 0) {
     score += 20;
   } else {
     missing.pricing.push('Price');
