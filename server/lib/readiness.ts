@@ -1,4 +1,5 @@
 import { getPrimaryPrice } from '../../shared/pricing-contract';
+import { validateManualLocationEvidence } from '../../shared/location-contract';
 
 export type ReadinessResult = {
   score: number;
@@ -21,22 +22,38 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   // 1. Location (20%)
   const authoredLocation = listing.location || listing;
   const hasCoordinates =
+    authoredLocation.latitude != null &&
+    authoredLocation.longitude != null &&
     Number.isFinite(Number(authoredLocation.latitude)) &&
     Number.isFinite(Number(authoredLocation.longitude)) &&
     !(Number(authoredLocation.latitude) === 0 && Number(authoredLocation.longitude) === 0);
+  const locationIssues = validateManualLocationEvidence({
+    propertyType: listing.propertyType,
+    discovery: {
+      provinceId: authoredLocation.provinceId,
+      cityId: authoredLocation.cityId,
+      suburbId: authoredLocation.suburbId ?? null,
+    },
+    privateAddress: authoredLocation.privateAddress || null,
+  });
   const hasCanonicalLocation =
-    Number(authoredLocation.provinceId) > 0 &&
-    Number(authoredLocation.cityId) > 0 &&
-    authoredLocation.locationConfirmationState === 'confirmed' &&
-    hasCoordinates;
+    locationIssues.length === 0 && authoredLocation.locationConfirmationState === 'confirmed';
   const hasLegacyLocation = Boolean(authoredLocation.address) && hasCoordinates;
   if (hasCanonicalLocation || hasLegacyLocation) {
     score += 20;
   } else {
-    if (!authoredLocation.city || !authoredLocation.province) missing.location.push('Area');
-    if (!hasCoordinates) missing.location.push('Map Location');
-    if (hasCoordinates && authoredLocation.locationConfirmationState !== 'confirmed') {
+    if (locationIssues.some(issue => /province|city|suburb|locality/i.test(issue))) {
+      missing.location.push('Area');
+    }
+    if (locationIssues.some(issue => /street|farm|holding|portion/i.test(issue))) {
+      missing.location.push('Street or rural reference');
+    }
+    if (authoredLocation.locationConfirmationState !== 'confirmed') {
       missing.location.push('Confirm Location');
+    }
+    const onlyOneCoordinate = (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
+    if (onlyOneCoordinate || (hasCoordinates && locationIssues.length > 0)) {
+      missing.location.push('Map coordinates');
     }
   }
 

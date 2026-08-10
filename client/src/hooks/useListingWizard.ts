@@ -27,7 +27,10 @@ import {
   buildFeaturesContextFromWizardState,
 } from '../../../shared/features-context';
 import { validatePricingContract } from '../../../shared/pricing-contract';
-import { coordinatePairSchema } from '../../../shared/location-contract';
+import {
+  coordinatePairSchema,
+  validateManualLocationEvidence,
+} from '../../../shared/location-contract';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
@@ -120,6 +123,43 @@ type WizardNavigationState = Pick<
   | 'mainMediaId'
 >;
 
+export function getLocationValidationIssues(
+  state: Pick<WizardNavigationState, 'propertyType' | 'location'>,
+): string[] {
+  const location = state.location;
+  if (!location) return ['Enter the property location.'];
+
+  const issues = validateManualLocationEvidence({
+    propertyType: state.propertyType,
+    discovery: {
+      provinceId: location.provinceId ?? null,
+      cityId: location.cityId ?? null,
+      suburbId: location.suburbId ?? null,
+    },
+    privateAddress: location.privateAddress ?? null,
+  });
+
+  const hasLatitude = location.latitude !== null && location.latitude !== undefined;
+  const hasLongitude = location.longitude !== null && location.longitude !== undefined;
+  if (hasLatitude !== hasLongitude) {
+    issues.push('Enter both map coordinates or leave them blank.');
+  } else if (hasLatitude && hasLongitude) {
+    const coordinates = coordinatePairSchema.safeParse({
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
+    if (!coordinates.success) {
+      issues.push(coordinates.error.issues[0]?.message || 'Enter a valid map location.');
+    }
+  }
+
+  if (location.locationConfirmationState !== 'confirmed') {
+    issues.push('Confirm the current location before continuing.');
+  }
+
+  return issues;
+}
+
 const retainFeaturesForState = (
   additionalInfo: unknown,
   propertyDetails: unknown,
@@ -182,20 +222,7 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
       );
     }
     case 6: {
-      const location = state.location;
-      const coordinates = location
-        ? coordinatePairSchema.safeParse({
-            latitude: location.latitude,
-            longitude: location.longitude,
-          })
-        : null;
-      return Boolean(
-        location &&
-        location.city.trim() &&
-        location.province.trim() &&
-        location.locationConfirmationState === 'confirmed' &&
-        coordinates?.success,
-      );
+      return getLocationValidationIssues(state).length === 0;
     }
     case 7:
       return state.media.length > 0 && Boolean(state.mainMediaId);
@@ -396,6 +423,9 @@ export const useListingWizardStore = create<ListingWizardStore>()(
               previous.provinceId !== location.provinceId,
               previous.cityId !== location.cityId,
               previous.suburbId !== location.suburbId,
+              JSON.stringify(previous.privateAddress ?? null) !==
+                JSON.stringify(location.privateAddress ?? null),
+              previous.providerLocationPlaceId !== location.providerLocationPlaceId,
             ].some(Boolean)
           : false;
         const nextLocation =
@@ -567,10 +597,12 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
 
         if (state.currentStep >= 7) {
-          // Step 7 is Location - validate location information
-          if (!state.location) {
-            errors.push({ field: 'location', message: 'Please provide location information' });
-          }
+          errors.push(
+            ...getLocationValidationIssues(state).map(message => ({
+              field: 'location',
+              message,
+            })),
+          );
         }
 
         if (state.currentStep >= 8) {

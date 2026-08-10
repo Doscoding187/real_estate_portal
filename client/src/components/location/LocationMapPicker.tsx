@@ -17,8 +17,8 @@ const defaultCenter = {
 };
 
 export interface LocationData {
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   address?: string;
   suburb?: string;
   city?: string;
@@ -58,6 +58,12 @@ export function LocationMapPicker({
   const [isGeocoding, setIsGeocoding] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+  useEffect(() => {
+    if (loadError) {
+      onGeocodingError?.('Google Maps is not available right now. You can enter the location manually.');
+    }
+  }, [loadError, onGeocodingError]);
 
   const parseGeocodingResult = useCallback(
     (

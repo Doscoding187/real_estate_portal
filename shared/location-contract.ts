@@ -21,6 +21,35 @@ export type LocationConfirmationState = (typeof LOCATION_CONFIRMATION_STATES)[nu
 export const PUBLIC_LOCATION_PRECISIONS = ['approximate', 'exact'] as const;
 export type PublicLocationPrecision = (typeof PUBLIC_LOCATION_PRECISIONS)[number];
 
+/** Product language mapped explicitly to the historical storage enum. */
+export const PUBLIC_LOCATION_POLICIES = ['street', 'full_address'] as const;
+export type PublicLocationPolicy = (typeof PUBLIC_LOCATION_POLICIES)[number];
+
+export function publicLocationPolicyToStoredPrecision(
+  policy: PublicLocationPolicy,
+): PublicLocationPrecision {
+  return policy === 'full_address' ? 'exact' : 'approximate';
+}
+
+export function storedPrecisionToPublicLocationPolicy(
+  precision: PublicLocationPrecision | null | undefined,
+): PublicLocationPolicy {
+  return precision === 'exact' ? 'full_address' : 'street';
+}
+
+export const MANUAL_URBAN_PROPERTY_TYPES = [
+  'apartment',
+  'house',
+  'townhouse',
+  'cluster_home',
+] as const;
+
+export type ManualUrbanPropertyType = (typeof MANUAL_URBAN_PROPERTY_TYPES)[number];
+
+export function isManualUrbanPropertyType(value: unknown): value is ManualUrbanPropertyType {
+  return typeof value === 'string' && (MANUAL_URBAN_PROPERTY_TYPES as readonly string[]).includes(value);
+}
+
 export const canonicalDiscoveryLocationSchema = z
   .object({
     provinceId: z.number().int().positive(),
@@ -48,8 +77,8 @@ export type PrivateAddress = z.infer<typeof privateAddressSchema>;
 
 export type ListingLocationAuthoringPayload = {
   address: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   city: string;
   suburb?: string;
   province: string;
@@ -82,10 +111,15 @@ export function buildListingLocationAuthoringPayload(
 ): ListingLocationAuthoringPayload | undefined {
   if (!location) return undefined;
 
+  const optionalCoordinate = (value: unknown): number | null => {
+    if (value === null || value === undefined || value === '') return null;
+    return typeof value === 'number' ? value : Number(value);
+  };
+
   return {
     address: typeof location.address === 'string' ? location.address : '',
-    latitude: Number(location.latitude),
-    longitude: Number(location.longitude),
+    latitude: optionalCoordinate(location.latitude),
+    longitude: optionalCoordinate(location.longitude),
     city: typeof location.city === 'string' ? location.city : '',
     suburb: typeof location.suburb === 'string' ? location.suburb : undefined,
     province: typeof location.province === 'string' ? location.province : '',
@@ -126,6 +160,52 @@ export const coordinatePairSchema = z
 
 export type CoordinatePair = z.infer<typeof coordinatePairSchema>;
 
+export type ManualLocationEvidence = {
+  propertyType?: string | null;
+  discovery:
+    | Partial<{
+        provinceId: number | null;
+        cityId: number | null;
+        suburbId: number | null;
+      }>
+    | null
+    | undefined;
+  privateAddress: PrivateAddress | null | undefined;
+};
+
+/**
+ * Location authoring validity is deliberately independent from coordinate
+ * enrichment. The wizard and server use this same rule so a provider outage
+ * cannot turn a valid manual street location into an unusable draft.
+ */
+export function validateManualLocationEvidence(input: ManualLocationEvidence): string[] {
+  const issues: string[] = [];
+  const discovery = input.discovery;
+  const address = input.privateAddress;
+
+  if (!Number.isInteger(discovery?.provinceId) || Number(discovery?.provinceId) <= 0) {
+    issues.push('Select a province.');
+  }
+  if (!Number.isInteger(discovery?.cityId) || Number(discovery?.cityId) <= 0) {
+    issues.push('Select a city or town.');
+  }
+
+  if (isManualUrbanPropertyType(input.propertyType)) {
+    if (!Number.isInteger(discovery?.suburbId) || Number(discovery?.suburbId) <= 0) {
+      issues.push('Select a suburb or locality.');
+    }
+    if (!address?.streetName?.trim()) {
+      issues.push('Enter the street name.');
+    }
+  } else if (input.propertyType === 'farm') {
+    if (!address?.farmOrHoldingName?.trim() && !address?.streetName?.trim() && !address?.portionReference?.trim()) {
+      issues.push('Enter a farm, holding, road or portion reference.');
+    }
+  }
+
+  return issues;
+}
+
 export const listingLocationSchema = z
   .object({
     version: z.literal(LOCATION_CONTRACT_VERSION),
@@ -141,18 +221,32 @@ export const listingLocationSchema = z
   .superRefine((location, context) => {
     if (location.locationConfirmationState !== 'confirmed') return;
 
-    if (!location.coordinates) {
+    const hasManualEvidence = Boolean(
+      location.privateAddress?.streetName?.trim() ||
+        location.privateAddress?.farmOrHoldingName?.trim() ||
+        location.privateAddress?.portionReference?.trim(),
+    );
+
+    if (!location.coordinates && !hasManualEvidence) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'A confirmed location requires valid coordinates.',
-        path: ['coordinates'],
+        message: 'A confirmed location requires a street or rural location reference.',
+        path: ['privateAddress'],
       });
     }
 
-    if (!location.coordinateSource) {
+    if (location.coordinates && !location.coordinateSource) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'A confirmed location requires coordinate source evidence.',
+        message: 'A confirmed coordinate location requires source evidence.',
+        path: ['coordinateSource'],
+      });
+    }
+
+    if (!location.coordinates && location.coordinateSource && location.coordinateSource !== 'manual_confirmed') {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A location without coordinates must use manual confirmation.',
         path: ['coordinateSource'],
       });
     }

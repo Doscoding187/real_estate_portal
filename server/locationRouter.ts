@@ -193,15 +193,15 @@ export const locationRouter = router({
     .input(
       z.object({
         address: z.string().max(500).optional(),
-        latitude: z.number().finite(),
-        longitude: z.number().finite(),
+        latitude: z.number().finite().nullable().optional(),
+        longitude: z.number().finite().nullable().optional(),
         city: z.string().max(150).optional(),
         suburb: z.string().max(200).optional(),
         province: z.string().max(100).optional(),
         postalCode: z.string().max(20).optional(),
         placeId: z.string().max(255).optional(),
-        providerLocationPlaceId: z.string().max(255).optional(),
-        provider: z.string().max(32).optional(),
+        providerLocationPlaceId: z.string().max(255).nullable().optional(),
+        provider: z.string().max(32).nullable().optional(),
         provinceId: z.number().int().positive().nullable().optional(),
         cityId: z.number().int().positive().nullable().optional(),
         suburbId: z.number().int().positive().nullable().optional(),
@@ -209,6 +209,7 @@ export const locationRouter = router({
         coordinateSource: z.enum(LOCATION_COORDINATE_SOURCES).nullable().optional(),
         locationConfirmationState: z.enum(LOCATION_CONFIRMATION_STATES).optional(),
         publicLocationPrecision: z.enum(PUBLIC_LOCATION_PRECISIONS).optional(),
+        propertyType: z.string().max(64).nullable().optional(),
         addressComponents: z
           .array(
             z.object({

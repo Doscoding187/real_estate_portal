@@ -83,6 +83,11 @@ import {
   getPrimaryPrice,
   validatePricingContract,
 } from '../shared/pricing-contract';
+import {
+  coordinatePairSchema,
+  storedPrecisionToPublicLocationPolicy,
+  type PrivateAddress,
+} from '../shared/location-contract';
 import { validateListingRecordLocation } from './services/listingLocationResolver';
 
 // Re-export getDb from the connection module to maintain backward compatibility
@@ -2197,9 +2202,12 @@ export async function createListing(
 
         propertyDetails: listingData.propertyDetails, // Drizzle handles JSON
         address: listingData.address || null,
-        latitude: Number(listingData.latitude).toFixed(7),
-        longitude: Number(listingData.longitude).toFixed(7),
+        latitude:
+          listingData.latitude == null ? null : Number(listingData.latitude).toFixed(7),
+        longitude:
+          listingData.longitude == null ? null : Number(listingData.longitude).toFixed(7),
         city: listingData.city,
+        suburb: listingData.suburb || null,
         province: listingData.province,
         provinceId: listingData.provinceId ?? null,
         cityId: listingData.cityId ?? null,
@@ -2858,23 +2866,59 @@ export async function getApprovalQueue(status?: string) {
 }
 
 function finiteCoordinate(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number.toFixed(7) : null;
 }
 
-async function buildPublicLocationProjection(database: any, listing: any) {
-  const precision = listing.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
+function readPrivateAddress(value: unknown): PrivateAddress | null {
+  if (!value) return null;
+  if (typeof value === 'object') return value as PrivateAddress;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as PrivateAddress;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function locationLabels(listing: any) {
   const areaLabel = [listing.suburb, listing.city, listing.province]
     .map(value => String(value || '').trim())
     .filter(Boolean)
     .join(', ');
+  const privateAddress = readPrivateAddress(listing.privateAddress);
+  const streetName = privateAddress?.streetName?.trim() || '';
+  const streetNumber = privateAddress?.streetNumber?.trim() || '';
+  const streetLabel = [streetName, areaLabel].filter(Boolean).join(', ');
+  const fullAddressLabel = [[streetNumber, streetName].filter(Boolean).join(' '), areaLabel]
+    .filter(Boolean)
+    .join(', ');
+
+  return { areaLabel, privateAddress, streetLabel, fullAddressLabel };
+}
+
+async function buildPublicLocationProjection(database: any, listing: any) {
+  const precision = listing.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
+  const policy = storedPrecisionToPublicLocationPolicy(precision);
+  const { areaLabel, streetLabel, fullAddressLabel } = locationLabels(listing);
 
   if (precision === 'exact') {
+    const latitude = finiteCoordinate(listing.latitude);
+    const longitude = finiteCoordinate(listing.longitude);
+    const coordinateResult = coordinatePairSchema.safeParse({
+      latitude: latitude === null ? null : Number(latitude),
+      longitude: longitude === null ? null : Number(longitude),
+    });
+    const hasExactCoordinatePair = coordinateResult.success;
     return {
-      publicAddress: listing.address || areaLabel || null,
-      publicLatitude: finiteCoordinate(listing.latitude),
-      publicLongitude: finiteCoordinate(listing.longitude),
+      publicAddress: fullAddressLabel || areaLabel || null,
+      publicLatitude: hasExactCoordinatePair ? latitude : null,
+      publicLongitude: hasExactCoordinatePair ? longitude : null,
       publicLocationPrecision: 'exact' as const,
+      publicLocationPolicy: policy,
     };
   }
 
@@ -2905,10 +2949,11 @@ async function buildPublicLocationProjection(database: any, listing: any) {
   }
 
   return {
-    publicAddress: areaLabel || null,
+    publicAddress: streetLabel || areaLabel || null,
     publicLatitude: finiteCoordinate(center?.latitude),
     publicLongitude: finiteCoordinate(center?.longitude),
     publicLocationPrecision: 'approximate' as const,
+    publicLocationPolicy: policy,
   };
 }
 
@@ -3475,11 +3520,11 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     ...featuresContext.spaces,
     ...featuresContext.security.features,
   ];
-  const exactPublicLocation = listing.publicLocationPrecision === 'exact';
-  const publicAreaLabel = [listing.suburb, listing.city, listing.province]
-    .map(value => String(value || '').trim())
-    .filter(Boolean)
-    .join(', ');
+  const publicLocationPolicy = storedPrecisionToPublicLocationPolicy(
+    listing.publicLocationPrecision,
+  );
+  const { areaLabel: publicAreaLabel, streetLabel, fullAddressLabel } = locationLabels(listing);
+  const exactPublicLocation = publicLocationPolicy === 'full_address';
 
   return {
     id: listing.id,
@@ -3540,14 +3585,15 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     city: listing.city,
     province: listing.province,
     suburb: listing.suburb,
-    address: exactPublicLocation ? listing.address || publicAreaLabel : publicAreaLabel,
+    address: exactPublicLocation ? fullAddressLabel || publicAreaLabel : streetLabel || publicAreaLabel,
     zipCode: listing.postalCode,
-    latitude: exactPublicLocation ? listing.latitude : null,
-    longitude: exactPublicLocation ? listing.longitude : null,
+    latitude: exactPublicLocation ? finiteCoordinate(listing.latitude) : null,
+    longitude: exactPublicLocation ? finiteCoordinate(listing.longitude) : null,
     provinceId: listing.provinceId ?? null,
     cityId: listing.cityId ?? null,
     suburbId: listing.suburbId ?? null,
     publicLocationPrecision: exactPublicLocation ? 'exact' : 'approximate',
+    publicLocationPolicy,
     // Media
     // Media - prepend CDN URL if stored as path
     images: media

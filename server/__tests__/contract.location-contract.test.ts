@@ -4,6 +4,7 @@ import {
   listingLocationSchema,
   locationProviderMappingSchema,
   privateAddressSchema,
+  validateManualLocationEvidence,
 } from '../../shared/location-contract';
 
 const baseLocation = {
@@ -26,7 +27,7 @@ describe('PLE-6B location contract', () => {
     ).toBe(false);
   });
 
-  it('requires confirmed locations to carry non-zero coordinates and source evidence', () => {
+  it('keeps zero invalid while allowing confirmed manual locations without coordinates', () => {
     expect(listingLocationSchema.safeParse(baseLocation).success).toBe(true);
     expect(
       listingLocationSchema.safeParse({
@@ -34,9 +35,14 @@ describe('PLE-6B location contract', () => {
         coordinates: { latitude: 0, longitude: 0 },
       }).success,
     ).toBe(false);
-    expect(listingLocationSchema.safeParse({ ...baseLocation, coordinates: null }).success).toBe(
-      false,
-    );
+    expect(
+      listingLocationSchema.safeParse({
+        ...baseLocation,
+        coordinates: null,
+        coordinateSource: 'manual_confirmed',
+        privateAddress: { streetName: 'Katherine Street' },
+      }).success,
+    ).toBe(true);
   });
 
   it('requires provider evidence to target exactly one canonical geography level', () => {
@@ -101,5 +107,43 @@ describe('PLE-6B location contract', () => {
       province: 'Gauteng',
     });
     expect(payload).not.toHaveProperty('unexpectedUiState');
+  });
+
+  it('preserves absent coordinates as null rather than creating a zero pair', () => {
+    const payload = buildListingLocationAuthoringPayload({
+      address: 'Katherine Street',
+      latitude: null,
+      longitude: null,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      privateAddress: { streetName: 'Katherine Street' },
+    });
+
+    expect(payload?.latitude).toBeNull();
+    expect(payload?.longitude).toBeNull();
+  });
+
+  it('requires canonical hierarchy and street evidence for urban manual authoring', () => {
+    expect(
+      validateManualLocationEvidence({
+        propertyType: 'house',
+        discovery: { provinceId: 1, cityId: 2, suburbId: 3 },
+        privateAddress: { streetName: 'Katherine Street' },
+      }),
+    ).toEqual([]);
+    expect(
+      validateManualLocationEvidence({
+        propertyType: 'house',
+        discovery: { provinceId: 1, cityId: 2, suburbId: null },
+        privateAddress: null,
+      }),
+    ).toEqual(['Select a suburb or locality.', 'Enter the street name.']);
+    expect(
+      validateManualLocationEvidence({
+        propertyType: 'farm',
+        discovery: { provinceId: 1, cityId: 2, suburbId: null },
+        privateAddress: { farmOrHoldingName: 'Riverside Smallholding' },
+      }),
+    ).toEqual([]);
   });
 });

@@ -10,6 +10,7 @@ import {
   coordinatePairSchema,
   LOCATION_CONTRACT_VERSION,
   listingLocationSchema,
+  validateManualLocationEvidence,
   type CoordinatePair,
   type PrivateAddress,
   type LocationCoordinateSource,
@@ -48,8 +49,8 @@ type SuburbParentRow = {
 
 export type ListingLocationResolverInput = {
   address?: string | null;
-  latitude: number;
-  longitude: number;
+  latitude?: number | null;
+  longitude?: number | null;
   city?: string | null;
   suburb?: string | null;
   province?: string | null;
@@ -65,6 +66,7 @@ export type ListingLocationResolverInput = {
   coordinateSource?: LocationCoordinateSource | null;
   locationConfirmationState?: LocationConfirmationState;
   publicLocationPrecision?: PublicLocationPrecision;
+  propertyType?: string | null;
 };
 
 export type ResolvedListingLocation = {
@@ -72,7 +74,7 @@ export type ResolvedListingLocation = {
   cityId: number | null;
   suburbId: number | null;
   privateAddress: PrivateAddress | null;
-  coordinatePair: CoordinatePair;
+  coordinatePair: CoordinatePair | null;
   coordinateSource: LocationCoordinateSource | null;
   locationConfirmationState: LocationConfirmationState;
   publicLocationPrecision: PublicLocationPrecision;
@@ -144,6 +146,28 @@ function derivePrivateAddress(input: ListingLocationResolverInput): PrivateAddre
   return Object.keys(address).length > 0 ? address : null;
 }
 
+export function parseOptionalCoordinatePair(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+): CoordinatePair | null {
+  const hasLatitude = latitude !== null && latitude !== undefined;
+  const hasLongitude = longitude !== null && longitude !== undefined;
+  if (!hasLatitude && !hasLongitude) return null;
+  if (hasLatitude !== hasLongitude) {
+    throw new ListingLocationResolutionError(
+      'Enter both map coordinates or leave them blank.',
+    );
+  }
+
+  const result = coordinatePairSchema.safeParse({ latitude, longitude });
+  if (!result.success) {
+    throw new ListingLocationResolutionError(
+      result.error.issues[0]?.message || 'Enter a valid property map location.',
+    );
+  }
+  return result.data;
+}
+
 async function one<T>(query: Promise<T[]>, label: string): Promise<T | null> {
   const rows = await query;
   if (rows.length > 1) {
@@ -180,15 +204,7 @@ export async function resolveCanonicalListingLocation(
   const db = await getDb();
   if (!db) throw new ListingLocationResolutionError('Database not available.');
 
-  const coordinateResult = coordinatePairSchema.safeParse({
-    latitude: input.latitude,
-    longitude: input.longitude,
-  });
-  if (!coordinateResult.success) {
-    throw new ListingLocationResolutionError(
-      coordinateResult.error.issues[0]?.message || 'Enter a valid property map location.',
-    );
-  }
+  const coordinatePair = parseOptionalCoordinatePair(input.latitude, input.longitude);
 
   let provinceId = Number.isInteger(input.provinceId) && Number(input.provinceId) > 0
     ? Number(input.provinceId)
@@ -346,7 +362,8 @@ export async function resolveCanonicalListingLocation(
     suburbName &&
     cityId &&
     clean(input.providerLocationPlaceId) &&
-    !providerEvidenceIsStreetAddress
+    !providerEvidenceIsStreetAddress &&
+    coordinatePair
   ) {
     if (!validLocalityCandidate(suburbName)) {
       throw new ListingLocationResolutionError(
@@ -377,8 +394,8 @@ export async function resolveCanonicalListingLocation(
           name: suburbName,
           slug: suburbSlug,
           postalCode: clean(input.postalCode) || null,
-          latitude: String(input.latitude),
-          longitude: String(input.longitude),
+          latitude: String(coordinatePair.latitude),
+          longitude: String(coordinatePair.longitude),
           status: 'provisional',
           origin: 'provider',
         })
@@ -435,21 +452,32 @@ export async function resolveCanonicalListingLocation(
     }
   }
 
+  const privateAddress = derivePrivateAddress(input);
   const confirmationState = input.locationConfirmationState || 'needs_confirmation';
-  const coordinateSource =
-    input.coordinateSource ||
-    (confirmationState === 'confirmed'
-      ? providerPlaceId || clean(input.placeId)
-        ? 'autocomplete'
-        : 'manual_confirmed'
-      : null);
+  if (confirmationState === 'confirmed' && input.propertyType) {
+    const evidenceIssues = validateManualLocationEvidence({
+      propertyType: input.propertyType,
+      discovery: { provinceId, cityId, suburbId },
+      privateAddress,
+    });
+    if (evidenceIssues.length > 0) {
+      throw new ListingLocationResolutionError(evidenceIssues.join(' '));
+    }
+  }
+
+  const coordinateSource = coordinatePair
+    ? input.coordinateSource ||
+      (providerPlaceId || clean(input.placeId) ? 'autocomplete' : 'manual_confirmed')
+    : confirmationState === 'confirmed'
+      ? 'manual_confirmed'
+      : null;
 
   return {
     provinceId,
     cityId,
     suburbId,
-    privateAddress: derivePrivateAddress(input),
-    coordinatePair: coordinateResult.data,
+    privateAddress,
+    coordinatePair,
     coordinateSource,
     locationConfirmationState: confirmationState,
     publicLocationPrecision: input.publicLocationPrecision || 'approximate',
@@ -484,9 +512,13 @@ export function validateListingRecordLocation(record: Record<string, unknown>): 
     'publicLocationPrecision',
   ].some(key => record[key] !== undefined);
   if (!hasCanonicalLocationColumns) {
-    const latitude = Number(record.latitude);
-    const longitude = Number(record.longitude);
-    if (record.address && Number.isFinite(latitude) && Number.isFinite(longitude)) return [];
+    if (record.address && record.latitude != null && record.longitude != null) {
+      try {
+        if (parseOptionalCoordinatePair(Number(record.latitude), Number(record.longitude))) return [];
+      } catch {
+        // Fall through to the canonical validation error below.
+      }
+    }
   }
 
   let privateAddress: PrivateAddress | null = null;
@@ -500,6 +532,29 @@ export function validateListingRecordLocation(record: Record<string, unknown>): 
     privateAddress = record.privateAddress as PrivateAddress;
   }
 
+  if (record.locationConfirmationState === 'confirmed') {
+    const manualIssues = validateManualLocationEvidence({
+      propertyType: typeof record.propertyType === 'string' ? record.propertyType : null,
+      discovery: {
+        provinceId: Number(record.provinceId),
+        cityId: Number(record.cityId),
+        suburbId: record.suburbId == null ? null : Number(record.suburbId),
+      },
+      privateAddress,
+    });
+    if (manualIssues.length > 0) return manualIssues;
+  }
+
+  let coordinates: CoordinatePair | null = null;
+  try {
+    coordinates = parseOptionalCoordinatePair(
+      record.latitude == null ? null : Number(record.latitude),
+      record.longitude == null ? null : Number(record.longitude),
+    );
+  } catch (error) {
+    return [error instanceof Error ? error.message : 'Enter a valid property map location.'];
+  }
+
   const result = listingLocationSchema.safeParse({
     version: LOCATION_CONTRACT_VERSION,
     discovery: {
@@ -508,10 +563,7 @@ export function validateListingRecordLocation(record: Record<string, unknown>): 
       suburbId: record.suburbId == null ? null : Number(record.suburbId),
     },
     privateAddress,
-    coordinates: {
-      latitude: Number(record.latitude),
-      longitude: Number(record.longitude),
-    },
+    coordinates,
     coordinateSource: record.coordinateSource ?? null,
     locationConfirmationState: record.locationConfirmationState,
     publicLocationPrecision: record.publicLocationPrecision || 'approximate',

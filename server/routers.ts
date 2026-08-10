@@ -1146,13 +1146,15 @@ const appRouterConfig = {
           .map(value => String(value || '').trim())
           .filter(Boolean)
           .join(', ');
+        // Public properties are the privacy firewall. Never fall back to the
+        // legacy exact address/coordinates when an explicit public projection
+        // is absent.
         const publicAddress =
-          (property as any).publicAddress ||
-          (publicLinkedListing ? publicAreaAddress : (property as any).address);
-        const publicLatitude = (property as any).publicLatitude ??
-          (publicLinkedListing ? null : (property as any).latitude);
-        const publicLongitude = (property as any).publicLongitude ??
-          (publicLinkedListing ? null : (property as any).longitude);
+          (property as any).publicAddress ?? (publicLinkedListing ? publicAreaAddress : null);
+        const publicLatitude =
+          (property as any).publicLatitude ?? (publicLinkedListing ? null : null);
+        const publicLongitude =
+          (property as any).publicLongitude ?? (publicLinkedListing ? null : null);
 
         return {
           property: {

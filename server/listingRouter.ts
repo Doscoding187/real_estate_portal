@@ -13,6 +13,7 @@ import * as db from './db';
 import { ENV } from './_core/env';
 import {
   ListingLocationResolutionError,
+  parseOptionalCoordinatePair,
   resolveCanonicalListingLocation,
   validateListingRecordLocation,
 } from './services/listingLocationResolver';
@@ -46,7 +47,6 @@ import {
   validatePricingContract,
 } from '../shared/pricing-contract';
 import {
-  coordinatePairSchema,
   LOCATION_CONFIRMATION_STATES,
   LOCATION_COORDINATE_SOURCES,
   PUBLIC_LOCATION_PRECISIONS,
@@ -96,6 +96,17 @@ async function normalizeLocationInput(inputLocation: { placeId?: string; locatio
   }
 
   return { sanitizedPlaceId, resolvedLocationId };
+}
+
+function parseDraftCoordinates(location: { latitude?: number | null; longitude?: number | null }) {
+  try {
+    return parseOptionalCoordinatePair(location.latitude, location.longitude);
+  } catch (error) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: error instanceof Error ? error.message : 'Enter a valid property map location.',
+    });
+  }
 }
 
 const LISTING_LIFECYCLE_ERROR_PATTERNS = [
@@ -251,17 +262,17 @@ const createListingSchemaBase = z.object({
   }),
   propertyDetails: z.record(z.string(), z.any()),
   location: z.object({
-    address: z.string().max(500),
-    latitude: z.number().finite(),
-    longitude: z.number().finite(),
+    address: z.string().max(500).optional().default(''),
+    latitude: z.number().finite().nullable().optional(),
+    longitude: z.number().finite().nullable().optional(),
     city: z.string().max(150),
     suburb: z.string().max(200).optional(),
     province: z.string().max(100),
     postalCode: z.string().max(20).optional(),
     placeId: z.string().optional(),
     locationId: z.number().optional(), // Added for internal Location ID support
-    providerLocationPlaceId: z.string().max(255).optional(),
-    provider: z.string().max(32).optional(),
+    providerLocationPlaceId: z.string().max(255).nullable().optional(),
+    provider: z.string().max(32).nullable().optional(),
     provinceId: z.number().int().positive().nullable().optional(),
     cityId: z.number().int().positive().nullable().optional(),
     suburbId: z.number().int().positive().nullable().optional(),
@@ -409,27 +420,19 @@ export const listingRouter = router({
           privateAddress: input.location.privateAddress || null,
           locationConfirmationState: input.location.locationConfirmationState,
           publicLocationPrecision: input.location.publicLocationPrecision,
+          propertyType: input.propertyType,
         });
       } catch (error) {
         if (error instanceof ListingLocationResolutionError) {
           if (input.status !== 'pending_review') {
-            const coordinateResult = coordinatePairSchema.safeParse({
-              latitude: input.location.latitude,
-              longitude: input.location.longitude,
-            });
-            if (!coordinateResult.success) {
-              throw new TRPCError({
-                code: 'BAD_REQUEST',
-                message: coordinateResult.error.issues[0]?.message || error.message,
-              });
-            }
+            const coordinatePair = parseDraftCoordinates(input.location);
             console.warn('[ListingRouter] Draft location remains unresolved:', error.message);
             resolvedLocation = {
               provinceId: null,
               cityId: null,
               suburbId: null,
               privateAddress: input.location.privateAddress || null,
-              coordinatePair: coordinateResult.data,
+              coordinatePair,
               coordinateSource: input.location.coordinateSource || null,
               locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
               publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
@@ -439,23 +442,14 @@ export const listingRouter = router({
             throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
           }
         } else if (input.status !== 'pending_review') {
-          const coordinateResult = coordinatePairSchema.safeParse({
-            latitude: input.location.latitude,
-            longitude: input.location.longitude,
-          });
-          if (!coordinateResult.success) {
-            throw new TRPCError({
-              code: 'BAD_REQUEST',
-              message: coordinateResult.error.issues[0]?.message || 'Enter a valid property map location.',
-            });
-          }
+          const coordinatePair = parseDraftCoordinates(input.location);
           console.warn('[ListingRouter] Draft location resolver unavailable:', error);
           resolvedLocation = {
             provinceId: null,
             cityId: null,
             suburbId: null,
             privateAddress: input.location.privateAddress || null,
-            coordinatePair: coordinateResult.data,
+            coordinatePair,
             coordinateSource: input.location.coordinateSource || null,
             locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
             publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
@@ -669,29 +663,21 @@ export const listingRouter = router({
               providerLocationPlaceId: input.location.providerLocationPlaceId || null,
               provider: input.location.provider || null,
               privateAddress: input.location.privateAddress || null,
+              propertyType: nextPropertyType,
             });
           } catch (error) {
             if (error instanceof ListingLocationResolutionError) {
               if (listing.status !== 'draft') {
                 throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
               }
-              const coordinateResult = coordinatePairSchema.safeParse({
-                latitude: input.location.latitude,
-                longitude: input.location.longitude,
-              });
-              if (!coordinateResult.success) {
-                throw new TRPCError({
-                  code: 'BAD_REQUEST',
-                  message: coordinateResult.error.issues[0]?.message || error.message,
-                });
-              }
+              const coordinatePair = parseDraftCoordinates(input.location);
               console.warn('[ListingRouter] Draft location remains unresolved during update:', error.message);
               resolvedLocation = {
                 provinceId: null,
                 cityId: null,
                 suburbId: null,
                 privateAddress: input.location.privateAddress || null,
-                coordinatePair: coordinateResult.data,
+                coordinatePair,
                 coordinateSource: input.location.coordinateSource || null,
                 locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
                 publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
@@ -700,23 +686,14 @@ export const listingRouter = router({
             } else if (listing.status !== 'draft') {
               throw error;
             } else {
-              const coordinateResult = coordinatePairSchema.safeParse({
-                latitude: input.location.latitude,
-                longitude: input.location.longitude,
-              });
-              if (!coordinateResult.success) {
-                throw new TRPCError({
-                  code: 'BAD_REQUEST',
-                  message: coordinateResult.error.issues[0]?.message || 'Enter a valid property map location.',
-                });
-              }
+              const coordinatePair = parseDraftCoordinates(input.location);
               console.warn('[ListingRouter] Draft location resolver unavailable during update:', error);
               resolvedLocation = {
                 provinceId: null,
                 cityId: null,
                 suburbId: null,
                 privateAddress: input.location.privateAddress || null,
-                coordinatePair: coordinateResult.data,
+                coordinatePair,
                 coordinateSource: input.location.coordinateSource || null,
                 locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
                 publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
@@ -736,6 +713,14 @@ export const listingRouter = router({
             ['postalCode', input.location.postalCode, listing.postalCode],
             ['latitude', input.location.latitude, listing.latitude],
             ['longitude', input.location.longitude, listing.longitude],
+            ['provinceId', input.location.provinceId, listing.provinceId],
+            ['cityId', input.location.cityId, listing.cityId],
+            ['suburbId', input.location.suburbId, listing.suburbId],
+            [
+              'privateAddress',
+              JSON.stringify(input.location.privateAddress || null),
+              JSON.stringify(listing.privateAddress || null),
+            ],
           ].some(([, next, previous]) => String(next ?? '') !== String(previous ?? ''));
           const explicitlyReconfirmed =
             input.location.locationConfirmationState === 'confirmed' &&
@@ -746,8 +731,10 @@ export const listingRouter = router({
             !explicitlyReconfirmed;
 
           updatePayload.address = input.location.address || null;
-          updatePayload.latitude = Number(input.location.latitude).toFixed(7);
-          updatePayload.longitude = Number(input.location.longitude).toFixed(7);
+          updatePayload.latitude =
+            input.location.latitude == null ? null : Number(input.location.latitude).toFixed(7);
+          updatePayload.longitude =
+            input.location.longitude == null ? null : Number(input.location.longitude).toFixed(7);
           updatePayload.city = input.location.city;
           updatePayload.suburb = input.location.suburb || null;
           updatePayload.province = input.location.province;

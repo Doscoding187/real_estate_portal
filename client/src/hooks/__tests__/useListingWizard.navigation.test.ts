@@ -147,19 +147,24 @@ describe('useListingWizardStore navigation contract', () => {
     expect(result.current.badges).toEqual([]);
   });
 
-  it('requires a confirmed, non-zero map location before leaving Step 6', () => {
+  it('allows a confirmed manual street location without coordinates', () => {
     const { result } = renderHook(() => useListingWizardStore());
 
     act(() => {
+      result.current.setPropertyType('house');
       result.current.setLocation({
-        address: '',
-        latitude: -26.1076,
-        longitude: 28.0567,
+        address: 'Katherine Street',
+        latitude: null,
+        longitude: null,
         city: 'Johannesburg',
         province: 'Gauteng',
         locationConfirmationState: 'needs_confirmation',
         coordinateSource: null,
         publicLocationPrecision: 'approximate',
+        provinceId: 1,
+        cityId: 2,
+        suburbId: 3,
+        privateAddress: { streetName: 'Katherine Street' },
       });
     });
     expect(result.current.canAdvanceFromStep(6)).toBe(false);
@@ -168,10 +173,34 @@ describe('useListingWizardStore navigation contract', () => {
       result.current.setLocation({
         ...result.current.location!,
         locationConfirmationState: 'confirmed',
-        coordinateSource: 'map',
+        coordinateSource: 'manual_confirmed',
       });
     });
     expect(result.current.canAdvanceFromStep(6)).toBe(true);
+  });
+
+  it('rejects a suburb-only urban location with an actionable contract failure', () => {
+    const { result } = renderHook(() => useListingWizardStore());
+
+    act(() => {
+      result.current.setPropertyType('house');
+      result.current.setLocation({
+        address: 'Sandton',
+        latitude: null,
+        longitude: null,
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        locationConfirmationState: 'confirmed',
+        coordinateSource: 'manual_confirmed',
+        publicLocationPrecision: 'approximate',
+        provinceId: 1,
+        cityId: 2,
+        suburbId: 3,
+        privateAddress: null,
+      });
+    });
+
+    expect(result.current.canAdvanceFromStep(6)).toBe(false);
   });
 
   it('invalidates confirmation when a location is edited without new pin evidence', () => {
@@ -184,6 +213,10 @@ describe('useListingWizardStore navigation contract', () => {
         longitude: 28.0567,
         city: 'Johannesburg',
         province: 'Gauteng',
+        provinceId: 1,
+        cityId: 2,
+        suburbId: 3,
+        privateAddress: { streetNumber: '10', streetName: 'Alice Lane' },
         locationConfirmationState: 'confirmed',
         coordinateSource: 'autocomplete',
         publicLocationPrecision: 'approximate',

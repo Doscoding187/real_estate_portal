@@ -65,4 +65,68 @@ describe('manual listing core property projection compatibility', () => {
     expect(property.area).toBe(0);
     expect(property.yardSize).toBe(20_000);
   });
+
+  it('keeps street-level public location separate from the private address', () => {
+    const property = transformListingToProperty({
+      id: 103,
+      title: 'Street-level privacy test',
+      description: 'A complete location privacy projection test listing.',
+      action: 'sell',
+      propertyType: 'house',
+      askingPrice: 2_500_000,
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      provinceId: 1,
+      cityId: 2,
+      suburbId: 3,
+      privateAddress: {
+        streetNumber: '12',
+        streetName: 'Katherine Street',
+        unitNumber: 'Unit 4',
+      },
+      publicLocationPrecision: 'approximate',
+      latitude: '-26.1076',
+      longitude: '28.0567',
+      ownerId: 5,
+      status: 'published',
+    });
+
+    expect(property.publicLocationPolicy).toBe('street');
+    expect(property.address).toBe('Katherine Street, Sandton, Johannesburg, Gauteng');
+    expect(property.address).not.toContain('12');
+    expect(property.address).not.toContain('Unit 4');
+    expect(property.latitude).toBeNull();
+    expect(property.longitude).toBeNull();
+  });
+
+  it('allows full public address without exposing a unit by default', () => {
+    const property = transformListingToProperty({
+      id: 104,
+      title: 'Full address privacy test',
+      description: 'A complete full address projection test listing.',
+      action: 'sell',
+      propertyType: 'house',
+      askingPrice: 2_500_000,
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      province: 'Gauteng',
+      privateAddress: {
+        streetNumber: '12',
+        streetName: 'Katherine Street',
+        unitNumber: 'Unit 4',
+      },
+      publicLocationPrecision: 'exact',
+      latitude: '-26.1076',
+      longitude: '28.0567',
+      ownerId: 5,
+      status: 'published',
+    });
+
+    expect(property.publicLocationPolicy).toBe('full_address');
+    expect(property.address).toBe('12 Katherine Street, Sandton, Johannesburg, Gauteng');
+    expect(property.address).not.toContain('Unit 4');
+    expect(property.latitude).toBe('-26.1076000');
+    expect(property.longitude).toBe('28.0567000');
+  });
 });

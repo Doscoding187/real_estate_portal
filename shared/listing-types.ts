@@ -444,8 +444,8 @@ export interface AdditionalInformation {
 // Step 4: Location
 export interface LocationData {
   address: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   city: string;
   suburb?: string;
   province: string;

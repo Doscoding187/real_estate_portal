@@ -227,8 +227,8 @@ describe('LocationAutocomplete - Manual Entry Fallback', () => {
         expect(mockOnChange).toHaveBeenCalledWith(
           expect.objectContaining({
             gps_accuracy: 'manual',
-            latitude: 0,
-            longitude: 0,
+            latitude: null,
+            longitude: null,
           }),
         );
       });
