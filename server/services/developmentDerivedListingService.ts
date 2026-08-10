@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ne } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import { developerBrandProfiles, developers, developments, unitTypes } from '../../drizzle/schema';
 import type {
@@ -9,6 +9,7 @@ import type {
   SortOption,
 } from '../../shared/types';
 import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
+import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 interface DevelopmentDerivedListingFilters {
   province?: string;
@@ -629,12 +630,7 @@ export class DevelopmentDerivedListingService {
       return { items: [], cards: [], total: 0, page, pageSize, hasMore: false };
     }
 
-    const conditions = [
-      eq(developments.isPublished, 1),
-      eq(developments.approvalStatus, 'approved'),
-      ne(developments.transactionType, 'auction'),
-      eq(unitTypes.isActive, 1),
-    ];
+    const conditions = [publicDevelopmentEligibilityConditions(), eq(unitTypes.isActive, 1)];
 
     const targetTransactionType =
       filters.listingType === 'rent'

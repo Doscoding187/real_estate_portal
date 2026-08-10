@@ -2,6 +2,8 @@
 
 S0 Authority Containment — 2026-08-10
 
+S1 Authority Convergence update — 2026-08-10
+
 This is the canonical S0 path ledger. It records authority decisions only; it
 is not a second implementation or audit report.
 
@@ -14,7 +16,7 @@ is not a second implementation or audit report.
 | `superAdminProcedure` context chain | Super-admin role check without operating context | Server-derived platform-curator context | Now composes authenticated brand-context middleware before role authorization | Super-admin routes; publisher mutations require the context explicitly | Replace with the S1 actor-context authority |
 | `developer.createDevelopment` for super-admins | Generic emulator create | Canonical publisher create | Rejected with explicit precondition error | Property-developer create remains active | Replace only if a future actor contract authorizes it |
 | `brandEmulatorRouter` and `brandEmulatorService` | Registered emulator/direct seed and delete mutations | Canonical authoring, listing, lead and custody services | Deleted; no active client/server consumers | None | N/A |
-| `_core/brandEmulation.ts` and `client/src/services/identityResolutionService.ts` | Parallel client/server identity resolution | Server-derived publisher context | Deleted as unreferenced authority helpers | Header-only client context bridge remains | Remove bridge during S1 actor-context convergence |
+| `_core/brandEmulation.ts` and `client/src/services/identityResolutionService.ts` | Parallel client/server identity resolution | Server-derived operating identity | Deleted as unreferenced authority helpers | Header-only client request remains; server resolves it through `identityResolver` | Replace the request bridge only when a transport-level actor context is introduced |
 | `localDemoSeed` | Explicit local/test fixture lane | Guarded fixture capability | Kept; production runtime and hosted database targets remain rejected | Local/test tooling only | Remove only when a replacement fixture lane exists |
 | `platformBrandSeedingService` | Direct platform seed service | Canonical platform-curator workflow | Deleted as unreferenced | None | N/A |
 | `server/emulatorRouter.ts` and `scripts/brandEmulatorDemo.ts` | Unregistered/demo direct seed paths | Canonical workflows and guarded fixtures | Deleted as unregistered/unsafe | None | N/A |
@@ -28,5 +30,9 @@ is not a second implementation or audit report.
 | `developer.searchDevelopments` autocomplete | Published-only legacy query | Canonical public eligibility boundary | Kept temporarily; now requires approved status and excludes auction | Listing wizard autocomplete | Replace when canonical development discovery autocomplete is available |
 | `/new-developments` / `DevelopmentsDemo` | Legacy development discovery page | Canonical development discovery projection | Kept temporarily; no new consumers added in S0 | Existing public route | Replace when S3 discovery implementation is delivered |
 | `client/src/components/developer/DevelopmentsList.tsx` | Client-reconstructed workspace lifecycle/readiness | Development Home/server workspace read model | Kept temporarily; no new consumers added in S0 | Existing developer route | Replace when S4 workspace summary projection is delivered |
+| `server/_core/identityResolver.ts` | Unused resolver with emulator/placeholder agency modes | Server-authorized Developer Engine operating identity | Strengthened and wired into publisher context-aware routes plus developer create/update/publication mutations; developer scope remains valid during onboarding before a public brand is linked, while any requested brand still requires persisted ownership | Development Home retains its existing server-owned read predicate until S4 read-model convergence; browser brand header is request input only | Revisit read-model consumers during S4 or broader team-authorization work |
+| `publicDevelopmentEligibility` | Raw publication/identity predicates repeated by public consumers | One typed public development eligibility policy | Added typed evaluator and SQL predicate; migrated public detail/list, DLE, lead capture, sitemap, location pages and distribution visibility | Legacy wizard autocomplete retains its bounded query | Replace autocomplete when canonical discovery autocomplete is delivered |
+| `publicLeadCaptureService` | Public lead acceptance coupled to onboarded recipient assumptions | Public eligibility plus platform lead custody and exact catalogue attribution | Platform-curated eligible developments can capture development/unit-type enquiries without a linked developer account; private/ineligible records are rejected before persistence | Lead delivery/routing and referral handling remain downstream | Add destination, consent and commercial routing authority in later lead/demand work |
+| `CanonicalDevelopmentCatalogue` | Raw development row treated as a complete public object | `brand → development → unitTypes` catalogue contract | Added shared type contract; current state remains on `developments`, approval history remains in `developmentApprovalQueue` | Existing service return shapes remain compatible projections | Refine when S3/S4 introduce typed discovery/workspace projections |
 
 S0 does not change the database schema or execute database mutations.
