@@ -210,7 +210,7 @@ const ListingWizard: React.FC = () => {
 
       // Set location
       store.setLocation({
-        address: listing.address,
+        address: listing.address || '',
         latitude: Number(listing.latitude),
         longitude: Number(listing.longitude),
         city: listing.city,
@@ -218,6 +218,13 @@ const ListingWizard: React.FC = () => {
         province: listing.province,
         postalCode: listing.postalCode || '',
         placeId: listing.placeId || '',
+        provinceId: listing.provinceId ?? null,
+        cityId: listing.cityId ?? null,
+        suburbId: listing.suburbId ?? null,
+        privateAddress: listing.privateAddress || null,
+        coordinateSource: listing.coordinateSource || null,
+        locationConfirmationState: listing.locationConfirmationState || 'needs_confirmation',
+        publicLocationPrecision: listing.publicLocationPrecision || 'approximate',
       });
 
       // Set media
@@ -606,6 +613,7 @@ const ListingWizard: React.FC = () => {
     // Map store to listing object expected by readiness calculator
     const listingCandidate = {
       action: store.action,
+      location: store.location,
       address: store.location?.address,
       latitude: store.location?.latitude,
       longitude: store.location?.longitude,

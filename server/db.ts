@@ -55,6 +55,9 @@ import {
   exploreEngagements,
   exploreFeedSessions,
   locations,
+  provinces,
+  cities,
+  suburbs,
   partners,
   explorePartners,
   auditLogs,
@@ -80,6 +83,7 @@ import {
   getPrimaryPrice,
   validatePricingContract,
 } from '../shared/pricing-contract';
+import { validateListingRecordLocation } from './services/listingLocationResolver';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -699,10 +703,10 @@ export async function searchProperties(params: PropertySearchParams) {
   if (params.minLat && params.maxLat && params.minLng && params.maxLng) {
     conditions.push(
       and(
-        gte(sql`CAST(${properties.latitude} AS DECIMAL)`, params.minLat),
-        lte(sql`CAST(${properties.latitude} AS DECIMAL)`, params.maxLat),
-        gte(sql`CAST(${properties.longitude} AS DECIMAL)`, params.minLng),
-        lte(sql`CAST(${properties.longitude} AS DECIMAL)`, params.maxLng),
+        gte(sql`CAST(${properties.publicLatitude} AS DECIMAL)`, params.minLat),
+        lte(sql`CAST(${properties.publicLatitude} AS DECIMAL)`, params.maxLat),
+        gte(sql`CAST(${properties.publicLongitude} AS DECIMAL)`, params.minLng),
+        lte(sql`CAST(${properties.publicLongitude} AS DECIMAL)`, params.maxLng),
       )!,
     );
   }
@@ -743,12 +747,12 @@ export async function searchProperties(params: PropertySearchParams) {
   // Bounds filter
   if (params.minLat !== undefined && params.maxLat !== undefined) {
     conditions.push(
-      sql`CAST(${properties.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`,
+      sql`CAST(${properties.publicLatitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.publicLatitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`,
     );
   }
   if (params.minLng !== undefined && params.maxLng !== undefined) {
     conditions.push(
-      sql`CAST(${properties.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`,
+      sql`CAST(${properties.publicLongitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.publicLongitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`,
     );
   }
 
@@ -2192,11 +2196,18 @@ export async function createListing(
         auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl || null,
 
         propertyDetails: listingData.propertyDetails, // Drizzle handles JSON
-        address: listingData.address,
+        address: listingData.address || null,
         latitude: Number(listingData.latitude).toFixed(7),
         longitude: Number(listingData.longitude).toFixed(7),
         city: listingData.city,
         province: listingData.province,
+        provinceId: listingData.provinceId ?? null,
+        cityId: listingData.cityId ?? null,
+        suburbId: listingData.suburbId ?? null,
+        privateAddress: listingData.privateAddress ?? null,
+        coordinateSource: listingData.coordinateSource ?? null,
+        locationConfirmationState: listingData.locationConfirmationState ?? 'needs_confirmation',
+        publicLocationPrecision: listingData.publicLocationPrecision ?? 'approximate',
 
         // Failsafe: Ensure slug is unique
         slug: listingData.slug.match(/-ts-[a-z0-9]+$/)
@@ -2209,8 +2220,8 @@ export async function createListing(
       };
 
       // Add optional fields only if they exist
-      if (listingData.suburb) insertValues.suburb = listingData.suburb;
-      if (listingData.postalCode) insertValues.postalCode = listingData.postalCode;
+      if (listingData.suburb !== undefined) insertValues.suburb = listingData.suburb || null;
+      if (listingData.postalCode !== undefined) insertValues.postalCode = listingData.postalCode || null;
       if (listingData.placeId) insertValues.placeId = listingData.placeId;
       if (listingData.locationId) insertValues.locationId = listingData.locationId;
 
@@ -2568,6 +2579,10 @@ export async function submitListingForReview(listingId: number) {
 
   const listing = await getListingById(listingId);
   if (!listing) throw new Error('Listing not found');
+  const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
+  if (locationIssues.length > 0) {
+    throw new Error(locationIssues.join(' '));
+  }
   const pricingIssues = validatePricingContract(
     String((transitionListing as any).action),
     (listing as any)?.pricing,
@@ -2842,6 +2857,61 @@ export async function getApprovalQueue(status?: string) {
   return await query.orderBy(desc(listingApprovalQueue.submittedAt));
 }
 
+function finiteCoordinate(value: unknown): string | null {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(7) : null;
+}
+
+async function buildPublicLocationProjection(database: any, listing: any) {
+  const precision = listing.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
+  const areaLabel = [listing.suburb, listing.city, listing.province]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .join(', ');
+
+  if (precision === 'exact') {
+    return {
+      publicAddress: listing.address || areaLabel || null,
+      publicLatitude: finiteCoordinate(listing.latitude),
+      publicLongitude: finiteCoordinate(listing.longitude),
+      publicLocationPrecision: 'exact' as const,
+    };
+  }
+
+  let center: { latitude: string | null; longitude: string | null } | null = null;
+  if (listing.suburbId) {
+    const [suburb] = await database
+      .select({ latitude: suburbs.latitude, longitude: suburbs.longitude })
+      .from(suburbs)
+      .where(eq(suburbs.id, Number(listing.suburbId)))
+      .limit(1);
+    center = suburb || null;
+  }
+  if (!center && listing.cityId) {
+    const [city] = await database
+      .select({ latitude: cities.latitude, longitude: cities.longitude })
+      .from(cities)
+      .where(eq(cities.id, Number(listing.cityId)))
+      .limit(1);
+    center = city || null;
+  }
+  if (!center && listing.provinceId) {
+    const [province] = await database
+      .select({ latitude: provinces.latitude, longitude: provinces.longitude })
+      .from(provinces)
+      .where(eq(provinces.id, Number(listing.provinceId)))
+      .limit(1);
+    center = province || null;
+  }
+
+  return {
+    publicAddress: areaLabel || null,
+    publicLatitude: finiteCoordinate(center?.latitude),
+    publicLongitude: finiteCoordinate(center?.longitude),
+    publicLocationPrecision: 'approximate' as const,
+  };
+}
+
 /**
  * Approve listing
  */
@@ -2888,6 +2958,10 @@ export async function approveListing(
   if (pricingIssues.length > 0) {
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
   }
+  const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
+  if (locationIssues.length > 0) {
+    throw new Error(locationIssues.join(' '));
+  }
 
   // A revision is a private listing-engine draft. Approval applies its public fields to
   // the original canonical listing/projection; the revision itself never becomes public.
@@ -2914,6 +2988,7 @@ export async function approveListing(
         : {}),
     };
     const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const approvedLocationProjection = await buildPublicLocationProjection(db, listing);
     await db.update(listings).set({
       askingPrice: (listing as any).askingPrice,
       negotiable: (listing as any).negotiable,
@@ -2927,6 +3002,21 @@ export async function approveListing(
       reservePrice: (listing as any).reservePrice,
       auctionDateTime: (listing as any).auctionDateTime,
       auctionTermsDocumentUrl: (listing as any).auctionTermsDocumentUrl,
+      address: (listing as any).address,
+      latitude: (listing as any).latitude,
+      longitude: (listing as any).longitude,
+      city: (listing as any).city,
+      suburb: (listing as any).suburb,
+      province: (listing as any).province,
+      postalCode: (listing as any).postalCode,
+      placeId: (listing as any).placeId,
+      provinceId: (listing as any).provinceId,
+      cityId: (listing as any).cityId,
+      suburbId: (listing as any).suburbId,
+      privateAddress: (listing as any).privateAddress,
+      coordinateSource: (listing as any).coordinateSource,
+      locationConfirmationState: (listing as any).locationConfirmationState,
+      publicLocationPrecision: (listing as any).publicLocationPrecision,
       propertyDetails: approvedPropertyDetails,
       title: listing.title, description: listing.description, updatedAt: approvedAt,
     } as any).where(eq(listings.id, originalListingId));
@@ -2937,6 +3027,18 @@ export async function approveListing(
       propertySettings: JSON.stringify(approvedPropertyDetails),
       levies: approvedPricingProjection.legacyLevy,
       ratesAndTaxes: approvedPricingProjection.ratesAndTaxes,
+      address: approvedLocationProjection.publicAddress || 'Location available on enquiry',
+      latitude: approvedLocationProjection.publicLatitude,
+      longitude: approvedLocationProjection.publicLongitude,
+      publicAddress: approvedLocationProjection.publicAddress,
+      publicLatitude: approvedLocationProjection.publicLatitude,
+      publicLongitude: approvedLocationProjection.publicLongitude,
+      publicLocationPrecision: approvedLocationProjection.publicLocationPrecision,
+      provinceId: (listing as any).provinceId,
+      cityId: (listing as any).cityId,
+      suburbId: (listing as any).suburbId,
+      locationText: approvedLocationProjection.publicAddress || 'Location available on enquiry',
+      placeId: null,
       updatedAt: approvedAt,
     } as any)
       .where(and(eq(properties.sourceListingId, originalListingId), isNotNull(properties.sourceListingId)));
@@ -3016,6 +3118,7 @@ export async function approveListing(
   // Re-evaluate immediately before the first public write. This is defence in
   // depth for entitlement changes between review and projection.
   await assertListingPublicationEntitled(db, { listingId, operation: 'public_projection' });
+  const publicLocationProjection = await buildPublicLocationProjection(db, listing);
 
   const propertyValues: any = {
     title: listing.title,
@@ -3032,14 +3135,22 @@ export async function approveListing(
     internalAreaM2,
     erfSizeM2,
     landAreaM2,
-    address: listing.address,
+    address: publicLocationProjection.publicAddress || 'Location available on enquiry',
     city: listing.city,
     province: listing.province,
     zipCode: listing.postalCode,
-    latitude: String(listing.latitude),
-    longitude: String(listing.longitude),
-    locationText: `${listing.city}, ${listing.province}`,
-    placeId: listing.placeId,
+    latitude: publicLocationProjection.publicLatitude,
+    longitude: publicLocationProjection.publicLongitude,
+    provinceId: listing.provinceId,
+    cityId: listing.cityId,
+    suburbId: listing.suburbId,
+    publicAddress: publicLocationProjection.publicAddress,
+    publicLatitude: publicLocationProjection.publicLatitude,
+    publicLongitude: publicLocationProjection.publicLongitude,
+    publicLocationPrecision: publicLocationProjection.publicLocationPrecision,
+    locationText: publicLocationProjection.publicAddress || `${listing.city}, ${listing.province}`,
+    // Provider IDs are authoring evidence, never a public location authority.
+    placeId: null,
     amenities: amenitiesString,
     status: 'available' as any,
     featured: listing.featured || 0,
@@ -3364,6 +3475,11 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     ...featuresContext.spaces,
     ...featuresContext.security.features,
   ];
+  const exactPublicLocation = listing.publicLocationPrecision === 'exact';
+  const publicAreaLabel = [listing.suburb, listing.city, listing.province]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .join(', ');
 
   return {
     id: listing.id,
@@ -3423,10 +3539,15 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     // Location fields
     city: listing.city,
     province: listing.province,
-    address: listing.streetAddress,
+    suburb: listing.suburb,
+    address: exactPublicLocation ? listing.address || publicAreaLabel : publicAreaLabel,
     zipCode: listing.postalCode,
-    latitude: listing.latitude,
-    longitude: listing.longitude,
+    latitude: exactPublicLocation ? listing.latitude : null,
+    longitude: exactPublicLocation ? listing.longitude : null,
+    provinceId: listing.provinceId ?? null,
+    cityId: listing.cityId ?? null,
+    suburbId: listing.suburbId ?? null,
+    publicLocationPrecision: exactPublicLocation ? 'exact' : 'approximate',
     // Media
     // Media - prepend CDN URL if stored as path
     images: media

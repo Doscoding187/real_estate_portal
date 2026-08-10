@@ -8,6 +8,7 @@ import {
   LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
 } from '../../../shared/features-context';
 import { buildPricingContract } from '../../../shared/pricing-contract';
+import { buildListingLocationAuthoringPayload } from '../../../shared/location-contract';
 
 export type ListingWizardSubmitPayload = inferRouterInputs<AppRouter>['listing']['create'];
 
@@ -191,7 +192,7 @@ export const buildListingWizardSubmitPayload = (
     description: state.description,
     pricing,
     propertyDetails: buildSubmittedPropertyDetails(state, pricing),
-    location: state.location!,
+    location: buildListingLocationAuthoringPayload(state.location)!,
     mediaIds,
     mainMediaId,
     media,

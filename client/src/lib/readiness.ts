@@ -18,11 +18,25 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   let score = 0;
 
   // 1. Location (20%)
-  if (listing.address && listing.latitude && listing.longitude) {
+  const authoredLocation = listing.location || listing;
+  const hasCoordinates =
+    Number.isFinite(Number(authoredLocation.latitude)) &&
+    Number.isFinite(Number(authoredLocation.longitude)) &&
+    !(Number(authoredLocation.latitude) === 0 && Number(authoredLocation.longitude) === 0);
+  const hasCanonicalLocation =
+    Number(authoredLocation.provinceId) > 0 &&
+    Number(authoredLocation.cityId) > 0 &&
+    authoredLocation.locationConfirmationState === 'confirmed' &&
+    hasCoordinates;
+  const hasLegacyLocation = Boolean(authoredLocation.address) && hasCoordinates;
+  if (hasCanonicalLocation || hasLegacyLocation) {
     score += 20;
   } else {
-    if (!listing.address) missing.location.push('Address');
-    if (!listing.latitude || !listing.longitude) missing.location.push('Map Location');
+    if (!authoredLocation.city || !authoredLocation.province) missing.location.push('Area');
+    if (!hasCoordinates) missing.location.push('Map Location');
+    if (hasCoordinates && authoredLocation.locationConfirmationState !== 'confirmed') {
+      missing.location.push('Confirm Location');
+    }
   }
 
   // 2. Pricing (20%)

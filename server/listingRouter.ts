@@ -12,9 +12,10 @@ import { agents, leads, locations, properties } from '../drizzle/schema';
 import * as db from './db';
 import { ENV } from './_core/env';
 import {
-  autoCreateLocationHierarchy,
-  extractPlaceComponents,
-} from './services/locationAutoPopulation';
+  ListingLocationResolutionError,
+  resolveCanonicalListingLocation,
+  validateListingRecordLocation,
+} from './services/listingLocationResolver';
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
 import { requireUser } from './_core/requireUser';
@@ -44,6 +45,13 @@ import {
   getPrimaryPrice,
   validatePricingContract,
 } from '../shared/pricing-contract';
+import {
+  coordinatePairSchema,
+  LOCATION_CONFIRMATION_STATES,
+  LOCATION_COORDINATE_SOURCES,
+  PUBLIC_LOCATION_PRECISIONS,
+  privateAddressSchema,
+} from '../shared/location-contract';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -243,15 +251,24 @@ const createListingSchemaBase = z.object({
   }),
   propertyDetails: z.record(z.string(), z.any()),
   location: z.object({
-    address: z.string(),
-    latitude: z.number(),
-    longitude: z.number(),
-    city: z.string(),
-    suburb: z.string().optional(),
-    province: z.string(),
-    postalCode: z.string().optional(),
+    address: z.string().max(500),
+    latitude: z.number().finite(),
+    longitude: z.number().finite(),
+    city: z.string().max(150),
+    suburb: z.string().max(200).optional(),
+    province: z.string().max(100),
+    postalCode: z.string().max(20).optional(),
     placeId: z.string().optional(),
     locationId: z.number().optional(), // Added for internal Location ID support
+    providerLocationPlaceId: z.string().max(255).optional(),
+    provider: z.string().max(32).optional(),
+    provinceId: z.number().int().positive().nullable().optional(),
+    cityId: z.number().int().positive().nullable().optional(),
+    suburbId: z.number().int().positive().nullable().optional(),
+    privateAddress: privateAddressSchema.nullable().optional(),
+    coordinateSource: z.enum(LOCATION_COORDINATE_SOURCES).nullable().optional(),
+    locationConfirmationState: z.enum(LOCATION_CONFIRMATION_STATES).optional(),
+    publicLocationPrecision: z.enum(PUBLIC_LOCATION_PRECISIONS).optional(),
     // Google Places address components for auto-population
     addressComponents: z
       .array(
@@ -382,58 +399,70 @@ export const listingRouter = router({
             orientation: null,
           }));
 
-      // Auto-create location hierarchy from Google Places data
-      // This auto-populates cities and suburbs as agents add properties!
-      let provinceId: number | null = null;
-      let cityId: number | null = null;
-      let suburbId: number | null = null;
-
-      if (input.location.placeId && input.location.addressComponents) {
-        try {
-          console.log('[ListingRouter] Auto-populating location from Google Places...');
-
-          // Extract components from Google Places data
-          const components = extractPlaceComponents(input.location.addressComponents);
-
-          // Auto-create city/suburb if they don't exist
-          const locationIds = await autoCreateLocationHierarchy({
-            placeId: input.location.placeId,
-            formattedAddress: input.location.address,
+      let resolvedLocation;
+      try {
+        resolvedLocation = await resolveCanonicalListingLocation({
+          ...input.location,
+          address: input.location.address || null,
+          providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+          provider: input.location.provider || null,
+          privateAddress: input.location.privateAddress || null,
+          locationConfirmationState: input.location.locationConfirmationState,
+          publicLocationPrecision: input.location.publicLocationPrecision,
+        });
+      } catch (error) {
+        if (error instanceof ListingLocationResolutionError) {
+          if (input.status !== 'pending_review') {
+            const coordinateResult = coordinatePairSchema.safeParse({
+              latitude: input.location.latitude,
+              longitude: input.location.longitude,
+            });
+            if (!coordinateResult.success) {
+              throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: coordinateResult.error.issues[0]?.message || error.message,
+              });
+            }
+            console.warn('[ListingRouter] Draft location remains unresolved:', error.message);
+            resolvedLocation = {
+              provinceId: null,
+              cityId: null,
+              suburbId: null,
+              privateAddress: input.location.privateAddress || null,
+              coordinatePair: coordinateResult.data,
+              coordinateSource: input.location.coordinateSource || null,
+              locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+              publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+              providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+            };
+          } else {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+          }
+        } else if (input.status !== 'pending_review') {
+          const coordinateResult = coordinatePairSchema.safeParse({
             latitude: input.location.latitude,
             longitude: input.location.longitude,
-            components,
           });
-
-          provinceId = locationIds.provinceId;
-          cityId = locationIds.cityId;
-          suburbId = locationIds.suburbId;
-
-          console.log('[ListingRouter] ✅ Auto-populated:', {
-            provinceId,
-            cityId,
-            suburbId,
-          });
-        } catch (error) {
-          console.error('[ListingRouter] Auto-population failed:', error);
-        }
-      }
-
-      // Fallback: Try legacy location resolution (for logging only)
-      if (!cityId && !input.location.locationId) {
-        try {
-          const { locationPagesServiceEnhanced } =
-            await import('./services/locationPagesServiceEnhanced');
-          const location = await locationPagesServiceEnhanced.resolveLocation(input.location);
-          console.log(
-            '[ListingRouter] Fallback: Resolved location:',
-            location.name,
-            `(ID: ${location.id})`,
-          );
-        } catch (error) {
-          console.warn(
-            '[ListingRouter] Location resolution failed, proceeding without location reference:',
-            error,
-          );
+          if (!coordinateResult.success) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: coordinateResult.error.issues[0]?.message || 'Enter a valid property map location.',
+            });
+          }
+          console.warn('[ListingRouter] Draft location resolver unavailable:', error);
+          resolvedLocation = {
+            provinceId: null,
+            cityId: null,
+            suburbId: null,
+            privateAddress: input.location.privateAddress || null,
+            coordinatePair: coordinateResult.data,
+            coordinateSource: input.location.coordinateSource || null,
+            locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+            publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+            providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+          };
+        } else {
+          throw error;
         }
       }
 
@@ -464,9 +493,13 @@ export const listingRouter = router({
         postalCode: input.location.postalCode,
         placeId: sanitizedPlaceId,
         locationId: resolvedLocationId, // New: Direct location_id if from numeric placeId
-        provinceId, // New: Auto-populated province ID
-        cityId, // New: Auto-populated city ID
-        suburbId, // New: Auto-populated suburb ID
+        provinceId: resolvedLocation.provinceId,
+        cityId: resolvedLocation.cityId,
+        suburbId: resolvedLocation.suburbId,
+        privateAddress: resolvedLocation.privateAddress,
+        coordinateSource: resolvedLocation.coordinateSource,
+        locationConfirmationState: resolvedLocation.locationConfirmationState,
+        publicLocationPrecision: resolvedLocation.publicLocationPrecision,
         slug,
         media,
         sellerProspectConversion,
@@ -628,12 +661,112 @@ export const listingRouter = router({
         }
 
         if (input.location) {
+          let resolvedLocation;
+          try {
+            resolvedLocation = await resolveCanonicalListingLocation({
+              ...input.location,
+              address: input.location.address || null,
+              providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+              provider: input.location.provider || null,
+              privateAddress: input.location.privateAddress || null,
+            });
+          } catch (error) {
+            if (error instanceof ListingLocationResolutionError) {
+              if (listing.status !== 'draft') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+              }
+              const coordinateResult = coordinatePairSchema.safeParse({
+                latitude: input.location.latitude,
+                longitude: input.location.longitude,
+              });
+              if (!coordinateResult.success) {
+                throw new TRPCError({
+                  code: 'BAD_REQUEST',
+                  message: coordinateResult.error.issues[0]?.message || error.message,
+                });
+              }
+              console.warn('[ListingRouter] Draft location remains unresolved during update:', error.message);
+              resolvedLocation = {
+                provinceId: null,
+                cityId: null,
+                suburbId: null,
+                privateAddress: input.location.privateAddress || null,
+                coordinatePair: coordinateResult.data,
+                coordinateSource: input.location.coordinateSource || null,
+                locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+                publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+                providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+              };
+            } else if (listing.status !== 'draft') {
+              throw error;
+            } else {
+              const coordinateResult = coordinatePairSchema.safeParse({
+                latitude: input.location.latitude,
+                longitude: input.location.longitude,
+              });
+              if (!coordinateResult.success) {
+                throw new TRPCError({
+                  code: 'BAD_REQUEST',
+                  message: coordinateResult.error.issues[0]?.message || 'Enter a valid property map location.',
+                });
+              }
+              console.warn('[ListingRouter] Draft location resolver unavailable during update:', error);
+              resolvedLocation = {
+                provinceId: null,
+                cityId: null,
+                suburbId: null,
+                privateAddress: input.location.privateAddress || null,
+                coordinatePair: coordinateResult.data,
+                coordinateSource: input.location.coordinateSource || null,
+                locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+                publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+                providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+              };
+            }
+          }
+
           const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(
             input.location,
           );
+          const materialLocationChange = [
+            ['address', input.location.address, listing.address],
+            ['city', input.location.city, listing.city],
+            ['suburb', input.location.suburb, listing.suburb],
+            ['province', input.location.province, listing.province],
+            ['postalCode', input.location.postalCode, listing.postalCode],
+            ['latitude', input.location.latitude, listing.latitude],
+            ['longitude', input.location.longitude, listing.longitude],
+          ].some(([, next, previous]) => String(next ?? '') !== String(previous ?? ''));
+          const explicitlyReconfirmed =
+            input.location.locationConfirmationState === 'confirmed' &&
+            Boolean(input.location.coordinateSource);
+          const requiresReconfirmation =
+            listing.locationConfirmationState === 'confirmed' &&
+            materialLocationChange &&
+            !explicitlyReconfirmed;
+
+          updatePayload.address = input.location.address || null;
+          updatePayload.latitude = Number(input.location.latitude).toFixed(7);
+          updatePayload.longitude = Number(input.location.longitude).toFixed(7);
+          updatePayload.city = input.location.city;
+          updatePayload.suburb = input.location.suburb || null;
+          updatePayload.province = input.location.province;
+          updatePayload.postalCode = input.location.postalCode || null;
           updatePayload.placeId = sanitizedPlaceId;
           updatePayload.locationId = resolvedLocationId;
-          // Remove nested location object strictly to avoid Drizzle schema errors
+          updatePayload.provinceId = resolvedLocation.provinceId;
+          updatePayload.cityId = resolvedLocation.cityId;
+          updatePayload.suburbId = resolvedLocation.suburbId;
+          updatePayload.privateAddress = resolvedLocation.privateAddress;
+          updatePayload.coordinateSource = requiresReconfirmation
+            ? null
+            : resolvedLocation.coordinateSource;
+          updatePayload.locationConfirmationState = requiresReconfirmation
+            ? 'needs_confirmation'
+            : resolvedLocation.locationConfirmationState;
+          updatePayload.publicLocationPrecision = resolvedLocation.publicLocationPrecision;
+
+          // Remove nested location object strictly to avoid Drizzle schema errors.
           delete updatePayload.location;
         }
 
@@ -1227,6 +1360,15 @@ export const listingRouter = router({
         const media = await db.getListingMedia(input.listingId);
 
         if (fullListing.action === 'sell' || fullListing.action === 'rent') {
+          const locationIssues = validateListingRecordLocation(fullListing as Record<string, unknown>);
+          if (locationIssues.length > 0) {
+            const message = locationIssues.join(' ');
+            await recordSubmitFailure('invalid_location', message, {
+              fields: ['location'],
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
           const pricingIssues = validatePricingContract(
             fullListing.action,
             fullListing.pricing as Record<string, unknown>,

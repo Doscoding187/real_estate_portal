@@ -1136,6 +1136,24 @@ const appRouterConfig = {
           (property as any).mainImage ||
           '';
 
+        const publicSuburb =
+          (property as any).suburb || (publicLinkedListing as any)?.suburb || undefined;
+        const publicAreaAddress = [
+          publicSuburb,
+          (property as any).city || (publicLinkedListing as any)?.city,
+          (property as any).province || (publicLinkedListing as any)?.province,
+        ]
+          .map(value => String(value || '').trim())
+          .filter(Boolean)
+          .join(', ');
+        const publicAddress =
+          (property as any).publicAddress ||
+          (publicLinkedListing ? publicAreaAddress : (property as any).address);
+        const publicLatitude = (property as any).publicLatitude ??
+          (publicLinkedListing ? null : (property as any).latitude);
+        const publicLongitude = (property as any).publicLongitude ??
+          (publicLinkedListing ? null : (property as any).longitude);
+
         return {
           property: {
             ...property,
@@ -1168,12 +1186,15 @@ const appRouterConfig = {
             city: (publicLinkedListing as any)?.city || (property as any).city || undefined,
             province:
               (publicLinkedListing as any)?.province || (property as any).province || undefined,
-            address:
-              (publicLinkedListing as any)?.address || (property as any).address || undefined,
+            address: publicAddress || undefined,
             zipCode:
               (publicLinkedListing as any)?.postalCode || (property as any).zipCode || undefined,
-            latitude: (publicLinkedListing as any)?.latitude || (property as any).latitude,
-            longitude: (publicLinkedListing as any)?.longitude || (property as any).longitude,
+            latitude: publicLatitude,
+            longitude: publicLongitude,
+            publicAddress: publicAddress || null,
+            publicLatitude,
+            publicLongitude,
+            publicLocationPrecision: (property as any).publicLocationPrecision || 'approximate',
             amenities: uniqueAmenities.length > 0 ? uniqueAmenities : linkedAmenities,
             features: linkedPropertyDetails.propertyHighlights || linkedAmenities,
             propertySettings: normalizedPropertySettings,

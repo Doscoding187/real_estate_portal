@@ -27,6 +27,7 @@ import {
   buildFeaturesContextFromWizardState,
 } from '../../../shared/features-context';
 import { validatePricingContract } from '../../../shared/pricing-contract';
+import { coordinatePairSchema } from '../../../shared/location-contract';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
@@ -182,13 +183,18 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
     }
     case 6: {
       const location = state.location;
+      const coordinates = location
+        ? coordinatePairSchema.safeParse({
+            latitude: location.latitude,
+            longitude: location.longitude,
+          })
+        : null;
       return Boolean(
         location &&
-        location.address.trim() &&
         location.city.trim() &&
         location.province.trim() &&
-        Number.isFinite(location.latitude) &&
-        Number.isFinite(location.longitude),
+        location.locationConfirmationState === 'confirmed' &&
+        coordinates?.success,
       );
     }
     case 7:
@@ -377,7 +383,30 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Step 4: Location
       setLocation: location => {
-        set({ location });
+        const previous = get().location;
+        const materiallyChanged = previous
+          ? [
+              previous.address !== location.address,
+              previous.city !== location.city,
+              previous.suburb !== location.suburb,
+              previous.province !== location.province,
+              previous.postalCode !== location.postalCode,
+              previous.latitude !== location.latitude,
+              previous.longitude !== location.longitude,
+              previous.provinceId !== location.provinceId,
+              previous.cityId !== location.cityId,
+              previous.suburbId !== location.suburbId,
+            ].some(Boolean)
+          : false;
+        const nextLocation =
+          materiallyChanged && location.locationConfirmationState === undefined
+            ? {
+                ...location,
+                coordinateSource: null,
+                locationConfirmationState: 'needs_confirmation' as const,
+              }
+            : location;
+        set({ location: nextLocation });
         get().removeError('location');
       },
 

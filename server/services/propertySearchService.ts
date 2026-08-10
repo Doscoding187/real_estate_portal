@@ -441,7 +441,7 @@ export class PropertySearchService {
         description: properties.description,
         price: properties.price,
         suburb: sql<string>`COALESCE(NULLIF(${suburbs.name}, ''), NULLIF(${properties.city}, ''), '')`,
-        address: properties.address,
+        address: properties.publicAddress,
         city: properties.city,
         province: properties.province,
         propertyType: properties.propertyType,
@@ -475,8 +475,8 @@ export class PropertySearchService {
         videoCount: sql<number>`CASE WHEN ${properties.videoUrl} IS NOT NULL THEN 1 ELSE 0 END`,
         status: properties.status,
         listedDate: properties.createdAt,
-        latitude: sql<number>`CAST(${properties.latitude} AS DECIMAL(10,8))`,
-        longitude: sql<number>`CAST(${properties.longitude} AS DECIMAL(11,8))`,
+        latitude: sql<number>`CAST(${properties.publicLatitude} AS DECIMAL(10,8))`,
+        longitude: sql<number>`CAST(${properties.publicLongitude} AS DECIMAL(11,8))`,
         highlights: properties.amenities,
         amenities: properties.amenities,
         mainImage: properties.mainImage,
@@ -974,7 +974,7 @@ export class PropertySearchService {
       }
       if (filters.suburb && filters.suburb.length > 0) {
         const suburbConditions = filters.suburb.map(
-          suburb => sql`LOWER(${properties.address}) LIKE LOWER(${`%${suburb}%`})`,
+          suburb => sql`LOWER(${properties.publicAddress}) LIKE LOWER(${`%${suburb}%`})`,
         );
         locationConditions.push(or(...suburbConditions)!);
       }
@@ -993,7 +993,7 @@ export class PropertySearchService {
         const textParams = slug.replace(/-/g, ' ');
         return or(
           sql`LOWER(${properties.city}) LIKE LOWER(${`%${textParams}%`})`,
-          sql`LOWER(${properties.address}) LIKE LOWER(${`%${textParams}%`})`,
+          sql`LOWER(${properties.publicAddress}) LIKE LOWER(${`%${textParams}%`})`,
         );
       });
       locationConditions.push(or(...multiTextConditions)!);
@@ -1125,10 +1125,10 @@ export class PropertySearchService {
     if (filters.bounds) {
       conditions.push(
         and(
-          sql`CAST(${properties.latitude} AS DECIMAL(10,8)) >= ${filters.bounds.south}`,
-          sql`CAST(${properties.latitude} AS DECIMAL(10,8)) <= ${filters.bounds.north}`,
-          sql`CAST(${properties.longitude} AS DECIMAL(11,8)) >= ${filters.bounds.west}`,
-          sql`CAST(${properties.longitude} AS DECIMAL(11,8)) <= ${filters.bounds.east}`,
+          sql`CAST(${properties.publicLatitude} AS DECIMAL(10,8)) >= ${filters.bounds.south}`,
+          sql`CAST(${properties.publicLatitude} AS DECIMAL(10,8)) <= ${filters.bounds.north}`,
+          sql`CAST(${properties.publicLongitude} AS DECIMAL(11,8)) >= ${filters.bounds.west}`,
+          sql`CAST(${properties.publicLongitude} AS DECIMAL(11,8)) <= ${filters.bounds.east}`,
         )!,
       );
     }
@@ -1151,9 +1151,9 @@ export class PropertySearchService {
       case 'date_asc':
         return asc(properties.createdAt);
       case 'suburb_asc':
-        return asc(properties.address);
+        return asc(properties.publicAddress);
       case 'suburb_desc':
-        return desc(properties.address);
+        return desc(properties.publicAddress);
       default:
         return desc(properties.createdAt);
     }

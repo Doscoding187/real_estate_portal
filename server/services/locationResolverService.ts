@@ -12,7 +12,7 @@
  */
 
 import { getDb } from '../db-connection';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, ne, sql } from 'drizzle-orm';
 import { provinces, cities, suburbs } from '../../drizzle/schema';
 import { parseCanonicalLocationId } from '../../shared/locationAuthority';
 
@@ -101,7 +101,7 @@ export class LocationResolverService {
       const [row] = await db
         .select({ id: provinces.id, name: provinces.name, slug: provinces.slug, code: provinces.code })
         .from(provinces)
-        .where(eq(provinces.id, id))
+        .where(and(eq(provinces.id, id), ne(provinces.status, 'retired')))
         .limit(1);
       return row
         ? {
@@ -117,7 +117,7 @@ export class LocationResolverService {
       const [row] = await db
         .select({ id: provinces.id, name: provinces.name, slug: provinces.slug, code: provinces.code })
         .from(provinces)
-        .where(sql`LOWER(${provinces.slug}) = LOWER(${slug})`)
+        .where(and(sql`LOWER(${provinces.slug}) = LOWER(${slug})`, ne(provinces.status, 'retired')))
         .limit(1);
       return row
         ? {
@@ -140,7 +140,7 @@ export class LocationResolverService {
           longitude: cities.longitude,
         })
         .from(cities)
-        .where(eq(cities.id, id))
+        .where(and(eq(cities.id, id), ne(cities.status, 'retired')))
         .limit(1);
       return row
         ? {
@@ -167,8 +167,12 @@ export class LocationResolverService {
         .from(cities)
         .where(
           provinceId
-            ? and(sql`LOWER(${cities.slug}) = LOWER(${slug})`, eq(cities.provinceId, provinceId))
-            : sql`LOWER(${cities.slug}) = LOWER(${slug})`,
+            ? and(
+                sql`LOWER(${cities.slug}) = LOWER(${slug})`,
+                eq(cities.provinceId, provinceId),
+                ne(cities.status, 'retired'),
+              )
+            : and(sql`LOWER(${cities.slug}) = LOWER(${slug})`, ne(cities.status, 'retired')),
         )
         .limit(2);
 
@@ -197,7 +201,7 @@ export class LocationResolverService {
           longitude: suburbs.longitude,
         })
         .from(suburbs)
-        .where(eq(suburbs.id, id))
+        .where(and(eq(suburbs.id, id), ne(suburbs.status, 'retired')))
         .limit(1);
       return row
         ? {
@@ -212,7 +216,11 @@ export class LocationResolverService {
     };
 
     const findSuburbBySlug = async (slug: string, cityId?: number, provinceId?: number) => {
-      const suburbConditions = [sql`LOWER(${suburbs.slug}) = LOWER(${slug})`];
+      const suburbConditions = [
+        sql`LOWER(${suburbs.slug}) = LOWER(${slug})`,
+        ne(suburbs.status, 'retired'),
+        ne(cities.status, 'retired'),
+      ];
       if (cityId) suburbConditions.push(eq(suburbs.cityId, cityId));
       if (provinceId) suburbConditions.push(eq(cities.provinceId, provinceId));
 

@@ -146,4 +146,57 @@ describe('useListingWizardStore navigation contract', () => {
     expect(result.current.basicInfo).toBeUndefined();
     expect(result.current.badges).toEqual([]);
   });
+
+  it('requires a confirmed, non-zero map location before leaving Step 6', () => {
+    const { result } = renderHook(() => useListingWizardStore());
+
+    act(() => {
+      result.current.setLocation({
+        address: '',
+        latitude: -26.1076,
+        longitude: 28.0567,
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        locationConfirmationState: 'needs_confirmation',
+        coordinateSource: null,
+        publicLocationPrecision: 'approximate',
+      });
+    });
+    expect(result.current.canAdvanceFromStep(6)).toBe(false);
+
+    act(() => {
+      result.current.setLocation({
+        ...result.current.location!,
+        locationConfirmationState: 'confirmed',
+        coordinateSource: 'map',
+      });
+    });
+    expect(result.current.canAdvanceFromStep(6)).toBe(true);
+  });
+
+  it('invalidates confirmation when a location is edited without new pin evidence', () => {
+    const { result } = renderHook(() => useListingWizardStore());
+
+    act(() => {
+      result.current.setLocation({
+        address: '10 Alice Lane',
+        latitude: -26.1076,
+        longitude: 28.0567,
+        city: 'Johannesburg',
+        province: 'Gauteng',
+        locationConfirmationState: 'confirmed',
+        coordinateSource: 'autocomplete',
+        publicLocationPrecision: 'approximate',
+      });
+      result.current.setLocation({
+        ...result.current.location!,
+        city: 'Pretoria',
+        locationConfirmationState: undefined,
+        coordinateSource: undefined,
+      });
+    });
+
+    expect(result.current.location?.locationConfirmationState).toBe('needs_confirmation');
+    expect(result.current.location?.coordinateSource).toBeNull();
+  });
 });

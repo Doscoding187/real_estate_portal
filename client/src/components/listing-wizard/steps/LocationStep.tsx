@@ -9,10 +9,12 @@ import { useListingWizardStore } from '@/hooks/useListingWizard';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MapPin, AlertTriangle, Info, Loader2 } from 'lucide-react';
 import { LocationMapPicker, LocationData } from '@/components/location/LocationMapPicker';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 
 type AddressPrediction = {
   placeId: string;
@@ -26,6 +28,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   const [addressSearch, setAddressSearch] = useState(location?.address || '');
   const [addressPredictions, setAddressPredictions] = useState<AddressPrediction[]>([]);
   const [isFetchingPredictions, setIsFetchingPredictions] = useState(false);
+  const resolveLocationMutation = trpc.location.resolveForAuthoring.useMutation();
 
   useEffect(() => {
     setAddressSearch(location?.address || addressHint || '');
@@ -50,9 +53,34 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     };
   }, []);
 
+  const applyConfirmedLocation = useCallback(
+    (nextLocation: any) => {
+      setLocation(nextLocation);
+      void resolveLocationMutation
+        .mutateAsync(nextLocation)
+        .then(resolved => {
+          setLocation({
+            ...nextLocation,
+            provinceId: resolved.provinceId,
+            cityId: resolved.cityId,
+            suburbId: resolved.suburbId,
+            privateAddress: resolved.privateAddress,
+            coordinateSource: resolved.coordinateSource,
+            locationConfirmationState: resolved.locationConfirmationState,
+            publicLocationPrecision: resolved.publicLocationPrecision,
+          });
+        })
+        .catch(() => {
+          // The server repeats resolution at create/update. A provider outage
+          // must not erase a valid manually confirmed map selection.
+        });
+    },
+    [resolveLocationMutation, setLocation],
+  );
+
   const handleLocationSelect = useCallback(
     (locationData: LocationData) => {
-      setLocation({
+      applyConfirmedLocation({
         address: locationData.address || locationData.formattedAddress || '',
         latitude: locationData.latitude,
         longitude: locationData.longitude,
@@ -61,15 +89,18 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         province: locationData.province || location?.province || '',
         postalCode: locationData.postalCode || location?.postalCode || '',
         placeId: (locationData as any).placeId || (location as any)?.placeId || '',
+        coordinateSource: locationData.coordinateSource || 'map',
+        locationConfirmationState: 'confirmed',
+        publicLocationPrecision: location?.publicLocationPrecision || 'approximate',
         addressComponents: (locationData as any).addressComponents || [],
-      } as any);
+      });
       setAddressSearch(locationData.address || locationData.formattedAddress || '');
       setAddressPredictions([]);
       setManualOverride(false);
       setGeocodingError(null);
       toast.success('Location synced from map selection');
     },
-    [setLocation, location],
+    [applyConfirmedLocation, location],
   );
 
   const handleGeocodingError = useCallback((error: string) => {
@@ -79,7 +110,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   const handleManualEdit = useCallback(() => {
     setManualOverride(prev => {
       if (!prev) {
-        toast.info('Manual mode enabled. Select an address suggestion to sync pin and address.');
+        toast.info('Manual mode enabled. Confirm the pin again after changing the address.');
       }
       return true;
     });
@@ -144,7 +175,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
           const longitude = place.geometry.location.lng();
           const parts = extractAddressParts(place.address_components);
 
-          setLocation({
+          applyConfirmedLocation({
             address: parts.address || place.formatted_address || prediction.description,
             latitude,
             longitude,
@@ -153,12 +184,15 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
             province: parts.province || location?.province || '',
             postalCode: parts.postalCode || location?.postalCode || '',
             placeId: place.place_id || prediction.placeId,
+            coordinateSource: 'autocomplete',
+            locationConfirmationState: 'confirmed',
+            publicLocationPrecision: location?.publicLocationPrecision || 'approximate',
             addressComponents: place.address_components.map(component => ({
               long_name: component.long_name,
               short_name: component.short_name,
               types: component.types,
             })),
-          } as any);
+          });
 
           setAddressSearch(parts.address || place.formatted_address || prediction.description);
           setAddressPredictions([]);
@@ -168,7 +202,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         },
       );
     },
-    [extractAddressParts, location, setLocation],
+    [applyConfirmedLocation, extractAddressParts, location],
   );
 
   // Handle manual address field changes
@@ -179,7 +213,12 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       fetchAddressPredictions(value);
     }
     if (location) {
-      const newLocation = { ...location, [field]: value };
+      const newLocation = {
+        ...location,
+        [field]: value,
+        coordinateSource: null,
+        locationConfirmationState: 'needs_confirmation' as const,
+      };
       setLocation(newLocation);
     } else {
       // Initialize location object if it doesn't exist
@@ -190,6 +229,8 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         city: '',
         province: '',
         [field]: value,
+        coordinateSource: null,
+        locationConfirmationState: 'needs_confirmation' as const,
       } as any;
       setLocation(newLocation);
     }
@@ -224,13 +265,53 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         <div className="flex items-start gap-2 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
           <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <p>
-            Address fields are auto-populated when you select a location. You can edit them manually
-            if needed. Seller-prospect address hints still require map confirmation before use.
+            Search an address, enter the area manually, or drop a pin. The map confirms the physical
+            location; a street address is optional for farms, smallholdings and new sites.
           </p>
         </div>
 
+        <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div>
+            <Label>What should prospects see?</Label>
+            <p className="mt-1 text-sm text-slate-600">
+              We keep the exact pin private by default and show the surrounding area instead.
+            </p>
+          </div>
+          <RadioGroup
+            value={location?.publicLocationPrecision || 'approximate'}
+            onValueChange={value =>
+              setLocation({
+                ...(location || {
+                  address: '',
+                  latitude: 0,
+                  longitude: 0,
+                  city: '',
+                  province: '',
+                }),
+                publicLocationPrecision: value as 'approximate' | 'exact',
+              })
+            }
+            className="grid gap-3 md:grid-cols-2"
+          >
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-white p-3">
+              <RadioGroupItem value="approximate" id="public-location-approximate" className="mt-1" />
+              <span>
+                <span className="block text-sm font-medium">Approximate location</span>
+                <span className="block text-xs text-slate-500">Show the area, not the exact property location.</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-white p-3">
+              <RadioGroupItem value="exact" id="public-location-exact" className="mt-1" />
+              <span>
+                <span className="block text-sm font-medium">Exact location</span>
+                <span className="block text-xs text-slate-500">Allow the exact address and pin to appear publicly.</span>
+              </span>
+            </label>
+          </RadioGroup>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <Label htmlFor="address">
               Street Address{' '}
               {!manualOverride && (

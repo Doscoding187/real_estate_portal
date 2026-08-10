@@ -11,6 +11,12 @@ import type {
   Negotiability,
   RecurringCosts,
 } from './pricing-contract';
+import type {
+  LocationCoordinateSource,
+  LocationConfirmationState,
+  PrivateAddress,
+  PublicLocationPrecision,
+} from './location-contract';
 
 export { PROPERTY_TYPE_TEMPLATES } from './property-taxonomy';
 export type {
@@ -445,6 +451,15 @@ export interface LocationData {
   province: string;
   postalCode?: string;
   placeId?: string; // Google Maps Place ID
+  providerLocationPlaceId?: string;
+  provider?: string;
+  provinceId?: number | null;
+  cityId?: number | null;
+  suburbId?: number | null;
+  privateAddress?: PrivateAddress | null;
+  coordinateSource?: LocationCoordinateSource | null;
+  locationConfirmationState?: LocationConfirmationState;
+  publicLocationPrecision?: PublicLocationPrecision;
   addressComponents?: Array<{
     long_name: string;
     short_name: string;

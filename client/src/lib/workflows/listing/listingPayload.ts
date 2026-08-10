@@ -16,6 +16,7 @@ import {
   LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
 } from '@shared/features-context';
 import { buildPricingContract } from '@shared/pricing-contract';
+import { buildListingLocationAuthoringPayload } from '@shared/location-contract';
 
 /**
  * Shape expected by server/listingRouter.ts createListingSchema.
@@ -125,7 +126,7 @@ export function buildListingSubmitPayloadFromWizardState(
     description: state.description ?? '',
     pricing: state.pricing!,
     propertyDetails,
-    location: state.location!,
+    location: buildListingLocationAuthoringPayload(state.location)!,
     mediaIds,
     mainMediaId,
     status: undefined,

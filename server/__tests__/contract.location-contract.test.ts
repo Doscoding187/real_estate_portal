@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildListingLocationAuthoringPayload,
   listingLocationSchema,
   locationProviderMappingSchema,
   privateAddressSchema,
@@ -62,5 +63,43 @@ describe('PLE-6B location contract', () => {
         suburbId: null,
       }).success,
     ).toBe(false);
+  });
+
+  it('preserves an unconfirmed draft without turning missing location truth into a fake zero', () => {
+    const draft = listingLocationSchema.safeParse({
+      ...baseLocation,
+      coordinates: { latitude: -26.1, longitude: 28.0 },
+      coordinateSource: null,
+      locationConfirmationState: 'needs_confirmation',
+    });
+    expect(draft.success).toBe(true);
+
+    expect(
+      listingLocationSchema.safeParse({
+        ...baseLocation,
+        coordinates: null,
+        coordinateSource: null,
+        locationConfirmationState: 'needs_confirmation',
+      }).success,
+    ).toBe(true);
+  });
+
+  it('allow-lists browser location payload keys', () => {
+    const payload = buildListingLocationAuthoringPayload({
+      ...baseLocation,
+      address: '10 Alice Lane',
+      latitude: -26.1076,
+      longitude: 28.0567,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      unexpectedUiState: 'must not cross the boundary',
+    } as any);
+
+    expect(payload).toMatchObject({
+      address: '10 Alice Lane',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+    });
+    expect(payload).not.toHaveProperty('unexpectedUiState');
   });
 });

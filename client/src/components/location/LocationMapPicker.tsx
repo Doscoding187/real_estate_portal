@@ -26,6 +26,7 @@ export interface LocationData {
   postalCode?: string;
   formattedAddress?: string;
   placeId?: string;
+  coordinateSource?: 'autocomplete' | 'map';
   addressComponents?: Array<{
     long_name: string;
     short_name: string;
@@ -63,6 +64,7 @@ export function LocationMapPicker({
       result: google.maps.GeocoderResult | google.maps.places.PlaceResult,
       lat: number,
       lng: number,
+      coordinateSource: 'autocomplete' | 'map',
     ): LocationData => {
       const addressComponents = result.address_components || [];
 
@@ -92,6 +94,7 @@ export function LocationMapPicker({
         postalCode: postalCode || undefined,
         formattedAddress: result.formatted_address,
         placeId: result.place_id,
+        coordinateSource,
         addressComponents: addressComponents.map(component => ({
           long_name: component.long_name,
           short_name: component.short_name,
@@ -119,7 +122,7 @@ export function LocationMapPicker({
   }, [initialLat, initialLng]);
 
   const performGeocoding = useCallback(
-    async (lat: number, lng: number) => {
+    async (lat: number, lng: number, coordinateSource: 'autocomplete' | 'map' = 'map') => {
       setIsGeocoding(true);
 
       try {
@@ -127,7 +130,7 @@ export function LocationMapPicker({
         const result = await geocoder.geocode({ location: { lat, lng } });
 
         if (result.results[0]) {
-          const locationData = parseGeocodingResult(result.results[0], lat, lng);
+          const locationData = parseGeocodingResult(result.results[0], lat, lng, coordinateSource);
           onLocationSelect(locationData);
         } else {
           onGeocodingError?.('No address found for this location');
@@ -150,7 +153,7 @@ export function LocationMapPicker({
       const lng = e.latLng.lng();
 
       setMarkerPosition({ lat, lng });
-      await performGeocoding(lat, lng);
+      await performGeocoding(lat, lng, 'map');
     },
     [performGeocoding],
   );
@@ -163,7 +166,7 @@ export function LocationMapPicker({
       const lng = e.latLng.lng();
 
       setMarkerPosition({ lat, lng });
-      await performGeocoding(lat, lng);
+      await performGeocoding(lat, lng, 'map');
     },
     [performGeocoding],
   );
@@ -180,7 +183,7 @@ export function LocationMapPicker({
       mapRef.current?.panTo({ lat, lng });
       mapRef.current?.setZoom(15);
 
-      const locationData = parseGeocodingResult(place, lat, lng);
+      const locationData = parseGeocodingResult(place, lat, lng, 'autocomplete');
       onLocationSelect(locationData);
     }
   }, [onLocationSelect, parseGeocodingResult]);
