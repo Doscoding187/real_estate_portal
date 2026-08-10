@@ -228,7 +228,7 @@ async function calculateUnitsMetrics(
       })
       .from(unitTypes)
       .innerJoin(developments, eq(developments.id, unitTypes.developmentId))
-      .where(eq(developments.developerId, developerId));
+      .where(and(eq(developments.developerId, developerId), eq(unitTypes.isActive, 1)));
 
     return {
       sold: Number(units[0]?.sold || 0),

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray } from 'drizzle-orm';
 
 import { getDb } from '../db-connection';
 import {
@@ -42,6 +42,8 @@ type DevelopmentOptions = {
 };
 
 type PublicationState = {
+  name: string;
+  description: string | null;
   isPublished: number;
   approvalStatus: string | null;
   publishedAt: string | null;
@@ -192,6 +194,8 @@ async function readPublicationState(developmentId: number): Promise<PublicationS
   const db = await database();
   const [state] = await db
     .select({
+      name: developments.name,
+      description: developments.description,
       isPublished: developments.isPublished,
       approvalStatus: developments.approvalStatus,
       publishedAt: developments.publishedAt,
@@ -206,6 +210,15 @@ async function readPublicationState(developmentId: number): Promise<PublicationS
 
   if (!state) throw new Error(`Development ${developmentId} was not found after fixture setup`);
   return state as PublicationState;
+}
+
+async function readApprovalHistory(developmentId: number) {
+  const db = await database();
+  return db
+    .select()
+    .from(developmentApprovalQueue)
+    .where(eq(developmentApprovalQueue.developmentId, developmentId))
+    .orderBy(asc(developmentApprovalQueue.id));
 }
 
 async function expectRejectedWithoutMutation(
@@ -311,10 +324,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     });
     expect(persisted.publishedAt).toBeTruthy();
 
-    const approvalHistory = await db
-      .select()
-      .from(developmentApprovalQueue)
-      .where(eq(developmentApprovalQueue.developmentId, developmentId));
+    const approvalHistory = await readApprovalHistory(developmentId);
     expect(approvalHistory).toHaveLength(1);
     expect(approvalHistory[0]).toMatchObject({
       developmentId,
@@ -333,11 +343,140 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
         brandProfileId,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
-    const afterRetryHistory = await db
-      .select()
-      .from(developmentApprovalQueue)
-      .where(eq(developmentApprovalQueue.developmentId, developmentId));
+    const afterRetryHistory = await readApprovalHistory(developmentId);
     expect(afterRetryHistory).toHaveLength(1);
+  });
+
+  it('takes a published curator development private before a successful update republish', async () => {
+    const superAdminId = await insertUser('super_admin');
+    const brandProfileId = await insertBrand(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
+
+    await developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+      brandProfileId,
+    });
+
+    const editedName = 'Platform Publication Development — Updated Catalogue';
+    const editedDescription =
+      'An updated canonical platform-curated development description with sufficient detail for republishing.';
+    await developmentService.updateDevelopment(
+      developmentId,
+      superAdminId,
+      { name: editedName, description: editedDescription } as any,
+      { brandProfileId },
+    );
+
+    const privateState = await readPublicationState(developmentId);
+    expect(privateState).toMatchObject({
+      name: editedName,
+      description: editedDescription,
+      isPublished: 0,
+      approvalStatus: 'draft',
+      publishedAt: null,
+      developerBrandProfileId: brandProfileId,
+    });
+
+    const beforeRepublishHistory = await readApprovalHistory(developmentId);
+    expect(beforeRepublishHistory).toHaveLength(1);
+    expect(beforeRepublishHistory[0]).toMatchObject({
+      status: 'approved',
+      submissionType: 'initial',
+      reviewedBy: superAdminId,
+    });
+
+    const republished = await developmentService.publishPlatformCuratedDevelopment(
+      developmentId,
+      superAdminId,
+      { brandProfileId },
+    );
+
+    expect(republished).toMatchObject({
+      name: editedName,
+      description: editedDescription,
+      isPublished: 1,
+      approvalStatus: 'approved',
+      developerBrandProfileId: brandProfileId,
+    });
+    expect(republished.publishedAt).toBeTruthy();
+
+    const liveState = await readPublicationState(developmentId);
+    expect(liveState).toMatchObject({
+      name: editedName,
+      description: editedDescription,
+      isPublished: 1,
+      approvalStatus: 'approved',
+      developerBrandProfileId: brandProfileId,
+    });
+    expect(liveState.publishedAt).toBeTruthy();
+
+    const republishHistory = await readApprovalHistory(developmentId);
+    expect(republishHistory).toHaveLength(2);
+    expect(republishHistory.map(row => row.submissionType)).toEqual(['initial', 'update']);
+    expect(republishHistory[1]).toMatchObject({
+      developmentId,
+      status: 'approved',
+      submissionType: 'update',
+      submittedBy: superAdminId,
+      reviewedBy: superAdminId,
+    });
+    expect(republishHistory[1].reviewedAt).toBe(republished.publishedAt);
+
+    await expect(
+      developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+        brandProfileId,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(await readApprovalHistory(developmentId)).toHaveLength(2);
+  });
+
+  it('keeps an edited curator development private when republish readiness fails', async () => {
+    const superAdminId = await insertUser('super_admin');
+    const brandProfileId = await insertBrand(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
+
+    await developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+      brandProfileId,
+    });
+
+    await developmentService.updateDevelopment(
+      developmentId,
+      superAdminId,
+      { description: '' } as any,
+      { brandProfileId },
+    );
+
+    const privateState = await readPublicationState(developmentId);
+    expect(privateState).toMatchObject({
+      description: null,
+      isPublished: 0,
+      approvalStatus: 'draft',
+      publishedAt: null,
+      developerBrandProfileId: brandProfileId,
+    });
+
+    await expect(
+      developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+        brandProfileId,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+
+    const afterFailedRepublish = await readPublicationState(developmentId);
+    expect(afterFailedRepublish).toMatchObject({
+      description: null,
+      isPublished: 0,
+      approvalStatus: 'draft',
+      publishedAt: null,
+      developerBrandProfileId: brandProfileId,
+    });
+
+    const history = await readApprovalHistory(developmentId);
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({
+      status: 'approved',
+      submissionType: 'initial',
+      reviewedBy: superAdminId,
+    });
+    expect(history.some(row => row.submissionType === 'update')).toBe(false);
   });
 
   it('rejects an ordinary persisted developer actor at the service boundary', async () => {

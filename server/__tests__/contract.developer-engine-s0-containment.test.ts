@@ -149,8 +149,8 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(publishFlowTest).toContain('saveDraft');
   });
 
-  it('keeps the publication-flow test on an intentional server test entry point', () => {
+  it('keeps the historical publication-flow test outside the authoritative server project', () => {
     const serverConfig = source('vitest.server.config.ts');
-    expect(serverConfig).toContain("'tests/integration/publish-flow.test.ts'");
+    expect(serverConfig).not.toContain("'tests/integration/publish-flow.test.ts'");
   });
 });

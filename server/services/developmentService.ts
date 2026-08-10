@@ -1669,58 +1669,114 @@ export async function updateDevelopment(
 
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
-  // ✅ Ownership check done in WHERE by developerProfileId
-  if (superAdminBrandProfileId !== null) {
-    await db
-      .update(developments)
-      .set(updatePayload)
-      .where(
-        and(
-          eq(developments.id, id),
-          eq(developments.developerBrandProfileId, superAdminBrandProfileId),
-        ),
-      );
-  } else {
-    await db
-      .update(developments)
-      .set(updatePayload)
-      .where(and(eq(developments.id, id), eq(developments.developerId, developerProfileId!)));
-  }
+  const persistUpdate = async (writeDb: any, current?: DevelopmentRow) => {
+    const persistedPayload = { ...updatePayload };
 
-  const updated = await db.query.developments.findFirst({
-    where:
+    // A live platform-curated record cannot be edited in place. Until S1 adds
+    // versioned pending revisions, the safe MVP contract is to take the
+    // current public record private before the edited catalogue can be
+    // republished through the canonical readiness/publication transition.
+    if (current && current.approvalStatus === 'approved' && Number(current.isPublished) === 1) {
+      Object.assign(persistedPayload, {
+        approvalStatus: 'draft',
+        isPublished: 0,
+        publishedAt: null,
+        rejectionNote: null,
+      });
+    }
+
+    const ownershipPredicate =
       superAdminBrandProfileId !== null
         ? and(
             eq(developments.id, id),
             eq(developments.developerBrandProfileId, superAdminBrandProfileId),
           )
-        : and(eq(developments.id, id), eq(developments.developerId, developerProfileId!)),
-  });
+        : and(eq(developments.id, id), eq(developments.developerId, developerProfileId!));
 
-  if (!updated) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Update failed or you do not own this development',
-    });
-  }
+    await writeDb.update(developments).set(persistedPayload).where(ownershipPredicate);
 
-  // Unit types (safe persistence helper handles no-wipe)
-  if (unitTypesData !== undefined) {
-    if (Array.isArray(unitTypesData)) {
-      if (unitTypesData.length === 0) {
-        console.warn('[updateDevelopment] Empty unitTypes - deleting all existing unit types');
-      }
-      await persistUnitTypes(db, id, unitTypesData);
-    } else {
-      console.warn('[updateDevelopment] unitTypes is not an array:', typeof unitTypesData);
+    const [updated] = await writeDb.select().from(developments).where(ownershipPredicate).limit(1);
+
+    if (!updated) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Update failed or you do not own this development',
+      });
     }
-  } else {
-    console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
-  }
 
-  // Phases (must respect INT auto_increment ids)
-  if (phasesData !== undefined && Array.isArray(phasesData)) {
-    await persistDevelopmentPhases(db, id, phasesData);
+    // Unit types (safe persistence helper handles no-wipe)
+    if (unitTypesData !== undefined) {
+      if (Array.isArray(unitTypesData)) {
+        if (unitTypesData.length === 0) {
+          console.warn('[updateDevelopment] Empty unitTypes - deleting all existing unit types');
+        }
+        await persistUnitTypes(writeDb, id, unitTypesData);
+      } else {
+        console.warn('[updateDevelopment] unitTypes is not an array:', typeof unitTypesData);
+      }
+    } else {
+      console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
+    }
+
+    // Phases (must respect INT auto_increment ids)
+    if (phasesData !== undefined && Array.isArray(phasesData)) {
+      await persistDevelopmentPhases(writeDb, id, phasesData);
+    }
+
+    return updated;
+  };
+
+  if (superAdminBrandProfileId !== null) {
+    await db.transaction(async (tx: any) => {
+      const [curatorBrand] = await tx
+        .select({
+          id: developerBrandProfiles.id,
+          ownerType: developerBrandProfiles.ownerType,
+          isVisible: developerBrandProfiles.isVisible,
+          linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
+        })
+        .from(developerBrandProfiles)
+        .where(
+          and(
+            eq(developerBrandProfiles.id, superAdminBrandProfileId),
+            eq(developerBrandProfiles.ownerType, 'platform'),
+            eq(developerBrandProfiles.isVisible, 1),
+            isNull(developerBrandProfiles.linkedDeveloperAccountId),
+          ),
+        )
+        .limit(1)
+        .for('update');
+
+      if (!curatorBrand) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'The selected brand is not an available platform curator context.',
+        });
+      }
+
+      const [current] = await tx
+        .select()
+        .from(developments)
+        .where(
+          and(
+            eq(developments.id, id),
+            eq(developments.developerBrandProfileId, superAdminBrandProfileId),
+          ),
+        )
+        .limit(1)
+        .for('update');
+
+      if (!current) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Update failed or you do not own this development',
+        });
+      }
+
+      return persistUpdate(tx, current);
+    });
+  } else {
+    await persistUpdate(db);
   }
 
   console.log('[updateDevelopment] Update completed successfully');
