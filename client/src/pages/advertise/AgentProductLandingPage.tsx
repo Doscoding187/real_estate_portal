@@ -440,12 +440,12 @@ export default function AgentProductLandingPage() {
       <EnhancedNavbar />
 
       <main id="main-content">
-        <section className="relative overflow-hidden bg-slate-950 text-white">
+        <section className="relative overflow-x-clip bg-slate-950 text-white">
           <div
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(0,92,168,0.28),transparent_34%)]"
             aria-hidden="true"
           />
-          <div className="mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 lg:px-8 lg:pb-28 lg:pt-14">
+          <div className="mx-auto max-w-screen-2xl px-4 pb-20 pt-10 sm:px-6 lg:px-8 lg:pb-32 lg:pt-14">
             <a
               href="/advertise"
               className="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 transition hover:text-white"
@@ -454,8 +454,8 @@ export default function AgentProductLandingPage() {
               Back to Advertise
             </a>
 
-            <div className="mt-12 grid items-center gap-14 lg:grid-cols-[.92fr_1.08fr] lg:gap-20">
-              <div className="max-w-2xl">
+            <div className="mt-14 grid items-center gap-12 xl:grid-cols-[.82fr_1.18fr] xl:gap-14 2xl:gap-16">
+              <div className="relative z-10 max-w-2xl">
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
                   For independent property agents
                 </p>
@@ -505,11 +505,9 @@ export default function AgentProductLandingPage() {
                 </div>
               </div>
 
-              <div className="relative">
+              <div className="relative min-w-0 xl:mr-[calc(-1*max(0px,calc((100vw-96rem)/2+1rem)))] xl:translate-x-32 xl:w-[calc(100%+max(0px,calc((100vw-96rem)/2+1rem)))]">
                 <div className="absolute -right-12 -top-12 h-64 w-64 rounded-full bg-blue-500/20 blur-3xl" />
-                <div className="relative rounded-[30px] border border-white/10 bg-white/[0.04] p-3 shadow-2xl shadow-black/30 sm:p-5">
-                  <AgentWorkspacePreview compact />
-                </div>
+                <AgentWorkspacePreview compact />
               </div>
             </div>
           </div>

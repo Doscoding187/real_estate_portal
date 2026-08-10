@@ -127,9 +127,7 @@ export function AgentWorkspacePreview({ compact = false }: AgentWorkspacePreview
     <div
       data-testid="agent-workspace-preview"
       aria-label="Illustrative Property Listify Agent workspace preview"
-      className={`overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.14)] ${
-        compact ? 'max-h-[560px]' : ''
-      }`}
+      className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.14)]"
     >
       <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
         <div className="flex items-center gap-3">
