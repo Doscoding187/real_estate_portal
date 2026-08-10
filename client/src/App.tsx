@@ -132,7 +132,7 @@ const AgentFunnelPage = lazy(() => import('./pages/advertise/AgentFunnelPage'));
 const DeveloperFunnelPage = lazy(() => import('./pages/advertise/DeveloperFunnelPage'));
 const BankFunnelPage = lazy(() => import('./pages/advertise/BankFunnelPage'));
 const OriginatorFunnelPage = lazy(() => import('./pages/advertise/OriginatorFunnelPage'));
-const AgencyComingSoonPage = lazy(() => import('./pages/advertise/AgencyComingSoonPage'));
+const AgencyProductLandingPage = lazy(() => import('./pages/advertise/AgencyProductLandingPage'));
 const ActivationGate = lazy(() => import('./pages/dashboard/ActivationGate'));
 const GetStarted = lazy(() => import('./pages/GetStarted'));
 const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
@@ -481,7 +481,7 @@ function Router() {
             <Redirect to="/role-selection" />
           </Route>
           <Route path="/advertise/sell/agents" component={AgentFunnelPage} />
-          <Route path="/advertise/sell/agencies" component={AgencyComingSoonPage} />
+          <Route path="/advertise/sell/agencies" component={AgencyProductLandingPage} />
           <Route path="/advertise/sell/developers" component={DeveloperFunnelPage} />
           <Route path="/advertise/sell" component={AdvertiseSellPage} />
           <Route path="/advertise/finance/banks" component={BankFunnelPage} />

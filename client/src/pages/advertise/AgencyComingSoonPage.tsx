@@ -1,5 +1,5 @@
-import LaunchAccessAudiencePage from './LaunchAccessAudiencePage';
+import AgencyProductLandingPage from './AgencyProductLandingPage';
 
 export default function AgencyComingSoonPage() {
-  return <LaunchAccessAudiencePage audience="agency" />;
+  return <AgencyProductLandingPage />;
 }
