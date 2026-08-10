@@ -226,6 +226,7 @@ function isPublicDevelopment(
     | {
         isPublished?: unknown;
         approvalStatus?: unknown;
+        transactionType?: unknown;
       }
     | null
     | undefined,
@@ -233,7 +234,8 @@ function isPublicDevelopment(
   return Boolean(
     development &&
     Number(development.isPublished || 0) === 1 &&
-    development.approvalStatus === 'approved',
+    development.approvalStatus === 'approved' &&
+    development.transactionType !== 'auction',
   );
 }
 
@@ -507,6 +509,7 @@ export async function resolveLeadOwnership(
         devOwnerType: developments.devOwnerType,
         isPublished: developments.isPublished,
         approvalStatus: developments.approvalStatus,
+        transactionType: developments.transactionType,
       })
       .from(developments)
       .where(eq(developments.id, developmentId))

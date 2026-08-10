@@ -159,9 +159,14 @@ const requireAgent = t.middleware(async ({ ctx, next }) => {
 });
 
 /**
- * Procedure: Super admin only
+ * Procedure: Super admin only.
+ *
+ * Keep the authenticated brand-context middleware in this chain so every
+ * super-admin route that consumes `ctx.operatingAs` receives the same
+ * server-derived, platform-curator context. Routes that do not need a brand
+ * context remain unaffected when the header is absent.
  */
-export const superAdminProcedure = t.procedure.use(requireSuperAdmin);
+export const superAdminProcedure = protectedProcedure.use(requireSuperAdmin);
 
 /**
  * Procedure: Agency admin only (super_admin can also access)

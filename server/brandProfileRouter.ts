@@ -15,7 +15,6 @@ import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
-import { brandEmulationService } from './_core/brandEmulation';
 import { developmentService } from './services/developmentService';
 import { requireUser } from './_core/requireUser';
 
@@ -252,52 +251,6 @@ export const brandProfileRouter = router({
       }
 
       return await developerBrandProfileService.toggleVisibility(input.id, input.visible);
-    }),
-
-  /**
-   * Attach development to brand (admin)
-   */
-  adminAttachDevelopment: protectedProcedure
-    .input(
-      z.object({
-        developmentId: z.number().int(),
-        brandProfileId: z.number().int(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const user = requireUser(ctx);
-      if (user.role !== 'super_admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only super admins can attach developments',
-        });
-      }
-
-      return await developerBrandProfileService.attachDevelopmentToBrand(
-        input.developmentId,
-        input.brandProfileId,
-      );
-    }),
-
-  /**
-   * Detach development from brand (admin)
-   */
-  adminDetachDevelopment: protectedProcedure
-    .input(
-      z.object({
-        developmentId: z.number().int(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const user = requireUser(ctx);
-      if (user.role !== 'super_admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only super admins can detach developments',
-        });
-      }
-
-      return await developerBrandProfileService.detachDevelopmentFromBrand(input.developmentId);
     }),
 
   /**

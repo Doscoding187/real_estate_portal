@@ -550,46 +550,150 @@ describeWithDb('Developer development publication lifecycle integration', () => 
   it('accepts canonical ownership and rejects an arbitrary ownership value atomically', async () => {
     const owner = await createFixture();
     const valid = await createDevelopmentFor(owner, { ownershipType: 'life-rights' });
-    await callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id: Number(valid.id) });
+    await callerFor(owner.userId, 'property_developer').developer.publishDevelopment({
+      id: Number(valid.id),
+    });
     const invalid = await createDevelopmentFor(owner, { ownershipType: 'made-up-title' });
-    await expect(callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id: Number(invalid.id) })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      callerFor(owner.userId, 'property_developer').developer.publishDevelopment({
+        id: Number(invalid.id),
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     const db = await getDb();
-    expect(await db!.select().from(developmentApprovalQueue).where(eq(developmentApprovalQueue.developmentId, Number(invalid.id)))).toHaveLength(0);
+    expect(
+      await db!
+        .select()
+        .from(developmentApprovalQueue)
+        .where(eq(developmentApprovalQueue.developmentId, Number(invalid.id))),
+    ).toHaveLength(0);
   });
 
-  it('enforces auction terms and permits an omitted reserve', async () => {
+  it('blocks auction publication while preserving private catalogue state', async () => {
     const owner = await createFixture();
-    const futureStart = '2099-01-01T10:00:00.000Z'; const futureEnd = '2099-01-02T10:00:00.000Z';
-    const unit = (overrides: Record<string, unknown> = {}) => ({ name: 'Auction unit', priceFrom: 1, totalUnits: 1, availableUnits: 1, startingBid: 100, auctionStartDate: futureStart, auctionEndDate: futureEnd, ...overrides });
-    const invalid = await createDevelopmentFor(owner, { transactionType: 'auction', unitTypes: [unit({ reservePrice: 50 })] });
-    await expect(callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id: Number(invalid.id) })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    const valid = await createDevelopmentFor(owner, { transactionType: 'auction', unitTypes: [unit()] });
-    await callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id: Number(valid.id) });
-    const db = await getDb(); expect(await db!.select().from(developmentApprovalQueue).where(eq(developmentApprovalQueue.developmentId, Number(valid.id)))).toHaveLength(1);
+    const futureStart = '2099-01-01T10:00:00.000Z';
+    const futureEnd = '2099-01-02T10:00:00.000Z';
+    const unit = (overrides: Record<string, unknown> = {}) => ({
+      name: 'Auction unit',
+      priceFrom: 1,
+      totalUnits: 1,
+      availableUnits: 1,
+      startingBid: 100,
+      auctionStartDate: futureStart,
+      auctionEndDate: futureEnd,
+      ...overrides,
+    });
+    const invalid = await createDevelopmentFor(owner, {
+      transactionType: 'auction',
+      unitTypes: [unit({ reservePrice: 50 })],
+    });
+    // Auction authoring is valid privately, but public publication fails its
+    // capability precondition until auction is supported end-to-end.
+    await expect(
+      callerFor(owner.userId, 'property_developer').developer.publishDevelopment({
+        id: Number(invalid.id),
+      }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    const valid = await createDevelopmentFor(owner, {
+      transactionType: 'auction',
+      unitTypes: [unit()],
+    });
+    await expect(
+      callerFor(owner.userId, 'property_developer').developer.publishDevelopment({
+        id: Number(valid.id),
+      }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    const db = await getDb();
+    for (const development of [invalid, valid]) {
+      const [projection] = await db!
+        .select()
+        .from(developments)
+        .where(eq(developments.id, Number(development.id)));
+      expect(projection).toMatchObject({
+        approvalStatus: 'draft',
+        isPublished: 0,
+        publishedAt: null,
+      });
+      expect(
+        await db!
+          .select()
+          .from(developmentApprovalQueue)
+          .where(eq(developmentApprovalQueue.developmentId, Number(development.id))),
+      ).toHaveLength(0);
+    }
   });
 
-  it('enforces every persisted auction failure atomically and accepts canonical reserve variants', async () => {
+  it('blocks every auction publication attempt atomically regardless of persisted terms', async () => {
     const owner = await createFixture();
-    const start = '2099-06-01T10:00:00.000Z'; const end = '2099-06-02T10:00:00.000Z';
-    const base = { name: 'Auction matrix unit', totalUnits: 1, availableUnits: 1, startingBid: 100, auctionStartDate: start, auctionEndDate: end };
+    const start = '2099-06-01T10:00:00.000Z';
+    const end = '2099-06-02T10:00:00.000Z';
+    const base = {
+      name: 'Auction matrix unit',
+      totalUnits: 1,
+      availableUnits: 1,
+      startingBid: 100,
+      auctionStartDate: start,
+      auctionEndDate: end,
+    };
     const invalidCases: Array<[string, Record<string, unknown>]> = [
-      ['missing bid', { startingBid: undefined }], ['zero bid', { startingBid: 0 }], ['negative bid', { startingBid: -1 }],
-      ['invalid start', { auctionStartDate: 'not-a-date' }], ['past start', { auctionStartDate: '2000-01-01T10:00:00.000Z' }], ['missing end', { auctionEndDate: undefined }],
-      ['invalid end', { auctionEndDate: 'not-a-date' }], ['end before start', { auctionEndDate: '2099-05-01T10:00:00.000Z' }], ['end equal start', { auctionEndDate: start }],
-      ['zero reserve', { reservePrice: 0 }], ['negative reserve', { reservePrice: -1 }], ['reserve below bid', { reservePrice: 99 }],
+      ['missing bid', { startingBid: undefined }],
+      ['zero bid', { startingBid: 0 }],
+      ['negative bid', { startingBid: -1 }],
+      ['invalid start', { auctionStartDate: 'not-a-date' }],
+      ['past start', { auctionStartDate: '2000-01-01T10:00:00.000Z' }],
+      ['missing end', { auctionEndDate: undefined }],
+      ['invalid end', { auctionEndDate: 'not-a-date' }],
+      ['end before start', { auctionEndDate: '2099-05-01T10:00:00.000Z' }],
+      ['end equal start', { auctionEndDate: start }],
+      ['zero reserve', { reservePrice: 0 }],
+      ['negative reserve', { reservePrice: -1 }],
+      ['reserve below bid', { reservePrice: 99 }],
     ];
     const db = await getDb();
     for (const [_name, overrides] of invalidCases) {
-      const development = await createDevelopmentFor(owner, { transactionType: 'auction', unitTypes: [{ ...base, ...overrides }] }); const id = Number(development.id);
-      await expect(callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      const development = await createDevelopmentFor(owner, {
+        transactionType: 'auction',
+        unitTypes: [{ ...base, ...overrides }],
+      });
+      const id = Number(development.id);
+      await expect(
+        callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
       const [projection] = await db!.select().from(developments).where(eq(developments.id, id));
-      expect(projection).toMatchObject({ approvalStatus: 'draft', isPublished: 0, publishedAt: null, rejectionNote: null });
-      expect(await db!.select().from(developmentApprovalQueue).where(eq(developmentApprovalQueue.developmentId, id))).toHaveLength(0);
+      expect(projection).toMatchObject({
+        approvalStatus: 'draft',
+        isPublished: 0,
+        publishedAt: null,
+        rejectionNote: null,
+      });
+      expect(
+        await db!
+          .select()
+          .from(developmentApprovalQueue)
+          .where(eq(developmentApprovalQueue.developmentId, id)),
+      ).toHaveLength(0);
     }
     for (const reservePrice of [undefined, 100, 150]) {
-      const development = await createDevelopmentFor(owner, { transactionType: 'auction', unitTypes: [{ ...base, reservePrice }] }); const id = Number(development.id);
-      await callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id });
-      expect(await db!.select().from(developmentApprovalQueue).where(eq(developmentApprovalQueue.developmentId, id))).toHaveLength(1);
+      const development = await createDevelopmentFor(owner, {
+        transactionType: 'auction',
+        unitTypes: [{ ...base, reservePrice }],
+      });
+      const id = Number(development.id);
+      await expect(
+        callerFor(owner.userId, 'property_developer').developer.publishDevelopment({ id }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      const [projection] = await db!.select().from(developments).where(eq(developments.id, id));
+      expect(projection).toMatchObject({
+        approvalStatus: 'draft',
+        isPublished: 0,
+        publishedAt: null,
+        rejectionNote: null,
+      });
+      expect(
+        await db!
+          .select()
+          .from(developmentApprovalQueue)
+          .where(eq(developmentApprovalQueue.developmentId, id)),
+      ).toHaveLength(0);
     }
   });
 });

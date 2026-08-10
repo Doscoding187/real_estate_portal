@@ -47,6 +47,7 @@ const formSchema = z.object({
 
   // Company Info (Tab 1)
   description: z.string().optional(),
+  sourceAttribution: z.string().min(3, 'Source attribution is required for curated publishing'),
   category: z.string().optional(),
   establishedYear: z.string().optional(), // Form input as string, convert to number
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
@@ -118,6 +119,7 @@ export function CreateBrandProfileDialog({
       identityType: 'developer',
       logoUrl: '',
       description: '',
+      sourceAttribution: '',
       category: '',
       establishedYear: '',
       website: '',
@@ -238,6 +240,7 @@ export function CreateBrandProfileDialog({
       logoUrl: values.logoUrl || undefined,
 
       description: values.description || undefined,
+      sourceAttribution: values.sourceAttribution,
       category: values.category || undefined,
       establishedYear: values.establishedYear ? parseInt(values.establishedYear) : undefined,
       website: values.website || undefined,
@@ -446,6 +449,26 @@ export function CreateBrandProfileDialog({
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sourceAttribution"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source Attribution *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. Verified developer website or public launch source"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Record the source used to establish this platform-curated brand.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

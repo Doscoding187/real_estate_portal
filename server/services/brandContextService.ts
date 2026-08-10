@@ -5,7 +5,7 @@
  * Allows super admins to operate as platform-owned brand profiles.
  */
 
-import { db } from '../db';
+import { getDb } from '../db-connection';
 import { developerBrandProfiles } from '../../drizzle/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
@@ -29,7 +29,7 @@ class BrandContextService {
       limit?: number;
     } = {},
   ): Promise<BrandContext[]> {
-    const database = await db.getDb();
+    const database = await getDb();
     if (!database) throw new Error('Database not available');
 
     let query = database
@@ -73,7 +73,7 @@ class BrandContextService {
    * Get brand context by ID for emulator operations
    */
   async getBrandContext(brandProfileId: number): Promise<BrandContext> {
-    const database = await db.getDb();
+    const database = await getDb();
     if (!database) throw new Error('Database not available');
 
     const [profile] = await database
@@ -91,6 +91,7 @@ class BrandContextService {
           eq(developerBrandProfiles.id, brandProfileId),
           eq(developerBrandProfiles.ownerType, 'platform'),
           eq(developerBrandProfiles.isVisible, 1),
+          isNull(developerBrandProfiles.linkedDeveloperAccountId),
         ),
       );
 
@@ -103,7 +104,7 @@ class BrandContextService {
 
     return {
       ...profile,
-      isOperatingAs: true,
+      isOperatingAs: Boolean(profile.isOperatingAs),
     };
   }
 

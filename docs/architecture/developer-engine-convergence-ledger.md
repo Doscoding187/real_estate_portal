@@ -1,0 +1,32 @@
+# Developer Engine convergence ledger
+
+S0 Authority Containment — 2026-08-10
+
+This is the canonical S0 path ledger. It records authority decisions only; it
+is not a second implementation or audit report.
+
+| Path | Previous authority | Target authority | S0 action | Remaining consumer | Removal condition |
+| --- | --- | --- | --- | --- | --- |
+| `superAdminPublisher.publishAllBrandDevelopments` | Direct bulk flag mutation | Readiness-gated platform-curator publication | Deleted; UI action removed | None | N/A |
+| `superAdminPublisher.publishDevelopment` | Router-owned direct update | `developmentService.publishPlatformCuratedDevelopment` | Routed through one transactional gate | Publisher wizard | N/A |
+| `brandProfile.adminAttachDevelopment` / `adminDetachDevelopment` | Arbitrary direct development-brand reassignment | Future canonical claim/transfer capability | Deleted with service methods; no replacement mutation introduced | None | Re-open only with the approved claim/transfer authority |
+| `DistributionNetworkPage` “Attach to brand” action | Active consumer of arbitrary attach mutation | Canonical brand/claim workflow | Removed; unlinked developments remain informationally blocked from partner setup | None | Re-open only when claim/transfer is implemented |
+| `superAdminProcedure` context chain | Super-admin role check without operating context | Server-derived platform-curator context | Now composes authenticated brand-context middleware before role authorization | Super-admin routes; publisher mutations require the context explicitly | Replace with the S1 actor-context authority |
+| `developer.createDevelopment` for super-admins | Generic emulator create | Canonical publisher create | Rejected with explicit precondition error | Property-developer create remains active | Replace only if a future actor contract authorizes it |
+| `brandEmulatorRouter` and `brandEmulatorService` | Registered emulator/direct seed and delete mutations | Canonical authoring, listing, lead and custody services | Deleted; no active client/server consumers | None | N/A |
+| `_core/brandEmulation.ts` and `client/src/services/identityResolutionService.ts` | Parallel client/server identity resolution | Server-derived publisher context | Deleted as unreferenced authority helpers | Header-only client context bridge remains | Remove bridge during S1 actor-context convergence |
+| `localDemoSeed` | Explicit local/test fixture lane | Guarded fixture capability | Kept; production runtime and hosted database targets remain rejected | Local/test tooling only | Remove only when a replacement fixture lane exists |
+| `platformBrandSeedingService` | Direct platform seed service | Canonical platform-curator workflow | Deleted as unreferenced | None | N/A |
+| `server/emulatorRouter.ts` and `scripts/brandEmulatorDemo.ts` | Unregistered/demo direct seed paths | Canonical workflows and guarded fixtures | Deleted as unregistered/unsafe | None | N/A |
+| `developmentService.publishDevelopmentStrict` | Direct insert-and-publish path | Canonical create → readiness → publish | Deleted; its integration assertions removed while active `saveDraft` coverage was retained | Draft workflow test only | N/A |
+| `client/src/components/developer/DevelopmentWizard.tsx` | Unused legacy authoring UI | `client/src/components/development-wizard/DevelopmentWizard.tsx` | Deleted; no active imports | Canonical development wizard | N/A |
+| `developerRouter` legacy unit normalization/`assertPublishable` helpers | Browser-shaped duplicate validation | Persisted submission readiness and canonical wizard payload | Deleted as unreferenced | Canonical readiness service and active wizard | N/A |
+| `server/services/publishNormalizer.ts` legacy helpers | Browser-shaped publication normalization | Canonical wizard payload and persisted readiness | Retained only for the `WizardData` draft type and focused legacy date test; no supported publication consumer | `developmentService.saveDraft` type import; auction-date unit test | Remove after those consumers use canonical payload types |
+| `developmentUnits` writer/KPI read | Individual-unit service and table | `unitTypes` MVP inventory authority | Writer service/tests deleted; KPI migrated to aggregate `unitTypes` | Dormant schema/relations only | Remove schema after migration authority approves and all residual reads are gone |
+| Auction publication | Private authoring plus implicit publication eligibility | Sale/rent public MVP contract | Publication/review approval rejected; public development, derived-listing, autocomplete, location and sitemap projections exclude auction | Private wizard/operating views | Re-open only with complete public auction contract evidence |
+| `server/db_listDevelopments.ts`, `server/db_getDevelopment.ts` | Unregistered legacy public read helpers | Canonical development service/public projections | Deleted as unused | None | N/A |
+| `developer.searchDevelopments` autocomplete | Published-only legacy query | Canonical public eligibility boundary | Kept temporarily; now requires approved status and excludes auction | Listing wizard autocomplete | Replace when canonical development discovery autocomplete is available |
+| `/new-developments` / `DevelopmentsDemo` | Legacy development discovery page | Canonical development discovery projection | Kept temporarily; no new consumers added in S0 | Existing public route | Replace when S3 discovery implementation is delivered |
+| `client/src/components/developer/DevelopmentsList.tsx` | Client-reconstructed workspace lifecycle/readiness | Development Home/server workspace read model | Kept temporarily; no new consumers added in S0 | Existing developer route | Replace when S4 workspace summary projection is delivered |
+
+S0 does not change the database schema or execute database mutations.

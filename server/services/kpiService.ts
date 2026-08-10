@@ -5,7 +5,7 @@
  */
 
 import { db } from '../db';
-import { developers, developmentUnits, developments, leads } from '../../drizzle/schema';
+import { developers, developments, leads, unitTypes } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql, count, avg } from 'drizzle-orm';
 import type { DeveloperKPIs, DeveloperKPICache } from '../../shared/types';
 
@@ -220,12 +220,15 @@ async function calculateUnitsMetrics(
   try {
     const units = await db
       .select({
-        sold: count(sql`CASE WHEN status = 'sold' THEN 1 END`),
-        available: count(sql`CASE WHEN status = 'available' THEN 1 END`),
+        sold: sql<number>`COALESCE(SUM(GREATEST(
+          ${unitTypes.totalUnits} - ${unitTypes.availableUnits} - COALESCE(${unitTypes.reservedUnits}, 0),
+          0
+        )), 0)`,
+        available: sql<number>`COALESCE(SUM(${unitTypes.availableUnits}), 0)`,
       })
-      .from(developmentUnits)
-      .innerJoin(developments, eq(developments.id, developmentUnits.developmentId))
-      .where(eq(developments.developerId, developerId));
+      .from(unitTypes)
+      .innerJoin(developments, eq(developments.id, unitTypes.developmentId))
+      .where(and(eq(developments.developerId, developerId), eq(unitTypes.isActive, 1)));
 
     return {
       sold: Number(units[0]?.sold || 0),
