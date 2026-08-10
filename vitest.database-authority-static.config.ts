@@ -11,6 +11,7 @@ export default {
       'server/__tests__/contract.database-local-lifecycle-authority.test.ts',
       'server/__tests__/contract.database-connection-path-authority.test.ts',
       'server/__tests__/contract.database-residual-utility-authority.test.ts',
+      'server/__tests__/contract.developer-engine-s0-containment.test.ts',
       'server/__tests__/contract.migration-tree-authority.test.ts',
       'server/__tests__/contract.migration-execution-authority.test.ts',
       'server/__tests__/contract.property-listify-database-authority-skill.test.ts',

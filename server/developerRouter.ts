@@ -6,11 +6,9 @@ import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
-import { unitService } from './services/unitService';
 import * as partnershipService from './services/partnershipService';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getBrandProfileById } from './services/developerBrandProfileService';
-import { brandEmulatorService } from './services/brandEmulatorService';
 import { developerBrandProfileService } from './services/developerBrandProfileService';
 import {
   calculateAffordabilityCompanion,
@@ -147,316 +145,6 @@ function assertDeveloperDistributionEnabled() {
       code: 'FORBIDDEN',
       message:
         'Distribution Network is disabled. Set FEATURE_DISTRIBUTION_NETWORK=true to enable this module.',
-    });
-  }
-}
-
-/**
- * Wizard v2 canonical parking types.
- * NOTE: legacy "parking" strings like '1','2','garage','none' are normalized into parkingType+parkingBays.
- */
-const ParkingTypeSchema = z.enum(['none', 'open', 'covered', 'carport', 'garage']);
-
-const UnitTypeSchemaV2 = z
-  .object({
-    id: z.string().optional(),
-    name: z.string().min(1),
-    bedrooms: z.number().int().min(0),
-    bathrooms: z.number().min(0),
-
-    // Wizard v2 prefers unitSize (range fields are legacy and should not be validated here)
-    unitSize: z.number().int().positive().optional(),
-
-    // Wizard v2 canonical pricing
-    basePriceFrom: z.number().positive(),
-    extras: z
-      .array(
-        z
-          .object({
-            price: z.number().nonnegative(),
-          })
-          .passthrough(),
-      )
-      .optional(),
-
-    // Wizard v2 canonical parking
-    parkingType: ParkingTypeSchema,
-    parkingBays: z.number().int().min(0),
-
-    totalUnits: z.number().int().min(0).optional(),
-    availableUnits: z.number().int().min(0).optional(),
-    reservedUnits: z.number().int().min(0).optional(),
-
-    // isActive exists but is not a publish blocker (defaulting happens server-side)
-    isActive: z.boolean().optional(),
-  })
-  .passthrough();
-
-/**
- * Legacy firewall: normalize "UnitTypeData" from old + new shapes into Wizard v2 shape.
- * - Accepts legacy u.parking (e.g. '1','2','garage','none') and maps to parkingType+parkingBays.
- * - Accepts missing parkingType and defaults safely.
- * - Accepts missing parkingBays and defaults safely.
- * - Accepts legacy priceFrom and maps to basePriceFrom as fallback.
- */
-function normalizeUnitType(raw: any) {
-  const u = raw ?? {};
-
-  // --- Parking ---
-  let parkingType: string | undefined = u.parkingType ?? u.parking_type ?? undefined;
-
-  let parkingBaysRaw = u.parkingBays ?? u.parking_bays ?? undefined;
-
-  // If parkingType is absent, attempt legacy mapping from u.parking
-  if (!parkingType && u.parking != null) {
-    const p = String(u.parking).trim().toLowerCase();
-
-    // numeric strings -> open bays
-    if (p === '1') {
-      parkingType = 'open';
-      parkingBaysRaw = 1;
-    } else if (p === '2') {
-      parkingType = 'open';
-      parkingBaysRaw = 2;
-    } else if (p === '0' || p === 'none' || p === '') {
-      parkingType = 'none';
-      parkingBaysRaw = 0;
-    } else if (p === 'garage') {
-      parkingType = 'garage';
-      parkingBaysRaw = typeof parkingBaysRaw === 'number' ? parkingBaysRaw : 1;
-    } else if (p === 'carport') {
-      parkingType = 'carport';
-      parkingBaysRaw = typeof parkingBaysRaw === 'number' ? parkingBaysRaw : 1;
-    } else {
-      // Unknown legacy value -> safest fallback
-      parkingType = 'none';
-      parkingBaysRaw = 0;
-    }
-  }
-
-  // Coerce bays into a safe integer
-  let parkingBays = Number(parkingBaysRaw ?? 0);
-  if (!Number.isFinite(parkingBays)) parkingBays = 0;
-  parkingBays = Math.max(0, Math.floor(parkingBays));
-
-  // Hard defaults
-  if (!parkingType) parkingType = 'none';
-
-  // If parkingType is none, enforce 0 bays
-  if (parkingType === 'none') parkingBays = 0;
-
-  // --- Pricing ---
-  // Wizard v2: basePriceFrom is canonical. Fall back to legacy priceFrom ONLY as a firewall.
-  const basePriceFrom = Number(
-    u.basePriceFrom ?? u.base_price_from ?? u.priceFrom ?? u.price_from ?? 0,
-  );
-
-  const toStockInt = (value: unknown): number => {
-    const n = Number(value ?? 0);
-    if (!Number.isFinite(n)) return 0;
-    return Math.max(0, Math.floor(n));
-  };
-  const totalUnits = toStockInt(u.totalUnits);
-  const availableUnits = toStockInt(u.availableUnits);
-  const reservedUnits = toStockInt(u.reservedUnits);
-
-  return {
-    ...u,
-    parkingType,
-    parkingBays,
-    basePriceFrom,
-    totalUnits,
-    availableUnits,
-    reservedUnits,
-  };
-}
-
-/**
- * Strict publish validation helper
- * Validates enums, required fields, and unit types before allowing publish.
- * Returns structured errors with field keys for UI highlighting.
- */
-function assertPublishable(fullDev: any, verifiedUnitCount?: number) {
-  interface ValidationError {
-    field: string;
-    message: string;
-  }
-
-  const errors: ValidationError[] = [];
-
-  // Name validation
-  const name = fullDev?.name ?? fullDev?.developmentData?.name;
-  if (!name || String(name).trim().length < 2) {
-    errors.push({ field: 'name', message: 'Development name is required.' });
-  }
-
-  // Location validation
-  const address = fullDev?.address ?? fullDev?.developmentData?.location?.address;
-  const city = fullDev?.city ?? fullDev?.developmentData?.location?.city;
-  const province = fullDev?.province ?? fullDev?.developmentData?.location?.province;
-
-  if (!address) errors.push({ field: 'location.address', message: 'Address is required.' });
-  if (!city) errors.push({ field: 'location.city', message: 'City is required.' });
-  if (!province) errors.push({ field: 'location.province', message: 'Province is required.' });
-
-  // Nature validation (only allow: new | phase)
-  const nature = fullDev?.nature ?? fullDev?.developmentData?.nature;
-  if (nature && nature !== 'new' && nature !== 'phase') {
-    errors.push({
-      field: 'nature',
-      message: `Invalid nature: ${nature}. Only 'new' or 'phase' allowed.`,
-    });
-  }
-
-  // Hero image validation (support both media.heroImage and developments.images[0])
-  const heroFromMedia =
-    fullDev?.media?.heroImage?.url ?? fullDev?.developmentData?.media?.heroImage?.url;
-
-  const images = Array.isArray(fullDev?.images) ? fullDev.images : [];
-  const heroFromImages = (images?.[0] as any)?.url ?? images?.[0];
-
-  if (!heroFromMedia && !heroFromImages) {
-    errors.push({ field: 'media.heroImage', message: 'A hero image is required.' });
-  }
-
-  // Unit type validation (skip for land)
-  const devType = fullDev?.developmentType ?? fullDev?.developmentData?.developmentType;
-  const isLand = devType === 'land';
-  const transactionType =
-    fullDev?.transactionType ??
-    fullDev?.developmentData?.transactionType ??
-    fullDev?.transaction_type ??
-    'for_sale';
-  const isRent = transactionType === 'for_rent';
-  const unitTypesRaw = Array.isArray(fullDev?.unitTypes) ? fullDev.unitTypes : [];
-
-  if (!isLand) {
-    // If verifiedUnitCount is provided, trust it. Otherwise fallback to array check.
-    const hasUnits =
-      verifiedUnitCount !== undefined ? verifiedUnitCount > 0 : unitTypesRaw.length > 0;
-
-    if (!hasUnits) {
-      errors.push({
-        field: 'unitTypes',
-        message:
-          'No unit types found. Please ensure you have added and saved at least one unit type.',
-      });
-    }
-
-    unitTypesRaw.forEach((raw: any, idx: number) => {
-      const u = normalizeUnitType(raw);
-      const unitPrefix = `unitTypes[${idx}]`;
-      const unitLabel = u?.name || 'Unnamed';
-
-      if (!u?.name) {
-        errors.push({ field: `${unitPrefix}.name`, message: 'Unit type is missing a name.' });
-      }
-      if (u?.bedrooms == null) {
-        errors.push({
-          field: `${unitPrefix}.bedrooms`,
-          message: `Unit "${unitLabel}" missing bedrooms.`,
-        });
-      }
-      if (u?.bathrooms == null) {
-        errors.push({
-          field: `${unitPrefix}.bathrooms`,
-          message: `Unit "${unitLabel}" missing bathrooms.`,
-        });
-      }
-
-      // Parking validation (Wizard v2)
-      const pt = String(u?.parkingType ?? '').trim();
-      const pb = Number(u?.parkingBays ?? 0);
-
-      const validParking = ['none', 'open', 'covered', 'carport', 'garage'].includes(pt);
-      if (!validParking) {
-        errors.push({
-          field: `${unitPrefix}.parkingType`,
-          message: `Unit "${unitLabel}" has invalid parking type.`,
-        });
-      }
-
-      if (!Number.isInteger(pb) || pb < 0) {
-        errors.push({
-          field: `${unitPrefix}.parkingBays`,
-          message: `Unit "${unitLabel}" has invalid parking bays.`,
-        });
-      }
-
-      if (pt === 'none' && pb !== 0) {
-        errors.push({
-          field: `${unitPrefix}.parkingBays`,
-          message: `Unit "${unitLabel}": parking bays must be 0 when parkingType is none.`,
-        });
-      }
-
-      const total = Number(u?.totalUnits ?? 0);
-      const available = Number(u?.availableUnits ?? 0);
-      const reserved = Number(u?.reservedUnits ?? 0);
-
-      if (!Number.isFinite(total) || total < 0) {
-        errors.push({
-          field: `${unitPrefix}.totalUnits`,
-          message: `Unit "${unitLabel}" has invalid total units.`,
-        });
-      }
-      if (!Number.isFinite(available) || available < 0) {
-        errors.push({
-          field: `${unitPrefix}.availableUnits`,
-          message: `Unit "${unitLabel}" has invalid available units.`,
-        });
-      }
-      if (!Number.isFinite(reserved) || reserved < 0) {
-        errors.push({
-          field: `${unitPrefix}.reservedUnits`,
-          message: `Unit "${unitLabel}" has invalid reserved units.`,
-        });
-      }
-      if (
-        Number.isFinite(total) &&
-        Number.isFinite(available) &&
-        Number.isFinite(reserved) &&
-        available + reserved > total
-      ) {
-        errors.push({
-          field: `${unitPrefix}.reservedUnits`,
-          message: `Unit "${unitLabel}" must satisfy available + reserved <= total units.`,
-        });
-      }
-
-      if (isRent) {
-        const rentFrom = Number(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0);
-        const rentTo = Number(u?.monthlyRentTo ?? 0);
-        if (
-          (!Number.isFinite(rentFrom) || rentFrom <= 0) &&
-          (!Number.isFinite(rentTo) || rentTo <= 0)
-        ) {
-          errors.push({
-            field: `${unitPrefix}.monthlyRentFrom`,
-            message: `Unit "${unitLabel}" must have a valid monthly rent > 0.`,
-          });
-        }
-      } else {
-        // Base price validation (Wizard v2)
-        const bp = Number(u?.basePriceFrom ?? 0);
-        if (!Number.isFinite(bp) || bp <= 0) {
-          errors.push({
-            field: `${unitPrefix}.basePriceFrom`,
-            message: `Unit "${unitLabel}" must have a valid base price > 0.`,
-          });
-        }
-      }
-    });
-  }
-
-  if (errors.length) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: errors[0].message,
-      cause: {
-        errors: errors.map(e => e.message), // legacy compatibility
-        validationErrors: errors, // structured for UI
-      },
     });
   }
 }
@@ -1324,7 +1012,7 @@ export const developerRouter = router({
           await import('./services/developmentDerivedListingService');
 
         const poolLimit = Math.max(limit * 2, 12);
-        const [listingResults, developmentUnits] = await Promise.all([
+        const [listingResults, derivedDevelopmentListings] = await Promise.all([
           propertySearchService.searchProperties(
             {
               province: locationFilter.province,
@@ -1354,7 +1042,7 @@ export const developerRouter = router({
         ]);
 
         const listingItems = (listingResults.properties || []).map(mapListing);
-        const developmentUnitItems = (developmentUnits.items || []).map(mapUnitListing);
+        const developmentUnitItems = (derivedDevelopmentListings.items || []).map(mapUnitListing);
         const { items, source } = composeResidentialHomeFeedItems(
           listingItems,
           developmentUnitItems,
@@ -1815,13 +1503,11 @@ export const developerRouter = router({
       }
 
       if (role === 'super_admin') {
-        // Super admin: emulation is required for this endpoint
-        if (!ctx.operatingAs?.brandProfileId) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Super admin must operate as a brand to create developments in emulator mode.',
-          });
-        }
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Super admins must create developments through the canonical publisher workflow.',
+        });
       }
 
       const development = await developmentService.createDevelopment(

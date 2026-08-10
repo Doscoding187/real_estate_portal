@@ -9,7 +9,7 @@ import {
   suburbPriceAnalytics,
   amenities,
 } from '../../drizzle/schema';
-import { eq, and, desc, sql, like, inArray, count, avg } from 'drizzle-orm';
+import { eq, and, desc, sql, like, inArray, count, avg, ne } from 'drizzle-orm';
 
 /**
  * IMPROVED Service for handling location page data aggregation
@@ -167,6 +167,8 @@ export const locationPagesService = {
           and(
             sql`TRIM(LOWER(${developments.province})) = LOWER(${province.name})`,
             eq(developments.isPublished, 1),
+            eq(developments.approvalStatus, 'approved'),
+            ne(developments.transactionType, 'auction'),
           ),
         )
         .limit(6);
@@ -328,6 +330,8 @@ export const locationPagesService = {
           and(
             sql`(TRIM(LOWER(${developments.city})) = LOWER(${city.name}) OR TRIM(LOWER(${developments.suburb})) IN (SELECT LOWER(name) FROM suburbs WHERE cityId = ${city.id}))`,
             eq(developments.isPublished, 1),
+            eq(developments.approvalStatus, 'approved'),
+            ne(developments.transactionType, 'auction'),
           ),
         )
         .limit(8);

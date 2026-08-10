@@ -277,7 +277,6 @@ import { propertyResultsRouter } from './propertyResultsRouter';
 import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
 import { brandProfileRouter } from './brandProfileRouter';
-import { brandEmulatorRouter } from './brandEmulatorRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
@@ -326,7 +325,6 @@ const appRouterConfig = {
   cache: cacheRouter,
   locationPages: locationPagesRouter,
   brandProfile: brandProfileRouter,
-  brandEmulator: brandEmulatorRouter,
   superAdminPublisher: superAdminPublisherRouter,
   favorites: favoritesRouter,
   reviews: reviewsRouter,

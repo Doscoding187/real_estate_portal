@@ -2,13 +2,19 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockDb, mockGetDb, mockGetBrandProfileById, mockRequireDeveloperProfileByUserId } =
-  vi.hoisted(() => ({
-    mockDb: { select: vi.fn() },
-    mockGetDb: vi.fn(),
-    mockGetBrandProfileById: vi.fn(),
-    mockRequireDeveloperProfileByUserId: vi.fn(),
-  }));
+const {
+  mockDb,
+  mockGetDb,
+  mockGetBrandProfileById,
+  mockRequireDeveloperProfileByUserId,
+  mockVerifyBrandContext,
+} = vi.hoisted(() => ({
+  mockDb: { select: vi.fn() },
+  mockGetDb: vi.fn(),
+  mockGetBrandProfileById: vi.fn(),
+  mockRequireDeveloperProfileByUserId: vi.fn(),
+  mockVerifyBrandContext: vi.fn(),
+}));
 
 vi.mock('../db', () => ({
   db: mockDb,
@@ -24,6 +30,12 @@ vi.mock('../services/developerBrandProfileService', () => ({
   getBrandProfileById: mockGetBrandProfileById,
   developerBrandProfileService: {
     getBrandProfileById: mockGetBrandProfileById,
+  },
+}));
+
+vi.mock('../services/brandContextService', () => ({
+  brandContextService: {
+    verifyBrandContext: mockVerifyBrandContext,
   },
 }));
 
@@ -121,6 +133,14 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
       id: 77,
       identityType: 'developer',
       brandName: 'Harbour Developments',
+    });
+    mockVerifyBrandContext.mockResolvedValue({
+      brandProfileId: 77,
+      identityType: 'developer',
+      brandName: 'Harbour Developments',
+      ownerType: 'platform',
+      brandTier: 'regional',
+      isOperatingAs: false,
     });
   });
 

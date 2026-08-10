@@ -1,20 +1,21 @@
-import { sql, eq, desc, and, inArray } from 'drizzle-orm';
+import { sql, eq, desc, and, inArray, isNull, ne } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { randomUUID } from 'crypto';
 import { getDb } from '../db-connection';
 import { generateUniqueSlug } from '../_core/utils/slug';
-import { normalizeForPublish, validateNormalizedPayload } from './publishNormalizer';
-import type { NormalizedDevelopmentPayload, WizardData } from './publishNormalizer';
+import type { WizardData } from './publishNormalizer';
 import { normalizeDateTimeForDb } from './developmentDateUtils';
 import {
   submissionValidationError,
   validatePersistedSubmissionReadiness,
 } from './developmentSubmissionReadiness';
+import { throwAuctionPublicationDisabled } from './developerEngineContainment';
 
 import {
   developments,
   developers,
+  users,
   unitTypes,
   developmentPhases,
   developerBrandProfiles,
@@ -460,11 +461,13 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
         eq(developments.id, value as number),
         eq(developments.isPublished, 1),
         eq(developments.approvalStatus, 'approved'),
+        ne(developments.transactionType, 'auction'),
       )
     : and(
         eq(developments.slug, value as string),
         eq(developments.isPublished, 1),
         eq(developments.approvalStatus, 'approved'),
+        ne(developments.transactionType, 'auction'),
       );
 
   const results = await db
@@ -675,6 +678,7 @@ export async function getPublicDevelopment(id: number) {
         eq(developments.id, id),
         eq(developments.isPublished, 1),
         eq(developments.approvalStatus, 'approved'),
+        ne(developments.transactionType, 'auction'),
       ),
     )
     .limit(1);
@@ -714,6 +718,7 @@ export async function listPublicDevelopments(options: {
   const conditions: any[] = [
     eq(developments.isPublished, 1),
     eq(developments.approvalStatus, 'approved'),
+    ne(developments.transactionType, 'auction'),
   ];
   if (province) conditions.push(eq(developments.province, province));
   if (city) conditions.push(eq(developments.city, city));
@@ -879,18 +884,24 @@ export async function createDevelopment(
   let resolvedBrandProfileId: number | null = null;
   let effectiveOwnerType: 'platform' | 'developer' = ownerType || 'developer';
 
-  // If super admin, bypass ALL checks
+  // Platform curator creation is still a canonical authoring operation, but
+  // it must always start as a draft. Publication is a separate, readiness-
+  // gated transition below.
   if (user?.role === 'super_admin') {
-    // Super admin mode - use brand profile from context or metadata
-    resolvedBrandProfileId =
-      operatingContext?.brandProfileId ||
-      brandProfileId ||
-      (developmentData as any).developerBrandProfileId ||
-      null;
+    // Super admin mode - use only the server-derived operating context. Body
+    // metadata is never allowed to select a different platform brand.
+    resolvedBrandProfileId = operatingContext?.brandProfileId || null;
     developerProfileId = null;
     effectiveOwnerType = 'platform';
 
-    console.log('[createDevelopment] ✅ SUPER ADMIN MODE - Bypassing all checks:', {
+    if (!resolvedBrandProfileId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'A valid platform curator brand context is required to create a development.',
+      });
+    }
+
+    console.log('[createDevelopment] Platform curator mode:', {
       brandProfileId: resolvedBrandProfileId,
       ownerType: effectiveOwnerType,
     });
@@ -936,12 +947,24 @@ export async function createDevelopment(
   const targetBrandId = resolvedBrandProfileId;
   if (targetBrandId) {
     const validBrand = await db.query.developerBrandProfiles.findFirst({
-      where: eq(developerBrandProfiles.id, targetBrandId),
+      where:
+        user?.role === 'super_admin'
+          ? and(
+              eq(developerBrandProfiles.id, targetBrandId),
+              eq(developerBrandProfiles.ownerType, 'platform'),
+              isNull(developerBrandProfiles.linkedDeveloperAccountId),
+              eq(developerBrandProfiles.isVisible, 1),
+            )
+          : eq(developerBrandProfiles.id, targetBrandId),
       columns: { id: true },
     });
     if (!validBrand) {
-      throw createError(`Brand Profile with ID ${targetBrandId} not found`, 'NOT_FOUND', {
-        brandProfileId: targetBrandId,
+      throw new TRPCError({
+        code: user?.role === 'super_admin' ? 'FORBIDDEN' : 'NOT_FOUND',
+        message:
+          user?.role === 'super_admin'
+            ? 'The selected brand is not an available platform curator context.'
+            : `Brand Profile with ID ${targetBrandId} not found`,
       });
     }
   }
@@ -1006,8 +1029,6 @@ export async function createDevelopment(
   const normalizedTransactionType = normalizeTransactionType(
     (developmentData as any).transactionType,
   );
-  const isSuperAdminBrandCreation = user?.role === 'super_admin' && !!resolvedBrandProfileId;
-  const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const rentRange =
     normalizedTransactionType === 'for_rent' ? computeRentRangeFromUnits(unitTypesData) : null;
   const auctionRange =
@@ -1030,14 +1051,12 @@ export async function createDevelopment(
     devOwnerType: effectiveOwnerType,
 
     isFeatured: 0,
-    isPublished: isSuperAdminBrandCreation ? 1 : 0,
-    publishedAt: isSuperAdminBrandCreation ? nowFormatted : null,
+    isPublished: 0,
+    publishedAt: null,
     views: 0,
     showHouseAddress: boolToInt((developmentData as any).showHouseAddress ?? true),
     readinessScore: 0,
-    approvalStatus: isSuperAdminBrandCreation ? 'approved' : 'draft',
-    approvedAt: isSuperAdminBrandCreation ? nowFormatted : null,
-    approvedBy: isSuperAdminBrandCreation ? user?.id : null,
+    approvalStatus: 'draft',
     nature: sanitizeEnum(
       (developmentData as any).nature,
       ['new', 'phase', 'extension', 'redevelopment'],
@@ -1142,11 +1161,6 @@ export async function createDevelopment(
   }
   if (Array.isArray(brochuresData) && brochuresData.length > 0) {
     insertPayload.brochures = JSON.stringify(brochuresData);
-  }
-
-  // Apply metadata overrides explicitly
-  if (brandProfileId && !(brandProfileId in insertPayload)) {
-    insertPayload.developerBrandProfileId = brandProfileId;
   }
 
   Object.keys(restMetadata).forEach(key => {
@@ -1655,58 +1669,114 @@ export async function updateDevelopment(
 
   console.log('[updateDevelopment] Update payload fields:', Object.keys(updatePayload));
 
-  // ✅ Ownership check done in WHERE by developerProfileId
-  if (superAdminBrandProfileId !== null) {
-    await db
-      .update(developments)
-      .set(updatePayload)
-      .where(
-        and(
-          eq(developments.id, id),
-          eq(developments.developerBrandProfileId, superAdminBrandProfileId),
-        ),
-      );
-  } else {
-    await db
-      .update(developments)
-      .set(updatePayload)
-      .where(and(eq(developments.id, id), eq(developments.developerId, developerProfileId!)));
-  }
+  const persistUpdate = async (writeDb: any, current?: DevelopmentRow) => {
+    const persistedPayload = { ...updatePayload };
 
-  const updated = await db.query.developments.findFirst({
-    where:
+    // A live platform-curated record cannot be edited in place. Until S1 adds
+    // versioned pending revisions, the safe MVP contract is to take the
+    // current public record private before the edited catalogue can be
+    // republished through the canonical readiness/publication transition.
+    if (current && current.approvalStatus === 'approved' && Number(current.isPublished) === 1) {
+      Object.assign(persistedPayload, {
+        approvalStatus: 'draft',
+        isPublished: 0,
+        publishedAt: null,
+        rejectionNote: null,
+      });
+    }
+
+    const ownershipPredicate =
       superAdminBrandProfileId !== null
         ? and(
             eq(developments.id, id),
             eq(developments.developerBrandProfileId, superAdminBrandProfileId),
           )
-        : and(eq(developments.id, id), eq(developments.developerId, developerProfileId!)),
-  });
+        : and(eq(developments.id, id), eq(developments.developerId, developerProfileId!));
 
-  if (!updated) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Update failed or you do not own this development',
-    });
-  }
+    await writeDb.update(developments).set(persistedPayload).where(ownershipPredicate);
 
-  // Unit types (safe persistence helper handles no-wipe)
-  if (unitTypesData !== undefined) {
-    if (Array.isArray(unitTypesData)) {
-      if (unitTypesData.length === 0) {
-        console.warn('[updateDevelopment] Empty unitTypes - deleting all existing unit types');
-      }
-      await persistUnitTypes(db, id, unitTypesData);
-    } else {
-      console.warn('[updateDevelopment] unitTypes is not an array:', typeof unitTypesData);
+    const [updated] = await writeDb.select().from(developments).where(ownershipPredicate).limit(1);
+
+    if (!updated) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Update failed or you do not own this development',
+      });
     }
-  } else {
-    console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
-  }
 
-  // Phases (must respect INT auto_increment ids)
-  if (phasesData !== undefined && Array.isArray(phasesData)) {
-    await persistDevelopmentPhases(db, id, phasesData);
+    // Unit types (safe persistence helper handles no-wipe)
+    if (unitTypesData !== undefined) {
+      if (Array.isArray(unitTypesData)) {
+        if (unitTypesData.length === 0) {
+          console.warn('[updateDevelopment] Empty unitTypes - deleting all existing unit types');
+        }
+        await persistUnitTypes(writeDb, id, unitTypesData);
+      } else {
+        console.warn('[updateDevelopment] unitTypes is not an array:', typeof unitTypesData);
+      }
+    } else {
+      console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
+    }
+
+    // Phases (must respect INT auto_increment ids)
+    if (phasesData !== undefined && Array.isArray(phasesData)) {
+      await persistDevelopmentPhases(writeDb, id, phasesData);
+    }
+
+    return updated;
+  };
+
+  if (superAdminBrandProfileId !== null) {
+    await db.transaction(async (tx: any) => {
+      const [curatorBrand] = await tx
+        .select({
+          id: developerBrandProfiles.id,
+          ownerType: developerBrandProfiles.ownerType,
+          isVisible: developerBrandProfiles.isVisible,
+          linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
+        })
+        .from(developerBrandProfiles)
+        .where(
+          and(
+            eq(developerBrandProfiles.id, superAdminBrandProfileId),
+            eq(developerBrandProfiles.ownerType, 'platform'),
+            eq(developerBrandProfiles.isVisible, 1),
+            isNull(developerBrandProfiles.linkedDeveloperAccountId),
+          ),
+        )
+        .limit(1)
+        .for('update');
+
+      if (!curatorBrand) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'The selected brand is not an available platform curator context.',
+        });
+      }
+
+      const [current] = await tx
+        .select()
+        .from(developments)
+        .where(
+          and(
+            eq(developments.id, id),
+            eq(developments.developerBrandProfileId, superAdminBrandProfileId),
+          ),
+        )
+        .limit(1)
+        .for('update');
+
+      if (!current) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Update failed or you do not own this development',
+        });
+      }
+
+      return persistUpdate(tx, current);
+    });
+  } else {
+    await persistUpdate(db);
   }
 
   console.log('[updateDevelopment] Update completed successfully');
@@ -2349,101 +2419,10 @@ async function publishDevelopment(
     columns: { id: true, role: true },
   });
 
-  // If super admin, bypass ALL checks
+  // Platform curator publication is a separate, readiness-gated transition.
+  // It must have an explicit, unclaimed platform brand context.
   if (user?.role === 'super_admin') {
-    // Super admin mode - use brand profile from context
-    const brandProfileId = operatingContext?.brandProfileId;
-
-    console.log('[publishDevelopment] ✅ SUPER ADMIN MODE - Bypassing all checks:', {
-      brandProfileId,
-    });
-
-    // First, get the development to verify it exists and check its brand
-    const [existingDev] = await db
-      .select()
-      .from(developments)
-      .where(eq(developments.id, id))
-      .limit(1);
-
-    if (!existingDev) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: 'Development not found',
-      });
-    }
-
-    if (!String(existingDev.description ?? '').trim()) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Description is required before publishing',
-      });
-    }
-
-    console.log('[publishDevelopment] Development found:', {
-      id: existingDev.id,
-      name: existingDev.name,
-      developerBrandProfileId: existingDev.developerBrandProfileId,
-      requestedBrandProfileId: brandProfileId,
-    });
-
-    // Verify brand ownership if brandProfileId is provided
-    if (brandProfileId && existingDev.developerBrandProfileId !== brandProfileId) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: `Development belongs to brand ${existingDev.developerBrandProfileId}, not ${brandProfileId}`,
-      });
-    }
-
-    // Publish it
-    console.log('[publishDevelopment] About to execute UPDATE query for development:', id);
-
-    try {
-      // Format datetime for MySQL (YYYY-MM-DD HH:MM:SS)
-      const publishedAtFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      const updateResult = await db
-        .update(developments)
-        .set({ isPublished: 1, publishedAt: publishedAtFormatted })
-        .where(eq(developments.id, id));
-
-      console.log(
-        '[publishDevelopment] ✅ Update query executed successfully, result:',
-        updateResult,
-      );
-    } catch (dbError: any) {
-      console.error('[publishDevelopment] ❌ Database error during UPDATE:', {
-        developmentId: id,
-        error: dbError,
-        errorName: dbError?.name,
-        errorMessage: dbError?.message,
-        errorCode: dbError?.code,
-        errorSql: dbError?.sql,
-        errorStack: dbError?.stack,
-      });
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Database error: ${dbError?.message || dbError?.toString() || 'Unknown error'}`,
-      });
-    }
-
-    console.log('[publishDevelopment] About to SELECT updated development');
-
-    const [updated] = await db.select().from(developments).where(eq(developments.id, id)).limit(1);
-
-    if (!updated) {
-      console.error('[publishDevelopment] ❌ Development not found after update!');
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Publish failed: Could not retrieve updated development',
-      });
-    }
-
-    console.log('[publishDevelopment] ✅ Super admin published development:', {
-      id: updated.id,
-      name: updated.name,
-      isPublished: updated.isPublished,
-      status: updated.status,
-    });
-    return updated;
+    return publishPlatformCuratedDevelopment(id, userId, operatingContext);
   }
 
   // Real developer mode - check ownership
@@ -2465,6 +2444,9 @@ async function publishDevelopment(
       .for('update');
     if (!ownedDevelopment) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+    }
+    if (ownedDevelopment.transactionType === 'auction') {
+      throwAuctionPublicationDisabled();
     }
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
     const blockers = validatePersistedSubmissionReadiness(ownedDevelopment, persistedUnits);
@@ -2530,6 +2512,177 @@ async function publishDevelopment(
   return updated;
 }
 
+/**
+ * The only supported privileged publication transition for platform-curated
+ * developments in S0. Human review may be bypassed by the curator, but the
+ * canonical persisted readiness, brand, inventory, transaction, and actor
+ * checks remain mandatory.
+ */
+async function publishPlatformCuratedDevelopment(
+  id: number,
+  userId: number,
+  operatingContext?: { brandProfileId: number } | null,
+) {
+  if (!operatingContext?.brandProfileId) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'An explicit platform curator brand context is required to publish a development.',
+    });
+  }
+
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const updated = await db.transaction(async (tx: any) => {
+    const [actor] = await tx
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.role, 'super_admin')))
+      .limit(1)
+      .for('update');
+
+    if (!actor) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only an authenticated super-admin can publish a platform-curated development.',
+      });
+    }
+
+    const [brand] = await tx
+      .select({
+        id: developerBrandProfiles.id,
+        sourceAttribution: developerBrandProfiles.sourceAttribution,
+      })
+      .from(developerBrandProfiles)
+      .where(
+        and(
+          eq(developerBrandProfiles.id, operatingContext.brandProfileId),
+          eq(developerBrandProfiles.ownerType, 'platform'),
+          eq(developerBrandProfiles.isVisible, 1),
+          isNull(developerBrandProfiles.linkedDeveloperAccountId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+
+    if (!brand) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'The selected brand is not an available platform curator context.',
+      });
+    }
+    if (!String(brand.sourceAttribution ?? '').trim()) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Platform-curated publication requires source attribution on the brand profile.',
+      });
+    }
+
+    const [existingDev] = await tx
+      .select()
+      .from(developments)
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.developerBrandProfileId, operatingContext.brandProfileId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+
+    if (!existingDev) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not found in the selected platform curator context.',
+      });
+    }
+    if (existingDev.transactionType === 'auction') {
+      throwAuctionPublicationDisabled();
+    }
+    if (existingDev.approvalStatus === 'approved' && existingDev.isPublished === 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Development is already publicly published.',
+      });
+    }
+
+    const openRows = await tx
+      .select({ id: developmentApprovalQueue.id })
+      .from(developmentApprovalQueue)
+      .where(
+        and(
+          eq(developmentApprovalQueue.developmentId, id),
+          inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (openRows.length > 0) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Development already has an unresolved review submission.',
+      });
+    }
+
+    const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
+    const blockers = validatePersistedSubmissionReadiness(existingDev, persistedUnits);
+    if (blockers.length > 0) throw submissionValidationError(blockers);
+
+    const priorRows = await tx
+      .select({ id: developmentApprovalQueue.id })
+      .from(developmentApprovalQueue)
+      .where(eq(developmentApprovalQueue.developmentId, id))
+      .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id))
+      .limit(1)
+      .for('update');
+    const now = mysqlDateTime();
+    await tx
+      .update(developments)
+      .set({
+        isPublished: 1,
+        approvalStatus: 'approved',
+        publishedAt: now,
+        rejectionNote: null,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.developerBrandProfileId, operatingContext.brandProfileId),
+        ),
+      );
+
+    await tx.insert(developmentApprovalQueue).values({
+      developmentId: id,
+      submittedBy: actor.id,
+      submittedAt: now,
+      status: 'approved',
+      submissionType: priorRows.length > 0 ? 'update' : 'initial',
+      reviewNotes: null,
+      rejectionReason: null,
+      reviewedAt: now,
+      reviewedBy: actor.id,
+      complianceChecks: null,
+    });
+
+    const [published] = await tx
+      .select()
+      .from(developments)
+      .where(eq(developments.id, id))
+      .limit(1);
+    return published;
+  });
+
+  if (!updated) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Publication completed without a persisted development result.',
+    });
+  }
+
+  return updated;
+}
+
 async function approveDevelopment(
   id: number,
   adminId: number,
@@ -2568,12 +2721,23 @@ async function completeReview(
 ) {
   await db.transaction(async (tx: any) => {
     const [development] = await tx
-      .select({ id: developments.id })
+      .select()
       .from(developments)
       .where(eq(developments.id, developmentId))
       .limit(1)
       .for('update');
     if (!development) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
+    if (decision === 'approved' && development.transactionType === 'auction') {
+      throwAuctionPublicationDisabled();
+    }
+    if (decision === 'approved') {
+      const reviewUnitTypes = await tx
+        .select()
+        .from(unitTypes)
+        .where(eq(unitTypes.developmentId, developmentId));
+      const blockers = validatePersistedSubmissionReadiness(development, reviewUnitTypes);
+      if (blockers.length > 0) throw submissionValidationError(blockers);
+    }
     const openRows = await tx
       .select()
       .from(developmentApprovalQueue)
@@ -2727,181 +2891,6 @@ export async function saveDraft(
   }
 }
 
-export async function publishDevelopmentStrict(
-  developerId: number,
-  wizardState: WizardData,
-  ownerType: 'platform' | 'developer' = 'developer',
-): Promise<{ developmentId: number; unitTypesCount: number }> {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  console.log('[publishDevelopmentStrict] Starting publish for developer:', developerId);
-
-  let normalized: NormalizedDevelopmentPayload;
-  try {
-    normalized = normalizeForPublish(wizardState, ownerType);
-  } catch (error: any) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Normalization failed',
-      cause: { field: 'normalization', error: error.message } as any,
-    });
-  }
-
-  try {
-    validateNormalizedPayload(normalized);
-  } catch (error: any) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Validation failed',
-      cause: { field: 'validation', error: error.message } as any,
-    });
-  }
-
-  validateForPublish(wizardState);
-
-  const slug = await generateUniqueSlug((normalized as any).name);
-
-  try {
-    const result = await db.transaction(async (tx: any) => {
-      // developerId in developments table MUST be the developer PROFILE id
-      const devProfile = await tx.query.developers.findFirst({
-        where: eq(developers.userId, developerId),
-        columns: { id: true },
-      });
-      if (!devProfile) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: `Developer profile for user ID ${developerId} not found`,
-        });
-      }
-
-      const devPayload = {
-        ...(normalized as any),
-        developerId: devProfile.id,
-        slug,
-        isPublished: 1,
-        publishedAt: mysqlDateTime(),
-
-        // ✅ hard defaults to satisfy DB NOT NULL + no default
-        views: 0,
-        isFeatured: 0,
-      };
-
-      const [insertResult] = await tx.insert(developments).values(devPayload);
-      const newId = insertResult.insertId;
-
-      let unitCount = 0;
-      if (Array.isArray(wizardState.unitTypes) && wizardState.unitTypes.length > 0) {
-        await persistUnitTypes(tx, newId, wizardState.unitTypes);
-
-        const [{ count }] = await tx
-          .select({ count: sql<number>`count(*)` })
-          .from(unitTypes)
-          .where(eq(unitTypes.developmentId, newId));
-
-        unitCount = Number(count);
-
-        if (unitCount === 0) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Unit types were provided but none were persisted',
-          });
-        }
-      }
-
-      return { newId, unitCount };
-    });
-
-    console.log('[publishDevelopmentStrict] Success:', result);
-    return { developmentId: result.newId, unitTypesCount: result.unitCount };
-  } catch (error: any) {
-    console.error('[publishDevelopmentStrict] Transaction failed:', error);
-    if (error instanceof TRPCError) throw error;
-
-    throw new TRPCError({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: `Publish failed: ${error.message}`,
-    });
-  }
-}
-
-function validateForPublish(wizardState: WizardData): void {
-  const errors: Record<string, string> = {};
-
-  if (!Array.isArray(wizardState.unitTypes) || wizardState.unitTypes.length === 0) {
-    errors['unitTypes'] = 'At least one unit type is required';
-  }
-
-  const images = (wizardState as any).images;
-  const hasHeroImage =
-    (Array.isArray(images) && images.length > 0) ||
-    (typeof images === 'string' && images.trim() !== '');
-
-  if (!hasHeroImage) {
-    errors['media.heroImage'] = 'At least one photo (Hero Image) is required';
-  }
-
-  const description = String(
-    (wizardState as any).description ?? (wizardState as any).developmentData?.description ?? '',
-  ).trim();
-  if (!description) {
-    errors['description'] = 'Description is required before publishing';
-  }
-
-  const transactionType =
-    (wizardState as any).transactionType ||
-    (wizardState as any).developmentData?.transactionType ||
-    'for_sale';
-
-  if (transactionType === 'for_rent' && Array.isArray(wizardState.unitTypes)) {
-    const hasRent = wizardState.unitTypes.some((u: any) => {
-      const from = Number(u?.monthlyRentFrom ?? u?.monthlyRent ?? 0);
-      const to = Number(u?.monthlyRentTo ?? 0);
-      return from > 0 || to > 0;
-    });
-    if (!hasRent) {
-      errors['unitTypes.monthlyRentFrom'] = 'At least one unit type must include monthly rent';
-    }
-  }
-
-  if (transactionType === 'auction' && Array.isArray(wizardState.unitTypes)) {
-    const now = Date.now();
-    const validAuctionUnits = wizardState.unitTypes.every((u: any) => {
-      const startingBid = Number(u?.startingBid ?? 0);
-      const reservePrice = u?.reservePrice != null ? Number(u.reservePrice) : undefined;
-      const startDate = u?.auctionStartDate ? new Date(u.auctionStartDate) : null;
-      const endDate = u?.auctionEndDate ? new Date(u.auctionEndDate) : null;
-
-      if (!startingBid || startingBid <= 0) return false;
-      if (
-        reservePrice != null &&
-        Number.isFinite(reservePrice) &&
-        reservePrice > 0 &&
-        reservePrice < startingBid
-      )
-        return false;
-      if (!startDate || Number.isNaN(startDate.getTime())) return false;
-      if (!endDate || Number.isNaN(endDate.getTime())) return false;
-      if (endDate.getTime() <= startDate.getTime()) return false;
-      if (startDate.getTime() < now) return false;
-      return true;
-    });
-
-    if (!validAuctionUnits) {
-      errors['unitTypes.startingBid'] = 'All unit types must include valid auction terms';
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Publish validation failed',
-      cause: { fields: errors } as any,
-    });
-  }
-}
-
 // ===========================================================================
 // DELETE DEVELOPMENT
 // ===========================================================================
@@ -3025,16 +3014,6 @@ async function getDevelopmentById(id: number) {
   return result[0] || null;
 }
 
-async function getDevelopmentsByBrandId(brandProfileId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database unavailable');
-
-  return db
-    .select()
-    .from(developments)
-    .where(eq(developments.developerBrandProfileId, brandProfileId));
-}
-
 // ===========================================================================
 // EXPORTS
 // ===========================================================================
@@ -3052,14 +3031,13 @@ export const developmentService = {
   updateDevelopment,
   getDevelopmentWithPhases,
   getDevelopmentById,
-  getDevelopmentsByBrandId,
   getDevelopmentsByDeveloperId,
   getDeveloperDevelopments: getDevelopmentsByDeveloperId,
   createPhase,
   updatePhase,
   deleteDevelopment,
   publishDevelopment,
+  publishPlatformCuratedDevelopment,
   unpublishDevelopment,
   saveDraft,
-  publishDevelopmentStrict,
 };
