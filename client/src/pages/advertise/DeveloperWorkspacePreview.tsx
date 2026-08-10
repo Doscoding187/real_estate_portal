@@ -232,7 +232,9 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
       aria-label="Illustrative Property Listify Developer workspace preview"
       className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.14)]"
     >
-      <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
+      <div
+        className={`flex items-center justify-between gap-4 border-b border-slate-200 bg-white ${compact ? 'px-4 py-2.5' : 'px-4 py-3 sm:px-5'}`}
+      >
         <div className="flex items-center gap-3">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
           <p className="text-xs font-bold text-slate-950">Developer workspace</p>
@@ -251,7 +253,7 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
       <div className="grid min-h-[530px] sm:grid-cols-[11.75rem_minmax(0,1fr)]">
         <WorkspaceNavigation compact={compact} />
 
-        <div className="min-w-0 bg-[#f8fafc] p-4 sm:p-5 lg:p-6">
+        <div className={`min-w-0 bg-[#f8fafc] ${compact ? 'p-4' : 'p-4 sm:p-5 lg:p-6'}`}>
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--brand-blue)]">
@@ -269,14 +271,16 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
             </span>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <div className={`${compact ? 'mt-4' : 'mt-5'} grid grid-cols-2 gap-2.5 lg:grid-cols-4`}>
             {KPI_ITEMS.map(item => (
               <MetricCard key={item.label} {...item} />
             ))}
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <section
+              className={`${compact ? 'p-2.5' : 'p-4'} rounded-2xl border border-slate-200 bg-white`}
+            >
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -291,13 +295,15 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
                 </span>
               </div>
               <div className="mt-4 space-y-2.5">
-                {DEVELOPMENTS.map(item => (
+                {(compact ? DEVELOPMENTS.slice(0, 2) : DEVELOPMENTS).map(item => (
                   <DevelopmentRow key={item.name} item={item} compact={compact} />
                 ))}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <section
+              className={`${compact ? 'p-2.5' : 'p-4'} rounded-2xl border border-slate-200 bg-white`}
+            >
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -312,7 +318,7 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
                 </span>
               </div>
               <div className="mt-4 space-y-2.5">
-                {INVENTORY_ITEMS.map(item => (
+                {(compact ? INVENTORY_ITEMS.slice(0, 1) : INVENTORY_ITEMS).map(item => (
                   <div
                     key={item.name}
                     className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5"
@@ -337,8 +343,10 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
             </section>
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className={`${compact ? 'mt-3' : 'mt-4'} grid gap-4 xl:grid-cols-[1.05fr_.95fr]`}>
+            <section
+              className={`${compact ? 'p-2.5' : 'p-4'} rounded-2xl border border-slate-200 bg-white`}
+            >
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -353,7 +361,7 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
                 </span>
               </div>
               <div className="mt-4 space-y-2.5">
-                {INTEREST_ITEMS.map(item => (
+                {(compact ? INTEREST_ITEMS.slice(0, 1) : INTEREST_ITEMS).map(item => (
                   <div
                     key={`${item.development}-${item.unit}`}
                     className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5"
@@ -379,7 +387,9 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
               </div>
             </section>
 
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+            <section
+              className={`${compact ? 'p-2.5' : 'p-4'} rounded-2xl border border-blue-100 bg-blue-50/70`}
+            >
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-[var(--brand-blue)]" aria-hidden="true" />
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-blue)]">
@@ -387,7 +397,7 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
                 </p>
               </div>
               <div className="mt-3 space-y-2.5">
-                {READINESS_ITEMS.map(item => (
+                {(compact ? READINESS_ITEMS.slice(0, 1) : READINESS_ITEMS).map(item => (
                   <StatusRow
                     key={item.label}
                     label={item.label}
@@ -397,30 +407,34 @@ export function DeveloperWorkspacePreview({ compact = false }: DeveloperWorkspac
                   />
                 ))}
               </div>
-              <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-100 bg-white/80 px-3 py-2.5 text-[10px] leading-5 text-slate-600">
-                <ClipboardCheck
-                  className="h-3.5 w-3.5 shrink-0 text-[var(--brand-blue)]"
-                  aria-hidden="true"
-                />
-                Review and publication status stay visible beside the project work.
-              </div>
+              {compact ? null : (
+                <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-100 bg-white/80 px-3 py-2.5 text-[10px] leading-5 text-slate-600">
+                  <ClipboardCheck
+                    className="h-3.5 w-3.5 shrink-0 text-[var(--brand-blue)]"
+                    aria-hidden="true"
+                  />
+                  Review and publication status stay visible beside the project work.
+                </div>
+              )}
             </section>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-600">
-              <Search className="h-3.5 w-3.5 text-[var(--brand-blue)]" aria-hidden="true" />
-              Public discovery
+          {compact ? null : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-600">
+                <Search className="h-3.5 w-3.5 text-[var(--brand-blue)]" aria-hidden="true" />
+                Public discovery
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-600">
+                <FileText className="h-3.5 w-3.5 text-indigo-700" aria-hidden="true" />
+                Media and floor plans
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-600">
+                <Clock3 className="h-3.5 w-3.5 text-orange-700" aria-hidden="true" />
+                Follow-up and next action
+              </div>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-600">
-              <FileText className="h-3.5 w-3.5 text-indigo-700" aria-hidden="true" />
-              Media and floor plans
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-semibold text-slate-600">
-              <Clock3 className="h-3.5 w-3.5 text-orange-700" aria-hidden="true" />
-              Follow-up and next action
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

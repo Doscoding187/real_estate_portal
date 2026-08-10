@@ -33,6 +33,7 @@ import {
   getCommercialPresentationLimits,
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
+import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 
 type AgentCapability = {
   label: string;
@@ -440,7 +441,7 @@ export default function AgentProductLandingPage() {
       <EnhancedNavbar />
 
       <main id="main-content">
-        <section className="relative overflow-x-clip bg-slate-950 text-white">
+        <section data-commercial-hero="true" className={COMMERCIAL_HERO_CLASS}>
           <div
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(0,92,168,0.28),transparent_34%)]"
             aria-hidden="true"

@@ -31,6 +31,7 @@ import {
   getCommercialTermPresentation,
 } from '@/lib/commercialCatalog';
 import { DeveloperWorkspacePreview } from './DeveloperWorkspacePreview';
+import { COMMERCIAL_HERO_CLASS } from './commercialHero';
 
 type DeveloperCapability = {
   label: string;
@@ -600,7 +601,7 @@ export default function DeveloperProductLandingPage() {
       <EnhancedNavbar />
 
       <main id="main-content">
-        <section className="relative overflow-x-clip bg-slate-950 text-white">
+        <section data-commercial-hero="true" className={COMMERCIAL_HERO_CLASS}>
           <div
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(0,92,168,0.3),transparent_35%)]"
             aria-hidden="true"
@@ -619,16 +620,16 @@ export default function DeveloperProductLandingPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
                   For property developers
                 </p>
-                <h1 className="mt-6 font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
+                <h1 className="mt-6 font-serif text-5xl font-semibold leading-[1.03] tracking-[-0.05em] text-white sm:text-6xl lg:mt-2 lg:text-7xl">
                   Run your development portfolio from one{' '}
                   <span className="text-blue-300">connected workspace.</span>
                 </h1>
-                <p className="mt-7 max-w-xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9">
+                <p className="mt-7 max-w-xl text-lg leading-8 text-slate-300 sm:text-xl sm:leading-9 lg:mt-4">
                   Organise developments, structure unit inventory, present eligible projects,
                   capture project-linked enquiries and see what needs attention across your
                   portfolio.
                 </p>
-                <div className="mt-9 flex flex-wrap gap-3">
+                <div className="mt-9 flex flex-wrap gap-3 lg:mt-5">
                   <a
                     href="#developer-workspace"
                     className="inline-flex items-center gap-2 rounded-2xl bg-[var(--conversion)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-orange-950/25 transition hover:bg-[var(--conversion-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
@@ -643,7 +644,7 @@ export default function DeveloperProductLandingPage() {
                     View Launch Access <ArrowDown className="h-4 w-4" aria-hidden="true" />
                   </a>
                 </div>
-                <div className="mt-8 flex flex-wrap gap-2.5 text-xs font-semibold text-slate-200">
+                <div className="mt-8 flex flex-wrap gap-2.5 text-xs font-semibold text-slate-200 lg:mt-4">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2">
                     <CircleDollarSign
                       className="h-4 w-4 shrink-0 text-orange-300"

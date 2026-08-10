@@ -228,11 +228,11 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
     <div
       data-testid="agency-workspace-preview"
       aria-label="Illustrative Property Listify Agency workspace preview"
-      className={`overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.14)] ${
-        compact ? 'max-h-[640px] sm:max-h-[720px]' : ''
-      }`}
+      className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,0.14)]"
     >
-      <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
+      <div
+        className={`flex items-center justify-between gap-4 border-b border-slate-200 bg-white ${compact ? 'px-4 py-2.5' : 'px-4 py-3 sm:px-5'}`}
+      >
         <div className="flex items-center gap-3">
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
           <p className="text-xs font-bold text-slate-950">Agency workspace</p>
@@ -251,7 +251,7 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
       <div className="grid min-h-[470px] sm:grid-cols-[11.25rem_minmax(0,1fr)]">
         <WorkspaceNavigation compact={compact} />
 
-        <div className="min-w-0 bg-[#f8fafc] p-4 sm:p-5 lg:p-6">
+        <div className={`min-w-0 bg-[#f8fafc] ${compact ? 'p-4' : 'p-4 sm:p-5 lg:p-6'}`}>
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--brand-blue)]">
@@ -276,7 +276,9 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
           </div>
 
           <div className="mt-4 grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
-            <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <section
+              className={`${compact ? 'p-3' : 'p-4'} rounded-2xl border border-slate-200 bg-white`}
+            >
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -291,7 +293,7 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
                 </span>
               </div>
               <div className="mt-4 space-y-2.5">
-                {TEAM_ATTENTION.map(item => (
+                {(compact ? TEAM_ATTENTION.slice(0, 2) : TEAM_ATTENTION).map(item => (
                   <div
                     key={item.name}
                     className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5"
@@ -319,7 +321,9 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <section
+              className={`${compact ? 'p-3' : 'p-4'} rounded-2xl border border-slate-200 bg-white`}
+            >
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -334,14 +338,16 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
                 </span>
               </div>
               <div className="mt-4 space-y-2.5">
-                {OPERATIONS_QUEUE.map(item => (
+                {(compact ? OPERATIONS_QUEUE.slice(0, 2) : OPERATIONS_QUEUE).map(item => (
                   <StatusRow key={item.label} {...item} />
                 ))}
               </div>
             </section>
           </div>
 
-          <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+          <section
+            className={`${compact ? 'p-3' : 'p-4'} mt-4 rounded-2xl border border-slate-200 bg-white`}
+          >
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
@@ -355,8 +361,8 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
                 <Route className="h-4 w-4" aria-hidden="true" />
               </span>
             </div>
-            <div className="mt-4 grid gap-3 lg:grid-cols-3">
-              {PROPERTIES.map(property => {
+            <div className={`${compact ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} mt-4 grid gap-3`}>
+              {(compact ? PROPERTIES.slice(0, 1) : PROPERTIES).map(property => {
                 const StatusIcon = property.icon;
                 return (
                   <div
@@ -387,35 +393,40 @@ export function AgencyWorkspacePreview({ compact = false }: AgencyWorkspacePrevi
             </div>
           </section>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-2">
-            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-              <div className="flex items-center gap-2">
-                <CircleDollarSign className="h-4 w-4 text-[var(--brand-blue)]" aria-hidden="true" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-blue)]">
-                  Commercial progress
-                </p>
-              </div>
-              <div className="mt-3 space-y-2.5">
-                {COMMERCIAL_PROGRESS.map(item => (
-                  <StatusRow key={item.label} {...item} tone="text-emerald-700" />
-                ))}
-              </div>
-            </section>
+          {compact ? null : (
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                <div className="flex items-center gap-2">
+                  <CircleDollarSign
+                    className="h-4 w-4 text-[var(--brand-blue)]"
+                    aria-hidden="true"
+                  />
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-blue)]">
+                    Commercial progress
+                  </p>
+                </div>
+                <div className="mt-3 space-y-2.5">
+                  {COMMERCIAL_PROGRESS.map(item => (
+                    <StatusRow key={item.label} {...item} tone="text-emerald-700" />
+                  ))}
+                </div>
+              </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-[var(--brand-blue)]" aria-hidden="true" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-blue)]">
-                  Management view
-                </p>
-              </div>
-              <div className="mt-3 space-y-2.5">
-                {MANAGEMENT_SIGNALS.map(item => (
-                  <StatusRow key={item.label} {...item} />
-                ))}
-              </div>
-            </section>
-          </div>
+              <section className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-[var(--brand-blue)]" aria-hidden="true" />
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-blue)]">
+                    Management view
+                  </p>
+                </div>
+                <div className="mt-3 space-y-2.5">
+                  {MANAGEMENT_SIGNALS.map(item => (
+                    <StatusRow key={item.label} {...item} />
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
         </div>
       </div>
     </div>
