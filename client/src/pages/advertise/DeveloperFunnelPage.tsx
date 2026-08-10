@@ -1,5 +1,5 @@
-import LaunchAccessAudiencePage from './LaunchAccessAudiencePage';
+import DeveloperProductLandingPage from './DeveloperProductLandingPage';
 
 export default function DeveloperFunnelPage() {
-  return <LaunchAccessAudiencePage audience="developer" />;
+  return <DeveloperProductLandingPage />;
 }
