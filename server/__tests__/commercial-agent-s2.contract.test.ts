@@ -13,6 +13,7 @@ describe('commercial monetization S2 agent authority', () => {
     expect(route).toContain('planId: z.number().int().positive()');
     expect(route).not.toContain('AGENT_ONBOARDING_TIER_VALUES');
     expect(service).toContain("getCommercialCatalog('agent')");
+    expect(service).toContain('product.source.planId === planId');
     expect(service).toContain('Free agent trials are retired');
     expect(service).toContain('manual-EFT invoice and verified payment');
     expect(route).toContain('request-launch-access-invoice');
@@ -66,13 +67,13 @@ describe('commercial monetization S2 agent authority', () => {
     const funnel = readRepoFile('client/src/pages/advertise/AgentFunnelPage.tsx');
 
     expect(packagePage).toContain('useCommercialCatalog');
-    expect(packagePage).toContain('source.planId');
     expect(packagePage).not.toContain('fallbackMonthlyCents');
     expect(packagePage).not.toContain('ANNUAL_DISCOUNT');
     expect(packagePage).not.toContain('AGENT_TRIAL_DAYS');
     expect(packagePage).not.toContain('R2,499');
     expect(app).not.toContain("import('./pages/advertise/AgentOnboardingPage')");
     expect(app).toContain('<Redirect to="/role-selection" />');
-    expect(funnel).toContain('nextRoute="/role-selection"');
+    expect(funnel).toContain("import AgentProductLandingPage from './AgentProductLandingPage'");
+    expect(funnel).toContain('return <AgentProductLandingPage />');
   });
 });
