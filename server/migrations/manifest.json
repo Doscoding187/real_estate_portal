@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0004_canonical_listing_location.sql",
+  "expectedHead": "0005_manual_location_without_coordinates.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -57,6 +57,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "PLE-6B-2026-08-10-Edward"
+    },
+    {
+      "sequence": 5,
+      "filename": "0005_manual_location_without_coordinates.sql",
+      "checksum": "8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b",
+      "parent": "0004_canonical_listing_location.sql",
+      "parentChecksum": "b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "PLE-6C-2026-08-10-Edward"
     }
   ]
 }

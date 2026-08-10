@@ -289,11 +289,11 @@ describe('migration execution authority', () => {
       parentChecksum: baseline?.checksum,
     });
     const latest = executionManifest.migrations.at(-1);
-    const measurements = executionManifest.migrations.find(entry => entry.sequence === 3);
+    const location = executionManifest.migrations.find(entry => entry.sequence === 4);
     expect(latest).toMatchObject({
-      filename: '0004_canonical_listing_location.sql',
-      parent: '0003_canonical_property_measurements.sql',
-      parentChecksum: measurements?.checksum,
+      filename: '0005_manual_location_without_coordinates.sql',
+      parent: '0004_canonical_listing_location.sql',
+      parentChecksum: location?.checksum,
     });
     expect(executionManifest.expectedHead).toBe(latest?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);

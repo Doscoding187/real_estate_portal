@@ -20,6 +20,8 @@ export default {
       'scripts/__tests__/localEnvironmentAuthority.test.ts',
       'server/_core/databaseAuthority/__tests__/*.test.ts',
       'server/migrations/__tests__/migrationManifest.test.ts',
+      'server/migrations/__tests__/canonicalListingLocationMigration.test.ts',
+      'server/migrations/__tests__/manualLocationWithoutCoordinatesMigration.test.ts',
     ],
     globals: true,
     restoreMocks: true,

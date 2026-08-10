@@ -493,6 +493,11 @@
       "purpose": "Approved PLE-6B additive location authority for geography lifecycle, provider mappings, canonical listing IDs, private address state, confirmation, and public precision."
     },
     {
+      "path": "server/migrations/0005_manual_location_without_coordinates.sql",
+      "classification": "canonical active",
+      "purpose": "Reviewed PLE-6C compatibility migration required to correct the P1 manual-authoring defect: allow confirmed manual street-level locations without provider coordinates while preserving existing coordinate values."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

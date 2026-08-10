@@ -6,7 +6,7 @@ import { loadAndValidateMigrationManifest, parseSqlStatements } from '../migrati
 const migrationPath = resolve('server/migrations/0004_canonical_listing_location.sql');
 
 describe('PLE-6B canonical listing location migration', () => {
-  it('is manifest-authorized as the next exceptional migration without database mutation', () => {
+  it('remains manifest-authorized as an exceptional migration without database mutation', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
@@ -21,7 +21,7 @@ describe('PLE-6B canonical listing location migration', () => {
       statementPolicy: 'approved-exception',
       approvalReference: 'PLE-6B-2026-08-10-Edward',
     });
-    expect(manifest.expectedHead.filename).toBe('0004_canonical_listing_location.sql');
+    expect(manifest.expectedHead.filename).toBe('0005_manual_location_without_coordinates.sql');
   });
 
   it('contains only additive DDL and the approved location invariants', () => {
