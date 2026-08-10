@@ -1057,8 +1057,6 @@ export async function createDevelopment(
     showHouseAddress: boolToInt((developmentData as any).showHouseAddress ?? true),
     readinessScore: 0,
     approvalStatus: 'draft',
-    approvedAt: null,
-    approvedBy: null,
     nature: sanitizeEnum(
       (developmentData as any).nature,
       ['new', 'phase', 'extension', 'redevelopment'],
@@ -2545,22 +2543,48 @@ async function publishPlatformCuratedDevelopment(
     if (existingDev.transactionType === 'auction') {
       throwAuctionPublicationDisabled();
     }
+    if (existingDev.approvalStatus === 'approved' && existingDev.isPublished === 1) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Development is already publicly published.',
+      });
+    }
 
-    const persistedUnits = await tx
-      .select()
-      .from(unitTypes)
-      .where(eq(unitTypes.developmentId, id));
+    const openRows = await tx
+      .select({ id: developmentApprovalQueue.id })
+      .from(developmentApprovalQueue)
+      .where(
+        and(
+          eq(developmentApprovalQueue.developmentId, id),
+          inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (openRows.length > 0) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Development already has an unresolved review submission.',
+      });
+    }
+
+    const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
     const blockers = validatePersistedSubmissionReadiness(existingDev, persistedUnits);
     if (blockers.length > 0) throw submissionValidationError(blockers);
 
+    const priorRows = await tx
+      .select({ id: developmentApprovalQueue.id })
+      .from(developmentApprovalQueue)
+      .where(eq(developmentApprovalQueue.developmentId, id))
+      .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id))
+      .limit(1)
+      .for('update');
     const now = mysqlDateTime();
     await tx
       .update(developments)
       .set({
         isPublished: 1,
         approvalStatus: 'approved',
-        approvedAt: now,
-        approvedBy: userId,
         publishedAt: now,
         rejectionNote: null,
         updatedAt: now,
@@ -2571,6 +2595,19 @@ async function publishPlatformCuratedDevelopment(
           eq(developments.developerBrandProfileId, operatingContext.brandProfileId),
         ),
       );
+
+    await tx.insert(developmentApprovalQueue).values({
+      developmentId: id,
+      submittedBy: actor.id,
+      submittedAt: now,
+      status: 'approved',
+      submissionType: priorRows.length > 0 ? 'update' : 'initial',
+      reviewNotes: null,
+      rejectionReason: null,
+      reviewedAt: now,
+      reviewedBy: actor.id,
+      complianceChecks: null,
+    });
 
     const [published] = await tx
       .select()
@@ -2675,8 +2712,6 @@ async function completeReview(
         ? {
             approvalStatus: 'approved' as const,
             isPublished: 1,
-            approvedAt: now,
-            approvedBy: reviewerId,
             publishedAt: now,
             rejectionNote: null,
           }

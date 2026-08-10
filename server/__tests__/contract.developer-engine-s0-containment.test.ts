@@ -26,8 +26,11 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(publisherRouter).toContain('requireActivePublisherContext');
     expect(developmentService).toContain('validatePersistedSubmissionReadiness');
     expect(developmentService).toContain('const reviewUnitTypes = await tx');
-    expect(developmentService).toContain('approvedBy: userId');
-    expect(developmentService).toContain('approvedBy: reviewerId');
+    expect(developmentService).toContain('reviewedBy: actor.id');
+    expect(developmentService).toContain("status: 'approved'");
+    expect(developmentService).not.toContain('approvedAt: now');
+    expect(developmentService).not.toContain('approvedBy: userId');
+    expect(developmentService).not.toContain('approvedBy: reviewerId');
   });
 
   it('retires the arbitrary cross-brand development linking authority', () => {
@@ -48,7 +51,7 @@ describe('Developer Engine S0 containment contracts', () => {
     const brandStart = developmentService.indexOf('const [brand] = await tx');
     const brandEnd = developmentService.indexOf('if (!brand)', brandStart);
 
-    expect(developmentService).toContain("eq(users.id, userId)");
+    expect(developmentService).toContain('eq(users.id, userId)');
     expect(developmentService).toContain("eq(users.role, 'super_admin')");
     expect(developmentService).toContain('Only an authenticated super-admin can publish');
     expect(brandStart).toBeGreaterThan(-1);
@@ -70,9 +73,7 @@ describe('Developer Engine S0 containment contracts', () => {
       'export const superAdminProcedure = protectedProcedure.use(requireSuperAdmin)',
     );
     expect(developmentService).toContain('A valid platform curator brand context is required');
-    expect(developmentService).not.toContain(
-      'operatingContext?.brandProfileId || brandProfileId',
-    );
+    expect(developmentService).not.toContain('operatingContext?.brandProfileId || brandProfileId');
     expect(developmentService).not.toContain(
       'insertPayload.developerBrandProfileId = brandProfileId',
     );
@@ -90,7 +91,9 @@ describe('Developer Engine S0 containment contracts', () => {
 
   it('retires the independent developmentUnits writer and moves KPI reads to unitTypes', () => {
     expect(existsSync(resolve(repoRoot, 'server/services/unitService.ts'))).toBe(false);
-    expect(existsSync(resolve(repoRoot, 'server/services/__tests__/unitService.test.ts'))).toBe(false);
+    expect(existsSync(resolve(repoRoot, 'server/services/__tests__/unitService.test.ts'))).toBe(
+      false,
+    );
 
     const kpiService = source('server/services/kpiService.ts');
     expect(kpiService).toContain('from(unitTypes)');
@@ -108,7 +111,9 @@ describe('Developer Engine S0 containment contracts', () => {
 
     expect(developmentService).toContain("existingDev.transactionType === 'auction'");
     expect(developmentService).toContain("ownedDevelopment.transactionType === 'auction'");
-    expect(developmentService).toContain("decision === 'approved' && development.transactionType === 'auction'");
+    expect(developmentService).toContain(
+      "decision === 'approved' && development.transactionType === 'auction'",
+    );
     expect(developmentService).toContain("ne(developments.transactionType, 'auction')");
     expect(derivedListingService).toContain("ne(developments.transactionType, 'auction')");
     expect(developmentService).not.toContain("neq(developments.transactionType, 'auction')");
@@ -129,14 +134,16 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(localDemoSeed).toContain('production runtime detected');
     expect(localDemoSeed).toContain('production database name detected');
     expect(existsSync(resolve(repoRoot, 'server/emulatorRouter.ts'))).toBe(false);
-    expect(
-      existsSync(resolve(repoRoot, 'server/services/platformBrandSeedingService.ts')),
-    ).toBe(false);
+    expect(existsSync(resolve(repoRoot, 'server/services/platformBrandSeedingService.ts'))).toBe(
+      false,
+    );
     expect(existsSync(resolve(repoRoot, 'scripts/brandEmulatorDemo.ts'))).toBe(false);
     expect(
       existsSync(resolve(repoRoot, 'client/src/components/developer/DevelopmentWizard.tsx')),
     ).toBe(false);
-    expect(source('server/services/developmentService.ts')).not.toContain('publishDevelopmentStrict');
+    expect(source('server/services/developmentService.ts')).not.toContain(
+      'publishDevelopmentStrict',
+    );
     const publishFlowTest = source('tests/integration/publish-flow.test.ts');
     expect(publishFlowTest).not.toContain('publishDevelopmentStrict');
     expect(publishFlowTest).toContain('saveDraft');
