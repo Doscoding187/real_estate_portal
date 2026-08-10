@@ -5,7 +5,7 @@
 
 import type { TrpcContext, BrandEmulationContext } from './context';
 import { TRPCError } from '@trpc/server';
-import { developerBrandProfileService } from '../services/developerBrandProfileService';
+import { brandContextService } from '../services/brandContextService';
 import { requireUser } from './requireUser';
 
 export interface BrandOperatingContext {
@@ -50,21 +50,16 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
   }
 
   try {
-    // Verify the brand profile exists
-    const brandProfile = await developerBrandProfileService.getBrandProfileById(brandProfileId);
-
-    if (!brandProfile) {
-      throw new TRPCError({
-        code: 'NOT_FOUND',
-        message: `Brand profile ${brandProfileId} not found`,
-      });
-    }
+    // The shared context boundary must enforce the same platform-curator
+    // isolation as the dedicated publisher routes: visible, platform-owned,
+    // and still unclaimed.
+    const brandProfile = await brandContextService.verifyBrandContext(brandProfileId);
 
     // Create enhanced context with brand operating context
     const enhancedCtx: EnhancedTRPCContext = {
       ...ctx,
       operatingAs: {
-        brandProfileId: brandProfile.id,
+        brandProfileId: brandProfile.brandProfileId,
         brandType: (brandProfile.identityType || 'developer') as any,
         brandName: brandProfile.brandName,
         originalUserId: ctx.user.id,
@@ -73,7 +68,7 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
       brandEmulationContext: {
         originalUserId: ctx.user.id,
         mode: 'seeding',
-        brandProfileId: brandProfile.id,
+        brandProfileId: brandProfile.brandProfileId,
         brandProfileType: (brandProfile.identityType || 'developer') as any,
         brandProfileName: brandProfile.brandName,
       },

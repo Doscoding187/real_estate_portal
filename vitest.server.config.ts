@@ -12,7 +12,11 @@ export default defineConfig({
   test: {
     name: 'server',
     environment: 'node',
-    include: ['server/**/*.test.ts', 'server/**/*.spec.ts'],
+    include: [
+      'server/**/*.test.ts',
+      'server/**/*.spec.ts',
+      'tests/integration/publish-flow.test.ts',
+    ],
     globals: true,
     restoreMocks: true,
     clearMocks: true,

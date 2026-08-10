@@ -91,6 +91,7 @@ class BrandContextService {
           eq(developerBrandProfiles.id, brandProfileId),
           eq(developerBrandProfiles.ownerType, 'platform'),
           eq(developerBrandProfiles.isVisible, 1),
+          isNull(developerBrandProfiles.linkedDeveloperAccountId),
         ),
       );
 
@@ -103,7 +104,7 @@ class BrandContextService {
 
     return {
       ...profile,
-      isOperatingAs: true,
+      isOperatingAs: Boolean(profile.isOperatingAs),
     };
   }
 

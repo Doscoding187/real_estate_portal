@@ -393,6 +393,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
       id: developments.id,
       isPublished: developments.isPublished,
       approvalStatus: developments.approvalStatus,
+      transactionType: developments.transactionType,
       developerBrandProfileId: developments.developerBrandProfileId,
       marketingBrandProfileId: developments.marketingBrandProfileId,
     })
@@ -411,7 +412,8 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const developmentVisible =
     brandProfileId !== null &&
     boolFromTinyInt(development.isPublished) &&
-    String(development.approvalStatus || '') === 'approved';
+    String(development.approvalStatus || '') === 'approved' &&
+    development.transactionType !== 'auction';
 
   const [program] = await input.db
     .select({

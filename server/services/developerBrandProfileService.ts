@@ -316,36 +316,6 @@ async function toggleVisibility(id: number, visible: boolean) {
 }
 
 /**
- * Attach development to brand profile
- */
-async function attachDevelopmentToBrand(developmentId: number, brandProfileId: number) {
-  await db
-    .update(developments)
-    .set({
-      developerBrandProfileId: brandProfileId,
-      devOwnerType: 'platform',
-    })
-    .where(eq(developments.id, developmentId));
-
-  return { success: true };
-}
-
-/**
- * Detach development from brand profile
- */
-async function detachDevelopmentFromBrand(developmentId: number) {
-  await db
-    .update(developments)
-    .set({
-      developerBrandProfileId: null,
-      devOwnerType: 'developer',
-    })
-    .where(eq(developments.id, developmentId));
-
-  return { success: true };
-}
-
-/**
  * Get developments for a brand profile
  */
 async function getBrandDevelopments(brandProfileId: number) {
@@ -617,9 +587,6 @@ export const developerBrandProfileService = {
   deleteBrandProfile, // Added
   verifyBrandOperation,
 
-  // Development linking
-  attachDevelopmentToBrand,
-  detachDevelopmentFromBrand,
   getBrandDevelopments,
   getBrandProfileWithStats,
 

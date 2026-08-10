@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 
 import {
@@ -272,6 +272,7 @@ router.get('/sitemap-developments.xml', async (_req, res, next) => {
         and(
           eq(developments.isPublished, 1),
           eq(developments.approvalStatus, 'approved'),
+          ne(developments.transactionType, 'auction'),
           sql`COALESCE(${developments.slug}, '') <> ''`,
         ),
       );
