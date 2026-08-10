@@ -488,6 +488,11 @@
       "purpose": "Additive public read-model measurements preserving internal, erf/stand, and normalized farm-land semantics for PLE-3B core property facts."
     },
     {
+      "path": "server/migrations/0004_canonical_listing_location.sql",
+      "classification": "canonical active",
+      "purpose": "Approved PLE-6B additive location authority for geography lifecycle, provider mappings, canonical listing IDs, private address state, confirmation, and public precision."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

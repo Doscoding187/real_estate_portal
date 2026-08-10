@@ -65,11 +65,11 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it('accepts the repository 0000 -> 0001 -> 0002 -> 0003 manifest with exact ancestry', () => {
+  it('accepts the repository 0000 -> 0001 -> 0002 -> 0003 -> 0004 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const [baseline, incremental, taxonomy, measurements] = manifest.orderedMigrations;
+    const [baseline, incremental, taxonomy, measurements, location] = manifest.orderedMigrations;
 
     expect(baseline).toMatchObject({
       sequence: 0,
@@ -104,7 +104,17 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe(measurements.filename);
+    expect(location).toMatchObject({
+      sequence: 4,
+      filename: '0004_canonical_listing_location.sql',
+      parent: measurements.filename,
+      parentChecksum: measurements.checksum,
+      checksum: 'b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'PLE-6B-2026-08-10-Edward',
+    });
+    expect(manifest.expectedHead.filename).toBe(location.filename);
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

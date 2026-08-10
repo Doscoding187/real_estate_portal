@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0003_canonical_property_measurements.sql",
+  "expectedHead": "0004_canonical_listing_location.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -46,6 +46,17 @@
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 4,
+      "filename": "0004_canonical_listing_location.sql",
+      "checksum": "b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe",
+      "parent": "0003_canonical_property_measurements.sql",
+      "parentChecksum": "773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "PLE-6B-2026-08-10-Edward"
     }
   ]
 }
