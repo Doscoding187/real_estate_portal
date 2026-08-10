@@ -16,6 +16,7 @@ import {
   type LocationCoordinateSource,
   type LocationConfirmationState,
   type PublicLocationPrecision,
+  isSpatialLocationAction,
 } from '../../shared/location-contract';
 
 type AddressComponent = {
@@ -73,6 +74,9 @@ export type ResolvedListingLocation = {
   provinceId: number | null;
   cityId: number | null;
   suburbId: number | null;
+  province?: string | null;
+  city?: string | null;
+  suburb?: string | null;
   privateAddress: PrivateAddress | null;
   coordinatePair: CoordinatePair | null;
   coordinateSource: LocationCoordinateSource | null;
@@ -125,6 +129,16 @@ export function validLocalityCandidate(value: string): boolean {
 function componentValue(components: AddressComponent[] | undefined, types: string[]) {
   const component = components?.find(item => types.some(type => item.types.includes(type)));
   return clean(component?.long_name);
+}
+
+export function hasGeographicLocalityEvidence(components: AddressComponent[] | undefined): boolean {
+  return Boolean(
+    components?.some(component =>
+      component.types.some(type =>
+        ['sublocality', 'sublocality_level_1', 'neighborhood', 'administrative_area_level_3'].includes(type),
+      ),
+    ),
+  );
 }
 
 function derivePrivateAddress(input: ListingLocationResolverInput): PrivateAddress | null {
@@ -217,6 +231,20 @@ export async function resolveCanonicalListingLocation(
     : null;
 
   const providerMapping = await resolveProviderMapping(db, input);
+  const providerEvidenceIsAuthoritative = isSpatialLocationAction({
+    coordinateSource: input.coordinateSource,
+    providerLocationPlaceId: providerMapping?.providerPlaceId || input.providerLocationPlaceId,
+  });
+
+  // A deliberate provider result or pin is the newest physical-location
+  // evidence. Resolve its text/components afresh instead of allowing stale
+  // manual IDs from the previous form state to create a false conflict.
+  if (providerEvidenceIsAuthoritative) {
+    provinceId = null;
+    cityId = null;
+    suburbId = null;
+  }
+
   if (providerMapping) {
     const targets = [
       providerMapping.provinceId,
@@ -273,7 +301,7 @@ export async function resolveCanonicalListingLocation(
     provinceId = province.id;
   }
 
-  const city = cityId
+  let city = cityId
     ? await one<CityRow>(
         db
           .select({ id: cities.id, name: cities.name, provinceId: cities.provinceId, slug: cities.slug })
@@ -302,10 +330,35 @@ export async function resolveCanonicalListingLocation(
         )
       : null;
 
+  let providerCityFallbackSuburb: SuburbRow | null = null;
+  if (!city && providerEvidenceIsAuthoritative && cityName && provinceId) {
+    providerCityFallbackSuburb = await one<SuburbRow>(
+      db
+        .select({ id: suburbs.id, name: suburbs.name, cityId: suburbs.cityId, slug: suburbs.slug })
+        .from(suburbs)
+        .innerJoin(cities, eq(suburbs.cityId, cities.id))
+        .where(
+          and(
+            eq(cities.provinceId, provinceId),
+            ne(cities.status, 'retired'),
+            ne(suburbs.status, 'retired'),
+            or(
+              sql`LOWER(${suburbs.name}) = LOWER(${cityName})`,
+              sql`LOWER(${suburbs.slug}) = LOWER(${slugify(cityName)})`,
+            ),
+          ),
+        )
+        .limit(2),
+      'provider locality',
+    );
+    if (providerCityFallbackSuburb) cityId = providerCityFallbackSuburb.cityId;
+  }
+
   if (city) {
-    if (!provinceId || city.provinceId !== provinceId) {
+    if (provinceId && city.provinceId !== provinceId) {
       throw new ListingLocationResolutionError('City does not belong to the selected province.', 'conflict');
     }
+    provinceId = city.provinceId;
     if (cityName && normalized(city.name) !== normalized(cityName)) {
       throw new ListingLocationResolutionError('City does not match the canonical selection.', 'conflict');
     }
@@ -322,6 +375,17 @@ export async function resolveCanonicalListingLocation(
       'suburb',
     );
     if (suburb) cityId = suburb.cityId;
+  }
+
+  if (!city && cityId) {
+    city = await one<CityRow>(
+      db
+        .select({ id: cities.id, name: cities.name, provinceId: cities.provinceId, slug: cities.slug })
+        .from(cities)
+        .where(and(eq(cities.id, cityId), ne(cities.status, 'retired')))
+        .limit(2),
+      'city',
+    );
   }
 
   let suburb = suburbId
@@ -353,17 +417,18 @@ export async function resolveCanonicalListingLocation(
         )
       : null;
 
-  const providerEvidenceIsStreetAddress = input.addressComponents?.some(component =>
-    component.types.some(type => type === 'street_number' || type === 'route'),
-  );
+  if (!suburb && !suburbName && providerCityFallbackSuburb) {
+    suburb = providerCityFallbackSuburb;
+    suburbId = providerCityFallbackSuburb.id;
+  }
 
   if (
     !suburb &&
     suburbName &&
     cityId &&
     clean(input.providerLocationPlaceId) &&
-    !providerEvidenceIsStreetAddress &&
-    coordinatePair
+    coordinatePair &&
+    hasGeographicLocalityEvidence(input.addressComponents)
   ) {
     if (!validLocalityCandidate(suburbName)) {
       throw new ListingLocationResolutionError(
@@ -476,6 +541,9 @@ export async function resolveCanonicalListingLocation(
     provinceId,
     cityId,
     suburbId,
+    province: province?.name || input.province || null,
+    city: city?.name || input.city || null,
+    suburb: suburb?.name || input.suburb || null,
     privateAddress,
     coordinatePair,
     coordinateSource,

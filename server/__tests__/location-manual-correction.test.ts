@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { calculateListingReadiness } from '../lib/readiness';
 import {
+  hasGeographicLocalityEvidence,
   parseOptionalCoordinatePair,
   validateListingRecordLocation,
 } from '../services/listingLocationResolver';
+import { isSpatialLocationAction } from '../../shared/location-contract';
 
 const manualUrbanListing = {
   propertyType: 'house',
@@ -58,5 +60,26 @@ describe('PLE-6C manual location correction', () => {
         privateAddress: { farmOrHoldingName: 'Riverside Smallholding' },
       }),
     ).toEqual([]);
+  });
+
+  it('treats provider and pin actions as the newest location evidence', () => {
+    expect(isSpatialLocationAction({ coordinateSource: 'map' })).toBe(true);
+    expect(isSpatialLocationAction({ coordinateSource: 'autocomplete' })).toBe(true);
+    expect(isSpatialLocationAction({ providerLocationPlaceId: 'google-place' })).toBe(true);
+    expect(isSpatialLocationAction({ coordinateSource: 'manual_confirmed' })).toBe(false);
+  });
+
+  it('requires explicit geographic locality evidence before creating provider localities', () => {
+    expect(
+      hasGeographicLocalityEvidence([
+        { long_name: 'Honey Street', short_name: 'Honey St', types: ['route'] },
+        { long_name: 'Berea', short_name: 'Berea', types: ['sublocality', 'sublocality_level_1'] },
+      ]),
+    ).toBe(true);
+    expect(
+      hasGeographicLocalityEvidence([
+        { long_name: 'Honey Street', short_name: 'Honey St', types: ['route'] },
+      ]),
+    ).toBe(false);
   });
 });

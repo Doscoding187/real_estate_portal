@@ -15,6 +15,14 @@ export type LocationOrigin = (typeof LOCATION_ORIGINS)[number];
 export const LOCATION_COORDINATE_SOURCES = ['autocomplete', 'map', 'manual_confirmed'] as const;
 export type LocationCoordinateSource = (typeof LOCATION_COORDINATE_SOURCES)[number];
 
+/** A provider result or deliberate pin is the newest spatial location evidence. */
+export function isSpatialLocationAction(input: {
+  coordinateSource?: LocationCoordinateSource | null;
+  providerLocationPlaceId?: string | null;
+}): boolean {
+  return Boolean(input.providerLocationPlaceId?.trim()) || input.coordinateSource === 'autocomplete' || input.coordinateSource === 'map';
+}
+
 export const LOCATION_CONFIRMATION_STATES = ['confirmed', 'needs_confirmation'] as const;
 export type LocationConfirmationState = (typeof LOCATION_CONFIRMATION_STATES)[number];
 

@@ -89,6 +89,20 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   const suburbs = (suburbsQuery.data || []) as HierarchyItem[];
   const isFarm = propertyType === 'farm';
   const isConfirmed = currentLocation.locationConfirmationState === 'confirmed';
+  const resolvedStreet = [
+    currentLocation.privateAddress?.streetNumber,
+    currentLocation.privateAddress?.streetName,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const resolvedRuralContext = [
+    currentLocation.privateAddress?.farmOrHoldingName,
+    currentLocation.privateAddress?.portionReference,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const resolvedArea = [currentLocation.suburb, currentLocation.city].filter(Boolean).join(', ');
+  const hasResolvedLocation = Boolean(resolvedStreet || resolvedRuralContext || resolvedArea || currentLocation.province);
   const validationIssues = useMemo(
     () => getLocationValidationIssues({ propertyType, location }),
     [location, propertyType],
@@ -165,6 +179,8 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     setLocation(
       withLocationDefaults({
         address: addressFromPrivate(privateAddress),
+        latitude: null,
+        longitude: null,
         postalCode: field === 'postalCode' ? value : currentLocation.postalCode,
         privateAddress,
         coordinateSource: null,
@@ -183,6 +199,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       provinceId: resolved.provinceId ?? base.provinceId ?? null,
       cityId: resolved.cityId ?? base.cityId ?? null,
       suburbId: resolved.suburbId ?? base.suburbId ?? null,
+      province: resolved.province ?? base.province,
+      city: resolved.city ?? base.city,
+      suburb: resolved.suburb ?? base.suburb,
       privateAddress: resolved.privateAddress ?? base.privateAddress ?? null,
       address: addressFromPrivate(resolved.privateAddress ?? base.privateAddress) || base.address,
       latitude: coordinatePair?.latitude ?? null,
@@ -192,6 +211,12 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       publicLocationPrecision: resolved.publicLocationPrecision || 'approximate',
       providerLocationPlaceId: resolved.providerLocationPlaceId || base.providerLocationPlaceId,
     });
+  };
+
+  const refreshResolvedSuburb = async (resolved: any) => {
+    if (resolved.suburbId && !suburbs.some(item => item.id === resolved.suburbId)) {
+      await suburbsQuery.refetch();
+    }
   };
 
   const confirmManualLocation = async () => {
@@ -228,7 +253,16 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     const addressComponents = selected.addressComponents || [];
     const component = (type: string) =>
       addressComponents.find((item: any) => item.types.includes(type))?.long_name || '';
-    const streetName = component('route') || selected.address || '';
+    const resolvedSuburb =
+      selected.suburb ||
+      component('sublocality') ||
+      component('sublocality_level_1') ||
+      component('neighborhood') ||
+      component('administrative_area_level_3');
+    const resolvedCity =
+      selected.city || component('locality') || component('administrative_area_level_2');
+    const resolvedProvince = selected.province || component('administrative_area_level_1');
+    const streetName = component('route');
     const privateAddress: PrivateAddress = {
       ...(component('street_number') ? { streetNumber: component('street_number') } : {}),
       ...(streetName ? { streetName } : {}),
@@ -240,17 +274,27 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       address: addressFromPrivate(privateAddress) || selected.address || '',
       latitude: selected.latitude ?? null,
       longitude: selected.longitude ?? null,
-      city: selected.city || '',
-      suburb: selected.suburb || '',
-      province: selected.province || '',
+      city: resolvedCity,
+      suburb: resolvedSuburb,
+      province: resolvedProvince,
       postalCode: selected.postalCode || component('postal_code') || '',
+      // A deliberate provider result or pin is the newest location evidence.
+      // Clear prior discovery IDs so stale manual selections cannot win.
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
       placeId: selected.placeId,
       providerLocationPlaceId: selected.placeId,
       provider: 'google',
       privateAddress,
       coordinateSource: selected.coordinateSource || 'autocomplete',
-      locationConfirmationState: 'confirmed',
+      locationConfirmationState: 'needs_confirmation',
+      addressComponents,
     });
+
+    setProviderMessage('');
+    setManualError('');
+    setLocation(nextLocation);
 
     try {
       const resolved = await resolveLocation.mutateAsync({
@@ -258,6 +302,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         propertyType: propertyType || null,
       });
       applyResolvedLocation(resolved, nextLocation);
+      await refreshResolvedSuburb(resolved);
     } catch (error) {
       setProviderMessage(error instanceof Error ? error.message : 'We could not resolve that place.');
     }
@@ -292,86 +337,239 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         </Alert>
       )}
 
-      <Card>
+      <Card className="border-blue-200 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <MapPin className="h-5 w-5 text-blue-600" />
-            Discovery area
+            Find the property
           </CardTitle>
           <CardDescription>
-            These selections use Property Listify geography IDs for search and discovery.
+            Search an address, street or place, or move the pin to the property. The details below
+            will stay synchronized with the latest location action.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="location-province">Province</Label>
-            <Select
-              value={currentLocation.provinceId ? String(currentLocation.provinceId) : ''}
-              onValueChange={value => updateHierarchy('province', value)}
-            >
-              <SelectTrigger id="location-province" className="w-full">
-                <SelectValue placeholder="Select province" />
-              </SelectTrigger>
-              <SelectContent>
-                {provinces.map(item => (
-                  <SelectItem key={item.id} value={String(item.id)}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <CardContent>
+          {!mapUnavailable ? (
+            <LocationMapPicker
+              initialLat={currentLocation.latitude ?? undefined}
+              initialLng={currentLocation.longitude ?? undefined}
+              searchQuery={[
+                currentLocation.privateAddress?.streetNumber,
+                currentLocation.privateAddress?.streetName,
+                currentLocation.suburb,
+                currentLocation.city,
+                currentLocation.province,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+              onLocationSelect={handleProviderLocation}
+              onGeocodingError={message => {
+                setProviderMessage(message);
+                if (/load|api key|maps/i.test(message)) setMapUnavailable(true);
+              }}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-700">
+              <p className="font-medium text-slate-900">Map search isn&apos;t available right now.</p>
+              <p className="mt-1">You can still enter the property location details below.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Location found</CardTitle>
+          <CardDescription>
+            Review the location resolved from the search or pin before confirming it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div
+            data-testid="resolved-location-summary"
+            className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+          >
+            {hasResolvedLocation ? (
+              <>
+                {(resolvedStreet || resolvedRuralContext) && (
+                  <p className="font-semibold text-slate-900">{resolvedStreet || resolvedRuralContext}</p>
+                )}
+                {resolvedArea && <p className="text-sm text-slate-700">{resolvedArea}</p>}
+                {currentLocation.province && (
+                  <p className="text-sm text-slate-600">{currentLocation.province}</p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-slate-600">
+                Choose a location above or complete the property details below.
+              </p>
+            )}
+            {currentLocation.latitude != null && currentLocation.longitude != null && (
+              <Badge className="mt-3" variant="secondary">
+                Coordinates captured
+              </Badge>
+            )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="location-city">City / town</Label>
-            <Select
-              value={currentLocation.cityId ? String(currentLocation.cityId) : ''}
-              onValueChange={value => updateHierarchy('city', value)}
-              disabled={!currentLocation.provinceId}
+
+          <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/60 p-4 text-sm text-slate-700">
+            <p className="font-medium text-slate-900">Confirm this location</p>
+            <p className="mt-1">
+              {isConfirmed
+                ? 'The current address and discovery area are confirmed.'
+                : 'Confirm the current address and discovery area before continuing.'}
+            </p>
+            <Button
+              type="button"
+              className="mt-3"
+              onClick={confirmManualLocation}
+              disabled={resolveLocation.isPending}
             >
-              <SelectTrigger id="location-city" className="w-full">
-                <SelectValue placeholder="Select city or town" />
-              </SelectTrigger>
-              <SelectContent>
-                {cities.map(item => (
-                  <SelectItem key={item.id} value={String(item.id)}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="location-suburb">Suburb / locality {isFarm ? '(optional)' : ''}</Label>
-            <Select
-              value={currentLocation.suburbId ? String(currentLocation.suburbId) : ''}
-              onValueChange={value => updateHierarchy('suburb', value)}
-              disabled={!currentLocation.cityId}
-            >
-              <SelectTrigger id="location-suburb" className="w-full">
-                <SelectValue placeholder={isFarm ? 'Select if applicable' : 'Select suburb or locality'} />
-              </SelectTrigger>
-              <SelectContent>
-                {suburbs.map(item => (
-                  <SelectItem key={item.id} value={String(item.id)}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {resolveLocation.isPending ? 'Confirming…' : isConfirmed ? 'Reconfirm location' : 'Confirm location'}
+            </Button>
+            {manualError && (
+              <p className="mt-2 flex items-center gap-2 text-sm text-red-700" role="alert">
+                <AlertCircle className="h-4 w-4" />
+                {manualError}
+              </p>
+            )}
+            {isConfirmed && !manualError && (
+              <p className="mt-2 flex items-center gap-2 text-sm text-emerald-700">
+                <CheckCircle2 className="h-4 w-4" />
+                Ready to continue. Coordinates are optional when the location is valid.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Property location</CardTitle>
+          <CardTitle className="text-lg">Property location details</CardTitle>
           <CardDescription>
-            {isFarm
-              ? 'Use the farm, holding, road or portion context that best identifies the rural property.'
-              : 'Street name is required. A street number, building and unit are optional.'}
+            These details use Property Listify geography IDs and stay synchronized with the map.
+            You can edit them manually if needed.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="location-province">Province</Label>
+              <Select
+                value={currentLocation.provinceId ? String(currentLocation.provinceId) : ''}
+                onValueChange={value => updateHierarchy('province', value)}
+              >
+                <SelectTrigger id="location-province" className="w-full">
+                  <SelectValue placeholder="Select province" />
+                </SelectTrigger>
+                <SelectContent>
+                  {provincesQuery.isPending ? (
+                    <SelectItem value="__loading" disabled>
+                      Loading provinces…
+                    </SelectItem>
+                  ) : provincesQuery.isError || provinces.length === 0 ? (
+                    <SelectItem value="__unavailable" disabled>
+                      We couldn&apos;t load locations. Try again.
+                    </SelectItem>
+                  ) : (
+                    provinces.map(item => (
+                      <SelectItem key={item.id} value={String(item.id)}>
+                        {item.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {provincesQuery.isPending && (
+                <p className="text-xs text-slate-500" role="status">
+                  Loading provinces…
+                </p>
+              )}
+              {(provincesQuery.isError || (!provincesQuery.isPending && provinces.length === 0)) && (
+                <p className="text-xs text-red-600" role="alert">
+                  We couldn&apos;t load locations. Try again.
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location-city">City / town</Label>
+              <Select
+                value={currentLocation.cityId ? String(currentLocation.cityId) : ''}
+                onValueChange={value => updateHierarchy('city', value)}
+                disabled={!currentLocation.provinceId}
+              >
+                <SelectTrigger id="location-city" className="w-full">
+                  <SelectValue placeholder="Select city or town" />
+                </SelectTrigger>
+                <SelectContent>
+                  {citiesQuery.isPending ? (
+                    <SelectItem value="__loading" disabled>
+                      Loading cities…
+                    </SelectItem>
+                  ) : citiesQuery.isError || cities.length === 0 ? (
+                    <SelectItem value="__unavailable" disabled>
+                      No cities available
+                    </SelectItem>
+                  ) : (
+                    cities.map(item => (
+                      <SelectItem key={item.id} value={String(item.id)}>
+                        {item.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {currentLocation.provinceId && citiesQuery.isPending && (
+                <p className="text-xs text-slate-500" role="status">
+                  Loading cities…
+                </p>
+              )}
+              {currentLocation.provinceId && (citiesQuery.isError || (!citiesQuery.isPending && cities.length === 0)) && (
+                <p className="text-xs text-red-600" role="alert">
+                  We couldn&apos;t load locations. Try again.
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location-suburb">Suburb / locality {isFarm ? '(optional)' : ''}</Label>
+              <Select
+                value={currentLocation.suburbId ? String(currentLocation.suburbId) : ''}
+                onValueChange={value => updateHierarchy('suburb', value)}
+                disabled={!currentLocation.cityId}
+              >
+                <SelectTrigger id="location-suburb" className="w-full">
+                  <SelectValue placeholder={isFarm ? 'Select if applicable' : 'Select suburb or locality'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {suburbsQuery.isPending ? (
+                    <SelectItem value="__loading" disabled>
+                      Loading suburbs…
+                    </SelectItem>
+                  ) : suburbsQuery.isError || suburbs.length === 0 ? (
+                    <SelectItem value="__unavailable" disabled>
+                      No suburbs available
+                    </SelectItem>
+                  ) : (
+                    suburbs.map(item => (
+                      <SelectItem key={item.id} value={String(item.id)}>
+                        {item.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {currentLocation.cityId && suburbsQuery.isPending && (
+                <p className="text-xs text-slate-500" role="status">
+                  Loading suburbs…
+                </p>
+              )}
+              {currentLocation.cityId && (suburbsQuery.isError || (!suburbsQuery.isPending && suburbs.length === 0)) && (
+                <p className="text-xs text-red-600" role="alert">
+                  We couldn&apos;t load locations. Try again.
+                </p>
+              )}
+            </div>
+          </div>
+
           {isFarm ? (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -396,7 +594,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
           ) : (
             <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
               <div className="space-y-2">
-                <Label htmlFor="location-street-number">Street number <span className="font-normal text-slate-500">(optional)</span></Label>
+                <Label htmlFor="location-street-number">
+                  Street number <span className="font-normal text-slate-500">(optional)</span>
+                </Label>
                 <Input
                   id="location-street-number"
                   value={currentLocation.privateAddress?.streetNumber || ''}
@@ -405,7 +605,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location-street-name">Street name <span className="text-red-600">*</span></Label>
+                <Label htmlFor="location-street-name">
+                  Street name <span className="text-red-600">*</span>
+                </Label>
                 <Input
                   id="location-street-name"
                   value={currentLocation.privateAddress?.streetName || ''}
@@ -418,7 +620,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="location-building">Building / complex <span className="font-normal text-slate-500">(optional)</span></Label>
+              <Label htmlFor="location-building">
+                Building / complex <span className="font-normal text-slate-500">(optional)</span>
+              </Label>
               <Input
                 id="location-building"
                 value={currentLocation.privateAddress?.buildingName || currentLocation.privateAddress?.complexOrEstateName || ''}
@@ -427,7 +631,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location-unit">Unit number <span className="font-normal text-slate-500">(optional)</span></Label>
+              <Label htmlFor="location-unit">
+                Unit number <span className="font-normal text-slate-500">(optional)</span>
+              </Label>
               <Input
                 id="location-unit"
                 value={currentLocation.privateAddress?.unitNumber || ''}
@@ -436,7 +642,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="location-postal">Postal code <span className="font-normal text-slate-500">(optional)</span></Label>
+              <Label htmlFor="location-postal">
+                Postal code <span className="font-normal text-slate-500">(optional)</span>
+              </Label>
               <Input
                 id="location-postal"
                 value={currentLocation.privateAddress?.postalCode || currentLocation.postalCode || ''}
@@ -444,58 +652,6 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                 placeholder="Optional postal code"
               />
             </div>
-          </div>
-
-          {!mapUnavailable && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">Map enrichment</p>
-                  <p className="text-xs text-slate-600">Search or adjust a pin when the map is available.</p>
-                </div>
-                {currentLocation.latitude != null && currentLocation.longitude != null && (
-                  <Badge variant="secondary">Coordinates captured</Badge>
-                )}
-              </div>
-              <LocationMapPicker
-                initialLat={currentLocation.latitude ?? undefined}
-                initialLng={currentLocation.longitude ?? undefined}
-                onLocationSelect={handleProviderLocation}
-                onGeocodingError={message => {
-                  setProviderMessage(message);
-                  if (/load|api key|maps/i.test(message)) setMapUnavailable(true);
-                }}
-              />
-            </div>
-          )}
-
-          <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4 text-sm text-slate-700">
-            <p className="font-medium text-slate-900">Confirm this location</p>
-            <p className="mt-1">
-              {isConfirmed
-                ? 'The current address and discovery area are confirmed.'
-                : 'Confirm the current address and discovery area before continuing.'}
-            </p>
-            <Button
-              type="button"
-              className="mt-3"
-              onClick={confirmManualLocation}
-              disabled={resolveLocation.isPending}
-            >
-              {resolveLocation.isPending ? 'Confirming…' : isConfirmed ? 'Reconfirm location' : 'Confirm location'}
-            </Button>
-            {manualError && (
-              <p className="mt-2 flex items-center gap-2 text-sm text-red-700" role="alert">
-                <AlertCircle className="h-4 w-4" />
-                {manualError}
-              </p>
-            )}
-            {isConfirmed && !manualError && (
-              <p className="mt-2 flex items-center gap-2 text-sm text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                Ready to continue. Coordinates are optional when the manual location is valid.
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>

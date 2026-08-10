@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
-import { Loader2, Info } from 'lucide-react';
+import { Info, Loader2, Search } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const libraries: ('places' | 'geometry')[] = ['places'];
@@ -37,6 +37,7 @@ export interface LocationData {
 interface LocationMapPickerProps {
   initialLat?: number;
   initialLng?: number;
+  searchQuery?: string;
   onLocationSelect: (location: LocationData) => void;
   onGeocodingError?: (error: string) => void;
 }
@@ -44,6 +45,7 @@ interface LocationMapPickerProps {
 export function LocationMapPicker({
   initialLat,
   initialLng,
+  searchQuery,
   onLocationSelect,
   onGeocodingError,
 }: LocationMapPickerProps) {
@@ -82,7 +84,11 @@ export function LocationMapPicker({
       // Extract address components
       const streetNumber = getComponent('street_number');
       const route = getComponent('route');
-      const suburb = getComponent('sublocality') || getComponent('sublocality_level_1');
+      const suburb =
+        getComponent('sublocality') ||
+        getComponent('sublocality_level_1') ||
+        getComponent('neighborhood') ||
+        getComponent('administrative_area_level_3');
       const city = getComponent('locality') || getComponent('administrative_area_level_2');
       const province = getComponent('administrative_area_level_1');
       const postalCode = getComponent('postal_code');
@@ -124,8 +130,36 @@ export function LocationMapPicker({
         mapRef.current.panTo(nextPosition);
         mapRef.current.setZoom(15);
       }
+    } else {
+      setMarkerPosition(null);
     }
   }, [initialLat, initialLng]);
+
+  useEffect(() => {
+    const query = searchQuery?.trim();
+    if (!isLoaded || !query) return;
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        const geocoder = new google.maps.Geocoder();
+        const result = await geocoder.geocode({
+          address: query,
+          componentRestrictions: { country: 'ZA' },
+        });
+        const location = result.results[0]?.geometry?.location;
+        if (!location) return;
+
+        const nextPosition = { lat: location.lat(), lng: location.lng() };
+        setMarkerPosition(nextPosition);
+        mapRef.current?.panTo(nextPosition);
+        mapRef.current?.setZoom(15);
+      } catch {
+        // Manual authoring remains valid when provider enrichment is unavailable.
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [isLoaded, searchQuery]);
 
   const performGeocoding = useCallback(
     async (lat: number, lng: number, coordinateSource: 'autocomplete' | 'map' = 'map') => {
@@ -213,8 +247,33 @@ export function LocationMapPicker({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="relative">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-blue-600"
+        />
+        <Autocomplete
+          onLoad={autocomplete => {
+            autocompleteRef.current = autocomplete;
+          }}
+          onPlaceChanged={handlePlaceSelect}
+          options={{
+            fields: ['geometry', 'address_components', 'formatted_address', 'place_id'],
+            componentRestrictions: { country: 'za' },
+          }}
+        >
+          <input
+            id="location-provider-search"
+            type="text"
+            aria-label="Search an address, street or place"
+            placeholder="Search an address, street or place..."
+            className="h-14 w-full rounded-xl border-2 border-blue-200 bg-white px-12 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+          />
+        </Autocomplete>
+      </div>
+
+      <div className="relative overflow-hidden rounded-lg">
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={markerPosition || defaultCenter}
@@ -241,23 +300,6 @@ export function LocationMapPicker({
           {markerPosition && (
             <Marker position={markerPosition} draggable={true} onDragEnd={handleMarkerDragEnd} />
           )}
-
-          <Autocomplete
-            onLoad={autocomplete => {
-              autocompleteRef.current = autocomplete;
-            }}
-            onPlaceChanged={handlePlaceSelect}
-            options={{
-              fields: ['geometry', 'address_components', 'formatted_address', 'place_id'],
-              componentRestrictions: { country: 'za' },
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Search for a location..."
-              className="absolute bottom-4 left-4 w-80 px-4 py-2 rounded-lg shadow-lg border border-gray-300 bg-white/90 backdrop-blur-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-            />
-          </Autocomplete>
         </GoogleMap>
 
         {isGeocoding && (
@@ -273,8 +315,8 @@ export function LocationMapPicker({
       <div className="flex items-start gap-2 text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
         <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
         <p>
-          Click on the map or search for a location to drop a pin at your show house. The address
-          fields will be automatically populated. You can drag the pin to adjust the location.
+          Search for the address or move the pin to the property. The synchronized details below
+          will update when the location is confidently resolved.
         </p>
       </div>
     </div>

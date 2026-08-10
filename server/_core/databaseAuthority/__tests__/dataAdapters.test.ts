@@ -66,9 +66,9 @@ describe('bounded Database Authority data adapters', () => {
   it('publishes deterministic versions and the required geography minimum', () => {
     expect(CANONICAL_GEOGRAPHY_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_GEOGRAPHY_EXPECTED_ROWS).toEqual({
-      provinces: 3,
-      cities: 4,
-      suburbs: 1,
+      provinces: 9,
+      cities: 10,
+      suburbs: 10,
     });
     expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v1');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
