@@ -1806,12 +1806,35 @@ export const developerRouter = router({
         .passthrough(),
     )
     .mutation(async ({ ctx, input }) => {
-      const role = requireUser(ctx).role;
+      const user = requireUser(ctx);
+      const role = user.role;
+      let developerId: number | null = null;
 
       // 🔒 Hard separation
       if (role === 'property_developer') {
         // Real developer: force no emulation
         (ctx as any).operatingAs = undefined;
+
+        const profile = await requireDeveloperProfileByUserId(user.id);
+        developerId = profile.id;
+        const limitCheck = await developerSubscriptionService.checkLimit(
+          developerId,
+          'developments',
+        );
+        if (!limitCheck.allowed) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message:
+              limitCheck.max !== null && limitCheck.max > 0
+                ? `Development limit reached for ${limitCheck.tier}. Request a canonical developer plan change to create more developments.`
+                : 'A canonical developer product and development entitlement are required before creating a development.',
+            cause: {
+              current: limitCheck.current,
+              max: limitCheck.max,
+              plan: limitCheck.tier,
+            },
+          });
+        }
       }
 
       if (role === 'super_admin') {
@@ -1825,11 +1848,15 @@ export const developerRouter = router({
       }
 
       const development = await developmentService.createDevelopment(
-        requireUser(ctx).id,
+        user.id,
         input as any,
         {},
         ctx.operatingAs ?? null,
       );
+
+      if (developerId) {
+        await developerSubscriptionService.incrementUsage(developerId, 'developments');
+      }
 
       return { development };
     }),
@@ -1857,6 +1884,11 @@ export const developerRouter = router({
       console.log('[deleteDevelopment Router] Built operatingContext:', operatingContext);
 
       await developmentService.deleteDevelopment(input.id, user.id, operatingContext);
+
+      if (user.role === 'property_developer') {
+        const profile = await requireDeveloperProfileByUserId(user.id);
+        await developerSubscriptionService.decrementUsage(profile.id, 'developments');
+      }
 
       return { success: true, deletedId: input.id };
     }),
@@ -2200,8 +2232,9 @@ export const developerRouter = router({
       return {
         success: false,
         status: 'sales_assisted' as const,
-        currentTier: subscription.tier,
+        currentTier: subscription?.commercial.planName || null,
         requestedTier: input.tier,
+        currentPlan: subscription?.commercial.planDisplayName || null,
         message:
           'Paid developer plan changes are sales-assisted until developer EFT billing is enabled. Your current entitlement has not changed.',
       };

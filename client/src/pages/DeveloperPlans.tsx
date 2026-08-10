@@ -1,13 +1,26 @@
 /**
- * Developer Subscription Plans Page
- * Display developer-specific plans with comparison
+ * Developer commercial products.
+ *
+ * Product, price, trial, benefit, limit and CTA facts come from the canonical
+ * commercial catalog. This page only supplies presentation and navigation.
  */
 
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Building2,
+  Check,
+  Crown,
+  Gift,
+  Link,
+  Sparkles,
+  Users,
+  Zap,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   Dialog,
@@ -17,451 +30,324 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import {
-  Check,
-  X,
-  Gift,
-  Zap,
-  Crown,
-  Building2,
-  Users,
-  TrendingUp,
-  Link,
-  ArrowLeft,
-  Sparkles,
-} from 'lucide-react';
-
+  formatCommercialLimitLabel,
+  getCommercialActionPresentation,
+  getCommercialPricePresentation,
+} from '@/lib/commercialCatalog';
+import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import { type SubscriptionTier } from '@/shared/types';
 import { toast } from 'sonner';
 
-// Developer-specific plan definitions with SA Rand pricing
-const DEVELOPER_PLANS = [
+const PLAN_STYLES = [
   {
-    id: 'free_trial',
-    name: 'Free Trial',
-    tier: 'free_trial' as SubscriptionTier,
-    price: 0,
-    priceDisplay: 'Free',
-    period: '14 days',
-    description: 'Try all features free for 14 days',
     icon: Gift,
     color: 'from-purple-500 to-pink-500',
     bgColor: 'bg-purple-100 text-purple-700',
     borderColor: 'border-purple-500',
-    isPopular: true,
-    isFree: true,
-    features: [
-      { label: '1 Development', included: true },
-      { label: '50 Leads/month', included: true },
-      { label: '1 Team Member', included: true },
-      { label: '30 Days Analytics', included: true },
-      { label: 'Basic Dashboard', included: true },
-      { label: 'CRM Integration', included: false },
-      { label: 'Advanced Analytics', included: false },
-      { label: 'Bond Calculator', included: false },
-    ],
   },
   {
-    id: 'basic',
-    name: 'Basic',
-    tier: 'basic' as SubscriptionTier,
-    price: 149900, // R1,499/month in cents
-    priceDisplay: 'R1,499',
-    period: '/month',
-    description: 'For growing developers',
     icon: Zap,
     color: 'from-blue-500 to-cyan-500',
     bgColor: 'bg-blue-100 text-blue-700',
     borderColor: 'border-blue-500',
-    isPopular: false,
-    isFree: false,
-    features: [
-      { label: '5 Developments', included: true },
-      { label: '200 Leads/month', included: true },
-      { label: '5 Team Members', included: true },
-      { label: '90 Days Analytics', included: true },
-      { label: 'Priority Support', included: true },
-      { label: 'CRM Integration', included: false },
-      { label: 'Advanced Analytics', included: true },
-      { label: 'Bond Calculator', included: true },
-    ],
   },
   {
-    id: 'premium',
-    name: 'Premium',
-    tier: 'premium' as SubscriptionTier,
-    price: 399900, // R3,999/month in cents
-    priceDisplay: 'R3,999',
-    period: '/month',
-    description: 'For enterprise developers',
     icon: Crown,
     color: 'from-amber-500 to-orange-500',
     bgColor: 'bg-amber-100 text-amber-700',
     borderColor: 'border-amber-500',
-    isPopular: false,
-    isFree: false,
-    features: [
-      { label: 'Unlimited Developments', included: true },
-      { label: 'Unlimited Leads', included: true },
-      { label: '50 Team Members', included: true },
-      { label: '365 Days Analytics', included: true },
-      { label: 'Dedicated Account Manager', included: true },
-      { label: 'CRM Integration', included: true },
-      { label: 'Advanced Analytics', included: true },
-      { label: 'Bond Calculator', included: true },
-    ],
   },
 ];
 
+function formatLimitValue(value: CommercialProduct['limits'][string]): string {
+  if (typeof value === 'boolean') return value ? 'Included' : 'Not included';
+  if (typeof value === 'number') return String(value);
+  return value == null || value === '' ? 'Not configured' : String(value);
+}
+
+function ProductIcon({ index, className }: { index: number; className?: string }) {
+  const Icon = PLAN_STYLES[index % PLAN_STYLES.length].icon;
+  return <Icon className={className} />;
+}
+
 export default function DeveloperPlans() {
   const [, setLocation] = useLocation();
-  const [selectedPlan, setSelectedPlan] = useState<(typeof DEVELOPER_PLANS)[0] | null>(null);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
-  // Get current subscription to highlight current plan
-  const { data: subscriptionData } = trpc.developer.getSubscription.useQuery(undefined, {
-    staleTime: 0,
+  const [selectedProduct, setSelectedProduct] = useState<CommercialProduct | null>(null);
+  const { data: catalog, isLoading, isError } = useCommercialCatalog('developer');
+  const { data: subscription } = trpc.developer.getSubscription.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+  const requestLaunchInvoice = trpc.billing.requestDeveloperLaunchAccessInvoice.useMutation({
+    onSuccess: result => {
+      setSelectedProduct(null);
+      toast.success('Invoice ready', {
+        description: `${result.invoice.invoiceNumber} is ready for manual EFT payment.`,
+      });
+      setLocation(`/developer/subscription?invoiceId=${result.invoice.id}`);
+    },
+    onError: error => {
+      toast.error(error.message || 'Launch Access invoice could not be issued');
+    },
   });
 
-  const currentTier = (subscriptionData as any)?.subscription?.tier ?? (subscriptionData as any)?.tier;
+  const products = catalog?.products || [];
+  const currentPlanId = subscription?.commercial?.entitled
+    ? (subscription.commercial.planId ?? null)
+    : null;
 
-  const handleSelectPlan = (plan: (typeof DEVELOPER_PLANS)[0]) => {
-    if (plan.tier === currentTier) {
-      // Already on this plan
-      return;
-    }
-
-    if (plan.tier === 'free_trial') {
-      // Can't downgrade to free trial
-      setLocation('/developer/dashboard');
-      return;
-    }
-
-    // Show confirmation dialog for upgrade
-    setSelectedPlan(plan);
-    setShowConfirmDialog(true);
+  const handleSelectProduct = (product: CommercialProduct) => {
+    const action = getCommercialActionPresentation(product);
+    if (product.source.planId === currentPlanId || action.disabled || !action.href) return;
+    setSelectedProduct(product);
   };
 
-  const handleConfirmUpgrade = () => {
-    if (!selectedPlan) return;
-    const subject = encodeURIComponent(`Developer plan request: ${selectedPlan.name}`);
-    const body = encodeURIComponent(
-      `Please prepare a ${selectedPlan.name} developer plan invoice for my Property Listify account.`,
-    );
-
-    window.location.href = `mailto:developers@listify.co.za?subject=${subject}&body=${body}`;
-    toast.info('Your plan remains unchanged until payment is confirmed.');
-    setShowConfirmDialog(false);
-    setSelectedPlan(null);
+  const continueWithProduct = () => {
+    if (!selectedProduct) return;
+    if (
+      selectedProduct.audience === 'developer' &&
+      selectedProduct.term.kind === 'paid_launch_access' &&
+      selectedProduct.action.mode === 'request_invoice'
+    ) {
+      requestLaunchInvoice.mutate();
+      return;
+    }
+    const action = getCommercialActionPresentation(selectedProduct);
+    if (action.href) setLocation(action.href);
+    setSelectedProduct(null);
   };
 
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        {/* ... (existing content) ... */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Back Button */}
+        <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
           <Button
             variant="ghost"
             className="mb-6"
             onClick={() => setLocation('/developer/dashboard')}
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
           </Button>
 
-          {/* Header */}
-          <div className="text-center mb-12">
+          <div className="mb-12 text-center">
             <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
-              <Sparkles className="w-3 h-3 mr-1" />
+              <Sparkles className="mr-1 h-3 w-3" />
               Developer Plans
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+            <h1 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">
               Scale Your Property Development Business
             </h1>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              Choose the perfect plan for your needs. All plans include our core platform features.
+            <p className="mx-auto max-w-2xl text-lg text-slate-600">
+              Compare the developer products currently configured in Property Listify.
             </p>
           </div>
 
-          {/* Plans Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {DEVELOPER_PLANS.map(plan => {
-              const PlanIcon = plan.icon;
-              const isCurrentPlan = currentTier === plan.tier;
+          {isLoading && (
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              {[0, 1, 2].map(item => (
+                <Card key={item} className="h-[560px] animate-pulse bg-white" />
+              ))}
+            </div>
+          )}
 
-              return (
-                <Card
-                  key={plan.id}
-                  className={cn(
-                    'relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1',
-                    plan.isPopular && 'ring-2 ring-purple-500 shadow-xl scale-[1.02]',
-                    isCurrentPlan && 'ring-2 ring-green-500',
-                  )}
-                >
-                  {/* Gradient Header */}
-                  <div className={cn('h-2 bg-gradient-to-r', plan.color)} />
+          {isError && (
+            <Card className="mx-auto max-w-xl p-8 text-center">
+              <h2 className="mb-2 text-xl font-semibold text-slate-900">
+                Developer pricing unavailable
+              </h2>
+              <p className="mb-6 text-slate-600">
+                We could not load the current commercial catalog. No historical price has been used
+                as a fallback.
+              </p>
+              <Button onClick={() => setLocation('/contact')}>Contact sales</Button>
+            </Card>
+          )}
 
-                  {/* Popular Badge */}
-                  {plan.isPopular && (
-                    <div className="absolute top-6 right-4">
-                      <Badge className="bg-purple-600 text-white shadow-lg">Most Popular</Badge>
-                    </div>
-                  )}
+          {!isLoading && !isError && products.length === 0 && (
+            <Card className="mx-auto max-w-xl p-8 text-center">
+              <h2 className="mb-2 text-xl font-semibold text-slate-900">
+                Developer products are being configured
+              </h2>
+              <p className="mb-6 text-slate-600">
+                There is no active canonical developer product available yet. Contact sales for an
+                assisted commercial conversation.
+              </p>
+              <Button onClick={() => setLocation('/contact')}>Contact sales</Button>
+            </Card>
+          )}
 
-                  {/* Current Plan Badge */}
-                  {isCurrentPlan && (
-                    <div className="absolute top-6 right-4">
-                      <Badge className="bg-green-600 text-white shadow-lg">Current Plan</Badge>
-                    </div>
-                  )}
+          {!isLoading && !isError && products.length > 0 && (
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              {products.map((product, index) => {
+                const style = PLAN_STYLES[index % PLAN_STYLES.length];
+                const price = getCommercialPricePresentation(product);
+                const action = getCommercialActionPresentation(product);
+                const isCurrentPlan = product.source.planId === currentPlanId;
+                const limits = Object.entries(product.limits);
 
-                  <div className="p-8">
-                    {/* Plan Icon & Name */}
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className={cn('p-4 rounded-2xl', plan.bgColor)}>
-                        <PlanIcon className="w-8 h-8" />
+                return (
+                  <Card
+                    key={product.productId}
+                    className={cn(
+                      'relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl',
+                      product.popular && 'scale-[1.02] ring-2 ring-purple-500 shadow-xl',
+                      isCurrentPlan && 'ring-2 ring-green-500',
+                    )}
+                  >
+                    <div className={cn('h-2 bg-gradient-to-r', style.color)} />
+                    {product.popular && (
+                      <div className="absolute right-4 top-6">
+                        <Badge className="bg-purple-600 text-white shadow-lg">Most Popular</Badge>
                       </div>
-                      <div>
-                        <h3 className="text-2xl font-bold text-slate-900">{plan.name}</h3>
-                        <p className="text-sm text-slate-500">{plan.description}</p>
+                    )}
+                    {isCurrentPlan && (
+                      <div className="absolute right-4 top-6">
+                        <Badge className="bg-green-600 text-white shadow-lg">Current Plan</Badge>
                       </div>
-                    </div>
+                    )}
 
-                    {/* Price */}
-                    <div className="mb-8">
-                      {plan.isFree ? (
+                    <div className="p-8">
+                      <div className="mb-6 flex items-center gap-4">
+                        <div className={cn('rounded-2xl p-4', style.bgColor)}>
+                          <ProductIcon index={index} className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-bold text-slate-900">
+                            {product.displayName}
+                          </h3>
+                          <p className="text-sm text-slate-500">
+                            {product.description || 'Canonical developer product'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mb-6">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-5xl font-bold text-slate-900">Free</span>
-                          <span className="text-slate-500">for {plan.period}</span>
+                          <span className="text-4xl font-bold text-slate-900">{price.label}</span>
+                          {price.period && <span className="text-slate-500">{price.period}</span>}
                         </div>
-                      ) : (
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-5xl font-bold text-slate-900">
-                            {plan.priceDisplay}
-                          </span>
-                          <span className="text-slate-500">{plan.period}</span>
-                        </div>
-                      )}
-                      {plan.isFree && (
-                        <p className="text-sm text-purple-600 font-medium mt-2">
-                          Then R0/month on Free tier, or upgrade
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Features */}
-                    <ul className="space-y-4 mb-8">
-                      {plan.features.map((feature, idx) => (
-                        <li
-                          key={idx}
-                          className={cn(
-                            'flex items-center gap-3 text-sm',
-                            feature.included ? 'text-slate-700' : 'text-slate-400',
+                        {product.term.kind === 'paid_launch_access' &&
+                          product.term.durationDays !== null && (
+                            <p className="mt-2 text-sm font-medium text-blue-600">
+                              Paid Launch Access · {product.term.durationDays} days
+                            </p>
                           )}
-                        >
-                          {feature.included ? (
-                            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                              <Check className="w-3 h-3 text-green-600" />
-                            </div>
-                          ) : (
-                            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center">
-                              <X className="w-3 h-3 text-slate-400" />
-                            </div>
+                        {product.term.kind === 'free_trial' &&
+                          product.trial.available &&
+                          product.trial.days > 0 && (
+                            <p className="mt-2 text-sm font-medium text-purple-600">
+                              Includes a {product.trial.days}-day trial
+                            </p>
                           )}
-                          <span className={feature.included ? 'font-medium' : 'line-through'}>
-                            {feature.label}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                        {product.pricing.displayIncludesVat === true && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            Displayed price includes VAT
+                          </p>
+                        )}
+                      </div>
 
-                    {/* CTA Button */}
-                    {isCurrentPlan ? (
-                      <Button disabled className="w-full h-12" variant="outline">
-                        Current Plan
-                      </Button>
-                    ) : (
+                      <div className="mb-8 space-y-4">
+                        {product.benefits.map(benefit => (
+                          <div
+                            key={benefit}
+                            className="flex items-start gap-3 text-sm text-slate-700"
+                          >
+                            <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                            <span>{benefit}</span>
+                          </div>
+                        ))}
+                        {limits.map(([key, value]) => (
+                          <div key={key} className="flex items-start gap-3 text-sm text-slate-700">
+                            <Building2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
+                            <span>
+                              <span className="font-medium">
+                                {formatCommercialLimitLabel(key)}:
+                              </span>{' '}
+                              {formatLimitValue(value)}
+                            </span>
+                          </div>
+                        ))}
+                        {product.benefits.length === 0 && limits.length === 0 && (
+                          <p className="text-sm text-slate-500">
+                            Benefits will be confirmed during assisted onboarding.
+                          </p>
+                        )}
+                      </div>
+
                       <Button
                         className={cn(
-                          'w-full h-12 font-semibold transition-all',
-                          plan.isPopular
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg'
-                            : plan.isFree
-                              ? 'bg-slate-900 hover:bg-slate-800'
-                              : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700',
+                          'h-12 w-full font-semibold transition-all',
+                          isCurrentPlan
+                            ? 'bg-slate-200 text-slate-600'
+                            : `bg-gradient-to-r ${style.color} text-white`,
                         )}
-                        onClick={() => handleSelectPlan(plan)}
+                        disabled={isCurrentPlan || action.disabled}
+                        onClick={() => handleSelectProduct(product)}
                       >
-                        {plan.isFree ? 'Start Free Trial' : `Upgrade to ${plan.name}`}
+                        {isCurrentPlan ? 'Current Plan' : action.label}
+                        {!isCurrentPlan && <ArrowUpRight className="ml-2 h-4 w-4" />}
                       </Button>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Feature Comparison Table */}
-          <div className="max-w-4xl mx-auto mt-16">
-            <h2 className="text-2xl font-bold text-center text-slate-900 mb-8">
-              Compare All Features
-            </h2>
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left p-4 text-slate-700 font-semibold">Feature</th>
-                    <th className="text-center p-4 text-purple-700 font-semibold">Free Trial</th>
-                    <th className="text-center p-4 text-blue-700 font-semibold">Basic</th>
-                    <th className="text-center p-4 text-amber-700 font-semibold">Premium</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <ComparisonRow
-                    label="Developments"
-                    values={['1', '5', 'Unlimited']}
-                    icon={Building2}
-                  />
-                  <ComparisonRow
-                    label="Leads/Month"
-                    values={['50', '200', 'Unlimited']}
-                    icon={Users}
-                  />
-                  <ComparisonRow label="Team Members" values={['1', '5', '50']} icon={Users} />
-                  <ComparisonRow
-                    label="Analytics Retention"
-                    values={['30 days', '90 days', '365 days']}
-                    icon={TrendingUp}
-                  />
-                  <ComparisonRow
-                    label="CRM Integration"
-                    values={[false, false, true]}
-                    icon={Link}
-                  />
-                  <ComparisonRow
-                    label="Advanced Analytics"
-                    values={[false, true, true]}
-                    icon={TrendingUp}
-                  />
-                  <ComparisonRow label="Bond Calculator" values={[false, true, true]} icon={Zap} />
-                  <ComparisonRow
-                    label="Priority Support"
-                    values={[false, true, true]}
-                    icon={Crown}
-                  />
-                </tbody>
-              </table>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
-          </div>
+          )}
 
-          {/* FAQ / Contact */}
-          <div className="text-center mt-16 pb-12">
-            <p className="text-slate-600 mb-4">Need a custom plan for your enterprise?</p>
+          <div className="mx-auto mt-16 max-w-3xl rounded-2xl bg-white p-8 text-center shadow-lg">
+            <div className="mb-4 flex justify-center gap-3 text-slate-400">
+              <Users className="h-5 w-5" />
+              <Link className="h-5 w-5" />
+              <Zap className="h-5 w-5" />
+            </div>
+            <p className="mb-4 text-slate-600">Need a custom developer arrangement?</p>
             <Button
               variant="outline"
               className="border-slate-300"
-              onClick={() => (window.location.href = 'mailto:developers@listify.co.za')}
+              onClick={() => setLocation('/contact')}
             >
-              Contact Sales
+              Contact sales
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Upgrade Confirmation Dialog */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <Dialog
+        open={Boolean(selectedProduct)}
+        onOpenChange={open => !open && setSelectedProduct(null)}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl">Request a Paid Plan</DialogTitle>
+            <DialogTitle>Continue with {selectedProduct?.displayName}</DialogTitle>
             <DialogDescription>
-              Paid developer plans are activated after an invoice and payment verification.
+              This product uses the current canonical commercial action. Paid developer access is
+              not activated by selecting a plan.
             </DialogDescription>
           </DialogHeader>
-
-          {selectedPlan && (
-            <div className="py-4">
-              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl mb-4">
-                <div className={cn('p-3 rounded-xl', selectedPlan.bgColor)}>
-                  {(() => {
-                    const PlanIcon = selectedPlan.icon;
-                    return <PlanIcon className="w-6 h-6" />;
-                  })()}
-                </div>
-                <div>
-                  <h4 className="font-bold text-lg">{selectedPlan.name}</h4>
-                  <p className="text-slate-600">
-                    {selectedPlan.priceDisplay}
-                    {selectedPlan.period}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-sm text-slate-600">
-                <p>✓ Your current plan stays active until payment is confirmed</p>
-                <p>✓ All existing data will be preserved</p>
-                <p>✓ A sales invoice request will open in your email client</p>
-              </div>
-
-              {!selectedPlan.isFree && (
-                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-                  <strong>Sales-assisted billing:</strong> A paid entitlement is never activated
-                  until the invoice has been paid and verified.
-                </div>
-              )}
+          {selectedProduct && (
+            <div className="space-y-3 py-4 text-sm text-slate-600">
+              <p>
+                {getCommercialPricePresentation(selectedProduct).label}
+                {getCommercialPricePresentation(selectedProduct).period || ''}
+              </p>
+              <p>
+                Any paid activation remains subject to an assisted invoice and verified payment.
+              </p>
+              <p>No promotion is shown unless it is configured by the commercial catalog.</p>
             </div>
           )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setShowConfirmDialog(false)}
-            >
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedProduct(null)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleConfirmUpgrade}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              Request Invoice
+            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending}>
+              {requestLaunchInvoice.isPending ? 'Requesting invoice…' : 'Continue'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-// Comparison table row component
-function ComparisonRow({
-  label,
-  values,
-  icon: Icon,
-}: {
-  label: string;
-  values: (string | boolean)[];
-  icon: React.ElementType;
-}) {
-  return (
-    <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-      <td className="p-4 text-slate-700 font-medium flex items-center gap-2">
-        <Icon className="w-4 h-4 text-slate-400" />
-        {label}
-      </td>
-      {values.map((value, idx) => (
-        <td key={idx} className="p-4 text-center">
-          {typeof value === 'boolean' ? (
-            value ? (
-              <Check className="w-5 h-5 text-green-600 mx-auto" />
-            ) : (
-              <X className="w-5 h-5 text-slate-300 mx-auto" />
-            )
-          ) : (
-            <span className="font-semibold text-slate-700">{value}</span>
-          )}
-        </td>
-      ))}
-    </tr>
   );
 }

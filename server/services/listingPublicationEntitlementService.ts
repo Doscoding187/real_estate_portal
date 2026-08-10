@@ -332,14 +332,28 @@ export async function assertListingPublicationEntitled(
 
   const subscriptionWithPlan = await getCanonicalSubscription(db, 'agent', owner.userId);
   const subscription = subscriptionWithPlan?.subscription;
+  const plan = subscriptionWithPlan?.plan;
   const trialEndsAt = dbTimestamp(subscription?.trialEndsAt);
   const validTrial =
     subscription?.status === 'trial' && trialEndsAt !== null && trialEndsAt > now.getTime();
   const failure = validTrial ? null : subscriptionFailure(subscription, now);
   if (failure) throw failure;
 
-  const maxActiveListings = await getPlanMaximumActiveListings(db, subscriptionWithPlan?.plan?.id);
-  if (maxActiveListings === 0) {
+  if (!plan) {
+    throw new ListingPublicationEntitlementError(
+      'subscription_plan_unresolved',
+      'A valid agent publishing plan is required before this listing can be submitted.',
+    );
+  }
+  if (plan.segment !== 'agent' || Number(plan.isActive) !== 1) {
+    throw new ListingPublicationEntitlementError(
+      'subscription_plan_ineligible',
+      'The current plan is not eligible for independent-agent listing publication.',
+    );
+  }
+
+  const maxActiveListings = await getPlanMaximumActiveListings(db, plan.id);
+  if (maxActiveListings <= 0) {
     throw new ListingPublicationEntitlementError(
       'listing_capacity_exhausted',
       'The current plan does not include active listing publication.',

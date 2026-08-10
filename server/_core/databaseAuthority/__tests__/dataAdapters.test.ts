@@ -13,6 +13,11 @@ import {
   SEARCH_TO_LEAD_SCENARIO_VERSION,
   verifySearchToLeadScenario,
 } from '../dataAdapters/searchToLeadScenario';
+import {
+  CANONICAL_COMMERCIAL_DIGEST,
+  CANONICAL_COMMERCIAL_VERSION,
+  CANONICAL_DEVELOPER_LAUNCH_ACCESS,
+} from '../dataAdapters/canonicalCommercial';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 
@@ -72,6 +77,25 @@ describe('bounded Database Authority data adapters', () => {
     });
     expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v1');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
+    expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v1');
+    expect(CANONICAL_COMMERCIAL_DIGEST).toMatch(/^[a-f0-9]{64}$/);
+    expect(CANONICAL_DEVELOPER_LAUNCH_ACCESS).toMatchObject({
+      name: 'developer_launch_access',
+      segment: 'developer',
+      trialDays: 0,
+      price: 149900,
+      priceMonthly: 0,
+    });
+    expect(CANONICAL_DEVELOPER_LAUNCH_ACCESS.metadata).toMatchObject({
+      commercial_term_kind: 'paid_launch_access',
+      commercial_term_duration_days: 90,
+      commercial_requires_verified_payment: true,
+      commercial_auto_renews: false,
+      commercial_pricing_mode: 'fixed',
+      commercial_price_configured: true,
+      commercial_launch_fee_minor: 149900,
+      commercial_billing_interval: 'once_off',
+    });
   });
 
   it.each([

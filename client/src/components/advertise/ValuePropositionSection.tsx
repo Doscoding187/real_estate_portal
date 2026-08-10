@@ -1,16 +1,15 @@
 /**
  * ValuePropositionSection Component
  *
- * Displays four feature blocks highlighting the key benefits of advertising
- * on the platform: High-Intent Audience, AI-Driven Visibility, Verified Leads,
- * and Dashboard Control.
+ * Displays the three supported value pillars: structured discovery, enquiry
+ * capture and business follow-up.
  *
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Target, MapPin, BarChart3 } from 'lucide-react';
+import { BriefcaseBusiness, Compass, MessageSquareText } from 'lucide-react';
 import { staggerContainer } from '@/lib/animations/advertiseAnimations';
 
 export interface ValuePropositionSectionProps {
@@ -19,25 +18,25 @@ export interface ValuePropositionSectionProps {
 
 const features = [
   {
-    icon: Target,
+    icon: Compass,
     iconColorClass: 'text-primary bg-primary/10',
-    headline: 'Verified Lead Generation',
+    headline: 'Structured discovery',
     description:
-      'Every enquiry is passed through our HomeFinder Copilot — buyers tell us their budget, location, and timeline before they ever reach you.',
+      'Your property or development inventory participates in the relevant Property Listify discovery journeys.',
   },
   {
-    icon: MapPin,
+    icon: MessageSquareText,
     iconColorClass: 'text-secondary bg-secondary/10',
-    headline: 'Smart Location & Budget Matching',
+    headline: 'Enquiry capture',
     description:
-      'Buyers are matched to properties based on affordability scores, not keyword searches. Your listings reach people who can actually buy.',
+      'Interest is recorded against the actual listing or development that the property seeker cares about.',
   },
   {
-    icon: BarChart3,
+    icon: BriefcaseBusiness,
     iconColorClass: 'text-success bg-success/10',
-    headline: 'CRM, Analytics & Conversion Tools',
+    headline: 'Business follow-up',
     description:
-      'Track enquiry volume, response rates, and pipeline value from one dashboard. Know exactly what\'s working and where deals are slipping.',
+      'The resulting enquiry reaches the relevant Agent, Agency or Developer workspace for supported follow-up.',
   },
 ];
 
@@ -46,6 +45,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
 }) => {
   return (
     <section
+      data-testid="value-proposition-section"
       className={`value-proposition-section py-20 md:py-28 bg-white ${className}`}
       aria-labelledby="value-proposition-heading"
       aria-describedby="value-proposition-description"
@@ -53,7 +53,7 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 md:mb-20">
-           <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -69,7 +69,9 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
             transition={{ duration: 0.4 }}
             className="text-3xl md:text-5xl font-bold leading-tight mb-6 text-slate-900 tracking-tight"
           >
-            We Don't Just List Properties.<br />We Generate Demand.
+            We don&apos;t just host listings.
+            <br />
+            We build the path to enquiry.
           </motion.h2>
 
           <motion.p
@@ -78,9 +80,10 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="text-lg md:text-xl text-slate-600 leading-relaxed max-w-3xl mx-auto font-light"
+            className="mx-auto max-w-3xl text-lg font-light leading-relaxed text-slate-600 md:text-xl md:leading-9"
           >
-            While traditional portals show listings to casual browsers, we qualify buyers through affordability tools and route genuine, serious intent straight to you.
+            Property Listify connects discovery, enquiry capture and business follow-up so your
+            inventory has a clear path from being found to being worked.
           </motion.p>
         </div>
 
@@ -95,25 +98,27 @@ export const ValuePropositionSection: React.FC<ValuePropositionSectionProps> = (
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <motion.div 
-                key={feature.headline} 
+              <motion.div
+                key={feature.headline}
                 role="listitem"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.15 }}
-                className="group p-8 rounded-2xl border border-slate-200 bg-white hover:shadow-xl hover:border-primary/30 transition-all duration-300 relative overflow-hidden"
+                className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-9 transition-all duration-300 hover:border-primary/30 hover:shadow-xl md:p-10"
               >
                 {/* Subtle gradient hover effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                <div className={`relative z-10 w-14 h-14 rounded-xl flex items-center justify-center mb-8 ${feature.iconColorClass}`}>
-                    <Icon className="w-7 h-7" />
+
+                <div
+                  className={`relative z-10 mb-8 flex h-16 w-16 items-center justify-center rounded-xl ${feature.iconColorClass}`}
+                >
+                  <Icon className="h-8 w-8" />
                 </div>
-                <h3 className="relative z-10 text-xl font-bold text-slate-900 mb-4 tracking-tight">
+                <h3 className="relative z-10 mb-4 text-2xl font-bold tracking-tight text-slate-900">
                   {feature.headline}
                 </h3>
-                <p className="relative z-10 text-slate-600 leading-relaxed">
+                <p className="relative z-10 text-base leading-8 text-slate-600 md:text-lg">
                   {feature.description}
                 </p>
               </motion.div>

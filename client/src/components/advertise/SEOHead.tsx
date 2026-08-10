@@ -21,8 +21,8 @@ interface SEOHeadProps {
 }
 
 export function SEOHead({
-  title = 'Advertise With Us | Reach High-Intent Property Buyers',
-  description = 'Advertise your properties, developments, and services to thousands of verified home seekers across South Africa. AI-powered visibility, verified leads, and full dashboard control.',
+  title = 'Launch Access | Property Listify',
+  description = 'Bring property or development inventory onto Property Listify, make it discoverable, capture enquiries and follow up in the right business workspace.',
   canonicalUrl = 'https://www.propertylistifysa.co.za/advertise',
   ogImage = '/images/advertise-og-image.jpg',
   ogType = 'website',

@@ -46,11 +46,11 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
     });
     return (
       <section
-        className={`final-cta-section py-20 md:py-28 bg-gray-50 ${className}`}
+        className={`final-cta-section bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-600 py-20 md:py-28 ${className}`}
         aria-labelledby="final-cta-heading"
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-600">Loading call to action...</p>
+        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <p className="text-blue-100">Loading call to action...</p>
         </div>
       </section>
     );
@@ -77,11 +77,14 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
 
   return (
     <section
-      className={`final-cta-section py-20 md:py-28 bg-gray-50 ${className}`}
+      className={`final-cta-section relative overflow-hidden bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-600 py-20 md:py-28 ${className}`}
       aria-labelledby="final-cta-heading"
     >
-      {/* Intentionally narrower max-w-4xl for focused CTA section */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div
+        className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-white/10 blur-3xl"
+        aria-hidden="true"
+      />
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <motion.div
           variants={staggerContainer}
           initial="initial"
@@ -93,7 +96,7 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
           <motion.h2
             id="final-cta-heading"
             variants={fadeUp}
-            className="text-3xl md:text-4xl font-semibold mb-6 leading-tight text-gray-900"
+            className="mb-6 text-3xl font-semibold leading-tight text-white md:text-4xl"
           >
             {headline}
           </motion.h2>
@@ -101,7 +104,7 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
           {/* Subtext */}
           <motion.p
             variants={fadeUp}
-            className="text-lg md:text-xl mb-10 text-gray-600 leading-relaxed max-w-xl mx-auto"
+            className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-blue-100 md:text-xl"
           >
             {subtext}
           </motion.p>
@@ -117,6 +120,7 @@ export const FinalCTASection: React.FC<FinalCTASectionProps> = ({
                 ...secondaryCTA,
                 onClick: handleSecondaryCTAClick,
               }}
+              surface="dark"
               className="justify-center"
             />
           </motion.div>

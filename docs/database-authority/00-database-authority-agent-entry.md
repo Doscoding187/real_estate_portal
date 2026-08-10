@@ -8,24 +8,25 @@ are in `authority-manifest.json`; operation permissions are in
 
 ## Authority spine
 
-| Concern                            | Authority                                                 |
-| ---------------------------------- | --------------------------------------------------------- |
-| Immutable target context           | `server/_core/databaseAuthority/context.ts`               |
-| Operation policy and decision      | `authorization.ts`, `operation-policy.json`               |
-| Connection creation                | `connectionAuthority.ts`                                  |
-| Worktree identity and lifecycle    | `worktreeIdentity.ts`, `lifecycle.ts`                     |
-| Migration membership and lineage   | `server/migrations/manifest.json`, `migrationManifest.ts` |
-| Migration planning and application | `runSqlMigrations.ts`                                     |
-| Successful history                 | `sql_migration_history`                                   |
-| Durable attempt evidence           | `sql_migration_attempts`                                  |
-| Desired schema                     | `drizzle/schema/`                                         |
-| Generated model evidence           | `drizzle/schema/canonical-model-inventory.json`           |
-| Physical-schema comparison         | `schemaCongruency.ts`                                     |
-| Layered readiness                  | `readiness.ts`                                            |
-| Local service lifecycle            | `scripts/local-db.sh`, `localServicePaths.ts`             |
-| Canonical geography reference data | `dataAdapters/canonicalGeography.ts`                      |
-| Isolated Search-to-Lead scenario   | `dataAdapters/searchToLeadScenario.ts`                    |
-| Remaining connection paths         | `connection-path-inventory.json`                          |
+| Concern                             | Authority                                                 |
+| ----------------------------------- | --------------------------------------------------------- |
+| Immutable target context            | `server/_core/databaseAuthority/context.ts`               |
+| Operation policy and decision       | `authorization.ts`, `operation-policy.json`               |
+| Connection creation                 | `connectionAuthority.ts`                                  |
+| Worktree identity and lifecycle     | `worktreeIdentity.ts`, `lifecycle.ts`                     |
+| Migration membership and lineage    | `server/migrations/manifest.json`, `migrationManifest.ts` |
+| Migration planning and application  | `runSqlMigrations.ts`                                     |
+| Successful history                  | `sql_migration_history`                                   |
+| Durable attempt evidence            | `sql_migration_attempts`                                  |
+| Desired schema                      | `drizzle/schema/`                                         |
+| Generated model evidence            | `drizzle/schema/canonical-model-inventory.json`           |
+| Physical-schema comparison          | `schemaCongruency.ts`                                     |
+| Layered readiness                   | `readiness.ts`                                            |
+| Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
+| Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
+| Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
+| Isolated Search-to-Lead scenario    | `dataAdapters/searchToLeadScenario.ts`                    |
+| Remaining connection paths          | `connection-path-inventory.json`                          |
 
 The credential-bearing URL is private to connection creation. Commands and
 reports may emit a sanitized fingerprint and hash, never credentials or a
@@ -105,7 +106,7 @@ never deletes it automatically. Validate and remove only an exact, empty,
 owned residue via an approved cleanup packet before retrying initialization.
 
 Reference and scenario adapters require the exact mode-0600 ownership profile,
-the accepted `0001_public_search_to_lead_reliability.sql` migration head, and
+the accepted `0002_paid_launch_access_invoice_term.sql` migration head, and
 the disposable worktree target. They are never part of ordinary service
 startup. Replay is explicit:
 

@@ -478,6 +478,11 @@
       "purpose": "Bounded additive consent, idempotency, and lead-delivery state for the public search-to-lead journey."
     },
     {
+      "path": "server/migrations/0002_paid_launch_access_invoice_term.sql",
+      "classification": "canonical active",
+      "purpose": "Allows canonical billing invoices to preserve paid fixed-term Launch Access as a once-off commercial term."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

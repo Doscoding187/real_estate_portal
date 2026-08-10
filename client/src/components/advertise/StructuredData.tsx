@@ -36,7 +36,7 @@ export function StructuredData({
     url: resolvedPageUrl,
     name: 'Advertise With Us',
     description:
-      "Advertising opportunities for property professionals on South Africa's leading property platform",
+      'Launch Access for businesses that publish property or development inventory on Property Listify.',
     inLanguage: 'en-ZA',
     isPartOf: {
       '@type': 'WebSite',
@@ -60,7 +60,7 @@ export function StructuredData({
     '@id': `${resolvedPageUrl}#service`,
     name: 'Property Advertising Platform',
     description:
-      'Comprehensive advertising solutions for property developers, estate agents, banks, bond originators, and service providers',
+      'A connected property journey for publishing inventory, participating in discovery, capturing enquiries and supporting business follow-up.',
     provider: {
       '@type': 'Organization',
       '@id': `${resolvedOrganizationUrl}#organization`,
@@ -78,35 +78,7 @@ export function StructuredData({
     },
     audience: {
       '@type': 'Audience',
-      audienceType: 'Property Professionals',
-    },
-    offers: {
-      '@type': 'AggregateOffer',
-      priceCurrency: 'ZAR',
-      availability: 'https://schema.org/InStock',
-      offerCount: 4,
-      offers: [
-        {
-          '@type': 'Offer',
-          name: 'Agent Plans',
-          description: 'Advertising plans for estate agents',
-        },
-        {
-          '@type': 'Offer',
-          name: 'Developer Plans',
-          description: 'Advertising plans for property developers',
-        },
-        {
-          '@type': 'Offer',
-          name: 'Bank/Loan Provider Plans',
-          description: 'Advertising plans for financial institutions',
-        },
-        {
-          '@type': 'Offer',
-          name: 'Service Provider Plans',
-          description: 'Advertising plans for property service providers',
-        },
-      ],
+      audienceType: 'Agents, agencies and property developers',
     },
   };
 
@@ -124,7 +96,7 @@ export function StructuredData({
       height: 60,
     },
     description:
-      "South Africa's leading property platform connecting buyers, sellers, and property professionals",
+      'Property platform connecting property seekers with property inventory and business workspaces.',
     address: {
       '@type': 'PostalAddress',
       addressCountry: 'ZA',

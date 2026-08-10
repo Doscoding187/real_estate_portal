@@ -288,7 +288,12 @@ describe('migration execution authority', () => {
       parent: baseline?.filename,
       parentChecksum: baseline?.checksum,
     });
-    expect(executionManifest.expectedHead).toBe(incremental?.filename);
+    const launchAccess = executionManifest.migrations.find(entry => entry.sequence === 2);
+    expect(launchAccess).toMatchObject({
+      filename: '0002_paid_launch_access_invoice_term.sql',
+      parent: incremental?.filename,
+    });
+    expect(executionManifest.expectedHead).toBe(launchAccess?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

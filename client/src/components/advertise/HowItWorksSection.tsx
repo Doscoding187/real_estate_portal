@@ -1,124 +1,142 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Radar, ShieldCheck, Zap, Handshake, ArrowRight } from 'lucide-react';
-import { softUITokens } from './design-tokens';
+import { BriefcaseBusiness, MessageSquareText, Search, Upload } from 'lucide-react';
 import { staggerContainer, staggerItem } from '@/lib/animations/advertiseAnimations';
 
-interface EngineStep {
+interface JourneyStep {
   id: number;
   title: string;
   description: string;
   icon: React.ElementType;
-  metric: string;
+  supportingLabel: string;
 }
 
-const steps: EngineStep[] = [
+const steps: JourneyStep[] = [
   {
     id: 1,
-    title: 'Signal Capture',
-    description: 'We generate proprietary demand through our localized consumer portals.',
-    icon: Radar,
-    metric: '100k+ searches/mo',
+    title: 'Publish',
+    description:
+      'Create accurate property or development inventory for the relevant business workflow.',
+    icon: Upload,
+    supportingLabel: 'Accurate inventory',
   },
   {
     id: 2,
-    title: 'Intent Verification',
-    description: 'Algorithms filter window-shoppers, scoring leads for real purchase intent.',
-    icon: ShieldCheck,
-    metric: '92% verification rate',
+    title: 'Get discovered',
+    description:
+      'Inventory becomes available through relevant Property Listify discovery experiences.',
+    icon: Search,
+    supportingLabel: 'Relevant discovery',
   },
   {
     id: 3,
-    title: 'Algorithmic Routing',
-    description: 'Leads are distributed instantly to the partners best positioned to close them.',
-    icon: Zap,
-    metric: '< 2s delivery time',
+    title: 'Capture interest',
+    description: 'Prospects enquire against the property or development inventory they care about.',
+    icon: MessageSquareText,
+    supportingLabel: 'Recorded enquiry',
   },
   {
     id: 4,
-    title: 'Acquisition & ROI',
-    description: 'You focus on what matters—closing deals and growing your underlying ROI.',
-    icon: Handshake,
-    metric: '4x average ROI',
+    title: 'Follow up',
+    description: 'The enquiry enters the appropriate Agent, Agency or Developer workflow.',
+    icon: BriefcaseBusiness,
+    supportingLabel: 'Business workspace',
   },
 ];
 
 export const HowItWorksSection: React.FC = () => {
   return (
-    <section className="py-24 bg-slate-50 relative overflow-hidden">
+    <section
+      data-testid="how-it-works-section"
+      className="relative overflow-hidden bg-slate-50 py-24"
+      aria-labelledby="how-it-works-heading"
+    >
       {/* Background decoration */}
-      <div className="absolute inset-0 pointer-events-none opacity-40">
-        <div className="absolute top-1/4 left-0 w-96 h-96 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob" />
-        <div className="absolute top-1/3 right-0 w-96 h-96 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000" />
+      <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true">
+        <div className="absolute left-0 top-1/4 h-96 w-96 animate-blob rounded-full bg-blue-100 opacity-50 mix-blend-multiply blur-3xl" />
+        <div className="animation-delay-2000 absolute right-0 top-1/3 h-96 w-96 animate-blob rounded-full bg-indigo-100 opacity-50 mix-blend-multiply blur-3xl" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <motion.div 
-          className="text-center max-w-3xl mx-auto mb-20"
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          className="mx-auto mb-20 max-w-3xl text-center"
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: '-100px' }}
           variants={staggerContainer}
         >
-          <motion.div variants={staggerItem} className="inline-flex items-center space-x-2 bg-indigo-100 px-4 py-2 rounded-full mb-6">
-             <Zap className="w-4 h-4 text-indigo-700" />
-             <span className="text-sm font-semibold text-indigo-800 uppercase tracking-wider">The Demand Engine</span>
+          <motion.div
+            variants={staggerItem}
+            className="mb-6 inline-flex items-center space-x-2 rounded-full bg-indigo-100 px-4 py-2"
+          >
+            <Search className="h-4 w-4 text-indigo-700" aria-hidden="true" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-indigo-800">
+              The path to enquiry
+            </span>
           </motion.div>
-          <motion.h2 variants={staggerItem} className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
-            How we turn traffic into <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">your revenue</span>
+          <motion.h2
+            id="how-it-works-heading"
+            variants={staggerItem}
+            className="mb-6 text-4xl font-extrabold tracking-tight text-slate-900 md:text-5xl"
+          >
+            How the Property Listify journey works
           </motion.h2>
-          <motion.p variants={staggerItem} className="text-lg md:text-xl text-slate-600">
-            We don't just sell ad space. We operate a closed-loop acquisition infrastructure built to scale your business predictably.
+          <motion.p
+            variants={staggerItem}
+            className="text-lg leading-8 text-slate-600 md:text-xl md:leading-9"
+          >
+            Each step keeps the inventory, the property seeker&apos;s interest and the responsible
+            business workspace connected.
           </motion.p>
         </motion.div>
 
-        <div className="relative max-w-5xl mx-auto">
+        <div className="relative mx-auto max-w-5xl">
           {/* Animated Connecting Pipeline for Desktop */}
-          <div className="hidden lg:block absolute top-[4.5rem] left-[10%] right-[10%] h-1 bg-slate-200 rounded-full z-0 overflow-hidden">
-             <motion.div 
-               className="absolute top-0 bottom-0 left-0 w-full bg-gradient-to-r from-transparent via-blue-500 to-indigo-500"
-               initial={{ x: '-100%' }}
-               whileInView={{ x: '100%' }}
-               viewport={{ once: false }}
-               transition={{ 
-                 repeat: Infinity, 
-                 duration: 3, 
-                 ease: "linear" 
-               }}
-             />
+          <div className="absolute left-[10%] right-[10%] top-[4.5rem] z-0 hidden h-1 overflow-hidden rounded-full bg-blue-100 lg:block">
+            <motion.div
+              className="absolute bottom-0 left-0 top-0 w-full bg-gradient-to-r from-transparent via-blue-500 to-indigo-500"
+              initial={{ x: '-100%' }}
+              whileInView={{ x: '100%' }}
+              viewport={{ once: false }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'linear' }}
+              aria-hidden="true"
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 relative z-10">
+          <div className="relative z-10 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {steps.map((step, index) => (
               <motion.div
                 key={step.id}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-50px" }}
+                viewport={{ once: true, margin: '-50px' }}
                 transition={{ duration: 0.6, delay: index * 0.15, type: 'spring', stiffness: 50 }}
-                className="relative flex flex-col items-center text-center group"
+                className="group relative flex flex-col items-center text-center"
               >
                 {/* Step Node */}
-                <div className="w-24 h-24 rounded-2xl bg-white shadow-xl shadow-slate-200/50 mb-8 flex items-center justify-center border border-slate-100 relative transition-transform group-hover:-translate-y-2 duration-300">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <step.icon className="w-10 h-10 text-indigo-600 relative z-10" />
-                  <div className="absolute -top-4 -right-4 w-8 h-8 rounded-full bg-slate-900 border-4 border-white text-white flex items-center justify-center font-bold text-sm shadow-md z-20">
+                <div className="relative mb-8 flex h-24 w-24 items-center justify-center rounded-2xl border border-blue-100 bg-white shadow-xl shadow-slate-200/50 transition-transform duration-300 group-hover:-translate-y-2">
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <step.icon
+                    className="relative z-10 h-10 w-10 text-indigo-600"
+                    aria-hidden="true"
+                  />
+                  <div className="absolute -right-4 -top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-blue-700 text-base font-bold text-white shadow-md">
                     {step.id}
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-3">{step.title}</h3>
-                <p className="text-slate-600 leading-relaxed mb-6">{step.description}</p>
-                
-                {/* Metric pill */}
-                <div className="mt-auto px-4 py-2 bg-indigo-50 rounded-lg border border-indigo-100/50 text-indigo-700 font-medium text-sm">
-                  {step.metric}
+                <h3 className="mb-3 text-xl font-bold text-slate-900">{step.title}</h3>
+                <p className="mb-6 text-base leading-8 text-slate-600 md:text-lg">
+                  {step.description}
+                </p>
+
+                <div className="mt-auto rounded-lg border border-indigo-100/50 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700">
+                  {step.supportingLabel}
                 </div>
               </motion.div>
             ))}
           </div>
         </div>
-
       </div>
     </section>
   );
