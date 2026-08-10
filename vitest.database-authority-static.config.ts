@@ -15,6 +15,7 @@ export default {
       'server/__tests__/contract.migration-execution-authority.test.ts',
       'server/__tests__/contract.property-listify-database-authority-skill.test.ts',
       'scripts/__tests__/localDbWorkflow.test.ts',
+      'scripts/__tests__/localServiceRecovery.test.ts',
       'scripts/__tests__/databaseUtilityAuthority.test.ts',
       'scripts/__tests__/localEnvironmentAuthority.test.ts',
       'server/_core/databaseAuthority/__tests__/*.test.ts',

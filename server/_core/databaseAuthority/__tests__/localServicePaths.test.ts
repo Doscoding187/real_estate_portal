@@ -8,6 +8,7 @@ import {
   localServiceLegacyRoot,
   localServiceLogPath,
   localServicePidPath,
+  localServiceLockPath,
   localServiceRoot,
   localServiceSocketPath,
   localServiceUid,
@@ -25,6 +26,9 @@ describe('Database Authority local service path authority', () => {
       '/var/tmp/property-listify-1000/mysql-3307/mysql.sock',
     );
     expect(localServicePidPath(1000)).toBe('/var/tmp/property-listify-1000/mysql-3307/mysqld.pid');
+    expect(localServiceLockPath(1000)).toBe(
+      '/var/tmp/property-listify-1000/mysql-3307/mysql.sock.lock',
+    );
     expect(localServiceLogPath(1000)).toBe('/var/tmp/property-listify-1000/mysql-3307/mysqld.log');
   });
 

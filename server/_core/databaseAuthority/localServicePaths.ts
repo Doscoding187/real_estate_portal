@@ -47,6 +47,10 @@ export function localServicePidPath(uid = currentUid()): string {
   return join(localServiceRoot(uid), 'mysqld.pid');
 }
 
+export function localServiceLockPath(uid = currentUid()): string {
+  return join(localServiceRoot(uid), 'mysql.sock.lock');
+}
+
 export function localServiceLogPath(uid = currentUid()): string {
   return join(localServiceRoot(uid), 'mysqld.log');
 }

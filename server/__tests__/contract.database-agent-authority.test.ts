@@ -33,6 +33,7 @@ describe('database authority agent entry contract', () => {
     expect(manifest.machineLocalEnvironmentRelativePath).toBe('.config/property-listify/local.env');
     expect(manifest.requiredLocalVariables).toContain('LOCAL_DEMO_AGENCY_PASSWORD');
     expect(manifest.approvedLocalCommands).toContain('db:worktree:create');
+    expect(manifest.approvedLocalCommands).toContain('db:authority:service:recover');
     expect(manifest.migrationManifest).toBe('server/migrations/manifest.json');
     expect(manifest.migrationAttemptLedger).toBe('sql_migration_attempts');
     expect(manifest.consumerContractEntrypoint).toBe(
@@ -91,6 +92,7 @@ describe('database authority agent entry contract', () => {
     expect(cli).toContain('localServiceRoot()');
     expect(cli).toContain('legacyPathPolicy');
     expect(entry).toContain('/var/tmp/property-listify-<uid>/mysql-3307');
+    expect(entry).toContain('db:authority:service:recover');
     expect(entry).toContain('home-directory MySQL datadir or modify AppArmor');
   });
 

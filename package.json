@@ -69,6 +69,7 @@
     "db:authority:service:wait": "bash scripts/local-db.sh wait",
     "db:authority:service:status": "bash scripts/local-db.sh status",
     "db:authority:service:stop": "bash scripts/local-db.sh stop",
+    "db:authority:service:recover": "bash scripts/local-db.sh recover",
     "db:local:destroy": "tsx scripts/retiredDatabaseMutation.ts db:local:destroy",
     "db:worktree:create": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:create",
     "db:worktree:ack": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:ack",

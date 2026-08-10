@@ -84,6 +84,7 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   'db:authority:service:wait',
   'db:authority:service:status',
   'db:authority:service:stop',
+  'db:authority:service:recover',
   'db:reference:prepare',
   'db:reference:verify',
   'db:scenario:prepare',

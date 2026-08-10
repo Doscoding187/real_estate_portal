@@ -79,12 +79,21 @@ pnpm db:authority:context
 pnpm db:worktree:ack
 pnpm db:worktree:dispose -- --ack=CONFIRM_DATABASE_DISPOSE_<fingerprint-prefix>
 pnpm db:authority:service:stop
+pnpm db:authority:service:recover
 pnpm db:authority:service:status
 ```
 
 Service shutdown is implemented as `mysqladmin shutdown` over the exact
 validated Unix socket. Do not assume a same-user signal is permitted for a
 confined `mysqld`; there is no silent TCP, signal, or broad-process fallback.
+
+If an abnormal termination leaves only authority-owned transient runtime
+metadata (`mysqld.pid`, `mysql.sock`, or `mysql.sock.lock`), use the governed
+`pnpm db:authority:service:recover` command. It classifies the complete bundle,
+fails closed on a live or ambiguous service, and removes only those three
+exact artifacts after proving the service root, process, port, socket, and lock
+state are safe. It never removes the service root, data directory, logs, or
+database files. A cleanly stopped service is a recovery no-op.
 
 The native MySQL initialization command owns creation of its data directory.
 The service path is derived by `localServicePaths.ts` as
