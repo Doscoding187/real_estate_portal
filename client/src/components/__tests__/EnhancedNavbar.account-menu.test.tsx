@@ -204,6 +204,39 @@ describe('EnhancedNavbar account menu', () => {
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
   });
 
+  it('closes after the pointer leaves the account trigger and menu', async () => {
+    mockUseAuth.mockReturnValue({ user: null, logout: vi.fn() });
+
+    render(<EnhancedNavbar />);
+    const user = userEvent.setup();
+    const trigger = screen.getAllByRole('button', { name: accountTriggerName })[0];
+
+    await user.click(trigger);
+    const menu = screen.getByRole('menu');
+    fireEvent.mouseLeave(trigger);
+    fireEvent.mouseEnter(menu);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    fireEvent.mouseLeave(menu);
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  });
+
+  it('closes an open Advertise menu when the pointer enters the login trigger', () => {
+    mockUseAuth.mockReturnValue({ user: null, logout: vi.fn() });
+
+    render(<EnhancedNavbar />);
+    const advertiseTrigger = screen.getByRole('button', { name: /Advertise & Partner/ });
+    const accountTrigger = screen.getAllByRole('button', { name: accountTriggerName })[0];
+
+    fireEvent.mouseEnter(advertiseTrigger);
+    expect(screen.getByRole('region', { name: 'Advertise & Partner navigation' })).toBeInTheDocument();
+
+    fireEvent.mouseEnter(accountTrigger);
+    expect(
+      screen.queryByRole('region', { name: 'Advertise & Partner navigation' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('opens with Enter and Space and restores focus after Escape', async () => {
     mockUseAuth.mockReturnValue({ user: null, logout: vi.fn() });
 
