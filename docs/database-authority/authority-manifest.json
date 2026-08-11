@@ -53,7 +53,9 @@
     "db:reference:prepare",
     "db:reference:verify",
     "db:scenario:prepare",
-    "db:scenario:verify"
+    "db:scenario:verify",
+    "db:ple-publication-entitlement:prepare",
+    "db:ple-publication-entitlement:verify"
   ],
   "destructiveLocalCommands": ["db:worktree:dispose"],
   "prohibitedCommandCategories": [
@@ -80,5 +82,6 @@
   "localServiceLifecycle": "scripts/local-db.sh",
   "localServiceDirectoryPattern": "/var/tmp/property-listify-<uid>/mysql-3307",
   "canonicalReferenceDataAdapter": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
-  "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
+  "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
+  "plePublicationEntitlementAdapter": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts"
 }

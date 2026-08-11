@@ -87,6 +87,8 @@
     "db:scenario:verify": "tsx scripts/databaseAuthorityCli.ts scenario:verify",
     "db:listing-preview:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts listing-preview:prepare",
     "db:listing-preview:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts listing-preview:verify",
+    "db:ple-publication-entitlement:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-publication-entitlement:prepare",
+    "db:ple-publication-entitlement:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts ple-publication-entitlement:verify",
     "db:listing-performance-e2e:reset": "tsx scripts/retiredDatabaseMutation.ts db:listing-performance-e2e:reset",
     "db:listing-performance-e2e:drop": "tsx scripts/retiredDatabaseMutation.ts db:listing-performance-e2e:drop",
     "db:prospect-journey-e2e:reset": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:reset",

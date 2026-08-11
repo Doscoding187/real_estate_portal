@@ -25,6 +25,10 @@ import {
   verifyListingPreviewFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/listingPreviewFixture';
 import {
+  preparePlePublicationEntitlement,
+  verifyPlePublicationEntitlement,
+} from '../server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement';
+import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
@@ -62,7 +66,9 @@ type Command =
   | 'scenario:prepare'
   | 'scenario:verify'
   | 'listing-preview:prepare'
-  | 'listing-preview:verify';
+  | 'listing-preview:verify'
+  | 'ple-publication-entitlement:prepare'
+  | 'ple-publication-entitlement:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -262,6 +268,26 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (
+    command === 'ple-publication-entitlement:prepare' ||
+    command === 'ple-publication-entitlement:verify'
+  ) {
+    const isPrepare = command.endsWith(':prepare');
+    const operation = isPrepare ? 'test-fixture' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      const evidence = isPrepare
+        ? await preparePlePublicationEntitlement({ authority, decision, connection })
+        : await verifyPlePublicationEntitlement({ authority, decision, connection });
+      print(evidence);
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   const authority = authorityFor('diagnostics');
   const decision = authorizationFor(authority);
   const connection = await createAuthoritySqlConnection(authority, decision);
@@ -301,6 +327,8 @@ const commands = new Set<Command>([
   'scenario:verify',
   'listing-preview:prepare',
   'listing-preview:verify',
+  'ple-publication-entitlement:prepare',
+  'ple-publication-entitlement:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
