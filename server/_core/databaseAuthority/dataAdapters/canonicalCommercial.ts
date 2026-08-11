@@ -6,7 +6,7 @@ import {
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
-  requireExactAdapterTarget,
+  requireReferenceAdapterTarget,
   requireProtectedCommercialReferenceTarget,
   requireReleaseReferenceTarget,
   rowValue,
@@ -638,7 +638,7 @@ export async function prepareCanonicalCommercialReferenceData(input: {
   assertOperation(input.decision, ['reference-seed', 'foundation-seed', 'release-reference-apply']);
   const ownership = releaseScoped
     ? requireReleaseReferenceTarget(input.authority)
-    : requireExactAdapterTarget(input.authority, input.profileRoot);
+    : requireReferenceAdapterTarget(input.authority, input.profileRoot);
   await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
@@ -690,11 +690,9 @@ export async function verifyCanonicalCommercialReference(input: {
 }): Promise<CommercialReferenceEvidence> {
   const releaseScoped = input.decision.operation === 'release-reference-verify';
   assertOperation(input.decision, ['verification', 'readiness', 'release-reference-verify']);
-  const protectedTarget = ['staging', 'production'].includes(input.authority.context.targetClass);
-  const ownership =
-    releaseScoped || protectedTarget
-      ? requireProtectedCommercialReferenceTarget(input.authority)
-      : requireExactAdapterTarget(input.authority, input.profileRoot);
+  const ownership = releaseScoped
+    ? requireProtectedCommercialReferenceTarget(input.authority)
+    : requireReferenceAdapterTarget(input.authority, input.profileRoot);
   await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,

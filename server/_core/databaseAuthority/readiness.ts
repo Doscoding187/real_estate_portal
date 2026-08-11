@@ -14,6 +14,7 @@ import { resolveDatabaseAuthority } from './context';
 import type { ResolvedDatabaseAuthority } from './types';
 import { assertOwnedDisposableTarget, identityFromAuthority } from './lifecycle';
 import { readWorktreeDatabaseProfile } from './worktreeProfile';
+import { requireReferenceAdapterTarget } from './dataAdapters/common';
 import { verifyCanonicalGeography } from './dataAdapters/canonicalGeography';
 import { verifyCanonicalCommercialReference } from './dataAdapters/canonicalCommercial';
 import { verifySearchToLeadScenario } from './dataAdapters/searchToLeadScenario';
@@ -123,6 +124,14 @@ function notEvaluatedLayers() {
 
 function targetOwnershipLayer(authority: ResolvedDatabaseAuthority): ReadinessLayer {
   try {
+    const ownership = requireReferenceAdapterTarget(authority);
+    if (authority.context.targetClass === 'disposable-test') {
+      return layer(
+        'ready',
+        'authorized-disposable-test',
+        `Authorized isolated test target ${ownership.databaseName} is available for reference verification.`,
+      );
+    }
     assertOwnedDisposableTarget(authority);
     const profile = readWorktreeDatabaseProfile(identityFromAuthority(authority));
     return profile

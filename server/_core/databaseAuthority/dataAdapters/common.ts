@@ -72,6 +72,52 @@ export function requireExactAdapterTarget(
   };
 }
 
+const DISPOSABLE_REFERENCE_OPERATIONS: readonly DatabaseOperation[] = [
+  'reference-seed',
+  'foundation-seed',
+  'verification',
+  'browser-verification',
+  'readiness',
+];
+
+/**
+ * Canonical reference adapters may run against either an owned local worktree
+ * or an explicitly resolved isolated test target. Worktree lifecycle remains
+ * intentionally stricter and is never delegated to this test-target branch.
+ */
+export function requireReferenceAdapterTarget(
+  authority: ResolvedDatabaseAuthority,
+  profileRoot?: string,
+): AdapterEvidence {
+  if (authority.context.targetClass === 'disposable-worktree') {
+    return requireExactAdapterTarget(authority, profileRoot);
+  }
+
+  if (
+    authority.context.targetClass === 'disposable-test' &&
+    DISPOSABLE_REFERENCE_OPERATIONS.includes(authority.context.operation) &&
+    authority.context.runtimeMode === 'test' &&
+    authority.context.local &&
+    authority.context.provider === 'mysql' &&
+    authority.context.dialect === 'mysql' &&
+    authority.context.worktree.registered &&
+    authority.context.worktree.ownershipMatches
+  ) {
+    return {
+      adapter: 'database-authority-disposable-test-adapter',
+      version: 'unassigned',
+      digest: 'unassigned',
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      databaseName: authority.context.databaseName,
+      ownershipKey: authority.context.worktree.ownershipKey,
+    };
+  }
+
+  throw new Error(
+    'Database Authority adapter refused: target is not the exact owned disposable worktree or an authorized isolated disposable-test target; protected staging/production reference use requires release-reference authority.',
+  );
+}
+
 const RELEASE_REFERENCE_OPERATIONS: readonly DatabaseOperation[] = [
   'release-reference-plan',
   'release-reference-apply',

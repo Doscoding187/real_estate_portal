@@ -6,6 +6,7 @@ import { resolveDatabaseAuthority } from '../context';
 import {
   CANONICAL_GEOGRAPHY_DIGEST,
   CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
+  prepareCanonicalGeography,
   verifyCanonicalGeography,
 } from '../dataAdapters/canonicalGeography';
 import {
@@ -20,8 +21,10 @@ import {
   CANONICAL_AGENT_LAUNCH_ACCESS,
   CANONICAL_DEVELOPER_LAUNCH_ACCESS,
   planCanonicalCommercialReferenceData,
+  prepareCanonicalCommercialReferenceData,
   verifyCanonicalCommercialReference,
 } from '../dataAdapters/canonicalCommercial';
+import { requireReferenceAdapterTarget } from '../dataAdapters/common';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 import { loadAndValidateMigrationManifest } from '../../../migrations/migrationManifest';
@@ -54,6 +57,18 @@ function authority(url: string, operation: 'verification' | 'reference-seed' | '
 
 function decision(operation: 'verification' | 'reference-seed' | 'scenario-seed') {
   return { operation } as any;
+}
+
+function disposableTestAuthority(operation: 'verification' | 'reference-seed') {
+  const testIdentity = identity('fix/database-authority-disposable-test');
+  return resolveDatabaseAuthority({
+    operation,
+    cwd: ROOT,
+    gitIdentity: testIdentity,
+    explicitDatabaseUrl: `mysql://test-owner:private@127.0.0.1:3307/listify_test_${testIdentity.ownershipKey.slice(0, 12)}`,
+    credentialClass: 'test-owner',
+    processEnv: { CI: 'true', NODE_ENV: 'test', APP_ENV: 'test' },
+  });
 }
 
 function releaseAuthority(operation: 'release-reference-plan' | 'release-reference-verify') {
@@ -172,6 +187,94 @@ describe('bounded Database Authority data adapters', () => {
         connection,
       }),
     ).rejects.toThrow(/exact owned disposable worktree|fails closed|not the exact/);
+    expect(connection.calls).toBe(0);
+  });
+
+  it('keeps worktree profile strict while routing authorized disposable-test reference adapters', async () => {
+    const worktreeIdentity = identity();
+    const worktree = authority(
+      `mysql://listify_app:private@127.0.0.1:3307/${worktreeIdentity.expectedWorktreeDatabase}`,
+      'reference-seed',
+    );
+    expect(() => requireReferenceAdapterTarget(worktree)).toThrow(
+      'exact owned worktree database profile is absent',
+    );
+
+    const prepareTarget = disposableTestAuthority('reference-seed');
+    expect(requireReferenceAdapterTarget(prepareTarget)).toMatchObject({
+      adapter: 'database-authority-disposable-test-adapter',
+      databaseName: prepareTarget.context.databaseName,
+    });
+
+    const prepareConnection = new UnexpectedConnection();
+    await expect(
+      prepareCanonicalGeography({
+        authority: prepareTarget,
+        decision: decision('reference-seed'),
+        connection: prepareConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
+
+    await expect(
+      prepareCanonicalCommercialReferenceData({
+        authority: prepareTarget,
+        decision: decision('reference-seed'),
+        connection: prepareConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
+
+    const verifyTarget = disposableTestAuthority('verification');
+    const verifyConnection = new UnexpectedConnection();
+    await expect(
+      verifyCanonicalGeography({
+        authority: verifyTarget,
+        decision: decision('verification'),
+        connection: verifyConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
+
+    await expect(
+      verifyCanonicalCommercialReference({
+        authority: verifyTarget,
+        decision: decision('verification'),
+        connection: verifyConnection,
+      }),
+    ).rejects.toThrow('connection must not be reached');
+    expect(prepareConnection.calls).toBeGreaterThan(0);
+    expect(verifyConnection.calls).toBeGreaterThan(0);
+  });
+
+  it('rejects test-shaped targets outside test authority and rejects protected targets on the ordinary path', async () => {
+    const testIdentity = identity('fix/database-authority-non-test-target');
+    const developmentTarget = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: ROOT,
+      gitIdentity: testIdentity,
+      explicitDatabaseUrl: `mysql://test-owner:private@127.0.0.1:3307/listify_test_${testIdentity.ownershipKey.slice(0, 12)}`,
+      credentialClass: 'test-owner',
+      processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
+    });
+    expect(developmentTarget.context.targetClass).toBe('unknown');
+    expect(() => requireReferenceAdapterTarget(developmentTarget)).toThrow(
+      'authorized isolated disposable-test target',
+    );
+
+    const productionTarget = resolveDatabaseAuthority({
+      operation: 'verification',
+      cwd: ROOT,
+      gitIdentity: testIdentity,
+      explicitDatabaseUrl: 'mysql://release-user:private@db.prod.example.com/listify_property_sa',
+      credentialClass: 'read-only',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const connection = new UnexpectedConnection();
+    await expect(
+      verifyCanonicalCommercialReference({
+        authority: productionTarget,
+        decision: decision('verification'),
+        connection,
+      }),
+    ).rejects.toThrow('release-reference authority');
     expect(connection.calls).toBe(0);
   });
 
