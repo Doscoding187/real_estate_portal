@@ -373,6 +373,38 @@ async function authorizeListingMediaManifest(
   return normalized;
 }
 
+function remapRevisionMediaToken(mediaId: string, mediaIdMap: Map<number, number>) {
+  if (!isExistingListingMediaToken(mediaId)) return mediaId;
+  const sourceMediaId = Number(mediaId.slice('existing:'.length));
+  const revisionMediaId = mediaIdMap.get(sourceMediaId);
+  if (!revisionMediaId) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Listing revision references media that is not part of the approved listing.',
+    });
+  }
+  return `existing:${revisionMediaId}`;
+}
+
+function remapRevisionPropertyDetails(
+  propertyDetails: Record<string, any>,
+  mediaIdMap: Map<number, number>,
+) {
+  const presentation = normalizePropertyPresentation(propertyDetails.propertyPresentation);
+  if (!presentation) return propertyDetails;
+
+  return {
+    ...propertyDetails,
+    propertyPresentation: {
+      ...presentation,
+      media: presentation.media.map(item => ({
+        ...item,
+        mediaId: remapRevisionMediaToken(item.mediaId, mediaIdMap),
+      })),
+    },
+  };
+}
+
 const createListingSchemaBase = z.object({
   action: listingActionSchema,
   propertyType: propertyTypeSchema,
@@ -779,6 +811,9 @@ export const listingRouter = router({
           userId,
           input.id,
         );
+        let targetListingId = input.id;
+        let targetMediaManifest = mediaManifest;
+        let targetMainMediaId = mainMediaId;
 
         // Status changes are lifecycle transitions, not editable listing data.
         // Legacy clients may echo the current status, but cannot promote a
@@ -935,33 +970,62 @@ export const listingRouter = router({
             listingId: input.id,
             operation: 'republish',
           });
+
+          const revisionContext = await db.createListingRevision(input.id);
+          targetListingId = revisionContext.revisionListingId;
+          targetMediaManifest = mediaManifest?.map(item => ({
+            ...item,
+            id: remapRevisionMediaToken(item.id, revisionContext.mediaIdMap),
+          }));
+          targetMainMediaId = mainMediaId
+            ? remapRevisionMediaToken(mainMediaId, revisionContext.mediaIdMap)
+            : mainMediaId;
+
+          if (updatePayload.propertyDetails) {
+            updatePayload.propertyDetails = remapRevisionPropertyDetails(
+              updatePayload.propertyDetails,
+              revisionContext.mediaIdMap,
+            );
+            const availableRevisionMedia =
+              targetMediaManifest ||
+              (await db.getListingMedia(targetListingId)).map(item => ({
+                id: item.id,
+                originalUrl: item.originalUrl,
+                url: item.processedUrl || item.originalUrl,
+                mediaType: item.mediaType,
+              }));
+            assertPropertyPresentationMediaReferences(
+              updatePayload.propertyDetails,
+              availableRevisionMedia,
+            );
+          }
         }
 
         // Update listing
-        await db.updateListing(input.id, updatePayload);
+        await db.updateListing(targetListingId, updatePayload);
 
-        if (mediaManifest !== undefined) {
-          await db.replaceListingMedia(input.id, mediaManifest, mainMediaId);
+        if (targetMediaManifest !== undefined) {
+          await db.replaceListingMedia(targetListingId, targetMediaManifest, targetMainMediaId);
         }
 
         if (requiresReviewBeforePublicUpdate) {
-          await db.submitListingForReview(input.id);
+          await db.submitListingForReview(targetListingId);
         } else {
           // Keep an already-public mirror deterministic. A failed projection
           // is a lifecycle error, not a warning that leaves stale public media.
-          await db.syncPublishedListingMediaToPropertyMirror(input.id);
+          await db.syncPublishedListingMediaToPropertyMirror(targetListingId);
         }
 
         // Recalculate readiness and quality
         // Fetch full listing with media to ensure accuracy (or construct from input + existing)
-        const fullListing = await db.getListingById(input.id);
-        const media = await db.getListingMedia(input.id);
+        const fullListing = await db.getListingById(targetListingId);
+        const media = await db.getListingMedia(targetListingId);
         const listingData = { ...fullListing, ...input, media }; // Merge input into full listing
 
         const readiness = calculateListingReadiness(listingData);
         const quality = calculateListingQualityScore(listingData);
 
-        await db.updateListing(input.id, {
+        await db.updateListing(targetListingId, {
           readinessScore: readiness.score,
           qualityScore: quality.score,
           qualityBreakdown: quality.breakdown,

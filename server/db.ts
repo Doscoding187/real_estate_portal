@@ -2668,6 +2668,125 @@ export async function getListingMedia(listingId: number) {
     .orderBy(listingMedia.displayOrder);
 }
 
+export type ListingRevisionContext = {
+  revisionListingId: number;
+  mediaIdMap: Map<number, number>;
+};
+
+/**
+ * Create the private draft used to revise a published listing. The published
+ * row and its public mirror remain untouched until the revision is approved.
+ */
+export async function createListingRevision(listingId: number): Promise<ListingRevisionContext> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  return await db.transaction(async tx => {
+    const [source] = await tx.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+    if (!source) throw new Error('Listing not found');
+    if (source.status !== 'published') {
+      throw new Error(`Only published listings can be revised (status "${source.status}")`);
+    }
+
+    const [activeRevision] = await tx
+      .select({ id: listings.id })
+      .from(listings)
+      .where(
+        and(
+          eq(listings.revisionOfListingId, listingId),
+          inArray(listings.status, ['draft', 'pending_review'] as any),
+        ),
+      )
+      .limit(1);
+    if (activeRevision) {
+      throw new Error(
+        'Another listing revision is already in progress. Open that revision to continue.',
+      );
+    }
+
+    const {
+      id: _sourceId,
+      createdAt: _sourceCreatedAt,
+      updatedAt: _sourceUpdatedAt,
+      publishedAt: _sourcePublishedAt,
+      archivedAt: _sourceArchivedAt,
+      reviewedBy: _sourceReviewedBy,
+      reviewedAt: _sourceReviewedAt,
+      rejectionReason: _sourceRejectionReason,
+      rejectionReasons: _sourceRejectionReasons,
+      rejectionNote: _sourceRejectionNote,
+      status: _sourceStatus,
+      approvalStatus: _sourceApprovalStatus,
+      revisionOfListingId: _sourceRevisionOfListingId,
+      mainMediaId: _sourceMainMediaId,
+      mainMediaType: _sourceMainMediaType,
+      canonicalUrl: _sourceCanonicalUrl,
+      slug: sourceSlug,
+      ...draftFields
+    } = source as any;
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const revisionSlug =
+      `${String(sourceSlug || listingId)}-revision-${Date.now().toString(36)}`.slice(0, 255);
+    const [revisionResult] = await tx.insert(listings).values({
+      ...draftFields,
+      slug: revisionSlug,
+      canonicalUrl: null,
+      status: 'draft',
+      approvalStatus: 'pending',
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      rejectionReasons: null,
+      rejectionNote: null,
+      publishedAt: null,
+      archivedAt: null,
+      revisionOfListingId: listingId,
+      mainMediaId: null,
+      mainMediaType: null,
+      createdAt: now,
+      updatedAt: now,
+    } as any);
+    const revisionListingId = Number((revisionResult as any).insertId);
+
+    const sourceMedia = await tx
+      .select()
+      .from(listingMedia)
+      .where(eq(listingMedia.listingId, listingId))
+      .orderBy(listingMedia.displayOrder);
+    const mediaIdMap = new Map<number, number>();
+
+    for (const item of sourceMedia) {
+      const [mediaResult] = await tx.insert(listingMedia).values({
+        listingId: revisionListingId,
+        mediaType: item.mediaType,
+        originalUrl: item.originalUrl,
+        originalFileName: item.originalFileName,
+        originalFileSize: item.originalFileSize,
+        processedUrl: item.processedUrl,
+        thumbnailUrl: item.thumbnailUrl,
+        previewUrl: item.previewUrl,
+        width: item.width,
+        height: item.height,
+        duration: item.duration,
+        mimeType: item.mimeType,
+        orientation: item.orientation,
+        isVertical: item.isVertical,
+        displayOrder: item.displayOrder,
+        isPrimary: item.isPrimary,
+        processingStatus: item.processingStatus,
+        processingError: item.processingError,
+        createdAt: item.createdAt,
+        uploadedAt: item.uploadedAt,
+        processedAt: item.processedAt,
+      });
+      mediaIdMap.set(Number(item.id), Number((mediaResult as any).insertId));
+    }
+
+    return { revisionListingId, mediaIdMap };
+  });
+}
+
 export type ListingMediaReplacementInput = {
   id: string;
   mediaType: 'image' | 'video' | 'floorplan' | 'pdf';
@@ -2828,11 +2947,12 @@ export async function synchronizeApprovedRevisionMedia(
     .where(eq(listingMedia.listingId, revisionListingId))
     .orderBy(listingMedia.displayOrder);
   const primary = getPrimaryListingImage(revisionMedia);
+  const mediaIdMap = new Map<number, number>();
 
   await db.transaction(async tx => {
     await tx.delete(listingMedia).where(eq(listingMedia.listingId, originalListingId));
     for (const item of revisionMedia) {
-      await tx.insert(listingMedia).values({
+      const [inserted] = await tx.insert(listingMedia).values({
         listingId: originalListingId,
         originalUrl: item.originalUrl,
         originalFileName: item.originalFileName,
@@ -2855,10 +2975,11 @@ export async function synchronizeApprovedRevisionMedia(
         uploadedAt: item.uploadedAt,
         processedAt: item.processedAt,
       });
+      mediaIdMap.set(Number(item.id), Number((inserted as any).insertId));
     }
   });
 
-  return { copied: revisionMedia.length, primaryMediaId: primary?.id ?? null };
+  return { copied: revisionMedia.length, primaryMediaId: primary?.id ?? null, mediaIdMap };
 }
 
 /**
@@ -3052,6 +3173,29 @@ async function buildPublicLocationProjection(database: any, listing: any) {
   };
 }
 
+function remapApprovedRevisionPresentationMedia(
+  propertyDetails: Record<string, any>,
+  mediaIdMap: Map<number, number>,
+) {
+  const presentation = normalizePropertyPresentation(propertyDetails.propertyPresentation);
+  if (!presentation) return propertyDetails;
+
+  const media = presentation.media.map(item => {
+    if (!item.mediaId.startsWith('existing:')) return item;
+    const revisionMediaId = Number(item.mediaId.slice('existing:'.length));
+    const originalMediaId = mediaIdMap.get(revisionMediaId);
+    if (!originalMediaId) {
+      throw new Error('Approved revision presentation references unsynchronized media');
+    }
+    return { ...item, mediaId: `existing:${originalMediaId}` };
+  });
+
+  return {
+    ...propertyDetails,
+    propertyPresentation: { ...presentation, media },
+  };
+}
+
 /**
  * Approve listing
  */
@@ -3126,12 +3270,20 @@ export async function approveListing(
       (listing as any).pricing,
       (listing as any).propertyDetails,
     );
-    const approvedPropertyDetails = {
+    const approvedPropertyDetailsBeforeMedia = {
       ...(((listing as any).propertyDetails as Record<string, unknown>) || {}),
       ...(approvedPricingProjection.contract
         ? { pricingContract: approvedPricingProjection.contract }
         : {}),
     };
+    const mediaSynchronization = await synchronizeApprovedRevisionMedia(
+      originalListingId,
+      listingId,
+    );
+    const approvedPropertyDetails = remapApprovedRevisionPresentationMedia(
+      approvedPropertyDetailsBeforeMedia as Record<string, any>,
+      mediaSynchronization.mediaIdMap,
+    );
     const approvedVirtualTour = getSafePropertyPresentationVirtualTour(
       approvedPropertyDetails['propertyPresentation'],
     );
@@ -3174,7 +3326,6 @@ export async function approveListing(
         updatedAt: approvedAt,
       } as any)
       .where(eq(listings.id, originalListingId));
-    await synchronizeApprovedRevisionMedia(originalListingId, listingId);
     await syncPublishedListingMediaToPropertyMirror(originalListingId);
     await db
       .update(properties)

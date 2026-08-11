@@ -18,6 +18,7 @@ const { mockDb, mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
   mockDb: {
     getListingById: vi.fn(),
     createListing: vi.fn(),
+    createListingRevision: vi.fn(),
     updateListing: vi.fn(),
     submitListingForReview: vi.fn(),
     approveListing: vi.fn(),
@@ -189,6 +190,10 @@ describe('listing lifecycle — canonical identity contract', () => {
     vi.mocked(mockDb.getListingMedia).mockResolvedValue([mockMediaItem()]);
     vi.mocked(mockDb.replaceListingMedia).mockResolvedValue(undefined);
     vi.mocked(mockDb.createListing).mockResolvedValue(1001);
+    vi.mocked(mockDb.createListingRevision).mockResolvedValue({
+      revisionListingId: 1002,
+      mediaIdMap: new Map(),
+    });
     vi.mocked(mockDb.updateListing).mockResolvedValue(undefined);
     vi.mocked(mockDb.submitListingForReview).mockResolvedValue(undefined);
     vi.mocked(mockDb.approveListing).mockResolvedValue(undefined);
@@ -359,6 +364,7 @@ describe('listing lifecycle — canonical identity contract', () => {
     await caller.listing.submitForReview({ listingId: LISTING_ID });
 
     // Submit must have been called with the same ID
+    expect(mockDb.createListingRevision).not.toHaveBeenCalled();
     expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
   });
 
@@ -516,7 +522,73 @@ describe('listing lifecycle — canonical identity contract', () => {
     });
 
     expect(result).toMatchObject({ success: true, status: 'pending_review' });
-    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.createListingRevision).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(1002);
+    expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
+  });
+
+  it('maps existing media and presentation references onto the private revision', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 8051;
+    const REVISION_ID = 8052;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({
+        id: LISTING_ID,
+        status: 'published',
+        propertyDetails: {
+          propertyPresentation: {
+            media: [{ kind: 'floorplan', label: 'Ground floor', mediaId: 'existing:501' }],
+          },
+        },
+      }),
+    );
+    vi.mocked(mockDb.createListingRevision).mockResolvedValue({
+      revisionListingId: REVISION_ID,
+      mediaIdMap: new Map([
+        [500, 1500],
+        [501, 1501],
+      ]),
+    });
+    vi.mocked(mockDb.getListingMedia).mockResolvedValue([
+      mockMediaItem({ id: 500, isPrimary: 1 }),
+      mockMediaItem({ id: 501, mediaType: 'floorplan', isPrimary: 0 }),
+    ]);
+
+    await caller.listing.update({
+      id: LISTING_ID,
+      title: 'Revised Modern Family Home',
+      media: [
+        { id: 'existing:500', mediaType: 'image' },
+        { id: 'existing:501', mediaType: 'floorplan' },
+      ],
+      mainMediaId: 'existing:500',
+      propertyDetails: {
+        propertyPresentation: {
+          media: [{ kind: 'floorplan', label: 'Ground floor', mediaId: 'existing:501' }],
+        },
+      },
+    });
+
+    expect(mockDb.updateListing).toHaveBeenCalledWith(
+      REVISION_ID,
+      expect.objectContaining({
+        propertyDetails: expect.objectContaining({
+          propertyPresentation: {
+            media: [{ kind: 'floorplan', label: 'Ground floor', mediaId: 'existing:1501' }],
+          },
+        }),
+      }),
+    );
+    expect(mockDb.replaceListingMedia).toHaveBeenCalledWith(
+      REVISION_ID,
+      [
+        { id: 'existing:1500', mediaType: 'image', uploadToken: null },
+        { id: 'existing:1501', mediaType: 'floorplan', uploadToken: null },
+      ],
+      'existing:1500',
+    );
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(REVISION_ID);
     expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
   });
 
@@ -634,7 +706,9 @@ describe('listing lifecycle — canonical identity contract', () => {
       title: 'Updated Title',
     });
 
-    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.createListingRevision).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.updateListing).toHaveBeenCalledWith(1002, expect.any(Object));
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(1002);
     expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
   });
 
