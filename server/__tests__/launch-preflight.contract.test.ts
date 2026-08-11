@@ -106,7 +106,7 @@ describe('launch preflight contract', () => {
       '"launch:preflight": "cross-env NODE_ENV=production APP_ENV=production tsx scripts/launch-preflight.ts"',
     );
     expect(packageJson).toContain(
-      '"release:predeploy:production": "pnpm launch:preflight && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:plan"',
+      '"release:predeploy:production": "pnpm launch:preflight && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:plan && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:reference:plan && cross-env NODE_ENV=production APP_ENV=production pnpm db:release:reference:verify"',
     );
     expect(packageJson).toContain('"db:release:apply":');
   });

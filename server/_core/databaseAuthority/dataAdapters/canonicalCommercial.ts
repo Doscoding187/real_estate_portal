@@ -7,6 +7,8 @@ import {
   queryRows,
   requireAcceptedMigrationHead,
   requireExactAdapterTarget,
+  requireProtectedCommercialReferenceTarget,
+  requireReleaseReferenceTarget,
   rowValue,
   stableDigest,
   withTransaction,
@@ -237,6 +239,22 @@ export type CommercialReferenceEvidence = AdapterEvidence & {
   migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
 };
 
+export type CommercialReferencePlanEvidence = AdapterEvidence & {
+  expectedProductKeys: string[];
+  status: 'ready' | 'pending';
+  pending: Array<
+    | { action: 'insert_plan'; productKey: string }
+    | { action: 'insert_entitlement'; productKey: string; featureKey: string }
+  >;
+  products: Array<{
+    productKey: string;
+    state: 'present' | 'missing';
+    planId: number | null;
+    missingEntitlementKeys: string[];
+  }>;
+  migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+};
+
 type Row = Record<string, unknown>;
 
 function asId(row: Row, label: string): number {
@@ -275,6 +293,7 @@ function assertPlanIdentity(
   product: {
     name: string;
     displayName: string;
+    description: string;
     segment: string;
     price: number;
     priceMonthly: number;
@@ -285,10 +304,13 @@ function assertPlanIdentity(
     features: unknown;
     limits: unknown;
     isActive: number;
+    isPopular: number;
+    sortOrder: number;
   },
 ): number {
   const mismatches = [
     String(rowValue(row, 'displayName')) !== product.displayName && 'display name',
+    String(rowValue(row, 'description')) !== product.description && 'description',
     String(rowValue(row, 'segment')) !== product.segment && 'segment',
     Number(rowValue(row, 'price')) !== product.price && 'launch fee',
     Number(rowValue(row, 'price_monthly')) !== product.priceMonthly && 'monthly price placeholder',
@@ -299,6 +321,8 @@ function assertPlanIdentity(
     !jsonMatches(rowValue(row, 'metadata'), product.metadata) && 'commercial metadata',
     !jsonMatches(rowValue(row, 'features'), product.features) && 'features',
     !jsonMatches(rowValue(row, 'limits'), product.limits) && 'limits',
+    Number(rowValue(row, 'isPopular')) !== product.isPopular && 'popular state',
+    Number(rowValue(row, 'sortOrder')) !== product.sortOrder && 'sort order',
   ].filter(Boolean);
 
   if (mismatches.length) {
@@ -417,6 +441,130 @@ async function ensureEntitlement(
   return id;
 }
 
+const CANONICAL_COMMERCIAL_REFERENCE_LOCK = 'property_listify_canonical_commercial_reference';
+
+async function withCanonicalCommercialReferenceLock<T>(
+  connection: AuthoritySqlConnection,
+  work: () => Promise<T>,
+): Promise<T> {
+  const rows = await queryRows(connection, 'SELECT GET_LOCK(?, 30) AS lock_status', [
+    CANONICAL_COMMERCIAL_REFERENCE_LOCK,
+  ]);
+  if (Number(rowValue(rows[0] ?? {}, 'lock_status') ?? 0) !== 1) {
+    throw new Error(
+      'Canonical commercial reference preparation blocked: release lock was not acquired.',
+    );
+  }
+  try {
+    return await work();
+  } finally {
+    try {
+      await connection.query('SELECT RELEASE_LOCK(?)', [CANONICAL_COMMERCIAL_REFERENCE_LOCK]);
+    } catch {
+      // The connection lifetime remains authoritative if lock release cannot be observed.
+    }
+  }
+}
+
+async function inspectCanonicalCommercialReferenceData(
+  connection: AuthoritySqlConnection,
+): Promise<Pick<CommercialReferencePlanEvidence, 'pending' | 'products'>> {
+  const pending: CommercialReferencePlanEvidence['pending'] = [];
+  const products: CommercialReferencePlanEvidence['products'] = [];
+
+  for (const product of CANONICAL_LAUNCH_ACCESS_PRODUCTS) {
+    const resolved = await resolveLaunchProductReference(product);
+    const rows = await queryRows(connection, 'SELECT * FROM plans WHERE name = ?', [product.name]);
+    if (rows.length > 1) {
+      throw new Error(`Canonical commercial has duplicate plan name ${product.name}.`);
+    }
+    if (rows.length === 0) {
+      pending.push({ action: 'insert_plan', productKey: product.name });
+      for (const featureKey of Object.keys(resolved.entitlements)) {
+        pending.push({ action: 'insert_entitlement', productKey: product.name, featureKey });
+      }
+      products.push({
+        productKey: product.name,
+        state: 'missing',
+        planId: null,
+        missingEntitlementKeys: Object.keys(resolved.entitlements),
+      });
+      continue;
+    }
+
+    const planId = assertPlanIdentity(rows[0], resolved);
+    const entitlementRows = await queryRows(
+      connection,
+      'SELECT feature_key, value_json FROM plan_entitlements WHERE plan_id = ? ORDER BY feature_key',
+      [planId],
+    );
+    const byKey = new Map<string, Row>();
+    for (const row of entitlementRows) {
+      const featureKey = String(rowValue(row, 'feature_key'));
+      if (byKey.has(featureKey)) {
+        throw new Error(`Canonical commercial has duplicate entitlement ${featureKey}.`);
+      }
+      byKey.set(featureKey, row);
+    }
+    const expectedKeys = Object.keys(resolved.entitlements);
+    const unexpectedKeys = [...byKey.keys()].filter(key => !expectedKeys.includes(key));
+    if (unexpectedKeys.length) {
+      throw new Error(
+        `Canonical commercial entitlements for ${product.name} contain unexpected keys: ${unexpectedKeys.join(', ')}.`,
+      );
+    }
+
+    const missingEntitlementKeys: string[] = [];
+    for (const [featureKey, value] of Object.entries(resolved.entitlements)) {
+      const row = byKey.get(featureKey);
+      if (!row) {
+        missingEntitlementKeys.push(featureKey);
+        pending.push({ action: 'insert_entitlement', productKey: product.name, featureKey });
+        continue;
+      }
+      if (!jsonMatches(rowValue(row, 'value_json'), value)) {
+        throw new Error(
+          `Canonical commercial entitlement ${featureKey} conflicts with approved data.`,
+        );
+      }
+    }
+
+    products.push({
+      productKey: product.name,
+      state: 'present',
+      planId,
+      missingEntitlementKeys,
+    });
+  }
+
+  return { pending, products };
+}
+
+export async function planCanonicalCommercialReferenceData(input: {
+  authority: ResolvedDatabaseAuthority;
+  decision: AuthorizedDatabaseOperation;
+  connection: AuthoritySqlConnection;
+}): Promise<CommercialReferencePlanEvidence> {
+  assertOperation(input.decision, ['release-reference-plan']);
+  const ownership = requireReleaseReferenceTarget(input.authority);
+  await requireAcceptedMigrationHead({
+    authority: input.authority,
+    connection: input.connection,
+  });
+  const plan = await inspectCanonicalCommercialReferenceData(input.connection);
+  return {
+    ...ownership,
+    adapter: 'canonical-commercial',
+    version: CANONICAL_COMMERCIAL_VERSION,
+    digest: CANONICAL_COMMERCIAL_DIGEST,
+    expectedProductKeys: CANONICAL_LAUNCH_ACCESS_PRODUCTS.map(product => product.name),
+    status: plan.pending.length ? 'pending' : 'ready',
+    pending: plan.pending,
+    products: plan.products,
+    migrationHead: ACCEPTED_MIGRATION_HEAD,
+  };
+}
+
 export async function verifyCanonicalCommercialReferenceData(
   connection: AuthoritySqlConnection,
 ): Promise<CommercialReferenceEvidence['verified']> {
@@ -463,7 +611,9 @@ export async function verifyCanonicalCommercialReferenceData(
     });
   }
 
-  const developer = verifiedProducts.find(product => product.productKey === 'developer_launch_access');
+  const developer = verifiedProducts.find(
+    product => product.productKey === 'developer_launch_access',
+  );
   if (!developer) throw new Error('Canonical commercial developer product verification failed.');
 
   return {
@@ -484,33 +634,35 @@ export async function prepareCanonicalCommercialReferenceData(input: {
   connection: AuthoritySqlConnection;
   profileRoot?: string;
 }): Promise<CommercialReferenceEvidence> {
-  assertOperation(input.decision, ['reference-seed', 'foundation-seed']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const releaseScoped = input.decision.operation === 'release-reference-apply';
+  assertOperation(input.decision, ['reference-seed', 'foundation-seed', 'release-reference-apply']);
+  const ownership = releaseScoped
+    ? requireReleaseReferenceTarget(input.authority)
+    : requireExactAdapterTarget(input.authority, input.profileRoot);
   await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
   });
 
-  let developerPlanId = 0;
-  await withTransaction(input.connection, async () => {
-    const references = [
-      CANONICAL_AGENT_LAUNCH_ACCESS,
-      CANONICAL_AGENCY_LAUNCH_ACCESS,
-      CANONICAL_DEVELOPER_LAUNCH_ACCESS,
-    ] as const;
-    for (const product of references) {
-      const ensured = await ensureLaunchPlan(input.connection, product);
-      if (product.name === CANONICAL_DEVELOPER_LAUNCH_ACCESS.name) {
-        developerPlanId = ensured.planId;
+  const verified = await withCanonicalCommercialReferenceLock(input.connection, async () => {
+    let developerPlanId = 0;
+    await inspectCanonicalCommercialReferenceData(input.connection);
+    await withTransaction(input.connection, async () => {
+      for (const product of CANONICAL_LAUNCH_ACCESS_PRODUCTS) {
+        const ensured = await ensureLaunchPlan(input.connection, product);
+        if (product.name === CANONICAL_DEVELOPER_LAUNCH_ACCESS.name) {
+          developerPlanId = ensured.planId;
+        }
+        for (const [featureKey, value] of Object.entries(ensured.entitlements)) {
+          await ensureEntitlement(input.connection, ensured.planId, featureKey, value);
+        }
       }
-      for (const [featureKey, value] of Object.entries(ensured.entitlements)) {
-        await ensureEntitlement(input.connection, ensured.planId, featureKey, value);
-      }
-    }
-  });
+    });
 
-  const verified = await verifyCanonicalCommercialReferenceData(input.connection);
+    const verified = await verifyCanonicalCommercialReferenceData(input.connection);
+    return { ...verified, planId: developerPlanId };
+  });
   return {
     ...ownership,
     adapter: 'canonical-commercial',
@@ -525,7 +677,7 @@ export async function prepareCanonicalCommercialReferenceData(input: {
       launchFeeMinor: CANONICAL_DEVELOPER_LAUNCH_ACCESS.metadata.commercial_launch_fee_minor,
       entitlementKeys: Object.keys(CANONICAL_DEVELOPER_LAUNCH_ACCESS.entitlements),
     },
-    verified: { ...verified, planId: developerPlanId },
+    verified,
     migrationHead: ACCEPTED_MIGRATION_HEAD,
   };
 }
@@ -536,8 +688,13 @@ export async function verifyCanonicalCommercialReference(input: {
   connection: AuthoritySqlConnection;
   profileRoot?: string;
 }): Promise<CommercialReferenceEvidence> {
-  assertOperation(input.decision, ['verification']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const releaseScoped = input.decision.operation === 'release-reference-verify';
+  assertOperation(input.decision, ['verification', 'readiness', 'release-reference-verify']);
+  const protectedTarget = ['staging', 'production'].includes(input.authority.context.targetClass);
+  const ownership =
+    releaseScoped || protectedTarget
+      ? requireProtectedCommercialReferenceTarget(input.authority)
+      : requireExactAdapterTarget(input.authority, input.profileRoot);
   await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,

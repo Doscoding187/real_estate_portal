@@ -11,7 +11,7 @@ import {
   loadAndValidateMigrationManifest,
   type ValidatedMigrationManifest,
 } from '../../../migrations/migrationManifest';
-import type { ResolvedDatabaseAuthority } from '../types';
+import type { DatabaseOperation, ResolvedDatabaseAuthority } from '../types';
 import { assertOwnedDisposableTarget, identityFromAuthority } from '../lifecycle';
 import { readWorktreeDatabaseProfile, writeWorktreeDatabaseProfile } from '../worktreeProfile';
 
@@ -70,6 +70,41 @@ export function requireExactAdapterTarget(
     databaseName: authority.context.databaseName,
     ownershipKey: authority.context.worktree.ownershipKey,
   };
+}
+
+const RELEASE_REFERENCE_OPERATIONS: readonly DatabaseOperation[] = [
+  'release-reference-plan',
+  'release-reference-apply',
+  'release-reference-verify',
+];
+
+export function requireProtectedCommercialReferenceTarget(
+  authority: ResolvedDatabaseAuthority,
+): AdapterEvidence {
+  if (!['staging', 'production'].includes(authority.context.targetClass)) {
+    throw new Error(
+      'Database Authority adapter refused: canonical commercial release reference data requires an authorized staging or production target.',
+    );
+  }
+  return {
+    adapter: 'database-authority-release-reference-adapter',
+    version: 'unassigned',
+    digest: 'unassigned',
+    targetFingerprintHash: authority.context.targetFingerprintHash,
+    databaseName: authority.context.databaseName,
+    ownershipKey: authority.context.worktree.ownershipKey,
+  };
+}
+
+export function requireReleaseReferenceTarget(
+  authority: ResolvedDatabaseAuthority,
+): AdapterEvidence {
+  if (!RELEASE_REFERENCE_OPERATIONS.includes(authority.context.operation)) {
+    throw new Error(
+      `Database Authority adapter refused: operation ${authority.context.operation} is not a release reference operation.`,
+    );
+  }
+  return requireProtectedCommercialReferenceTarget(authority);
 }
 
 export async function requireAcceptedMigrationHead(input: {

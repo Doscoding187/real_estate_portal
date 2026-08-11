@@ -18,11 +18,28 @@ pnpm release:predeploy:production
 This runs:
 
 1. `launch:preflight`
-2. `db:target`
-3. `migration:sql`
-4. `db:verify:distribution`
+2. `db:release:plan`
+3. `db:release:reference:plan`
+4. `db:release:reference:verify`
 
 If this fails, stop and fix before deploying.
+
+The predeploy command is intentionally read-only for database state. Once the
+release plan is approved, the explicit production sequence is:
+
+1. `pnpm db:release:plan`
+2. `pnpm db:release:reference:plan`
+3. `pnpm db:release:apply -- --accepted-old-head=<accepted-head> --expected-new-head=<manifest-head> --ack=CONFIRM_RELEASE_APPLY_<fingerprint-prefix>`
+4. `pnpm db:release:reference:apply -- --ack=CONFIRM_RELEASE_REFERENCE_APPLY_<fingerprint-prefix>`
+5. `pnpm db:release:reference:verify`
+6. `pnpm db:readiness`
+
+Each protected operation must receive the exact approval reference, actor and
+target fingerprint through the Database Authority release environment. The
+acknowledgement values are emitted by `pnpm db:release:ack` and
+`pnpm db:release:reference:ack`; do not guess them. The release owner must
+explicitly authorize both apply steps. Application startup never performs
+canonical reference preparation automatically.
 
 ## 3) Deploy to Railway
 

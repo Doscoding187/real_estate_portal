@@ -61,6 +61,9 @@ export type AuthorityManifest = {
   localServiceLifecycle: string;
   localServiceDirectoryPattern: string;
   canonicalReferenceDataAdapter: string;
+  canonicalCommercialReferenceDataAdapter: string;
+  canonicalCommercialReleaseEntrypoint: string;
+  canonicalCommercialReleaseCommands: string[];
   acceptanceScenarioAdapter: string;
 };
 
@@ -78,6 +81,10 @@ const REQUIRED_PACKAGE_SCRIPTS = [
   'db:release:plan',
   'db:release:ack',
   'db:release:apply',
+  'db:release:reference:plan',
+  'db:release:reference:ack',
+  'db:release:reference:apply',
+  'db:release:reference:verify',
   'db:readiness',
   'db:schema:congruency',
   'db:authority:service:start',
@@ -122,6 +129,8 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.localServicePathAuthority,
     manifest.localServiceLifecycle,
     manifest.canonicalReferenceDataAdapter,
+    manifest.canonicalCommercialReferenceDataAdapter,
+    manifest.canonicalCommercialReleaseEntrypoint,
     manifest.acceptanceScenarioAdapter,
   ];
   const missingPaths = paths.filter(path => !existsSync(resolve(root, path)));
@@ -133,6 +142,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     ...REQUIRED_PACKAGE_SCRIPTS,
     ...manifest.approvedLocalCommands,
     ...manifest.destructiveLocalCommands,
+    ...manifest.canonicalCommercialReleaseCommands,
   ].filter(script => !scripts[script]);
   const invalid = [
     manifest.authorityVersion !== 3 ? 'authority version must be 3' : '',
@@ -288,6 +298,7 @@ async function main() {
   console.log(`Schema Migrated: ${readiness.layers.schemaMigrated.code}`);
   console.log(`Schema Congruency: ${readiness.layers.schemaCongruent.code}`);
   console.log(`Canonical Reference Data: ${readiness.layers.canonicalReferenceData.code}`);
+  console.log(`Commercial Reference Data: ${readiness.layers.commercialReferenceData.code}`);
   console.log(`Acceptance Scenario Data: ${readiness.layers.acceptanceScenario.code}`);
   console.log(`Requested Runtime: ${readiness.requestedRuntime}`);
   console.log(`Application Readiness: ${readiness.applicationReady ? 'ready' : 'not-ready'}`);

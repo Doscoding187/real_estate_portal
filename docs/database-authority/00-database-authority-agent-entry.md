@@ -25,6 +25,7 @@ are in `authority-manifest.json`; operation permissions are in
 | Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
 | Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
 | Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
+| Canonical commercial release        | `scripts/databaseAuthorityCli.ts` (`release-reference:*`) |
 | Isolated Search-to-Lead scenario    | `dataAdapters/searchToLeadScenario.ts`                    |
 | Remaining connection paths          | `connection-path-inventory.json`                          |
 
@@ -114,6 +115,29 @@ startup. Replay is explicit:
 pnpm db:reference:verify
 pnpm db:scenario:verify
 ```
+
+Canonical commercial Launch Access reference data uses a separate protected
+release authority. The generic `db:reference:prepare` operation remains
+restricted to disposable targets and `productionSeedAuthority` remains `none`.
+For staging or production, the supported sequence is explicit:
+
+```text
+release:plan
+→ release-reference:plan
+→ release:apply (explicit migration acknowledgement)
+→ release-reference:apply (explicit protected-target acknowledgement)
+→ release-reference:verify
+→ readiness/deployment smoke checks
+```
+
+The release-reference plan and verify commands are read-only. The apply command
+uses the canonical commercial adapter, requires protected release approval and
+an exact target acknowledgement, runs transactionally under a named MySQL
+lock, and is idempotent. Missing approved products or entitlements are inserted;
+conflicting rows, duplicate canonical names, unexpected entitlements, and an
+unaccepted migration head fail closed. No release-reference apply runs during
+application startup, and the actual production apply remains an explicitly
+authorized release action.
 
 Provisioning is idempotent only when its mode-0600 ownership profile exactly
 matches the canonical worktree realpath and Git common-directory identity.

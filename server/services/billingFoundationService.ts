@@ -726,7 +726,10 @@ async function resolveLaunchBillingOwner(
       .where(eq(users.id, user.id))
       .limit(1);
     if (!agentUser || agentUser.role !== 'agent') {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Agent billing requires an agent account.' });
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Agent billing requires an agent account.',
+      });
     }
     return {
       ownerType: 'agent',
@@ -794,12 +797,7 @@ async function lockLaunchInvoice(
       AND owner_id = ${input.owner.ownerId}
     FOR UPDATE
   `);
-  return getInvoiceForOwnerOrThrow(
-    tx,
-    input.invoiceId,
-    input.owner.ownerType,
-    input.owner.ownerId,
-  );
+  return getInvoiceForOwnerOrThrow(tx, input.invoiceId, input.owner.ownerType, input.owner.ownerId);
 }
 
 async function getLaunchPlanForOwner(
@@ -864,10 +862,14 @@ export async function requestPaidLaunchAccessInvoice(input: {
   }
 
   return db.transaction(async tx => {
+    // Lock the owner state before the first transaction-consistent plan and
+    // subscription reads. A concurrent retry may otherwise establish an old
+    // REPEATABLE READ snapshot before waiting on the owner lock and then miss
+    // the invoice committed by the first checkout.
+    const lockedState = await lockLaunchBillingState(tx, owner);
     const plan = await getLaunchPlanForOwner(tx, owner.ownerType, input.planId);
     const term = resolveCommercialTerm(plan);
     const launchFee = getConfiguredLaunchFeeMinor(plan)!;
-    const lockedState = await lockLaunchBillingState(tx, owner);
     const lockedSubscription = lockedState.subscription;
 
     if (
@@ -888,7 +890,11 @@ export async function requestPaidLaunchAccessInvoice(input: {
     if (
       lockedSubscription &&
       ACTIVE_SUBSCRIPTION_STATUSES.has(lockedSubscription.status as CanonicalSubscriptionStatus) &&
-      isPaidCommercialTermExpired(term, lockedSubscription.status, lockedSubscription.currentPeriodEnd)
+      isPaidCommercialTermExpired(
+        term,
+        lockedSubscription.status,
+        lockedSubscription.currentPeriodEnd,
+      )
     ) {
       await tx
         .update(subscriptions)
@@ -2691,7 +2697,9 @@ export async function getBillingDocumentForUser(input: { user: BillingUser; docu
   const isOwningDeveloperUser =
     document.ownerType === 'developer' && Number(developerProfile?.id || 0) === document.ownerId;
   const isOwningAgentUser =
-    document.ownerType === 'agent' && input.user.role === 'agent' && input.user.id === document.ownerId;
+    document.ownerType === 'agent' &&
+    input.user.role === 'agent' &&
+    input.user.id === document.ownerId;
   if (!isFinanceAdmin && !isOwningAgencyUser && !isOwningDeveloperUser && !isOwningAgentUser) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Document is private.' });
   }
