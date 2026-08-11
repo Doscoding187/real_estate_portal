@@ -498,6 +498,11 @@
       "purpose": "Reviewed PLE-6C compatibility migration required to correct the P1 manual-authoring defect: allow confirmed manual street-level locations without provider coordinates while preserving existing coordinate values."
     },
     {
+      "path": "server/migrations/0006_development_supersessions.sql",
+      "classification": "canonical active",
+      "purpose": "Durable Developer Engine source-to-replacement supersession lifecycle and historical root-route reservation."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

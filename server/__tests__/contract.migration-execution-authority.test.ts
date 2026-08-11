@@ -283,17 +283,18 @@ describe('migration execution authority', () => {
     expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
     const baseline = executionManifest.migrations.find(entry => entry.sequence === 0);
     const incremental = executionManifest.migrations.find(entry => entry.sequence === 1);
+    const latest = executionManifest.migrations.at(-1);
     expect(incremental).toMatchObject({
       filename: '0001_public_search_to_lead_reliability.sql',
       parent: baseline?.filename,
       parentChecksum: baseline?.checksum,
     });
-    const latest = executionManifest.migrations.at(-1);
-    const location = executionManifest.migrations.find(entry => entry.sequence === 4);
+    const manualLocation = executionManifest.migrations.find(entry => entry.sequence === 5);
     expect(latest).toMatchObject({
-      filename: '0005_manual_location_without_coordinates.sql',
-      parent: '0004_canonical_listing_location.sql',
-      parentChecksum: location?.checksum,
+      sequence: 6,
+      filename: '0006_development_supersessions.sql',
+      parent: '0005_manual_location_without_coordinates.sql',
+      parentChecksum: manualLocation?.checksum,
     });
     expect(executionManifest.expectedHead).toBe(latest?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);

@@ -369,25 +369,12 @@ async function requestClaim(brandProfileId: number) {
  * Links brand profile to developer account
  */
 async function convertToSubscriber(brandProfileId: number, developerAccountId: number) {
-  await db
-    .update(developerBrandProfiles)
-    .set({
-      isSubscriber: 1,
-      isClaimable: 0,
-      linkedDeveloperAccountId: developerAccountId,
-      ownerType: 'developer',
-    })
-    .where(eq(developerBrandProfiles.id, brandProfileId));
-
-  // Update all developments to be developer-managed
-  await db
-    .update(developments)
-    .set({
-      devOwnerType: 'developer',
-    })
-    .where(eq(developments.developerBrandProfileId, brandProfileId));
-
-  return { success: true };
+  void brandProfileId;
+  void developerAccountId;
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'SEPARATE_CATALOGUE_AND_SUPERSESSION_REQUIRED',
+  });
 }
 
 // ============================================================================

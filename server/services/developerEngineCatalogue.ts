@@ -38,6 +38,8 @@ export type CanonicalDevelopmentCatalogue = {
   unitTypes: Pick<CanonicalUnitTypeRow, 'id' | 'developmentId' | 'isActive'>[];
   /** Optional SQL aggregate used when a consumer does not need full unit rows. */
   activeUnitTypeCount?: number;
+  /** S2 defense-in-depth flag for an active curated-source supersession. */
+  activeSupersessionSource?: boolean;
 };
 
 /**
