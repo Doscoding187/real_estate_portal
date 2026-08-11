@@ -122,7 +122,7 @@ describe('public Agent product landing page', () => {
     expect(screen.getAllByText(/Active Listings: 50/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Request Launch Access invoice/i })).toHaveAttribute(
       'href',
-      '/contact',
+      '/agent/select-package',
     );
     expect(
       screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,

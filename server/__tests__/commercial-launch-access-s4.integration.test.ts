@@ -280,6 +280,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         user: ownerUser,
         planId: plan.id,
       });
+      expect(requested).toMatchObject({ ownerType: input.ownerType, ownerId: input.ownerId });
       expect(requested.invoice.amountDue).toBe(input.expectedAmount);
       expect(requested.invoice.commercialTermKind).toBe('paid_launch_access');
       expect(requested.invoice.metadata).toMatchObject({
@@ -287,6 +288,18 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         commercial_term_duration_days: 90,
         entitlement_starts_on_verified_activation: true,
       });
+
+      const retried = await requestPaidLaunchAccessInvoice({
+        user: ownerUser,
+        planId: plan.id,
+      });
+      expect(retried).toMatchObject({
+        ownerType: input.ownerType,
+        ownerId: input.ownerId,
+        reused: true,
+      });
+      expect(retried.invoice.id).toBe(requested.invoice.id);
+      expect(await ownerInvoiceCount(input.ownerType, input.ownerId)).toBe(1);
 
       const pending = await getPlanAccessProjectionForUserId(input.userId);
       expect(pending?.subscription?.status).toBe('pending_payment');

@@ -1,10 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import type { inferRouterOutputs } from '@trpc/server';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { APP_TITLE } from '@/const';
 import { apiFetch } from '@/lib/api';
+import { trpc } from '@/lib/trpc';
+import type { AppRouter } from '../../../../server/routers';
 import {
   formatCommercialLimitLabel,
   formatCommercialLimitValue,
@@ -22,8 +28,24 @@ import {
   ExternalLink,
   LogOut,
   ShieldCheck,
+  UploadCloud,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
+type AgentInvoice = NonNullable<AgentBillingWorkspace['activeInvoice']>;
+type AgentBankDetails = AgentBillingWorkspace['bankDetails'];
+type AgentProofStorage = AgentBillingWorkspace['proofStorage'];
+
+type AgentInvoiceResponse = {
+  invoice: AgentInvoice;
+  bankDetails: AgentBankDetails;
+  paymentReference: string;
+  reused: boolean;
+  ownerType: string;
+  ownerId: number;
+};
 
 type AgentOnboardingStatus = {
   packageSelected: boolean;
@@ -120,13 +142,213 @@ function ActivationSteps() {
   );
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+    reader.onerror = () => reject(reader.error || new Error('Could not read proof document.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatInvoiceAmount(amountMinor: number | null | undefined): string {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amountMinor || 0) / 100);
+}
+
+function AgentManualEftPanel({
+  invoice,
+  bankDetails,
+  proofStorage,
+  paymentAmount,
+  setPaymentAmount,
+  bankReference,
+  setBankReference,
+  payerName,
+  setPayerName,
+  paymentDate,
+  setPaymentDate,
+  setProofFile,
+  onSubmit,
+  isSubmitting,
+}: {
+  invoice: AgentInvoice;
+  bankDetails?: AgentBankDetails;
+  proofStorage?: AgentProofStorage;
+  paymentAmount: string;
+  setPaymentAmount: Dispatch<SetStateAction<string>>;
+  bankReference: string;
+  setBankReference: Dispatch<SetStateAction<string>>;
+  payerName: string;
+  setPayerName: Dispatch<SetStateAction<string>>;
+  paymentDate: string;
+  setPaymentDate: Dispatch<SetStateAction<string>>;
+  setProofFile: Dispatch<SetStateAction<File | null>>;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}) {
+  const proofCanBeSubmitted = ['issued', 'partially_paid', 'overdue'].includes(invoice.status);
+
+  return (
+    <Card className="mt-6 border-blue-200 bg-blue-50/40">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <UploadCloud className="h-5 w-5 text-blue-600" />
+          Agent Launch Access invoice
+        </CardTitle>
+        <CardDescription>
+          {invoice.invoiceNumber} · {formatInvoiceAmount(invoice.amountDue)} once-off for 90 days.
+          Access starts only after finance verifies the EFT payment.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 rounded-lg border border-blue-200 bg-white p-4 text-sm md:grid-cols-3">
+          <div>
+            <p className="text-slate-500">Amount due</p>
+            <p className="font-semibold text-slate-900">{formatInvoiceAmount(invoice.amountDue)}</p>
+          </div>
+          <div>
+            <p className="text-slate-500">Payment reference</p>
+            <p className="font-semibold text-slate-900">{invoice.paymentReference}</p>
+          </div>
+          <div>
+            <p className="text-slate-500">Status</p>
+            <Badge variant="outline" className="mt-1">
+              {invoice.status === 'submitted' ? 'Proof under review' : invoice.status}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-blue-200 bg-white p-4 text-sm text-slate-700">
+          <p className="font-semibold text-slate-900">Manual EFT instructions</p>
+          <dl className="mt-2 grid gap-1 sm:grid-cols-2">
+            <div>
+              <dt className="text-slate-500">Account</dt>
+              <dd className="font-medium text-slate-900">
+                {bankDetails?.accountName || 'Account details unavailable'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Bank</dt>
+              <dd className="font-medium text-slate-900">
+                {bankDetails?.bankName || 'Bank details unavailable'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Account number</dt>
+              <dd className="font-medium text-slate-900">
+                {bankDetails?.accountNumber || 'Account number unavailable'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Branch</dt>
+              <dd className="font-medium text-slate-900">
+                {bankDetails?.branchCode || 'Branch unavailable'}
+              </dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-xs text-slate-500">
+            Use the invoice payment reference above.{' '}
+            {bankDetails?.configurationMessage ||
+              'Finance verification is required before the 90-day term starts.'}
+          </p>
+        </div>
+
+        {proofCanBeSubmitted ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <Label htmlFor="agent-payment-amount">Amount paid</Label>
+              <Input
+                id="agent-payment-amount"
+                inputMode="decimal"
+                value={paymentAmount}
+                onChange={event => setPaymentAmount(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="agent-payment-date">Payment date</Label>
+              <Input
+                id="agent-payment-date"
+                type="date"
+                value={paymentDate}
+                onChange={event => setPaymentDate(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="agent-bank-reference">Bank reference</Label>
+              <Input
+                id="agent-bank-reference"
+                value={bankReference}
+                onChange={event => setBankReference(event.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="agent-payer-name">Payer name</Label>
+              <Input
+                id="agent-payer-name"
+                value={payerName}
+                onChange={event => setPayerName(event.target.value)}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <Label htmlFor="agent-proof-file">Proof of payment</Label>
+              <Input
+                id="agent-proof-file"
+                type="file"
+                accept="application/pdf,image/jpeg,image/png,image/webp"
+                onChange={event => setProofFile(event.target.files?.[0] || null)}
+              />
+            </div>
+            <Button
+              className="md:col-span-2"
+              disabled={isSubmitting || proofStorage?.configured === false}
+              onClick={onSubmit}
+            >
+              {isSubmitting ? 'Submitting proof…' : 'Submit proof for review'}
+              <UploadCloud className="ml-2 h-4 w-4" />
+            </Button>
+            {proofStorage?.configured === false && (
+              <p className="md:col-span-2 text-xs text-amber-700">
+                Proof upload is not available until private billing storage is configured.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm font-medium text-blue-800">
+            This invoice is already under review. Finance verification is required before the 90-day
+            Launch Access term can activate.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AgentPackageSelection() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { user, loading } = useAuth({ redirectOnUnauthenticated: true });
   const catalog = useCommercialCatalog('agent');
+  const workspaceQuery = trpc.billing.agentWorkspace.useQuery(undefined, {
+    enabled: user?.role === 'agent',
+    retry: false,
+    staleTime: 0,
+    refetchOnMount: true,
+  });
+  const submitProof = trpc.billing.submitLaunchAccessPaymentProof.useMutation();
   const [, setStatus] = useState<AgentOnboardingStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
+  const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
+  const [isRequestingInvoice, setIsRequestingInvoice] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [bankReference, setBankReference] = useState('');
+  const [payerName, setPayerName] = useState('');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const agentProducts = useMemo(
     () =>
@@ -158,7 +380,7 @@ export default function AgentPackageSelection() {
         if (cancelled) return;
 
         setStatus(result);
-        if (result.packageSelected) {
+        if (result.packageSelected && result.subscriptionStatus === 'active') {
           setLocation(result.dashboardUnlocked ? '/agent/dashboard' : '/agent/setup');
         }
       } catch (error) {
@@ -177,6 +399,16 @@ export default function AgentPackageSelection() {
       cancelled = true;
     };
   }, [loading, setLocation, user?.role]);
+
+  const activeInvoice = invoiceResponse?.invoice ?? workspaceQuery.data?.activeInvoice ?? null;
+  const bankDetails = invoiceResponse?.bankDetails ?? workspaceQuery.data?.bankDetails;
+  const proofStorage = workspaceQuery.data?.proofStorage;
+
+  useEffect(() => {
+    if (activeInvoice && !paymentAmount) {
+      setPaymentAmount((Number(activeInvoice.amountDue || 0) / 100).toFixed(2));
+    }
+  }, [activeInvoice, paymentAmount]);
 
   if (loading || statusLoading || catalog.isLoading) {
     return (
@@ -212,7 +444,77 @@ export default function AgentPackageSelection() {
   }
 
   const action = getCommercialActionPresentation(launchProduct);
-  const actionHref = action.href || '/contact';
+
+  const handleRequestInvoice = async () => {
+    const planId = launchProduct.source?.planId;
+    if (!planId) {
+      toast.error('The canonical Agent Launch Access product is not requestable right now.');
+      return;
+    }
+
+    setIsRequestingInvoice(true);
+    try {
+      const result = await apiFetch<AgentInvoiceResponse>('/agent/request-launch-access-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId }),
+      });
+      setInvoiceResponse(result);
+      setPaymentAmount((Number(result.invoice.amountDue || 0) / 100).toFixed(2));
+      await workspaceQuery.refetch();
+      toast.success(
+        result.reused ? 'Your existing Agent invoice is ready.' : 'Agent invoice ready.',
+        {
+          description: 'Pay by manual EFT and submit proof for finance verification.',
+        },
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not request the Agent invoice');
+    } finally {
+      setIsRequestingInvoice(false);
+    }
+  };
+
+  const handleProofSubmit = async () => {
+    if (!activeInvoice) {
+      toast.error('Request an invoice before submitting payment proof.');
+      return;
+    }
+    if (!proofFile) {
+      toast.error('Attach proof of payment.');
+      return;
+    }
+
+    const amountRand = Number(paymentAmount);
+    if (!Number.isFinite(amountRand) || amountRand <= 0) {
+      toast.error('Enter a valid payment amount.');
+      return;
+    }
+
+    try {
+      const contentBase64 = await fileToBase64(proofFile);
+      await submitProof.mutateAsync({
+        invoiceId: activeInvoice.id,
+        amount: Math.round(amountRand * 100),
+        bankReference,
+        payerName,
+        paymentDate,
+        file: {
+          filename: proofFile.name,
+          mimeType: proofFile.type || 'application/octet-stream',
+          sizeBytes: proofFile.size,
+          contentBase64,
+        },
+      });
+      await workspaceQuery.refetch();
+      setInvoiceResponse(null);
+      setProofFile(null);
+      setBankReference('');
+      toast.success('Payment proof submitted for finance review.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Payment proof could not be submitted.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f9fc] text-slate-950">
@@ -286,8 +588,17 @@ export default function AgentPackageSelection() {
                 activate access. Finance verification starts the fixed 90-day term.
               </div>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Button className="h-12 flex-1 rounded-2xl" onClick={() => setLocation(actionHref)}>
-                  {action.label} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                <Button
+                  className="h-12 flex-1 rounded-2xl"
+                  disabled={isRequestingInvoice}
+                  onClick={() => void handleRequestInvoice()}
+                >
+                  {isRequestingInvoice
+                    ? 'Preparing invoice…'
+                    : activeInvoice
+                      ? 'Refresh invoice'
+                      : action.label}{' '}
+                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   variant="outline"
@@ -297,6 +608,24 @@ export default function AgentPackageSelection() {
                   Talk to Property Listify
                 </Button>
               </div>
+              {activeInvoice ? (
+                <AgentManualEftPanel
+                  invoice={activeInvoice}
+                  bankDetails={bankDetails}
+                  proofStorage={proofStorage}
+                  paymentAmount={paymentAmount}
+                  setPaymentAmount={setPaymentAmount}
+                  bankReference={bankReference}
+                  setBankReference={setBankReference}
+                  payerName={payerName}
+                  setPayerName={setPayerName}
+                  paymentDate={paymentDate}
+                  setPaymentDate={setPaymentDate}
+                  setProofFile={setProofFile}
+                  onSubmit={() => void handleProofSubmit()}
+                  isSubmitting={submitProof.isPending}
+                />
+              ) : null}
             </div>
           </section>
         </div>

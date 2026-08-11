@@ -309,7 +309,10 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
   const term = getCommercialTermPresentation(product);
   const action = getCommercialActionPresentation(product);
   const limits = getCommercialPresentationLimits(product);
-  const actionHref = action.href || '/contact';
+  const actionHref =
+    product.productKey === 'agent_launch_access'
+      ? '/agent/select-package'
+      : action.href || '/contact';
 
   return (
     <div

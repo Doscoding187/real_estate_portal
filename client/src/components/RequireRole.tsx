@@ -1,4 +1,5 @@
 import { useAuth } from '@/_core/hooks/useAuth';
+import { getAccountAuthHref } from '@/lib/publicNavigation';
 import { UNAUTHED_ERR_MSG } from '../../../shared/const';
 import { TRPCClientError } from '@trpc/client';
 import { useEffect } from 'react';
@@ -43,7 +44,14 @@ export const RequireRole = ({ role, children }: { role: string; children: React.
     if (error && !isUnauthorizedError) return;
 
     if (!isAuthenticated) {
-      if (window.location.pathname !== '/login') setLocation('/login');
+      if (window.location.pathname !== '/login') {
+        const currentPath = `${window.location.pathname}${window.location.search || ''}${window.location.hash || ''}`;
+        const loginPath =
+          window.location.pathname === '/agent/select-package'
+            ? getAccountAuthHref('signin', currentPath)
+            : '/login';
+        setLocation(loginPath);
+      }
       return;
     }
 
