@@ -132,6 +132,11 @@ function toMysqlDateTime(value: Date | string = new Date()): string {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 }
 
+async function lockListingTransitionRow(database: any, listingId: number) {
+  if (typeof database.execute !== 'function') return;
+  await database.execute(sql`SELECT id FROM listings WHERE id = ${listingId} FOR UPDATE`);
+}
+
 // Export a synchronous db object that throws if not initialized
 // This is for backwards compatibility with existing code
 export const db = new Proxy({} as any, {
@@ -2255,8 +2260,8 @@ export async function createListing(
 /**
  * Get listing by ID
  */
-export async function getListingById(listingId: number) {
-  const db = await getDb();
+export async function getListingById(listingId: number, database?: any) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
   const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
@@ -2441,11 +2446,20 @@ export async function updateListing(listingId: number, updateData: any) {
 /**
  * Submit listing for review
  */
-export async function submitListingForReview(listingId: number) {
-  const db = await getDb();
+export async function submitListingForReview(listingId: number, database?: any) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
-  const [transitionListing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+  if (!database && typeof db.transaction === 'function') {
+    return db.transaction((transaction: any) => submitListingForReview(listingId, transaction));
+  }
+
+  await lockListingTransitionRow(db, listingId);
+  const [transitionListing] = await db
+    .select()
+    .from(listings)
+    .where(eq(listings.id, listingId))
+    .limit(1);
   if (!transitionListing) throw new Error('Listing not found');
   if (!['draft', 'rejected'].includes(String(transitionListing.status))) {
     throw new Error(`Listing cannot be submitted from status "${transitionListing.status}"`);
@@ -2465,14 +2479,10 @@ export async function submitListingForReview(listingId: number) {
     })
     .where(eq(listings.id, listingId));
 
-  // Get listing to find owner
-  const listing = await getListingById(listingId);
-  if (!listing) throw new Error('Listing not found');
-
   // Add to approval queue
   await db.insert(listingApprovalQueue).values({
     listingId,
-    submittedBy: listing.ownerId,
+    submittedBy: transitionListing.ownerId,
     submittedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     status: 'pending' as any,
     priority: 'normal' as any,
@@ -2505,8 +2515,8 @@ export async function getListingAnalytics(listingId: number) {
 /**
  * Get listing media
  */
-export async function getListingMedia(listingId: number) {
-  const db = await getDb();
+export async function getListingMedia(listingId: number, database?: any) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
   return await db
@@ -2727,12 +2737,21 @@ export async function approveListing(
   reviewedBy: number,
   notes?: string,
   source: 'admin_approval' | 'fast_track' = 'admin_approval',
+  database?: any,
 ) {
-  const db = await getDb();
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
+  if (!database && typeof db.transaction === 'function') {
+    return db.transaction((transaction: any) =>
+      approveListing(listingId, reviewedBy, notes, source, transaction),
+    );
+  }
+
+  await lockListingTransitionRow(db, listingId);
+
   // 1. Get full listing data
-  const listing = await getListingById(listingId);
+  const listing = await getListingById(listingId, db);
   if (!listing) throw new Error('Listing not found');
 
   if (listing.status === 'published' || listing.status === 'approved') {
@@ -2750,10 +2769,15 @@ export async function approveListing(
 
   // This guard is deliberately in the persistence path. A router, script, or
   // future service that invokes approveListing cannot create a public property
-  // without the same commercial decision.
+  // without the same commercial decision. A revision replaces an existing
+  // active listing, so that original is excluded from the capacity count.
+  const originalListingIdForCapacity = Number((listing as any).revisionOfListingId || 0);
   const listingCommercialOwner = await assertListingPublicationEntitled(db, {
     listingId,
     operation: source === 'fast_track' ? 'fast_track' : 'admin_approval',
+    ...(originalListingIdForCapacity > 0
+      ? { excludeListingIds: [originalListingIdForCapacity] }
+      : {}),
   });
 
   // A revision is a private listing-engine draft. Approval applies its public fields to
@@ -2762,11 +2786,12 @@ export async function approveListing(
     const originalListingId = Number((listing as any).revisionOfListingId);
     const [original] = await db.select().from(listings).where(eq(listings.id, originalListingId)).limit(1);
     if (!original || original.status !== 'published') throw new Error('The original published listing is no longer available for this revision');
+    const revisionCommercialOwner = listingCommercialOwner;
     const originalCommercialOwner = await assertListingPublicationEntitled(db, {
       listingId: originalListingId,
       operation: 'republish',
     });
-    if (!isSameListingCommercialOwner(listingCommercialOwner, originalCommercialOwner)) {
+    if (!isSameListingCommercialOwner(revisionCommercialOwner, originalCommercialOwner)) {
       throw new Error('Listing revision commercial owner does not match the original listing');
     }
     const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -2890,7 +2915,7 @@ export async function approveListing(
   }
 
   // 4. Sync Media
-  const mediaItems = await getListingMedia(listingId);
+  const mediaItems = await getListingMedia(listingId, db);
   const imageItems = mediaItems.filter(item => item.mediaType === 'image');
   const mainMedia = imageItems.find(item => item.isPrimary) || imageItems[0] || null;
 

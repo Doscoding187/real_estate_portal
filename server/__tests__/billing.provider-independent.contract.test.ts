@@ -127,7 +127,9 @@ describe('provider-independent billing foundation contract', () => {
     expect(reviewPath).toContain('overpaymentAmount');
     expect(reviewPath).toContain('partial_payment_does_not_activate');
     expect(reviewPath).toContain('activateSubscriptionForPaidInvoice');
-    expect(reviewPath).toContain('eventType: invoicePaid');
+    expect(reviewPath).toContain('eventType: activationOccurred');
+    expect(reviewPath).toContain('payment_approved_invoice_already_paid');
+    expect(reviewPath).toContain('activation_transition: activationOccurred');
     expect(reviewPath).toContain("'payment_approved_subscription_activated'");
     expect(reviewPath).toContain("'payment_partially_approved'");
   });

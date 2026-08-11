@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 import {
   agencies,
   agencyBranding,
@@ -68,6 +68,8 @@ export function isSameListingCommercialOwner(
 }
 
 type DbLike = any;
+
+const ACTIVE_CANONICAL_LISTING_STATUSES = ['approved', 'published'] as const;
 
 const dbTimestamp = (value: unknown) => {
   if (!value) return null;
@@ -152,6 +154,87 @@ async function getPlanMaximumActiveListings(db: DbLike, planId: number | null | 
     .where(eq(planEntitlements.planId, planId));
   const map = Object.fromEntries(rows.map((row: any) => [row.featureKey, row.valueJson]));
   return getEntitlementNumber(map, 'max_active_listings', 0);
+}
+
+async function lockListingPublicationOwner(db: DbLike, owner: ListingCommercialOwner) {
+  // Publication callers pass their transaction handle. Keep the unit-test
+  // adapter and read-only callers compatible while making the real transition
+  // serialize on the same canonical owner row as billing.
+  if (typeof db.execute !== 'function') return;
+
+  if (owner.kind === 'agency') {
+    await db.execute(sql`SELECT id FROM agencies WHERE id = ${owner.agencyId} FOR UPDATE`);
+    return;
+  }
+
+  await db.execute(sql`SELECT id FROM users WHERE id = ${owner.userId} FOR UPDATE`);
+}
+
+async function getActiveListingCount(
+  db: DbLike,
+  owner: ListingCommercialOwner,
+  additionalExcludedListingIds: number[] = [],
+) {
+  const ownerCondition =
+    owner.kind === 'agency'
+      ? or(
+          eq(listings.agencyId, owner.agencyId),
+          and(
+            isNull(listings.agencyId),
+            or(
+              eq(users.agencyId, owner.agencyId),
+              and(isNull(users.agencyId), eq(agents.agencyId, owner.agencyId)),
+            ),
+          ),
+        )
+      : and(
+          eq(listings.ownerId, owner.userId),
+          isNull(listings.agencyId),
+          isNull(users.agencyId),
+          isNull(agents.agencyId),
+        );
+
+  const activeListingQuery = db
+    .select({ id: listings.id })
+    .from(listings)
+    .leftJoin(users, eq(listings.ownerId, users.id))
+    .leftJoin(agents, eq(listings.agentId, agents.id))
+    .where(
+      and(
+        ownerCondition,
+        inArray(listings.status, ACTIVE_CANONICAL_LISTING_STATUSES as any),
+        eq(listings.approvalStatus, 'approved' as any),
+        // A republish/media-sync assertion is about the existing item. It must
+        // not consume a second slot while the item is already active.
+        additionalExcludedListingIds.length
+          ? notInArray(listings.id, [owner.listingId, ...additionalExcludedListingIds])
+          : ne(listings.id, owner.listingId),
+      ),
+    );
+
+  // A locking read is a current read in MySQL/TiDB. This prevents a second
+  // publication transaction from counting a stale snapshot after it waits on
+  // the canonical owner-row lock.
+  const rows =
+    typeof activeListingQuery.for === 'function'
+      ? await activeListingQuery.for('update')
+      : await activeListingQuery;
+  return rows.length;
+}
+
+async function assertActiveListingCapacity(
+  db: DbLike,
+  owner: ListingCommercialOwner,
+  maxActiveListings: number,
+  additionalExcludedListingIds: number[] = [],
+) {
+  const activeListingCount = await getActiveListingCount(db, owner, additionalExcludedListingIds);
+  if (activeListingCount >= maxActiveListings) {
+    throw new ListingPublicationEntitlementError(
+      'listing_capacity_exhausted',
+      `The current plan allows ${maxActiveListings} active listings. Archive an active listing before publishing another.`,
+    );
+  }
 }
 
 function profileCompletionScore(agent: any) {
@@ -242,17 +325,22 @@ export async function resolveListingCommercialOwner(
 }
 
 /**
- * Read-only entitlement assertion used by every publication-capable listing
- * transition. Callers must provide the same transaction that will write the
- * transition/projection so a later implementation can add row locking without
- * changing the public API.
+ * Entitlement assertion used by every publication-capable listing transition.
+ * Publication mutations pass their transaction handle so owner locking and the
+ * current active-inventory read cover the subsequent public write.
  */
 export async function assertListingPublicationEntitled(
   db: DbLike,
-  input: { listingId: number; operation: ListingPublicationOperation; at?: Date },
+  input: {
+    listingId: number;
+    operation: ListingPublicationOperation;
+    at?: Date;
+    excludeListingIds?: number[];
+  },
 ): Promise<ListingCommercialOwner> {
   const now = input.at || new Date();
   const owner = await resolveListingCommercialOwner(db, input.listingId);
+  await lockListingPublicationOwner(db, owner);
 
   if (owner.kind === 'agency') {
     const [[agency], [branding]] = await Promise.all([
@@ -298,12 +386,13 @@ export async function assertListingPublicationEntitled(
     }
 
     const maxActiveListings = await getPlanMaximumActiveListings(db, plan.id);
-    if (maxActiveListings === 0) {
+    if (maxActiveListings <= 0) {
       throw new ListingPublicationEntitlementError(
         'listing_capacity_exhausted',
         'The current agency plan does not include active listing publication.',
       );
     }
+    await assertActiveListingCapacity(db, owner, maxActiveListings, input.excludeListingIds);
     return owner;
   }
 
@@ -359,5 +448,6 @@ export async function assertListingPublicationEntitled(
       'The current plan does not include active listing publication.',
     );
   }
+  await assertActiveListingCapacity(db, owner, maxActiveListings, input.excludeListingIds);
   return owner;
 }

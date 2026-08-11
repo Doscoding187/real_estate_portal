@@ -2215,6 +2215,7 @@ export async function reviewManualPayment(input: {
       invoice = row.invoice;
     }
     const reviewedAt = nowDb();
+    const invoiceWasAlreadyPaid = invoice.status === 'paid';
 
     if (beforePayment.state === 'verified' && input.decision === 'approve') {
       return { success: true, idempotent: true, invoiceStatus: invoice.status };
@@ -2253,7 +2254,8 @@ export async function reviewManualPayment(input: {
       await tx
         .update(billingInvoices)
         .set({
-          status: 'submitted',
+          status: invoiceWasAlreadyPaid ? 'paid' : 'submitted',
+          paidAt: invoiceWasAlreadyPaid ? invoice.paidAt : null,
           updatedBy: input.actorUser.id,
         })
         .where(eq(billingInvoices.id, invoice.id));
@@ -2267,10 +2269,12 @@ export async function reviewManualPayment(input: {
         const currentStatus = currentSubscription?.status as
           | CanonicalSubscriptionStatus
           | undefined;
-        const shouldPreserveAccess = currentStatus
-          ? ACTIVE_SUBSCRIPTION_STATUSES.has(currentStatus)
-          : false;
-        nextSubscriptionStatus = shouldPreserveAccess ? currentStatus! : 'pending_payment';
+        const shouldPreserveAccess =
+          invoiceWasAlreadyPaid ||
+          (currentStatus ? ACTIVE_SUBSCRIPTION_STATUSES.has(currentStatus) : false);
+        nextSubscriptionStatus = shouldPreserveAccess
+          ? currentStatus || 'active'
+          : 'pending_payment';
         nextSubscriptionPeriodEnd = currentSubscription?.currentPeriodEnd || null;
 
         if (!shouldPreserveAccess) {
@@ -2296,7 +2300,7 @@ export async function reviewManualPayment(input: {
         beforeData: beforePayment,
         afterData: {
           state: 'rejected',
-          invoiceStatus: 'submitted',
+          invoiceStatus: invoiceWasAlreadyPaid ? 'paid' : 'submitted',
           subscriptionStatus: nextSubscriptionStatus,
         },
       });
@@ -2320,7 +2324,12 @@ export async function reviewManualPayment(input: {
         });
       }
 
-      return { success: true, idempotent: false, invoiceStatus: 'submitted' };
+      return {
+        success: true,
+        idempotent: invoiceWasAlreadyPaid,
+        invoiceStatus: invoiceWasAlreadyPaid ? 'paid' : 'submitted',
+        subscriptionStatus: nextSubscriptionStatus,
+      };
     }
 
     const verifiedAmount = Math.round(input.verifiedAmount || beforePayment.amount);
@@ -2344,7 +2353,9 @@ export async function reviewManualPayment(input: {
 
     const amountPaid = await getLatestInvoicePaymentTotal(tx, invoice.id);
     const invoicePaid = amountPaid >= invoice.amountDue && input.decision !== 'partial_payment';
-    const nextInvoiceStatus: InvoiceStatus = invoicePaid ? 'paid' : 'partially_paid';
+    const invoiceSettled = invoiceWasAlreadyPaid || invoicePaid;
+    const activationOccurred = invoicePaid && !invoiceWasAlreadyPaid;
+    const nextInvoiceStatus: InvoiceStatus = invoiceSettled ? 'paid' : 'partially_paid';
     const overpaymentAmount = Math.max(0, amountPaid - invoice.amountDue);
 
     await tx
@@ -2352,24 +2363,28 @@ export async function reviewManualPayment(input: {
       .set({
         status: nextInvoiceStatus,
         amountPaid,
-        paidAt: invoicePaid ? reviewedAt : null,
+        paidAt: invoiceSettled ? invoice.paidAt || reviewedAt : null,
         updatedBy: input.actorUser.id,
         metadata: {
           ...parseJsonRecord(invoice.metadata),
           last_reviewed_payment_id: beforePayment.id,
           last_reviewed_at: reviewedAt,
           overpayment_amount: overpaymentAmount,
-          amount_rule: invoicePaid
-            ? overpaymentAmount > 0
-              ? 'overpayment_activates'
-              : 'exact_or_full_payment_activates'
-            : 'partial_payment_does_not_activate',
+          activation_transition: activationOccurred,
+          already_paid_invoice_proof: invoiceWasAlreadyPaid,
+          amount_rule: invoiceWasAlreadyPaid
+            ? 'already_paid_invoice_does_not_reactivate'
+            : invoicePaid
+              ? overpaymentAmount > 0
+                ? 'overpayment_activates'
+                : 'exact_or_full_payment_activates'
+              : 'partial_payment_does_not_activate',
         },
       })
       .where(eq(billingInvoices.id, invoice.id));
 
     let subscription: SubscriptionRow | null = null;
-    if (invoicePaid) {
+    if (activationOccurred) {
       subscription = await activateSubscriptionForPaidInvoice(tx, {
         invoice: { ...invoice, amountPaid, status: nextInvoiceStatus },
         actorUserId: input.actorUser.id,
@@ -2381,11 +2396,12 @@ export async function reviewManualPayment(input: {
         .from(subscriptions)
         .where(eq(subscriptions.id, invoice.subscriptionId))
         .limit(1);
+      subscription = currentSubscription || null;
       const currentStatus = currentSubscription?.status as CanonicalSubscriptionStatus | undefined;
       const shouldPreserveAccess = currentStatus
         ? ACTIVE_SUBSCRIPTION_STATUSES.has(currentStatus)
         : false;
-      if (!shouldPreserveAccess) {
+      if (!invoiceWasAlreadyPaid && !shouldPreserveAccess) {
         await tx
           .update(subscriptions)
           .set({
@@ -2403,39 +2419,59 @@ export async function reviewManualPayment(input: {
       invoiceId: invoice.id,
       paymentId: beforePayment.id,
       actorUserId: input.actorUser.id,
-      eventType: invoicePaid
+      eventType: activationOccurred
         ? 'payment_approved_subscription_activated'
-        : 'payment_partially_approved',
-      message: input.note || (invoicePaid ? 'Payment approved.' : 'Partial payment recorded.'),
+        : invoiceWasAlreadyPaid
+          ? 'payment_approved_invoice_already_paid'
+          : 'payment_partially_approved',
+      message:
+        input.note ||
+        (activationOccurred
+          ? 'Payment approved.'
+          : invoiceWasAlreadyPaid
+            ? 'Additional proof recorded for an already-paid invoice; existing activation unchanged.'
+            : 'Partial payment recorded.'),
       beforeData: beforePayment,
       afterData: {
         paymentState: 'verified',
         invoiceStatus: nextInvoiceStatus,
         amountPaid,
         subscriptionStatus: subscription?.status || 'payment_under_review',
+        activationOccurred,
       },
     });
 
     if (invoice.ownerType === 'agency') {
       await notifyAgencyUsers(tx, {
         agencyId: invoice.ownerId,
-        type: invoicePaid ? 'payment_approved' : 'partial_payment',
-        title: invoicePaid ? 'Payment approved' : 'Partial payment recorded',
-        content: invoicePaid
+        type: activationOccurred
+          ? 'payment_approved'
+          : invoiceWasAlreadyPaid
+            ? 'payment_proof_recorded'
+            : 'partial_payment',
+        title: activationOccurred
+          ? 'Payment approved'
+          : invoiceWasAlreadyPaid
+            ? 'Additional payment proof recorded'
+            : 'Partial payment recorded',
+        content: activationOccurred
           ? `Payment for ${invoice.invoiceNumber} has been approved and your subscription is active.`
-          : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
+          : invoiceWasAlreadyPaid
+            ? `Additional proof for ${invoice.invoiceNumber} was recorded; the existing activation was not extended.`
+            : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
         data: { invoiceId: invoice.id, paymentId: beforePayment.id },
       });
-      if (invoicePaid) {
+      if (activationOccurred) {
         activatedAgencyId = invoice.ownerId;
       }
     }
 
     return {
       success: true,
-      idempotent: false,
+      idempotent: invoiceWasAlreadyPaid,
       invoiceStatus: nextInvoiceStatus,
       subscriptionStatus: subscription?.status || 'payment_under_review',
+      activationOccurred,
     };
   });
 

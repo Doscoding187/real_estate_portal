@@ -7,6 +7,7 @@ import {
   billingInvoices,
   billingPaymentDocuments,
   billingPayments,
+  developers,
   notifications,
   plans,
   subscriptions,
@@ -32,6 +33,7 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
 const created = {
   userIds: [] as number[],
   agencyIds: [] as number[],
+  developerIds: [] as number[],
 };
 
 const originalEnvironment: Record<string, string | undefined> = {};
@@ -47,7 +49,7 @@ function insertId(result: any): number {
 
 async function insertUser(input: {
   label: string;
-  role: 'agent' | 'agency_admin' | 'super_admin';
+  role: 'agent' | 'agency_admin' | 'property_developer' | 'super_admin';
   agencyId?: number | null;
 }) {
   const db = await getDb();
@@ -64,6 +66,23 @@ async function insertUser(input: {
   if (!userId) throw new Error(`Could not create ${input.label} test user.`);
   created.userIds.push(userId);
   return userId;
+}
+
+async function insertDeveloper(userId: number, label: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
+  const [result] = await db.insert(developers).values({
+    name: `${label} Developer`,
+    email: `${label}-${suffix}@example.test`,
+    isVerified: 1,
+    status: 'approved',
+    userId,
+  } as any);
+  const developerId = insertId(result);
+  if (!developerId) throw new Error(`Could not create ${label} developer profile.`);
+  created.developerIds.push(developerId);
+  return developerId;
 }
 
 async function insertAgency(label: string) {
@@ -112,7 +131,7 @@ async function ownerInvoiceCount(ownerType: string, ownerId: number) {
   return Number(row?.count || 0);
 }
 
-async function loadSubscription(ownerType: 'agent' | 'agency', ownerId: number) {
+async function loadSubscription(ownerType: 'agent' | 'agency' | 'developer', ownerId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const [row] = await db
@@ -129,6 +148,7 @@ async function cleanup() {
 
   const userIds = Array.from(new Set(created.userIds));
   const agencyIds = Array.from(new Set(created.agencyIds));
+  const developerIds = Array.from(new Set(created.developerIds));
 
   if (userIds.length) {
     await db.delete(notifications).where(inArray(notifications.userId, userIds));
@@ -149,6 +169,31 @@ async function cleanup() {
     await db
       .delete(subscriptions)
       .where(and(eq(subscriptions.ownerType, 'agency'), inArray(subscriptions.ownerId, agencyIds)));
+  }
+  if (developerIds.length) {
+    await db
+      .delete(billingAuditEvents)
+      .where(
+        and(eq(billingAuditEvents.ownerType, 'developer'), inArray(billingAuditEvents.ownerId, developerIds)),
+      );
+    await db
+      .delete(billingPaymentDocuments)
+      .where(
+        and(
+          eq(billingPaymentDocuments.ownerType, 'developer'),
+          inArray(billingPaymentDocuments.ownerId, developerIds),
+        ),
+      );
+    await db
+      .delete(billingPayments)
+      .where(and(eq(billingPayments.ownerType, 'developer'), inArray(billingPayments.ownerId, developerIds)));
+    await db
+      .delete(billingInvoices)
+      .where(and(eq(billingInvoices.ownerType, 'developer'), inArray(billingInvoices.ownerId, developerIds)));
+    await db
+      .delete(subscriptions)
+      .where(and(eq(subscriptions.ownerType, 'developer'), inArray(subscriptions.ownerId, developerIds)));
+    await db.delete(developers).where(inArray(developers.id, developerIds));
   }
   if (userIds.length) {
     await db
@@ -172,6 +217,7 @@ async function cleanup() {
 
   created.userIds.length = 0;
   created.agencyIds.length = 0;
+  created.developerIds.length = 0;
 }
 
 describeWithDb('S4 paid Launch Access disposable runtime', () => {
@@ -248,14 +294,24 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       role: 'agency_admin',
       agencyId: otherAgencyId,
     });
+    const developerUserId = await insertUser({
+      label: 's4-developer-primary',
+      role: 'property_developer',
+    });
+    const developerId = await insertDeveloper(developerUserId, 's4-developer-primary');
+    const otherDeveloperUserId = await insertUser({
+      label: 's4-developer-other',
+      role: 'property_developer',
+    });
+    await insertDeveloper(otherDeveloperUserId, 's4-developer-other');
     const financeId = await insertUser({ label: 's4-finance', role: 'super_admin' });
 
     const runOwner = async (input: {
-      ownerType: 'agent' | 'agency';
+      ownerType: 'agent' | 'agency' | 'developer';
       ownerId: number;
       userId: number;
       otherUserId: number;
-      planKey: 'agent_launch_access' | 'agency_launch_access';
+      planKey: 'agent_launch_access' | 'agency_launch_access' | 'developer_launch_access';
       expectedAmount: number;
       expectedLimit: number;
       expectedFlags: Record<string, boolean>;
@@ -267,12 +323,22 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
 
       const ownerUser = {
         id: input.userId,
-        role: input.ownerType === 'agent' ? 'agent' : 'agency_admin',
+        role:
+          input.ownerType === 'agent'
+            ? 'agent'
+            : input.ownerType === 'agency'
+              ? 'agency_admin'
+              : 'property_developer',
         agencyId: input.ownerType === 'agency' ? input.ownerId : null,
       };
       const otherUser = {
         id: input.otherUserId,
-        role: input.ownerType === 'agent' ? 'agent' : 'agency_admin',
+        role:
+          input.ownerType === 'agent'
+            ? 'agent'
+            : input.ownerType === 'agency'
+              ? 'agency_admin'
+              : 'property_developer',
         agencyId: input.ownerType === 'agency' ? otherAgencyId : null,
       };
 
@@ -316,6 +382,11 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         user: ownerUser,
         ...proofFor(requested.invoice),
       });
+      const secondProof = await submitPaidLaunchAccessPaymentProof({
+        user: ownerUser,
+        ...proofFor(requested.invoice),
+      });
+      expect(secondProof.paymentId).not.toBe(proof.paymentId);
       const afterProof = await getPlanAccessProjectionForUserId(input.userId);
       expect(afterProof?.subscription?.status).toBe('payment_under_review');
       expect(isSubscriptionEntitled(afterProof?.subscription?.status)).toBe(false);
@@ -340,6 +411,23 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       for (const [key, value] of Object.entries(input.expectedFlags)) {
         expect(active?.entitlements[key]).toBe(value);
       }
+
+      const periodEndAfterFirstApproval = active?.subscription?.currentPeriodEnd;
+      const secondApproval = await reviewManualPayment({
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId: secondProof.paymentId,
+        decision: 'approve',
+        verifiedAmount: input.expectedAmount,
+      });
+      expect(secondApproval).toMatchObject({
+        success: true,
+        idempotent: true,
+        invoiceStatus: 'paid',
+        subscriptionStatus: 'active',
+        activationOccurred: false,
+      });
+      const afterSecondApproval = await loadSubscription(input.ownerType, input.ownerId);
+      expect(afterSecondApproval?.currentPeriodEnd).toBe(periodEndAfterFirstApproval);
 
       const subscription = await loadSubscription(input.ownerType, input.ownerId);
       expect(subscription?.currentPeriodStart).toBeTruthy();
@@ -387,6 +475,18 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         has_revenue_dashboard: true,
         has_team_dashboard: true,
         has_lead_routing: true,
+      },
+    });
+    await runOwner({
+      ownerType: 'developer',
+      ownerId: developerId,
+      userId: developerUserId,
+      otherUserId: otherDeveloperUserId,
+      planKey: 'developer_launch_access',
+      expectedAmount: 149900,
+      expectedLimit: 0,
+      expectedFlags: {
+        unlimited_development_portfolio: true,
       },
     });
   }, 60_000);

@@ -15,6 +15,7 @@ class QueuedDb {
       leftJoin: () => chain,
       where: () => chain,
       limit: () => Promise.resolve(result),
+      for: () => Promise.resolve(result),
       then: (resolve: (value: any[]) => unknown) => Promise.resolve(result).then(resolve),
     };
     return chain;
@@ -46,6 +47,7 @@ function agencyDb(input: {
   subscription?: Record<string, unknown> | null;
   plan?: Record<string, unknown> | null;
   entitlements?: Array<Record<string, unknown>>;
+  activeListingCount?: number;
 }) {
   const listing = { ...agencyListing, ...(input.listing || {}) };
   const results: any[][] = [[listing], [{ ...agencyOwner, ...(input.owner || {}) }]];
@@ -63,8 +65,57 @@ function agencyDb(input: {
   );
   if (input.subscription && input.plan !== null) {
     results.push(input.entitlements === undefined ? publishingEntitlements : input.entitlements);
+    results.push(
+      Array.from({ length: input.activeListingCount || 0 }, (_, index) => ({ id: index + 1 })),
+    );
   }
   return new QueuedDb(results);
+}
+
+function independentAgentDb(input: {
+  activeListingCount?: number;
+  entitlements?: Array<Record<string, unknown>>;
+}) {
+  const future = new Date(at.getTime() + 86_400_000).toISOString();
+  return new QueuedDb([
+    [{ id: 12, ownerId: 200, agencyId: null, agentId: 45 }],
+    [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1 }],
+    [
+      {
+        id: 45,
+        userId: 200,
+        agencyId: null,
+        profileImage: 'a',
+        areasServed: 'b',
+        bio: 'c',
+        phone: 'd',
+        focus: 'sales',
+        propertyTypes: 'house',
+      },
+    ],
+    [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1 }],
+    [
+      {
+        id: 45,
+        userId: 200,
+        agencyId: null,
+        profileImage: 'a',
+        areasServed: 'b',
+        bio: 'c',
+        phone: 'd',
+        focus: 'sales',
+        propertyTypes: 'house',
+      },
+    ],
+    [
+      {
+        subscription: { status: 'active', currentPeriodEnd: future },
+        plan: { id: 2, segment: 'agent', isActive: 1 },
+      },
+    ],
+    input.entitlements || [{ featureKey: 'max_active_listings', valueJson: 50 }],
+    Array.from({ length: input.activeListingCount || 0 }, (_, index) => ({ id: index + 1 })),
+  ]);
 }
 
 async function expectAgencyDenied(
@@ -127,6 +178,46 @@ describe('listing publication entitlement service', () => {
     );
   });
 
+  it('enforces the canonical numeric active-listing cap for agencies', async () => {
+    await expectAgencyDenied(
+      {
+        subscription: { status: 'active', cancelAtPeriodEnd: 0 },
+        entitlements: [{ featureKey: 'max_active_listings', valueJson: 500 }],
+        activeListingCount: 500,
+      },
+      'listing_capacity_exhausted',
+    );
+
+    await expect(
+      assertListingPublicationEntitled(
+        agencyDb({
+          subscription: { status: 'active', cancelAtPeriodEnd: 0 },
+          entitlements: [{ featureKey: 'max_active_listings', valueJson: 500 }],
+          activeListingCount: 499,
+        }),
+        { listingId: 10, operation: 'submit', at },
+      ),
+    ).resolves.toMatchObject({ kind: 'agency', agencyId: 77 });
+  });
+
+  it('enforces the canonical numeric active-listing cap for independent agents', async () => {
+    await expect(
+      assertListingPublicationEntitled(independentAgentDb({ activeListingCount: 49 }), {
+        listingId: 12,
+        operation: 'submit',
+        at,
+      }),
+    ).resolves.toMatchObject({ kind: 'independent_agent', userId: 200 });
+
+    await expect(
+      assertListingPublicationEntitled(independentAgentDb({ activeListingCount: 50 }), {
+        listingId: 12,
+        operation: 'submit',
+        at,
+      }),
+    ).rejects.toMatchObject({ reason: 'listing_capacity_exhausted' });
+  });
+
   it('accepts a valid agency grace period', async () => {
     await expect(
       assertListingPublicationEntitled(
@@ -177,6 +268,14 @@ describe('listing publication entitlement service', () => {
         subscription: { status: 'active' },
         plan: agencyPublishingPlan,
         entitlements: [{ featureKey: 'max_active_listings', valueJson: 0 }],
+      },
+      'listing_capacity_exhausted',
+    );
+    await expectAgencyDenied(
+      {
+        subscription: { status: 'active' },
+        plan: agencyPublishingPlan,
+        entitlements: [],
       },
       'listing_capacity_exhausted',
     );
