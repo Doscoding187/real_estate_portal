@@ -1,4 +1,4 @@
-import { sql, eq, desc, and, inArray, isNull, ne } from 'drizzle-orm';
+import { sql, eq, desc, and, inArray, isNull } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { randomUUID } from 'crypto';
@@ -11,6 +11,7 @@ import {
   validatePersistedSubmissionReadiness,
 } from './developmentSubmissionReadiness';
 import { throwAuctionPublicationDisabled } from './developerEngineContainment';
+import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 import {
   developments,
@@ -456,19 +457,10 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 
   const { isId, value } = parseSlugOrId(slugOrId);
 
-  const whereClause = isId
-    ? and(
-        eq(developments.id, value as number),
-        eq(developments.isPublished, 1),
-        eq(developments.approvalStatus, 'approved'),
-        ne(developments.transactionType, 'auction'),
-      )
-    : and(
-        eq(developments.slug, value as string),
-        eq(developments.isPublished, 1),
-        eq(developments.approvalStatus, 'approved'),
-        ne(developments.transactionType, 'auction'),
-      );
+  const whereClause = and(
+    isId ? eq(developments.id, value as number) : eq(developments.slug, value as string),
+    publicDevelopmentEligibilityConditions(),
+  );
 
   const results = await db
     .select({
@@ -520,6 +512,10 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
     })
     .from(developments)
     .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(
+      developerBrandProfiles,
+      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+    )
     .where(whereClause)
     .limit(1);
 
@@ -673,14 +669,12 @@ export async function getPublicDevelopment(id: number) {
       isPublished: developments.isPublished,
     })
     .from(developments)
-    .where(
-      and(
-        eq(developments.id, id),
-        eq(developments.isPublished, 1),
-        eq(developments.approvalStatus, 'approved'),
-        ne(developments.transactionType, 'auction'),
-      ),
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(
+      developerBrandProfiles,
+      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
     )
+    .where(and(eq(developments.id, id), publicDevelopmentEligibilityConditions()))
     .limit(1);
 
   if (!results[0]) return null;
@@ -715,11 +709,7 @@ export async function listPublicDevelopments(options: {
     transactionType,
   } = options;
 
-  const conditions: any[] = [
-    eq(developments.isPublished, 1),
-    eq(developments.approvalStatus, 'approved'),
-    ne(developments.transactionType, 'auction'),
-  ];
+  const conditions: any[] = [publicDevelopmentEligibilityConditions()];
   if (province) conditions.push(eq(developments.province, province));
   if (city) conditions.push(eq(developments.city, city));
   if (suburb) conditions.push(eq(developments.suburb, suburb));

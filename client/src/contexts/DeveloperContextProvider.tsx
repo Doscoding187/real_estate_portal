@@ -71,7 +71,7 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
       // Sync with global publisher context store
       // CRITICAL: Use actual identityType from database, never hardcode
       setOperatingAs({
-        mode: 'seeding',
+        mode: 'platform_curator',
         brandProfileId: brand.id,
         brandProfileName: brand.brandName,
         brandProfileType: brand.identityType || 'developer', // Use real identityType

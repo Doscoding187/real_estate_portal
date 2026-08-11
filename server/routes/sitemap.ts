@@ -1,8 +1,9 @@
-import { and, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 
 import {
   cities,
+  developers,
   developments,
   developerBrandProfiles,
   listings,
@@ -12,6 +13,7 @@ import {
 } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
+import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
 
 const router = Router();
 
@@ -268,11 +270,14 @@ router.get('/sitemap-developments.xml', async (_req, res, next) => {
         updatedAt: developments.updatedAt,
       })
       .from(developments)
+      .leftJoin(developers, eq(developments.developerId, developers.id))
+      .leftJoin(
+        developerBrandProfiles,
+        eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+      )
       .where(
         and(
-          eq(developments.isPublished, 1),
-          eq(developments.approvalStatus, 'approved'),
-          ne(developments.transactionType, 'auction'),
+          publicDevelopmentEligibilityConditions(),
           sql`COALESCE(${developments.slug}, '') <> ''`,
         ),
       );

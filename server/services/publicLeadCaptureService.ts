@@ -32,6 +32,7 @@ import {
   type PublicLeadRecipientType,
   type PublicSupplyOrigin,
 } from './publicLeadCustodyService';
+import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -221,24 +222,6 @@ function isPublicListingStatus(status: unknown, approvalStatus?: unknown): boole
   return (status === 'approved' || status === 'published') && approvalStatus === 'approved';
 }
 
-function isPublicDevelopment(
-  development:
-    | {
-        isPublished?: unknown;
-        approvalStatus?: unknown;
-        transactionType?: unknown;
-      }
-    | null
-    | undefined,
-): boolean {
-  return Boolean(
-    development &&
-    Number(development.isPublished || 0) === 1 &&
-    development.approvalStatus === 'approved' &&
-    development.transactionType !== 'auction',
-  );
-}
-
 function isDuplicateKeyError(error: unknown): boolean {
   const code = String((error as { code?: unknown })?.code || '');
   const message = String((error as { message?: unknown })?.message || '').toLowerCase();
@@ -305,6 +288,7 @@ async function selectBrand(database: any, brandId: number) {
       linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
       isVisible: developerBrandProfiles.isVisible,
       isSubscriber: developerBrandProfiles.isSubscriber,
+      sourceAttribution: developerBrandProfiles.sourceAttribution,
     })
     .from(developerBrandProfiles)
     .where(eq(developerBrandProfiles.id, brandId))
@@ -510,17 +494,17 @@ export async function resolveLeadOwnership(
         isPublished: developments.isPublished,
         approvalStatus: developments.approvalStatus,
         transactionType: developments.transactionType,
+        developmentType: developments.developmentType,
+        activeUnitTypeCount: sql<number>`(
+          SELECT COUNT(*)
+          FROM ${unitTypes}
+          WHERE ${unitTypes.developmentId} = ${developments.id}
+            AND ${unitTypes.isActive} = 1
+        )`,
       })
       .from(developments)
       .where(eq(developments.id, developmentId))
       .limit(1);
-  }
-
-  if (targetKind === 'development' && !isPublicDevelopment(development)) {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message: 'Development not available for public enquiries.',
-    });
   }
 
   if (targetKind === 'development' && input.unitId) {
@@ -572,6 +556,28 @@ export async function resolveLeadOwnership(
     const developerMap = await loadDeveloperCandidates(database, developerIds);
     const developerId =
       positiveId(development?.developerId) || positiveId(brand?.linkedDeveloperAccountId);
+    const eligibility = evaluatePublicDevelopmentEligibility({
+      development: {
+        id: Number(development?.id || 0),
+        developerId: positiveId(development?.developerId) ?? null,
+        developerBrandProfileId: positiveId(development?.developerBrandProfileId) ?? null,
+        devOwnerType: development?.devOwnerType || null,
+        developmentType: development?.developmentType || null,
+        transactionType: development?.transactionType || null,
+        isPublished: development?.isPublished,
+        approvalStatus: development?.approvalStatus || null,
+      },
+      brand,
+      developer: developerId ? developerMap.get(developerId) : null,
+      unitTypes: [],
+      activeUnitTypeCount: Number(development?.activeUnitTypeCount || 0),
+    } as any);
+    if (!eligibility.eligible) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not available for public enquiries.',
+      });
+    }
     const custody = resolvePublicDevelopmentCustody({
       developerId: development?.developerId,
       developerBrandProfileId: development?.developerBrandProfileId,
