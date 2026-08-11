@@ -13,7 +13,6 @@ import {
   isNull,
   isNotNull,
   not,
-  ne,
   count,
   avg,
   min,
@@ -892,40 +891,6 @@ export async function searchDevelopers(query: string, limit: number = 10) {
         eq(developers.status, 'approved' as any), // Only show approved developers
       ),
     )
-    .limit(limit);
-}
-
-/**
- * Search developments by name (for autocomplete)
- */
-export async function searchDevelopments(query: string, developerId?: number, limit: number = 10) {
-  const db = await getDb();
-  if (!db) return [];
-
-  const conditions = [
-    sql`LOWER(${developments.name}) LIKE ${`%${query.toLowerCase()}%`}`,
-    eq(developments.isPublished, 1), // Only show published developments
-    eq(developments.approvalStatus, 'approved'),
-    ne(developments.transactionType, 'auction'),
-  ];
-
-  // Filter by developer if provided
-  if (developerId) {
-    conditions.push(eq(developments.developerId, developerId));
-  }
-
-  return await db
-    .select({
-      id: developments.id,
-      name: developments.name,
-      city: developments.city,
-      province: developments.province,
-      developerId: developments.developerId,
-      developmentType: developments.developmentType,
-      status: developments.status,
-    })
-    .from(developments)
-    .where(and(...conditions))
     .limit(limit);
 }
 
