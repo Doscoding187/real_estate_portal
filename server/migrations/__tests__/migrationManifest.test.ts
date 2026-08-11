@@ -65,11 +65,11 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it('accepts the repository 0000 -> 0001 manifest with exact ancestry', () => {
+  it('accepts the repository 0000 -> 0001 -> 0002 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const [baseline, incremental] = manifest.orderedMigrations;
+    const [baseline, incremental, latest] = manifest.orderedMigrations;
 
     expect(baseline).toMatchObject({
       sequence: 0,
@@ -86,7 +86,16 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe(incremental.filename);
+    expect(latest).toMatchObject({
+      sequence: 2,
+      filename: '0002_development_supersessions.sql',
+      parent: incremental.filename,
+      parentChecksum: incremental.checksum,
+      checksum: '9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(manifest.expectedHead.filename).toBe(latest.filename);
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

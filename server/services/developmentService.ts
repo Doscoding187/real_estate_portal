@@ -12,6 +12,8 @@ import {
 } from './developmentSubmissionReadiness';
 import { throwAuctionPublicationDisabled } from './developerEngineContainment';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
+import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 
 import {
   developments,
@@ -22,6 +24,7 @@ import {
   developerBrandProfiles,
   developmentDrafts,
   developmentApprovalQueue,
+  developmentSupersessions,
   locations,
   distributionPrograms,
 } from '../../drizzle/schema';
@@ -1010,7 +1013,7 @@ export async function createDevelopment(
 
   // Ensure baseSlug is never undefined
   const slugSource = (baseSlug || '').trim();
-  const slug = await generateUniqueSlug(slugSource);
+  let slug = await generateUniqueSlug(slugSource);
 
   // IMPORTANT:
   // - amenities/highlights/features tables differ (you showed amenities=text, highlights=json, features=json)
@@ -1164,6 +1167,31 @@ export async function createDevelopment(
 
   try {
     const createdDev = await db.transaction(async (tx: any) => {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const [slugOwner] = await tx
+          .select({ id: developments.id })
+          .from(developments)
+          .where(eq(developments.slug, slug))
+          .limit(1)
+          .for('update');
+        const routePath = buildDevelopmentRootPath({ id: 0, slug });
+        const [reservedPath] = await tx
+          .select({ id: developmentSupersessions.id })
+          .from(developmentSupersessions)
+          .where(eq(developmentSupersessions.sourcePublicRootPath, routePath))
+          .limit(1)
+          .for('update');
+        if (!slugOwner && !reservedPath) break;
+        if (attempt === 4) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'A unique development root route could not be allocated.',
+          });
+        }
+        slug = await generateUniqueSlug(slugSource);
+      }
+      insertPayload.slug = slug;
+
       // fingerprint db (optional)
       try {
         const [rows] = await tx.execute(sql`SELECT DATABASE() as dbName, @@hostname as dbHost`);
@@ -2435,6 +2463,7 @@ async function publishDevelopment(
     if (!ownedDevelopment) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
     }
+    await assertDevelopmentPublicTransitionAllowed(tx, id);
     if (ownedDevelopment.transactionType === 'auction') {
       throwAuctionPublicationDisabled();
     }
@@ -2513,6 +2542,20 @@ async function publishPlatformCuratedDevelopment(
   userId: number,
   operatingContext?: { brandProfileId: number } | null,
 ) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  return db.transaction((tx: any) =>
+    publishPlatformCuratedDevelopmentInTransaction(tx, id, userId, operatingContext),
+  );
+}
+
+export async function publishPlatformCuratedDevelopmentInTransaction(
+  tx: any,
+  id: number,
+  userId: number,
+  operatingContext?: { brandProfileId: number } | null,
+) {
   if (!operatingContext?.brandProfileId) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
@@ -2520,10 +2563,7 @@ async function publishPlatformCuratedDevelopment(
     });
   }
 
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const updated = await db.transaction(async (tx: any) => {
+  const updated = await (async () => {
     const [actor] = await tx
       .select({ id: users.id, role: users.role })
       .from(users)
@@ -2535,6 +2575,20 @@ async function publishPlatformCuratedDevelopment(
       throw new TRPCError({
         code: 'FORBIDDEN',
         message: 'Only an authenticated super-admin can publish a platform-curated development.',
+      });
+    }
+
+    const [existingDev] = await tx
+      .select()
+      .from(developments)
+      .where(eq(developments.id, id))
+      .limit(1)
+      .for('update');
+
+    if (!existingDev) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not found in the selected platform curator context.',
       });
     }
 
@@ -2567,25 +2621,14 @@ async function publishPlatformCuratedDevelopment(
         message: 'Platform-curated publication requires source attribution on the brand profile.',
       });
     }
-
-    const [existingDev] = await tx
-      .select()
-      .from(developments)
-      .where(
-        and(
-          eq(developments.id, id),
-          eq(developments.developerBrandProfileId, operatingContext.brandProfileId),
-        ),
-      )
-      .limit(1)
-      .for('update');
-
-    if (!existingDev) {
+    if (Number(existingDev.developerBrandProfileId) !== Number(operatingContext.brandProfileId)) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Development not found in the selected platform curator context.',
       });
     }
+
+    await assertDevelopmentPublicTransitionAllowed(tx, id);
     if (existingDev.transactionType === 'auction') {
       throwAuctionPublicationDisabled();
     }
@@ -2661,7 +2704,7 @@ async function publishPlatformCuratedDevelopment(
       .where(eq(developments.id, id))
       .limit(1);
     return published;
-  });
+  })();
 
   if (!updated) {
     throw new TRPCError({
@@ -2709,98 +2752,218 @@ async function completeReview(
     complianceChecks?: Record<string, boolean>;
   },
 ) {
-  await db.transaction(async (tx: any) => {
-    const [development] = await tx
-      .select()
-      .from(developments)
-      .where(eq(developments.id, developmentId))
-      .limit(1)
-      .for('update');
-    if (!development) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
-    if (decision === 'approved' && development.transactionType === 'auction') {
-      throwAuctionPublicationDisabled();
-    }
-    if (decision === 'approved') {
-      const reviewUnitTypes = await tx
-        .select()
-        .from(unitTypes)
-        .where(eq(unitTypes.developmentId, developmentId));
-      const blockers = validatePersistedSubmissionReadiness(development, reviewUnitTypes);
-      if (blockers.length > 0) throw submissionValidationError(blockers);
-    }
-    const openRows = await tx
-      .select()
-      .from(developmentApprovalQueue)
-      .where(
-        and(
-          eq(developmentApprovalQueue.developmentId, developmentId),
-          inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
-        ),
-      )
-      .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id));
-    if (openRows.length !== 1) {
-      throw new TRPCError({
-        code: openRows.length ? 'CONFLICT' : 'BAD_REQUEST',
-        message: 'Development must have exactly one unresolved review record.',
-      });
-    }
-    const openRow = openRows[0];
-    if (openRow.submittedBy === reviewerId) {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'A submitter cannot review their own development submission.',
-      });
-    }
+  await db.transaction((tx: any) =>
+    completeReviewInTransaction(tx, developmentId, reviewerId, decision, details),
+  );
+}
 
-    const now = mysqlDateTime();
-    const developmentProjection =
-      decision === 'approved'
+export async function completeReviewInTransaction(
+  tx: any,
+  developmentId: number,
+  reviewerId: number,
+  decision: 'approved' | 'rejected' | 'changes_requested',
+  details: {
+    reviewNotes?: string;
+    rejectionReason?: string;
+    complianceChecks?: Record<string, boolean>;
+  },
+  options: { allowVerifiedRelationshipId?: number } = {},
+) {
+  const [development] = await tx
+    .select()
+    .from(developments)
+    .where(eq(developments.id, developmentId))
+    .limit(1)
+    .for('update');
+  if (!development) throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
+  if (decision === 'approved' && development.transactionType === 'auction') {
+    throwAuctionPublicationDisabled();
+  }
+  if (decision === 'approved') {
+    await assertDevelopmentPublicTransitionAllowed(tx, developmentId, options);
+    const reviewUnitTypes = await tx
+      .select()
+      .from(unitTypes)
+      .where(eq(unitTypes.developmentId, developmentId));
+    const blockers = validatePersistedSubmissionReadiness(development, reviewUnitTypes);
+    if (blockers.length > 0) throw submissionValidationError(blockers);
+  }
+  const openRows = await tx
+    .select()
+    .from(developmentApprovalQueue)
+    .where(
+      and(
+        eq(developmentApprovalQueue.developmentId, developmentId),
+        inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+      ),
+    )
+    .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id));
+  if (openRows.length !== 1) {
+    throw new TRPCError({
+      code: openRows.length ? 'CONFLICT' : 'BAD_REQUEST',
+      message: 'Development must have exactly one unresolved review record.',
+    });
+  }
+  const openRow = openRows[0];
+  if (openRow.submittedBy === reviewerId) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'A submitter cannot review their own development submission.',
+    });
+  }
+
+  const now = mysqlDateTime();
+  const developmentProjection =
+    decision === 'approved'
+      ? {
+          approvalStatus: 'approved' as const,
+          isPublished: 1,
+          publishedAt: now,
+          rejectionNote: null,
+        }
+      : decision === 'changes_requested'
         ? {
-            approvalStatus: 'approved' as const,
-            isPublished: 1,
-            publishedAt: now,
-            rejectionNote: null,
+            approvalStatus: 'draft' as const,
+            isPublished: 0,
+            publishedAt: null,
+            rejectionNote: details.reviewNotes ?? null,
           }
-        : decision === 'changes_requested'
-          ? {
-              approvalStatus: 'draft' as const,
-              isPublished: 0,
-              publishedAt: null,
-              rejectionNote: details.reviewNotes ?? null,
-            }
-          : {
-              approvalStatus: 'rejected' as const,
-              isPublished: 0,
-              publishedAt: null,
-              rejectionNote: details.rejectionReason ?? null,
-            };
-    const result = await tx
-      .update(developmentApprovalQueue)
-      .set({
-        status: decision,
-        reviewedBy: reviewerId,
-        reviewedAt: now,
-        reviewNotes: details.reviewNotes ?? null,
-        rejectionReason: details.rejectionReason ?? null,
-        complianceChecks: details.complianceChecks ?? null,
-      })
-      .where(
-        and(
-          eq(developmentApprovalQueue.id, openRow.id),
-          inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
-        ),
-      );
-    const affectedRows = Number(result?.affectedRows ?? result?.[0]?.affectedRows ?? 0);
-    if (affectedRows !== 1)
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'Review record changed before completion.',
-      });
+        : {
+            approvalStatus: 'rejected' as const,
+            isPublished: 0,
+            publishedAt: null,
+            rejectionNote: details.rejectionReason ?? null,
+          };
+  const result = await tx
+    .update(developmentApprovalQueue)
+    .set({
+      status: decision,
+      reviewedBy: reviewerId,
+      reviewedAt: now,
+      reviewNotes: details.reviewNotes ?? null,
+      rejectionReason: details.rejectionReason ?? null,
+      complianceChecks: details.complianceChecks ?? null,
+    })
+    .where(
+      and(
+        eq(developmentApprovalQueue.id, openRow.id),
+        inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+      ),
+    );
+  const affectedRows = Number(result?.affectedRows ?? result?.[0]?.affectedRows ?? 0);
+  if (affectedRows !== 1)
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'Review record changed before completion.',
+    });
+  await tx
+    .update(developments)
+    .set(developmentProjection)
+    .where(eq(developments.id, developmentId));
+}
+
+/**
+ * Final developer-owned publication primitive used by the S2 cutover. The
+ * caller owns the transaction and has already locked the development. A
+ * pending review is completed through the existing S1 review authority; an
+ * already-approved private catalogue only needs its final publication flag
+ * restored.
+ */
+export async function publishDeveloperOwnedDevelopmentInTransaction(
+  tx: any,
+  developmentId: number,
+  actorUserId: number,
+  supersessionRelationshipId: number,
+) {
+  const [development] = await tx
+    .select()
+    .from(developments)
+    .where(eq(developments.id, developmentId))
+    .limit(1)
+    .for('update');
+
+  if (!development) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Replacement development not found.' });
+  }
+  if (development.devOwnerType !== 'developer' || development.developerId === null) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Replacement development must remain developer-owned.',
+    });
+  }
+  if (Number(development.isPublished) === 1) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'Replacement development is already publicly published.',
+    });
+  }
+  if (development.transactionType === 'auction') {
+    throwAuctionPublicationDisabled();
+  }
+
+  await assertDevelopmentPublicTransitionAllowed(tx, developmentId, {
+    allowVerifiedRelationshipId: supersessionRelationshipId,
+  });
+
+  const persistedUnits = await tx
+    .select()
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, developmentId));
+  const blockers = validatePersistedSubmissionReadiness(development, persistedUnits);
+  if (blockers.length > 0) throw submissionValidationError(blockers);
+
+  if (development.approvalStatus === 'approved') {
+    const now = mysqlDateTime();
     await tx
       .update(developments)
-      .set(developmentProjection)
-      .where(eq(developments.id, developmentId));
-  });
+      .set({ isPublished: 1, publishedAt: now, rejectionNote: null, updatedAt: now })
+      .where(and(eq(developments.id, developmentId), eq(developments.isPublished, 0)));
+  } else {
+    await completeReviewInTransaction(
+      tx,
+      developmentId,
+      actorUserId,
+      'approved',
+      { complianceChecks: undefined },
+      { allowVerifiedRelationshipId: supersessionRelationshipId },
+    );
+  }
+
+  const [published] = await tx
+    .select()
+    .from(developments)
+    .where(eq(developments.id, developmentId))
+    .limit(1);
+  if (
+    !published ||
+    Number(published.isPublished) !== 1 ||
+    published.approvalStatus !== 'approved'
+  ) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Replacement publication did not produce a canonical public development.',
+    });
+  }
+
+  return published;
+}
+
+export async function unpublishDevelopmentInTransaction(tx: any, developmentId: number) {
+  const now = mysqlDateTime();
+  await tx
+    .update(developments)
+    .set({ isPublished: 0, publishedAt: null, updatedAt: now })
+    .where(eq(developments.id, developmentId));
+
+  const [unpublished] = await tx
+    .select()
+    .from(developments)
+    .where(eq(developments.id, developmentId))
+    .limit(1);
+  if (!unpublished) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
+  }
+  return unpublished;
 }
 
 async function unpublishDevelopment(id: number, userId: number) {
@@ -2816,24 +2979,20 @@ async function unpublishDevelopment(id: number, userId: number) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
   }
 
-  const [ownedDevelopment] = await db
-    .select({ id: developments.id })
-    .from(developments)
-    .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
-    .limit(1);
+  await db.transaction(async (tx: any) => {
+    const [ownedDevelopment] = await tx
+      .select({ id: developments.id })
+      .from(developments)
+      .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
+      .limit(1)
+      .for('update');
 
-  if (!ownedDevelopment) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
-  }
+    if (!ownedDevelopment) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+    }
 
-  await db
-    .update(developments)
-    .set({
-      isPublished: 0,
-      publishedAt: null,
-      updatedAt: mysqlDateTime(),
-    })
-    .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)));
+    await unpublishDevelopmentInTransaction(tx, id);
+  });
 
   return { success: true, id };
 }
@@ -3028,6 +3187,10 @@ export const developmentService = {
   deleteDevelopment,
   publishDevelopment,
   publishPlatformCuratedDevelopment,
+  publishPlatformCuratedDevelopmentInTransaction,
+  publishDeveloperOwnedDevelopmentInTransaction,
+  completeReviewInTransaction,
   unpublishDevelopment,
+  unpublishDevelopmentInTransaction,
   saveDraft,
 };

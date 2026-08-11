@@ -4,6 +4,7 @@ import {
   AnyMySqlColumn,
   index,
   unique,
+  check,
   foreignKey,
   int,
   varchar,
@@ -330,6 +331,114 @@ export const developments = mysqlTable(
     index('idx_developments_slug').on(table.slug),
     index('idx_developments_location').on(table.latitude, table.longitude),
     index('idx_developments_auction_dates').on(table.auctionStartDate, table.auctionEndDate),
+  ],
+);
+
+export const developmentSupersessions = mysqlTable(
+  'development_supersessions',
+  {
+    id: int().autoincrement().primaryKey(),
+    sourceDevelopmentId: int('source_development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'restrict' }),
+    replacementDevelopmentId: int('replacement_development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'restrict' }),
+    status: mysqlEnum('status', ['verified', 'active', 'reversed']).notNull(),
+    verificationNote: varchar('verification_note', { length: 1000 }).notNull(),
+    verifiedByActorId: int('verified_by_actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    verifiedAt: timestamp('verified_at', { mode: 'string' }).notNull(),
+    activatedByActorId: int('activated_by_actor_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+    activatedAt: timestamp('activated_at', { mode: 'string' }),
+    sourcePublicRootPath: varchar('source_public_root_path', { length: 512 }),
+    reversedByActorId: int('reversed_by_actor_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+    reversedAt: timestamp('reversed_at', { mode: 'string' }),
+    reversalReason: varchar('reversal_reason', { length: 1000 }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_development_supersessions_pair').on(
+      table.sourceDevelopmentId,
+      table.replacementDevelopmentId,
+    ),
+    unique('uq_development_supersessions_source_path').on(table.sourcePublicRootPath),
+    index('idx_development_supersessions_source_status').on(
+      table.sourceDevelopmentId,
+      table.status,
+    ),
+    index('idx_development_supersessions_replacement_status').on(
+      table.replacementDevelopmentId,
+      table.status,
+    ),
+    check(
+      'chk_development_supersessions_distinct_endpoints',
+      sql`${table.sourceDevelopmentId} <> ${table.replacementDevelopmentId}`,
+    ),
+    check(
+      'chk_development_supersessions_verification_note',
+      sql`CHAR_LENGTH(TRIM(${table.verificationNote})) > 0`,
+    ),
+    check(
+      'chk_development_supersessions_source_path',
+      sql`${table.sourcePublicRootPath} IS NULL OR CHAR_LENGTH(TRIM(${table.sourcePublicRootPath})) > 0`,
+    ),
+    check(
+      'chk_development_supersessions_verified_shape',
+      sql`${table.status} <> 'verified' OR (
+        ${table.activatedByActorId} IS NULL
+        AND ${table.activatedAt} IS NULL
+        AND ${table.sourcePublicRootPath} IS NULL
+        AND ${table.reversedByActorId} IS NULL
+        AND ${table.reversedAt} IS NULL
+        AND ${table.reversalReason} IS NULL
+      )`,
+    ),
+    check(
+      'chk_development_supersessions_active_shape',
+      sql`${table.status} <> 'active' OR (
+        ${table.activatedByActorId} IS NOT NULL
+        AND ${table.activatedAt} IS NOT NULL
+        AND ${table.sourcePublicRootPath} IS NOT NULL
+        AND ${table.reversedByActorId} IS NULL
+        AND ${table.reversedAt} IS NULL
+        AND ${table.reversalReason} IS NULL
+      )`,
+    ),
+    check(
+      'chk_development_supersessions_reversed_shape',
+      sql`${table.status} <> 'reversed' OR (
+        ${table.reversedByActorId} IS NOT NULL
+        AND ${table.reversedAt} IS NOT NULL
+        AND CHAR_LENGTH(TRIM(${table.reversalReason})) > 0
+      )`,
+    ),
+    check(
+      'chk_development_supersessions_activation_triplet',
+      sql`(
+        ${table.activatedByActorId} IS NULL
+        AND ${table.activatedAt} IS NULL
+        AND ${table.sourcePublicRootPath} IS NULL
+      ) OR (
+        ${table.activatedByActorId} IS NOT NULL
+        AND ${table.activatedAt} IS NOT NULL
+        AND ${table.sourcePublicRootPath} IS NOT NULL
+      )`,
+    ),
+    check(
+      'chk_development_supersessions_activation_order',
+      sql`${table.activatedAt} IS NULL OR ${table.activatedAt} >= ${table.verifiedAt}`,
+    ),
+    check(
+      'chk_development_supersessions_reversal_order',
+      sql`${table.reversedAt} IS NULL OR ${table.reversedAt} >= ${table.verifiedAt}`,
+    ),
   ],
 );
 

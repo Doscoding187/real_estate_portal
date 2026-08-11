@@ -283,12 +283,19 @@ describe('migration execution authority', () => {
     expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
     const baseline = executionManifest.migrations.find(entry => entry.sequence === 0);
     const incremental = executionManifest.migrations.find(entry => entry.sequence === 1);
+    const latest = executionManifest.migrations.at(-1);
     expect(incremental).toMatchObject({
       filename: '0001_public_search_to_lead_reliability.sql',
       parent: baseline?.filename,
       parentChecksum: baseline?.checksum,
     });
-    expect(executionManifest.expectedHead).toBe(incremental?.filename);
+    expect(latest).toMatchObject({
+      sequence: 2,
+      filename: '0002_development_supersessions.sql',
+      parent: incremental?.filename,
+      parentChecksum: incremental?.checksum,
+    });
+    expect(executionManifest.expectedHead).toBe(latest?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');
