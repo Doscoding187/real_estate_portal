@@ -55,6 +55,7 @@ import { validatePersistedSubmissionReadiness } from './services/developmentSubm
 import { buildDevelopmentHomeInventory } from './services/developmentInventorySummary';
 import { buildDevelopmentHomeAttention } from './services/developmentHomeAttention';
 import { getDevelopmentHomeDistribution } from './services/developmentHomeDistribution';
+import { developmentSupersessionService } from './services/developmentSupersessionService';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
@@ -243,6 +244,44 @@ function toPublicDeveloperResponse(developer: any) {
 // ===========================================================================
 
 export const developerRouter = router({
+  verifySupersession: superAdminProcedure
+    .input(
+      z.object({
+        sourceDevelopmentId: z.number().int().positive(),
+        replacementDevelopmentId: z.number().int().positive(),
+        verificationNote: z.string().trim().min(1).max(1000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developmentSupersessionService.verifyDevelopmentSupersession({
+        ...input,
+        actorUserId: requireUser(ctx).id,
+      }),
+    ),
+
+  activateSupersession: superAdminProcedure
+    .input(z.object({ supersessionId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) =>
+      developmentSupersessionService.activateDevelopmentSupersession({
+        ...input,
+        actorUserId: requireUser(ctx).id,
+      }),
+    ),
+
+  reverseSupersession: superAdminProcedure
+    .input(
+      z.object({
+        supersessionId: z.number().int().positive(),
+        reversalReason: z.string().trim().min(1).max(1000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developmentSupersessionService.reverseDevelopmentSupersession({
+        ...input,
+        actorUserId: requireUser(ctx).id,
+      }),
+    ),
+
   getOnboardingStatus: protectedProcedure.query(async ({ ctx }) => {
     const user = requireUser(ctx);
 

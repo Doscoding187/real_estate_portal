@@ -1,10 +1,6 @@
 import { createHash } from 'node:crypto';
 import { is, SQL } from 'drizzle-orm';
-import {
-  getTableConfig,
-  MySqlDialect,
-  MySqlTable,
-} from 'drizzle-orm/mysql-core';
+import { getTableConfig, MySqlDialect, MySqlTable } from 'drizzle-orm/mysql-core';
 import type { AuthoritySqlConnection } from './connectionAuthority';
 
 export const RUNNER_CONTROL_TABLES = Object.freeze([
@@ -94,11 +90,66 @@ function normalizedType(value: string): string {
 }
 
 function normalizedAction(value: unknown): string {
-  return String(value ?? 'no action').trim().toLowerCase().replace(/\s+/g, ' ');
+  return String(value ?? 'no action')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
 }
 
 function normalizedExpression(value: string): string {
   let normalized = value.trim().replace(/\s+/g, ' ').toLowerCase();
+  // MySQL/MariaDB expose CHECK clauses with table qualifiers removed,
+  // character-set introducers added to string literals, and redundant
+  // grouping parentheses around simple predicates. Canonicalize those
+  // provider renderings so the Drizzle model and physical schema compare on
+  // the actual constraint meaning.
+  normalized = normalized
+    .replace(/`[^`]+`\.`([^`]+)`/g, '`$1`')
+    .replace(/_utf8mb4\\?'/g, "'")
+    .replace(/\\'/g, "'")
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')');
+  const hasTopLevelBooleanOperator = (expression: string): boolean => {
+    let depth = 0;
+    for (let index = 0; index < expression.length; index += 1) {
+      const character = expression[index];
+      if (character === '(') depth += 1;
+      if (character === ')') depth -= 1;
+      if (depth === 0 && /[a-z]/i.test(character)) {
+        const remainder = expression.slice(index);
+        if (/^(?:and|or)\b/.test(remainder)) return true;
+      }
+    }
+    return false;
+  };
+
+  // Remove only grouping parentheses around a single predicate. Parentheses
+  // belonging to SQL functions (for example TRIM(...)) and boolean groups
+  // remain semantically significant.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const stack: number[] = [];
+    for (let index = 0; index < normalized.length; index += 1) {
+      const character = normalized[index];
+      if (character === '(') {
+        stack.push(index);
+        continue;
+      }
+      if (character !== ')' || stack.length === 0) continue;
+
+      const opening = stack.pop()!;
+      const previousCharacter = normalized[opening - 1] ?? '';
+      if (/[a-z0-9_]/i.test(previousCharacter)) continue;
+
+      const inner = normalized.slice(opening + 1, index);
+      if (hasTopLevelBooleanOperator(inner)) continue;
+
+      normalized = `${normalized.slice(0, opening)}${inner}${normalized.slice(index + 1)}`;
+      changed = true;
+      break;
+    }
+  }
   while (normalized.startsWith('(') && normalized.endsWith(')')) {
     normalized = normalized.slice(1, -1).trim();
   }
@@ -110,7 +161,9 @@ function normalizedExpression(value: string): string {
 
 function normalizeDefaultForType(value: string, type: string): string {
   if (
-    /^(?:tinyint|smallint|mediumint|int|bigint|decimal|numeric|float|double|real|bit)\b/.test(type) &&
+    /^(?:tinyint|smallint|mediumint|int|bigint|decimal|numeric|float|double|real|bit)\b/.test(
+      type,
+    ) &&
     /^[-+]?\d+(?:\.\d+)?$/.test(value.trim())
   ) {
     return String(Number(value));
@@ -163,7 +216,9 @@ function withoutDigest(schema: Omit<NormalizedSchema, 'digest'>): Omit<Normalize
 }
 
 function schemaDigest(schema: Omit<NormalizedSchema, 'digest'>): string {
-  return createHash('sha256').update(JSON.stringify(withoutDigest(schema))).digest('hex');
+  return createHash('sha256')
+    .update(JSON.stringify(withoutDigest(schema)))
+    .digest('hex');
 }
 
 function finishSchema(tables: NormalizedTable[]): NormalizedSchema {
@@ -193,7 +248,9 @@ export function normalizedDesiredSchema(schemaExports: Record<string, unknown>):
     if (!is(value, MySqlTable)) continue;
     const config = getTableConfig(value);
     if (RUNNER_CONTROL_TABLES.includes(config.name as any)) {
-      throw new Error(`Application Drizzle model may not define runner control table ${config.name}.`);
+      throw new Error(
+        `Application Drizzle model may not define runner control table ${config.name}.`,
+      );
     }
     byName.set(config.name, value);
   }
@@ -303,10 +360,7 @@ export async function normalizedPhysicalSchema(
     .map(row => String(rowValue(row, 'table_name') ?? ''))
     .filter(name => name && !excluded.has(name));
   const tables = new Map<string, NormalizedTable>(
-    names.map(name => [
-      name,
-      { name, columns: [], indexes: [], foreignKeys: [], checks: [] },
-    ]),
+    names.map(name => [name, { name, columns: [], indexes: [], foreignKeys: [], checks: [] }]),
   );
 
   const columnRows = await queryRows(
@@ -389,7 +443,7 @@ export async function normalizedPhysicalSchema(
   try {
     const checkRows = await queryRows(
       connection,
-      'SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = \'CHECK\' ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME',
+      "SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = 'CHECK' ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME",
     );
     for (const row of checkRows) {
       const table = tables.get(String(rowValue(row, 'table_name') ?? ''));
@@ -516,10 +570,7 @@ export function compareNormalizedSchemas(
         });
         continue;
       }
-      const fields: Array<[
-        keyof NormalizedColumn,
-        SchemaDifference['category'],
-      ]> = [
+      const fields: Array<[keyof NormalizedColumn, SchemaDifference['category']]> = [
         ['ordinal', 'column'],
         ['type', 'type'],
         ['nullable', 'nullability'],
