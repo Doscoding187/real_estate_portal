@@ -50,6 +50,7 @@ import {
   getSafePropertyPresentationVirtualTour,
   summarizePropertyPresentation,
 } from '../shared/property-presentation';
+import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -899,14 +900,8 @@ const appRouterConfig = {
           ? (publicLinkedListing.propertyDetails as any) || {}
           : {};
 
-        const bucketName = ENV.s3BucketName || 'listify-properties-sa';
-        const awsRegion = ENV.awsRegion || 'eu-north-1';
-        const cdnUrl = ENV.cloudFrontUrl || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
-
         const propertyImages = rawImages.map(img => {
-          const imageUrl = img.imageUrl.startsWith('http')
-            ? img.imageUrl
-            : `${cdnUrl}/${img.imageUrl}`;
+          const imageUrl = resolveMediaDeliveryUrl(img.imageUrl) || img.imageUrl;
           return {
             ...img,
             imageUrl,
@@ -931,7 +926,8 @@ const appRouterConfig = {
                 originalFileName: img.originalFileName,
               },
             );
-            const imageUrl = rawUrl.startsWith('http') ? rawUrl : `${cdnUrl}/${rawUrl}`;
+            const imageUrl = resolveMediaDeliveryUrl(rawUrl);
+            if (!imageUrl) return [];
             return [
               {
                 id: img.id,

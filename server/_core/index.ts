@@ -19,6 +19,7 @@ import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliverySch
 import sitemapRouter from '../routes/sitemap';
 import agentOnboardingRouter from '../routes/agentOnboarding';
 import { ENV } from './env';
+import { registerLocalMediaRoutes } from './localMediaRoutes';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -160,6 +161,7 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+  registerLocalMediaRoutes(app);
 
   app.use((req, res, next) => {
     const headerRequestId = req.headers['x-request-id'];

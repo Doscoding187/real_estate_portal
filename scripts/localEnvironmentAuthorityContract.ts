@@ -72,7 +72,16 @@ const group = (
 
 const CONTRACT_GROUPS: readonly ContractGroup[] = [
   group(
-    ['NODE_ENV', 'APP_ENV', 'VITE_APP_ENV', 'VITE_DEPLOY_ENV', 'VITE_APP_ID', 'PORT'],
+    [
+      'NODE_ENV',
+      'APP_ENV',
+      'VITE_APP_ENV',
+      'VITE_DEPLOY_ENV',
+      'VITE_APP_ID',
+      'PORT',
+      'MEDIA_STORAGE_ADAPTER',
+      'MEDIA_LOCAL_STORAGE_DIR',
+    ],
     'TRACKED_SAFE_DEFAULT',
     'Tracked templates plus runtime mode authority',
     false,

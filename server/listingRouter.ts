@@ -63,6 +63,13 @@ import {
   normalizePropertyPresentation,
   type PresentationMediaLike,
 } from '../shared/property-presentation';
+import {
+  buildLocalMediaPublicUrl,
+  buildLocalMediaUploadUrl,
+  createLocalMediaKey,
+  getMediaStorageAdapter,
+  resolveMediaDeliveryUrl,
+} from './_core/mediaStorage';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -1008,8 +1015,6 @@ export const listingRouter = router({
 
       // Transform media to include full URLs
       // Frontend expects 'url' field, but database has 'originalUrl'
-      const cdnBaseUrl =
-        ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
       const media = rawMedia.map(m => {
         const presentation = normalizePropertyPresentation(
           (listing.propertyDetails as any)?.propertyPresentation,
@@ -1019,12 +1024,8 @@ export const listingRouter = router({
         );
         return {
           ...m,
-          url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
-          thumbnail: m.thumbnailUrl
-            ? m.thumbnailUrl.startsWith('http')
-              ? m.thumbnailUrl
-              : `${cdnBaseUrl}/${m.thumbnailUrl}`
-            : null,
+          url: resolveMediaDeliveryUrl(m.originalUrl),
+          thumbnail: resolveMediaDeliveryUrl(m.thumbnailUrl),
           presentationKind:
             descriptor?.kind ||
             (m.mediaType === 'floorplan'
@@ -1229,22 +1230,35 @@ export const listingRouter = router({
           }
         }
 
-        // Import the S3 upload service
-        const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
-
-        // Generate presigned URL for S3
         const storageScope = input.listingId?.toString() || `draft-${user.id}`;
+        if (getMediaStorageAdapter() === 'local') {
+          const key = createLocalMediaKey(input.filename, storageScope);
+          const uploadToken = createListingMediaUploadToken({
+            key,
+            mediaType: input.type,
+            contentType: input.contentType,
+            fileName: input.filename,
+            userId: user.id,
+            listingId: input.listingId ?? null,
+          });
+
+          return {
+            uploadUrl: buildLocalMediaUploadUrl(uploadToken),
+            mediaId: key,
+            publicUrl: buildLocalMediaPublicUrl(key),
+            uploadToken,
+          };
+        }
+
+        // Import the S3 upload service only for the explicitly selected S3 adapter.
+        const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
         const result = await generatePresignedUploadUrl(
           input.filename,
           input.contentType,
           storageScope,
         );
 
-        // Build the public CDN URL (CloudFront preferred)
-        const { ENV } = await import('./_core/env');
-        const cdnUrl =
-          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-        const publicUrl = `${cdnUrl}/${result.key}`;
+        const publicUrl = resolveMediaDeliveryUrl(result.key);
         const uploadToken = createListingMediaUploadToken({
           key: result.key,
           mediaType: input.type,
@@ -1257,7 +1271,7 @@ export const listingRouter = router({
         return {
           uploadUrl: result.uploadUrl,
           mediaId: result.key, // Use the S3 key as media ID
-          publicUrl,
+          publicUrl: publicUrl || result.key,
           uploadToken,
         };
       } catch (error) {

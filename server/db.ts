@@ -100,6 +100,7 @@ import {
   getSafePropertyPresentationVirtualTour,
   summarizePropertyPresentation,
 } from '../shared/property-presentation';
+import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -2435,16 +2436,8 @@ export async function getUserListings(
         .where(eq(listingMedia.listingId, listing.id))
         .orderBy(listingMedia.displayOrder);
 
-      const cdnUrl =
-        ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
       const primaryMedia = getPrimaryListingImage(media);
-      const primaryImage = primaryMedia
-        ? primaryMedia.originalUrl?.startsWith('http')
-          ? primaryMedia.originalUrl
-          : primaryMedia.originalUrl
-            ? `${cdnUrl}/${primaryMedia.originalUrl}`
-            : null
-        : null;
+      const primaryImage = primaryMedia ? resolveMediaDeliveryUrl(primaryMedia.originalUrl) : null;
 
       const propertyDetails = listing.propertyDetails || {};
       const pricing: Record<string, unknown> = {
@@ -3688,18 +3681,8 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
         },
       );
 
-      let url = rawUrl;
-      if (!url.startsWith('http')) {
-        let cdn = process.env.CLOUDFRONT_URL;
-        const bucket = process.env.S3_BUCKET_NAME;
-        const region = process.env.AWS_REGION || 'us-east-1';
-        if (cdn) {
-          cdn = cdn.replace(/^https?:\/\//, '').replace(/\/$/, '');
-          url = `https://${cdn}/${url}`;
-        } else if (bucket) {
-          url = `https://${bucket}.s3.${region}.amazonaws.com/${url}`;
-        }
-      }
+      const url = resolveMediaDeliveryUrl(rawUrl);
+      if (!url) return null;
 
       return {
         id: item.id,
