@@ -433,6 +433,47 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
         brandProfileId: Number(source.developerBrandProfileId),
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT', message: 'SUPERSESSION_REVERSAL_REQUIRED' });
+
+    const relationshipBeforeRepublish = await readRelationship(Number(verified.id));
+    await developmentService.unpublishDevelopment(pair.replacementId, pair.developerUserId);
+    expect(await readDevelopment(pair.sourceId)).toMatchObject({ isPublished: 0 });
+    expect(await readDevelopment(pair.replacementId)).toMatchObject({ isPublished: 0 });
+    expect(await developmentService.getPublicDevelopment(pair.sourceId)).toBeNull();
+    expect(await developmentService.getPublicDevelopment(pair.replacementId)).toBeNull();
+
+    const submitted = await developmentService.publishDevelopment(
+      pair.replacementId,
+      pair.developerUserId,
+    );
+    expect(submitted).toMatchObject({ approvalStatus: 'pending', isPublished: 0 });
+    await developmentService.approveDevelopment(pair.replacementId, pair.superAdminId);
+
+    expect(await readDevelopment(pair.replacementId)).toMatchObject({
+      approvalStatus: 'approved',
+      isPublished: 1,
+    });
+    expect(await developmentService.getPublicDevelopment(pair.sourceId)).toBeNull();
+    expect(await developmentService.getPublicDevelopment(pair.replacementId)).toMatchObject({
+      id: pair.replacementId,
+      isPublished: 1,
+    });
+    expect(
+      await resolveActiveDevelopmentSupersessionRedirect(activated.sourcePublicRootPath!),
+    ).toMatchObject({
+      replacementDevelopmentId: pair.replacementId,
+      targetPath: `/development/s2-replacement-activation`,
+    });
+
+    expect(await readRelationship(Number(verified.id))).toMatchObject({
+      id: relationshipBeforeRepublish.id,
+      status: 'active',
+      verificationNote: relationshipBeforeRepublish.verificationNote,
+      verifiedByActorId: relationshipBeforeRepublish.verifiedByActorId,
+      verifiedAt: relationshipBeforeRepublish.verifiedAt,
+      activatedByActorId: relationshipBeforeRepublish.activatedByActorId,
+      activatedAt: relationshipBeforeRepublish.activatedAt,
+      sourcePublicRootPath: relationshipBeforeRepublish.sourcePublicRootPath,
+    });
   });
 
   it('redirects by the reserved exact source path and follows replacement slug changes', async () => {

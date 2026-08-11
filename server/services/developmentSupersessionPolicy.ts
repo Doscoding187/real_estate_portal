@@ -58,6 +58,10 @@ export async function assertDevelopmentPublicTransitionAllowed(
       });
     }
 
+    if (row.status === 'active' && Number(row.replacementDevelopmentId) === developmentId) {
+      continue;
+    }
+
     throw new TRPCError({
       code: 'CONFLICT',
       message: SUPERSESSION_ACTIVATION_REQUIRED,
