@@ -45,6 +45,7 @@ import { calculateListingReadiness } from '@/lib/readiness';
 import { buildCanonicalCorePropertyDetails } from '@/../../shared/core-property-information';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { buildListingWizardSubmitPayload } from '@/lib/listingWizardSubmitMapper';
+import { LISTING_MEDIA_TYPES } from '@/../../shared/listing-media';
 import { buildPricingContract } from '@/../../shared/pricing-contract';
 
 const ListingWizard: React.FC = () => {
@@ -145,7 +146,13 @@ const ListingWizard: React.FC = () => {
       console.log('Populating wizard with existing listing:', existingListing);
 
       const listing = (existingListing as any).property || existingListing;
-      const listingMedia = (existingListing as any).images || (listing as any).media || [];
+      const listingMedia = (
+        Array.isArray((existingListing as any).media) && (existingListing as any).media.length > 0
+          ? (existingListing as any).media
+          : Array.isArray((listing as any).media) && (listing as any).media.length > 0
+            ? (listing as any).media
+            : (existingListing as any).images || []
+      ) as any[];
 
       // Reset store first to clear any drafts
       store.reset();
@@ -165,17 +172,22 @@ const ListingWizard: React.FC = () => {
         pricing.monthlyRent = Number(sourcePricing.monthlyRent);
       if (sourcePricing.deposit !== null && sourcePricing.deposit !== undefined)
         pricing.deposit = Number(sourcePricing.deposit);
-      if (sourcePricing.transferCostEstimate !== null && sourcePricing.transferCostEstimate !== undefined)
+      if (
+        sourcePricing.transferCostEstimate !== null &&
+        sourcePricing.transferCostEstimate !== undefined
+      )
         pricing.transferCostEstimate = Number(sourcePricing.transferCostEstimate);
       if (sourcePricing.startingBid !== null && sourcePricing.startingBid !== undefined)
         pricing.startingBid = Number(sourcePricing.startingBid);
       if (sourcePricing.reservePrice !== null && sourcePricing.reservePrice !== undefined)
         pricing.reservePrice = Number(sourcePricing.reservePrice);
       if (sourcePricing.leaseTerms) pricing.leaseTerms = sourcePricing.leaseTerms;
-      if (sourcePricing.availableFrom) pricing.availableFrom = new Date(sourcePricing.availableFrom);
+      if (sourcePricing.availableFrom)
+        pricing.availableFrom = new Date(sourcePricing.availableFrom);
       if (sourcePricing.utilitiesIncluded !== undefined)
         pricing.utilitiesIncluded = Boolean(sourcePricing.utilitiesIncluded);
-      if (sourcePricing.auctionDateTime) pricing.auctionDateTime = new Date(sourcePricing.auctionDateTime);
+      if (sourcePricing.auctionDateTime)
+        pricing.auctionDateTime = new Date(sourcePricing.auctionDateTime);
       if (sourcePricing.auctionTermsDocumentUrl)
         pricing.auctionTermsDocumentUrl = sourcePricing.auctionTermsDocumentUrl;
       if (sourcePricing.negotiable !== undefined)
@@ -211,8 +223,8 @@ const ListingWizard: React.FC = () => {
       // Set location
       store.setLocation({
         address: listing.address || '',
-        latitude: Number(listing.latitude),
-        longitude: Number(listing.longitude),
+        latitude: listing.latitude == null ? null : Number(listing.latitude),
+        longitude: listing.longitude == null ? null : Number(listing.longitude),
         city: listing.city,
         suburb: listing.suburb || '',
         province: listing.province,
@@ -236,18 +248,32 @@ const ListingWizard: React.FC = () => {
         // This might be tricky if store expects File objects for new uploads
         // But for existing ones, it should handle URL-based media
         listingMedia.forEach((m: any) => {
+          const url = m.url || m.processedUrl || m.previewUrl || m.originalUrl || m.imageUrl;
+          const type = LISTING_MEDIA_TYPES.includes(m.mediaType) ? m.mediaType : 'image';
+          if (!url) return;
           store.addMedia({
             id: `existing:${m.id}`,
             file: null as any, // No file object for existing media
-            preview: m.url || m.originalUrl || m.imageUrl,
-            type: m.mediaType,
-            progress: 100,
+            url,
+            type,
+            thumbnailUrl: m.thumbnailUrl || m.thumbnail || undefined,
+            previewUrl: m.previewUrl || undefined,
+            fileName: m.originalFileName || m.fileName || undefined,
+            fileSize: m.originalFileSize || m.fileSize || undefined,
+            width: m.width || undefined,
+            height: m.height || undefined,
+            duration: m.duration || undefined,
+            orientation: m.orientation || undefined,
+            processingStatus: m.processingStatus || 'completed',
             displayOrder: m.displayOrder,
             isPrimary: Boolean(m.isPrimary),
-            description: '',
           });
 
-          if (m.isPrimary) {
+          if (
+            m.isPrimary &&
+            type === 'image' &&
+            (m.processingStatus || 'completed') === 'completed'
+          ) {
             store.setMainMedia(`existing:${m.id}`);
           }
         });

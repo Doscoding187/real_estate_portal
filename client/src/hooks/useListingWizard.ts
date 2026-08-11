@@ -23,14 +23,17 @@ import {
   retainCorePropertyInformationForType,
   validateCorePropertyInformation,
 } from '../../../shared/core-property-information';
-import {
-  buildFeaturesContextFromWizardState,
-} from '../../../shared/features-context';
+import { buildFeaturesContextFromWizardState } from '../../../shared/features-context';
 import { validatePricingContract } from '../../../shared/pricing-contract';
 import {
   coordinatePairSchema,
   validateManualLocationEvidence,
 } from '../../../shared/location-contract';
+import {
+  getPrimaryListingImage,
+  isCompletedListingImage,
+  normalizeListingMediaPrimary,
+} from '../../../shared/listing-media';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
@@ -225,7 +228,7 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
       return getLocationValidationIssues(state).length === 0;
     }
     case 7:
-      return state.media.length > 0 && Boolean(state.mainMediaId);
+      return Boolean(getPrimaryListingImage(state.media, state.mainMediaId));
     default:
       return false;
   }
@@ -443,8 +446,13 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       // Step 5: Media
       addMedia: media => {
         const currentMedia = get().media;
+        const normalized = normalizeListingMediaPrimary(
+          [...currentMedia, { ...media, displayOrder: currentMedia.length }],
+          get().mainMediaId,
+        );
         set({
-          media: [...currentMedia, { ...media, displayOrder: currentMedia.length }],
+          media: normalized.media as MediaFile[],
+          mainMediaId: normalized.primaryId,
         });
       },
 
@@ -456,13 +464,15 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           ...m,
           displayOrder: i,
         }));
-        set({ media: reorderedMedia });
+        const normalized = normalizeListingMediaPrimary(reorderedMedia, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       updateMedia: (index, updates) => {
         const currentMedia = get().media;
         const newMedia = currentMedia.map((m, i) => (i === index ? { ...m, ...updates } : m));
-        set({ media: newMedia });
+        const normalized = normalizeListingMediaPrimary(newMedia, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       reorderMedia: (fromIndex, toIndex) => {
@@ -477,28 +487,23 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           displayOrder: i,
         }));
 
-        set({ media: reorderedMedia });
+        const normalized = normalizeListingMediaPrimary(reorderedMedia, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       setMedia: media => {
-        set({ media });
+        const normalized = normalizeListingMediaPrimary(media, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       setMainMedia: mediaId => {
         const media = get().media;
         const mainMedia = media.find(m => m.id === mediaId);
 
-        if (mainMedia) {
+        if (mainMedia && isCompletedListingImage(mainMedia)) {
           // Update all media to mark only one as primary
-          const updatedMedia = media.map(m => ({
-            ...m,
-            isPrimary: m.id === mediaId,
-          }));
-
-          set({
-            media: updatedMedia,
-            mainMediaId: mediaId,
-          });
+          const normalized = normalizeListingMediaPrimary(media, mediaId);
+          set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
         }
       },
 
@@ -607,11 +612,12 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
         if (state.currentStep >= 8) {
           // Step 8 is Media Upload - validate media requirements
-          if (state.media.length === 0) {
-            errors.push({ field: 'media', message: 'Please upload at least one image or video' });
-          }
-          if (!state.mainMediaId) {
-            errors.push({ field: 'mainMedia', message: 'Please select a main media item' });
+          if (!getPrimaryListingImage(state.media, state.mainMediaId)) {
+            errors.push({ field: 'media', message: 'Please upload at least one completed image' });
+            errors.push({
+              field: 'mainMedia',
+              message: 'Please select a completed image as the main media',
+            });
           }
         }
 

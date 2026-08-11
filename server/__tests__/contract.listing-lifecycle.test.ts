@@ -16,24 +16,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockDb, mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
   mockDb: {
-      getListingById: vi.fn(),
-      createListing: vi.fn(),
-      updateListing: vi.fn(),
-      submitListingForReview: vi.fn(),
-      approveListing: vi.fn(),
-      rejectListing: vi.fn(),
-      archiveListing: vi.fn(),
-      deleteListing: vi.fn(),
-      getListingMedia: vi.fn(),
-      replaceListingMedia: vi.fn(),
-      getUserListings: vi.fn(),
-      getListingAnalytics: vi.fn(),
-      getAgentById: vi.fn(),
-      getAgentByUserId: vi.fn(),
-      getUserById: vi.fn(),
-      getApprovalQueue: vi.fn(),
-      syncPublishedListingMediaToPropertyMirror: vi.fn(),
-      getDb: vi.fn(),
+    getListingById: vi.fn(),
+    createListing: vi.fn(),
+    updateListing: vi.fn(),
+    submitListingForReview: vi.fn(),
+    approveListing: vi.fn(),
+    rejectListing: vi.fn(),
+    archiveListing: vi.fn(),
+    deleteListing: vi.fn(),
+    getListingMedia: vi.fn(),
+    replaceListingMedia: vi.fn(),
+    getUserListings: vi.fn(),
+    getListingAnalytics: vi.fn(),
+    getAgentById: vi.fn(),
+    getAgentByUserId: vi.fn(),
+    getUserById: vi.fn(),
+    getApprovalQueue: vi.fn(),
+    syncPublishedListingMediaToPropertyMirror: vi.fn(),
+    getDb: vi.fn(),
   },
   mockAssertListingPublicationEntitled: vi.fn(),
 }));
@@ -48,7 +48,10 @@ vi.mock('../services/agentOsEventService', () => ({
 vi.mock('../services/listingPublicationEntitlementService', () => ({
   assertListingPublicationEntitled: mockAssertListingPublicationEntitled,
   ListingPublicationEntitlementError: class ListingPublicationEntitlementError extends Error {
-    constructor(public readonly reason: string, message: string) {
+    constructor(
+      public readonly reason: string,
+      message: string,
+    ) {
       super(message);
     }
   },
@@ -79,6 +82,7 @@ vi.mock('../services/locationPagesServiceEnhanced', () => ({
 
 import { appRouter } from '../routers';
 import { ListingPublicationEntitlementError } from '../services/listingPublicationEntitlementService';
+import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
 
 // ---------------------------------------------------------------------------
 // Shared test helpers
@@ -521,10 +525,20 @@ describe('listing lifecycle — canonical identity contract', () => {
     const LISTING_ID = 8101;
     const media = [
       {
-        id: 'uploads/listings/8101/walkthrough.mp4',
+        id: 'properties/8101/walkthrough.mp4',
         mediaType: 'video' as const,
         fileName: 'walkthrough.mp4',
         processingStatus: 'completed' as const,
+        uploadToken: createListingMediaUploadToken({
+          key: 'properties/8101/walkthrough.mp4',
+          mediaType: 'video',
+          contentType: 'video/mp4',
+          fileName: 'walkthrough.mp4',
+          fileSize: 1024,
+          userId: ownerUser.id,
+          listingId: LISTING_ID,
+          confirmed: true,
+        }),
       },
       {
         id: 'existing:701',
@@ -543,7 +557,14 @@ describe('listing lifecycle — canonical identity contract', () => {
       media,
     });
 
-    expect(mockDb.replaceListingMedia).toHaveBeenCalledWith(LISTING_ID, media, media[0].id);
+    expect(mockDb.replaceListingMedia).toHaveBeenCalledWith(
+      LISTING_ID,
+      [
+        { ...media[0], fileSize: 1024, uploadToken: null },
+        { ...media[1], uploadToken: null },
+      ],
+      media[0].id,
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -622,7 +643,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   // -----------------------------------------------------------------------
   it.each(['sell', 'rent', 'auction'] as const)(
     'action "%s" follows same lifecycle through submit',
-    async (action) => {
+    async action => {
       const caller = makeCaller(ownerUser);
       const LISTING_ID = 12001;
 
@@ -651,9 +672,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   it('approve rejects non-super-admin', async () => {
     const caller = makeCaller(ownerUser); // agent, not admin
 
-    await expect(
-      caller.listing.approve({ listingId: 13001 }),
-    ).rejects.toThrow();
+    await expect(caller.listing.approve({ listingId: 13001 })).rejects.toThrow();
   });
 
   it('approve returns listing lifecycle-state errors as BAD_REQUEST', async () => {
@@ -716,9 +735,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   it('reject rejects non-super-admin', async () => {
     const caller = makeCaller(ownerUser); // agent, not admin
 
-    await expect(
-      caller.listing.reject({ listingId: 14001 }),
-    ).rejects.toThrow();
+    await expect(caller.listing.reject({ listingId: 14001 })).rejects.toThrow();
   });
 
   it('reject returns listing lifecycle-state errors as BAD_REQUEST', async () => {

@@ -142,7 +142,11 @@ const buildSubmittedPropertyDetails = (
       listingActionToIntent(state.action),
       state.propertyType,
     ),
-    ...buildCanonicalCorePropertyDetails(state.propertyType, state.propertyDetails, state.basicInfo),
+    ...buildCanonicalCorePropertyDetails(
+      state.propertyType,
+      state.propertyDetails,
+      state.basicInfo,
+    ),
   };
 
   return normalizePropertyDetailsForPublicContract(propertyDetails, state.action, pricing);
@@ -162,6 +166,7 @@ const buildTypedMediaManifest = (
         mediaType: item.type,
       };
 
+      if (item.uploadToken !== undefined) manifestItem.uploadToken = item.uploadToken;
       if (item.fileName !== undefined) manifestItem.fileName = item.fileName;
       if (item.fileSize !== undefined) manifestItem.fileSize = item.fileSize;
       if (item.thumbnailUrl !== undefined) manifestItem.thumbnailUrl = item.thumbnailUrl;
@@ -170,7 +175,8 @@ const buildTypedMediaManifest = (
       if (item.height !== undefined) manifestItem.height = item.height;
       if (item.duration !== undefined) manifestItem.duration = item.duration;
       if (item.orientation !== undefined) manifestItem.orientation = item.orientation;
-      if (item.processingStatus !== undefined) manifestItem.processingStatus = item.processingStatus;
+      if (item.processingStatus !== undefined)
+        manifestItem.processingStatus = item.processingStatus;
 
       return manifestItem;
     })
@@ -183,7 +189,8 @@ export const buildListingWizardSubmitPayload = (
   const mediaIds = state.media.map(getMediaId);
   const media = buildTypedMediaManifest(state.media);
   const mainMediaId =
-    state.mainMediaId?.toString() || (state.media.length > 0 ? getMediaId(state.media[0]) : undefined);
+    state.mainMediaId?.toString() ||
+    (state.media.length > 0 ? getMediaId(state.media[0]) : undefined);
 
   return {
     action: state.action!,

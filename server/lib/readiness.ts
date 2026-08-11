@@ -1,5 +1,6 @@
 import { getPrimaryPrice } from '../../shared/pricing-contract';
 import { validateManualLocationEvidence } from '../../shared/location-contract';
+import { getCompletedListingImages } from '../../shared/listing-media';
 
 export type ReadinessResult = {
   score: number;
@@ -51,7 +52,8 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
     if (authoredLocation.locationConfirmationState !== 'confirmed') {
       missing.location.push('Confirm Location');
     }
-    const onlyOneCoordinate = (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
+    const onlyOneCoordinate =
+      (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
     if (onlyOneCoordinate || (hasCoordinates && locationIssues.length > 0)) {
       missing.location.push('Map coordinates');
     }
@@ -67,20 +69,23 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
     missing.pricing.push('Price');
   }
 
-  // 3. Media (25%)
-  // Ensure listing.images is defined and has length. Assuming it might be a JSON string or array.
-  // We'll simplistic check here, can be refined based on actual data structure passing in.
-  let imageCount = 0;
-  if (Array.isArray(listing.images)) {
-    imageCount = listing.images.length;
-  } else if (typeof listing.images === 'string') {
+  // 3. Media (25%) — only completed qualifying images count. Videos,
+  // documents and failed/incomplete uploads never satisfy image readiness.
+  let mediaItems = Array.isArray(listing.media) ? listing.media : [];
+  if (mediaItems.length === 0 && Array.isArray(listing.images)) {
+    mediaItems = listing.images.map((url: unknown) => ({ url, type: 'image' as const }));
+  }
+  if (mediaItems.length === 0 && typeof listing.images === 'string') {
     try {
       const parsed = JSON.parse(listing.images);
-      if (Array.isArray(parsed)) imageCount = parsed.length;
-    } catch (e) {
+      if (Array.isArray(parsed)) {
+        mediaItems = parsed.map((url: unknown) => ({ url, type: 'image' as const }));
+      }
+    } catch (_error) {
       // invalid json
     }
   }
+  const imageCount = getCompletedListingImages(mediaItems).length;
 
   // If there's a mainMediaId, that counts as well effectively
   if (imageCount >= 5) {

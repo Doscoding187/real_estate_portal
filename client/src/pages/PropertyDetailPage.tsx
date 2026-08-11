@@ -38,6 +38,10 @@ import {
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
+import {
+  PropertyMediaTypeSection,
+  type PublicPropertyMedia,
+} from '@/components/property/PropertyMediaTypeSection';
 import { PropertyServiceActions } from '@/components/property/PropertyServiceActions';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
@@ -82,6 +86,7 @@ interface PropertyImageLike {
   url?: string;
   isPrimary?: number;
   displayOrder?: number;
+  mediaType?: 'image' | 'video' | 'floorplan' | 'pdf';
 }
 
 interface PropertySpecs {
@@ -167,12 +172,14 @@ interface PropertyPayload {
   erfSizeM2?: number | string | null;
   landAreaM2?: number | string | null;
   mainImage?: string;
+  media?: PublicPropertyMedia[];
   agent?: ContactIdentityLite;
 }
 
 interface PropertyDetailResponse {
   property: PropertyPayload;
   images?: PropertyImageLike[];
+  media?: PublicPropertyMedia[];
   agent?: ContactIdentityLite;
 }
 
@@ -299,7 +306,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     );
   }
 
-  const { property, images } = data as PropertyDetailResponse;
+  const { property, images, media } = data as PropertyDetailResponse;
   const isFavorite = favorites.some(favorite => Number(favorite.propertyId) === propertyId);
   const agent = property.agent || (data as PropertyDetailResponse).agent;
 
@@ -491,9 +498,29 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const propertyImages = (Array.isArray(images) ? images : []).filter(
     (image): image is PropertyImageLike =>
       Boolean(
-        (typeof image?.imageUrl === 'string' && image.imageUrl) ||
-        (typeof image?.url === 'string' && image.url),
+        (!image.mediaType || image.mediaType === 'image') &&
+        ((typeof image?.imageUrl === 'string' && image.imageUrl) ||
+          (typeof image?.url === 'string' && image.url)),
       ),
+  );
+  const propertyMedia: PublicPropertyMedia[] = (
+    Array.isArray(media)
+      ? media
+      : Array.isArray(property.media)
+        ? property.media
+        : propertyImages.map(image => ({
+            id: image.id,
+            url: image.imageUrl || image.url || '',
+            mediaType: 'image' as const,
+            displayOrder: image.displayOrder,
+          }))
+  ).filter((item): item is PublicPropertyMedia =>
+    Boolean(
+      item &&
+      typeof item.url === 'string' &&
+      item.url &&
+      ['image', 'video', 'floorplan', 'pdf'].includes(item.mediaType),
+    ),
   );
   const propertyImageUrls = propertyImages
     .map(image =>
@@ -889,6 +916,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           {/* Left Column - Image Gallery */}
           <div className="lg:col-span-7">
             <PropertyImageGallery images={propertyGalleryImages} propertyTitle={property.title} />
+            <PropertyMediaTypeSection media={propertyMedia} />
           </div>
 
           {/* Right Column - Buyer Decision Panel */}
@@ -1352,7 +1380,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
 
             {/* 2.3 Canonical Features & Context */}
             {propertyFeatureGroups.length > 0 ? (
-              <div id={featureSpecItems.length === 0 ? 'features' : undefined} className="space-y-4">
+              <div
+                id={featureSpecItems.length === 0 ? 'features' : undefined}
+                className="space-y-4"
+              >
                 {propertyFeatureGroups.map(group => {
                   const GroupIcon =
                     group.key === 'security'
@@ -1439,7 +1470,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 </CardContent>
               </Card>
             ) : highlights.length > 0 ? (
-              <Card id={featureSpecItems.length === 0 ? 'features' : undefined} className="border-slate-200 shadow-sm">
+              <Card
+                id={featureSpecItems.length === 0 ? 'features' : undefined}
+                className="border-slate-200 shadow-sm"
+              >
                 <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
                     Property Features &amp; Specifications
@@ -1450,7 +1484,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                     {highlights.map((amenity: string, index: number) => {
                       const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                       return (
-                        <div key={index} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5"
+                        >
                           <IconComponent className="h-5 w-5 text-blue-600" />
                           <span className="font-medium capitalize text-slate-700">{amenity}</span>
                         </div>

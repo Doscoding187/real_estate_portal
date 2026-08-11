@@ -9,6 +9,7 @@ import type { MediaFile } from '@/../../shared/listing-types';
 import type { MediaItem } from '@/components/media/SortableMediaGrid';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getPrimaryListingImage } from '@/../../shared/listing-media';
 
 const MediaUploadStep: React.FC = () => {
   const store = useListingWizardStore();
@@ -18,6 +19,7 @@ const MediaUploadStep: React.FC = () => {
 
   // TRPC mutation for media upload
   const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
+  const confirmMediaUploadMutation = trpc.listing.confirmMediaUpload.useMutation();
 
   // Handle file upload
   const handleUpload = useCallback(
@@ -44,7 +46,8 @@ const MediaUploadStep: React.FC = () => {
         try {
           // Determine media type
           const isImage = file.type.startsWith('image/');
-          const mediaType = isImage ? 'image' : 'video';
+          const isPdf = file.type === 'application/pdf';
+          const mediaType = isPdf ? 'pdf' : isImage ? 'image' : 'video';
 
           // Update progress: requesting upload URL
           setUploads(prev => prev.map(u => (u.id === uploadId ? { ...u, progress: 10 } : u)));
@@ -101,6 +104,13 @@ const MediaUploadStep: React.FC = () => {
             xhr.send(file);
           });
 
+          // A successful browser PUT is not yet listing authority. The server
+          // verifies the object and returns a confirmation token bound to this
+          // user/upload before the item enters wizard state.
+          const confirmation = await confirmMediaUploadMutation.mutateAsync({
+            uploadToken: uploadData.uploadToken,
+          });
+
           // Update progress: finalizing
           setUploads(prev => prev.map(u => (u.id === uploadId ? { ...u, progress: 95 } : u)));
 
@@ -109,20 +119,18 @@ const MediaUploadStep: React.FC = () => {
             id: uploadData.mediaId,
             url: uploadData.publicUrl,
             type: mediaType,
+            uploadToken: confirmation.uploadToken,
             fileName: file.name,
-            fileSize: file.size,
+            fileSize: confirmation.fileSize ?? file.size,
             displayOrder: existingCount + i,
-            isPrimary: existingCount === 0 && i === 0, // First uploaded file only
+            isPrimary:
+              mediaType === 'image' &&
+              getPrimaryListingImage(useListingWizardStore.getState().media as any[]) === null,
             processingStatus: 'completed',
           };
 
           // Add to store
           store.addMedia(mediaFile);
-
-          // Set as main media if first upload
-          if (existingCount === 0 && i === 0) {
-            store.setMainMedia(uploadData.mediaId as any);
-          }
 
           // Mark as completed
           setUploads(prev =>
@@ -142,7 +150,7 @@ const MediaUploadStep: React.FC = () => {
         }
       }
     },
-    [store, uploadMediaMutation],
+    [store, uploadMediaMutation, confirmMediaUploadMutation],
   );
 
   const MAX_FILES = 30;
@@ -168,8 +176,9 @@ const MediaUploadStep: React.FC = () => {
       const validFiles = limitedFiles.filter(file => {
         const isImage = file.type.startsWith('image/');
         const isVideo = file.type.startsWith('video/');
-        if (!isImage && !isVideo) {
-          toast.error(`Unsupported file type: ${file.name}`);
+        const isPdf = file.type === 'application/pdf';
+        if (!isImage && !isVideo && !isPdf) {
+          toast.error(`Unsupported media type: ${file.name}`);
           return false;
         }
 
@@ -326,7 +335,7 @@ const MediaUploadStep: React.FC = () => {
             )}
           />
           <p className="text-base font-medium text-slate-800">
-            {isDragOver ? 'Drop images/videos here' : 'Click to upload or drag and drop'}
+            {isDragOver ? 'Drop media here' : 'Click to upload or drag and drop'}
           </p>
           <p className="text-sm text-slate-500 mt-1">
             Max {MAX_FILES} files • {MAX_IMAGE_MB}MB per image • {MAX_VIDEO_MB}MB per video
@@ -337,7 +346,7 @@ const MediaUploadStep: React.FC = () => {
             type="file"
             className="hidden"
             multiple
-            accept="image/*,video/*"
+            accept="image/*,video/*,application/pdf"
             onChange={e => {
               validateAndUpload(Array.from(e.target.files || []));
               e.currentTarget.value = '';

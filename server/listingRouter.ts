@@ -46,12 +46,19 @@ import {
   getPrimaryPrice,
   validatePricingContract,
 } from '../shared/pricing-contract';
+import { getPrimaryListingImage } from '../shared/listing-media';
 import {
   LOCATION_CONFIRMATION_STATES,
   LOCATION_COORDINATE_SOURCES,
   PUBLIC_LOCATION_PRECISIONS,
   privateAddressSchema,
 } from '../shared/location-contract';
+import {
+  createListingMediaUploadToken,
+  confirmListingMediaUploadToken,
+  isExistingListingMediaToken,
+  verifyListingMediaUploadToken,
+} from './services/listingMediaAuthority';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -222,6 +229,7 @@ const listingMediaInputSchema = z.object({
   // listing-media record as though it were a new upload.
   id: z.string().min(1),
   mediaType: z.enum(['image', 'video', 'floorplan', 'pdf']),
+  uploadToken: z.string().min(1).optional().nullable(),
   fileName: z.string().max(255).optional().nullable(),
   fileSize: z.number().int().nonnegative().optional().nullable(),
   thumbnailUrl: z.string().optional().nullable(),
@@ -232,6 +240,88 @@ const listingMediaInputSchema = z.object({
   orientation: z.enum(['vertical', 'horizontal', 'square']).optional().nullable(),
   processingStatus: z.enum(['pending', 'processing', 'completed', 'failed']).optional().nullable(),
 });
+
+type ListingMediaInput = z.infer<typeof listingMediaInputSchema>;
+
+/**
+ * Convert client media references into a server-authorized manifest. Existing
+ * rows are represented by listing-scoped `existing:<id>` tokens and are
+ * checked again by replaceListingMedia. New storage keys must carry a
+ * server-issued, confirmed upload token bound to the authenticated user.
+ */
+async function authorizeListingMediaManifest(
+  media: ListingMediaInput[] | undefined,
+  mediaIds: string[] | undefined,
+  userId: number,
+  listingId?: number,
+): Promise<ListingMediaInput[] | undefined> {
+  if (!media?.length) {
+    if (mediaIds && mediaIds.length > 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Media must be submitted with a confirmed upload manifest.',
+      });
+    }
+    return media;
+  }
+
+  const normalized: ListingMediaInput[] = [];
+  for (const item of media) {
+    if (isExistingListingMediaToken(item.id)) {
+      if (listingId === undefined) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Existing listing media cannot be attached to a new listing.',
+        });
+      }
+      normalized.push({ ...item, uploadToken: null });
+      continue;
+    }
+
+    if (!item.uploadToken) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Every new media item must be uploaded and confirmed before submission.',
+      });
+    }
+
+    let token;
+    try {
+      token = verifyListingMediaUploadToken(item.uploadToken, {
+        userId,
+        key: item.id,
+        mediaType: item.mediaType,
+        requireConfirmed: true,
+      });
+    } catch (error) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: error instanceof Error ? error.message : 'Invalid media upload confirmation.',
+      });
+    }
+
+    if (token.listingId !== null && token.listingId !== listingId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Media upload is bound to a different listing.',
+      });
+    }
+
+    normalized.push({
+      ...item,
+      mediaType: token.mediaType,
+      fileName: token.fileName,
+      fileSize: token.fileSize,
+      // Processing metadata is server-owned for direct uploads. A successful
+      // confirmation is the only state accepted into listing authority.
+      processingStatus: 'completed',
+      // The signed reservation is authorization evidence, not listing data.
+      uploadToken: null,
+    });
+  }
+
+  return normalized;
+}
 
 const createListingSchemaBase = z.object({
   action: listingActionSchema,
@@ -353,18 +443,23 @@ export const listingRouter = router({
 
     try {
       const sellerProspectId = input.sellerProspectId;
-      const sellerProspectConversion = sellerProspectId !== undefined
-        ? await (async () => {
-            const database = await db.getDb();
-            if (!database) {
-              throw new TRPCError({
-                code: 'INTERNAL_SERVER_ERROR',
-                message: 'Database not available',
-              });
-            }
-            return prepareSellerProspectListingConversion(database, requireUser(ctx), sellerProspectId);
-          })()
-        : undefined;
+      const sellerProspectConversion =
+        sellerProspectId !== undefined
+          ? await (async () => {
+              const database = await db.getDb();
+              if (!database) {
+                throw new TRPCError({
+                  code: 'INTERNAL_SERVER_ERROR',
+                  message: 'Database not available',
+                });
+              }
+              return prepareSellerProspectListingConversion(
+                database,
+                requireUser(ctx),
+                sellerProspectId,
+              );
+            })()
+          : undefined;
 
       // Generate slug from title
       const timestamp = Date.now().toString(36);
@@ -374,16 +469,22 @@ export const listingRouter = router({
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') + `-${timestamp}`;
 
-      // The typed manifest preserves video/floorplan/document semantics. Keep
-      // mediaIds as a compatibility fallback for older clients.
-      const media = input.media?.length
-        ? input.media.map((item, index) => ({
+      const authorizedMedia = await authorizeListingMediaManifest(
+        input.media,
+        input.mediaIds,
+        userId,
+      );
+
+      // The typed manifest preserves video/floorplan/document semantics. New
+      // media is accepted only after the upload-token boundary above.
+      const media = authorizedMedia?.length
+        ? authorizedMedia.map((item, index) => ({
             id: item.id,
             url: item.id,
             type: item.mediaType,
             displayOrder: index,
-            isPrimary: input.mainMediaId ? item.id === input.mainMediaId : index === 0,
-            processingStatus: item.processingStatus || 'completed',
+            isPrimary: input.mainMediaId ? item.id === input.mainMediaId : false,
+            processingStatus: 'completed' as const,
             thumbnailUrl: item.thumbnailUrl || null,
             previewUrl: item.previewUrl || null,
             fileName: item.fileName || null,
@@ -393,22 +494,7 @@ export const listingRouter = router({
             duration: item.duration || null,
             orientation: item.orientation || null,
           }))
-        : input.mediaIds.map((id, index) => ({
-            id,
-            url: id,
-            type: 'image' as const,
-            displayOrder: index,
-            isPrimary: input.mainMediaId ? id === input.mainMediaId : index === 0,
-            processingStatus: 'completed' as const,
-            thumbnailUrl: null,
-            previewUrl: null,
-            fileName: null,
-            fileSize: null,
-            width: null,
-            height: null,
-            duration: null,
-            orientation: null,
-          }));
+        : [];
 
       let resolvedLocation;
       try {
@@ -434,7 +520,8 @@ export const listingRouter = router({
               privateAddress: input.location.privateAddress || null,
               coordinatePair,
               coordinateSource: input.location.coordinateSource || null,
-              locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+              locationConfirmationState:
+                input.location.locationConfirmationState || 'needs_confirmation',
               publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
               providerLocationPlaceId: input.location.providerLocationPlaceId || null,
             };
@@ -451,7 +538,8 @@ export const listingRouter = router({
             privateAddress: input.location.privateAddress || null,
             coordinatePair,
             coordinateSource: input.location.coordinateSource || null,
-            locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+            locationConfirmationState:
+              input.location.locationConfirmationState || 'needs_confirmation',
             publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
             providerLocationPlaceId: input.location.providerLocationPlaceId || null,
           };
@@ -607,7 +695,7 @@ export const listingRouter = router({
         const pricingIssues = validatePricingContract(
           input.action ?? listing.action,
           input.pricing ?? (listing.pricing as any),
-          input.propertyDetails ?? ((listing.propertyDetails as any) ?? {}),
+          input.propertyDetails ?? (listing.propertyDetails as any) ?? {},
           {
             mode: 'draft',
             enforceInputShape: input.pricing !== undefined,
@@ -626,13 +714,20 @@ export const listingRouter = router({
         // GUARD: Normalize placeId and validate location_id (if location is being updated)
         const {
           id: _id,
-          media: mediaManifest,
-          mediaIds: _mediaIds,
+          media: rawMediaManifest,
+          mediaIds: rawMediaIds,
           mainMediaId,
           sellerProspectId: _sellerProspectId,
           status: requestedStatus,
           ...listingInput
         } = input;
+
+        const mediaManifest = await authorizeListingMediaManifest(
+          rawMediaManifest,
+          rawMediaIds,
+          userId,
+          input.id,
+        );
 
         // Status changes are lifecycle transitions, not editable listing data.
         // Legacy clients may echo the current status, but cannot promote a
@@ -671,7 +766,10 @@ export const listingRouter = router({
                 throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
               }
               const coordinatePair = parseDraftCoordinates(input.location);
-              console.warn('[ListingRouter] Draft location remains unresolved during update:', error.message);
+              console.warn(
+                '[ListingRouter] Draft location remains unresolved during update:',
+                error.message,
+              );
               resolvedLocation = {
                 provinceId: null,
                 cityId: null,
@@ -679,7 +777,8 @@ export const listingRouter = router({
                 privateAddress: input.location.privateAddress || null,
                 coordinatePair,
                 coordinateSource: input.location.coordinateSource || null,
-                locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+                locationConfirmationState:
+                  input.location.locationConfirmationState || 'needs_confirmation',
                 publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
                 providerLocationPlaceId: input.location.providerLocationPlaceId || null,
               };
@@ -687,7 +786,10 @@ export const listingRouter = router({
               throw error;
             } else {
               const coordinatePair = parseDraftCoordinates(input.location);
-              console.warn('[ListingRouter] Draft location resolver unavailable during update:', error);
+              console.warn(
+                '[ListingRouter] Draft location resolver unavailable during update:',
+                error,
+              );
               resolvedLocation = {
                 provinceId: null,
                 cityId: null,
@@ -695,7 +797,8 @@ export const listingRouter = router({
                 privateAddress: input.location.privateAddress || null,
                 coordinatePair,
                 coordinateSource: input.location.coordinateSource || null,
-                locationConfirmationState: input.location.locationConfirmationState || 'needs_confirmation',
+                locationConfirmationState:
+                  input.location.locationConfirmationState || 'needs_confirmation',
                 publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
                 providerLocationPlaceId: input.location.providerLocationPlaceId || null,
               };
@@ -781,15 +884,9 @@ export const listingRouter = router({
         if (requiresReviewBeforePublicUpdate) {
           await db.submitListingForReview(input.id);
         } else {
-          // Keep already-public mirror media in sync only for edits that do not need review.
-          try {
-            await db.syncPublishedListingMediaToPropertyMirror(input.id);
-          } catch (syncError) {
-            console.warn('[listing.update] Property media mirror sync skipped:', {
-              listingId: input.id,
-              message: syncError instanceof Error ? syncError.message : String(syncError),
-            });
-          }
+          // Keep an already-public mirror deterministic. A failed projection
+          // is a lifecycle error, not a warning that leaves stale public media.
+          await db.syncPublishedListingMediaToPropertyMirror(input.id);
         }
 
         // Recalculate readiness and quality
@@ -827,89 +924,85 @@ export const listingRouter = router({
    * Get listing by ID for private authoring/review workflows.
    * Public property detail reads must go through properties.getById.
    */
-  getById: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ ctx, input }) => {
-      try {
-        console.log('[listing.getById] Fetching listing ID:', input.id);
-        // Fetch listing
-        const listing = await db.getListingById(input.id);
-        console.log(
-          '[listing.getById] Result:',
-          listing ? `Found: ${listing.title}` : 'NOT FOUND',
-        );
-        if (!listing) {
-          return null; // Return null instead of throwing for consistency with properties.getById
-        }
+  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
+    try {
+      console.log('[listing.getById] Fetching listing ID:', input.id);
+      // Fetch listing
+      const listing = await db.getListingById(input.id);
+      console.log('[listing.getById] Result:', listing ? `Found: ${listing.title}` : 'NOT FOUND');
+      if (!listing) {
+        return null; // Return null instead of throwing for consistency with properties.getById
+      }
 
-        const user = requireUser(ctx);
-        const isOwner =
-          Number((listing as any).userId || 0) === user.id ||
-          Number((listing as any).ownerId || 0) === user.id;
-        const isSuperAdmin = user.role === 'super_admin';
+      const user = requireUser(ctx);
+      const isOwner =
+        Number((listing as any).userId || 0) === user.id ||
+        Number((listing as any).ownerId || 0) === user.id;
+      const isSuperAdmin = user.role === 'super_admin';
 
-        if (!isOwner && !isSuperAdmin) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Not authorized to view this listing',
-          });
-        }
-
-        // Fetch media
-        const rawMedia = await db.getListingMedia(input.id);
-
-        // Transform media to include full URLs
-        // Frontend expects 'url' field, but database has 'originalUrl'
-        const cdnBaseUrl =
-          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-        const media = rawMedia.map(m => ({
-          ...m,
-          url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
-          thumbnail: m.thumbnailUrl
-            ? m.thumbnailUrl.startsWith('http')
-              ? m.thumbnailUrl
-              : `${cdnBaseUrl}/${m.thumbnailUrl}`
-            : null,
-        }));
-
-        // Fetch agent if assigned
-        let agent = null;
-        if (listing.agentId) {
-          agent = await db.getAgentById(listing.agentId);
-        }
-
-        // Normalize price field for PropertyDetail compatibility
-        // PropertyDetail expects a single 'price' field
-        const price =
-          getPrimaryPrice(
-            listing.action,
-            listing.pricing as Record<string, unknown>,
-            listing.propertyDetails as Record<string, unknown>,
-          ) || 0;
-
-        // Map listing fields to property-compatible format
-        const propertyCompatibleListing = {
-          ...listing,
-          price, // Add normalized price field
-          listingType: listing.action, // Map action → listingType for compatibility
-          mainImage: media[0]?.url || null, // Add mainImage for cards/previews
-          area: listing.propertyDetails?.size || listing.propertyDetails?.area || 0, // Fallback area
-        };
-
-        return {
-          property: propertyCompatibleListing,
-          images: media,
-          agent,
-        };
-      } catch (error) {
-        console.error('Error fetching listing:', error);
-        if (error instanceof TRPCError) throw error;
+      if (!isOwner && !isSuperAdmin) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch listing',
+          code: 'FORBIDDEN',
+          message: 'Not authorized to view this listing',
         });
       }
-    }),
+
+      // Fetch media
+      const rawMedia = await db.getListingMedia(input.id);
+
+      // Transform media to include full URLs
+      // Frontend expects 'url' field, but database has 'originalUrl'
+      const cdnBaseUrl =
+        ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
+      const media = rawMedia.map(m => ({
+        ...m,
+        url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
+        thumbnail: m.thumbnailUrl
+          ? m.thumbnailUrl.startsWith('http')
+            ? m.thumbnailUrl
+            : `${cdnBaseUrl}/${m.thumbnailUrl}`
+          : null,
+      }));
+      const primaryImage = getPrimaryListingImage(media as any[]);
+
+      // Fetch agent if assigned
+      let agent = null;
+      if (listing.agentId) {
+        agent = await db.getAgentById(listing.agentId);
+      }
+
+      // Normalize price field for PropertyDetail compatibility
+      // PropertyDetail expects a single 'price' field
+      const price =
+        getPrimaryPrice(
+          listing.action,
+          listing.pricing as Record<string, unknown>,
+          listing.propertyDetails as Record<string, unknown>,
+        ) || 0;
+
+      // Map listing fields to property-compatible format
+      const propertyCompatibleListing = {
+        ...listing,
+        price, // Add normalized price field
+        listingType: listing.action, // Map action → listingType for compatibility
+        mainImage: primaryImage?.url || null, // Hero is always a completed image
+        area: listing.propertyDetails?.size || listing.propertyDetails?.area || 0, // Fallback area
+      };
+
+      return {
+        property: propertyCompatibleListing,
+        images: media,
+        agent,
+      };
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+      if (error instanceof TRPCError) throw error;
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch listing',
+      });
+    }
+  }),
 
   /**
    * Get user's listings
@@ -1048,14 +1141,30 @@ export const listingRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        const user = requireUser(ctx);
+        if (input.listingId !== undefined) {
+          const listing = await db.getListingById(input.listingId);
+          const isOwner =
+            listing &&
+            (Number((listing as any).userId || 0) === user.id ||
+              Number((listing as any).ownerId || 0) === user.id);
+          if (!listing || (!isOwner && user.role !== 'super_admin')) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Not authorized to upload media for this listing',
+            });
+          }
+        }
+
         // Import the S3 upload service
         const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
 
         // Generate presigned URL for S3
+        const storageScope = input.listingId?.toString() || `draft-${user.id}`;
         const result = await generatePresignedUploadUrl(
           input.filename,
           input.contentType,
-          input.listingId?.toString() || 'draft',
+          storageScope,
         );
 
         // Build the public CDN URL (CloudFront preferred)
@@ -1063,17 +1172,71 @@ export const listingRouter = router({
         const cdnUrl =
           ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
         const publicUrl = `${cdnUrl}/${result.key}`;
+        const uploadToken = createListingMediaUploadToken({
+          key: result.key,
+          mediaType: input.type,
+          contentType: input.contentType,
+          fileName: input.filename,
+          userId: user.id,
+          listingId: input.listingId ?? null,
+        });
 
         return {
           uploadUrl: result.uploadUrl,
           mediaId: result.key, // Use the S3 key as media ID
           publicUrl,
+          uploadToken,
         };
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        if (
+          error instanceof Error &&
+          /invalid|supported|content type|filename|media type/i.test(error.message)
+        ) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+        }
         console.error('Error generating media upload URL:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to generate upload URL',
+        });
+      }
+    }),
+
+  /**
+   * Finalize a direct upload. The storage HEAD check is the point at which a
+   * presigned reservation becomes a confirmed media reference.
+   */
+  confirmMediaUpload: protectedProcedure
+    .input(z.object({ uploadToken: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      try {
+        const reservation = verifyListingMediaUploadToken(input.uploadToken, {
+          userId: user.id,
+          requireConfirmed: false,
+        });
+        const { assertUploadedMediaObject } = await import('./_core/imageUpload');
+        const verifiedObject = await assertUploadedMediaObject(
+          reservation.key,
+          reservation.contentType,
+        );
+        const uploadToken = confirmListingMediaUploadToken(
+          input.uploadToken,
+          verifiedObject.contentLength,
+        );
+
+        return {
+          uploadToken,
+          mediaId: reservation.key,
+          fileSize: verifiedObject.contentLength,
+          contentType: verifiedObject.contentType || reservation.contentType,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: error instanceof Error ? error.message : 'Unable to confirm media upload.',
         });
       }
     }),
@@ -1241,10 +1404,7 @@ export const listingRouter = router({
             .orderBy(desc(leads.createdAt))
             .limit(input.limit)
             .offset(input.offset),
-          dbInstance
-            .select({ total: count() })
-            .from(leads)
-            .where(eq(leads.propertyId, propertyId)),
+          dbInstance.select({ total: count() }).from(leads).where(eq(leads.propertyId, propertyId)),
         ]);
 
         return {
@@ -1347,7 +1507,9 @@ export const listingRouter = router({
         const media = await db.getListingMedia(input.listingId);
 
         if (fullListing.action === 'sell' || fullListing.action === 'rent') {
-          const locationIssues = validateListingRecordLocation(fullListing as Record<string, unknown>);
+          const locationIssues = validateListingRecordLocation(
+            fullListing as Record<string, unknown>,
+          );
           if (locationIssues.length > 0) {
             const message = locationIssues.join(' ');
             await recordSubmitFailure('invalid_location', message, {

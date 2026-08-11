@@ -39,6 +39,12 @@ import { validatePublicSearchInput } from '../shared/publicSearchValidation';
 import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
 import { normalizeFeaturesContext } from '../shared/features-context';
 import { buildPricingContract, getPrimaryPrice } from '../shared/pricing-contract';
+import {
+  getListingMediaUrl,
+  getListingMediaType,
+  getPrimaryListingImage,
+  isCompletedListingMedia,
+} from '../shared/listing-media';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -903,19 +909,46 @@ const appRouterConfig = {
           };
         });
 
-        const listingImages = linkedListingMedia.map(img => {
-          const rawUrl = (img as any).originalUrl || (img as any).url || '';
-          const imageUrl = rawUrl.startsWith('http') ? rawUrl : `${cdnUrl}/${rawUrl}`;
-          return {
-            id: img.id,
-            imageUrl,
-            url: imageUrl,
-            isPrimary: img.isPrimary,
-            displayOrder: img.displayOrder,
-          };
-        });
+        const linkedMediaCandidates = linkedListingMedia
+          .filter(img => isCompletedListingMedia(img as any))
+          .flatMap(img => {
+            const rawUrl = getListingMediaUrl(img as any);
+            const mediaType = getListingMediaType(img as any);
+            if (!rawUrl || !mediaType) return [];
+            const imageUrl = rawUrl.startsWith('http') ? rawUrl : `${cdnUrl}/${rawUrl}`;
+            return [
+              {
+                id: img.id,
+                imageUrl,
+                url: imageUrl,
+                mediaType,
+                type: mediaType,
+                isPrimary: img.isPrimary,
+                displayOrder: img.displayOrder,
+                thumbnailUrl: img.thumbnailUrl || null,
+                previewUrl: img.previewUrl || null,
+                processingStatus: img.processingStatus || 'completed',
+                originalFileName: img.originalFileName || null,
+              },
+            ];
+          });
+        const linkedPrimaryImage = getPrimaryListingImage(linkedMediaCandidates as any);
+        const linkedMedia = linkedMediaCandidates.map(img => ({
+          ...img,
+          isPrimary: linkedPrimaryImage && Number(linkedPrimaryImage.id) === Number(img.id) ? 1 : 0,
+        }));
 
+        const listingImages = linkedMedia.filter(img => img.mediaType === 'image');
         const images = listingImages.length > 0 ? listingImages : propertyImages;
+        const publicMedia =
+          linkedMedia.length > 0
+            ? linkedMedia
+            : propertyImages.map(img => ({
+                ...img,
+                mediaType: 'image' as const,
+                type: 'image' as const,
+                processingStatus: 'completed' as const,
+              }));
 
         let amenities: string[] = [];
         let storedPropertySettings: Record<string, any> = {};
@@ -1049,7 +1082,11 @@ const appRouterConfig = {
           'sale';
 
         const pricingAction =
-          resolvedListingType === 'sale' ? 'sell' : resolvedListingType === 'rent' ? 'rent' : resolvedListingType;
+          resolvedListingType === 'sale'
+            ? 'sell'
+            : resolvedListingType === 'rent'
+              ? 'rent'
+              : resolvedListingType;
         const linkedPricingContract = publicLinkedListing
           ? buildPricingContract(
               pricingAction,
@@ -1200,6 +1237,7 @@ const appRouterConfig = {
             propertySettings: normalizedPropertySettings,
             propertyDetails: normalizedPropertyDetails,
             mainImage: resolvedMainImage,
+            media: publicMedia,
             listingSource: 'manual',
             listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
             development: development || undefined,
@@ -1207,6 +1245,7 @@ const appRouterConfig = {
             agent: agent || undefined,
           },
           images,
+          media: publicMedia,
         };
       }),
 

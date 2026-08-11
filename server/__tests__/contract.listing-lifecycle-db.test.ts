@@ -120,7 +120,12 @@ class FakeDrizzle {
     return {
       set: (vals: Record<string, unknown>) => ({
         where: (conds: any) => {
-          this.record({ type: 'update', table: tableName, set: vals, whereCols: extractColNames(conds) });
+          this.record({
+            type: 'update',
+            table: tableName,
+            set: vals,
+            whereCols: extractColNames(conds),
+          });
           return Promise.resolve([{ affectedRows: 1 }]);
         },
       }),
@@ -165,6 +170,7 @@ import {
   deleteListing,
   rejectListing,
   replaceListingMedia,
+  synchronizeApprovedRevisionMedia,
   syncPublishedListingMediaToPropertyMirror,
   updateListingAgentAssignment,
 } from '../db';
@@ -288,7 +294,9 @@ describe('approveListing (lower-level)', () => {
   });
 
   it('rejects approval for already-published listing (state guard)', async () => {
-    fakeDb.setNextSelectResult([listingRow({ id: 5004, status: 'published', approvalStatus: 'approved' })]);
+    fakeDb.setNextSelectResult([
+      listingRow({ id: 5004, status: 'published', approvalStatus: 'approved' }),
+    ]);
 
     await expect(approveListing(5004, 1)).rejects.toThrow('already published');
 
@@ -309,16 +317,20 @@ describe('approveListing (lower-level)', () => {
 
     await approveListing(5005, 1);
 
-    const imgDeletes = fakeDb.calls.filter(c => c.type === 'delete' && c.table === 'propertyImages');
+    const imgDeletes = fakeDb.calls.filter(
+      c => c.type === 'delete' && c.table === 'propertyImages',
+    );
     expect(imgDeletes.length).toBeGreaterThanOrEqual(1);
 
-    const imgInserts = fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'propertyImages');
+    const imgInserts = fakeDb.calls.filter(
+      c => c.type === 'insert' && c.table === 'propertyImages',
+    );
     expect(imgInserts).toHaveLength(2);
   });
 
   it.each(['sell', 'rent', 'auction'] as const)(
     'handles action "%s" with correct listingType mapping',
-    async (action) => {
+    async action => {
       const pricing =
         action === 'sell'
           ? JSON.stringify({ askingPrice: 3000000 })
@@ -326,9 +338,7 @@ describe('approveListing (lower-level)', () => {
             ? JSON.stringify({ monthlyRent: 25000 })
             : JSON.stringify({ startingBid: 1500000 });
 
-      fakeDb.setNextSelectResult([
-        listingRow({ id: 5100, action, pricing }),
-      ]);
+      fakeDb.setNextSelectResult([listingRow({ id: 5100, action, pricing })]);
       fakeDb.setNextSelectResult([]); // no existing property
 
       await approveListing(5100, 1);
@@ -345,24 +355,24 @@ describe('approveListing (lower-level)', () => {
 // ===========================================================================
 
 describe('replaceListingMedia (lower-level)', () => {
-  it('retains explicit existing media, removes omitted media, and preserves a new video type', async () => {
+  it('retains an image primary, removes omitted media, and preserves a new video type', async () => {
     fakeDb.setNextSelectResult([{ id: 701 }, { id: 702 }]);
 
     await replaceListingMedia(
       5501,
       [
         {
+          id: 'existing:701',
+          mediaType: 'image',
+        },
+        {
           id: 'uploads/listings/5501/walkthrough.mp4',
           mediaType: 'video',
           fileName: 'walkthrough.mp4',
           processingStatus: 'completed',
         },
-        {
-          id: 'existing:701',
-          mediaType: 'image',
-        },
       ],
-      'uploads/listings/5501/walkthrough.mp4',
+      'existing:701',
     );
 
     const deletes = fakeDb.calls.filter(c => c.type === 'delete' && c.table === 'listing_media');
@@ -375,12 +385,63 @@ describe('replaceListingMedia (lower-level)', () => {
       listingId: 5501,
       originalUrl: 'uploads/listings/5501/walkthrough.mp4',
       mediaType: 'video',
-      displayOrder: 0,
-      isPrimary: 1,
+      displayOrder: 1,
+      isPrimary: 0,
     });
     expect(updates).toHaveLength(1);
-    expect(updates[0].set).toMatchObject({ displayOrder: 1, isPrimary: 0 });
+    expect(updates[0].set).toMatchObject({ displayOrder: 0, isPrimary: 1 });
     expect(fakeDb.calls.indexOf(deletes[0])).toBeLessThan(fakeDb.calls.indexOf(inserts[0]));
+  });
+
+  it('rejects a video as the requested primary media', async () => {
+    fakeDb.setNextSelectResult([]);
+
+    await expect(
+      replaceListingMedia(
+        5501,
+        [
+          {
+            id: 'uploads/listings/5501/walkthrough.mp4',
+            mediaType: 'video',
+            fileName: 'walkthrough.mp4',
+            processingStatus: 'completed',
+          },
+        ],
+        'uploads/listings/5501/walkthrough.mp4',
+      ),
+    ).rejects.toThrow('Listing primary media must be a completed image');
+
+    const writes = fakeDb.calls.filter(c => c.type !== 'select');
+    expect(writes).toHaveLength(0);
+  });
+
+  it('copies the approved revision snapshot and recalculates a safe image primary', async () => {
+    fakeDb.setNextSelectResult([
+      listingMediaRow({
+        id: 801,
+        listingId: 5602,
+        mediaType: 'video',
+        isPrimary: 1,
+        displayOrder: 0,
+      }),
+      listingMediaRow({
+        id: 802,
+        listingId: 5602,
+        mediaType: 'image',
+        isPrimary: 0,
+        displayOrder: 1,
+      }),
+    ]);
+
+    await expect(synchronizeApprovedRevisionMedia(5601, 5602)).resolves.toMatchObject({
+      copied: 2,
+      primaryMediaId: 802,
+    });
+
+    const inserts = fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'listing_media');
+    expect(inserts).toHaveLength(2);
+    expect(inserts[0].values).toMatchObject({ listingId: 5601, mediaType: 'video', isPrimary: 0 });
+    expect(inserts[1].values).toMatchObject({ listingId: 5601, mediaType: 'image', isPrimary: 1 });
   });
 
   it('rejects an existing-media token that belongs to another listing', async () => {
@@ -414,9 +475,7 @@ describe('syncPublishedListingMediaToPropertyMirror (lower-level)', () => {
     expect(result.propertyId).toBe(777);
 
     // Prove the first properties select used sourceListingId in its WHERE
-    const propSelects = fakeDb.calls.filter(
-      c => c.type === 'select' && c.table === 'properties',
-    );
+    const propSelects = fakeDb.calls.filter(c => c.type === 'select' && c.table === 'properties');
     expect(propSelects.length).toBeGreaterThanOrEqual(1);
     // The first properties select is the sourceListingId lookup
     expect(propSelects[0].whereCols).toContain('sourceListingId');
@@ -486,12 +545,8 @@ describe('archiveListing (lower-level)', () => {
   it('cascades archive status to linked property projection', async () => {
     await archiveListing(9001);
 
-    const listingUpdates = fakeDb.calls.filter(
-      c => c.type === 'update' && c.table === 'listings',
-    );
-    const propUpdates = fakeDb.calls.filter(
-      c => c.type === 'update' && c.table === 'properties',
-    );
+    const listingUpdates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'listings');
+    const propUpdates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'properties');
     expect(listingUpdates[0].set).toMatchObject({
       status: 'archived',
     });
@@ -507,12 +562,8 @@ describe('archiveListing (lower-level)', () => {
   it('updates authored agent custody and the linked public projection together', async () => {
     await updateListingAgentAssignment(9002, 77);
 
-    const listingUpdates = fakeDb.calls.filter(
-      c => c.type === 'update' && c.table === 'listings',
-    );
-    const propUpdates = fakeDb.calls.filter(
-      c => c.type === 'update' && c.table === 'properties',
-    );
+    const listingUpdates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'listings');
+    const propUpdates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'properties');
 
     expect(listingUpdates[0]).toMatchObject({
       set: { agentId: 77 },
@@ -539,7 +590,8 @@ describe('listing publication entitlement final guard', () => {
     await expect(approveListing(9101, 1)).rejects.toThrow('Subscription activation');
 
     const publicWrites = fakeDb.calls.filter(
-      call => call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
+      call =>
+        call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
     );
     expect(publicWrites).toHaveLength(0);
   });
@@ -555,7 +607,8 @@ describe('listing publication entitlement final guard', () => {
     );
 
     const publicWrites = fakeDb.calls.filter(
-      call => call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
+      call =>
+        call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
     );
     expect(publicWrites).toHaveLength(0);
     expect(assertListingPublicationEntitled).toHaveBeenCalledWith(
@@ -573,7 +626,8 @@ describe('listing publication entitlement final guard', () => {
     await expect(approveListing(9104, 1)).rejects.toThrow('subscription is suspended');
 
     const publicWrites = fakeDb.calls.filter(
-      call => call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
+      call =>
+        call.type !== 'select' && (call.table === 'properties' || call.table === 'propertyImages'),
     );
     expect(publicWrites).toHaveLength(0);
     expect(assertListingPublicationEntitled).toHaveBeenCalledWith(
@@ -606,9 +660,7 @@ describe('deleteListing (lower-level)', () => {
     fakeDb.setNextSelectResult([listingRow({ id: 10001, status: 'draft' })]);
     await deleteListing(10001);
 
-    const propUpdates = fakeDb.calls.filter(
-      c => c.type === 'update' && c.table === 'properties',
-    );
+    const propUpdates = fakeDb.calls.filter(c => c.type === 'update' && c.table === 'properties');
     expect(propUpdates.length).toBeGreaterThanOrEqual(1);
     expect(propUpdates[0].set).toMatchObject({
       status: 'archived',

@@ -1,11 +1,11 @@
 import { getPrimaryPrice } from '@shared/pricing-contract';
 import { validateManualLocationEvidence } from '@shared/location-contract';
+import { getCompletedListingImages } from '@shared/listing-media';
 
 export type ReadinessResult = {
   score: number;
   missing: Record<string, string[]>;
 };
-
 
 export const calculateListingReadiness = (listing: any): ReadinessResult => {
   const missing: Record<string, string[]> = {
@@ -50,7 +50,8 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
     if (authoredLocation.locationConfirmationState !== 'confirmed') {
       missing.location.push('Confirm Location');
     }
-    const onlyOneCoordinate = (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
+    const onlyOneCoordinate =
+      (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
     if (onlyOneCoordinate || (hasCoordinates && locationIssues.length > 0)) {
       missing.location.push('Map coordinates');
     }
@@ -66,14 +67,13 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
     missing.pricing.push('Price');
   }
 
-  // 3. Media (25%)
-  let imageCount = 0;
-  if (Array.isArray(listing.images)) {
-    imageCount = listing.images.length;
-  } else if (Array.isArray(listing.media)) {
-    // Handle the shape returned by getById (media array of objects)
-    imageCount = listing.media.length;
+  // 3. Media (25%) — only completed qualifying images count. Videos,
+  // documents and failed/incomplete uploads never satisfy image readiness.
+  let mediaItems = Array.isArray(listing.media) ? listing.media : [];
+  if (mediaItems.length === 0 && Array.isArray(listing.images)) {
+    mediaItems = listing.images.map((url: unknown) => ({ url, type: 'image' as const }));
   }
+  const imageCount = getCompletedListingImages(mediaItems).length;
 
   if (imageCount >= 5) {
     score += 25;

@@ -6,11 +6,7 @@ import type {
 } from './property-taxonomy';
 import type { CorePropertyInformation } from './core-property-information';
 import type { FeaturesContext } from './features-context';
-import type {
-  MoneyFact,
-  Negotiability,
-  RecurringCosts,
-} from './pricing-contract';
+import type { MoneyFact, Negotiability, RecurringCosts } from './pricing-contract';
 import type {
   LocationCoordinateSource,
   LocationConfirmationState,
@@ -475,6 +471,8 @@ export interface MediaFile {
   file?: File;
   url: string;
   type: MediaType;
+  /** Server-issued confirmation proving the uploaded object and owner. */
+  uploadToken?: string;
   fileName?: string;
   fileSize?: number;
   thumbnailUrl?: string;
@@ -569,6 +567,7 @@ export interface CreateListingRequest {
   media?: Array<{
     id: string;
     mediaType: MediaType;
+    uploadToken?: string | null;
     fileName?: string | null;
     fileSize?: number | null;
     thumbnailUrl?: string | null;

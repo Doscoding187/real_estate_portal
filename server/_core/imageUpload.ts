@@ -7,7 +7,12 @@
 import { nanoid } from 'nanoid';
 import { storagePut, storageGet } from '../storage';
 import { ENV } from './env';
-import { PutObjectCommand, S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  PutObjectCommand,
+  S3Client,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
@@ -240,4 +245,40 @@ export async function generatePresignedUploadUrl(
     }
     throw new Error('Failed to generate upload URL');
   }
+}
+
+/**
+ * Confirm that a direct upload actually exists before its reference is
+ * accepted into canonical listing_media. The browser never gets to promote a
+ * presigned key into listing authority merely by posting the key back.
+ */
+export async function assertUploadedMediaObject(
+  key: string,
+  expectedContentType: string,
+): Promise<{ contentType: string | null; contentLength: number | null }> {
+  if (!key || key.includes('..') || key.startsWith('/')) {
+    throw new Error('Invalid uploaded media key.');
+  }
+
+  if (useS3 && s3Client) {
+    const result = await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: ENV.s3BucketName,
+        Key: key,
+      }),
+    );
+    const contentType = result.ContentType?.toLowerCase() || null;
+    if (contentType && contentType !== expectedContentType.toLowerCase()) {
+      throw new Error('Uploaded media content type does not match its confirmation.');
+    }
+    return {
+      contentType,
+      contentLength: result.ContentLength == null ? null : Number(result.ContentLength),
+    };
+  }
+
+  // The presigned listing-media route is S3-backed. Keep the fallback
+  // explicit rather than claiming a storage-proxy key was verified when the
+  // proxy does not expose a reliable HEAD contract here.
+  throw new Error('Uploaded media storage is unavailable for verification.');
 }
