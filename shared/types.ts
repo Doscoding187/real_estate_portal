@@ -1020,6 +1020,9 @@ export interface SearchCardResult {
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
+  hasFloorplan?: boolean;
+  hasVirtualTour?: boolean;
+  hasPublicDocuments?: boolean;
   transactionType?: string;
   listedDate: Date;
   latitude?: number;

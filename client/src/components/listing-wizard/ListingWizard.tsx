@@ -47,6 +47,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { buildListingWizardSubmitPayload } from '@/lib/listingWizardSubmitMapper';
 import { LISTING_MEDIA_TYPES } from '@/../../shared/listing-media';
 import { buildPricingContract } from '@/../../shared/pricing-contract';
+import { getPresentationMediaDescriptor } from '@/../../shared/property-presentation';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -251,6 +252,16 @@ const ListingWizard: React.FC = () => {
           const url = m.url || m.processedUrl || m.previewUrl || m.originalUrl || m.imageUrl;
           const type = LISTING_MEDIA_TYPES.includes(m.mediaType) ? m.mediaType : 'image';
           if (!url) return;
+          const presentation = getPresentationMediaDescriptor(
+            listing.propertyDetails?.propertyPresentation,
+            {
+              id: m.id,
+              type,
+              url,
+              originalUrl: m.originalUrl,
+              fileName: m.originalFileName || m.fileName,
+            },
+          );
           store.addMedia({
             id: `existing:${m.id}`,
             file: null as any, // No file object for existing media
@@ -265,6 +276,7 @@ const ListingWizard: React.FC = () => {
             duration: m.duration || undefined,
             orientation: m.orientation || undefined,
             processingStatus: m.processingStatus || 'completed',
+            presentationLabel: presentation.label,
             displayOrder: m.displayOrder,
             isPrimary: Boolean(m.isPrimary),
           });

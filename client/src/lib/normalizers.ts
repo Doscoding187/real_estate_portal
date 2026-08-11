@@ -90,7 +90,9 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     const candidate = raw.developerBrand || raw.developerBrandProfile;
     if (candidate && typeof candidate === 'object') {
       const id = Number((candidate as any).id || 0);
-      const brandName = String((candidate as any).brandName || (candidate as any).name || '').trim();
+      const brandName = String(
+        (candidate as any).brandName || (candidate as any).name || '',
+      ).trim();
       const slug = String((candidate as any).slug || '').trim();
       if (Number.isFinite(id) && id > 0 && brandName && slug) {
         return {
@@ -195,6 +197,10 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     raw.images?.length || raw.media?.filter((m: any) => m.type === 'image').length || 0;
   const videoCount =
     raw.videos?.length || raw.media?.filter((m: any) => m.type === 'video').length || 0;
+  const mediaSummary = raw.mediaSummary || {};
+  const hasFloorplan = Boolean(mediaSummary.hasFloorplan || raw.hasFloorplan);
+  const hasVirtualTour = Boolean(mediaSummary.hasVirtualTour || raw.hasVirtualTour);
+  const hasPublicDocuments = Boolean(mediaSummary.hasDocuments || raw.hasPublicDocuments);
 
   const firstImage = Array.isArray(raw.images) ? raw.images[0] : undefined;
   const firstImageUrl =
@@ -246,6 +252,9 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     badges: badges.length > 0 ? Array.from(new Set(badges)) : undefined,
     imageCount,
     videoCount,
+    hasFloorplan,
+    hasVirtualTour,
+    hasPublicDocuments,
     highlights: (() => {
       const source =
         raw.highlights ||
@@ -341,7 +350,9 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
         ? {
             id: normalized.identity.agentId ? String(normalized.identity.agentId) : undefined,
             name: normalized.identity.name,
-            agencyId: normalized.identity.agencyId ? String(normalized.identity.agencyId) : undefined,
+            agencyId: normalized.identity.agencyId
+              ? String(normalized.identity.agencyId)
+              : undefined,
             agency: undefined,
             phone: normalized.identity.phone || undefined,
             whatsapp: normalized.identity.whatsapp || undefined,
@@ -354,6 +365,9 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
     badges: normalized.badges,
     imageCount: card.imageCount ?? normalized.imageCount,
     videoCount: card.videoCount ?? normalized.videoCount,
+    hasFloorplan: card.hasFloorplan ?? normalized.hasFloorplan,
+    hasVirtualTour: card.hasVirtualTour ?? normalized.hasVirtualTour,
+    hasPublicDocuments: card.hasPublicDocuments ?? normalized.hasPublicDocuments,
     highlights: normalized.highlights,
     suppressBadges: true,
   };

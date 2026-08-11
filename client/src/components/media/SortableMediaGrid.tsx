@@ -45,6 +45,7 @@ export interface MediaItem {
     | 'render'
     | 'document';
   fileName?: string;
+  presentationLabel?: string;
   isPrimary?: boolean;
   displayOrder: number;
 }
@@ -166,6 +167,12 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
             {getMediaTypeIcon()}
             <span className="capitalize">{item.type}</span>
           </div>
+
+          {item.presentationLabel && (
+            <span className="max-w-[45%] truncate rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-700">
+              {item.presentationLabel}
+            </span>
+          )}
 
           {onSetPrimary && item.type === 'image' && (
             <Button

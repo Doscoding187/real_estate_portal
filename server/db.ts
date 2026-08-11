@@ -95,6 +95,11 @@ import {
   isCompletedListingMedia,
 } from '../shared/listing-media';
 import { validateListingRecordLocation } from './services/listingLocationResolver';
+import {
+  getPresentationMediaDescriptor,
+  getSafePropertyPresentationVirtualTour,
+  summarizePropertyPresentation,
+} from '../shared/property-presentation';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -3134,6 +3139,9 @@ export async function approveListing(
         ? { pricingContract: approvedPricingProjection.contract }
         : {}),
     };
+    const approvedVirtualTour = getSafePropertyPresentationVirtualTour(
+      approvedPropertyDetails['propertyPresentation'],
+    );
     const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const approvedLocationProjection = await buildPublicLocationProjection(db, listing);
     await db
@@ -3167,6 +3175,7 @@ export async function approveListing(
         locationConfirmationState: (listing as any).locationConfirmationState,
         publicLocationPrecision: (listing as any).publicLocationPrecision,
         propertyDetails: approvedPropertyDetails,
+        virtualTourUrl: approvedVirtualTour?.embedUrl || null,
         title: listing.title,
         description: listing.description,
         updatedAt: approvedAt,
@@ -3326,6 +3335,9 @@ export async function approveListing(
     ownerId: listing.ownerId,
     sourceListingId: listingId,
     propertySettings: JSON.stringify(canonicalDetails),
+    virtualTourUrl:
+      getSafePropertyPresentationVirtualTour(canonicalDetails.propertyPresentation)?.embedUrl ||
+      null,
     // These columns are legacy compatibility projections. Public pricing
     // detail reads the versioned contract stored in propertySettings.
     levies: pricingProjection.legacyLevy,
@@ -3654,12 +3666,27 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     previewUrl: string | null;
     processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
     originalFileName: string | null;
+    mimeType?: string | null;
+    presentationKind?: 'floorplan' | 'document';
+    presentationLabel?: string | null;
   };
   const publicMediaCandidates = media
     .map((item: any) => {
       const rawUrl = getListingMediaUrl(item);
       const mediaType = getListingMediaType(item);
       if (!rawUrl || !mediaType) return null;
+
+      const presentationDescriptor = getPresentationMediaDescriptor(
+        propertyDetails.propertyPresentation,
+        {
+          id: item.id,
+          type: mediaType,
+          mediaType,
+          url: rawUrl,
+          originalUrl: item.originalUrl,
+          originalFileName: item.originalFileName,
+        },
+      );
 
       let url = rawUrl;
       if (!url.startsWith('http')) {
@@ -3685,6 +3712,9 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
         previewUrl: item.previewUrl || null,
         processingStatus: item.processingStatus || 'completed',
         originalFileName: item.originalFileName || null,
+        mimeType: item.mimeType || null,
+        presentationKind: presentationDescriptor.kind,
+        presentationLabel: presentationDescriptor.label || null,
       };
     })
     .filter(Boolean) as PublicListingMedia[];
@@ -3693,6 +3723,7 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
     ...item,
     isPrimary: primaryPublicImage && Number(primaryPublicImage.id) === Number(item.id) ? 1 : 0,
   }));
+  const mediaSummary = summarizePropertyPresentation(media, propertyDetails.propertyPresentation);
 
   return {
     id: listing.id,
@@ -3771,6 +3802,12 @@ export function transformListingToProperty(listing: any, media: any[] = []) {
       .map(item => item.url)
       .filter(Boolean),
     media: publicMedia,
+    virtualTour:
+      getSafePropertyPresentationVirtualTour(propertyDetails.propertyPresentation) || null,
+    mediaSummary,
+    hasFloorplan: mediaSummary.hasFloorplan,
+    hasVirtualTour: mediaSummary.hasVirtualTour,
+    hasPublicDocuments: mediaSummary.hasDocuments,
     mainImage: primaryPublicImage?.url || null,
     // Metadata
     status: listing.status,

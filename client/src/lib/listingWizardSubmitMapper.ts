@@ -9,6 +9,7 @@ import {
 } from '../../../shared/features-context';
 import { buildPricingContract } from '../../../shared/pricing-contract';
 import { buildListingLocationAuthoringPayload } from '../../../shared/location-contract';
+import { buildPropertyPresentationForMedia } from '../../../shared/property-presentation';
 
 export type ListingWizardSubmitPayload = inferRouterInputs<AppRouter>['listing']['create'];
 
@@ -147,7 +148,23 @@ const buildSubmittedPropertyDetails = (
       state.propertyDetails,
       state.basicInfo,
     ),
-  };
+  } as Record<string, unknown>;
+
+  const propertyPresentation = buildPropertyPresentationForMedia(
+    propertyDetails.propertyPresentation,
+    state.media.map(item => ({
+      id: item.id,
+      type: item.type,
+      url: item.url,
+      fileName: item.fileName,
+      presentationLabel: item.presentationLabel,
+    })),
+  );
+  if (propertyPresentation) {
+    propertyDetails.propertyPresentation = propertyPresentation;
+  } else {
+    delete propertyDetails.propertyPresentation;
+  }
 
   return normalizePropertyDetailsForPublicContract(propertyDetails, state.action, pricing);
 };

@@ -173,6 +173,12 @@ interface PropertyPayload {
   landAreaM2?: number | string | null;
   mainImage?: string;
   media?: PublicPropertyMedia[];
+  virtualTour?: {
+    provider: 'matterport';
+    embedUrl: string;
+    displayLabel?: string;
+    status: 'active';
+  } | null;
   agent?: ContactIdentityLite;
 }
 
@@ -916,7 +922,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           {/* Left Column - Image Gallery */}
           <div className="lg:col-span-7">
             <PropertyImageGallery images={propertyGalleryImages} propertyTitle={property.title} />
-            <PropertyMediaTypeSection media={propertyMedia} />
+            <PropertyMediaTypeSection media={propertyMedia} virtualTour={property.virtualTour} />
           </div>
 
           {/* Right Column - Buyer Decision Panel */}

@@ -13,6 +13,7 @@ import type {
   PrivateAddress,
   PublicLocationPrecision,
 } from './location-contract';
+import type { PropertyPresentation } from './property-presentation';
 
 export { PROPERTY_TYPE_TEMPLATES } from './property-taxonomy';
 export type {
@@ -277,14 +278,18 @@ export interface ExtendedPropertyDetails {
 }
 
 // Union type for all property details
-export type PropertyDetails =
+export type PropertyDetails = (
   | ApartmentFields
   | HouseFields
   | FarmFields
   | LandFields
   | CommercialFields
   | SharedLivingFields
-  | ExtendedPropertyDetails;
+  | ExtendedPropertyDetails
+) & {
+  /** Typed semantic presentation metadata; media rows remain the asset authority. */
+  propertyPresentation?: PropertyPresentation;
+};
 
 // Step 3: Pricing Fields
 export interface SellPricing {
@@ -484,6 +489,8 @@ export interface MediaFile {
   displayOrder: number;
   isPrimary: boolean;
   processingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  /** Semantic label for plans/documents; never inferred from MIME alone. */
+  presentationLabel?: string;
   fileData?: string; // Base64 encoded file data for persistence
 }
 

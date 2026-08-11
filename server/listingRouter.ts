@@ -59,6 +59,10 @@ import {
   isExistingListingMediaToken,
   verifyListingMediaUploadToken,
 } from './services/listingMediaAuthority';
+import {
+  normalizePropertyPresentation,
+  type PresentationMediaLike,
+} from '../shared/property-presentation';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -216,7 +220,46 @@ function normalizePropertyDetailsForPublicContract(
   // mapping while retaining legacy flat aliases for existing consumers.
   Object.assign(normalized, buildCanonicalCorePropertyDetails(propertyType as any, normalized));
 
+  if (normalized.propertyPresentation !== undefined) {
+    try {
+      normalized.propertyPresentation = normalizePropertyPresentation(
+        normalized.propertyPresentation,
+      );
+    } catch (error) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: error instanceof Error ? error.message : 'Property presentation is not valid.',
+      });
+    }
+  }
+
   return normalized;
+}
+
+function assertPropertyPresentationMediaReferences(
+  propertyDetails: Record<string, any>,
+  availableMedia: PresentationMediaLike[] | undefined,
+) {
+  const presentation = normalizePropertyPresentation(propertyDetails.propertyPresentation);
+  if (!presentation || presentation.media.length === 0) return;
+
+  const allowed = new Set(
+    (availableMedia || []).flatMap(media => {
+      const ids = media.id == null ? [] : [String(media.id), `existing:${String(media.id)}`];
+      return [...ids, media.url, media.originalUrl].filter((value): value is string =>
+        Boolean(value && value.trim()),
+      );
+    }),
+  );
+
+  for (const item of presentation.media) {
+    if (!allowed.has(item.mediaId)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Property presentation references media that is not part of this listing.',
+      });
+    }
+  }
 }
 
 // Validation schemas
@@ -556,6 +599,7 @@ export const listingRouter = router({
         input.action,
         input.propertyType,
       );
+      assertPropertyPresentationMediaReferences(propertyDetails, authorizedMedia);
 
       // Create listing in database with auto-populated location IDs
       const listingId = await db.createListing({
@@ -747,6 +791,18 @@ export const listingRouter = router({
             input.action ?? listing.action,
             nextPropertyType,
           );
+        }
+
+        if (updatePayload.propertyDetails?.propertyPresentation) {
+          const availableMedia =
+            mediaManifest ||
+            (await db.getListingMedia(input.id)).map(item => ({
+              id: item.id,
+              originalUrl: item.originalUrl,
+              url: item.processedUrl || item.originalUrl,
+              mediaType: item.mediaType,
+            }));
+          assertPropertyPresentationMediaReferences(updatePayload.propertyDetails, availableMedia);
         }
 
         if (input.location) {
@@ -954,15 +1010,31 @@ export const listingRouter = router({
       // Frontend expects 'url' field, but database has 'originalUrl'
       const cdnBaseUrl =
         ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-      const media = rawMedia.map(m => ({
-        ...m,
-        url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
-        thumbnail: m.thumbnailUrl
-          ? m.thumbnailUrl.startsWith('http')
-            ? m.thumbnailUrl
-            : `${cdnBaseUrl}/${m.thumbnailUrl}`
-          : null,
-      }));
+      const media = rawMedia.map(m => {
+        const presentation = normalizePropertyPresentation(
+          (listing.propertyDetails as any)?.propertyPresentation,
+        );
+        const descriptor = presentation?.media.find(item =>
+          [String(m.id), `existing:${String(m.id)}`, m.originalUrl].includes(item.mediaId),
+        );
+        return {
+          ...m,
+          url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
+          thumbnail: m.thumbnailUrl
+            ? m.thumbnailUrl.startsWith('http')
+              ? m.thumbnailUrl
+              : `${cdnBaseUrl}/${m.thumbnailUrl}`
+            : null,
+          presentationKind:
+            descriptor?.kind ||
+            (m.mediaType === 'floorplan'
+              ? 'floorplan'
+              : m.mediaType === 'pdf'
+                ? 'document'
+                : undefined),
+          presentationLabel: descriptor?.label || null,
+        };
+      });
       const primaryImage = getPrimaryListingImage(media as any[]);
 
       // Fetch agent if assigned
@@ -992,6 +1064,7 @@ export const listingRouter = router({
       return {
         property: propertyCompatibleListing,
         images: media,
+        media,
         agent,
       };
     } catch (error) {

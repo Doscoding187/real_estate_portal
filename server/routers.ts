@@ -45,6 +45,11 @@ import {
   getPrimaryListingImage,
   isCompletedListingMedia,
 } from '../shared/listing-media';
+import {
+  getPresentationMediaDescriptor,
+  getSafePropertyPresentationVirtualTour,
+  summarizePropertyPresentation,
+} from '../shared/property-presentation';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -915,6 +920,17 @@ const appRouterConfig = {
             const rawUrl = getListingMediaUrl(img as any);
             const mediaType = getListingMediaType(img as any);
             if (!rawUrl || !mediaType) return [];
+            const presentationDescriptor = getPresentationMediaDescriptor(
+              linkedPropertyDetails.propertyPresentation,
+              {
+                id: img.id,
+                type: mediaType,
+                mediaType,
+                url: rawUrl,
+                originalUrl: (img as any).originalUrl,
+                originalFileName: img.originalFileName,
+              },
+            );
             const imageUrl = rawUrl.startsWith('http') ? rawUrl : `${cdnUrl}/${rawUrl}`;
             return [
               {
@@ -929,6 +945,9 @@ const appRouterConfig = {
                 previewUrl: img.previewUrl || null,
                 processingStatus: img.processingStatus || 'completed',
                 originalFileName: img.originalFileName || null,
+                mimeType: img.mimeType || null,
+                presentationKind: presentationDescriptor.kind,
+                presentationLabel: presentationDescriptor.label || null,
               },
             ];
           });
@@ -1190,6 +1209,9 @@ const appRouterConfig = {
           (property as any).publicLatitude ?? (publicLinkedListing ? null : null);
         const publicLongitude =
           (property as any).publicLongitude ?? (publicLinkedListing ? null : null);
+        const linkedVirtualTour = publicLinkedListing
+          ? getSafePropertyPresentationVirtualTour(linkedPropertyDetails.propertyPresentation)
+          : undefined;
 
         return {
           property: {
@@ -1232,6 +1254,12 @@ const appRouterConfig = {
             publicLatitude,
             publicLongitude,
             publicLocationPrecision: (property as any).publicLocationPrecision || 'approximate',
+            virtualTour: linkedVirtualTour || null,
+            virtualTourUrl: linkedVirtualTour?.embedUrl || null,
+            mediaSummary: summarizePropertyPresentation(
+              linkedListingMedia,
+              linkedPropertyDetails.propertyPresentation,
+            ),
             amenities: uniqueAmenities.length > 0 ? uniqueAmenities : linkedAmenities,
             features: linkedPropertyDetails.propertyHighlights || linkedAmenities,
             propertySettings: normalizedPropertySettings,
