@@ -1,6 +1,7 @@
 import { getPrimaryPrice } from '@shared/pricing-contract';
 import { validateManualLocationEvidence } from '@shared/location-contract';
 import { getCompletedListingImages } from '@shared/listing-media';
+import { readCorePropertyInformation } from '@shared/core-property-information';
 
 export type ReadinessResult = {
   score: number;
@@ -101,8 +102,24 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
       }
     }
 
+    const corePropertyInformation = readCorePropertyInformation(
+      listing.propertyType,
+      details,
+      listing.basicInfo,
+    );
+    const hasKnownBedrooms =
+      corePropertyInformation.bedrooms?.status === 'known' &&
+      Number.isFinite(Number(corePropertyInformation.bedrooms.value)) &&
+      Number(corePropertyInformation.bedrooms.value) >= 0;
+    const hasLegacyBedrooms =
+      details.bedrooms !== undefined &&
+      details.bedrooms !== null &&
+      Number.isFinite(Number(details.bedrooms)) &&
+      Number(details.bedrooms) >= 0;
+
     if (
-      details.bedrooms ||
+      hasKnownBedrooms ||
+      hasLegacyBedrooms ||
       listing.propertyType === 'land' ||
       listing.propertyType === 'commercial'
     ) {

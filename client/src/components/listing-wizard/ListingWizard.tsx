@@ -185,7 +185,7 @@ const ListingWizard: React.FC = () => {
       if (sourcePricing.leaseTerms) pricing.leaseTerms = sourcePricing.leaseTerms;
       if (sourcePricing.availableFrom)
         pricing.availableFrom = new Date(sourcePricing.availableFrom);
-      if (sourcePricing.utilitiesIncluded !== undefined)
+      if (listing.action === 'rent' && sourcePricing.utilitiesIncluded !== undefined)
         pricing.utilitiesIncluded = Boolean(sourcePricing.utilitiesIncluded);
       if (sourcePricing.auctionDateTime)
         pricing.auctionDateTime = new Date(sourcePricing.auctionDateTime);
@@ -661,15 +661,18 @@ const ListingWizard: React.FC = () => {
       description: store.description,
       propertyType: store.propertyType,
       propertyDetails: store.propertyDetails,
+      basicInfo: store.basicInfo,
     };
     return calculateListingReadiness(listingCandidate);
   }, [
+    store.action,
     store.location,
     store.pricing,
     store.media,
     store.description,
     store.propertyType,
     store.propertyDetails,
+    store.basicInfo,
   ]);
 
   const readinessMissingItems = useMemo(() => {

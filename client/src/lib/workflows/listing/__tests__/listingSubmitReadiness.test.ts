@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { calculateSubmitReadinessDryRun } from '../listingSubmitReadiness';
+import { calculateListingReadiness } from '../../../readiness';
 import type { ListingWorkflowData } from '@shared/listing-workflow-types';
 
 const completeData: ListingWorkflowData = {
@@ -52,6 +53,20 @@ const emptyData: ListingWorkflowData = {
 };
 
 describe('calculateSubmitReadinessDryRun', () => {
+  it('counts canonical core bedrooms in the wizard readiness gate', () => {
+    const result = calculateListingReadiness({
+      propertyType: 'house',
+      propertyDetails: {
+        corePropertyInformation: {
+          version: 1,
+          bedrooms: { status: 'known', value: 3 },
+        },
+      },
+    });
+
+    expect(result.missing.specs).toEqual([]);
+  });
+
   it('returns ready for complete data', async () => {
     const result = await calculateSubmitReadinessDryRun(completeData);
     expect(result.ready).toBe(true);
