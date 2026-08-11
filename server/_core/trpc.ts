@@ -6,17 +6,15 @@ import type { TrpcContext } from './context';
 import { applyBrandContext, type EnhancedTRPCContext } from './brandContext';
 
 export function formatTrpcError({ shape, error }: any) {
-    const cause = error.cause;
+  const cause = error.cause;
 
-    // Zod v4 can be ZodError, but also sometimes wrapped / different instance
-    const isZod =
-      cause &&
-      typeof cause === 'object' &&
-      ('issues' in (cause as any) || cause instanceof ZodError);
+  // Zod v4 can be ZodError, but also sometimes wrapped / different instance
+  const isZod =
+    cause && typeof cause === 'object' && ('issues' in (cause as any) || cause instanceof ZodError);
 
-    const zodError = isZod
-      ? ((cause as any).flatten?.() ?? { formErrors: [], fieldErrors: {} })
-      : undefined;
+  const zodError = isZod
+    ? ((cause as any).flatten?.() ?? { formErrors: [], fieldErrors: {} })
+    : undefined;
 
   return {
     ...shape,
@@ -49,7 +47,7 @@ const requireUser = t.middleware(async opts => {
     throw new TRPCError({ code: 'UNAUTHORIZED', message: UNAUTHED_ERR_MSG });
   }
 
-  // Apply brand context for super admin emulator mode
+  // Resolve a requested platform-curator identity on the server.
   const enhancedCtx = await applyBrandContext(ctx);
 
   return next({
@@ -159,9 +157,14 @@ const requireAgent = t.middleware(async ({ ctx, next }) => {
 });
 
 /**
- * Procedure: Super admin only
+ * Procedure: Super admin only.
+ *
+ * Keep the authenticated operating-identity middleware in this chain so every
+ * super-admin route that consumes `ctx.operatingAs` receives the same
+ * server-derived platform-curator context. Routes that do not need a brand
+ * context remain unaffected when the header is absent.
  */
-export const superAdminProcedure = t.procedure.use(requireSuperAdmin);
+export const superAdminProcedure = protectedProcedure.use(requireSuperAdmin);
 
 /**
  * Procedure: Agency admin only (super_admin can also access)

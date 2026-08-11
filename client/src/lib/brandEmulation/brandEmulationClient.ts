@@ -1,8 +1,8 @@
 /**
  * Brand Emulation Client Service
  *
- * Handles client-side injection of brand emulation context into API requests
- * when super admins are operating in emulator/seeding mode.
+ * Handles client-side injection of a requested platform-curator brand into
+ * API requests. The server remains the authority for the identity.
  *
  * SECURITY: Only sends brandProfileId in header. Type is resolved server-side from DB.
  */
@@ -32,7 +32,7 @@ class BrandEmulationClientService {
 
       const publisherContext = JSON.parse(storedContext);
       // Zustand persist wraps state in 'state' property
-      return publisherContext.state?.context?.mode === 'seeding';
+      return publisherContext.state?.context?.mode === 'platform_curator';
     } catch {
       return false;
     }
@@ -47,7 +47,7 @@ class BrandEmulationClientService {
       if (!storedContext) return null;
 
       const publisherContext = JSON.parse(storedContext);
-      if (publisherContext.state?.context?.mode === 'seeding') {
+      if (publisherContext.state?.context?.mode === 'platform_curator') {
         return publisherContext.state.context.brandProfileId || null;
       }
       return null;
@@ -65,7 +65,7 @@ class BrandEmulationClientService {
       if (!storedContext) return null;
 
       const publisherContext = JSON.parse(storedContext);
-      if (publisherContext.state?.context?.mode === 'seeding') {
+      if (publisherContext.state?.context?.mode === 'platform_curator') {
         return {
           brandProfileId: publisherContext.state.context.brandProfileId,
           brandProfileName: publisherContext.state.context.brandProfileName,

@@ -181,6 +181,9 @@ describe('publicLeadCaptureService contract', () => {
             devOwnerType: 'platform',
             isPublished: 1,
             approvalStatus: 'approved',
+            transactionType: 'for_sale',
+            developmentType: 'residential',
+            activeUnitTypeCount: 1,
           },
         ],
         [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
@@ -191,6 +194,7 @@ describe('publicLeadCaptureService contract', () => {
             linkedDeveloperAccountId: null,
             isVisible: 1,
             isSubscriber: 0,
+            sourceAttribution: 'contract-test-source',
           },
         ],
       ],
@@ -219,6 +223,8 @@ describe('publicLeadCaptureService contract', () => {
       expect.objectContaining({
         developmentId: 77,
         developerBrandProfileId: 13,
+        unitId: 'unit-1',
+        unitName: 'Type A',
         captureRequestId: 'capture-request-001',
         consentVersion: '2026-08-02',
         leadDeliveryMethod: 'manual',
@@ -237,6 +243,45 @@ describe('publicLeadCaptureService contract', () => {
     });
   });
 
+  it('rejects a private platform-curated development before creating a lead', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 77,
+            developerId: null,
+            developerBrandProfileId: 13,
+            devOwnerType: 'platform',
+            isPublished: 0,
+            approvalStatus: 'draft',
+            transactionType: 'for_sale',
+            developmentType: 'residential',
+            activeUnitTypeCount: 1,
+          },
+        ],
+        [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
+        [
+          {
+            id: 13,
+            ownerType: 'platform',
+            linkedDeveloperAccountId: null,
+            isVisible: 1,
+            isSubscriber: 0,
+            sourceAttribution: 'contract-test-source',
+          },
+        ],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(baseInput({ developmentId: 77, unitId: 'unit-1' })),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(database.insertValues).not.toHaveBeenCalled();
+    expect(database.state.deliveryAttempts).toHaveLength(0);
+  });
+
   it('routes a registered, approved development to its matching developer recipient', async () => {
     const database = makeFakeDatabase({
       selectResults: [
@@ -249,6 +294,9 @@ describe('publicLeadCaptureService contract', () => {
             devOwnerType: 'developer',
             isPublished: 1,
             approvalStatus: 'approved',
+            transactionType: 'for_sale',
+            developmentType: 'residential',
+            activeUnitTypeCount: 1,
           },
         ],
         [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
@@ -259,6 +307,7 @@ describe('publicLeadCaptureService contract', () => {
             linkedDeveloperAccountId: 7,
             isVisible: 1,
             isSubscriber: 1,
+            sourceAttribution: null,
           },
         ],
         [{ id: 7, userId: 70, status: 'approved' }],

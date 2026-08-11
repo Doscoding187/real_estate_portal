@@ -900,6 +900,8 @@ export async function searchDevelopments(query: string, developerId?: number, li
   const conditions = [
     sql`LOWER(${developments.name}) LIKE ${`%${query.toLowerCase()}%`}`,
     eq(developments.isPublished, 1), // Only show published developments
+    eq(developments.approvalStatus, 'approved'),
+    ne(developments.transactionType, 'auction'),
   ];
 
   // Filter by developer if provided

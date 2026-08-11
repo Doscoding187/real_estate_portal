@@ -4,23 +4,15 @@ import { authService } from './auth';
 
 export type User = typeof users.$inferSelect;
 
-export type BrandEmulationContext = {
-  originalUserId: number;
-  brandProfileId: number;
-  brandProfileType: 'developer' | 'marketing_agency' | 'hybrid';
-  mode?: 'seeding' | 'emulating';
-  brandProfileName?: string;
-};
-
 /**
  * Base tRPC context created for each request.
- * Brand emulation context is applied later by brandContext middleware.
+ * Server-authorized operating identity is applied later by brandContext
+ * middleware. A browser header is only a request for that resolution.
  */
 export type TrpcContext = {
   req: CreateExpressContextOptions['req'];
   res: CreateExpressContextOptions['res'];
   user: User | null;
-  brandEmulationContext?: BrandEmulationContext;
   requestId: string;
 };
 

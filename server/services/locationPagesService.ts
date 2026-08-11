@@ -5,11 +5,14 @@ import {
   suburbs,
   properties,
   developments,
+  developers,
+  developerBrandProfiles,
   priceAnalytics,
   suburbPriceAnalytics,
   amenities,
 } from '../../drizzle/schema';
-import { eq, and, desc, sql, like, inArray, count, avg } from 'drizzle-orm';
+import { eq, and, desc, sql, like, inArray, count, avg, getTableColumns } from 'drizzle-orm';
+import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 /**
  * IMPROVED Service for handling location page data aggregation
@@ -161,12 +164,17 @@ export const locationPagesService = {
 
     try {
       featuredDevelopments = await db
-        .select()
+        .select({ ...getTableColumns(developments) })
         .from(developments)
+        .leftJoin(developers, eq(developments.developerId, developers.id))
+        .leftJoin(
+          developerBrandProfiles,
+          eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+        )
         .where(
           and(
             sql`TRIM(LOWER(${developments.province})) = LOWER(${province.name})`,
-            eq(developments.isPublished, 1),
+            publicDevelopmentEligibilityConditions(),
           ),
         )
         .limit(6);
@@ -322,12 +330,17 @@ export const locationPagesService = {
       // 4. Developments in City (match by city name, trim whitespace, also include suburb matches)
       // Cascading: show developments where city matches OR suburb is in this city's suburbs
       const cityDevelopments = await db
-        .select()
+        .select({ ...getTableColumns(developments) })
         .from(developments)
+        .leftJoin(developers, eq(developments.developerId, developers.id))
+        .leftJoin(
+          developerBrandProfiles,
+          eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+        )
         .where(
           and(
             sql`(TRIM(LOWER(${developments.city})) = LOWER(${city.name}) OR TRIM(LOWER(${developments.suburb})) IN (SELECT LOWER(name) FROM suburbs WHERE cityId = ${city.id}))`,
-            eq(developments.isPublished, 1),
+            publicDevelopmentEligibilityConditions(),
           ),
         )
         .limit(8);

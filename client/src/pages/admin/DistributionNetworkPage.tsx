@@ -208,13 +208,6 @@ export default function DistributionNetworkPage() {
     },
     onError: err => toast.error(err.message),
   });
-  const attachDevelopmentToBrandMutation = trpc.brandProfile.adminAttachDevelopment.useMutation({
-    onSuccess: async () => {
-      toast.success('Development linked to brand profile');
-      await Promise.all([catalogQuery.refetch(), allCatalogQuery.refetch(), programsQuery.refetch()]);
-    },
-    onError: err => toast.error(err.message),
-  });
   const resendManagerInviteMutation = trpc.distribution.admin.resendManagerInvite.useMutation({
     onSuccess: result => {
       setLatestInviteUrl(result.inviteUrl || '');
@@ -516,7 +509,8 @@ export default function DistributionNetworkPage() {
               <p className="text-sm font-medium text-slate-900">Setup path</p>
               <p className="mt-1 text-sm text-slate-600">
                 Brand-linked developments can be added to Partner Developments. Use Publisher admin
-                to create a brand profile or development, or attach an existing development below.
+                to create a brand profile or development. Unlinked developments must use the
+                canonical brand or claim workflow before partner setup.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={() => setLocation('/admin/publisher')}>
@@ -706,29 +700,9 @@ export default function DistributionNetworkPage() {
                               {getPartnerDevelopmentSetupDescription('needs_brand_link')}
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline">
-                              {getPartnerDevelopmentSetupLabel('needs_brand_link')}
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={
-                                !selectedBrandProfileId || attachDevelopmentToBrandMutation.isPending
-                              }
-                              onClick={() =>
-                                selectedBrandProfileId &&
-                                attachDevelopmentToBrandMutation.mutate({
-                                  developmentId: Number(row.developmentId),
-                                  brandProfileId: selectedBrandProfileId,
-                                })
-                              }
-                            >
-                              {selectedBrandProfileId
-                                ? `Attach to ${selectedBrandName}`
-                                : 'Select a Brand First'}
-                            </Button>
-                          </div>
+                          <Badge variant="outline">
+                            {getPartnerDevelopmentSetupLabel('needs_brand_link')}
+                          </Badge>
                         </div>
                       </div>
                     ))}

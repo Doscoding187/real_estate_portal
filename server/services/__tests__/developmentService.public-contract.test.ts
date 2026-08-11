@@ -45,7 +45,7 @@ describe('developmentService public development contract', () => {
 
     mockSelect.mockReturnValue({ from: mockFrom });
     mockFrom.mockReturnValue({ leftJoin: mockLeftJoin });
-    mockLeftJoin.mockReturnValue({ where: mockWhere });
+    mockLeftJoin.mockReturnValue({ leftJoin: mockLeftJoin, where: mockWhere });
     mockWhere.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue([]);
     mockGetDb.mockResolvedValue({ select: mockSelect });
@@ -61,9 +61,7 @@ describe('developmentService public development contract', () => {
     expect(parts.columns).toEqual(
       expect.arrayContaining(['slug', 'isPublished', 'approval_status']),
     );
-    expect(parts.params).toEqual(
-      expect.arrayContaining(['demo-development', 1, 'approved']),
-    );
+    expect(parts.params).toEqual(expect.arrayContaining(['demo-development', 1, 'approved']));
   });
 
   it('requires id lookups to be published and approved before public exposure', async () => {
@@ -78,11 +76,6 @@ describe('developmentService public development contract', () => {
   });
 
   it('requires direct public id reads to be published and approved before exposure', async () => {
-    mockSelect.mockReturnValueOnce({ from: mockFrom });
-    mockFrom.mockReturnValueOnce({ where: mockWhere });
-    mockWhere.mockReturnValueOnce({ limit: mockLimit });
-    mockLimit.mockResolvedValueOnce([]);
-
     const result = await getPublicDevelopment(42);
 
     expect(result).toBeNull();

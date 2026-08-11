@@ -7,6 +7,24 @@ import { brandLeadService } from './services/brandLeadService';
 import { developments, properties, developerBrandProfiles, leads } from '../drizzle/schema';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import { developmentService } from './services/developmentService';
+import { resolveOperatingIdentity } from './_core/identityResolver';
+import type { EnhancedTRPCContext } from './_core/brandContext';
+
+async function requireActivePublisherContext(ctx: EnhancedTRPCContext, brandProfileId: number) {
+  const identity = await resolveOperatingIdentity(ctx, {
+    mode: 'platform_curator',
+    brandProfileId,
+  });
+
+  if (identity.mode !== 'platform_curator') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'A platform-curator identity is required for publisher operations.',
+    });
+  }
+
+  return { brandProfileId: identity.brandProfileId };
+}
 
 /**
  * Super Admin Publisher Router
@@ -54,7 +72,7 @@ export const superAdminPublisherRouter = router({
       userId: ctx.user?.id,
       userEmail: ctx.user?.email,
       userRole: ctx.user?.role,
-      isEmulatorMode: !!enhancedCtx.operatingAs,
+      isPlatformCuratorMode: !!enhancedCtx.operatingAs,
       operatingAs: enhancedCtx.operatingAs
         ? {
             brandProfileId: enhancedCtx.operatingAs.brandProfileId,
@@ -78,7 +96,9 @@ export const superAdminPublisherRouter = router({
         .passthrough(),
     )
     .mutation(async ({ input, ctx }) => {
-      const selectedBrand = await developerBrandProfileService.getBrandProfileById(input.brandProfileId);
+      const selectedBrand = await developerBrandProfileService.getBrandProfileById(
+        input.brandProfileId,
+      );
       if (!selectedBrand) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -93,22 +113,7 @@ export const superAdminPublisherRouter = router({
         });
       }
 
-      // Get operating context from middleware (set by brandContext.ts)
-      const enhancedCtx = ctx as any; // EnhancedTRPCContext
-      if (
-        enhancedCtx.operatingAs?.brandProfileId &&
-        Number(enhancedCtx.operatingAs.brandProfileId) !== Number(input.brandProfileId)
-      ) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message:
-            'Selected brand does not match active publisher context. Re-select brand and retry.',
-        });
-      }
-
-      const operatingContext = enhancedCtx.operatingAs
-        ? { brandProfileId: enhancedCtx.operatingAs.brandProfileId }
-        : { brandProfileId: input.brandProfileId };
+      const operatingContext = await requireActivePublisherContext(ctx, input.brandProfileId);
 
       const metadata = {
         ownerType: 'platform' as const,
@@ -181,6 +186,7 @@ export const superAdminPublisherRouter = router({
 
         // Company Info
         description: z.string().optional(),
+        sourceAttribution: z.string().min(3).optional(),
         category: z.string().optional(),
         establishedYear: z.number().nullable().optional(),
         website: z.string().optional(),
@@ -211,6 +217,7 @@ export const superAdminPublisherRouter = router({
 
         // Map extended fields
         about: input.description,
+        sourceAttribution: input.sourceAttribution,
         // Category is not directly on developerBrandProfiles schema based on service check,
         // but we can map it to 'propertyFocus' or store in 'about' if needed.
         // Re-checking service definition: propertyFocus is string[].
@@ -259,6 +266,7 @@ export const superAdminPublisherRouter = router({
 
         // Company Info
         description: z.string().optional(),
+        sourceAttribution: z.string().min(3).optional(),
         category: z.string().optional(),
         establishedYear: z.number().nullable().optional(),
         website: z.string().optional(),
@@ -277,6 +285,7 @@ export const superAdminPublisherRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      await requireActivePublisherContext(ctx, input.brandProfileId);
       // Logic to combine address if partial updates are provided is tricky without reading first.
       // ideally frontend sends full address data if updating address.
       // We will perform a simple mapping assuming what is sent is what is intended.
@@ -297,6 +306,7 @@ export const superAdminPublisherRouter = router({
         identityType: input.identityType,
         logoUrl: input.logoUrl,
         about: input.description,
+        sourceAttribution: input.sourceAttribution,
         foundedYear: input.establishedYear,
         websiteUrl: input.website,
         publicContactEmail: input.email,
@@ -318,7 +328,8 @@ export const superAdminPublisherRouter = router({
         force: z.boolean().optional().default(false),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      await requireActivePublisherContext(ctx, input.brandProfileId);
       return await developerBrandProfileService.deleteBrandProfile(
         input.brandProfileId,
         input.force,
@@ -340,7 +351,8 @@ export const superAdminPublisherRouter = router({
         search: z.string().optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      await requireActivePublisherContext(ctx, input.brandProfileId);
       try {
         // Use service to get developments specifically linked to this brand profile
         return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
@@ -363,7 +375,8 @@ export const superAdminPublisherRouter = router({
         developmentId: z.number().int(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      await requireActivePublisherContext(ctx, input.brandProfileId);
       const dev = await developmentService.getDevelopmentWithPhases(input.developmentId);
       if (!dev || Number(dev.developerBrandProfileId || 0) !== Number(input.brandProfileId)) {
         throw new TRPCError({
@@ -373,61 +386,6 @@ export const superAdminPublisherRouter = router({
       }
 
       return dev;
-    }),
-
-  /**
-   * Bulk approve + publish all developments for a brand profile.
-   * Useful for seeding/demo content where super admin content should be immediately visible.
-   */
-  publishAllBrandDevelopments: superAdminProcedure
-    .input(
-      z.object({
-        brandProfileId: z.number().int(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const dbConn = await db.getDb();
-      if (!dbConn) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-
-      const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
-      const [before] = await dbConn
-        .select({ count: sql<number>`count(*)` })
-        .from(developments)
-        .where(eq(developments.developerBrandProfileId, input.brandProfileId));
-
-      const [needsUpdate] = await dbConn
-        .select({ count: sql<number>`count(*)` })
-        .from(developments)
-        .where(
-          and(
-            eq(developments.developerBrandProfileId, input.brandProfileId),
-            sql`(${developments.isPublished} = 0 OR ${developments.approvalStatus} <> 'approved')`,
-          ),
-        );
-
-      await dbConn
-        .update(developments)
-        .set({
-          isPublished: 1,
-          approvalStatus: 'approved' as any,
-          approvedAt: nowFormatted,
-          approvedBy: ctx.user.id,
-          publishedAt: nowFormatted,
-          status: 'launching-soon',
-          updatedAt: nowFormatted,
-        })
-        .where(eq(developments.developerBrandProfileId, input.brandProfileId));
-
-      const total = Number(before?.count || 0);
-      const updated = Number(needsUpdate?.count || 0);
-
-      return {
-        success: true,
-        brandProfileId: input.brandProfileId,
-        totalDevelopments: total,
-        updatedDevelopments: updated,
-      };
     }),
 
   /**
@@ -442,11 +400,12 @@ export const superAdminPublisherRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.brandProfileId);
       const updated = await developmentService.updateDevelopment(
         input.developmentId,
         ctx.user.id,
         input.data as any,
-        { brandProfileId: input.brandProfileId },
+        operatingContext,
       );
 
       return { success: true, development: updated };
@@ -463,61 +422,14 @@ export const superAdminPublisherRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const dbConn = await db.getDb();
-      if (!dbConn) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-      }
+      const operatingContext = await requireActivePublisherContext(ctx, input.brandProfileId);
+      const development = await developmentService.publishPlatformCuratedDevelopment(
+        input.developmentId,
+        ctx.user.id,
+        operatingContext,
+      );
 
-      const [existingDev] = await dbConn
-        .select()
-        .from(developments)
-        .where(
-          and(
-            eq(developments.id, input.developmentId),
-            eq(developments.developerBrandProfileId, input.brandProfileId),
-          ),
-        )
-        .limit(1);
-
-      if (!existingDev) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Development not found or does not belong to this brand context',
-        });
-      }
-
-      if (!String(existingDev.description ?? '').trim()) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Description is required before publishing',
-        });
-      }
-
-      const nowFormatted = new Date().toISOString().slice(0, 19).replace('T', ' ');
-
-      await dbConn
-        .update(developments)
-        .set({
-          isPublished: 1,
-          approvalStatus: 'approved' as any,
-          approvedAt: nowFormatted,
-          approvedBy: ctx.user.id,
-          publishedAt: nowFormatted,
-          status: existingDev.status || 'launching-soon',
-          updatedAt: nowFormatted,
-        })
-        .where(eq(developments.id, input.developmentId));
-
-      const [updated] = await dbConn
-        .select()
-        .from(developments)
-        .where(eq(developments.id, input.developmentId))
-        .limit(1);
-
-      return {
-        success: true,
-        development: updated || existingDev,
-      };
+      return { success: true, development };
     }),
 
   // ==========================================================================
@@ -535,7 +447,8 @@ export const superAdminPublisherRouter = router({
         offset: z.number().default(0),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      await requireActivePublisherContext(ctx, input.brandProfileId);
       try {
         const dbConn = await db.getDb();
         if (!dbConn) return [];
@@ -584,7 +497,10 @@ export const superAdminPublisherRouter = router({
         .from(leads)
         .leftJoin(properties, eq(leads.propertyId, properties.id))
         .leftJoin(developments, eq(leads.developmentId, developments.id))
-        .leftJoin(developerBrandProfiles, eq(leads.developerBrandProfileId, developerBrandProfiles.id))
+        .leftJoin(
+          developerBrandProfiles,
+          eq(leads.developerBrandProfileId, developerBrandProfiles.id),
+        )
         .where(
           and(
             eq(leads.deliveryStatus, 'attention_required'),
@@ -640,7 +556,8 @@ export const superAdminPublisherRouter = router({
         brandProfileId: z.number().int(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      await requireActivePublisherContext(ctx, input.brandProfileId);
       // Reuse the service's lead stats which aggregates leads, views, etc.
       return await developerBrandProfileService.getBrandLeadStats(input.brandProfileId);
     }),

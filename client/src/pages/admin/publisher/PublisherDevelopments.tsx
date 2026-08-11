@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Plus, Search, Filter, AlertCircle, Building2, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Filter, AlertCircle, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -39,18 +39,6 @@ const PublisherDevelopments: React.FC = () => {
     },
     onError: error => {
       toast.error(error.message || 'Failed to delete development');
-    },
-  });
-
-  const publishAllMutation = trpc.superAdminPublisher.publishAllBrandDevelopments.useMutation({
-    onSuccess: result => {
-      toast.success(
-        `Published ${result.updatedDevelopments} of ${result.totalDevelopments} development(s).`,
-      );
-      refetch();
-    },
-    onError: error => {
-      toast.error(error.message || 'Failed to publish brand developments');
     },
   });
 
@@ -120,18 +108,6 @@ const PublisherDevelopments: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (!selectedBrandId) return;
-              publishAllMutation.mutate({ brandProfileId: selectedBrandId });
-            }}
-            disabled={!selectedBrandId || publishAllMutation.isPending}
-            className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            {publishAllMutation.isPending ? 'Publishing...' : 'Publish Existing'}
-          </Button>
           <Button
             onClick={handleCreateDevelopment}
             className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105"

@@ -3,12 +3,18 @@ import { eq } from 'drizzle-orm';
 
 import { developerRouter } from '../developerRouter';
 import { getDb } from '../db-connection';
-import { developerBrandProfiles, developers, developments, users } from '../../drizzle/schema';
+import {
+  developerBrandProfiles,
+  developers,
+  developments,
+  unitTypes,
+  users,
+} from '../../drizzle/schema';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe);
 
 describeWithDb('developer public profile integration', () => {
   let userId: number | null = null;
@@ -88,6 +94,17 @@ describeWithDb('developer public profile integration', () => {
       approvalStatus: 'approved',
     });
     developmentIds.push(Number(publishedInsert.insertId));
+    await db!.insert(unitTypes).values({
+      id: `public-unit-${suffix}`,
+      developmentId: Number(publishedInsert.insertId),
+      name: 'Two Bedroom Apartment',
+      bedrooms: 2,
+      bathrooms: '2.0',
+      basePriceFrom: '1200000.00',
+      totalUnits: 10,
+      availableUnits: 8,
+      isActive: 1,
+    });
 
     const [draftInsert] = await db!.insert(developments).values({
       developerId,
@@ -104,7 +121,11 @@ describeWithDb('developer public profile integration', () => {
     });
     developmentIds.push(Number(draftInsert.insertId));
 
-    const caller = developerRouter.createCaller({ req: { headers: {} }, res: {}, user: null } as any);
+    const caller = developerRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
     await expect(caller.getPublicDeveloperBySlug({ slug })).resolves.toMatchObject({
       id: brandProfileId,
       name: `Public Brand ${suffix}`,
@@ -118,10 +139,7 @@ describeWithDb('developer public profile integration', () => {
       expect.objectContaining({ id: developmentIds[0], slug: `published-development-${suffix}` }),
     ]);
 
-    await db!
-      .update(developers)
-      .set({ status: 'rejected' })
-      .where(eq(developers.id, developerId));
+    await db!.update(developers).set({ status: 'rejected' }).where(eq(developers.id, developerId));
 
     await expect(caller.getPublicDeveloperBySlug({ slug })).resolves.toBeNull();
   });
