@@ -126,6 +126,42 @@ describe('public development eligibility authority', () => {
     });
   });
 
+  it('rejects an invisible platform brand and a broken developer custody chain', () => {
+    expect(
+      evaluatePublicDevelopmentEligibility(catalogue({ brand: { isVisible: 0 } })),
+    ).toMatchObject({
+      eligible: false,
+      reasons: expect.arrayContaining(['brand_not_visible']),
+    });
+
+    expect(
+      evaluatePublicDevelopmentEligibility(
+        catalogue({
+          development: { developerId: 7, devOwnerType: 'developer' },
+          brand: { ownerType: 'developer', linkedDeveloperAccountId: 99 },
+          developer: { id: 7, status: 'pending' },
+        }),
+      ),
+    ).toMatchObject({
+      eligible: false,
+      reasons: expect.arrayContaining(['invalid_developer_custody']),
+    });
+  });
+
+  it('does not make a source public merely because supersession is no longer active', () => {
+    expect(
+      evaluatePublicDevelopmentEligibility(
+        catalogue({
+          activeSupersessionSource: false,
+          development: { isPublished: 0 },
+        }),
+      ),
+    ).toMatchObject({
+      eligible: false,
+      reasons: expect.arrayContaining(['not_published']),
+    });
+  });
+
   it('fails closed for an active curated-source supersession even if publication flags remain live', () => {
     const result = evaluatePublicDevelopmentEligibility(
       catalogue({ activeSupersessionSource: true }),

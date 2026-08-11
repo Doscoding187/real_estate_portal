@@ -13,7 +13,11 @@ vi.mock('../../db-connection', () => ({
   getDb: mockGetDb,
 }));
 
-import { getPublicDevelopment, getPublicDevelopmentBySlug } from '../developmentService';
+import {
+  getPublicDevelopment,
+  getPublicDevelopmentBySlug,
+  searchPublicDevelopments,
+} from '../developmentService';
 
 function collectSqlParts(
   value: unknown,
@@ -84,5 +88,52 @@ describe('developmentService public development contract', () => {
 
     expect(parts.columns).toEqual(expect.arrayContaining(['id', 'isPublished', 'approval_status']));
     expect(parts.params).toEqual(expect.arrayContaining([42, 1, 'approved']));
+  });
+
+  it('uses the complete public catalogue authority for autocomplete and returns the canonical route', async () => {
+    mockLimit.mockResolvedValue([
+      {
+        id: 42,
+        name: 'Harbour Heights',
+        slug: 'harbour-heights',
+        city: 'Cape Town',
+        province: 'Western Cape',
+        developerId: 7,
+        developmentType: 'residential',
+        status: 'selling',
+      },
+    ]);
+
+    const result = await searchPublicDevelopments({
+      query: 'Harbour',
+      developerId: 7,
+      limit: 10,
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 42,
+        slug: 'harbour-heights',
+        canonicalRoute: '/development/harbour-heights',
+      }),
+    ]);
+
+    const whereClause = mockWhere.mock.calls[0]?.[0];
+    const parts = collectSqlParts(whereClause);
+    expect(parts.columns).toEqual(
+      expect.arrayContaining([
+        'name',
+        'isPublished',
+        'approval_status',
+        'transaction_type',
+        'developer_id',
+        'status',
+        'source_development_id',
+        'is_active',
+      ]),
+    );
+    expect(parts.params).toEqual(
+      expect.arrayContaining([7, 1, 'approved', 'for_sale', 'for_rent']),
+    );
   });
 });
