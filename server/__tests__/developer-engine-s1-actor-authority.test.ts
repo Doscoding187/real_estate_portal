@@ -110,11 +110,11 @@ describe('Developer Engine S1 actor authority', () => {
     expect(mockVerifyBrandContext).not.toHaveBeenCalled();
   });
 
-  it('lets a developer operate only its persisted developer-owned brand', async () => {
+  it('uses the canonical brandProfile relationship instead of a stale developerBrandProfileId field', async () => {
     mockGetDeveloperByUserId.mockResolvedValue({
       id: 7,
       userId: 70,
-      developerBrandProfileId: 44,
+      developerBrandProfileId: 999,
       brandProfile: { id: 44 },
     });
     mockGetDb.mockResolvedValue(developerBrandDatabase());

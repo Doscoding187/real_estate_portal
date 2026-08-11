@@ -126,8 +126,7 @@ export async function resolveOperatingIdentity(
       });
     }
 
-    const resolvedBrandProfileId =
-      profile.developerBrandProfileId ?? profile.brandProfile?.id ?? null;
+    const resolvedBrandProfileId = profile.brandProfile?.id ?? null;
     if (brandProfileId !== null && brandProfileId !== resolvedBrandProfileId) {
       throw new TRPCError({
         code: 'FORBIDDEN',
