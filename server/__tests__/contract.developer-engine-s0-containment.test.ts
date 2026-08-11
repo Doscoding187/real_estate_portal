@@ -114,15 +114,14 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(developmentService).toContain(
       "decision === 'approved' && development.transactionType === 'auction'",
     );
-    expect(developmentService).toContain("ne(developments.transactionType, 'auction')");
-    expect(derivedListingService).toContain("ne(developments.transactionType, 'auction')");
+    expect(developmentService).toContain('publicDevelopmentEligibilityConditions()');
+    expect(derivedListingService).toContain('publicDevelopmentEligibilityConditions()');
     expect(developmentService).not.toContain("neq(developments.transactionType, 'auction')");
     expect(derivedListingService).not.toContain("neq(developments.transactionType, 'auction')");
-    expect(source('server/db.ts')).toContain("ne(developments.transactionType, 'auction')");
-    expect(locationPagesService).toContain("ne(developments.transactionType, 'auction')");
-    expect(publicLeadCaptureService).toContain("development.transactionType !== 'auction'");
-    expect(distributionPolicy).toContain("development.transactionType !== 'auction'");
-    expect(sitemap).toContain("ne(developments.transactionType, 'auction')");
+    expect(locationPagesService).toContain('publicDevelopmentEligibilityConditions()');
+    expect(publicLeadCaptureService).toContain('evaluatePublicDevelopmentEligibility');
+    expect(distributionPolicy).toContain('evaluatePublicDevelopmentEligibility');
+    expect(sitemap).toContain('publicDevelopmentEligibilityConditions()');
     expect(guard).toContain(
       'Auction developments are not part of the supported public MVP contract',
     );

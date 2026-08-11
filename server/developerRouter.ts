@@ -49,6 +49,7 @@ import {
 import { calculateDevelopmentReadiness } from './lib/readiness';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
+import { resolveOperatingIdentity } from './_core/identityResolver';
 import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
 import { validatePersistedSubmissionReadiness } from './services/developmentSubmissionReadiness';
 import { buildDevelopmentHomeInventory } from './services/developmentInventorySummary';
@@ -1496,12 +1497,6 @@ export const developerRouter = router({
     .mutation(async ({ ctx, input }) => {
       const role = requireUser(ctx).role;
 
-      // 🔒 Hard separation
-      if (role === 'property_developer') {
-        // Real developer: force no emulation
-        (ctx as any).operatingAs = undefined;
-      }
-
       if (role === 'super_admin') {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
@@ -1509,6 +1504,10 @@ export const developerRouter = router({
             'Super admins must create developments through the canonical publisher workflow.',
         });
       }
+
+      // The authenticated developer identity, not a body-supplied developer or
+      // brand ID, is the authority for this authoring command.
+      await resolveOperatingIdentity(ctx, { mode: 'developer' });
 
       const development = await developmentService.createDevelopment(
         requireUser(ctx).id,
@@ -1593,25 +1592,27 @@ export const developerRouter = router({
       });
     }
 
-    // Handle brand emulation mode
-    if (role === 'super_admin' && operatingAs?.mode === 'seeding') {
+    // Resolve the server-authorized platform-curator identity before returning
+    // a developer-facing operating view.
+    if (role === 'super_admin' && operatingAs) {
+      const identity = await resolveOperatingIdentity(ctx, { mode: 'platform_curator' });
       if (
-        operatingAs.brandProfileType !== 'developer' &&
-        operatingAs.brandProfileType !== 'hybrid'
+        identity.mode !== 'platform_curator' ||
+        (identity.identityType !== 'developer' && identity.identityType !== 'hybrid')
       ) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message:
-            'Brand emulation context must be developer or hybrid type for developer profile.',
+            'Platform curator context must be developer or hybrid type for developer profile.',
         });
       }
 
-      // Return brand profile instead of user profile in emulation mode
-      const brandProfile = await getBrandProfileById(operatingAs.brandProfileId);
+      // Return the selected platform brand as the operating developer view.
+      const brandProfile = await getBrandProfileById(identity.brandProfileId);
       if (!brandProfile) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `Brand profile ${operatingAs.brandProfileId} not found.`,
+          message: `Brand profile ${identity.brandProfileId} not found.`,
         });
       }
 
@@ -1628,9 +1629,9 @@ export const developerRouter = router({
         headOfficeLocation: brandProfile.headOfficeLocation,
         operatingProvinces: brandProfile.operatingProvinces,
         propertyFocus: brandProfile.propertyFocus,
-        // Emulation-specific fields
-        isEmulation: true,
-        emulationType: 'developer',
+        // Operating-identity fields
+        isPlatformCurator: true,
+        operatingMode: 'platform_curator',
         actualUser: {
           id: user.id,
           email: user.email,
@@ -1667,7 +1668,7 @@ export const developerRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      await resolveOperatingIdentity(ctx, { mode: 'developer' });
       return await developmentService.updateDevelopment(
         input.id,
         requireUser(ctx).id,
@@ -1727,6 +1728,8 @@ export const developerRouter = router({
       let row: DevelopmentHomeIdentityRow | undefined;
 
       if (user.role === 'property_developer') {
+        // Development Home is a read model. Its existing ownership helper is
+        // already server-derived; S4 will replace this read model wholesale.
         const profile = await requireDeveloperProfileByUserId(user.id);
         [row] = await dbConn
           .select(selectIdentity)
@@ -1904,11 +1907,17 @@ export const developerRouter = router({
       if (!dbConn)
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
 
+      const user = requireUser(ctx);
+      await resolveOperatingIdentity(
+        ctx,
+        user.role === 'super_admin' ? { mode: 'platform_curator' } : { mode: 'developer' },
+      );
+
       // Simplified: Let the service handle super admin vs developer logic
       const result = await developmentService.publishDevelopment(
         input.id,
-        requireUser(ctx).id,
-        ctx.operatingAs, // Pass emulation context directly
+        user.id,
+        ctx.operatingAs, // Server-derived platform-curator context, when present
       );
 
       return result;

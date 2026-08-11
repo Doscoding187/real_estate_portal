@@ -3,6 +3,8 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import {
   developmentRequiredDocuments,
+  developerBrandProfiles,
+  developers,
   developments,
   distributionManagerAssignments,
   distributionPrograms,
@@ -17,6 +19,7 @@ import {
   type DistributionBrandPartnershipRow,
   type DistributionDevelopmentAccessRow,
 } from './distributionAccessRepository';
+import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -205,7 +208,8 @@ function buildReasons(input: {
       reasons.push(`development_access_${input.access.status}`);
     }
     if (boolFromTinyInt(input.access.excludedByMandate)) reasons.push('excluded_by_mandate');
-    if (boolFromTinyInt(input.access.excludedByExclusivity)) reasons.push('excluded_by_exclusivity');
+    if (boolFromTinyInt(input.access.excludedByExclusivity))
+      reasons.push('excluded_by_exclusivity');
     if (!boolFromTinyInt(input.access.submissionAllowed)) reasons.push('submission_not_allowed');
   }
 
@@ -351,8 +355,9 @@ export function buildOpportunityReadiness(input: {
     new Set(input.reasons.map(reason => mapDistributionReasonToOpportunityReason(reason).code)),
   );
   const firstMessage =
-    input.reasons.map(reason => mapDistributionReasonToOpportunityReason(reason).message).find(Boolean) ||
-    'This opportunity is not accepting referrals right now.';
+    input.reasons
+      .map(reason => mapDistributionReasonToOpportunityReason(reason).message)
+      .find(Boolean) || 'This opportunity is not accepting referrals right now.';
 
   if (input.inventoryState === 'enabled') {
     return {
@@ -369,7 +374,11 @@ export function buildOpportunityReadiness(input: {
     return {
       status: 'pending_setup' as const,
       reasonCodes,
-      nextAction: needsDocs ? ('upload_docs' as const) : needsManager ? ('contact_manager' as const) : ('not_available' as const),
+      nextAction: needsDocs
+        ? ('upload_docs' as const)
+        : needsManager
+          ? ('contact_manager' as const)
+          : ('not_available' as const),
       friendlyMessage: firstMessage,
     };
   }
@@ -391,13 +400,38 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const [development] = await input.db
     .select({
       id: developments.id,
+      developerId: developments.developerId,
+      devOwnerType: developments.devOwnerType,
+      developmentType: developments.developmentType,
       isPublished: developments.isPublished,
       approvalStatus: developments.approvalStatus,
       transactionType: developments.transactionType,
       developerBrandProfileId: developments.developerBrandProfileId,
       marketingBrandProfileId: developments.marketingBrandProfileId,
+      brand: {
+        id: developerBrandProfiles.id,
+        ownerType: developerBrandProfiles.ownerType,
+        linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
+        isVisible: developerBrandProfiles.isVisible,
+        sourceAttribution: developerBrandProfiles.sourceAttribution,
+      },
+      developer: {
+        id: developers.id,
+        status: developers.status,
+      },
+      activeUnitTypeCount: sql<number>`(
+        SELECT COUNT(*)
+        FROM unit_types
+        WHERE development_id = ${developments.id}
+          AND is_active = 1
+      )`,
     })
     .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(
+      developerBrandProfiles,
+      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+    )
     .where(eq(developments.id, input.developmentId))
     .limit(1);
 
@@ -409,11 +443,23 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     Number(development.developerBrandProfileId || 0) ||
     Number(development.marketingBrandProfileId || 0) ||
     null;
-  const developmentVisible =
-    brandProfileId !== null &&
-    boolFromTinyInt(development.isPublished) &&
-    String(development.approvalStatus || '') === 'approved' &&
-    development.transactionType !== 'auction';
+  const publicEligibility = evaluatePublicDevelopmentEligibility({
+    development: {
+      id: Number(development.id),
+      developerId: development.developerId,
+      developerBrandProfileId: development.developerBrandProfileId,
+      devOwnerType: development.devOwnerType,
+      developmentType: development.developmentType,
+      transactionType: development.transactionType,
+      isPublished: development.isPublished,
+      approvalStatus: development.approvalStatus,
+    },
+    brand: development.brand,
+    developer: development.developer?.id ? development.developer : null,
+    unitTypes: [],
+    activeUnitTypeCount: Number(development.activeUnitTypeCount || 0),
+  } as any);
+  const developmentVisible = publicEligibility.eligible;
 
   const [program] = await input.db
     .select({
@@ -458,20 +504,19 @@ export async function evaluateDevelopmentDistributionAccess(input: {
         });
 
   const developmentId = Number(development.id);
-  const [managerSummary] =
-    programExists
-      ? await input.db
-          .select({ count: sql<number>`COUNT(*)` })
-          .from(distributionManagerAssignments)
-          .where(
-            and(
-              eq(distributionManagerAssignments.developmentId, developmentId),
-              eq(distributionManagerAssignments.isPrimary, 1),
-              eq(distributionManagerAssignments.isActive, 1),
-            ),
-          )
-          .limit(1)
-      : [{ count: 0 as unknown as number }];
+  const [managerSummary] = programExists
+    ? await input.db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(distributionManagerAssignments)
+        .where(
+          and(
+            eq(distributionManagerAssignments.developmentId, developmentId),
+            eq(distributionManagerAssignments.isPrimary, 1),
+            eq(distributionManagerAssignments.isActive, 1),
+          ),
+        )
+        .limit(1)
+    : [{ count: 0 as unknown as number }];
 
   const [requiredDocsSummary] = await input.db
     .select({ count: sql<number>`COUNT(*)` })
@@ -494,7 +539,9 @@ export async function evaluateDevelopmentDistributionAccess(input: {
               ? null
               : Number(program.defaultCommissionPercent),
           defaultCommissionAmount:
-            program.defaultCommissionAmount === null ? null : Number(program.defaultCommissionAmount),
+            program.defaultCommissionAmount === null
+              ? null
+              : Number(program.defaultCommissionAmount),
           tierAccessPolicy: program.tierAccessPolicy,
           payoutMilestone: program.payoutMilestone,
           currencyCode: program.currencyCode,
@@ -514,15 +561,18 @@ export async function evaluateDevelopmentDistributionAccess(input: {
         missingRequirements: ['program_missing'],
       };
 
-  const brandPartnershipStatus = (partnership?.status || fallback.partnershipStatus || null) as BrandPartnershipStatus | null;
-  const developmentAccessStatus = (access?.status || fallback.accessStatus || null) as DevelopmentAccessStatus | null;
+  const brandPartnershipStatus = (partnership?.status ||
+    fallback.partnershipStatus ||
+    null) as BrandPartnershipStatus | null;
+  const developmentAccessStatus = (access?.status ||
+    fallback.accessStatus ||
+    null) as DevelopmentAccessStatus | null;
   const submissionAllowed = access
     ? boolFromTinyInt(access.submissionAllowed)
     : fallback.submissionAllowed;
   const excludedByMandate = access ? boolFromTinyInt(access.excludedByMandate) : false;
   const excludedByExclusivity = access ? boolFromTinyInt(access.excludedByExclusivity) : false;
-  const legacyFallbackUsed =
-    !partnership || !access ? Boolean(fallback.legacyFallbackUsed) : false;
+  const legacyFallbackUsed = !partnership || !access ? Boolean(fallback.legacyFallbackUsed) : false;
   const fallbackReason =
     !partnership || !access ? (fallback.fallbackReason as string | null) : null;
 
@@ -644,7 +694,9 @@ export async function assertDevelopmentSubmissionEligible(input: {
 }) {
   const evaluation = await evaluateDevelopmentDistributionAccess(input);
   if (!evaluation.submitReady) {
-    const reasons = evaluation.reasons.map(reason => mapDistributionReasonToOpportunityReason(reason));
+    const reasons = evaluation.reasons.map(reason =>
+      mapDistributionReasonToOpportunityReason(reason),
+    );
     const error = new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: evaluation.opportunity.friendlyMessage,

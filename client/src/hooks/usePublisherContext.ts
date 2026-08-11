@@ -1,7 +1,7 @@
 /**
  * Publisher Context Store
  *
- * Global state for "Operate As" functionality in Publisher Emulator.
+ * Global state for the platform-curator operating identity.
  * Persists the selected brand profile context across navigation.
  *
  * Used by:
@@ -13,7 +13,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface PublisherBrandContext {
-  mode: 'seeding';
+  mode: 'platform_curator';
   brandProfileId: number;
   brandProfileName: string;
   brandProfileType: 'developer' | 'marketing_agency' | 'hybrid';
@@ -71,10 +71,10 @@ export function resolvePublishingIdentity(
 ): {
   identityType: 'developer' | 'marketing_agency' | 'brand';
   brandProfileId: number;
-  source: 'publisher_emulator';
+  source: 'platform_curator';
 } | null {
   // Only resolve for Super Admin with active publisher context
-  if (userRole === 'super_admin' && publisherContext?.mode === 'seeding') {
+  if (userRole === 'super_admin' && publisherContext?.mode === 'platform_curator') {
     // Map brand profile type to wizard identity type
     const identityType =
       publisherContext.brandProfileType === 'developer'
@@ -84,7 +84,7 @@ export function resolvePublishingIdentity(
     return {
       identityType,
       brandProfileId: publisherContext.brandProfileId,
-      source: 'publisher_emulator',
+      source: 'platform_curator',
     };
   }
 

@@ -1,9 +1,12 @@
 /**
- * Brand Context Middleware
- * Enables super admin to operate as specific brands for emulator mode
+ * Developer Engine operating-identity middleware.
+ *
+ * The client may request a brand with x-operating-as-brand. The server
+ * resolves and validates that request as a platform-curator identity before
+ * placing it on tRPC context.
  */
 
-import type { TrpcContext, BrandEmulationContext } from './context';
+import type { TrpcContext } from './context';
 import { TRPCError } from '@trpc/server';
 import { brandContextService } from '../services/brandContextService';
 import { requireUser } from './requireUser';
@@ -13,19 +16,19 @@ export interface BrandOperatingContext {
   brandType: 'developer' | 'marketing_agency' | 'hybrid';
   brandName: string;
   originalUserId: number;
-  mode?: 'seeding' | 'emulating';
+  ownerType: 'platform';
+  mode: 'platform_curator';
   brandProfileType?: 'developer' | 'marketing_agency' | 'hybrid';
   brandProfileName?: string;
 }
 
 export interface EnhancedTRPCContext extends TrpcContext {
   operatingAs?: BrandOperatingContext;
-  brandEmulationContext?: BrandEmulationContext;
 }
 
 /**
- * Middleware to handle brand switching for emulator mode
- * Only super admins can switch brand context
+ * Resolve a requested platform-curator identity.
+ * Only super admins can request this operating mode.
  */
 export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCContext> {
   // Only allow super admins to operate as brands
@@ -63,12 +66,8 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
         brandType: (brandProfile.identityType || 'developer') as any,
         brandName: brandProfile.brandName,
         originalUserId: ctx.user.id,
-      },
-      // ✅ BRIDGE: legacy code expects this
-      brandEmulationContext: {
-        originalUserId: ctx.user.id,
-        mode: 'seeding',
-        brandProfileId: brandProfile.brandProfileId,
+        ownerType: 'platform',
+        mode: 'platform_curator',
         brandProfileType: (brandProfile.identityType || 'developer') as any,
         brandProfileName: brandProfile.brandName,
       },
@@ -90,12 +89,13 @@ export async function applyBrandContext(ctx: TrpcContext): Promise<EnhancedTRPCC
 
 /**
  * Helper to get the effective brand ID for operations
- * In emulator mode, uses the operating-as brand ID
+ * In platform-curator mode, revalidates and uses the operating-as brand ID
  * In normal mode, uses the user's developer profile
  */
 export async function getEffectiveBrandId(ctx: EnhancedTRPCContext): Promise<number> {
   // If operating as a brand in emulator mode
   if (ctx.operatingAs) {
+    await brandContextService.verifyBrandContext(ctx.operatingAs.brandProfileId);
     return ctx.operatingAs.brandProfileId;
   }
 
@@ -121,10 +121,8 @@ export async function getEffectiveBrandId(ctx: EnhancedTRPCContext): Promise<num
   });
 }
 
-/**
- * Type guard to check if context is in emulator mode
- */
-export function isEmulatorMode(ctx: EnhancedTRPCContext): ctx is EnhancedTRPCContext & {
+/** Type guard for a server-authorized platform-curator context. */
+export function isPlatformCuratorContext(ctx: EnhancedTRPCContext): ctx is EnhancedTRPCContext & {
   operatingAs: BrandOperatingContext;
 } {
   return !!ctx.operatingAs;
@@ -140,9 +138,9 @@ export function logBrandContextChange(
 ): void {
   if (action === 'enter' && brandContext) {
     console.log(
-      `[BRAND_CONTEXT] User ${userId} entering emulator mode as brand "${brandContext.brandName}" (ID: ${brandContext.brandProfileId})`,
+      `[BRAND_CONTEXT] User ${userId} entering platform-curator mode as brand "${brandContext.brandName}" (ID: ${brandContext.brandProfileId})`,
     );
   } else if (action === 'exit') {
-    console.log(`[BRAND_CONTEXT] User ${userId} exiting emulator mode`);
+    console.log(`[BRAND_CONTEXT] User ${userId} exiting platform-curator mode`);
   }
 }

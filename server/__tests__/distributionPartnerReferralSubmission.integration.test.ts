@@ -17,6 +17,7 @@ import {
   distributionDealEvents,
   distributionDeals,
   distributionPrograms,
+  unitTypes,
   users,
 } from '../../drizzle/schema';
 
@@ -32,6 +33,7 @@ const createdState = {
   userIds: [] as number[],
   brandProfileIds: [] as number[],
   developmentIds: [] as number[],
+  unitTypeIds: [] as string[],
   programIds: [] as number[],
   brandPartnershipIds: [] as number[],
   accessIds: [] as number[],
@@ -108,6 +110,8 @@ async function insertDevelopment(name: string) {
     profileType: 'industry_reference',
     isVisible: 1,
     identityType: 'developer',
+    sourceAttribution: 'Publicly available referral integration fixture source',
+    linkedDeveloperAccountId: null,
   } as any);
   const brandProfileId = Number((brandInsertResult as any).insertId || 0);
   createdState.brandProfileIds.push(brandProfileId);
@@ -117,13 +121,33 @@ async function insertDevelopment(name: string) {
     developmentType: 'residential',
     city: 'Johannesburg',
     province: 'Gauteng',
+    developerId: null,
     developerBrandProfileId: brandProfileId,
+    devOwnerType: 'platform',
+    transactionType: 'for_sale',
     isPublished: 1,
     approvalStatus: 'approved',
+    publishedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    status: 'selling',
   } as any);
 
   const developmentId = Number((insertResult as any).insertId || 0);
   createdState.developmentIds.push(developmentId);
+
+  const unitTypeId = randomUUID();
+  await db.insert(unitTypes).values({
+    id: unitTypeId,
+    developmentId,
+    name: 'Referral Fixture Unit',
+    bedrooms: 2,
+    bathrooms: '1.0',
+    basePriceFrom: '1000000.00',
+    isActive: 1,
+    totalUnits: 1,
+    availableUnits: 1,
+  });
+  createdState.unitTypeIds.push(unitTypeId);
+
   return developmentId;
 }
 
@@ -364,6 +388,11 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     }
 
     const developmentIds = uniqueIds(createdState.developmentIds);
+    const unitTypeIds = uniqueStringIds(createdState.unitTypeIds);
+    if (unitTypeIds.length) {
+      await db.delete(unitTypes).where(inArray(unitTypes.id, unitTypeIds));
+    }
+
     if (developmentIds.length) {
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
@@ -383,6 +412,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.userIds = [];
     createdState.brandProfileIds = [];
     createdState.developmentIds = [];
+    createdState.unitTypeIds = [];
     createdState.programIds = [];
     createdState.brandPartnershipIds = [];
     createdState.accessIds = [];
