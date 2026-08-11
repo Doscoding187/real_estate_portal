@@ -101,6 +101,16 @@ const CONTRACT_GROUPS: readonly ContractGroup[] = [
     'A shared, remote, or production value could expose data or credentials.',
   ),
   group(
+    ['LOCAL_PLE_REVIEWER_PASSWORD'],
+    'REQUIRED_MACHINE_LOCAL_SECRET',
+    '~/.config/property-listify/local.env',
+    false,
+    false,
+    'The PLE reviewer fixture operation must refuse to run until this secret exists.',
+    'No secret fallback is permitted.',
+    'A privileged reviewer credential must never be stored in the repository or shared environment.',
+  ),
+  group(
     ['APP_URL', 'FRONTEND_URL', 'VITE_API_URL', 'VITE_API_BASE_URL'],
     'REQUIRED_MACHINE_LOCAL_NON_SECRET',
     '~/.config/property-listify/local.env',

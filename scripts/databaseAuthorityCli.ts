@@ -29,6 +29,10 @@ import {
   verifyPlePublicationEntitlement,
 } from '../server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement';
 import {
+  preparePleReviewerFixture,
+  verifyPleReviewerFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/pleReviewerFixture';
+import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
@@ -68,7 +72,9 @@ type Command =
   | 'listing-preview:prepare'
   | 'listing-preview:verify'
   | 'ple-publication-entitlement:prepare'
-  | 'ple-publication-entitlement:verify';
+  | 'ple-publication-entitlement:verify'
+  | 'ple-reviewer:prepare'
+  | 'ple-reviewer:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -270,7 +276,9 @@ async function run(command: Command): Promise<void> {
 
   if (
     command === 'ple-publication-entitlement:prepare' ||
-    command === 'ple-publication-entitlement:verify'
+    command === 'ple-publication-entitlement:verify' ||
+    command === 'ple-reviewer:prepare' ||
+    command === 'ple-reviewer:verify'
   ) {
     const isPrepare = command.endsWith(':prepare');
     const operation = isPrepare ? 'test-fixture' : 'verification';
@@ -278,9 +286,14 @@ async function run(command: Command): Promise<void> {
     const decision = authorizationFor(authority);
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
-      const evidence = isPrepare
-        ? await preparePlePublicationEntitlement({ authority, decision, connection })
-        : await verifyPlePublicationEntitlement({ authority, decision, connection });
+      const isReviewer = command.startsWith('ple-reviewer:');
+      const evidence = isReviewer
+        ? isPrepare
+          ? await preparePleReviewerFixture({ authority, decision, connection })
+          : await verifyPleReviewerFixture({ authority, decision, connection })
+        : isPrepare
+          ? await preparePlePublicationEntitlement({ authority, decision, connection })
+          : await verifyPlePublicationEntitlement({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -329,6 +342,8 @@ const commands = new Set<Command>([
   'listing-preview:verify',
   'ple-publication-entitlement:prepare',
   'ple-publication-entitlement:verify',
+  'ple-reviewer:prepare',
+  'ple-reviewer:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

@@ -9,6 +9,7 @@
     "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
     "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
     "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
+    "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
     "server/_core/launchPreflight.ts",
     "scripts/databaseAuthorityCli.ts",
     "scripts/databaseAuthorityConsumerContract.ts",
@@ -85,6 +86,7 @@
     "canonicalReferenceData": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
     "searchToLeadScenario": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
     "plePublicationEntitlement": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
+    "pleReviewerFixture": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
     "targetRequirement": "exact owned disposable worktree profile and accepted manifest head",
     "legacyLocationsAuthority": "never written or used as canonical geography authority"
   },
