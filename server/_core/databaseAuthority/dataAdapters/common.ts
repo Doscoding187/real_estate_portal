@@ -15,7 +15,7 @@ import type { DatabaseOperation, ResolvedDatabaseAuthority } from '../types';
 import { assertOwnedDisposableTarget, identityFromAuthority } from '../lifecycle';
 import { readWorktreeDatabaseProfile, writeWorktreeDatabaseProfile } from '../worktreeProfile';
 
-export const ACCEPTED_MIGRATION_HEAD = '0002_paid_launch_access_invoice_term.sql' as const;
+export const ACCEPTED_MIGRATION_HEAD = '0003_paid_launch_access_invoice_term.sql' as const;
 
 export type AdapterEvidence = {
   adapter: string;

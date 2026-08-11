@@ -6,6 +6,7 @@ import {
   agencies,
   developerBrandProfiles,
   developers,
+  developmentSupersessions,
   developments,
   leads,
   listings,
@@ -501,6 +502,12 @@ export async function resolveLeadOwnership(
           WHERE ${unitTypes.developmentId} = ${developments.id}
             AND ${unitTypes.isActive} = 1
         )`,
+        activeSupersessionSource: sql<number>`EXISTS (
+          SELECT 1
+          FROM ${developmentSupersessions}
+          WHERE ${developmentSupersessions.sourceDevelopmentId} = ${developments.id}
+            AND ${developmentSupersessions.status} = 'active'
+        )`,
       })
       .from(developments)
       .where(eq(developments.id, developmentId))
@@ -571,6 +578,7 @@ export async function resolveLeadOwnership(
       developer: developerId ? developerMap.get(developerId) : null,
       unitTypes: [],
       activeUnitTypeCount: Number(development?.activeUnitTypeCount || 0),
+      activeSupersessionSource: Number(development?.activeSupersessionSource || 0) === 1,
     } as any);
     if (!eligibility.eligible) {
       throw new TRPCError({

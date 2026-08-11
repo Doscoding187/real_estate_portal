@@ -107,7 +107,7 @@ never deletes it automatically. Validate and remove only an exact, empty,
 owned residue via an approved cleanup packet before retrying initialization.
 
 Reference and scenario adapters require the exact mode-0600 ownership profile,
-the accepted `0002_paid_launch_access_invoice_term.sql` migration head, and
+the accepted `0003_paid_launch_access_invoice_term.sql` migration head, and
 the disposable worktree target. They are never part of ordinary service
 startup. Replay is explicit:
 

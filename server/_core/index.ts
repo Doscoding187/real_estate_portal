@@ -16,6 +16,7 @@ import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import sitemapRouter from '../routes/sitemap';
+import developmentSupersessionRedirectRouter from '../routes/developmentSupersessionRedirect';
 import agentOnboardingRouter from '../routes/agentOnboarding';
 import { ENV } from './env';
 
@@ -190,6 +191,7 @@ async function startServer() {
   app.use(customDomainMiddleware);
 
   app.use('/', sitemapRouter);
+  app.use('/', developmentSupersessionRedirectRouter);
   registerAuthRoutes(app);
   app.use('/api/agent', agentOnboardingRouter);
   registerHealthEndpoint(app);

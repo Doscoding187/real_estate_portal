@@ -8,6 +8,7 @@ import {
   type MigrationManifestDocument,
   type MigrationManifestEntry,
 } from '../migrationManifest';
+import { buildMigrationPlan } from '../runSqlMigrations';
 
 const roots: string[] = [];
 const checksum = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -65,11 +66,12 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it('accepts the repository 0000 -> 0001 -> 0002 manifest with exact ancestry', () => {
+  it('accepts the repository 0000 -> 0001 -> 0002 -> 0003 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const [baseline, incremental, launchAccess] = manifest.orderedMigrations;
+    const [baseline, incremental, developmentSupersessions, launchAccess] =
+      manifest.orderedMigrations;
 
     expect(baseline).toMatchObject({
       sequence: 0,
@@ -86,16 +88,49 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(launchAccess).toMatchObject({
+    expect(developmentSupersessions).toMatchObject({
       sequence: 2,
-      filename: '0002_paid_launch_access_invoice_term.sql',
+      filename: '0002_development_supersessions.sql',
       parent: incremental.filename,
       parentChecksum: incremental.checksum,
+      checksum: '9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(launchAccess).toMatchObject({
+      sequence: 3,
+      filename: '0003_paid_launch_access_invoice_term.sql',
+      parent: developmentSupersessions.filename,
+      parentChecksum: developmentSupersessions.checksum,
       checksum: '84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46',
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
     expect(manifest.expectedHead.filename).toBe(launchAccess.filename);
+  });
+
+  it('plans exactly one paid-launch migration from the current-main head', () => {
+    const manifest = loadAndValidateMigrationManifest({
+      migrationsDirectory: resolve('server/migrations'),
+    });
+    const currentMainHead = manifest.orderedMigrations[2];
+    const plan = buildMigrationPlan({
+      manifest,
+      targetFingerprintHash: 'a'.repeat(64),
+      applied: manifest.orderedMigrations.slice(0, 3).map(item => ({
+        fileName: item.filename,
+        checksum: item.checksum,
+      })),
+      acceptedOldHead: currentMainHead.filename,
+      expectedNewHead: '0003_paid_launch_access_invoice_term.sql',
+    });
+
+    expect(plan.acceptedOldHead).toBe('0002_development_supersessions.sql');
+    expect(plan.pending).toHaveLength(1);
+    expect(plan.pending.map(item => item.filename)).toEqual([
+      '0003_paid_launch_access_invoice_term.sql',
+    ]);
+    expect(plan.expectedNewHead).toBe('0003_paid_launch_access_invoice_term.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

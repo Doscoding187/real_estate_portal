@@ -1,6 +1,12 @@
 import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
 
-import { developerBrandProfiles, developers, developments, unitTypes } from '../../drizzle/schema';
+import {
+  developerBrandProfiles,
+  developers,
+  developmentSupersessions,
+  developments,
+  unitTypes,
+} from '../../drizzle/schema';
 import {
   SUPPORTED_PUBLIC_TRANSACTION_TYPES,
   type CanonicalDevelopmentCatalogue,
@@ -16,7 +22,8 @@ export type PublicDevelopmentEligibilityReason =
   | 'missing_source_attribution'
   | 'invalid_platform_custody'
   | 'invalid_developer_custody'
-  | 'missing_active_unit_types';
+  | 'missing_active_unit_types'
+  | 'active_supersession_source';
 
 export type PublicDevelopmentEligibilityResult = {
   eligible: boolean;
@@ -44,6 +51,8 @@ export function evaluatePublicDevelopmentEligibility(
 ): PublicDevelopmentEligibilityResult {
   const { development, brand, developer, unitTypes: catalogueUnitTypes } = catalogue;
   const reasons: PublicDevelopmentEligibilityReason[] = [];
+
+  if (catalogue.activeSupersessionSource) reasons.push('active_supersession_source');
 
   if (!isTinyIntTrue(development.isPublished)) reasons.push('not_published');
   if (development.approvalStatus !== 'approved') reasons.push('not_approved');
@@ -151,5 +160,11 @@ export function publicDevelopmentEligibilityConditions(): SQL {
     ),
     or(platformCustody, developerCustody),
     or(eq(developments.developmentType, 'land'), activeUnitTypeExists),
+    sql`NOT EXISTS (
+      SELECT 1
+      FROM ${developmentSupersessions}
+      WHERE ${developmentSupersessions.sourceDevelopmentId} = ${developments.id}
+        AND ${developmentSupersessions.status} = 'active'
+    )`,
   )!;
 }

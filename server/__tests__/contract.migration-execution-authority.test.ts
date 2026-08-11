@@ -283,15 +283,28 @@ describe('migration execution authority', () => {
     expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
     const baseline = executionManifest.migrations.find(entry => entry.sequence === 0);
     const incremental = executionManifest.migrations.find(entry => entry.sequence === 1);
+    const developmentSupersessions = executionManifest.migrations.find(
+      entry => entry.sequence === 2,
+    );
+    const launchAccess = executionManifest.migrations.find(entry => entry.sequence === 3);
     expect(incremental).toMatchObject({
       filename: '0001_public_search_to_lead_reliability.sql',
       parent: baseline?.filename,
       parentChecksum: baseline?.checksum,
     });
-    const launchAccess = executionManifest.migrations.find(entry => entry.sequence === 2);
-    expect(launchAccess).toMatchObject({
-      filename: '0002_paid_launch_access_invoice_term.sql',
+    expect(developmentSupersessions).toMatchObject({
+      sequence: 2,
+      filename: '0002_development_supersessions.sql',
       parent: incremental?.filename,
+      parentChecksum: incremental?.checksum,
+      checksum: '9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655',
+    });
+    expect(launchAccess).toMatchObject({
+      sequence: 3,
+      filename: '0003_paid_launch_access_invoice_term.sql',
+      parent: developmentSupersessions?.filename,
+      parentChecksum: developmentSupersessions?.checksum,
+      checksum: '84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46',
     });
     expect(executionManifest.expectedHead).toBe(launchAccess?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);

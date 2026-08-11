@@ -5,6 +5,7 @@ import {
   developmentRequiredDocuments,
   developerBrandProfiles,
   developers,
+  developmentSupersessions,
   developments,
   distributionManagerAssignments,
   distributionPrograms,
@@ -425,6 +426,12 @@ export async function evaluateDevelopmentDistributionAccess(input: {
         WHERE development_id = ${developments.id}
           AND is_active = 1
       )`,
+      activeSupersessionSource: sql<number>`EXISTS (
+        SELECT 1
+        FROM ${developmentSupersessions}
+        WHERE ${developmentSupersessions.sourceDevelopmentId} = ${developments.id}
+          AND ${developmentSupersessions.status} = 'active'
+      )`,
     })
     .from(developments)
     .leftJoin(developers, eq(developments.developerId, developers.id))
@@ -458,6 +465,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     developer: development.developer?.id ? development.developer : null,
     unitTypes: [],
     activeUnitTypeCount: Number(development.activeUnitTypeCount || 0),
+    activeSupersessionSource: Number(development.activeSupersessionSource || 0) === 1,
   } as any);
   const developmentVisible = publicEligibility.eligible;
 

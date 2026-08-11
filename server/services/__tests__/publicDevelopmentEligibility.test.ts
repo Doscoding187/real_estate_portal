@@ -9,6 +9,7 @@ function catalogue(
     developer?: CanonicalDevelopmentCatalogue['developer'];
     unitTypes?: CanonicalDevelopmentCatalogue['unitTypes'];
     activeUnitTypeCount?: number;
+    activeSupersessionSource?: boolean;
   } = {},
 ): CanonicalDevelopmentCatalogue {
   const defaultDevelopment: CanonicalDevelopmentCatalogue['development'] = {
@@ -37,6 +38,9 @@ function catalogue(
     ...(overrides.activeUnitTypeCount === undefined
       ? {}
       : { activeUnitTypeCount: overrides.activeUnitTypeCount }),
+    ...(overrides.activeSupersessionSource === undefined
+      ? {}
+      : { activeSupersessionSource: overrides.activeSupersessionSource }),
   };
 }
 
@@ -119,6 +123,17 @@ describe('public development eligibility authority', () => {
     expect(result).toMatchObject({
       eligible: false,
       reasons: expect.arrayContaining(['missing_source_attribution']),
+    });
+  });
+
+  it('fails closed for an active curated-source supersession even if publication flags remain live', () => {
+    const result = evaluatePublicDevelopmentEligibility(
+      catalogue({ activeSupersessionSource: true }),
+    );
+
+    expect(result).toMatchObject({
+      eligible: false,
+      reasons: expect.arrayContaining(['active_supersession_source']),
     });
   });
 });

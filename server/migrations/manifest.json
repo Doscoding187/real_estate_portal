@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0002_paid_launch_access_invoice_term.sql",
+  "expectedHead": "0003_paid_launch_access_invoice_term.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -28,10 +28,20 @@
     },
     {
       "sequence": 2,
-      "filename": "0002_paid_launch_access_invoice_term.sql",
-      "checksum": "84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46",
+      "filename": "0002_development_supersessions.sql",
+      "checksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
       "parent": "0001_public_search_to_lead_reliability.sql",
       "parentChecksum": "adb04a6e5655e4812ddd594d2b85cb5b218c6f54cb2fc0c029ecdc76325da5a0",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 3,
+      "filename": "0003_paid_launch_access_invoice_term.sql",
+      "checksum": "84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46",
+      "parent": "0002_development_supersessions.sql",
+      "parentChecksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
