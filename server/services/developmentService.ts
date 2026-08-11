@@ -814,6 +814,7 @@ export async function listPublicDevelopments(options: {
 
   return results.map((d: any) => ({
     ...d,
+    canonicalRoute: buildDevelopmentRootPath(d),
     images: parseJsonField(d.images),
     highlights: parseJsonField(d.highlights),
     rating: d.rating != null ? Number(d.rating) : null,
@@ -828,6 +829,60 @@ export async function listPublicDevelopments(options: {
       d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
     configurations: unitsByDevelopment.get(Number(d.id)) || [],
     unitTypes: unitsByDevelopment.get(Number(d.id)) || [],
+  }));
+}
+
+/**
+ * Canonical public development discovery projection for bounded name search.
+ *
+ * This intentionally shares the same catalogue joins and public eligibility
+ * predicate as list/detail discovery.  The response keeps the autocomplete
+ * fields stable while adding the S2-owned current route identity.
+ */
+export async function searchPublicDevelopments(options: {
+  query: string;
+  developerId?: number;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const query = options.query.trim().toLowerCase();
+  if (!query) return [];
+
+  const limit = Math.max(1, Math.min(Math.trunc(options.limit ?? 10), 20));
+  const conditions = [
+    sql`LOWER(${developments.name}) LIKE ${`%${query}%`}`,
+    publicDevelopmentEligibilityConditions(),
+  ];
+
+  if (options.developerId !== undefined) {
+    conditions.push(eq(developments.developerId, options.developerId));
+  }
+
+  const results = await db
+    .select({
+      id: developments.id,
+      name: developments.name,
+      slug: developments.slug,
+      city: developments.city,
+      province: developments.province,
+      developerId: developments.developerId,
+      developmentType: developments.developmentType,
+      status: developments.status,
+    })
+    .from(developments)
+    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(
+      developerBrandProfiles,
+      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+    )
+    .where(and(...conditions))
+    .limit(limit);
+
+  return results.map(result => ({
+    ...result,
+    canonicalRoute: buildDevelopmentRootPath(result),
   }));
 }
 
@@ -3175,6 +3230,7 @@ export const developmentService = {
   getPublicDevelopmentBySlug,
   getPublicDevelopment,
   listPublicDevelopments,
+  searchPublicDevelopments,
 
   createDevelopment,
   updateDevelopment,

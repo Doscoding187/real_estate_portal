@@ -534,7 +534,11 @@ export const developerRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      return await db.searchDevelopments(input.query, input.developerId, input.limit);
+      return await developmentService.searchPublicDevelopments({
+        query: input.query,
+        developerId: input.developerId,
+        limit: input.limit,
+      });
     }),
 
   createProfile: protectedProcedure

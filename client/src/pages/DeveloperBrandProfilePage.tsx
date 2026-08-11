@@ -229,6 +229,7 @@ export default function DeveloperBrandProfilePage() {
                   <DevelopmentCard
                     key={dev.id}
                     id={dev.slug || String(dev.id)}
+                    canonicalRoute={dev.canonicalRoute}
                     title={dev.name}
                     rating={Number(dev.rating) || 0}
                     location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}

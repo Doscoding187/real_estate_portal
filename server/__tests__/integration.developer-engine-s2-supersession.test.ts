@@ -412,9 +412,27 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
     expect(source).toMatchObject({ isPublished: 0, devOwnerType: 'platform', developerId: null });
     expect(replacement).toMatchObject({ isPublished: 1, devOwnerType: 'developer' });
 
+    const publicDiscoveryIds = async () =>
+      (await developmentService.listPublicDevelopments({ limit: 50 })).map(row => Number(row.id));
+    const autocompleteResults = async () =>
+      developmentService.searchPublicDevelopments({ query: 'S2 Development', limit: 50 });
+
+    expect(await publicDiscoveryIds()).toEqual(expect.arrayContaining([pair.replacementId]));
+    expect(await publicDiscoveryIds()).not.toEqual(expect.arrayContaining([pair.sourceId]));
+    expect((await autocompleteResults()).map(row => Number(row.id))).toEqual(
+      expect.arrayContaining([pair.replacementId]),
+    );
+    expect((await autocompleteResults()).map(row => Number(row.id))).not.toEqual(
+      expect.arrayContaining([pair.sourceId]),
+    );
+
     const db = await database();
     await db.update(developments).set({ isPublished: 1 }).where(eq(developments.id, pair.sourceId));
     expect(await developmentService.getPublicDevelopment(pair.sourceId)).toBeNull();
+    expect(await publicDiscoveryIds()).not.toEqual(expect.arrayContaining([pair.sourceId]));
+    expect((await autocompleteResults()).map(row => Number(row.id))).not.toEqual(
+      expect.arrayContaining([pair.sourceId]),
+    );
     await db.update(developments).set({ isPublished: 0 }).where(eq(developments.id, pair.sourceId));
 
     const retry = await activateDevelopmentSupersession({
@@ -440,6 +458,11 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
     expect(await readDevelopment(pair.replacementId)).toMatchObject({ isPublished: 0 });
     expect(await developmentService.getPublicDevelopment(pair.sourceId)).toBeNull();
     expect(await developmentService.getPublicDevelopment(pair.replacementId)).toBeNull();
+    expect(await publicDiscoveryIds()).not.toEqual(expect.arrayContaining([pair.sourceId]));
+    expect(await publicDiscoveryIds()).not.toEqual(expect.arrayContaining([pair.replacementId]));
+    expect((await autocompleteResults()).map(row => Number(row.id))).not.toEqual(
+      expect.arrayContaining([pair.sourceId, pair.replacementId]),
+    );
 
     const submitted = await developmentService.publishDevelopment(
       pair.replacementId,
@@ -456,6 +479,16 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
     expect(await developmentService.getPublicDevelopment(pair.replacementId)).toMatchObject({
       id: pair.replacementId,
       isPublished: 1,
+    });
+    expect(await publicDiscoveryIds()).not.toEqual(expect.arrayContaining([pair.sourceId]));
+    expect(await publicDiscoveryIds()).toEqual(expect.arrayContaining([pair.replacementId]));
+    expect((await autocompleteResults()).map(row => Number(row.id))).not.toEqual(
+      expect.arrayContaining([pair.sourceId]),
+    );
+    expect(
+      (await autocompleteResults()).find(row => Number(row.id) === pair.replacementId),
+    ).toMatchObject({
+      canonicalRoute: '/development/s2-replacement-activation',
     });
     expect(
       await resolveActiveDevelopmentSupersessionRedirect(activated.sourcePublicRootPath!),
@@ -674,6 +707,21 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       isPublished: replacementBefore.isPublished,
       publishedAt: replacementBefore.publishedAt,
     });
+    const reversedPublicIds = (await developmentService.listPublicDevelopments({ limit: 50 })).map(
+      row => Number(row.id),
+    );
+    expect(reversedPublicIds).not.toEqual(expect.arrayContaining([pair.sourceId]));
+    expect(reversedPublicIds).toEqual(expect.arrayContaining([pair.replacementId]));
+    const reversedAutocomplete = await developmentService.searchPublicDevelopments({
+      query: 'S2 Development',
+      limit: 50,
+    });
+    expect(reversedAutocomplete.map(row => Number(row.id))).not.toEqual(
+      expect.arrayContaining([pair.sourceId]),
+    );
+    expect(reversedAutocomplete.map(row => Number(row.id))).toEqual(
+      expect.arrayContaining([pair.replacementId]),
+    );
     expect(
       await resolveActiveDevelopmentSupersessionRedirect(activated.sourcePublicRootPath!),
     ).toBeNull();

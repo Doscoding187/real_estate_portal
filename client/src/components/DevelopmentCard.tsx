@@ -7,6 +7,7 @@ import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 
 export interface DevelopmentCardProps {
   id: string;
+  canonicalRoute?: string;
   title: string;
   rating?: number;
   location: string;
@@ -33,6 +34,7 @@ export interface DevelopmentCardProps {
 
 export function DevelopmentCard({
   id,
+  canonicalRoute,
   title,
   rating,
   location,
@@ -50,6 +52,7 @@ export function DevelopmentCard({
   onContactClick,
 }: DevelopmentCardProps) {
   const [, setLocation] = useLocation();
+  const developmentRoute = canonicalRoute || `/development/${id}`;
 
   const formatPrice = (price: number) => {
     if (price >= 1000000) {
@@ -63,7 +66,7 @@ export function DevelopmentCard({
       {/* Image Section (Left) - 40% width */}
       <div
         className="relative w-full md:w-[40%] h-64 md:h-auto md:min-h-[320px] shrink-0 overflow-hidden cursor-pointer"
-        onClick={() => setLocation(`/development/${id}`)}
+        onClick={() => setLocation(developmentRoute)}
       >
         <img
           src={image}
@@ -121,8 +124,8 @@ export function DevelopmentCard({
           <div className="mb-5">
             <div className="flex items-start justify-between mb-2">
               <h3
-            className="text-xl sm:text-2xl font-bold text-slate-900 hover:text-primary transition-colors cursor-pointer flex items-center gap-2 leading-tight"
-                onClick={() => setLocation(`/development/${id}`)}
+                className="text-xl sm:text-2xl font-bold text-slate-900 hover:text-primary transition-colors cursor-pointer flex items-center gap-2 leading-tight"
+                onClick={() => setLocation(developmentRoute)}
               >
                 {title}
                 {rating && (
@@ -230,7 +233,7 @@ export function DevelopmentCard({
                 onContactClick();
               } else {
                 // Development detail owns the canonical enquiry dialog and attribution context.
-                setLocation(`/development/${id}`);
+                setLocation(developmentRoute);
               }
             }}
           >
