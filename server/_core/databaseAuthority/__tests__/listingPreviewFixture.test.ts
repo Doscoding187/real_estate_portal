@@ -1,4 +1,6 @@
 import { join } from 'node:path';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import bcrypt from 'bcryptjs';
 import { describe, expect, it } from 'vitest';
 import { resolveDatabaseAuthority } from '../context';
@@ -71,27 +73,31 @@ describe('listing-preview Database Authority fixture', () => {
 
   it('refuses a target owned by another registered worktree', () => {
     const current = exactWorktreeTarget();
-    const otherWorktreePath = '/home/edwardspc/Desktop/Dev/property-listify-main';
-    const wrongOwner = resolveDatabaseAuthority({
-      operation: 'demo-seed',
-      cwd: ROOT,
-      gitIdentity: deriveGitWorktreeIdentity({
-        repositoryRoot: ROOT,
-        gitCommonDirectory: join(ROOT, '.git'),
-        worktreePath: otherWorktreePath,
-        branch: 'main',
-        head: 'a'.repeat(40),
-        originMainHead: 'b'.repeat(40),
-        registered: true,
-        clean: true,
-      }),
-      explicitDatabaseUrl: `mysql://listify_app:private@127.0.0.1:3307/${current.context.databaseName}`,
-      credentialClass: 'local-owner',
-      processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
-    });
-    expect(() => assertListingPreviewTarget(wrongOwner)).toThrow(
-      'exact owned disposable worktree database',
-    );
+    const otherWorktreePath = mkdtempSync(join(tmpdir(), 'property-listify-other-worktree-'));
+    try {
+      const wrongOwner = resolveDatabaseAuthority({
+        operation: 'demo-seed',
+        cwd: ROOT,
+        gitIdentity: deriveGitWorktreeIdentity({
+          repositoryRoot: ROOT,
+          gitCommonDirectory: join(ROOT, '.git'),
+          worktreePath: otherWorktreePath,
+          branch: 'main',
+          head: 'a'.repeat(40),
+          originMainHead: 'b'.repeat(40),
+          registered: true,
+          clean: true,
+        }),
+        explicitDatabaseUrl: `mysql://listify_app:private@127.0.0.1:3307/${current.context.databaseName}`,
+        credentialClass: 'local-owner',
+        processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
+      });
+      expect(() => assertListingPreviewTarget(wrongOwner)).toThrow(
+        'exact owned disposable worktree database',
+      );
+    } finally {
+      rmSync(otherWorktreePath, { recursive: true, force: true });
+    }
   });
 
   it('fails closed when the central password authority is absent', () => {
