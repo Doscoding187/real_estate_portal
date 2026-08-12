@@ -14,7 +14,9 @@ import { resolveDatabaseAuthority } from './context';
 import type { ResolvedDatabaseAuthority } from './types';
 import { assertOwnedDisposableTarget, identityFromAuthority } from './lifecycle';
 import { readWorktreeDatabaseProfile } from './worktreeProfile';
+import { requireReferenceAdapterTarget } from './dataAdapters/common';
 import { verifyCanonicalGeography } from './dataAdapters/canonicalGeography';
+import { verifyCanonicalCommercialReference } from './dataAdapters/canonicalCommercial';
 import { verifySearchToLeadScenario } from './dataAdapters/searchToLeadScenario';
 import {
   compareNormalizedSchemas,
@@ -56,6 +58,7 @@ export type LayeredDatabaseReadiness = {
     schemaMigrated: ReadinessLayer;
     schemaCongruent: ReadinessLayer;
     canonicalReferenceData: ReadinessLayer;
+    commercialReferenceData: ReadinessLayer;
     acceptanceScenario: ReadinessLayer;
     application: ReadinessLayer;
     targetConnectivity: ReadinessLayer;
@@ -121,6 +124,14 @@ function notEvaluatedLayers() {
 
 function targetOwnershipLayer(authority: ResolvedDatabaseAuthority): ReadinessLayer {
   try {
+    const ownership = requireReferenceAdapterTarget(authority);
+    if (authority.context.targetClass === 'disposable-test') {
+      return layer(
+        'ready',
+        'authorized-disposable-test',
+        `Authorized isolated test target ${ownership.databaseName} is available for reference verification.`,
+      );
+    }
     assertOwnedDisposableTarget(authority);
     const profile = readWorktreeDatabaseProfile(identityFromAuthority(authority));
     return profile
@@ -331,6 +342,11 @@ export async function assessAuthorizedDatabaseReadiness(input: {
     'reference-not-evaluated',
     'Canonical reference data is evaluated for a requested location runtime.',
   );
+  let commercialReferenceData = layer(
+    'not-evaluated',
+    'commercial-reference-not-evaluated',
+    'Canonical commercial reference data is evaluated for database readiness.',
+  );
   let acceptanceScenario = layer(
     'not-evaluated',
     'scenario-not-evaluated',
@@ -413,6 +429,42 @@ export async function assessAuthorizedDatabaseReadiness(input: {
       }
     }
   }
+  if (requestedRuntime === 'database') {
+    if (migrationHead.state !== 'ready' || schemaCongruent.state !== 'ready') {
+      commercialReferenceData = layer(
+        'not-ready',
+        'commercial-reference-blocked-by-schema',
+        'Canonical commercial reference data requires the accepted migration head and a congruent schema.',
+      );
+    } else if (!input.authorization) {
+      commercialReferenceData = layer(
+        'not-evaluated',
+        'commercial-reference-authorization-not-supplied',
+        'Commercial reference verification requires the authorized readiness operation.',
+      );
+    } else {
+      try {
+        const commercial = await verifyCanonicalCommercialReference({
+          authority: input.authority,
+          decision: input.authorization,
+          connection: input.connection,
+        });
+        commercialReferenceData = layer(
+          'ready',
+          'canonical-commercial-reference-ready',
+          `${commercial.version} (${commercial.digest.slice(0, 16)}) verified: ${commercial.verified.products.length} Launch Access products and their entitlements.`,
+        );
+      } catch (error) {
+        commercialReferenceData = layer(
+          'not-ready',
+          'canonical-commercial-reference-not-ready',
+          error instanceof Error
+            ? error.message
+            : 'Canonical commercial reference data is not ready.',
+        );
+      }
+    }
+  }
   const requiredData =
     requestedRuntime === 'database'
       ? layer(
@@ -437,7 +489,8 @@ export async function assessAuthorizedDatabaseReadiness(input: {
     schemaMigrated.state === 'ready' &&
     schemaCongruent.state === 'ready' &&
     incompleteAttemptState.state === 'ready' &&
-    structuralSchema.state === 'ready';
+    structuralSchema.state === 'ready' &&
+    (requestedRuntime !== 'database' || commercialReferenceData.state === 'ready');
   const applicationReady =
     baseReady && (requestedRuntime === 'database' || requiredData.state === 'ready');
   const application = applicationReady
@@ -474,6 +527,7 @@ export async function assessAuthorizedDatabaseReadiness(input: {
       schemaMigrated,
       schemaCongruent,
       canonicalReferenceData,
+      commercialReferenceData,
       acceptanceScenario,
       application,
       targetConnectivity,
@@ -608,6 +662,11 @@ function unavailableReadiness(input: {
         'not-evaluated',
         'reference-not-evaluated',
         'Target readiness failed before canonical reference-data verification.',
+      ),
+      commercialReferenceData: layer(
+        'not-evaluated',
+        'commercial-reference-not-evaluated',
+        'Target readiness failed before canonical commercial reference-data verification.',
       ),
       acceptanceScenario: layer(
         'not-evaluated',

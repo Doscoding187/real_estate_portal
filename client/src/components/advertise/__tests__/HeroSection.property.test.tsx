@@ -19,9 +19,21 @@ vi.mock('framer-motion', () => {
     function MockMotionComponent({ children, ...props }: any) {
       // Strip all framer-motion specific props
       const {
-        whileInView, whileHover, whileTap, initial, animate, exit,
-        transition, viewport, variants, drag, dragConstraints,
-        layoutId, layout, onAnimationComplete, custom,
+        whileInView,
+        whileHover,
+        whileTap,
+        initial,
+        animate,
+        exit,
+        transition,
+        viewport,
+        variants,
+        drag,
+        dragConstraints,
+        layoutId,
+        layout,
+        onAnimationComplete,
+        custom,
         ...domProps
       } = props;
       const Element = Tag as any;
@@ -79,7 +91,7 @@ vi.mock('@/lib/animations/advertiseAnimations', () => ({
   staggerItem: {},
 }));
 
-// Mock CTAButton (imported but not used inline — HeroSection renders buttons directly)
+// Mock CTAButton for compatibility with older component imports.
 vi.mock('../CTAButton', () => ({
   CTAButtonGroup: () => null,
 }));
@@ -114,7 +126,8 @@ function buildProps(overrides: Partial<HeroSectionProps> = {}): HeroSectionProps
  * Arbitrary: generate a meaningful string (not just whitespace/punctuation)
  */
 const meaningfulString = (min: number, max: number) =>
-  fc.string({ minLength: min, maxLength: max })
+  fc
+    .string({ minLength: min, maxLength: max })
     .map(s => 'X' + s.replace(/\s+/g, ' ').trim() + 'X')
     .filter(s => s.length >= min);
 
@@ -205,11 +218,11 @@ describe('Property 1: Hero section load performance', () => {
           const subheadlineEl = Array.from(pElements).find(p => p.textContent === subheadline);
           expect(subheadlineEl).toBeTruthy();
 
-          // Verify CTA buttons are present (rendered inline as <button> elements)
-          const buttons = container.querySelectorAll('button');
-          const buttonTexts = Array.from(buttons).map(b => b.textContent?.trim());
-          expect(buttonTexts).toContain(primaryLabel);
-          expect(buttonTexts).toContain(secondaryLabel);
+          // Destination CTAs render as real links so browser navigation works.
+          const links = container.querySelectorAll('a');
+          const linkTexts = Array.from(links).map(link => link.textContent?.trim());
+          expect(linkTexts).toContain(primaryLabel);
+          expect(linkTexts).toContain(secondaryLabel);
 
           // Verify section has proper ARIA label
           const section = container.querySelector('section');
@@ -225,19 +238,15 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should maintain stable layout dimensions for any configuration', () => {
     fc.assert(
-      fc.property(
-        meaningfulString(30, 70),
-        meaningfulString(50, 150),
-        (headline, subheadline) => {
-          const props = buildProps({ headline, subheadline });
-          const { container } = render(<HeroSection {...props} />);
-          const section = container.querySelector('section');
+      fc.property(meaningfulString(30, 70), meaningfulString(50, 150), (headline, subheadline) => {
+        const props = buildProps({ headline, subheadline });
+        const { container } = render(<HeroSection {...props} />);
+        const section = container.querySelector('section');
 
-          expect(section).toBeTruthy();
-          expect(section?.className).toContain('overflow-hidden');
-          expect(section?.className).toContain('relative');
-        },
-      ),
+        expect(section).toBeTruthy();
+        expect(section?.className).toContain('overflow-hidden');
+        expect(section?.className).toContain('relative');
+      }),
       { numRuns: 100 },
     );
   });
@@ -275,29 +284,25 @@ describe('Property 1: Hero section load performance', () => {
    */
   it('should maintain semantic HTML structure for any configuration', () => {
     fc.assert(
-      fc.property(
-        meaningfulString(30, 70),
-        meaningfulString(50, 150),
-        (headline, subheadline) => {
-          const props = buildProps({ headline, subheadline });
-          const { container } = render(<HeroSection {...props} />);
+      fc.property(meaningfulString(30, 70), meaningfulString(50, 150), (headline, subheadline) => {
+        const props = buildProps({ headline, subheadline });
+        const { container } = render(<HeroSection {...props} />);
 
-          // Should have semantic section element
-          const section = container.querySelector('section');
-          expect(section).toBeTruthy();
+        // Should have semantic section element
+        const section = container.querySelector('section');
+        expect(section).toBeTruthy();
 
-          // Should have single H1 element
-          const h1Elements = container.querySelectorAll('h1');
-          expect(h1Elements.length).toBe(1);
+        // Should have single H1 element
+        const h1Elements = container.querySelectorAll('h1');
+        expect(h1Elements.length).toBe(1);
 
-          // H1 should have proper ID for aria-labelledby
-          const h1 = h1Elements[0];
-          expect(h1.id).toBe('hero-headline');
+        // H1 should have proper ID for aria-labelledby
+        const h1 = h1Elements[0];
+        expect(h1.id).toBe('hero-headline');
 
-          // Section should reference H1 via aria-labelledby
-          expect(section?.getAttribute('aria-labelledby')).toBe('hero-headline');
-        },
-      ),
+        // Section should reference H1 via aria-labelledby
+        expect(section?.getAttribute('aria-labelledby')).toBe('hero-headline');
+      }),
       { numRuns: 100 },
     );
   });
@@ -317,6 +322,15 @@ describe('Property 1: Hero section load performance', () => {
       }),
       { numRuns: 100 },
     );
+  });
+
+  it('uses an isolated hero stack and preserves CTA destinations', () => {
+    const { container } = render(<HeroSection {...buildProps()} />);
+    const section = container.querySelector('section');
+    const links = Array.from(container.querySelectorAll('a'));
+
+    expect(section?.className).toContain('isolate');
+    expect(links.map(link => link.getAttribute('href'))).toEqual(['/register', '/about']);
   });
 
   /**
@@ -359,8 +373,8 @@ describe('Property 1: Hero section load performance', () => {
         const props = buildProps({ headline });
         const { container } = render(<HeroSection {...props} />);
 
-        // Should have responsive container with max-w-4xl (centered layout)
-        const containerDiv = container.querySelector('.max-w-4xl');
+        // Should have the responsive two-column container used by the product-led hero.
+        const containerDiv = container.querySelector('.max-w-7xl');
         expect(containerDiv).toBeTruthy();
         if (containerDiv) {
           expect(containerDiv.className).toContain('px-4');

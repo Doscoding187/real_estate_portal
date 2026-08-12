@@ -79,5 +79,13 @@
   "localServiceLifecycle": "scripts/local-db.sh",
   "localServiceDirectoryPattern": "/var/tmp/property-listify-<uid>/mysql-3307",
   "canonicalReferenceDataAdapter": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+  "canonicalCommercialReferenceDataAdapter": "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
+  "canonicalCommercialReleaseEntrypoint": "scripts/databaseAuthorityCli.ts",
+  "canonicalCommercialReleaseCommands": [
+    "db:release:reference:plan",
+    "db:release:reference:ack",
+    "db:release:reference:apply",
+    "db:release:reference:verify"
+  ],
   "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
 }

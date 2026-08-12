@@ -1,5 +1,5 @@
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -110,7 +110,29 @@ describe('EnhancedNavbar Advertise & Partner menu', () => {
     expect(trigger).toHaveAttribute('data-active', 'true');
 
     fireEvent.click(trigger);
-    expect(screen.getByRole('region', { name: 'Advertise & Partner navigation' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Advertise & Partner navigation' }),
+    ).toBeInTheDocument();
+  });
+
+  it('closes the Advertise & Partner menu when the pointer leaves the action group', async () => {
+    render(<EnhancedNavbar />);
+
+    const trigger = screen.getByRole('button', { name: /Advertise & Partner/ });
+    const actions = trigger.closest('.public-navbar__desktop-actions');
+
+    expect(actions).not.toBeNull();
+    fireEvent.mouseEnter(trigger);
+    expect(
+      screen.getByRole('region', { name: 'Advertise & Partner navigation' }),
+    ).toBeInTheDocument();
+
+    fireEvent.mouseLeave(actions!);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('region', { name: 'Advertise & Partner navigation' }),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it('exposes only approved public commercial paths in the mobile section', () => {

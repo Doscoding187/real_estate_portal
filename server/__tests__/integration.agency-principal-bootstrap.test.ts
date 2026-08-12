@@ -7,6 +7,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 
 import { appRouter } from '../routers';
 import { authService } from '../_core/auth';
+import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
 import { getDb } from '../db';
 import { createListing } from '../db';
 import { assertListingPublicationEntitled } from '../services/listingPublicationEntitlementService';
@@ -32,18 +33,26 @@ import {
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.test'), override: true });
 
-function usesListifyTest(url?: string) {
+function usesApprovedDisposableDatabase(url?: string) {
   try {
-    return new URL(url || '').pathname.replace(/^\//, '') === 'listify_test';
+    const authority = resolveDatabaseAuthority({
+      operation: 'test-fixture',
+      explicitDatabaseUrl: url,
+    });
+    return (
+      ['disposable-test', 'disposable-worktree'].includes(authority.context.targetClass) &&
+      authority.context.worktree.ownershipMatches
+    );
   } catch {
     return false;
   }
 }
 
-const hasTestDb = usesListifyTest(process.env.DATABASE_URL);
+const hasTestDb = usesApprovedDisposableDatabase(process.env.DATABASE_URL);
 const guardedDescribe: typeof describe = hasTestDb
   ? describe
-  : ((name, fn) => describe.skip(`${name} (requires listify_test)`, fn)) as typeof describe;
+  : (((name, fn) =>
+      describe.skip(`${name} (requires an approved disposable database)`, fn)) as typeof describe);
 
 const created = {
   agencyIds: [] as number[],
@@ -55,8 +64,12 @@ const created = {
 
 const originalEnv: Record<string, string | undefined> = {};
 const idOf = (result: any) => Number(result?.insertId || result?.[0]?.insertId || 0);
-const caller = (user: { id: number; role: string; agencyId?: number | null; email?: string | null }) =>
-  appRouter.createCaller({ req: { headers: {} }, res: {}, user } as any);
+const caller = (user: {
+  id: number;
+  role: string;
+  agencyId?: number | null;
+  email?: string | null;
+}) => appRouter.createCaller({ req: { headers: {} }, res: {}, user } as any);
 
 function rememberEnv(key: string, value: string) {
   if (!(key in originalEnv)) originalEnv[key] = process.env[key];
@@ -103,7 +116,30 @@ async function createPlan(input: {
   return planId;
 }
 
-function onboardingInput(suffix: string, planId: number, teamEmails = [`agent-${suffix}@example.test`]) {
+async function canonicalAgencyLaunchAccessPlanId() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const [plan] = await db
+    .select()
+    .from(plans)
+    .where(eq(plans.name, 'agency_launch_access'))
+    .limit(1);
+  if (
+    !plan ||
+    plan.segment !== 'agency' ||
+    Number(plan.price) !== 99_900 ||
+    Number(plan.trialDays) !== 0
+  ) {
+    throw new Error('Canonical agency Launch Access reference data is unavailable or invalid.');
+  }
+  return Number(plan.id);
+}
+
+function onboardingInput(
+  suffix: string,
+  planId: number,
+  teamEmails = [`agent-${suffix}@example.test`],
+) {
   return {
     basicInfo: {
       name: `Bootstrap Realty ${suffix}`,
@@ -127,7 +163,12 @@ function onboardingInput(suffix: string, planId: number, teamEmails = [`agent-${
 
 async function registerPrincipal(suffix: string) {
   const email = `principal-${suffix}@example.test`;
-  const result = await authService.register(email, 'StrongPassword1!', 'Bootstrap Principal', 'agency_admin');
+  const result = await authService.register(
+    email,
+    'StrongPassword1!',
+    'Bootstrap Principal',
+    'agency_admin',
+  );
   created.userIds.push(result.userId);
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -138,7 +179,10 @@ async function registerPrincipal(suffix: string) {
 
 beforeAll(() => {
   rememberEnv('BILLING_PROOF_STORAGE_ADAPTER', 'local');
-  rememberEnv('BILLING_PRIVATE_STORAGE_DIR', `/tmp/property-listify-bootstrap-proofs-${process.pid}`);
+  rememberEnv(
+    'BILLING_PRIVATE_STORAGE_DIR',
+    `/tmp/property-listify-bootstrap-proofs-${process.pid}`,
+  );
   rememberEnv('BILLING_EFT_ACCOUNT_NAME', 'LOCAL TEST EFT ACCOUNT - NOT PAYABLE');
   rememberEnv('BILLING_EFT_BANK_NAME', 'Local Test Bank');
   rememberEnv('BILLING_EFT_BRANCH_CODE', '000000');
@@ -166,15 +210,42 @@ afterEach(async () => {
     await db.delete(listings).where(inArray(listings.id, listingIds));
   }
   if (agencyIds.length) {
-    await db.delete(billingAuditEvents).where(and(eq(billingAuditEvents.ownerType, 'agency'), inArray(billingAuditEvents.ownerId, agencyIds)));
-    await db.delete(billingPaymentDocuments).where(and(eq(billingPaymentDocuments.ownerType, 'agency'), inArray(billingPaymentDocuments.ownerId, agencyIds)));
-    await db.delete(billingPayments).where(and(eq(billingPayments.ownerType, 'agency'), inArray(billingPayments.ownerId, agencyIds)));
-    await db.delete(billingInvoices).where(and(eq(billingInvoices.ownerType, 'agency'), inArray(billingInvoices.ownerId, agencyIds)));
+    await db
+      .delete(billingAuditEvents)
+      .where(
+        and(
+          eq(billingAuditEvents.ownerType, 'agency'),
+          inArray(billingAuditEvents.ownerId, agencyIds),
+        ),
+      );
+    await db
+      .delete(billingPaymentDocuments)
+      .where(
+        and(
+          eq(billingPaymentDocuments.ownerType, 'agency'),
+          inArray(billingPaymentDocuments.ownerId, agencyIds),
+        ),
+      );
+    await db
+      .delete(billingPayments)
+      .where(
+        and(eq(billingPayments.ownerType, 'agency'), inArray(billingPayments.ownerId, agencyIds)),
+      );
+    await db
+      .delete(billingInvoices)
+      .where(
+        and(eq(billingInvoices.ownerType, 'agency'), inArray(billingInvoices.ownerId, agencyIds)),
+      );
     await db.delete(invitations).where(inArray(invitations.agencyId, agencyIds));
-    await db.delete(subscriptions).where(and(eq(subscriptions.ownerType, 'agency'), inArray(subscriptions.ownerId, agencyIds)));
+    await db
+      .delete(subscriptions)
+      .where(and(eq(subscriptions.ownerType, 'agency'), inArray(subscriptions.ownerId, agencyIds)));
     await db.delete(agencyBranding).where(inArray(agencyBranding.agencyId, agencyIds));
   }
-  if (agentIds.length) await db.delete(agencyAgentMemberships).where(inArray(agencyAgentMemberships.agentId, agentIds));
+  if (agentIds.length)
+    await db
+      .delete(agencyAgentMemberships)
+      .where(inArray(agencyAgentMemberships.agentId, agentIds));
   if (agentIds.length) await db.delete(agents).where(inArray(agents.id, agentIds));
   if (userIds.length) {
     await db.delete(notifications).where(inArray(notifications.userId, userIds));
@@ -192,7 +263,9 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
       'utf8',
     );
 
-    expect(page).toContain('planId: agency.alreadyCreated ? agency.planId : planSelection.selectedPlanId');
+    expect(page).toContain(
+      'planId: agency.alreadyCreated ? agency.planId : planSelection.selectedPlanId',
+    );
     expect(page).toContain("toast.info('Resuming agency setup'");
     expect(page).toContain('error instanceof Error\n            ? error.message');
     expect(page).not.toContain('AgencySetupWizard');
@@ -200,26 +273,42 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
 
   it('registers, verifies, bootstraps once, reuses EFT checkout, and activates canonical access', async () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan({ suffix });
+    const planId = await canonicalAgencyLaunchAccessPlanId();
     const principal = await registerPrincipal(suffix);
 
-    await expect(caller({ id: principal.user.id, role: 'agency_admin', email: principal.email }).agency.createOnboarding(onboardingInput(suffix, planId))).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    await expect(
+      caller({
+        id: principal.user.id,
+        role: 'agency_admin',
+        email: principal.email,
+      }).agency.createOnboarding(onboardingInput(suffix, planId)),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
     const verified = await authService.verifyEmail(principal.verificationToken);
-    expect(verified).toMatchObject({ id: principal.user.id, role: 'agency_admin', emailVerified: 1 });
+    expect(verified).toMatchObject({
+      id: principal.user.id,
+      role: 'agency_admin',
+      emailVerified: 1,
+    });
 
-    const principalCaller = caller({ id: principal.user.id, role: 'agency_admin', email: principal.email });
+    const principalCaller = caller({
+      id: principal.user.id,
+      role: 'agency_admin',
+      email: principal.email,
+    });
     await expect(
       principalCaller.agency.createOnboarding(
         onboardingInput(`${suffix}-malformed`, planId, ['not-an-email']),
       ),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     await expect(
-      principalCaller.agency.createOnboarding(
-        onboardingInput(`${suffix}-blank`, planId, ['   ']),
-      ),
+      principalCaller.agency.createOnboarding(onboardingInput(`${suffix}-blank`, planId, ['   '])),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     const createdOnboarding = await principalCaller.agency.createOnboarding(
-      onboardingInput(suffix, planId, [`Agent-${suffix}@example.test`, ` agent-${suffix}@example.test `, principal.email]),
+      onboardingInput(suffix, planId, [
+        `Agent-${suffix}@example.test`,
+        ` agent-${suffix}@example.test `,
+        principal.email,
+      ]),
     );
     created.agencyIds.push(createdOnboarding.agencyId);
     expect(createdOnboarding.alreadyCreated).toBe(false);
@@ -228,17 +317,40 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     if (!db) throw new Error('Database not available');
     const [[agency], [branding], [subscription], invitationRows] = await Promise.all([
       db.select().from(agencies).where(eq(agencies.id, createdOnboarding.agencyId)).limit(1),
-      db.select().from(agencyBranding).where(eq(agencyBranding.agencyId, createdOnboarding.agencyId)).limit(1),
-      db.select().from(subscriptions).where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, createdOnboarding.agencyId))).limit(1),
+      db
+        .select()
+        .from(agencyBranding)
+        .where(eq(agencyBranding.agencyId, createdOnboarding.agencyId))
+        .limit(1),
+      db
+        .select()
+        .from(subscriptions)
+        .where(
+          and(
+            eq(subscriptions.ownerType, 'agency'),
+            eq(subscriptions.ownerId, createdOnboarding.agencyId),
+          ),
+        )
+        .limit(1),
       db.select().from(invitations).where(eq(invitations.agencyId, createdOnboarding.agencyId)),
     ]);
     expect(agency).toBeTruthy();
     expect(branding).toMatchObject({ companyName: `Bootstrap Realty ${suffix}` });
-    expect(subscription).toMatchObject({ ownerType: 'agency', ownerId: createdOnboarding.agencyId, planId, status: 'trial' });
+    expect(subscription).toMatchObject({
+      ownerType: 'agency',
+      ownerId: createdOnboarding.agencyId,
+      planId,
+      status: 'pending_payment',
+    });
     expect(invitationRows).toHaveLength(1);
     expect(invitationRows[0]?.email).toBe(`agent-${suffix}@example.test`);
 
-    const attachedCaller = caller({ id: principal.user.id, role: 'agency_admin', agencyId: createdOnboarding.agencyId, email: principal.email });
+    const attachedCaller = caller({
+      id: principal.user.id,
+      role: 'agency_admin',
+      agencyId: createdOnboarding.agencyId,
+      email: principal.email,
+    });
     expect((await attachedCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(false);
     const [checkout, concurrentCheckout] = await Promise.all([
       attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' }),
@@ -250,22 +362,47 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
       await db
         .select()
         .from(billingInvoices)
-        .where(and(eq(billingInvoices.ownerType, 'agency'), eq(billingInvoices.ownerId, createdOnboarding.agencyId))),
+        .where(
+          and(
+            eq(billingInvoices.ownerType, 'agency'),
+            eq(billingInvoices.ownerId, createdOnboarding.agencyId),
+          ),
+        ),
     ).toHaveLength(1);
-    const checkoutRetry = await attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' });
+    const checkoutRetry = await attachedCaller.billing.startManualEftCheckout({
+      planId,
+      billingCycle: 'monthly',
+    });
     expect(checkoutRetry.invoice.id).toBe(checkout.invoice.id);
     expect(checkoutRetry.paymentReference).toBe(checkout.paymentReference);
-    await expect(attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'annual' })).rejects.toMatchObject({ code: 'CONFLICT' });
+    const alternateCycleCheckout = await attachedCaller.billing.startManualEftCheckout({
+      planId,
+      billingCycle: 'annual',
+    });
+    expect(alternateCycleCheckout.invoice.id).toBe(checkout.invoice.id);
+    expect(alternateCycleCheckout.paymentReference).toBe(checkout.paymentReference);
+    expect(alternateCycleCheckout.invoice.commercialTermKind).toBe('paid_launch_access');
 
-    const [adminInsert] = await db.insert(users).values({ email: `finance-${suffix}@example.test`, name: 'Finance Admin', role: 'super_admin', emailVerified: 1 } as any);
-    const adminId = idOf(adminInsert); created.userIds.push(adminId);
+    const [adminInsert] = await db.insert(users).values({
+      email: `finance-${suffix}@example.test`,
+      name: 'Finance Admin',
+      role: 'super_admin',
+      emailVerified: 1,
+    } as any);
+    const adminId = idOf(adminInsert);
+    created.userIds.push(adminId);
     const proof = await attachedCaller.billing.submitPaymentProof({
       invoiceId: checkout.invoice.id,
       amount: checkout.invoice.amountDue,
       bankReference: checkout.paymentReference,
       payerName: 'Bootstrap Principal',
       paymentDate: new Date().toISOString().slice(0, 10),
-      file: { filename: 'proof.pdf', mimeType: 'application/pdf', sizeBytes: 3, contentBase64: Buffer.from('pdf').toString('base64') },
+      file: {
+        filename: 'proof.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 3,
+        contentBase64: Buffer.from('pdf').toString('base64'),
+      },
     });
     const adminCaller = caller({ id: adminId, role: 'super_admin' });
     let releaseConcurrentStart: (() => void) | undefined;
@@ -295,56 +432,110 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
       expect(checkoutDuringApprovalResult.value.invoice.id).toBe(checkout.invoice.id);
       expect(checkoutDuringApprovalResult.value.paymentReference).toBe(checkout.paymentReference);
     } else {
-      expect(checkoutDuringApprovalResult.reason).toMatchObject({ code: 'PRECONDITION_FAILED' });
+      expect(checkoutDuringApprovalResult.reason).toMatchObject({ code: 'CONFLICT' });
     }
     const concurrentInvoices = await db
       .select()
       .from(billingInvoices)
-      .where(and(eq(billingInvoices.ownerType, 'agency'), eq(billingInvoices.ownerId, createdOnboarding.agencyId)));
+      .where(
+        and(
+          eq(billingInvoices.ownerType, 'agency'),
+          eq(billingInvoices.ownerId, createdOnboarding.agencyId),
+        ),
+      );
     expect(concurrentInvoices).toHaveLength(1);
-    expect(concurrentInvoices.filter(invoice => ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status))).toHaveLength(0);
-    expect(concurrentInvoices.map(invoice => invoice.paymentReference)).toEqual([checkout.paymentReference]);
+    expect(
+      concurrentInvoices.filter(invoice =>
+        ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status),
+      ),
+    ).toHaveLength(0);
+    expect(concurrentInvoices.map(invoice => invoice.paymentReference)).toEqual([
+      checkout.paymentReference,
+    ]);
     expect(
       await db
         .select()
         .from(billingAuditEvents)
-        .where(and(eq(billingAuditEvents.ownerType, 'agency'), eq(billingAuditEvents.ownerId, createdOnboarding.agencyId), eq(billingAuditEvents.eventType, 'payment_approved_subscription_activated'))),
+        .where(
+          and(
+            eq(billingAuditEvents.ownerType, 'agency'),
+            eq(billingAuditEvents.ownerId, createdOnboarding.agencyId),
+            eq(billingAuditEvents.eventType, 'payment_approved_subscription_activated'),
+          ),
+        ),
     ).toHaveLength(1);
     expect((await attachedCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(true);
-    expect((await adminCaller.billing.admin.reviewManualPayment({ paymentId: proof.paymentId, decision: 'approve' })).idempotent).toBe(true);
-    const postPaymentCheckout = await attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' });
-    expect(postPaymentCheckout.invoice.id).not.toBe(checkout.invoice.id);
-    expect(postPaymentCheckout.reused).toBe(false);
+    expect(
+      (
+        await adminCaller.billing.admin.reviewManualPayment({
+          paymentId: proof.paymentId,
+          decision: 'approve',
+        })
+      ).idempotent,
+    ).toBe(true);
+    await expect(
+      attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
 
-    const retry = await principalCaller.agency.createOnboarding(onboardingInput(`${suffix}-ignored`, planId + 100));
-    expect(retry).toMatchObject({ agencyId: createdOnboarding.agencyId, planId, alreadyCreated: true });
-    expect(await db.select().from(agencies).where(eq(agencies.id, createdOnboarding.agencyId))).toHaveLength(1);
-    expect(await db.select().from(invitations).where(eq(invitations.agencyId, createdOnboarding.agencyId))).toHaveLength(1);
+    const retry = await principalCaller.agency.createOnboarding(
+      onboardingInput(`${suffix}-ignored`, planId + 100),
+    );
+    expect(retry).toMatchObject({
+      agencyId: createdOnboarding.agencyId,
+      planId,
+      alreadyCreated: true,
+    });
+    expect(
+      await db.select().from(agencies).where(eq(agencies.id, createdOnboarding.agencyId)),
+    ).toHaveLength(1);
+    expect(
+      await db
+        .select()
+        .from(invitations)
+        .where(eq(invitations.agencyId, createdOnboarding.agencyId)),
+    ).toHaveLength(1);
   });
 
   it('denies incompatible principals and plans, and serializes concurrent bootstrap calls', async () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const validPlanId = await createPlan({ suffix });
+    const validPlanId = await canonicalAgencyLaunchAccessPlanId();
     const agencyPrincipal = await registerPrincipal(`${suffix}-concurrent`);
     await authService.verifyEmail(agencyPrincipal.verificationToken);
-    const concurrentCaller = caller({ id: agencyPrincipal.user.id, role: 'agency_admin', email: agencyPrincipal.email });
+    const concurrentCaller = caller({
+      id: agencyPrincipal.user.id,
+      role: 'agency_admin',
+      email: agencyPrincipal.email,
+    });
     const [first, second] = await Promise.all([
-      concurrentCaller.agency.createOnboarding(onboardingInput(`${suffix}-concurrent`, validPlanId)),
-      concurrentCaller.agency.createOnboarding(onboardingInput(`${suffix}-concurrent`, validPlanId)),
+      concurrentCaller.agency.createOnboarding(
+        onboardingInput(`${suffix}-concurrent`, validPlanId),
+      ),
+      concurrentCaller.agency.createOnboarding(
+        onboardingInput(`${suffix}-concurrent`, validPlanId),
+      ),
     ]);
     created.agencyIds.push(first.agencyId);
     expect(second.agencyId).toBe(first.agencyId);
     expect([first.alreadyCreated, second.alreadyCreated]).toContain(false);
     expect([first.alreadyCreated, second.alreadyCreated]).toContain(true);
 
-    const db = await getDb(); if (!db) throw new Error('Database not available');
-    const [concurrentAgencies, concurrentBranding, concurrentSubscriptions, concurrentInvitations, concurrentPrincipal] = await Promise.all([
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [
+      concurrentAgencies,
+      concurrentBranding,
+      concurrentSubscriptions,
+      concurrentInvitations,
+      concurrentPrincipal,
+    ] = await Promise.all([
       db.select().from(agencies).where(eq(agencies.id, first.agencyId)),
       db.select().from(agencyBranding).where(eq(agencyBranding.agencyId, first.agencyId)),
       db
         .select()
         .from(subscriptions)
-        .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, first.agencyId))),
+        .where(
+          and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, first.agencyId)),
+        ),
       db.select().from(invitations).where(eq(invitations.agencyId, first.agencyId)),
       db.select().from(users).where(eq(users.id, agencyPrincipal.user.id)).limit(1),
     ]);
@@ -352,33 +543,89 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     expect(concurrentBranding).toHaveLength(1);
     expect(concurrentSubscriptions).toHaveLength(1);
     expect(concurrentInvitations).toHaveLength(1);
-    expect(concurrentPrincipal[0]).toMatchObject({ agencyId: first.agencyId, role: 'agency_admin' });
+    expect(concurrentPrincipal[0]).toMatchObject({
+      agencyId: first.agencyId,
+      role: 'agency_admin',
+    });
     await expect(
-      (appRouter.createCaller({ req: { headers: {} }, res: {} } as any) as any).agency.createOnboarding(
-        onboardingInput(`${suffix}-anonymous`, validPlanId),
-      ),
+      (
+        appRouter.createCaller({ req: { headers: {} }, res: {} } as any) as any
+      ).agency.createOnboarding(onboardingInput(`${suffix}-anonymous`, validPlanId)),
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
-    const [prospectInsert] = await db.insert(users).values({ email: `prospect-${suffix}@example.test`, role: 'visitor', emailVerified: 1 } as any);
-    const prospectId = idOf(prospectInsert); created.userIds.push(prospectId);
-    await expect(caller({ id: prospectId, role: 'visitor' }).agency.createOnboarding(onboardingInput(`${suffix}-prospect`, validPlanId))).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const [prospectInsert] = await db.insert(users).values({
+      email: `prospect-${suffix}@example.test`,
+      role: 'visitor',
+      emailVerified: 1,
+    } as any);
+    const prospectId = idOf(prospectInsert);
+    created.userIds.push(prospectId);
+    await expect(
+      caller({ id: prospectId, role: 'visitor' }).agency.createOnboarding(
+        onboardingInput(`${suffix}-prospect`, validPlanId),
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
 
     for (const role of ['agent', 'property_developer', 'super_admin'] as const) {
-      const [result] = await db.insert(users).values({ email: `${role}-${suffix}@example.test`, role, emailVerified: 1 } as any);
-      const userId = idOf(result); created.userIds.push(userId);
-      await expect(caller({ id: userId, role }).agency.createOnboarding(onboardingInput(`${suffix}-${role}`, validPlanId))).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      const [result] = await db
+        .insert(users)
+        .values({ email: `${role}-${suffix}@example.test`, role, emailVerified: 1 } as any);
+      const userId = idOf(result);
+      created.userIds.push(userId);
+      await expect(
+        caller({ id: userId, role }).agency.createOnboarding(
+          onboardingInput(`${suffix}-${role}`, validPlanId),
+        ),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     }
 
-    const [partialAgencyResult] = await db.insert(agencies).values({ name: `Partial ${suffix}`, slug: `partial-${suffix}`.replace(/[^a-z0-9-]/g, '-'), email: `partial-${suffix}@example.test`, subscriptionPlan: 'free', subscriptionStatus: 'trial', isVerified: 0 } as any);
-    const partialAgencyId = idOf(partialAgencyResult); created.agencyIds.push(partialAgencyId);
-    const [partialPrincipalResult] = await db.insert(users).values({ email: `partial-principal-${suffix}@example.test`, role: 'agency_admin', agencyId: partialAgencyId, emailVerified: 1 } as any);
-    const partialPrincipalId = idOf(partialPrincipalResult); created.userIds.push(partialPrincipalId);
-    await expect(caller({ id: partialPrincipalId, role: 'agency_admin', agencyId: partialAgencyId }).agency.createOnboarding(onboardingInput(`${suffix}-partial`, validPlanId))).rejects.toMatchObject({ code: 'CONFLICT' });
+    const [partialAgencyResult] = await db.insert(agencies).values({
+      name: `Partial ${suffix}`,
+      slug: `partial-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
+      email: `partial-${suffix}@example.test`,
+      subscriptionPlan: 'free',
+      subscriptionStatus: 'trial',
+      isVerified: 0,
+    } as any);
+    const partialAgencyId = idOf(partialAgencyResult);
+    created.agencyIds.push(partialAgencyId);
+    const [partialPrincipalResult] = await db.insert(users).values({
+      email: `partial-principal-${suffix}@example.test`,
+      role: 'agency_admin',
+      agencyId: partialAgencyId,
+      emailVerified: 1,
+    } as any);
+    const partialPrincipalId = idOf(partialPrincipalResult);
+    created.userIds.push(partialPrincipalId);
+    await expect(
+      caller({
+        id: partialPrincipalId,
+        role: 'agency_admin',
+        agencyId: partialAgencyId,
+      }).agency.createOnboarding(onboardingInput(`${suffix}-partial`, validPlanId)),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
 
-    const [contradictoryResult] = await db.insert(users).values({ email: `contradictory-${suffix}@example.test`, role: 'agency_admin', emailVerified: 1 } as any);
-    const contradictoryId = idOf(contradictoryResult); created.userIds.push(contradictoryId);
-    const [agentResult] = await db.insert(agents).values({ userId: contradictoryId, firstName: 'Contradictory', lastName: 'Agent', email: `contradictory-agent-${suffix}@example.test`, status: 'approved', isVerified: 1, isFeatured: 0 } as any);
+    const [contradictoryResult] = await db.insert(users).values({
+      email: `contradictory-${suffix}@example.test`,
+      role: 'agency_admin',
+      emailVerified: 1,
+    } as any);
+    const contradictoryId = idOf(contradictoryResult);
+    created.userIds.push(contradictoryId);
+    const [agentResult] = await db.insert(agents).values({
+      userId: contradictoryId,
+      firstName: 'Contradictory',
+      lastName: 'Agent',
+      email: `contradictory-agent-${suffix}@example.test`,
+      status: 'approved',
+      isVerified: 1,
+      isFeatured: 0,
+    } as any);
     created.agentIds.push(idOf(agentResult));
-    await expect(caller({ id: contradictoryId, role: 'agency_admin' }).agency.createOnboarding(onboardingInput(`${suffix}-contradictory`, validPlanId))).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(
+      caller({ id: contradictoryId, role: 'agency_admin' }).agency.createOnboarding(
+        onboardingInput(`${suffix}-contradictory`, validPlanId),
+      ),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
 
     const membershipPrincipal = await registerPrincipal(`${suffix}-membership`);
     await authService.verifyEmail(membershipPrincipal.verificationToken);
@@ -411,27 +658,52 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
       updatedBy: membershipPrincipal.user.id,
     });
     await expect(
-      caller({ id: membershipPrincipal.user.id, role: 'agency_admin', email: membershipPrincipal.email }).agency.createOnboarding(
-        onboardingInput(`${suffix}-membership`, validPlanId),
-      ),
+      caller({
+        id: membershipPrincipal.user.id,
+        role: 'agency_admin',
+        email: membershipPrincipal.email,
+      }).agency.createOnboarding(onboardingInput(`${suffix}-membership`, validPlanId)),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
 
     for (const [segment, active, price, capacity] of [
-      ['agent', 1, 99_000, 5], ['developer', 1, 99_000, 5], ['enterprise', 1, 99_000, 5], ['agency', 0, 99_000, 5], ['agency', 1, 0, 5], ['agency', 1, 99_000, 0],
+      ['agent', 1, 99_000, 5],
+      ['developer', 1, 99_000, 5],
+      ['enterprise', 1, 99_000, 5],
+      ['agency', 0, 99_000, 5],
+      ['agency', 1, 0, 5],
+      ['agency', 1, 99_000, 0],
     ] as const) {
-      const planId = await createPlan({ suffix: `${suffix}-${segment}-${price}-${capacity}`, segment, active, price, capacity });
+      const planId = await createPlan({
+        suffix: `${suffix}-${segment}-${price}-${capacity}`,
+        segment,
+        active,
+        price,
+        capacity,
+      });
       const candidate = await registerPrincipal(`${suffix}-${segment}-${price}-${capacity}`);
       await authService.verifyEmail(candidate.verificationToken);
-      await expect(caller({ id: candidate.user.id, role: 'agency_admin', email: candidate.email }).agency.createOnboarding(onboardingInput(`${suffix}-${segment}-${price}-${capacity}`, planId))).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      await expect(
+        caller({
+          id: candidate.user.id,
+          role: 'agency_admin',
+          email: candidate.email,
+        }).agency.createOnboarding(
+          onboardingInput(`${suffix}-${segment}-${price}-${capacity}`, planId),
+        ),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
     }
   });
 
   it('rolls back a mid-bootstrap database failure and permits a clean retry', async () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const planId = await createPlan({ suffix });
+    const planId = await canonicalAgencyLaunchAccessPlanId();
     const principal = await registerPrincipal(`${suffix}-rollback`);
     await authService.verifyEmail(principal.verificationToken);
-    const principalCaller = caller({ id: principal.user.id, role: 'agency_admin', email: principal.email });
+    const principalCaller = caller({
+      id: principal.user.id,
+      role: 'agency_admin',
+      email: principal.email,
+    });
     const failedInput = onboardingInput(`${suffix}-rollback`, planId);
     failedInput.branding.companyName = 'x'.repeat(300);
 
@@ -439,10 +711,19 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
 
     const db = await getDb();
     if (!db) throw new Error('Database not available');
-    const [[persistedPrincipal], failedAgencies, failedBranding, failedSubscriptions, failedInvitations] = await Promise.all([
+    const [
+      [persistedPrincipal],
+      failedAgencies,
+      failedBranding,
+      failedSubscriptions,
+      failedInvitations,
+    ] = await Promise.all([
       db.select().from(users).where(eq(users.id, principal.user.id)).limit(1),
       db.select().from(agencies).where(eq(agencies.email, failedInput.basicInfo.email)),
-      db.select().from(agencyBranding).where(eq(agencyBranding.companyName, failedInput.branding.companyName)),
+      db
+        .select()
+        .from(agencyBranding)
+        .where(eq(agencyBranding.companyName, failedInput.branding.companyName)),
       db
         .select()
         .from(subscriptions)
@@ -455,7 +736,9 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     expect(failedSubscriptions).toHaveLength(0);
     expect(failedInvitations).toHaveLength(0);
 
-    const retried = await principalCaller.agency.createOnboarding(onboardingInput(`${suffix}-retry`, planId));
+    const retried = await principalCaller.agency.createOnboarding(
+      onboardingInput(`${suffix}-retry`, planId),
+    );
     created.agencyIds.push(retried.agencyId);
     expect(retried.alreadyCreated).toBe(false);
   });

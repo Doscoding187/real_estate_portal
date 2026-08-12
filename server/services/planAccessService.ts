@@ -1,6 +1,22 @@
 import { and, asc, eq } from 'drizzle-orm';
-import { agencies, plans, planEntitlements, subscriptions, users } from '../../drizzle/schema';
+import {
+  agencies,
+  developers,
+  plans,
+  planEntitlements,
+  subscriptions,
+  users,
+} from '../../drizzle/schema';
 import { getDb } from '../db';
+import {
+  calculateCommercialTermEnd,
+  getCommercialProductKey,
+  getConfiguredLaunchFeeMinor,
+  isPaidCommercialTermExpired,
+  parseCommercialMetadata,
+  resolveCommercialTerm,
+  validatePaidLaunchAccessPayment,
+} from './commercialTerm';
 
 export type PlanSegment = 'agent' | 'agency' | 'enterprise' | 'developer';
 export type SubscriptionOwnerType = 'agent' | 'agency' | 'developer';
@@ -50,6 +66,7 @@ export type SubscriptionSnapshot = {
   ownerType: SubscriptionOwnerType;
   ownerId: number;
   status: SubscriptionStatus;
+  createdAt: string | null;
   trialEndsAt: string | null;
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
@@ -75,7 +92,6 @@ type DbHandle = Awaited<ReturnType<typeof getDb>>;
 type SubscriptionRow = typeof subscriptions.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 
-const DEFAULT_AGENT_PLAN = 'agent_starter';
 const DEFAULT_AGENCY_PLAN = 'agency_growth';
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -99,7 +115,7 @@ function parseJsonRecord(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
-function parseEntitlementValue(value: unknown): EntitlementValue {
+export function parseEntitlementValue(value: unknown): EntitlementValue {
   if (value === null || value === undefined) return null;
   if (typeof value === 'boolean' || typeof value === 'number' || typeof value === 'string') {
     return value;
@@ -130,6 +146,7 @@ function toSubscriptionSnapshot(row: SubscriptionRow): SubscriptionSnapshot {
     ownerType: row.ownerType as SubscriptionOwnerType,
     ownerId: Number(row.ownerId),
     status: row.status as SubscriptionStatus,
+    createdAt: row.createdAt || null,
     trialEndsAt: row.trialEndsAt || null,
     currentPeriodStart: row.currentPeriodStart || null,
     currentPeriodEnd: row.currentPeriodEnd || null,
@@ -189,14 +206,35 @@ function deriveTrialState(
   };
 }
 
-function getOwnerContextForUser(user: UserRow): {
+async function getOwnerContextForUser(
+  db: DbHandle,
+  user: UserRow,
+): Promise<{
   ownerType: SubscriptionOwnerType;
   ownerId: number;
-} {
+} | null> {
   if (user.role === 'agency_admin' && user.agencyId) {
     return {
       ownerType: 'agency',
       ownerId: Number(user.agencyId),
+    };
+  }
+
+  if (user.role === 'property_developer') {
+    const [developer] = await db
+      .select({ id: developers.id })
+      .from(developers)
+      .where(eq(developers.userId, user.id))
+      .limit(1);
+
+    // A developer subscription is owned by the developer profile, not the
+    // login row. Do not fall back to user.id: that would create a second,
+    // ambiguous owner identity for canonical subscriptions.
+    if (!developer) return null;
+
+    return {
+      ownerType: 'developer',
+      ownerId: Number(developer.id),
     };
   }
 
@@ -209,22 +247,9 @@ function getOwnerContextForUser(user: UserRow): {
 async function getStarterPlan(db: DbHandle, ownerType: SubscriptionOwnerType) {
   if (!db) throw new Error('Database not available');
 
-  if (ownerType === 'agent') {
-    const [named] = await db
-      .select()
-      .from(plans)
-      .where(eq(plans.name, DEFAULT_AGENT_PLAN))
-      .limit(1);
-    if (named) return named;
-
-    const [segmentFallback] = await db
-      .select()
-      .from(plans)
-      .where(eq(plans.segment, 'agent'))
-      .orderBy(asc(plans.sortOrder))
-      .limit(1);
-    return segmentFallback || null;
-  }
+  // Independent agents must explicitly select a canonical product. Automatic
+  // plan provisioning is retained only for the existing agency bootstrap path.
+  if (ownerType !== 'agency') return null;
 
   const [named] = await db.select().from(plans).where(eq(plans.name, DEFAULT_AGENCY_PLAN)).limit(1);
   if (named) return named;
@@ -242,7 +267,9 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const { ownerType, ownerId } = getOwnerContextForUser(user);
+  const ownerContext = await getOwnerContextForUser(db, user);
+  if (!ownerContext || ownerContext.ownerType !== 'agency') return null;
+  const { ownerType, ownerId } = ownerContext;
   const [existing] = await db
     .select()
     .from(subscriptions)
@@ -259,14 +286,8 @@ async function ensureDefaultSubscriptionForUser(user: UserRow): Promise<Subscrip
     .toISOString()
     .slice(0, 19)
     .replace('T', ' ');
-  const trialEndsAt =
-    ownerType === 'agent' ? user.trialEndsAt || fallbackTrialEnd : fallbackTrialEnd;
-  const status: SubscriptionStatus =
-    ownerType === 'agent' && user.plan === 'paid'
-      ? 'active'
-      : ownerType === 'agent' && user.trialStatus === 'expired'
-        ? 'expired'
-        : 'trial';
+  const trialEndsAt = fallbackTrialEnd;
+  const status: SubscriptionStatus = 'trial';
 
   await db.insert(subscriptions).values({
     ownerType,
@@ -395,7 +416,9 @@ export async function getPlanAccessProjectionForUserId(
 
   if (!user) return null;
 
-  const { ownerType, ownerId } = getOwnerContextForUser(user);
+  const ownerContext = await getOwnerContextForUser(db, user);
+  if (!ownerContext) return null;
+  const { ownerType, ownerId } = ownerContext;
 
   let [subscriptionRow] = await db
     .select()
@@ -403,8 +426,7 @@ export async function getPlanAccessProjectionForUserId(
     .where(and(eq(subscriptions.ownerType, ownerType), eq(subscriptions.ownerId, ownerId)))
     .limit(1);
 
-  const shouldAutoProvision =
-    user.role === 'agent' || (user.role === 'agency_admin' && ownerType === 'agency');
+  const shouldAutoProvision = user.role === 'agency_admin' && ownerType === 'agency';
 
   if (!subscriptionRow && shouldAutoProvision) {
     subscriptionRow = await ensureDefaultSubscriptionForUser(user);
@@ -446,6 +468,28 @@ export async function getPlanAccessProjectionForUserId(
     }
   }
 
+  const commercialTerm = planRow ? resolveCommercialTerm(planRow) : null;
+  const paidLaunchExpired = Boolean(
+    commercialTerm &&
+    isPaidCommercialTermExpired(
+      commercialTerm,
+      subscriptionRow?.status,
+      subscriptionRow?.currentPeriodEnd,
+    ),
+  );
+
+  // A paid fixed-term entitlement expires from its canonical period end. It
+  // is deliberately not treated as a free trial, and recurring subscriptions
+  // retain their existing lifecycle semantics.
+  if (paidLaunchExpired && subscriptionRow) {
+    await db
+      .update(subscriptions)
+      .set({ status: 'expired' })
+      .where(eq(subscriptions.id, subscriptionRow.id));
+
+    subscriptionRow.status = 'expired';
+  }
+
   const trialState = deriveTrialState(
     (subscriptionRow?.status as SubscriptionStatus | null) || null,
     subscriptionRow?.trialEndsAt || null,
@@ -467,9 +511,23 @@ export async function setSubscriptionPlanForOwner(input: {
   planId: number;
   status?: SubscriptionStatus;
   trialEndsAt?: string | null;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd?: boolean;
   billingCycleAnchor?: string | null;
   metadata?: Record<string, unknown> | null;
   actorUserId?: number;
+  /**
+   * Required when this low-level writer is used to activate a paid fixed-term
+   * Launch Access plan. Normal trial and recurring-plan writes do not need
+   * this context; paid Launch Access must come from verified billing state.
+   */
+  verifiedPayment?: VerifiedCommercialPayment;
+  /**
+   * A pending Launch Access subscription is safe to create before payment;
+   * it carries no entitlement until the canonical finance review activates it.
+   */
+  allowPendingPayment?: boolean;
   /**
    * Optional caller-owned database handle. Bootstrap flows use this to keep
    * the commercial subscription in the same transaction as its owner.
@@ -484,6 +542,30 @@ export async function setSubscriptionPlanForOwner(input: {
     throw new Error('Plan not found');
   }
 
+  if (planRow.segment !== input.ownerType) {
+    throw new Error('Plan is not eligible for this commercial owner');
+  }
+
+  const nextStatus = input.status || 'active';
+  const term = resolveCommercialTerm(planRow);
+  if (term.kind === 'paid_launch_access') {
+    if (nextStatus === 'pending_payment' && input.allowPendingPayment) {
+      // Pending payment is intentionally non-entitled. Activation still
+      // requires the verified payment branch below.
+    } else if (nextStatus !== 'active' || !input.verifiedPayment) {
+      throw new Error('Paid Launch Access requires activation through verified billing authority.');
+    } else {
+      const activationError = validatePaidLaunchAccessPayment(
+        term,
+        getConfiguredLaunchFeeMinor(planRow),
+        input.verifiedPayment,
+      );
+      if (activationError) {
+        throw new Error(activationError);
+      }
+    }
+  }
+
   const nowTs = new Date().toISOString().slice(0, 19).replace('T', ' ');
   const trialDays = Math.max(0, Number(planRow.trialDays || 0));
   const computedTrialEnd =
@@ -491,34 +573,44 @@ export async function setSubscriptionPlanForOwner(input: {
       ? new Date(Date.now() + trialDays * MS_PER_DAY).toISOString().slice(0, 19).replace('T', ' ')
       : null;
 
-  const nextStatus = input.status || 'active';
   const trialEndsAt = input.trialEndsAt ?? (nextStatus === 'trial' ? computedTrialEnd : null);
   const billingCycleAnchor =
     input.billingCycleAnchor ?? (nextStatus === 'trial' ? trialEndsAt : nowTs);
 
-  await db
-    .insert(subscriptions)
-    .values({
-      ownerType: input.ownerType,
-      ownerId: input.ownerId,
-      planId: input.planId,
-      status: nextStatus,
-      trialEndsAt: trialEndsAt || null,
-      billingCycleAnchor: billingCycleAnchor || null,
-      metadata: input.metadata || null,
-      updatedBy: input.actorUserId || null,
-      createdBy: input.actorUserId || null,
-    })
-    .onDuplicateKeyUpdate({
-      set: {
-        planId: input.planId,
-        status: nextStatus,
-        trialEndsAt: trialEndsAt || null,
-        billingCycleAnchor: billingCycleAnchor || null,
-        metadata: input.metadata || null,
-        updatedBy: input.actorUserId || null,
-      },
-    });
+  const insertValues: typeof subscriptions.$inferInsert = {
+    ownerType: input.ownerType,
+    ownerId: input.ownerId,
+    planId: input.planId,
+    status: nextStatus,
+    trialEndsAt: trialEndsAt || null,
+    billingCycleAnchor: billingCycleAnchor || null,
+    metadata: input.metadata || null,
+    updatedBy: input.actorUserId || null,
+    createdBy: input.actorUserId || null,
+  };
+  const updateSet: Partial<typeof subscriptions.$inferInsert> = {
+    planId: input.planId,
+    status: nextStatus,
+    trialEndsAt: trialEndsAt || null,
+    billingCycleAnchor: billingCycleAnchor || null,
+    metadata: input.metadata || null,
+    updatedBy: input.actorUserId || null,
+  };
+
+  if (input.currentPeriodStart !== undefined) {
+    insertValues.currentPeriodStart = input.currentPeriodStart;
+    updateSet.currentPeriodStart = input.currentPeriodStart;
+  }
+  if (input.currentPeriodEnd !== undefined) {
+    insertValues.currentPeriodEnd = input.currentPeriodEnd;
+    updateSet.currentPeriodEnd = input.currentPeriodEnd;
+  }
+  if (input.cancelAtPeriodEnd !== undefined) {
+    insertValues.cancelAtPeriodEnd = input.cancelAtPeriodEnd ? 1 : 0;
+    updateSet.cancelAtPeriodEnd = input.cancelAtPeriodEnd ? 1 : 0;
+  }
+
+  await db.insert(subscriptions).values(insertValues).onDuplicateKeyUpdate({ set: updateSet });
 
   const [row] = await db
     .select()
@@ -531,40 +623,85 @@ export async function setSubscriptionPlanForOwner(input: {
   return row ? toSubscriptionSnapshot(row) : null;
 }
 
-export async function initializeAgentStarterTrial(
-  userId: number,
-): Promise<SubscriptionSnapshot | null> {
-  const db = await getDb();
+export type VerifiedCommercialPayment = {
+  invoiceId: number;
+  paymentId: number;
+  amountMinor: number;
+  state: 'verified';
+};
+
+function toDbDateTime(value: Date): string {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/**
+ * Activate a generic paid fixed-term commercial product after a canonical
+ * finance authority has verified payment. The caller must supply the
+ * verified payment context; no public onboarding or catalog read can call
+ * this function successfully by itself.
+ */
+export async function activatePaidLaunchAccessForOwner(input: {
+  ownerType: SubscriptionOwnerType;
+  ownerId: number;
+  planId: number;
+  verifiedPayment: VerifiedCommercialPayment;
+  actorUserId?: number;
+  activatedAt?: Date;
+  metadata?: Record<string, unknown> | null;
+  db?: any;
+}): Promise<SubscriptionSnapshot | null> {
+  const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 
-  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) return null;
+  const [planRow] = await db.select().from(plans).where(eq(plans.id, input.planId)).limit(1);
+  if (!planRow) throw new Error('Plan not found');
+  if (planRow.segment !== input.ownerType) {
+    throw new Error('Plan is not eligible for this commercial owner.');
+  }
 
-  const [planRow] = await db
-    .select()
-    .from(plans)
-    .where(eq(plans.name, DEFAULT_AGENT_PLAN))
-    .limit(1);
-  if (!planRow) return null;
+  const term = resolveCommercialTerm(planRow);
+  const configuredFee = getConfiguredLaunchFeeMinor(planRow);
+  const activationError = validatePaidLaunchAccessPayment(
+    term,
+    configuredFee,
+    input.verifiedPayment,
+  );
+  if (activationError) {
+    throw new Error(activationError);
+  }
 
-  const trialDays = Math.max(1, Number(planRow.trialDays || 30));
-  const trialEnd = new Date(Date.now() + trialDays * MS_PER_DAY)
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ');
+  const start = input.activatedAt || new Date();
+  const end = calculateCommercialTermEnd(start, term);
+  if (!end) throw new Error('Paid Launch Access has no valid duration.');
+  const metadata = parseCommercialMetadata(planRow.metadata);
 
-  return await setSubscriptionPlanForOwner({
-    ownerType: 'agent',
-    ownerId: userId,
-    planId: planRow.id,
-    status: 'trial',
-    trialEndsAt: user.trialEndsAt || trialEnd,
-    billingCycleAnchor: user.trialEndsAt || trialEnd,
+  return setSubscriptionPlanForOwner({
+    ownerType: input.ownerType,
+    ownerId: input.ownerId,
+    planId: input.planId,
+    status: 'active',
+    trialEndsAt: null,
+    currentPeriodStart: toDbDateTime(start),
+    currentPeriodEnd: toDbDateTime(end),
+    cancelAtPeriodEnd: false,
+    billingCycleAnchor: toDbDateTime(end),
     metadata: {
-      source: 'auth_register',
-      onboarding_plan: DEFAULT_AGENT_PLAN,
+      ...metadata,
+      ...(input.metadata || {}),
+      commercial_product_key: getCommercialProductKey(planRow),
+      commercial_term_kind: 'paid_launch_access',
+      commercial_access_activated: true,
+      commercial_requires_verified_payment: true,
+      commercial_auto_renews: false,
+      billing_provider: 'manual_eft',
+      verified_invoice_id: input.verifiedPayment.invoiceId,
+      verified_payment_id: input.verifiedPayment.paymentId,
+      verified_payment_amount_minor: input.verifiedPayment.amountMinor,
+      activated_at: toDbDateTime(start),
     },
-    actorUserId: userId,
+    actorUserId: input.actorUserId,
+    verifiedPayment: input.verifiedPayment,
+    db,
   });
 }
 
@@ -580,6 +717,26 @@ export async function getAgencyOwnerIdForUser(userId: number): Promise<number | 
     .where(eq(agencies.id, user.agencyId))
     .limit(1);
   return agency ? Number(agency.id) : null;
+}
+
+export async function getDeveloperUserId(developerId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [developer] = await db
+    .select({ userId: developers.userId })
+    .from(developers)
+    .where(eq(developers.id, developerId))
+    .limit(1);
+
+  return developer ? Number(developer.userId) : null;
+}
+
+export async function getPlanAccessProjectionForDeveloperId(
+  developerId: number,
+): Promise<PlanAccessProjection | null> {
+  const userId = await getDeveloperUserId(developerId);
+  return userId ? getPlanAccessProjectionForUserId(userId) : null;
 }
 
 export function isTrialState(status: SubscriptionStatus | null | undefined): boolean {

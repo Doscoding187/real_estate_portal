@@ -1,13 +1,7 @@
 {
   "policyVersion": 1,
-  "denyTargetClasses": [
-    "unknown",
-    "shared-remote"
-  ],
-  "protectedTargetClasses": [
-    "staging",
-    "production"
-  ],
+  "denyTargetClasses": ["unknown", "shared-remote"],
+  "protectedTargetClasses": ["staging", "production"],
   "operations": {
     "runtime-connect": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test", "staging", "production"],
@@ -18,7 +12,13 @@
       "evidence": "sanitized-context-and-result"
     },
     "read-only-connect": {
-      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "allowedTargetClasses": [
+        "clean-main-local",
+        "disposable-worktree",
+        "disposable-test",
+        "staging",
+        "production"
+      ],
       "credentialClasses": ["read-only", "runtime", "local-owner", "test-owner", "migration"],
       "ownership": "registered-local-worktree",
       "approval": "protected-target",
@@ -82,7 +82,13 @@
       "evidence": "sanitized-context-and-result"
     },
     "verification": {
-      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "allowedTargetClasses": [
+        "clean-main-local",
+        "disposable-worktree",
+        "disposable-test",
+        "staging",
+        "production"
+      ],
       "credentialClasses": ["read-only", "runtime", "migration", "local-owner", "test-owner"],
       "ownership": "registered-local-worktree",
       "approval": "protected-target",
@@ -98,7 +104,13 @@
       "evidence": "sanitized-context-and-result"
     },
     "readiness": {
-      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "allowedTargetClasses": [
+        "clean-main-local",
+        "disposable-worktree",
+        "disposable-test",
+        "staging",
+        "production"
+      ],
       "credentialClasses": ["read-only", "runtime", "migration", "local-owner", "test-owner"],
       "ownership": "registered-local-worktree",
       "approval": "protected-target",
@@ -106,7 +118,13 @@
       "evidence": "sanitized-layer-results"
     },
     "diagnostics": {
-      "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test", "staging", "production"],
+      "allowedTargetClasses": [
+        "clean-main-local",
+        "disposable-worktree",
+        "disposable-test",
+        "staging",
+        "production"
+      ],
       "credentialClasses": ["read-only", "migration", "local-owner", "test-owner"],
       "ownership": "registered-local-worktree",
       "approval": "protected-target",
@@ -168,6 +186,30 @@
       "approval": "protected-target",
       "acknowledgement": "exact-target",
       "evidence": "sanitized-release-attempt-and-result"
+    },
+    "release-reference-plan": {
+      "allowedTargetClasses": ["staging", "production"],
+      "credentialClasses": ["read-only", "migration"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-release-reference-plan"
+    },
+    "release-reference-apply": {
+      "allowedTargetClasses": ["staging", "production"],
+      "credentialClasses": ["migration"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "sanitized-release-reference-apply"
+    },
+    "release-reference-verify": {
+      "allowedTargetClasses": ["staging", "production"],
+      "credentialClasses": ["read-only", "migration"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-release-reference-verification"
     }
   }
 }

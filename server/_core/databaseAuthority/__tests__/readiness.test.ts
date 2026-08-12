@@ -284,4 +284,30 @@ describe('truthful layered readiness', () => {
     expect(report.layers.release.state).toBe('not-evaluated');
     expect(report.layers.fullDiagnostics.state).toBe('not-evaluated');
   });
+
+  it('recognizes an authorized disposable-test target without requiring a worktree profile', async () => {
+    const value = fixture();
+    const testAuthority = resolveDatabaseAuthority({
+      operation: 'readiness',
+      cwd: value.root,
+      gitIdentity: value.identity,
+      explicitDatabaseUrl: `mysql://test-owner:private@127.0.0.1:3307/listify_test_${value.identity.ownershipKey.slice(0, 12)}`,
+      credentialClass: 'test-owner',
+      processEnv: { CI: 'true', NODE_ENV: 'test', APP_ENV: 'test' },
+    });
+    const testAuthorization = authorizeDatabaseOperation(testAuthority, { root: process.cwd() });
+    const report = await assessAuthorizedDatabaseReadiness({
+      authority: testAuthority,
+      authorization: testAuthorization,
+      connection: new ReadinessConnection(testAuthority.context.databaseName),
+      manifest: value.manifest,
+      root: value.root,
+    });
+
+    expect(testAuthority.context.targetClass).toBe('disposable-test');
+    expect(report.layers.targetOwned).toMatchObject({
+      state: 'ready',
+      code: 'authorized-disposable-test',
+    });
+  });
 });

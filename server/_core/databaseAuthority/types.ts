@@ -19,6 +19,9 @@ export const DATABASE_OPERATIONS = [
   'lifecycle-admin',
   'release-plan',
   'release-apply',
+  'release-reference-plan',
+  'release-reference-apply',
+  'release-reference-verify',
 ] as const;
 
 export type DatabaseOperation = (typeof DATABASE_OPERATIONS)[number];

@@ -264,14 +264,14 @@ export const defaultContent: AdvertisePageContent = {
     {
       id: 'agent-plans',
       category: 'Agent Plans',
-      description: 'From R499/month - Perfect for individual agents and small teams',
+      description: 'Launch and subscription terms are supplied by the canonical commercial catalog',
       href: '/pricing/agents',
       order: 1,
     },
     {
       id: 'developer-plans',
       category: 'Developer Plans',
-      description: 'From R2,999/month - Showcase developments with advanced features',
+      description: 'Developer launch and future subscription terms are supplied by the canonical commercial catalog',
       href: '/pricing/developers',
       order: 2,
     },
@@ -312,7 +312,7 @@ export const defaultContent: AdvertisePageContent = {
       id: 'faq-1',
       question: 'How much does it cost to advertise on the platform?',
       answer:
-        'Pricing varies by partner type and plan tier. Agents can start from R499/month, developers from R2,999/month, and banks/service providers have custom enterprise plans. All plans include core features like listing promotion and lead management, with premium tiers offering advanced analytics and priority placement.',
+        'Pricing varies by partner type and approved commercial product. Current launch and subscription terms are supplied by the canonical commercial catalog. Dedicated campaigns, guaranteed leads and paid placement are separate products and are not included unless explicitly configured.',
       order: 1,
     },
     {

@@ -11,11 +11,11 @@ import {
   loadAndValidateMigrationManifest,
   type ValidatedMigrationManifest,
 } from '../../../migrations/migrationManifest';
-import type { ResolvedDatabaseAuthority } from '../types';
+import type { DatabaseOperation, ResolvedDatabaseAuthority } from '../types';
 import { assertOwnedDisposableTarget, identityFromAuthority } from '../lifecycle';
 import { readWorktreeDatabaseProfile, writeWorktreeDatabaseProfile } from '../worktreeProfile';
 
-export const ACCEPTED_MIGRATION_HEAD = '0001_public_search_to_lead_reliability.sql' as const;
+export const ACCEPTED_MIGRATION_HEAD = '0003_paid_launch_access_invoice_term.sql' as const;
 
 export type AdapterEvidence = {
   adapter: string;
@@ -70,6 +70,87 @@ export function requireExactAdapterTarget(
     databaseName: authority.context.databaseName,
     ownershipKey: authority.context.worktree.ownershipKey,
   };
+}
+
+const DISPOSABLE_REFERENCE_OPERATIONS: readonly DatabaseOperation[] = [
+  'reference-seed',
+  'foundation-seed',
+  'verification',
+  'browser-verification',
+  'readiness',
+];
+
+/**
+ * Canonical reference adapters may run against either an owned local worktree
+ * or an explicitly resolved isolated test target. Worktree lifecycle remains
+ * intentionally stricter and is never delegated to this test-target branch.
+ */
+export function requireReferenceAdapterTarget(
+  authority: ResolvedDatabaseAuthority,
+  profileRoot?: string,
+): AdapterEvidence {
+  if (authority.context.targetClass === 'disposable-worktree') {
+    return requireExactAdapterTarget(authority, profileRoot);
+  }
+
+  if (
+    authority.context.targetClass === 'disposable-test' &&
+    DISPOSABLE_REFERENCE_OPERATIONS.includes(authority.context.operation) &&
+    authority.context.runtimeMode === 'test' &&
+    authority.context.local &&
+    authority.context.provider === 'mysql' &&
+    authority.context.dialect === 'mysql' &&
+    authority.context.worktree.registered &&
+    authority.context.worktree.ownershipMatches
+  ) {
+    return {
+      adapter: 'database-authority-disposable-test-adapter',
+      version: 'unassigned',
+      digest: 'unassigned',
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      databaseName: authority.context.databaseName,
+      ownershipKey: authority.context.worktree.ownershipKey,
+    };
+  }
+
+  throw new Error(
+    'Database Authority adapter refused: target is not the exact owned disposable worktree or an authorized isolated disposable-test target; protected staging/production reference use requires release-reference authority.',
+  );
+}
+
+const RELEASE_REFERENCE_OPERATIONS: readonly DatabaseOperation[] = [
+  'release-reference-plan',
+  'release-reference-apply',
+  'release-reference-verify',
+];
+
+export function requireProtectedCommercialReferenceTarget(
+  authority: ResolvedDatabaseAuthority,
+): AdapterEvidence {
+  if (!['staging', 'production'].includes(authority.context.targetClass)) {
+    throw new Error(
+      'Database Authority adapter refused: canonical commercial release reference data requires an authorized staging or production target.',
+    );
+  }
+  return {
+    adapter: 'database-authority-release-reference-adapter',
+    version: 'unassigned',
+    digest: 'unassigned',
+    targetFingerprintHash: authority.context.targetFingerprintHash,
+    databaseName: authority.context.databaseName,
+    ownershipKey: authority.context.worktree.ownershipKey,
+  };
+}
+
+export function requireReleaseReferenceTarget(
+  authority: ResolvedDatabaseAuthority,
+): AdapterEvidence {
+  if (!RELEASE_REFERENCE_OPERATIONS.includes(authority.context.operation)) {
+    throw new Error(
+      `Database Authority adapter refused: operation ${authority.context.operation} is not a release reference operation.`,
+    );
+  }
+  return requireProtectedCommercialReferenceTarget(authority);
 }
 
 export async function requireAcceptedMigrationHead(input: {

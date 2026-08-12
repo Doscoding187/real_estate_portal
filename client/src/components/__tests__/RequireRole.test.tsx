@@ -71,6 +71,32 @@ describe('RequireRole', () => {
     });
   });
 
+  test('preserves the Agent purchase intent through authentication', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/agent/select-package',
+        search: '',
+        hash: '',
+      },
+      writable: true,
+    });
+
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    renderWithAuth({}, 'agent');
+
+    await waitFor(() => {
+      expect(setLocation).toHaveBeenCalledWith('/login?mode=signin&next=%2Fagent%2Fselect-package');
+    });
+  });
+
   test('redirects to role home when user does not have required role', async () => {
     const setLocation = vi.fn();
     mockUseAuth.mockReturnValue({

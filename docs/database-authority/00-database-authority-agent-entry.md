@@ -8,24 +8,26 @@ are in `authority-manifest.json`; operation permissions are in
 
 ## Authority spine
 
-| Concern                            | Authority                                                 |
-| ---------------------------------- | --------------------------------------------------------- |
-| Immutable target context           | `server/_core/databaseAuthority/context.ts`               |
-| Operation policy and decision      | `authorization.ts`, `operation-policy.json`               |
-| Connection creation                | `connectionAuthority.ts`                                  |
-| Worktree identity and lifecycle    | `worktreeIdentity.ts`, `lifecycle.ts`                     |
-| Migration membership and lineage   | `server/migrations/manifest.json`, `migrationManifest.ts` |
-| Migration planning and application | `runSqlMigrations.ts`                                     |
-| Successful history                 | `sql_migration_history`                                   |
-| Durable attempt evidence           | `sql_migration_attempts`                                  |
-| Desired schema                     | `drizzle/schema/`                                         |
-| Generated model evidence           | `drizzle/schema/canonical-model-inventory.json`           |
-| Physical-schema comparison         | `schemaCongruency.ts`                                     |
-| Layered readiness                  | `readiness.ts`                                            |
-| Local service lifecycle            | `scripts/local-db.sh`, `localServicePaths.ts`             |
-| Canonical geography reference data | `dataAdapters/canonicalGeography.ts`                      |
-| Isolated Search-to-Lead scenario   | `dataAdapters/searchToLeadScenario.ts`                    |
-| Remaining connection paths         | `connection-path-inventory.json`                          |
+| Concern                             | Authority                                                 |
+| ----------------------------------- | --------------------------------------------------------- |
+| Immutable target context            | `server/_core/databaseAuthority/context.ts`               |
+| Operation policy and decision       | `authorization.ts`, `operation-policy.json`               |
+| Connection creation                 | `connectionAuthority.ts`                                  |
+| Worktree identity and lifecycle     | `worktreeIdentity.ts`, `lifecycle.ts`                     |
+| Migration membership and lineage    | `server/migrations/manifest.json`, `migrationManifest.ts` |
+| Migration planning and application  | `runSqlMigrations.ts`                                     |
+| Successful history                  | `sql_migration_history`                                   |
+| Durable attempt evidence            | `sql_migration_attempts`                                  |
+| Desired schema                      | `drizzle/schema/`                                         |
+| Generated model evidence            | `drizzle/schema/canonical-model-inventory.json`           |
+| Physical-schema comparison          | `schemaCongruency.ts`                                     |
+| Layered readiness                   | `readiness.ts`                                            |
+| Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
+| Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
+| Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
+| Canonical commercial release        | `scripts/databaseAuthorityCli.ts` (`release-reference:*`) |
+| Isolated Search-to-Lead scenario    | `dataAdapters/searchToLeadScenario.ts`                    |
+| Remaining connection paths          | `connection-path-inventory.json`                          |
 
 The credential-bearing URL is private to connection creation. Commands and
 reports may emit a sanitized fingerprint and hash, never credentials or a
@@ -105,7 +107,7 @@ never deletes it automatically. Validate and remove only an exact, empty,
 owned residue via an approved cleanup packet before retrying initialization.
 
 Reference and scenario adapters require the exact mode-0600 ownership profile,
-the accepted `0001_public_search_to_lead_reliability.sql` migration head, and
+the accepted `0003_paid_launch_access_invoice_term.sql` migration head, and
 the disposable worktree target. They are never part of ordinary service
 startup. Replay is explicit:
 
@@ -113,6 +115,29 @@ startup. Replay is explicit:
 pnpm db:reference:verify
 pnpm db:scenario:verify
 ```
+
+Canonical commercial Launch Access reference data uses a separate protected
+release authority. The generic `db:reference:prepare` operation remains
+restricted to disposable targets and `productionSeedAuthority` remains `none`.
+For staging or production, the supported sequence is explicit:
+
+```text
+release:plan
+→ release-reference:plan
+→ release:apply (explicit migration acknowledgement)
+→ release-reference:apply (explicit protected-target acknowledgement)
+→ release-reference:verify
+→ readiness/deployment smoke checks
+```
+
+The release-reference plan and verify commands are read-only. The apply command
+uses the canonical commercial adapter, requires protected release approval and
+an exact target acknowledgement, runs transactionally under a named MySQL
+lock, and is idempotent. Missing approved products or entitlements are inserted;
+conflicting rows, duplicate canonical names, unexpected entitlements, and an
+unaccepted migration head fail closed. No release-reference apply runs during
+application startup, and the actual production apply remains an explicitly
+authorized release action.
 
 Provisioning is idempotent only when its mode-0600 ownership profile exactly
 matches the canonical worktree realpath and Git common-directory identity.

@@ -106,6 +106,8 @@ describe('database authority agent entry contract', () => {
     ]);
     expect(consumerContractCommandSequence()).toEqual([
       ['pnpm', ['db:migrate:test']],
+      ['pnpm', ['db:reference:prepare']],
+      ['pnpm', ['db:reference:verify']],
       ['pnpm', ['db:schema:congruency']],
       ['pnpm', ['db:verify:distribution']],
       ['pnpm', ['db:readiness']],
@@ -167,6 +169,9 @@ describe('database authority agent entry contract', () => {
     const dbJobStart = ci.indexOf('  db-contract-verification:');
     const dbJobEnd = ci.indexOf('\n  lint-and-typecheck:');
     const dbJob = ci.slice(dbJobStart, dbJobEnd);
+    const testJobStart = ci.indexOf('  test:\n');
+    const testJobEnd = ci.indexOf('\n  build:', testJobStart);
+    const testJob = ci.slice(testJobStart, testJobEnd);
 
     expect(ci).toContain('pnpm db:verify:ci');
     expect(ci).toContain('pnpm db:authority:consumer-contract');
@@ -182,6 +187,16 @@ describe('database authority agent entry contract', () => {
     expect(dbJob.match(/\n {6}DATABASE_CREDENTIAL_CLASS:/g)).toHaveLength(1);
     expect(dbJob).toContain('MYSQL_DATABASE: listify_test');
     expect(dbJob).toContain('- 3306:3306');
+    expect(testJob).toContain('pnpm db:migrate:test');
+    expect(testJob).toContain('pnpm db:reference:prepare');
+    expect(testJob).toContain('pnpm db:reference:verify');
+    expect(testJob.indexOf('pnpm db:migrate:test')).toBeLessThan(
+      testJob.indexOf('pnpm db:reference:prepare'),
+    );
+    expect(testJob.indexOf('pnpm db:reference:prepare')).toBeLessThan(
+      testJob.indexOf('pnpm db:reference:verify'),
+    );
+    expect(testJob.indexOf('pnpm db:reference:verify')).toBeLessThan(testJob.indexOf('Run tests'));
     expect(aggregate).toContain("['test:db-authority:static']");
     expect(aggregate).toContain("['db:authority:utilities']");
     expect(aggregate).toContain("['schema:sanity']");

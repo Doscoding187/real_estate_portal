@@ -6,7 +6,7 @@ import {
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
-  requireExactAdapterTarget,
+  requireReferenceAdapterTarget,
   rowValue,
   stableDigest,
   withTransaction,
@@ -275,7 +275,7 @@ export async function prepareCanonicalGeography(input: {
   profileRoot?: string;
 }): Promise<GeographyReferenceEvidence> {
   assertOperation(input.decision, ['reference-seed', 'foundation-seed']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
   await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
@@ -320,7 +320,7 @@ export async function verifyCanonicalGeography(input: {
   profileRoot?: string;
 }): Promise<GeographyReferenceEvidence> {
   assertOperation(input.decision, ['verification', 'browser-verification', 'readiness']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
   await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,

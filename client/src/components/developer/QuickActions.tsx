@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Building2, Home, Image, Megaphone, UserPlus, Plus, Zap, Lock } from 'lucide-react';
+import { Building2, Home, Image, UserPlus, Plus, Zap, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -20,7 +20,7 @@ interface QuickAction {
   onClick?: () => void;
   gradientFrom: string;
   gradientTo: string;
-  requiresTier?: 'basic' | 'premium';
+  requiresCanonicalEntitlement?: boolean;
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
@@ -52,16 +52,6 @@ const QUICK_ACTIONS: QuickAction[] = [
     gradientTo: 'to-pink-600',
   },
   {
-    id: 'launch-campaign',
-    label: 'Launch Campaign',
-    description: 'Start a marketing campaign',
-    icon: Megaphone,
-    path: '/developer/campaigns/new',
-    gradientFrom: 'from-orange-500',
-    gradientTo: 'to-red-600',
-    requiresTier: 'basic',
-  },
-  {
     id: 'add-team-member',
     label: 'Add Team Member',
     description: 'Invite a team member',
@@ -81,8 +71,6 @@ export function QuickActions({ className }: QuickActionsProps) {
   const { isAuthenticated } = useAuth();
   const [hoveredAction, setHoveredAction] = useState<string | null>(null);
 
-  // Fetch subscription to check tier limits
-  const { data: subscription } = trpc.developer.getSubscription.useQuery();
   const explorePublishingQuery = trpc.explore.getPublishingEligibility.useQuery(undefined, {
     enabled: isAuthenticated,
     retry: false,
@@ -93,19 +81,12 @@ export function QuickActions({ className }: QuickActionsProps) {
   );
 
   const isActionDisabled = (action: QuickAction): boolean => {
-    if (!action.requiresTier) return false;
-    if (!subscription) return false;
-
-    const tierHierarchy = { free_trial: 0, basic: 1, premium: 2 };
-    const currentTier = tierHierarchy[subscription.tier];
-    const requiredTier = tierHierarchy[action.requiresTier];
-
-    return currentTier < requiredTier;
+    return action.requiresCanonicalEntitlement === true;
   };
 
   const getDisabledReason = (action: QuickAction): string => {
-    if (!action.requiresTier) return '';
-    return `Upgrade to ${action.requiresTier} plan to use this feature`;
+    if (!action.requiresCanonicalEntitlement) return '';
+    return 'This feature requires a configured canonical entitlement';
   };
 
   const handleActionClick = (action: QuickAction) => {

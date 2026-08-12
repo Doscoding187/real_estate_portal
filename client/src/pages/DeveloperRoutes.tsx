@@ -12,10 +12,8 @@ import LeadsManager from '@/components/developer/LeadsManager';
 import SettingsPanel from '@/components/developer/SettingsPanel';
 import TeamManagement from '@/components/developer/TeamManagement';
 import AnalyticsPanel from '@/components/developer/AnalyticsPanel';
-import MarketingCampaigns from '@/components/developer/MarketingCampaigns';
 import BillingPanel from '@/components/developer/BillingPanel';
 import CreateDevelopment from '@/pages/CreateDevelopment';
-import DeveloperCampaignsPage from '@/pages/DeveloperCampaignsPage';
 import DeveloperPerformancePage from '@/pages/DeveloperPerformancePage';
 import DeveloperPlans from '@/pages/DeveloperPlans';
 import DeveloperBrandProfilePage from '@/pages/DeveloperBrandProfilePage';
@@ -166,8 +164,6 @@ export default function DeveloperRoutes() {
           path="/developer/explore"
           component={() => <PlaceholderContent title="Explore Analytics" />}
         />
-        <Route path="/developer/campaigns" component={MarketingCampaigns} />
-        <Route path="/developer/campaigns/new" component={DeveloperCampaignsPage} />
         <Route path="/developer/performance" component={DeveloperPerformancePage} />
 
         {/* Settings */}

@@ -16,6 +16,7 @@ export interface CTAButtonProps {
   label: string;
   href: string;
   variant: 'primary' | 'secondary';
+  surface?: 'light' | 'dark';
   onClick?: () => void;
   className?: string;
   fullWidth?: boolean;
@@ -27,11 +28,12 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
   label,
   href,
   variant,
+  surface = 'light',
   onClick,
   className = '',
   fullWidth = false,
 }) => {
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = () => {
     // Track analytics
     trackCTA({
       ctaLabel: label,
@@ -39,11 +41,9 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
       ctaHref: href,
     });
 
-    // Call custom onClick if provided
-    if (onClick) {
-      e.preventDefault();
-      onClick();
-    }
+    // Call custom onClick if provided, while preserving the anchor's native
+    // destination navigation. CTA destinations must not depend on a handler.
+    onClick?.();
   };
 
   const isPrimary = variant === 'primary';
@@ -58,28 +58,19 @@ export const CTAButton: React.FC<CTAButtonProps> = ({
   };
 
   const secondaryStyles = {
-    background: 'transparent',
-    color: softUITokens.colors.primary.base,
-    border: `2px solid ${softUITokens.colors.primary.base}`,
+    background: surface === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+    color:
+      surface === 'dark' ? softUITokens.colors.neutral.white : softUITokens.colors.primary.base,
+    border: `2px solid ${surface === 'dark' ? 'rgba(255, 255, 255, 0.72)' : softUITokens.colors.primary.base}`,
     borderRadius: softUITokens.borderRadius.soft,
     transition: `all ${softUITokens.transitions.base}`,
   };
-
-  const hoverStyles = isPrimary
-    ? {
-        boxShadow: '0 12px 30px rgba(255, 122, 0, 0.32)',
-        transform: 'translateY(-2px)',
-      }
-    : {
-        background: softUITokens.colors.primary.light,
-        transform: 'translateY(-2px)',
-      };
 
   return (
     <motion.a
       href={href}
       onClick={handleClick}
-      className={`cta-button cta-button--${variant} inline-flex items-center justify-center px-8 py-3.5 text-base sm:text-lg font-semibold no-underline cursor-pointer ${fullWidth ? 'w-full' : ''} ${className}`}
+      className={`cta-button cta-button--${variant} inline-flex items-center justify-center px-8 py-3.5 text-base sm:text-lg font-semibold no-underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${surface === 'dark' && !isPrimary ? 'focus-visible:ring-white focus-visible:ring-offset-indigo-700 hover:bg-white/20' : 'focus-visible:ring-blue-500'} ${fullWidth ? 'w-full' : ''} ${className}`}
       style={isPrimary ? primaryStyles : secondaryStyles}
       variants={buttonPress}
       initial="rest"
@@ -108,12 +99,14 @@ export interface CTAButtonGroupProps {
     href: string;
     onClick?: () => void;
   };
+  surface?: 'light' | 'dark';
   className?: string;
 }
 
 export const CTAButtonGroup: React.FC<CTAButtonGroupProps> = ({
   primaryCTA,
   secondaryCTA,
+  surface = 'light',
   className = '',
 }) => {
   return (
@@ -122,12 +115,14 @@ export const CTAButtonGroup: React.FC<CTAButtonGroupProps> = ({
         label={primaryCTA.label}
         href={primaryCTA.href}
         variant="primary"
+        surface={surface}
         onClick={primaryCTA.onClick}
       />
       <CTAButton
         label={secondaryCTA.label}
         href={secondaryCTA.href}
         variant="secondary"
+        surface={surface}
         onClick={secondaryCTA.onClick}
       />
     </div>
