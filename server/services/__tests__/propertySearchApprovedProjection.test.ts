@@ -101,7 +101,7 @@ describe('manual property Search approved projection authority', () => {
         orderedQuery([
           {
             propertyId: 501,
-            imageUrl: 'https://cdn.example.test/approved-card-photo.jpg',
+            imageUrl: 'properties/draft-501/approved-card-photo.jpg',
             isPrimary: 1,
           },
         ]),
@@ -117,7 +117,7 @@ describe('manual property Search approved projection authority', () => {
       price: 2_500_000,
       bedrooms: 3,
       bathrooms: 2,
-      mainImage: 'https://cdn.example.test/approved-card-photo.jpg',
+      mainImage: '/api/local-media/object?key=properties%2Fdraft-501%2Fapproved-card-photo.jpg',
     });
     expect(result.properties[0]).not.toHaveProperty('sourceListingId');
     expect(result.cards[0]).toMatchObject({
@@ -125,7 +125,7 @@ describe('manual property Search approved projection authority', () => {
       id: '501',
       propertyId: 501,
       href: '/property/501',
-      image: 'https://cdn.example.test/approved-card-photo.jpg',
+      image: '/api/local-media/object?key=properties%2Fdraft-501%2Fapproved-card-photo.jpg',
     });
     expect(JSON.stringify(result)).not.toContain('private-candidate-photo');
   });

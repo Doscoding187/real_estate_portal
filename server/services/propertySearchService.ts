@@ -28,12 +28,13 @@ import { locationResolver, ResolvedLocation } from './locationResolverService';
 import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
 import { buildCorePropertyInformation } from '../../shared/core-property-information';
 import { normalizeFeaturesContext } from '../../shared/features-context';
+import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 
 // Cache key prefix for property searches
-// Authority version: v3 removes listing/listing_media fallback from manual
-// public cards. Advancing the namespace prevents an older cached fallback
-// payload surviving the approved-public read correction.
-const CACHE_PREFIX = 'property:search:v3:';
+// Authority version: v4 routes approved image-mirror storage keys through the
+// configured media adapter. Advancing the namespace prevents a cached v3
+// payload with an undeliverable raw object key surviving this correction.
+const CACHE_PREFIX = 'property:search:v4:';
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 
@@ -158,37 +159,15 @@ function deriveLoadSheddingSolutions(details: Record<string, any>): LoadShedding
   return Array.from(solutions);
 }
 
-function getMediaCdnBaseUrl(): string {
-  const cloudFrontUrl = String(process.env.CLOUDFRONT_URL || '').trim();
-  if (cloudFrontUrl) {
-    return cloudFrontUrl.replace(/\/+$/, '');
-  }
-
-  const bucketName = String(process.env.S3_BUCKET_NAME || '').trim();
-  const awsRegion = String(process.env.AWS_REGION || 'af-south-1').trim();
-  if (!bucketName) return '';
-
-  return `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
-}
-
-const MEDIA_CDN_BASE_URL = getMediaCdnBaseUrl();
-
 function resolveMediaUrl(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return undefined;
-
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || /^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
   if (trimmed.startsWith('//')) return `https:${trimmed}`;
+  if (trimmed.startsWith('/')) return trimmed;
 
-  const normalizedPath = trimmed.replace(/^\/+/, '');
-  if (!normalizedPath) return undefined;
-
-  if (!MEDIA_CDN_BASE_URL) return `/${normalizedPath}`;
-  return `${MEDIA_CDN_BASE_URL}/${normalizedPath}`;
+  return resolveMediaDeliveryUrl(trimmed) || undefined;
 }
 
 function buildPropertySearchCardResult(property: any): SearchCardResult {
