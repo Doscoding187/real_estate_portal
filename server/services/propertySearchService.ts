@@ -8,15 +8,12 @@ import { db } from '../db';
 import {
   properties,
   propertyImages,
-  listingMedia,
-  listings,
   developments,
   developers,
   developerBrandProfiles,
   agents,
   agencies,
   suburbs,
-  users,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
@@ -33,9 +30,17 @@ import { buildCorePropertyInformation } from '../../shared/core-property-informa
 import { normalizeFeaturesContext } from '../../shared/features-context';
 
 // Cache key prefix for property searches
-const CACHE_PREFIX = 'property:search:v2:';
+// Authority version: v3 removes listing/listing_media fallback from manual
+// public cards. Advancing the namespace prevents an older cached fallback
+// payload surviving the approved-public read correction.
+const CACHE_PREFIX = 'property:search:v3:';
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
+
+type ManualPropertyFilters = PropertyFilters & {
+  /** Internal route option; never inferred from listing or revision state. */
+  featuredOnly?: boolean;
+};
 
 type QueryLocationIds = Array<{
   provinceId?: number;
@@ -141,7 +146,9 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): nu
 function deriveLoadSheddingSolutions(details: Record<string, any>): LoadSheddingSolution[] {
   const solutions = new Set<LoadSheddingSolution>();
   const canonical = normalizeFeaturesContext(details.featuresContext, details);
-  const powerBackup = String(canonical.utilities.backupPower ?? details.powerBackup ?? '').toLowerCase();
+  const powerBackup = String(
+    canonical.utilities.backupPower ?? details.powerBackup ?? '',
+  ).toLowerCase();
   if (powerBackup === 'none') solutions.add('none');
   if (powerBackup.includes('solar')) solutions.add('solar');
   if (powerBackup.includes('generator')) solutions.add('generator');
@@ -281,7 +288,7 @@ export class PropertySearchService {
    * Requirements: 2.3 (sorting), 6.1-6.3 (pagination), 7.1 (result count)
    */
   async searchProperties(
-    filters: PropertyFilters,
+    filters: ManualPropertyFilters,
     sortOption: SortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
@@ -538,87 +545,6 @@ export class PropertySearchService {
       imagesByProperty.get(propId)!.push(img);
     });
 
-    const sourceListingIds: number[] = Array.from(
-      new Set(
-        results
-          .map((prop: any) => Number(prop.sourceListingId || 0))
-          .filter(
-            (listingId: number): listingId is number => Number.isFinite(listingId) && listingId > 0,
-          ),
-      ),
-    );
-    const sourceListingImages =
-      sourceListingIds.length > 0
-        ? await db
-            .select({
-              listingId: listingMedia.listingId,
-              imageUrl: sql<string>`COALESCE(${listingMedia.processedUrl}, ${listingMedia.originalUrl})`,
-              isPrimary: listingMedia.isPrimary,
-              displayOrder: listingMedia.displayOrder,
-            })
-            .from(listingMedia)
-            .innerJoin(listings, eq(listingMedia.listingId, listings.id))
-            .where(
-              and(
-                inArray(listingMedia.listingId, sourceListingIds),
-                eq(listingMedia.mediaType, 'image'),
-                inArray(listings.status, ['published', 'approved']),
-                eq(listings.approvalStatus, 'approved'),
-              ),
-            )
-            .orderBy(desc(listingMedia.isPrimary), asc(listingMedia.displayOrder))
-        : [];
-
-    const sourceListingIdentities =
-      sourceListingIds.length > 0
-        ? await db
-            .select({
-              listingId: listings.id,
-              agentDisplayName: agents.displayName,
-              agentFirstName: agents.firstName,
-              agentLastName: agents.lastName,
-              agentPhone: agents.phone,
-              agentWhatsapp: agents.whatsapp,
-              agentEmail: agents.email,
-              agentProfileImage: agents.profileImage,
-              agencyName: agencies.name,
-              agentId: listings.agentId,
-              ownerName: users.name,
-              ownerFirstName: users.firstName,
-              ownerLastName: users.lastName,
-              ownerPhone: users.phone,
-              ownerEmail: users.email,
-            })
-            .from(listings)
-            .leftJoin(agents, and(eq(listings.agentId, agents.id), eq(agents.status, 'approved')))
-            .leftJoin(agencies, and(eq(listings.agencyId, agencies.id), eq(agencies.isVerified, 1)))
-            .leftJoin(users, eq(listings.ownerId, users.id))
-            .where(
-              and(
-                inArray(listings.id, sourceListingIds),
-                inArray(listings.status, ['published', 'approved']),
-                eq(listings.approvalStatus, 'approved'),
-              ),
-            )
-        : [];
-
-    const imagesBySourceListing = new Map<number, typeof sourceListingImages>();
-    sourceListingImages.forEach((img: any) => {
-      const listingId = Number(img.listingId);
-      if (!imagesBySourceListing.has(listingId)) {
-        imagesBySourceListing.set(listingId, []);
-      }
-      imagesBySourceListing.get(listingId)!.push(img);
-    });
-
-    const identityBySourceListing = new Map<number, (typeof sourceListingIdentities)[number]>();
-    sourceListingIdentities.forEach((identity: any) => {
-      const listingId = Number(identity.listingId || 0);
-      if (listingId > 0) {
-        identityBySourceListing.set(listingId, identity);
-      }
-    });
-
     // Transform results to Property type
     const transformedProperties: Property[] = results.map((prop: any) => {
       const details = parseJsonObject(prop.propertySettings);
@@ -628,7 +554,8 @@ export class PropertySearchService {
       const core = buildCorePropertyInformation(prop.propertyType, details);
       const coreInternalArea =
         core.internalArea?.status === 'known' ? Number(core.internalArea.valueM2) : undefined;
-      const coreErfArea = core.erfArea?.status === 'known' ? Number(core.erfArea.valueM2) : undefined;
+      const coreErfArea =
+        core.erfArea?.status === 'known' ? Number(core.erfArea.valueM2) : undefined;
       const coreLandArea =
         core.farmLandArea?.status === 'known' ? Number(core.farmLandArea.normalizedM2) : undefined;
       const floorSize =
@@ -636,15 +563,14 @@ export class PropertySearchService {
         asPositiveNumber(prop.internalAreaM2) ||
         asPositiveNumber(prop.floorSize);
       const erfSize =
-        coreErfArea ||
-        asPositiveNumber(prop.erfSizeM2) ||
-        asPositiveNumber(prop.erfSize);
+        coreErfArea || asPositiveNumber(prop.erfSizeM2) || asPositiveNumber(prop.erfSize);
       const landSize =
         coreLandArea || asPositiveNumber(prop.landAreaM2) || asPositiveNumber(prop.landSize);
 
-      const securityTokens = (hasCanonicalStep4
-        ? featuresContext.security.features
-        : parseStringList(details.securityFeatures)
+      const securityTokens = (
+        hasCanonicalStep4
+          ? featuresContext.security.features
+          : parseStringList(details.securityFeatures)
       ).map(v => v.toLowerCase());
       const amenityTokens = [
         ...parseStringList(details.amenities),
@@ -654,12 +580,16 @@ export class PropertySearchService {
 
       const internetAvailability = String(
         hasCanonicalStep4
-          ? featuresContext.utilities.internetAccess ?? ''
-          : details.internetAvailability ?? details.internetAccess ?? '',
+          ? (featuresContext.utilities.internetAccess ?? '')
+          : (details.internetAvailability ?? details.internetAccess ?? ''),
       ).toLowerCase();
 
       const explicitSecurityEstate =
-        details.securityEstate === true ? true : details.securityEstate === false ? false : undefined;
+        details.securityEstate === true
+          ? true
+          : details.securityEstate === false
+            ? false
+            : undefined;
       const canonicalPetPolicy = hasCanonicalStep4 ? featuresContext.petPolicy : undefined;
       const petFriendly = hasCanonicalStep4
         ? canonicalPetPolicy === 'allowed'
@@ -709,40 +639,17 @@ export class PropertySearchService {
           thumbnailUrl: resolvedImageUrl,
         });
       }
-      if (primaryImage.length === 0 && Number(prop.sourceListingId || 0) > 0) {
-        const sourceImages: Array<{ url: string; thumbnailUrl: string }> = [];
-        for (const img of imagesBySourceListing.get(Number(prop.sourceListingId)) || []) {
-          const resolvedImageUrl = resolveMediaUrl((img as any).imageUrl);
-          if (!resolvedImageUrl) continue;
-          sourceImages.push({
-            url: resolvedImageUrl,
-            thumbnailUrl: resolvedImageUrl,
-          });
-        }
-        primaryImage.push(...sourceImages);
+      // Canonical PLE card images are owned by propertyImages. Only the
+      // explicit unlinked legacy path may use the historical properties.mainImage.
+      const legacyMainImage =
+        prop.sourceListingId == null ? resolveMediaUrl(prop.mainImage) : undefined;
+      if (primaryImage.length === 0 && legacyMainImage) {
+        primaryImage.push({ url: legacyMainImage, thumbnailUrl: legacyMainImage });
       }
-      const resolvedMainImage = resolveMediaUrl(prop.mainImage);
-      if (primaryImage.length === 0 && resolvedMainImage) {
-        primaryImage.push({ url: resolvedMainImage, thumbnailUrl: resolvedMainImage });
-      }
-
-      const sourceListingIdentity = identityBySourceListing.get(Number(prop.sourceListingId || 0));
 
       const agentName = (
         String(prop.agentDisplayName || '').trim() ||
-        [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim() ||
-        String(sourceListingIdentity?.agentDisplayName || '').trim() ||
-        [sourceListingIdentity?.agentFirstName, sourceListingIdentity?.agentLastName]
-          .filter(Boolean)
-          .join(' ')
-          .trim()
-      ).trim();
-      const ownerName = (
-        String(sourceListingIdentity?.ownerName || '').trim() ||
-        [sourceListingIdentity?.ownerFirstName, sourceListingIdentity?.ownerLastName]
-          .filter(Boolean)
-          .join(' ')
-          .trim()
+        [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim()
       ).trim();
       const developerName = String(prop.developerName || '').trim();
       const developerLogo = prop.developerLogo || undefined;
@@ -778,12 +685,17 @@ export class PropertySearchService {
             }
           : undefined;
 
-      const titleType: Property['titleType'] =
-        String(details.ownershipType || details.titleType || '').toLowerCase().includes('sectional')
-          ? 'sectional'
-          : String(details.ownershipType || details.titleType || '').toLowerCase().includes('freehold')
-            ? 'freehold'
-            : undefined;
+      const titleType: Property['titleType'] = String(
+        details.ownershipType || details.titleType || '',
+      )
+        .toLowerCase()
+        .includes('sectional')
+        ? 'sectional'
+        : String(details.ownershipType || details.titleType || '')
+              .toLowerCase()
+              .includes('freehold')
+          ? 'freehold'
+          : undefined;
 
       return {
         id: String(prop.id),
@@ -810,38 +722,23 @@ export class PropertySearchService {
         fibreReady,
         loadSheddingSolutions: deriveLoadSheddingSolutions(details),
         images: primaryImage,
-        mainImage: resolvedMainImage || primaryImage[0]?.url || undefined,
+        mainImage: primaryImage[0]?.url || undefined,
         videoCount: Number(prop.videoCount || 0),
         status: this.mapStatus(prop.status),
         listedDate: new Date(prop.listedDate),
         listingSource: 'manual',
-        listerType: hasAgentIdentity
-          ? prop.agencyName || sourceListingIdentity?.agencyName
-            ? 'agency'
-            : 'agent'
-          : 'private',
+        listerType: hasAgentIdentity ? (prop.agencyName ? 'agency' : 'agent') : 'private',
         agent: hasAgentIdentity
           ? {
-              id: String(prop.agentId || sourceListingIdentity?.agentId || 0),
+              id: String(prop.agentId || 0),
               name: agentName,
-              agency: String(prop.agencyName || sourceListingIdentity?.agencyName || ''),
-              phone: String(prop.agentPhone || sourceListingIdentity?.agentPhone || ''),
-              whatsapp: String(prop.agentWhatsapp || sourceListingIdentity?.agentWhatsapp || ''),
-              email: String(prop.agentEmail || sourceListingIdentity?.agentEmail || ''),
-              image:
-                prop.agentProfileImage || sourceListingIdentity?.agentProfileImage || undefined,
+              agency: String(prop.agencyName || ''),
+              phone: String(prop.agentPhone || ''),
+              whatsapp: String(prop.agentWhatsapp || ''),
+              email: String(prop.agentEmail || ''),
+              image: prop.agentProfileImage || undefined,
             }
-          : ownerName
-            ? {
-                id: String(prop.ownerId || 0),
-                name: ownerName,
-                agency: '',
-                phone: String(sourceListingIdentity?.ownerPhone || ''),
-                whatsapp: '',
-                email: String(sourceListingIdentity?.ownerEmail || ''),
-                image: undefined,
-              }
-            : undefined,
+          : undefined,
         developerBrand,
         development,
         developmentId:
@@ -910,19 +807,27 @@ export class PropertySearchService {
     return searchResults;
   }
 
+  /** Return featured manual inventory through the same projection-only read path. */
+  async searchFeaturedProperties(limit: number = 6): Promise<Property[]> {
+    const pageSize = Math.max(1, Math.min(50, Math.floor(limit)));
+    const results = await this.searchProperties({ featuredOnly: true }, 'date_desc', 1, pageSize);
+    return results.properties;
+  }
+
   /**
    * Build filter conditions from PropertyFilters
    * Supports all filter types: location, price, bedrooms, SA-specific
    * Uses hybrid approach: ID-based queries when available, text fallback otherwise
    */
   private buildFilterConditions(
-    filters: PropertyFilters,
+    filters: ManualPropertyFilters,
     locationIds: QueryLocationIds = [],
   ): SQL[] {
     const conditions: SQL[] = [];
 
     // Only show published/available properties by default
     conditions.push(or(eq(properties.status, 'available'), eq(properties.status, 'published'))!);
+    if (filters.featuredOnly) conditions.push(eq(properties.featured, 1));
 
     // Location filters - Use Hybrid Approach (ID OR Text) to handle legitimate legacy data
 
@@ -1181,7 +1086,7 @@ export class PropertySearchService {
    * Generate cache key for search results
    */
   private generateCacheKey(
-    filters: PropertyFilters,
+    filters: ManualPropertyFilters,
     sortOption: SortOption,
     page: number,
     pageSize: number,

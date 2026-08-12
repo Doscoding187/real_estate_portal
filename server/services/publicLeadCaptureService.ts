@@ -9,7 +9,6 @@ import {
   developmentSupersessions,
   developments,
   leads,
-  listings,
   properties,
   unitTypes,
   users,
@@ -217,10 +216,6 @@ function coerceLeadType(input?: string): LeadType {
 
 function isPublicPropertyStatus(status: unknown): boolean {
   return status === 'available' || status === 'published';
-}
-
-function isPublicListingStatus(status: unknown, approvalStatus?: unknown): boolean {
-  return (status === 'approved' || status === 'published') && approvalStatus === 'approved';
 }
 
 function isDuplicateKeyError(error: unknown): boolean {
@@ -459,7 +454,6 @@ export async function resolveLeadOwnership(
         developmentId: properties.developmentId,
         developerBrandProfileId: properties.developerBrandProfileId,
         agentId: properties.agentId,
-        sourceListingId: properties.sourceListingId,
         ownerId: properties.ownerId,
       })
       .from(properties)
@@ -616,40 +610,14 @@ export async function resolveLeadOwnership(
     return mapCustodyResolution({ developerBrandProfileId: brand?.id }, custody);
   }
 
-  const sourceListingId = positiveId(property?.sourceListingId);
-  let sourceListing: any = null;
-  if (sourceListingId) {
-    [sourceListing] = await database
-      .select({
-        id: listings.id,
-        agentId: listings.agentId,
-        agencyId: listings.agencyId,
-        ownerId: listings.ownerId,
-        status: listings.status,
-        approvalStatus: listings.approvalStatus,
-      })
-      .from(listings)
-      .where(eq(listings.id, sourceListingId))
-      .limit(1);
-    if (
-      !sourceListing ||
-      !isPublicListingStatus(sourceListing.status, sourceListing.approvalStatus)
-    ) {
-      sourceListing = null;
-    }
-  }
-
-  const agentIds = [positiveId(property.agentId), positiveId(sourceListing?.agentId)].filter(
-    (id): id is number => id !== undefined,
-  );
+  // Public enquiry attribution is projection-owned. sourceListingId is an
+  // internal publication bridge, never a fallback into mutable listing state.
+  const agentIds = [positiveId(property.agentId)].filter((id): id is number => id !== undefined);
   const agentMap = await loadAgentCandidates(database, agentIds);
-  const ownerIds = [positiveId(property.ownerId), positiveId(sourceListing?.ownerId)].filter(
-    (id): id is number => id !== undefined,
-  );
+  const ownerIds = [positiveId(property.ownerId)].filter((id): id is number => id !== undefined);
   const userMap = await loadUserCandidates(database, ownerIds);
 
   const agencyIds = [
-    positiveId(sourceListing?.agencyId),
     ...Array.from(userMap.values()).map(user => positiveId(user.agencyId)),
     ...agentIds.map(agentId => positiveId(agentMap.get(agentId)?.agencyId)),
   ].filter((id): id is number => id !== undefined);
@@ -657,19 +625,12 @@ export async function resolveLeadOwnership(
 
   const custody = resolvePublicPropertyCustody({
     propertyAgentId: property.agentId,
-    sourceListingAgentId: sourceListing?.agentId,
-    sourceListingAgencyId: sourceListing?.agencyId,
     ownerAgencyId: userMap.get(Number(property.ownerId))?.agencyId,
     developerBrandProfileId: brand?.id,
     directAgent: property.agentId ? agentMap.get(Number(property.agentId)) : null,
-    sourceAgent: sourceListing?.agentId ? agentMap.get(Number(sourceListing.agentId)) : null,
     directAgentAgency: property.agentId
       ? agencyMap.get(Number(agentMap.get(Number(property.agentId))?.agencyId))
       : null,
-    sourceAgentAgency: sourceListing?.agentId
-      ? agencyMap.get(Number(agentMap.get(Number(sourceListing.agentId))?.agencyId))
-      : null,
-    sourceAgency: sourceListing?.agencyId ? agencyMap.get(Number(sourceListing.agencyId)) : null,
     ownerAgency: userMap.get(Number(property.ownerId))?.agencyId
       ? agencyMap.get(Number(userMap.get(Number(property.ownerId))?.agencyId))
       : null,

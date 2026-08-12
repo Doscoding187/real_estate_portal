@@ -469,11 +469,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     : null;
 
   const similarProperties = (similarPropertiesData ?? []).filter(p => {
-    if (p.id === propertyId) return false;
+    if (Number(p.id) === propertyId) return false;
 
-    // The detail page receives a broad legacy getAll feed. Keep the visible
-    // continuation in the same explicit transaction universe as the opened
-    // listing; do not let a rental detail silently recommend sale inventory.
+    // The continuation feed contains public property projections. Keep it in
+    // the same explicit transaction universe as the opened property; do not
+    // let a rental detail silently recommend sale inventory.
     if (normalizedListingType !== 'rent' && normalizedListingType !== 'sale') return true;
 
     const candidateListingType = String(
@@ -1906,7 +1906,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                     {/* Image */}
                     <div className="relative h-44 overflow-hidden bg-slate-100">
                       <img
-                        src={prop.mainImage || '/placeholder-property.jpg'}
+                        src={prop.images[0]?.url || '/placeholder-property.jpg'}
                         alt={prop.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
@@ -1964,10 +1964,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                             <span>{prop.bathrooms}</span>
                           </div>
                         )}
-                        {prop.area && (
+                        {(prop.floorSize || prop.internalAreaM2) && (
                           <div className="flex items-center gap-1">
                             <Square className="h-3.5 w-3.5" />
-                            <span>{prop.area} m²</span>
+                            <span>{prop.floorSize || prop.internalAreaM2} m²</span>
                           </div>
                         )}
                       </div>

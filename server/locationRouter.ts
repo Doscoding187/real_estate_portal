@@ -244,9 +244,9 @@ export const locationRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const { getFeaturedListings } = await import('./db');
+      const { propertySearchService } = await import('./services/propertySearchService');
       try {
-        return await getFeaturedListings(input.limit);
+        return await propertySearchService.searchFeaturedProperties(input.limit);
       } catch (error) {
         console.error('Error fetching featured listings:', error);
         return [];

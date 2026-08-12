@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   mockSearchProperties,
+  mockSearchFeaturedProperties,
+  mockSearchListings,
   mockIncrementPropertyViews,
   mockGetPropertyById,
   mockGetPropertyImages,
@@ -20,6 +22,8 @@ const {
   mockRecordAgentOsEventForAgentId,
 } = vi.hoisted(() => ({
   mockSearchProperties: vi.fn(),
+  mockSearchFeaturedProperties: vi.fn(),
+  mockSearchListings: vi.fn(),
   mockIncrementPropertyViews: vi.fn(),
   mockGetPropertyById: vi.fn(),
   mockGetPropertyImages: vi.fn(),
@@ -41,6 +45,7 @@ const {
 vi.mock('../services/propertySearchService', () => ({
   propertySearchService: {
     searchProperties: mockSearchProperties,
+    searchFeaturedProperties: mockSearchFeaturedProperties,
   },
 }));
 
@@ -51,7 +56,7 @@ vi.mock('../db', () => ({
   getPropertyImages: mockGetPropertyImages,
   getListingById: mockGetListingById,
   getListingMedia: mockGetListingMedia,
-  searchListings: vi.fn(),
+  searchListings: mockSearchListings,
 }));
 
 vi.mock('../db-connection', () => ({
@@ -126,6 +131,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       pageSize: 20,
       hasMore: false,
     });
+    mockSearchFeaturedProperties.mockResolvedValue([]);
 
     mockIncrementPropertyViews.mockResolvedValue(undefined);
     mockGetPropertyById.mockResolvedValue({
@@ -416,7 +422,7 @@ describe('single-property search-detail-lead ownership contract', () => {
     expect(mockIncrementPropertyViews).toHaveBeenCalledWith(502);
   });
 
-  it('does not expose pending source-listing edits through public detail', async () => {
+  it('fails closed instead of blending a public projection with an invalid source lifecycle', async () => {
     const trpc = caller();
 
     mockGetPropertyById.mockResolvedValueOnce({
@@ -458,20 +464,70 @@ describe('single-property search-detail-lead ownership contract', () => {
 
     const detail = await trpc.properties.getById({ id: 503 });
 
-    expect(detail.property).toMatchObject({
-      id: 503,
-      title: 'Approved Public Title',
-      description: 'Approved public description.',
-      bedrooms: 2,
-      bathrooms: 1,
-      sourceType: 'property',
-    });
-    expect(detail.property.sourceListing).toBeUndefined();
-    expect(detail.property.propertyDetails).toMatchObject({
-      bedrooms: 2,
-      bathrooms: 1,
-    });
+    expect(detail).toEqual({ property: null, images: [] });
     expect(mockGetListingById).toHaveBeenCalledWith(9003);
     expect(mockGetListingMedia).not.toHaveBeenCalled();
+    expect(mockIncrementPropertyViews).not.toHaveBeenCalled();
+  });
+
+  it('uses projection search results and public property IDs for the Detail continuation feed', async () => {
+    mockSearchProperties.mockResolvedValueOnce({
+      properties: [
+        {
+          id: '501',
+          title: 'Approved projection result',
+          price: 2_500_000,
+          city: 'Johannesburg',
+          propertyType: 'house',
+          listingType: 'sale',
+        },
+      ],
+      cards: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      hasMore: false,
+    });
+
+    const result = await caller().properties.getAll({
+      city: 'Johannesburg',
+      propertyType: 'house',
+      limit: 10,
+      offset: 0,
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({ id: '501', title: 'Approved projection result' }),
+    ]);
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      { city: 'Johannesburg', propertyType: ['house'] },
+      'date_desc',
+      1,
+      10,
+    );
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
+
+  it('uses the projection-only service for featured public inventory', async () => {
+    mockSearchFeaturedProperties.mockResolvedValueOnce([
+      { id: '502', title: 'Featured approved projection' },
+    ]);
+
+    const result = await caller().properties.featured({ limit: 6 });
+
+    expect(result).toEqual([{ id: '502', title: 'Featured approved projection' }]);
+    expect(mockSearchFeaturedProperties).toHaveBeenCalledWith(6);
+  });
+
+  it('keeps location featured inventory on public property identities too', async () => {
+    mockSearchFeaturedProperties.mockResolvedValueOnce([
+      { id: '503', title: 'Location featured projection' },
+    ]);
+
+    const result = await caller().location.getFeaturedListings({ limit: 4 });
+
+    expect(result).toEqual([{ id: '503', title: 'Location featured projection' }]);
+    expect(mockSearchFeaturedProperties).toHaveBeenCalledWith(4);
+    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 });

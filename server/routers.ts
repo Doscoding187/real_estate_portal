@@ -36,20 +36,7 @@ import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
 import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
-import { normalizeFeaturesContext } from '../shared/features-context';
-import { buildPricingContract, getPrimaryPrice } from '../shared/pricing-contract';
-import {
-  getListingMediaUrl,
-  getListingMediaType,
-  getPrimaryListingImage,
-  isCompletedListingMedia,
-} from '../shared/listing-media';
-import {
-  getPresentationMediaDescriptor,
-  getSafePropertyPresentationVirtualTour,
-  summarizePropertyPresentation,
-} from '../shared/property-presentation';
-import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
+import { resolveApprovedPublicProperty } from './services/approvedPublicPropertyService';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -89,10 +76,6 @@ function parseTextList(value?: string | null) {
 
 function isPublicPropertyStatus(status: unknown): boolean {
   return status === 'available' || status === 'published';
-}
-
-function isPublicListingStatus(status: unknown, approvalStatus?: unknown): boolean {
-  return (status === 'published' || status === 'approved') && approvalStatus === 'approved';
 }
 
 async function getPropertyContactAgent(
@@ -723,7 +706,8 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        return await db.getFeaturedListings(input.limit);
+        const { propertySearchService } = await import('./services/propertySearchService');
+        return await propertySearchService.searchFeaturedProperties(input.limit);
       }),
 
     // Get filter counts for search refinement
@@ -851,12 +835,19 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        return await db.searchListings({
-          city: input.city,
-          propertyType: input.propertyType as any,
-          limit: input.limit,
-          offset: input.offset,
-        });
+        const { propertySearchService } = await import('./services/propertySearchService');
+        const pageSize = Math.max(1, Math.min(50, Math.floor(input.limit)));
+        const page = Math.floor(Math.max(0, input.offset) / pageSize) + 1;
+        const results = await propertySearchService.searchProperties(
+          {
+            city: input.city,
+            propertyType: input.propertyType ? [input.propertyType as any] : undefined,
+          },
+          'date_desc',
+          page,
+          pageSize,
+        );
+        return results.properties;
       }),
 
     getById: publicProcedure
@@ -866,135 +857,14 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        const drizzleDb = await getDb();
-
-        // Public property detail routes are keyed by properties.id. Listing data may enrich
-        // the mirror through sourceListingId, but listings.id must never hijack /property/:id.
-        const property = await db.getPropertyById(input.id);
-        if (!property || !isPublicPropertyStatus((property as any).status)) {
+        const approvedPublicProperty = await resolveApprovedPublicProperty(input.id);
+        if (!approvedPublicProperty) {
           return { property: null, images: [] };
         }
 
         await db.incrementPropertyViews(input.id);
-
-        const rawImages = await db.getPropertyImages(input.id);
-
-        const linkedListingId = Number((property as any).sourceListingId || 0);
-        const linkedListing =
-          Number.isFinite(linkedListingId) && linkedListingId > 0
-            ? await db.getListingById(linkedListingId)
-            : null;
-        const publicLinkedListing =
-          linkedListing &&
-          isPublicListingStatus(
-            (linkedListing as any).status,
-            (linkedListing as any).approvalStatus,
-          )
-            ? linkedListing
-            : null;
-        const linkedListingMedia = publicLinkedListing
-          ? await db.getListingMedia(linkedListingId)
-          : [];
-        const linkedPropertyDetails = publicLinkedListing
-          ? (publicLinkedListing.propertyDetails as any) || {}
-          : {};
-
-        const propertyImages = rawImages.map(img => {
-          const imageUrl = resolveMediaDeliveryUrl(img.imageUrl) || img.imageUrl;
-          return {
-            ...img,
-            imageUrl,
-            url: imageUrl,
-          };
-        });
-
-        const linkedMediaCandidates = linkedListingMedia
-          .filter(img => isCompletedListingMedia(img as any))
-          .flatMap(img => {
-            const rawUrl = getListingMediaUrl(img as any);
-            const mediaType = getListingMediaType(img as any);
-            if (!rawUrl || !mediaType) return [];
-            const presentationDescriptor = getPresentationMediaDescriptor(
-              linkedPropertyDetails.propertyPresentation,
-              {
-                id: img.id,
-                type: mediaType,
-                mediaType,
-                url: rawUrl,
-                originalUrl: (img as any).originalUrl,
-                originalFileName: img.originalFileName,
-              },
-            );
-            const imageUrl = resolveMediaDeliveryUrl(rawUrl);
-            if (!imageUrl) return [];
-            return [
-              {
-                id: img.id,
-                imageUrl,
-                url: imageUrl,
-                mediaType,
-                type: mediaType,
-                isPrimary: img.isPrimary,
-                displayOrder: img.displayOrder,
-                thumbnailUrl: img.thumbnailUrl || null,
-                previewUrl: img.previewUrl || null,
-                processingStatus: img.processingStatus || 'completed',
-                originalFileName: img.originalFileName || null,
-                mimeType: img.mimeType || null,
-                presentationKind: presentationDescriptor.kind,
-                presentationLabel: presentationDescriptor.label || null,
-              },
-            ];
-          });
-        const linkedPrimaryImage = getPrimaryListingImage(linkedMediaCandidates as any);
-        const linkedMedia = linkedMediaCandidates.map(img => ({
-          ...img,
-          isPrimary: linkedPrimaryImage && Number(linkedPrimaryImage.id) === Number(img.id) ? 1 : 0,
-        }));
-
-        const listingImages = linkedMedia.filter(img => img.mediaType === 'image');
-        const images = listingImages.length > 0 ? listingImages : propertyImages;
-        const publicMedia =
-          linkedMedia.length > 0
-            ? linkedMedia
-            : propertyImages.map(img => ({
-                ...img,
-                mediaType: 'image' as const,
-                type: 'image' as const,
-                processingStatus: 'completed' as const,
-              }));
-
-        let amenities: string[] = [];
-        let storedPropertySettings: Record<string, any> = {};
-        try {
-          if (typeof property.amenities === 'string' && !property.amenities.startsWith('[')) {
-            amenities.push(property.amenities);
-          } else if (typeof property.amenities === 'string') {
-            amenities = [...amenities, ...JSON.parse(property.amenities)];
-          }
-
-          if (property.propertySettings) {
-            const settings =
-              typeof property.propertySettings === 'string'
-                ? JSON.parse(property.propertySettings)
-                : property.propertySettings;
-            storedPropertySettings = settings || {};
-
-            const storedFeaturesContext = normalizeFeaturesContext(
-              settings?.featuresContext,
-              settings,
-            );
-            amenities = [
-              ...amenities,
-              ...storedFeaturesContext.spaces,
-              ...storedFeaturesContext.security.features,
-            ];
-          }
-        } catch (e) {
-          console.error('Failed to parse legacy amenities', e);
-        }
-
-        const uniqueAmenities = Array.from(new Set(amenities));
+        const property = approvedPublicProperty.property;
+        const drizzleDb = await getDb();
 
         let development: any = null;
         let developerBrand: any = null;
@@ -1089,186 +959,18 @@ const appRouterConfig = {
           }
         }
 
-        const resolvedListingType =
-          (property as any).listingType ||
-          (property as any).transactionType ||
-          (publicLinkedListing as any)?.action ||
-          'sale';
-
-        const pricingAction =
-          resolvedListingType === 'sale'
-            ? 'sell'
-            : resolvedListingType === 'rent'
-              ? 'rent'
-              : resolvedListingType;
-        const linkedPricingContract = publicLinkedListing
-          ? buildPricingContract(
-              pricingAction,
-              (publicLinkedListing as any).pricing,
-              linkedPropertyDetails,
-            )
-          : undefined;
-        const linkedPrice = publicLinkedListing
-          ? getPrimaryPrice(
-              pricingAction,
-              (publicLinkedListing as any).pricing,
-              linkedPropertyDetails,
-            )
-          : undefined;
-        const resolvedPrice =
-          linkedPrice !== undefined ? linkedPrice : Number((property as any).price || 0) || 0;
-
-        const resolvedBedrooms =
-          Number((property as any).bedrooms || 0) ||
-          Number(linkedPropertyDetails.bedrooms || 0) ||
-          0;
-
-        const resolvedBathrooms =
-          Number((property as any).bathrooms || 0) ||
-          Number(linkedPropertyDetails.bathrooms || 0) ||
-          0;
-
-        const resolvedArea =
-          Number((property as any).area || 0) ||
-          Number(linkedPropertyDetails.erfSizeM2 || 0) ||
-          Number(linkedPropertyDetails.unitSizeM2 || 0) ||
-          Number(linkedPropertyDetails.houseAreaM2 || 0) ||
-          Number(linkedPropertyDetails.landSizeM2OrHa || 0) ||
-          0;
-
-        const linkedFeaturesContext = normalizeFeaturesContext(
-          linkedPropertyDetails.featuresContext,
-          linkedPropertyDetails,
-        );
-        const linkedAmenities = [
-          ...linkedFeaturesContext.spaces,
-          ...linkedFeaturesContext.security.features,
-        ];
-
-        const normalizedPropertySettings = {
-          ...storedPropertySettings,
-          featuresContext: linkedFeaturesContext,
-          ownershipType: linkedPropertyDetails.ownershipType,
-          powerBackup: linkedPropertyDetails.powerBackup,
-          security: linkedPropertyDetails.security || linkedPropertyDetails.securityLevel,
-          securityFeatures: linkedPropertyDetails.securityFeatures,
-          waterSupply: linkedPropertyDetails.waterSupply,
-          internetAccess: linkedPropertyDetails.internetAccess,
-          flooring: linkedPropertyDetails.flooring,
-          parkingType: linkedPropertyDetails.parkingType,
-          petFriendly: linkedPropertyDetails.petFriendly,
-          electricitySupply: linkedPropertyDetails.electricitySupply,
-          additionalRooms: linkedPropertyDetails.additionalRooms,
+        const publicProperty: Record<string, any> = {
+          ...property,
+          listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
+          development: development || undefined,
+          developerBrand: developerBrand || undefined,
+          agent: agent || undefined,
         };
-
-        const normalizedPropertyDetails = {
-          ...(typeof (property as any).propertyDetails === 'string'
-            ? (() => {
-                try {
-                  return JSON.parse((property as any).propertyDetails);
-                } catch {
-                  return {};
-                }
-              })()
-            : (property as any).propertyDetails || {}),
-          ...linkedPropertyDetails,
-          featuresContext: linkedFeaturesContext,
-          bedrooms: resolvedBedrooms,
-          bathrooms: resolvedBathrooms,
-          area: resolvedArea,
-          ...(linkedPricingContract ? { pricingContract: linkedPricingContract } : {}),
-        };
-
-        const resolvedMainImage =
-          images.find(img => Number(img.isPrimary) === 1)?.imageUrl ||
-          images[0]?.imageUrl ||
-          (property as any).mainImage ||
-          '';
-
-        const publicSuburb =
-          (property as any).suburb || (publicLinkedListing as any)?.suburb || undefined;
-        const publicAreaAddress = [
-          publicSuburb,
-          (property as any).city || (publicLinkedListing as any)?.city,
-          (property as any).province || (publicLinkedListing as any)?.province,
-        ]
-          .map(value => String(value || '').trim())
-          .filter(Boolean)
-          .join(', ');
-        // Public properties are the privacy firewall. Never fall back to the
-        // legacy exact address/coordinates when an explicit public projection
-        // is absent.
-        const publicAddress =
-          (property as any).publicAddress ?? (publicLinkedListing ? publicAreaAddress : null);
-        const publicLatitude =
-          (property as any).publicLatitude ?? (publicLinkedListing ? null : null);
-        const publicLongitude =
-          (property as any).publicLongitude ?? (publicLinkedListing ? null : null);
-        const linkedVirtualTour = publicLinkedListing
-          ? getSafePropertyPresentationVirtualTour(linkedPropertyDetails.propertyPresentation)
-          : undefined;
 
         return {
-          property: {
-            ...property,
-            ...(publicLinkedListing
-              ? {
-                  sourceListing: {
-                    id: publicLinkedListing.id,
-                    slug: (publicLinkedListing as any).slug,
-                    action: (publicLinkedListing as any).action,
-                  },
-                }
-              : {}),
-            sourceType: publicLinkedListing ? 'property_mirror_listing' : 'property',
-            sourceListingId: linkedListingId || (property as any).sourceListingId,
-            title: (property as any).title || (publicLinkedListing as any)?.title,
-            description: (property as any).description || (publicLinkedListing as any)?.description,
-            price: resolvedPrice,
-            displayPrice: resolvedPrice,
-            ...(linkedPricingContract ? { pricingContract: linkedPricingContract } : {}),
-            listingType: resolvedListingType,
-            transactionType: resolvedListingType,
-            propertyType:
-              (property as any).propertyType || (publicLinkedListing as any)?.propertyType,
-            bedrooms: resolvedBedrooms,
-            bathrooms: resolvedBathrooms,
-            area: resolvedArea,
-            unitSizeM2: linkedPropertyDetails.unitSizeM2,
-            erfSizeM2: linkedPropertyDetails.erfSizeM2,
-            suburb: (publicLinkedListing as any)?.suburb || (property as any).suburb || undefined,
-            city: (publicLinkedListing as any)?.city || (property as any).city || undefined,
-            province:
-              (publicLinkedListing as any)?.province || (property as any).province || undefined,
-            address: publicAddress || undefined,
-            zipCode:
-              (publicLinkedListing as any)?.postalCode || (property as any).zipCode || undefined,
-            latitude: publicLatitude,
-            longitude: publicLongitude,
-            publicAddress: publicAddress || null,
-            publicLatitude,
-            publicLongitude,
-            publicLocationPrecision: (property as any).publicLocationPrecision || 'approximate',
-            virtualTour: linkedVirtualTour || null,
-            virtualTourUrl: linkedVirtualTour?.embedUrl || null,
-            mediaSummary: summarizePropertyPresentation(
-              linkedListingMedia,
-              linkedPropertyDetails.propertyPresentation,
-            ),
-            amenities: uniqueAmenities.length > 0 ? uniqueAmenities : linkedAmenities,
-            features: linkedPropertyDetails.propertyHighlights || linkedAmenities,
-            propertySettings: normalizedPropertySettings,
-            propertyDetails: normalizedPropertyDetails,
-            mainImage: resolvedMainImage,
-            media: publicMedia,
-            listingSource: 'manual',
-            listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
-            development: development || undefined,
-            developerBrand: developerBrand || undefined,
-            agent: agent || undefined,
-          },
-          images,
-          media: publicMedia,
+          property: publicProperty,
+          images: approvedPublicProperty.images,
+          media: approvedPublicProperty.media,
         };
       }),
 

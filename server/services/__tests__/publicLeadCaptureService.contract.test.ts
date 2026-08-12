@@ -340,7 +340,9 @@ describe('publicLeadCaptureService contract', () => {
             developmentId: null,
             developerBrandProfileId: null,
             agentId: 33,
-            sourceListingId: null,
+            // The bridge is deliberately present: public enquiry ownership
+            // must still come from the approved property projection.
+            sourceListingId: 9001,
             ownerId: 81,
           },
         ],
