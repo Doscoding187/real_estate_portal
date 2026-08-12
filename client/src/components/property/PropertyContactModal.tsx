@@ -36,8 +36,6 @@ interface PropertyContactModalProps {
   agentName?: string;
   agentPhone?: string;
   agentEmail?: string;
-  agentId?: number;
-  agencyId?: number;
   developerBrandProfileId?: number;
   developmentId?: number;
   initialMessage?: string;
@@ -79,8 +77,6 @@ export function PropertyContactModal({
   agentName = 'Listing Contact',
   agentPhone,
   agentEmail,
-  agentId,
-  agencyId,
   developerBrandProfileId,
   developmentId,
   initialMessage,
@@ -170,6 +166,8 @@ export function PropertyContactModal({
       return;
     }
 
+    // Public property custody is derived server-side from propertyId. Do not
+    // submit display identities or client-selected agent/agency destinations.
     createLeadMutation.mutate({
       propertyId,
       name: formData.name,
@@ -178,8 +176,6 @@ export function PropertyContactModal({
       message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
       leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry',
       source,
-      agentId,
-      agencyId,
       developerBrandProfileId,
       developmentId,
       affordabilityData,

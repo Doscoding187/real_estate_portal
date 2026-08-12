@@ -26,6 +26,12 @@ import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { calculateListingQualityScore } from '@/lib/quality';
 import { QualityScoreCard } from '@/components/dashboard/QualityScoreCard';
+import {
+  getStep4HighlightLabel,
+  getStep4SecurityFeatureLabel,
+  getStep4SpaceLabel,
+  normalizeFeaturesContext,
+} from '@shared/features-context';
 
 const PreviewStep: React.FC = () => {
   const state = useListingWizardStore();
@@ -55,11 +61,15 @@ const PreviewStep: React.FC = () => {
   const imageCount = state.media.filter((m: any) => m.type === 'image').length;
   const videoCount = state.media.filter((m: any) => m.type === 'video').length;
 
-  // Get amenities list from additionalInfo (where they're actually stored)
+  const featuresContext = normalizeFeaturesContext(
+    state.additionalInfo?.featuresContext,
+    state.additionalInfo,
+  );
   const amenitiesList = [
-    ...(state.additionalInfo?.propertyHighlights || []),
-    ...(state.additionalInfo?.additionalRooms || []),
-    ...(state.additionalInfo?.securityFeatures || []),
+    ...featuresContext.spaces.map(getStep4SpaceLabel),
+    ...featuresContext.security.features.map(getStep4SecurityFeatureLabel),
+    ...featuresContext.highlights.map(getStep4HighlightLabel),
+    ...featuresContext.customHighlights,
   ];
 
   // Calculate house/building area (not yard/land)

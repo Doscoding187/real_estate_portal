@@ -154,11 +154,11 @@ export const enhancedLocationRouter = router({
             conditions.push(
               sql`(
                 6371 * acos(
-                  cos(radians(${lat})) * 
-                  cos(radians(${properties.latitude})) * 
-                  cos(radians(${properties.longitude}) - radians(${lng})) + 
+                  cos(radians(${lat})) *
+                  cos(radians(${properties.publicLatitude})) *
+                  cos(radians(${properties.publicLongitude}) - radians(${lng})) +
                   sin(radians(${lat})) * 
-                  sin(radians(${properties.latitude}))
+                  sin(radians(${properties.publicLatitude}))
                 )
               ) <= ${radiusKm}`,
             );
@@ -169,8 +169,8 @@ export const enhancedLocationRouter = router({
       // Map bounds filtering
       if (input.bounds) {
         conditions.push(
-          sql`${properties.latitude} BETWEEN ${input.bounds.south} AND ${input.bounds.north}`,
-          sql`${properties.longitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
+          sql`${properties.publicLatitude} BETWEEN ${input.bounds.south} AND ${input.bounds.north}`,
+          sql`${properties.publicLongitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
         );
       }
 
@@ -227,10 +227,10 @@ export const enhancedLocationRouter = router({
           bedrooms: properties.bedrooms,
           bathrooms: properties.bathrooms,
           area: properties.area,
-          latitude: properties.latitude,
-          longitude: properties.longitude,
+          latitude: properties.publicLatitude,
+          longitude: properties.publicLongitude,
           mainImage: properties.mainImage,
-          address: properties.address,
+          address: properties.publicAddress,
           city: properties.city,
           province: properties.province,
           createdAt: properties.createdAt,
@@ -238,13 +238,13 @@ export const enhancedLocationRouter = router({
             CASE 
               WHEN ${input.location?.type === 'coordinates'} THEN
                 (6371 * acos(
-                  cos(radians(${input.location?.value.split(',').map(Number)[0] || 0})) * 
-                  cos(radians(${properties.latitude})) * 
-                  cos(radians(${properties.longitude}) - radians(${
+                  cos(radians(${input.location?.value.split(',').map(Number)[0] || 0})) *
+                  cos(radians(${properties.publicLatitude})) *
+                  cos(radians(${properties.publicLongitude}) - radians(${
                     input.location?.value.split(',').map(Number)[1] || 0
-                  })) + 
-                  sin(radians(${input.location?.value.split(',').map(Number)[0] || 0})) * 
-                  sin(radians(${properties.latitude}))
+                  })) +
+                  sin(radians(${input.location?.value.split(',').map(Number)[0] || 0})) *
+                  sin(radians(${properties.publicLatitude}))
                 ))
               ELSE NULL
             END
@@ -457,8 +457,8 @@ export const enhancedLocationRouter = router({
 
           const cellConditions = [
             ...conditions,
-            sql`${properties.latitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
-            sql`${properties.longitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
+            sql`${properties.publicLatitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
+            sql`${properties.publicLongitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
           ];
 
           const [countResult] = await db
@@ -514,11 +514,11 @@ export const enhancedLocationRouter = router({
         // Location similarity
         sql`(
           6371 * acos(
-            cos(radians(${referenceProperty.latitude || 0})) * 
-            cos(radians(${properties.latitude || 0})) * 
-            cos(radians(${properties.longitude || 0}) - radians(${referenceProperty.longitude || 0})) + 
-            sin(radians(${referenceProperty.latitude || 0})) * 
-            sin(radians(${properties.latitude || 0}))
+            cos(radians(${referenceProperty.publicLatitude || 0})) *
+            cos(radians(${properties.publicLatitude || 0})) *
+            cos(radians(${properties.publicLongitude || 0}) - radians(${referenceProperty.publicLongitude || 0})) +
+            sin(radians(${referenceProperty.publicLatitude || 0})) *
+            sin(radians(${properties.publicLatitude || 0}))
           )
         ) <= ${input.radius}`,
       ];
@@ -546,18 +546,18 @@ export const enhancedLocationRouter = router({
           bedrooms: properties.bedrooms,
           bathrooms: properties.bathrooms,
           area: properties.area,
-          latitude: properties.latitude,
-          longitude: properties.longitude,
+          latitude: properties.publicLatitude,
+          longitude: properties.publicLongitude,
           mainImage: properties.mainImage,
           city: properties.city,
           province: properties.province,
           distance: sql<number>`
             (6371 * acos(
-              cos(radians(${referenceProperty.latitude || 0})) * 
-              cos(radians(${properties.latitude || 0})) * 
-              cos(radians(${properties.longitude || 0}) - radians(${referenceProperty.longitude || 0})) + 
-              sin(radians(${referenceProperty.latitude || 0})) * 
-              sin(radians(${properties.latitude || 0}))
+              cos(radians(${referenceProperty.publicLatitude || 0})) *
+              cos(radians(${properties.publicLatitude || 0})) *
+              cos(radians(${properties.publicLongitude || 0}) - radians(${referenceProperty.publicLongitude || 0})) +
+              sin(radians(${referenceProperty.publicLatitude || 0})) *
+              sin(radians(${properties.publicLatitude || 0}))
             ))
           `.as('distance_km'),
         })
@@ -605,7 +605,7 @@ export const enhancedLocationRouter = router({
       } else if (input.location.type === 'city') {
         locationFilter = properties.city;
       } else if (input.location.type === 'suburb') {
-        locationFilter = properties.address;
+        locationFilter = properties.publicAddress;
         locationValue = `%${locationValue}%`;
       }
 
@@ -614,7 +614,7 @@ export const enhancedLocationRouter = router({
 
       if (locationValue && locationFilter) {
         if (input.location.type === 'suburb') {
-          conditions.push(like(properties.address, locationValue));
+          conditions.push(like(properties.publicAddress, locationValue));
         } else {
           conditions.push(eq(locationFilter as any, locationValue));
         }
@@ -774,4 +774,3 @@ function calculateHaversineDistance(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
-

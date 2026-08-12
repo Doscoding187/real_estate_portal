@@ -3,7 +3,6 @@ import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { databaseAuthorityChildEnvironment } from '../context';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
-  ACCEPTED_MIGRATION_HEAD,
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
@@ -56,7 +55,7 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
     developmentId: number;
     unitId: string;
   };
-  migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+  migrationHead: string;
   acceptance?: {
     locationState: 'resolved';
     locationContext: { provinceId: number; cityId: number; suburbId: number };
@@ -554,7 +553,7 @@ export async function prepareSearchToLeadScenario(input: {
 }): Promise<SearchToLeadScenarioEvidence> {
   assertOperation(input.decision, ['scenario-seed']);
   const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
@@ -573,7 +572,7 @@ export async function prepareSearchToLeadScenario(input: {
       canonicalLocation: 'gauteng/johannesburg/sandton',
     },
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }
 
@@ -726,7 +725,7 @@ export async function verifySearchToLeadScenario(input: {
 }): Promise<SearchToLeadScenarioEvidence> {
   assertOperation(input.decision, ['verification', 'browser-verification', 'readiness']);
   const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
@@ -748,7 +747,7 @@ export async function verifySearchToLeadScenario(input: {
       canonicalLocation: 'gauteng/johannesburg/sandton',
     },
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
     acceptance,
   };
 }

@@ -6,8 +6,8 @@ import { and, eq } from 'drizzle-orm';
 
 import {
   agencies, agencyBranding, agents, agencyDealOfferVersions, agencyDeals, agencyListingPerformanceActivity,
-  agencyListingPerformanceReviews, listingAnalytics, listingApprovalQueue, listingLeads, listings, properties,
-  planEntitlements, plans, showings, subscriptions, users,
+  agencyListingPerformanceReviews, cities, listingAnalytics, listingApprovalQueue, listingLeads, listings,
+  planEntitlements, plans, properties, provinces, showings, suburbs, subscriptions, users,
 } from '../../drizzle/schema';
 import { approveListing, createListing, getDb, submitListingForReview } from '../db';
 import { appRouter } from '../routers';
@@ -23,6 +23,34 @@ const ids = { agencies: [] as number[], users: [] as number[], agents: [] as num
 const idOf = (result: any) => Number(result?.insertId || result?.[0]?.insertId || 0);
 const toMySqlTimestamp = (value: Date) => value.toISOString().slice(0, 19).replace('T', ' ');
 const caller = (user: { id: number; role: 'agency_admin' | 'agent'; agencyId: number }) => appRouter.createCaller({ user, req: { headers: {} }, res: {}, requestId: `performance-${Date.now()}` } as any);
+
+async function canonicalSandtonLocation(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+) {
+  const [location] = await db
+    .select({
+      provinceId: provinces.id,
+      cityId: cities.id,
+      suburbId: suburbs.id,
+    })
+    .from(provinces)
+    .innerJoin(cities, eq(cities.provinceId, provinces.id))
+    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
+    .where(
+      and(
+        eq(provinces.slug, 'gauteng'),
+        eq(cities.slug, 'johannesburg'),
+        eq(suburbs.slug, 'sandton'),
+      ),
+    )
+    .limit(1);
+
+  if (!location) {
+    throw new Error('Canonical Gauteng/Johannesburg/Sandton geography is required by this fixture.');
+  }
+
+  return location;
+}
 
 async function user(agencyId: number, role: 'agency_admin' | 'agent', suffix: string, label: string) {
   const db = await getDb(); if (!db) throw new Error('Database not available');
@@ -48,7 +76,8 @@ async function makeAgencyPublicationReady(agencyId: number, suffix: string) {
 }
 async function publishedListing(ownerId: number, agencyId: number, agentId: number, suffix: string, price = 2_000_000) {
   const db = await getDb(); if (!db) throw new Error('Database not available');
-  const id = await createListing({ userId: ownerId, action: 'sell', propertyType: 'house', title: `[E2E Performance] Canonical ${suffix}`, description: 'Canonical listing used only by guarded listing-performance integration coverage.', pricing: { askingPrice: price }, propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 180 }, address: '71 Snapshot Avenue', latitude: -26.1076, longitude: 28.0567, city: 'Johannesburg', province: 'Gauteng', postalCode: '2001', slug: `performance-canonical-${suffix}`.replace(/[^a-z0-9-]/g, '-'), media: [] });
+  const location = await canonicalSandtonLocation(db);
+  const id = await createListing({ userId: ownerId, action: 'sell', propertyType: 'house', title: `[E2E Performance] Canonical ${suffix}`, description: 'Canonical listing used only by guarded listing-performance integration coverage.', pricing: { askingPrice: price }, propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 180 }, address: '71 Snapshot Avenue', latitude: -26.1076, longitude: 28.0567, city: 'Johannesburg', suburb: 'Sandton', province: 'Gauteng', postalCode: '2001', provinceId: location.provinceId, cityId: location.cityId, suburbId: location.suburbId, privateAddress: { streetNumber: '71', streetName: 'Snapshot Avenue', postalCode: '2001' }, coordinateSource: 'manual_confirmed', locationConfirmationState: 'confirmed', publicLocationPrecision: 'approximate', slug: `performance-canonical-${suffix}`.replace(/[^a-z0-9-]/g, '-'), media: [] });
   ids.listings.push(id);
   const publishedAt = new Date(Date.now() - 21 * 86_400_000).toISOString().slice(0, 19).replace('T', ' ');
   await db.update(listings).set({ agencyId, agentId, status: 'published', approvalStatus: 'approved', publishedAt, readinessScore: 100, askingPrice: String(price) } as any).where(eq(listings.id, id));

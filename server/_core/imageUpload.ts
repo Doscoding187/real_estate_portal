@@ -7,14 +7,27 @@
 import { nanoid } from 'nanoid';
 import { storagePut, storageGet } from '../storage';
 import { ENV } from './env';
-import { PutObjectCommand, S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  PutObjectCommand,
+  S3Client,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
+import { getMediaStorageAdapter, inspectLocalMediaObject } from './mediaStorage';
 
-// Check if AWS S3 is configured
+// The PLE listing route selects its storage adapter before reaching this
+// helper. Keep the legacy helper aligned with that selection so local
+// development does not look like an S3 failure in server logs.
+const selectedMediaStorageAdapter = getMediaStorageAdapter();
 const useS3 = Boolean(
-  ENV.awsAccessKeyId && ENV.awsSecretAccessKey && ENV.awsRegion && ENV.s3BucketName,
+  selectedMediaStorageAdapter === 's3' &&
+  ENV.awsAccessKeyId &&
+  ENV.awsSecretAccessKey &&
+  ENV.awsRegion &&
+  ENV.s3BucketName,
 );
 
 let s3Client: S3Client | null = null;
@@ -36,13 +49,17 @@ if (useS3) {
       secretAccessKey: ENV.awsSecretAccessKey,
     },
   });
-} else {
+} else if (selectedMediaStorageAdapter === 's3') {
   console.warn('⚠️  AWS S3 not fully configured. Missing:');
   if (!ENV.awsAccessKeyId) console.warn('   - AWS_ACCESS_KEY_ID');
   if (!ENV.awsSecretAccessKey) console.warn('   - AWS_SECRET_ACCESS_KEY');
   if (!ENV.awsRegion) console.warn('   - AWS_REGION');
   if (!ENV.s3BucketName) console.warn('   - S3_BUCKET_NAME');
   console.warn('   Falling back to storage proxy for image uploads');
+} else {
+  console.log(
+    'ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.',
+  );
 }
 
 // Image sizes to generate
@@ -240,4 +257,48 @@ export async function generatePresignedUploadUrl(
     }
     throw new Error('Failed to generate upload URL');
   }
+}
+
+/**
+ * Confirm that a direct upload actually exists before its reference is
+ * accepted into canonical listing_media. The browser never gets to promote a
+ * presigned key into listing authority merely by posting the key back.
+ */
+export async function assertUploadedMediaObject(
+  key: string,
+  expectedContentType: string,
+): Promise<{ contentType: string | null; contentLength: number | null }> {
+  if (!key || key.includes('..') || key.startsWith('/')) {
+    throw new Error('Invalid uploaded media key.');
+  }
+
+  if (getMediaStorageAdapter() === 'local') {
+    const result = await inspectLocalMediaObject(key, expectedContentType);
+    return {
+      contentType: result.contentType,
+      contentLength: result.contentLength,
+    };
+  }
+
+  if (useS3 && s3Client) {
+    const result = await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: ENV.s3BucketName,
+        Key: key,
+      }),
+    );
+    const contentType = result.ContentType?.toLowerCase() || null;
+    if (contentType && contentType !== expectedContentType.toLowerCase()) {
+      throw new Error('Uploaded media content type does not match its confirmation.');
+    }
+    return {
+      contentType,
+      contentLength: result.ContentLength == null ? null : Number(result.ContentLength),
+    };
+  }
+
+  // The presigned listing-media route is S3-backed. Keep the fallback
+  // explicit rather than claiming a storage-proxy key was verified when the
+  // proxy does not expose a reliable HEAD contract here.
+  throw new Error('Uploaded media storage is unavailable for verification.');
 }

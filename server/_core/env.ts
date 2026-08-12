@@ -44,6 +44,8 @@ export const ENV = {
   awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
   s3BucketName: process.env.S3_BUCKET_NAME ?? '',
   cloudFrontUrl: process.env.CLOUDFRONT_URL ?? '',
+  mediaStorageAdapter: process.env.MEDIA_STORAGE_ADAPTER ?? '',
+  mediaLocalStorageDir: process.env.MEDIA_LOCAL_STORAGE_DIR ?? '',
   maxImageSizeMb: parseInt(process.env.MAX_IMAGE_SIZE_MB ?? '10'),
   // Email configuration
   resendApiKey: process.env.RESEND_API_KEY ?? '',

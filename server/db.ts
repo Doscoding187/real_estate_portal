@@ -54,6 +54,9 @@ import {
   exploreEngagements,
   exploreFeedSessions,
   locations,
+  provinces,
+  cities,
+  suburbs,
   partners,
   explorePartners,
   auditLogs,
@@ -67,6 +70,37 @@ import {
   assertListingPublicationEntitled,
   isSameListingCommercialOwner,
 } from './services/listingPublicationEntitlementService';
+import { toPublicPropertyType } from '../shared/property-taxonomy';
+import {
+  buildCanonicalCorePropertyDetails,
+  buildCorePropertyInformation,
+} from '../shared/core-property-information';
+import { normalizeFeaturesContext } from '../shared/features-context';
+import {
+  buildPricingContract,
+  getMoneyFactAmount,
+  getPrimaryPrice,
+  validatePricingContract,
+} from '../shared/pricing-contract';
+import {
+  coordinatePairSchema,
+  storedPrecisionToPublicLocationPolicy,
+  type PrivateAddress,
+} from '../shared/location-contract';
+import {
+  getListingMediaType,
+  getListingMediaUrl,
+  getPrimaryListingImage,
+  isCompletedListingMedia,
+} from '../shared/listing-media';
+import { validateListingRecordLocation } from './services/listingLocationResolver';
+import {
+  getPresentationMediaDescriptor,
+  getSafePropertyPresentationVirtualTour,
+  normalizePropertyPresentation,
+  summarizePropertyPresentation,
+} from '../shared/property-presentation';
+import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -129,6 +163,26 @@ function toMysqlDateTime(value: Date | string = new Date()): string {
     return new Date().toISOString().slice(0, 19).replace('T', ' ');
   }
   return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function getPricingProjection(
+  action: string | undefined,
+  pricing: Record<string, unknown> | null | undefined,
+  propertyDetails: Record<string, unknown> | null | undefined,
+) {
+  const contract = buildPricingContract(action, pricing, propertyDetails);
+  const recurringCosts = contract?.intent === 'sale' ? contract.recurringCosts : {};
+  const levyFact =
+    recurringCosts.bodyCorporateLevy ||
+    recurringCosts.hoaEstateLevy ||
+    recurringCosts.otherMandatoryCharge;
+
+  return {
+    contract,
+    price: getPrimaryPrice(action, pricing, propertyDetails) ?? 0,
+    ratesAndTaxes: getMoneyFactAmount(recurringCosts.ratesAndTaxes) ?? null,
+    legacyLevy: getMoneyFactAmount(levyFact) ?? null,
+  };
 }
 
 async function lockListingTransitionRow(database: any, listingId: number) {
@@ -301,10 +355,7 @@ export async function updateUserLastSignIn(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db
-    .update(users)
-    .set({ lastSignedIn: toMysqlDateTime() })
-    .where(eq(users.id, userId));
+  await db.update(users).set({ lastSignedIn: toMysqlDateTime() }).where(eq(users.id, userId));
 }
 
 /**
@@ -463,6 +514,17 @@ export async function getPropertyById(id: number) {
   return result[0];
 }
 
+function assertListingBackedPropertyProjectionIsReadOnly(
+  property: Pick<Property, 'sourceListingId'>,
+  operation: string,
+) {
+  if (property.sourceListingId == null) return;
+
+  throw new Error(
+    `Listing-backed public property projections are read-only; use the canonical listing lifecycle to ${operation}.`,
+  );
+}
+
 export async function getPropertyImages(propertyId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -515,6 +577,8 @@ export async function updateProperty(
   if (property.ownerId !== userId && !isAdmin) {
     throw new Error('Unauthorized: You can only update your own properties');
   }
+
+  assertListingBackedPropertyProjectionIsReadOnly(property, 'update this inventory');
 
   // Normalize location fields for consistent querying
   const normalizedUpdates = normalizeLocationFields(updates);
@@ -580,6 +644,8 @@ export async function deleteProperty(
   if (property.ownerId !== userId && !isAdmin) {
     throw new Error('Unauthorized: You can only delete your own properties');
   }
+
+  assertListingBackedPropertyProjectionIsReadOnly(property, 'delete this inventory');
 
   // Cascade delete will handle propertyImages
   await db.delete(properties).where(eq(properties.id, propertyId));
@@ -656,10 +722,10 @@ export async function searchProperties(params: PropertySearchParams) {
   if (params.minLat && params.maxLat && params.minLng && params.maxLng) {
     conditions.push(
       and(
-        gte(sql`CAST(${properties.latitude} AS DECIMAL)`, params.minLat),
-        lte(sql`CAST(${properties.latitude} AS DECIMAL)`, params.maxLat),
-        gte(sql`CAST(${properties.longitude} AS DECIMAL)`, params.minLng),
-        lte(sql`CAST(${properties.longitude} AS DECIMAL)`, params.maxLng),
+        gte(sql`CAST(${properties.publicLatitude} AS DECIMAL)`, params.minLat),
+        lte(sql`CAST(${properties.publicLatitude} AS DECIMAL)`, params.maxLat),
+        gte(sql`CAST(${properties.publicLongitude} AS DECIMAL)`, params.minLng),
+        lte(sql`CAST(${properties.publicLongitude} AS DECIMAL)`, params.maxLng),
       )!,
     );
   }
@@ -700,12 +766,12 @@ export async function searchProperties(params: PropertySearchParams) {
   // Bounds filter
   if (params.minLat !== undefined && params.maxLat !== undefined) {
     conditions.push(
-      sql`CAST(${properties.latitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.latitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`,
+      sql`CAST(${properties.publicLatitude} AS DECIMAL(10, 6)) >= ${params.minLat} AND CAST(${properties.publicLatitude} AS DECIMAL(10, 6)) <= ${params.maxLat}`,
     );
   }
   if (params.minLng !== undefined && params.maxLng !== undefined) {
     conditions.push(
-      sql`CAST(${properties.longitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.longitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`,
+      sql`CAST(${properties.publicLongitude} AS DECIMAL(10, 6)) >= ${params.minLng} AND CAST(${properties.publicLongitude} AS DECIMAL(10, 6)) <= ${params.maxLng}`,
     );
   }
 
@@ -994,10 +1060,7 @@ function agencyListingScopeCondition(agencyId: number) {
     eq(listings.agencyId, agencyId),
     and(
       isNull(listings.agencyId),
-      or(
-        eq(users.agencyId, agencyId),
-        and(isNull(users.agencyId), eq(agents.agencyId, agencyId)),
-      ),
+      or(eq(users.agencyId, agencyId), and(isNull(users.agencyId), eq(agents.agencyId, agencyId))),
     ),
   )!;
 }
@@ -1044,7 +1107,9 @@ export async function getAgencyDashboardStats(agencyId: number) {
   // Calculate stats
   const totalListings = agencyListings.length;
   const activeListings = agencyListings.filter(listing => listing.status === 'published').length;
-  const pendingListings = agencyListings.filter(listing => listing.status === 'pending_review').length;
+  const pendingListings = agencyListings.filter(
+    listing => listing.status === 'pending_review',
+  ).length;
   const totalSales = agencyListings.filter(
     listing => listing.status === 'sold' || listing.status === 'rented',
   ).length;
@@ -1490,7 +1555,12 @@ export async function getAgencyRecentListings(agencyId: number, limit: number = 
   return rows.map(({ listing }) => ({
     id: listing.id,
     title: listing.title,
-    price: Number(listing.askingPrice || listing.monthlyRent || listing.startingBid || 0) || null,
+    price:
+      getPrimaryPrice(
+        String(listing.action),
+        listing as unknown as Record<string, unknown>,
+        (listing.propertyDetails as Record<string, unknown> | null | undefined) || {},
+      ) ?? null,
     status: listing.status,
     city: listing.city,
     views: null,
@@ -2044,7 +2114,10 @@ export async function createListing(
         }
 
         const actorIsManager = owner?.role === 'agency_admin' || owner?.role === 'super_admin';
-        if (!actorIsManager && (owner?.role !== 'agent' || !agentId || currentAssignedAgentId !== agentId)) {
+        if (
+          !actorIsManager &&
+          (owner?.role !== 'agent' || !agentId || currentAssignedAgentId !== agentId)
+        ) {
           throw new Error('Seller prospect assignment no longer permits this listing conversion');
         }
       }
@@ -2057,6 +2130,21 @@ export async function createListing(
         coords: { lat: listingData.latitude, lng: listingData.longitude },
       });
 
+      const pricingContract = buildPricingContract(
+        listingData.action,
+        listingData.pricing as Record<string, unknown>,
+        listingData.propertyDetails as Record<string, unknown>,
+        { preferEmbedded: false },
+      );
+      const salePrice =
+        pricingContract?.intent === 'sale' ? pricingContract.askingPrice : undefined;
+      const rentPrice =
+        pricingContract?.intent === 'rent' ? pricingContract.monthlyRent : undefined;
+      const depositAmount =
+        pricingContract?.intent === 'rent'
+          ? getMoneyFactAmount(pricingContract.deposit)
+          : undefined;
+
       const insertValues: any = {
         ownerId: listingData.userId,
         agentId: agentId,
@@ -2067,17 +2155,16 @@ export async function createListing(
         description: listingData.description,
 
         // Map pricing fields
-        askingPrice: listingData.pricing.askingPrice
-          ? String(listingData.pricing.askingPrice)
-          : null,
-        negotiable: listingData.pricing.negotiable ? 1 : 0,
+        askingPrice: salePrice !== undefined ? String(salePrice) : null,
+        negotiable:
+          pricingContract?.intent === 'sale' && pricingContract.negotiability === 'negotiable'
+            ? 1
+            : 0,
         transferCostEstimate: listingData.pricing.transferCostEstimate
           ? String(listingData.pricing.transferCostEstimate)
           : null,
-        monthlyRent: listingData.pricing.monthlyRent
-          ? String(listingData.pricing.monthlyRent)
-          : null,
-        deposit: listingData.pricing.deposit ? String(listingData.pricing.deposit) : null,
+        monthlyRent: rentPrice !== undefined ? String(rentPrice) : null,
+        deposit: depositAmount !== undefined ? String(depositAmount) : null,
         leaseTerms: listingData.pricing.leaseTerms || null,
         availableFrom: listingData.pricing.availableFrom
           ? new Date(listingData.pricing.availableFrom).toISOString().slice(0, 19).replace('T', ' ')
@@ -2098,11 +2185,19 @@ export async function createListing(
         auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl || null,
 
         propertyDetails: listingData.propertyDetails, // Drizzle handles JSON
-        address: listingData.address,
-        latitude: Number(listingData.latitude).toFixed(7),
-        longitude: Number(listingData.longitude).toFixed(7),
+        address: listingData.address || null,
+        latitude: listingData.latitude == null ? null : Number(listingData.latitude).toFixed(7),
+        longitude: listingData.longitude == null ? null : Number(listingData.longitude).toFixed(7),
         city: listingData.city,
+        suburb: listingData.suburb || null,
         province: listingData.province,
+        provinceId: listingData.provinceId ?? null,
+        cityId: listingData.cityId ?? null,
+        suburbId: listingData.suburbId ?? null,
+        privateAddress: listingData.privateAddress ?? null,
+        coordinateSource: listingData.coordinateSource ?? null,
+        locationConfirmationState: listingData.locationConfirmationState ?? 'needs_confirmation',
+        publicLocationPrecision: listingData.publicLocationPrecision ?? 'approximate',
 
         // Failsafe: Ensure slug is unique
         slug: listingData.slug.match(/-ts-[a-z0-9]+$/)
@@ -2115,8 +2210,9 @@ export async function createListing(
       };
 
       // Add optional fields only if they exist
-      if (listingData.suburb) insertValues.suburb = listingData.suburb;
-      if (listingData.postalCode) insertValues.postalCode = listingData.postalCode;
+      if (listingData.suburb !== undefined) insertValues.suburb = listingData.suburb || null;
+      if (listingData.postalCode !== undefined)
+        insertValues.postalCode = listingData.postalCode || null;
       if (listingData.placeId) insertValues.placeId = listingData.placeId;
       if (listingData.locationId) insertValues.locationId = listingData.locationId;
 
@@ -2148,6 +2244,7 @@ export async function createListing(
 
       // Add media records
       if (listingData.media && listingData.media.length > 0) {
+        const primaryMedia = getPrimaryListingImage(listingData.media);
         for (const mediaItem of listingData.media) {
           await tx.insert(listingMedia).values({
             listingId: newListingId,
@@ -2161,8 +2258,8 @@ export async function createListing(
             duration: mediaItem.duration,
             orientation: mediaItem.orientation,
             displayOrder: mediaItem.displayOrder,
-            isPrimary: mediaItem.isPrimary ? 1 : 0,
-            processingStatus: mediaItem.processingStatus,
+            isPrimary: primaryMedia && String(primaryMedia.id) === String(mediaItem.id) ? 1 : 0,
+            processingStatus: mediaItem.processingStatus === 'completed' ? 'completed' : 'pending',
             createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
             uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
           });
@@ -2235,27 +2332,41 @@ export async function getListingById(listingId: number, database?: any) {
 
   if (!listing) return null;
 
-  // Construct pricing object from individual columns
-  const pricing = {
-    askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
-    negotiable: listing.negotiable === 1,
-    transferCostEstimate: listing.transferCostEstimate
-      ? Number(listing.transferCostEstimate)
-      : undefined,
-    monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
-    deposit: listing.deposit ? Number(listing.deposit) : undefined,
-    leaseTerms: listing.leaseTerms,
-    availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
-    utilitiesIncluded: listing.utilitiesIncluded === 1,
-    startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
-    reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
-    auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
-    auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
-  };
-
   // propertyDetails is already an object if using json() type in schema
   // but if it's null, we should handle it
   const propertyDetails = listing.propertyDetails || {};
+
+  // Construct compatibility pricing from individual columns, then expose the
+  // versioned contract when one is present in the approved property details.
+  const pricing = {
+    askingPrice: listing.askingPrice != null ? Number(listing.askingPrice) : undefined,
+    negotiable: listing.negotiable === 1,
+    transferCostEstimate:
+      listing.transferCostEstimate != null ? Number(listing.transferCostEstimate) : undefined,
+    monthlyRent: listing.monthlyRent != null ? Number(listing.monthlyRent) : undefined,
+    deposit: listing.deposit != null ? Number(listing.deposit) : undefined,
+    leaseTerms: listing.leaseTerms,
+    availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
+    utilitiesIncluded: listing.utilitiesIncluded === 1,
+    startingBid: listing.startingBid != null ? Number(listing.startingBid) : undefined,
+    reservePrice: listing.reservePrice != null ? Number(listing.reservePrice) : undefined,
+    auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
+    auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
+  } as Record<string, unknown>;
+  const pricingContract = buildPricingContract(
+    listing.action,
+    pricing,
+    propertyDetails as Record<string, unknown>,
+  );
+  if (pricingContract) {
+    pricing.pricingContract = pricingContract;
+    if (pricingContract.intent === 'sale') {
+      pricing.negotiability = pricingContract.negotiability;
+      pricing.recurringCosts = pricingContract.recurringCosts;
+    } else {
+      pricing.depositFact = pricingContract.deposit;
+    }
+  }
 
   return {
     ...listing,
@@ -2290,40 +2401,45 @@ export async function getUserListings(
   // Fetch primary images
   const listingsWithImages = await Promise.all(
     listingsData.map(async listing => {
-      const images = await db
+      const media = await db
         .select()
         .from(listingMedia)
         .where(eq(listingMedia.listingId, listing.id))
-        .orderBy(listingMedia.displayOrder)
-        .limit(1);
+        .orderBy(listingMedia.displayOrder);
 
-      const cdnUrl =
-        ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-      const primaryImage =
-        images.length > 0
-          ? images[0].originalUrl.startsWith('http')
-            ? images[0].originalUrl
-            : `${cdnUrl}/${images[0].originalUrl}`
-          : null;
+      const primaryMedia = getPrimaryListingImage(media);
+      const primaryImage = primaryMedia ? resolveMediaDeliveryUrl(primaryMedia.originalUrl) : null;
 
-      const pricing = {
-        askingPrice: listing.askingPrice ? Number(listing.askingPrice) : undefined,
+      const propertyDetails = listing.propertyDetails || {};
+      const pricing: Record<string, unknown> = {
+        askingPrice: listing.askingPrice != null ? Number(listing.askingPrice) : undefined,
         negotiable: listing.negotiable === 1,
-        transferCostEstimate: listing.transferCostEstimate
-          ? Number(listing.transferCostEstimate)
-          : undefined,
-        monthlyRent: listing.monthlyRent ? Number(listing.monthlyRent) : undefined,
-        deposit: listing.deposit ? Number(listing.deposit) : undefined,
+        transferCostEstimate:
+          listing.transferCostEstimate != null ? Number(listing.transferCostEstimate) : undefined,
+        monthlyRent: listing.monthlyRent != null ? Number(listing.monthlyRent) : undefined,
+        deposit: listing.deposit != null ? Number(listing.deposit) : undefined,
         leaseTerms: listing.leaseTerms,
         availableFrom: listing.availableFrom ? new Date(listing.availableFrom) : undefined,
         utilitiesIncluded: listing.utilitiesIncluded === 1,
-        startingBid: listing.startingBid ? Number(listing.startingBid) : undefined,
-        reservePrice: listing.reservePrice ? Number(listing.reservePrice) : undefined,
+        startingBid: listing.startingBid != null ? Number(listing.startingBid) : undefined,
+        reservePrice: listing.reservePrice != null ? Number(listing.reservePrice) : undefined,
         auctionDateTime: listing.auctionDateTime ? new Date(listing.auctionDateTime) : undefined,
         auctionTermsDocumentUrl: listing.auctionTermsDocumentUrl,
       };
-
-      const propertyDetails = listing.propertyDetails || {};
+      const pricingContract = buildPricingContract(
+        listing.action,
+        pricing,
+        propertyDetails as Record<string, unknown>,
+      );
+      if (pricingContract) {
+        pricing.pricingContract = pricingContract;
+        if (pricingContract.intent === 'sale') {
+          pricing.negotiability = pricingContract.negotiability;
+          pricing.recurringCosts = pricingContract.recurringCosts;
+        } else {
+          pricing.depositFact = pricingContract.deposit;
+        }
+      }
 
       return {
         ...listing,
@@ -2360,22 +2476,43 @@ export async function updateListing(listingId: number, updateData: any) {
 
   // Map pricing fields if present
   if (updateData.pricing) {
-    if (updateData.pricing.askingPrice !== undefined)
-      updateFields.askingPrice = updateData.pricing.askingPrice
-        ? String(updateData.pricing.askingPrice)
-        : null;
-    if (updateData.pricing.negotiable !== undefined)
-      updateFields.negotiable = updateData.pricing.negotiable ? 1 : 0;
+    const pricingContract = buildPricingContract(
+      updateData.action,
+      updateData.pricing,
+      updateData.propertyDetails,
+      { preferEmbedded: false },
+    );
+    const salePrice = pricingContract?.intent === 'sale' ? pricingContract.askingPrice : undefined;
+    const rentPrice = pricingContract?.intent === 'rent' ? pricingContract.monthlyRent : undefined;
+    const depositAmount =
+      pricingContract?.intent === 'rent' ? getMoneyFactAmount(pricingContract.deposit) : undefined;
+
+    if (updateData.action === 'sell') {
+      updateFields.askingPrice = salePrice !== undefined ? String(salePrice) : null;
+      updateFields.monthlyRent = null;
+      updateFields.deposit = null;
+      updateFields.negotiable =
+        pricingContract?.intent === 'sale' && pricingContract.negotiability === 'negotiable'
+          ? 1
+          : 0;
+    } else if (updateData.action === 'rent') {
+      updateFields.askingPrice = null;
+      updateFields.monthlyRent = rentPrice !== undefined ? String(rentPrice) : null;
+      updateFields.deposit = depositAmount !== undefined ? String(depositAmount) : null;
+      updateFields.negotiable = 0;
+    } else {
+      if (updateData.pricing.askingPrice !== undefined)
+        updateFields.askingPrice = updateData.pricing.askingPrice
+          ? String(updateData.pricing.askingPrice)
+          : null;
+      if (updateData.pricing.negotiable !== undefined)
+        updateFields.negotiable = updateData.pricing.negotiable ? 1 : 0;
+    }
     if (updateData.pricing.transferCostEstimate !== undefined)
-      updateFields.transferCostEstimate = updateData.pricing.transferCostEstimate
-        ? String(updateData.pricing.transferCostEstimate)
-        : null;
-    if (updateData.pricing.monthlyRent !== undefined)
-      updateFields.monthlyRent = updateData.pricing.monthlyRent
-        ? String(updateData.pricing.monthlyRent)
-        : null;
-    if (updateData.pricing.deposit !== undefined)
-      updateFields.deposit = updateData.pricing.deposit ? String(updateData.pricing.deposit) : null;
+      updateFields.transferCostEstimate =
+        updateData.pricing.transferCostEstimate !== null
+          ? String(updateData.pricing.transferCostEstimate)
+          : null;
     if (updateData.pricing.leaseTerms !== undefined)
       updateFields.leaseTerms = updateData.pricing.leaseTerms;
     if (updateData.pricing.availableFrom !== undefined)
@@ -2430,9 +2567,30 @@ export async function submitListingForReview(listingId: number, database?: any) 
     throw new Error(`Listing cannot be submitted from status "${transitionListing.status}"`);
   }
 
+  const listing = await getListingById(listingId, db);
+  if (!listing) throw new Error('Listing not found');
+  const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
+  if (locationIssues.length > 0) {
+    throw new Error(locationIssues.join(' '));
+  }
+  const pricingIssues = validatePricingContract(
+    String((transitionListing as any).action),
+    (listing as any)?.pricing,
+    (listing as any)?.propertyDetails,
+    { mode: 'publish', enforceInputShape: false },
+  );
+  if (pricingIssues.length > 0) {
+    throw new Error(pricingIssues.map(issue => issue.message).join(' '));
+  }
+
   // This is the transition boundary for every caller, including agency routes,
   // generic routes, scripts, and lower-level tests.
-  await assertListingPublicationEntitled(db, { listingId, operation: 'submit' });
+  const originalListingId = Number((transitionListing as any).revisionOfListingId || 0);
+  await assertListingPublicationEntitled(db, {
+    listingId,
+    operation: 'submit',
+    ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
+  });
 
   // Update listing status
   await db
@@ -2491,9 +2649,129 @@ export async function getListingMedia(listingId: number, database?: any) {
     .orderBy(listingMedia.displayOrder);
 }
 
+export type ListingRevisionContext = {
+  revisionListingId: number;
+  mediaIdMap: Map<number, number>;
+};
+
+/**
+ * Create the private draft used to revise a published listing. The published
+ * row and its public mirror remain untouched until the revision is approved.
+ */
+export async function createListingRevision(listingId: number): Promise<ListingRevisionContext> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  return await db.transaction(async tx => {
+    const [source] = await tx.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+    if (!source) throw new Error('Listing not found');
+    if (source.status !== 'published') {
+      throw new Error(`Only published listings can be revised (status "${source.status}")`);
+    }
+
+    const [activeRevision] = await tx
+      .select({ id: listings.id })
+      .from(listings)
+      .where(
+        and(
+          eq(listings.revisionOfListingId, listingId),
+          inArray(listings.status, ['draft', 'pending_review'] as any),
+        ),
+      )
+      .limit(1);
+    if (activeRevision) {
+      throw new Error(
+        'Another listing revision is already in progress. Open that revision to continue.',
+      );
+    }
+
+    const {
+      id: _sourceId,
+      createdAt: _sourceCreatedAt,
+      updatedAt: _sourceUpdatedAt,
+      publishedAt: _sourcePublishedAt,
+      archivedAt: _sourceArchivedAt,
+      reviewedBy: _sourceReviewedBy,
+      reviewedAt: _sourceReviewedAt,
+      rejectionReason: _sourceRejectionReason,
+      rejectionReasons: _sourceRejectionReasons,
+      rejectionNote: _sourceRejectionNote,
+      status: _sourceStatus,
+      approvalStatus: _sourceApprovalStatus,
+      revisionOfListingId: _sourceRevisionOfListingId,
+      mainMediaId: _sourceMainMediaId,
+      mainMediaType: _sourceMainMediaType,
+      canonicalUrl: _sourceCanonicalUrl,
+      slug: sourceSlug,
+      ...draftFields
+    } = source as any;
+
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const revisionSlug =
+      `${String(sourceSlug || listingId)}-revision-${Date.now().toString(36)}`.slice(0, 255);
+    const [revisionResult] = await tx.insert(listings).values({
+      ...draftFields,
+      slug: revisionSlug,
+      canonicalUrl: null,
+      status: 'draft',
+      approvalStatus: 'pending',
+      reviewedBy: null,
+      reviewedAt: null,
+      rejectionReason: null,
+      rejectionReasons: null,
+      rejectionNote: null,
+      publishedAt: null,
+      archivedAt: null,
+      revisionOfListingId: listingId,
+      mainMediaId: null,
+      mainMediaType: null,
+      createdAt: now,
+      updatedAt: now,
+    } as any);
+    const revisionListingId = Number((revisionResult as any).insertId);
+
+    const sourceMedia = await tx
+      .select()
+      .from(listingMedia)
+      .where(eq(listingMedia.listingId, listingId))
+      .orderBy(listingMedia.displayOrder);
+    const mediaIdMap = new Map<number, number>();
+
+    for (const item of sourceMedia) {
+      const [mediaResult] = await tx.insert(listingMedia).values({
+        listingId: revisionListingId,
+        mediaType: item.mediaType,
+        originalUrl: item.originalUrl,
+        originalFileName: item.originalFileName,
+        originalFileSize: item.originalFileSize,
+        processedUrl: item.processedUrl,
+        thumbnailUrl: item.thumbnailUrl,
+        previewUrl: item.previewUrl,
+        width: item.width,
+        height: item.height,
+        duration: item.duration,
+        mimeType: item.mimeType,
+        orientation: item.orientation,
+        isVertical: item.isVertical,
+        displayOrder: item.displayOrder,
+        isPrimary: item.isPrimary,
+        processingStatus: item.processingStatus,
+        processingError: item.processingError,
+        createdAt: item.createdAt,
+        uploadedAt: item.uploadedAt,
+        processedAt: item.processedAt,
+      });
+      mediaIdMap.set(Number(item.id), Number((mediaResult as any).insertId));
+    }
+
+    return { revisionListingId, mediaIdMap };
+  });
+}
+
 export type ListingMediaReplacementInput = {
   id: string;
   mediaType: 'image' | 'video' | 'floorplan' | 'pdf';
+  uploadToken?: string | null;
   fileName?: string | null;
   fileSize?: number | null;
   thumbnailUrl?: string | null;
@@ -2532,24 +2810,57 @@ export async function replaceListingMedia(
     throw new Error('Listing media manifest contains duplicate items');
   }
 
-  const resolvedMainMediaId = mainMediaId || media[0]?.id || null;
-  if (resolvedMainMediaId && !ids.includes(resolvedMainMediaId)) {
+  if (mainMediaId && !ids.includes(mainMediaId)) {
     throw new Error('Listing primary media must be included in the media manifest');
   }
 
   await db.transaction(async tx => {
-    const existing = await tx
-      .select({ id: listingMedia.id })
+    const existing = (await tx
+      .select({
+        id: listingMedia.id,
+        mediaType: listingMedia.mediaType,
+        originalUrl: listingMedia.originalUrl,
+        processingStatus: listingMedia.processingStatus,
+      })
       .from(listingMedia)
-      .where(eq(listingMedia.listingId, listingId));
+      .where(eq(listingMedia.listingId, listingId))) as Array<{
+      id: number;
+      mediaType: ListingMediaReplacementInput['mediaType'] | null;
+      originalUrl: string | null;
+      processingStatus: 'pending' | 'processing' | 'completed' | 'failed' | null;
+    }>;
     const existingIds = new Set(existing.map(item => Number(item.id)));
     const retainedExistingIds = new Set<number>();
+
+    const existingById = new Map(existing.map(item => [Number(item.id), item]));
+    const canonicalMediaForPrimary = media.map(item => {
+      const existingId = parseExistingListingMediaId(item.id);
+      const existingItem = existingId === null ? null : existingById.get(existingId);
+      return {
+        ...item,
+        id: item.id,
+        url: existingItem?.originalUrl || item.id,
+        mediaType: existingItem?.mediaType || item.mediaType,
+        processingStatus: existingItem?.processingStatus || item.processingStatus,
+      };
+    });
+    const primaryMedia = getPrimaryListingImage(canonicalMediaForPrimary, mainMediaId);
+    const resolvedMainMediaId = primaryMedia ? String(primaryMedia.id) : null;
+    if (mainMediaId && resolvedMainMediaId !== mainMediaId) {
+      throw new Error('Listing primary media must be a completed image');
+    }
 
     for (const item of media) {
       if (!item.id.startsWith(EXISTING_LISTING_MEDIA_ID_PREFIX)) continue;
       const existingMediaId = parseExistingListingMediaId(item.id);
       if (existingMediaId === null || !existingIds.has(existingMediaId)) {
         throw new Error('Listing media does not belong to this listing');
+      }
+      const existingItem = existingById.get(existingMediaId);
+      if (existingItem?.mediaType && existingItem.mediaType !== item.mediaType) {
+        throw new Error(
+          'Existing listing media type cannot be changed through the client manifest',
+        );
       }
       retainedExistingIds.add(existingMediaId);
     }
@@ -2560,7 +2871,9 @@ export async function replaceListingMedia(
     if (staleExistingIds.length) {
       await tx
         .delete(listingMedia)
-        .where(and(eq(listingMedia.listingId, listingId), inArray(listingMedia.id, staleExistingIds)));
+        .where(
+          and(eq(listingMedia.listingId, listingId), inArray(listingMedia.id, staleExistingIds)),
+        );
     }
 
     for (const [displayOrder, item] of media.entries()) {
@@ -2589,7 +2902,7 @@ export async function replaceListingMedia(
         orientation: item.orientation || null,
         displayOrder,
         isPrimary,
-        processingStatus: item.processingStatus || 'completed',
+        processingStatus: item.processingStatus === 'completed' ? 'completed' : 'pending',
         createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
         uploadedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
@@ -2598,14 +2911,80 @@ export async function replaceListingMedia(
 }
 
 /**
- * Keep search mirror media in sync for already-published listings.
- * This updates properties.mainImage and property_images from listing_media.
+ * Copy the complete approved revision media snapshot onto the original
+ * listing. Revision rows remain intact for history; the original listing is
+ * the canonical public source after approval.
  */
-export async function syncPublishedListingMediaToPropertyMirror(listingId: number) {
-  const db = await getDb();
+async function synchronizeApprovedRevisionMediaWithDatabase(
+  originalListingId: number,
+  revisionListingId: number,
+  database: any,
+) {
+  const revisionMedia = await database
+    .select()
+    .from(listingMedia)
+    .where(eq(listingMedia.listingId, revisionListingId))
+    .orderBy(listingMedia.displayOrder);
+  const primary = getPrimaryListingImage(revisionMedia);
+  const mediaIdMap = new Map<number, number>();
+
+  await database.delete(listingMedia).where(eq(listingMedia.listingId, originalListingId));
+  for (const item of revisionMedia) {
+    const [inserted] = await database.insert(listingMedia).values({
+      listingId: originalListingId,
+      originalUrl: item.originalUrl,
+      originalFileName: item.originalFileName,
+      originalFileSize: item.originalFileSize,
+      processedUrl: item.processedUrl,
+      thumbnailUrl: item.thumbnailUrl,
+      previewUrl: item.previewUrl,
+      width: item.width,
+      height: item.height,
+      duration: item.duration,
+      mimeType: item.mimeType,
+      orientation: item.orientation,
+      isVertical: item.isVertical,
+      mediaType: item.mediaType,
+      displayOrder: item.displayOrder,
+      isPrimary: primary && Number(primary.id) === Number(item.id) ? 1 : 0,
+      processingStatus: item.processingStatus,
+      processingError: item.processingError,
+      createdAt: item.createdAt,
+      uploadedAt: item.uploadedAt,
+      processedAt: item.processedAt,
+    });
+    mediaIdMap.set(Number(item.id), Number((inserted as any).insertId));
+  }
+
+  return { copied: revisionMedia.length, primaryMediaId: primary?.id ?? null, mediaIdMap };
+}
+
+export async function synchronizeApprovedRevisionMedia(
+  originalListingId: number,
+  revisionListingId: number,
+  database?: any,
+) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
-  const listing = await getListingById(listingId);
+  if (database) {
+    return synchronizeApprovedRevisionMediaWithDatabase(
+      originalListingId,
+      revisionListingId,
+      database,
+    );
+  }
+
+  return db.transaction((tx: any) =>
+    synchronizeApprovedRevisionMediaWithDatabase(originalListingId, revisionListingId, tx),
+  );
+}
+
+async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
+  listingId: number,
+  database: any,
+) {
+  const listing = await getListingById(listingId, database);
   if (!listing) {
     return { synced: false, reason: 'listing_not_found' as const };
   }
@@ -2616,9 +2995,9 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
 
   // Replacing public media is a public projection update, never a draft-only
   // action. This prevents repair/compatibility callers bypassing entitlement.
-  await assertListingPublicationEntitled(db, { listingId, operation: 'public_media_sync' });
+  await assertListingPublicationEntitled(database, { listingId, operation: 'public_media_sync' });
 
-  const [mirroredProperty] = await db
+  const [mirroredProperty] = await database
     .select({ id: properties.id })
     .from(properties)
     .where(eq(properties.sourceListingId, listingId))
@@ -2628,11 +3007,13 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
     return { synced: false, reason: 'property_mirror_not_found' as const };
   }
 
-  const mediaItems = await getListingMedia(listingId);
-  const imageItems = mediaItems.filter(item => item.mediaType === 'image');
-  const mainMedia = imageItems.find(item => item.isPrimary) || imageItems[0] || null;
+  const mediaItems = await getListingMedia(listingId, database);
+  const imageItems = mediaItems.filter(
+    item => item.mediaType === 'image' && isCompletedListingMedia(item),
+  );
+  const mainMedia = getPrimaryListingImage(imageItems);
 
-  await db
+  await database
     .update(properties)
     .set({
       mainImage: mainMedia ? mainMedia.processedUrl || mainMedia.originalUrl : null,
@@ -2640,13 +3021,13 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
     })
     .where(eq(properties.id, mirroredProperty.id));
 
-  await db.delete(propertyImages).where(eq(propertyImages.propertyId, mirroredProperty.id));
+  await database.delete(propertyImages).where(eq(propertyImages.propertyId, mirroredProperty.id));
 
   for (const item of imageItems) {
-    await db.insert(propertyImages).values({
+    await database.insert(propertyImages).values({
       propertyId: mirroredProperty.id,
       imageUrl: item.processedUrl || item.originalUrl,
-      isPrimary: item.isPrimary ? 1 : 0,
+      isPrimary: mainMedia && Number(mainMedia.id) === Number(item.id) ? 1 : 0,
       displayOrder: item.displayOrder,
       createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     });
@@ -2657,6 +3038,28 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
     propertyId: mirroredProperty.id,
     imageCount: imageItems.length,
   };
+}
+
+/**
+ * Keep search mirror media in sync for already-published listings.
+ *
+ * Callers that already own a transaction must pass its executor. The wrapper
+ * retains standalone atomic behavior for callers outside an approval flow.
+ */
+export async function syncPublishedListingMediaToPropertyMirror(
+  listingId: number,
+  database?: any,
+) {
+  const db = database || (await getDb());
+  if (!db) throw new Error('Database not available');
+
+  if (database) {
+    return syncPublishedListingMediaToPropertyMirrorWithDatabase(listingId, database);
+  }
+
+  return db.transaction((tx: any) =>
+    syncPublishedListingMediaToPropertyMirrorWithDatabase(listingId, tx),
+  );
 }
 
 /**
@@ -2694,6 +3097,140 @@ export async function getApprovalQueue(status?: string) {
   return await query.orderBy(desc(listingApprovalQueue.submittedAt));
 }
 
+function finiteCoordinate(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(7) : null;
+}
+
+function readPrivateAddress(value: unknown): PrivateAddress | null {
+  if (!value) return null;
+  if (typeof value === 'object') return value as PrivateAddress;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as PrivateAddress;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function locationLabels(listing: any) {
+  const areaLabel = [listing.suburb, listing.city, listing.province]
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .join(', ');
+  const privateAddress = readPrivateAddress(listing.privateAddress);
+  const streetName = privateAddress?.streetName?.trim() || '';
+  const streetNumber = privateAddress?.streetNumber?.trim() || '';
+  const streetLabel = [streetName, areaLabel].filter(Boolean).join(', ');
+  const fullAddressLabel = [[streetNumber, streetName].filter(Boolean).join(' '), areaLabel]
+    .filter(Boolean)
+    .join(', ');
+
+  return { areaLabel, privateAddress, streetLabel, fullAddressLabel };
+}
+
+async function buildPublicLocationProjection(database: any, listing: any) {
+  const precision = listing.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
+  const policy = storedPrecisionToPublicLocationPolicy(precision);
+  const { areaLabel, streetLabel, fullAddressLabel } = locationLabels(listing);
+
+  if (precision === 'exact') {
+    const latitude = finiteCoordinate(listing.latitude);
+    const longitude = finiteCoordinate(listing.longitude);
+    const coordinateResult = coordinatePairSchema.safeParse({
+      latitude: latitude === null ? null : Number(latitude),
+      longitude: longitude === null ? null : Number(longitude),
+    });
+    const hasExactCoordinatePair = coordinateResult.success;
+    return {
+      publicAddress: fullAddressLabel || areaLabel || null,
+      publicLatitude: hasExactCoordinatePair ? latitude : null,
+      publicLongitude: hasExactCoordinatePair ? longitude : null,
+      publicLocationPrecision: 'exact' as const,
+      publicLocationPolicy: policy,
+    };
+  }
+
+  let center: { latitude: string | null; longitude: string | null } | null = null;
+  if (listing.suburbId) {
+    const [suburb] = await database
+      .select({ latitude: suburbs.latitude, longitude: suburbs.longitude })
+      .from(suburbs)
+      .where(eq(suburbs.id, Number(listing.suburbId)))
+      .limit(1);
+    center = suburb || null;
+  }
+  if (!center && listing.cityId) {
+    const [city] = await database
+      .select({ latitude: cities.latitude, longitude: cities.longitude })
+      .from(cities)
+      .where(eq(cities.id, Number(listing.cityId)))
+      .limit(1);
+    center = city || null;
+  }
+  if (!center && listing.provinceId) {
+    const [province] = await database
+      .select({ latitude: provinces.latitude, longitude: provinces.longitude })
+      .from(provinces)
+      .where(eq(provinces.id, Number(listing.provinceId)))
+      .limit(1);
+    center = province || null;
+  }
+
+  return {
+    publicAddress: streetLabel || areaLabel || null,
+    publicLatitude: finiteCoordinate(center?.latitude),
+    publicLongitude: finiteCoordinate(center?.longitude),
+    publicLocationPrecision: 'approximate' as const,
+    publicLocationPolicy: policy,
+  };
+}
+
+function remapApprovedRevisionPresentationMedia(
+  propertyDetails: Record<string, any>,
+  mediaIdMap: Map<number, number>,
+) {
+  const presentation = normalizePropertyPresentation(propertyDetails.propertyPresentation);
+  if (!presentation) return propertyDetails;
+
+  const media = presentation.media.map(item => {
+    if (!item.mediaId.startsWith('existing:')) return item;
+    const revisionMediaId = Number(item.mediaId.slice('existing:'.length));
+    const originalMediaId = mediaIdMap.get(revisionMediaId);
+    if (!originalMediaId) {
+      throw new Error('Approved revision presentation references unsynchronized media');
+    }
+    return { ...item, mediaId: `existing:${originalMediaId}` };
+  });
+
+  return {
+    ...propertyDetails,
+    propertyPresentation: { ...presentation, media },
+  };
+}
+
+/**
+ * Search results are cached independently from the approval transaction. The
+ * cache must be invalidated only after the transaction commits so a failed
+ * approval cannot disturb a still-valid public snapshot, and a successful
+ * approval cannot leave Search serving the previous projection indefinitely.
+ *
+ * This is intentionally a post-commit, best-effort side effect: approval has
+ * already committed at this point, so a cache-service failure must not report
+ * a false approval failure or trigger a retry of the lifecycle transaction.
+ */
+async function invalidateApprovedPropertySearchCacheAfterCommit(): Promise<void> {
+  try {
+    const { propertySearchService } = await import('./services/propertySearchService');
+    await propertySearchService.invalidateCache();
+  } catch (error) {
+    console.error('[Listings] Approved property Search cache invalidation failed', error);
+  }
+}
+
 /**
  * Approve listing
  */
@@ -2708,9 +3245,11 @@ export async function approveListing(
   if (!db) throw new Error('Database not available');
 
   if (!database && typeof db.transaction === 'function') {
-    return db.transaction((transaction: any) =>
+    const result = await db.transaction((transaction: any) =>
       approveListing(listingId, reviewedBy, notes, source, transaction),
     );
+    await invalidateApprovedPropertySearchCacheAfterCommit();
+    return result;
   }
 
   await lockListingTransitionRow(db, listingId);
@@ -2745,12 +3284,31 @@ export async function approveListing(
       : {}),
   });
 
+  const pricingIssues = validatePricingContract(
+    String((listing as any).action),
+    (listing as any).pricing,
+    (listing as any).propertyDetails,
+    { mode: 'publish', enforceInputShape: false },
+  );
+  if (pricingIssues.length > 0) {
+    throw new Error(pricingIssues.map(issue => issue.message).join(' '));
+  }
+  const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
+  if (locationIssues.length > 0) {
+    throw new Error(locationIssues.join(' '));
+  }
+
   // A revision is a private listing-engine draft. Approval applies its public fields to
   // the original canonical listing/projection; the revision itself never becomes public.
   if ((listing as any).revisionOfListingId) {
     const originalListingId = Number((listing as any).revisionOfListingId);
-    const [original] = await db.select().from(listings).where(eq(listings.id, originalListingId)).limit(1);
-    if (!original || original.status !== 'published') throw new Error('The original published listing is no longer available for this revision');
+    const [original] = await db
+      .select()
+      .from(listings)
+      .where(eq(listings.id, originalListingId))
+      .limit(1);
+    if (!original || original.status !== 'published')
+      throw new Error('The original published listing is no longer available for this revision');
     const revisionCommercialOwner = listingCommercialOwner;
     const originalCommercialOwner = await assertListingPublicationEntitled(db, {
       listingId: originalListingId,
@@ -2759,19 +3317,112 @@ export async function approveListing(
     if (!isSameListingCommercialOwner(revisionCommercialOwner, originalCommercialOwner)) {
       throw new Error('Listing revision commercial owner does not match the original listing');
     }
+    const approvedPricingProjection = getPricingProjection(
+      String((listing as any).action),
+      (listing as any).pricing,
+      (listing as any).propertyDetails,
+    );
+    const approvedPropertyDetailsBeforeMedia = {
+      ...(((listing as any).propertyDetails as Record<string, unknown>) || {}),
+      ...(approvedPricingProjection.contract
+        ? { pricingContract: approvedPricingProjection.contract }
+        : {}),
+    };
+    const mediaSynchronization = await synchronizeApprovedRevisionMedia(
+      originalListingId,
+      listingId,
+      db,
+    );
+    const approvedPropertyDetails = remapApprovedRevisionPresentationMedia(
+      approvedPropertyDetailsBeforeMedia as Record<string, any>,
+      mediaSynchronization.mediaIdMap,
+    );
+    const approvedVirtualTour = getSafePropertyPresentationVirtualTour(
+      approvedPropertyDetails['propertyPresentation'],
+    );
     const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    await db.update(listings).set({
-      askingPrice: (listing as any).askingPrice,
-      monthlyRent: (listing as any).monthlyRent,
-      startingBid: (listing as any).startingBid,
-      propertyDetails: (listing as any).propertyDetails,
-      title: listing.title, description: listing.description, updatedAt: approvedAt,
-    } as any).where(eq(listings.id, originalListingId));
-    const publicPrice = (listing as any).askingPrice || (listing as any).monthlyRent || (listing as any).startingBid || 0;
-    await db.update(properties).set({ price: publicPrice, title: listing.title, description: listing.description, updatedAt: approvedAt } as any)
-      .where(and(eq(properties.sourceListingId, originalListingId), isNotNull(properties.sourceListingId)));
-    await db.update(listings).set({ status: 'archived' as any, approvalStatus: 'approved' as any, reviewedBy, reviewedAt: approvedAt, updatedAt: approvedAt } as any).where(eq(listings.id, listingId));
-    await db.update(listingApprovalQueue).set({ status: 'approved' as any, reviewedBy, reviewedAt: approvedAt, reviewNotes: notes }).where(eq(listingApprovalQueue.listingId, listingId));
+    const approvedLocationProjection = await buildPublicLocationProjection(db, listing);
+    await db
+      .update(listings)
+      .set({
+        askingPrice: (listing as any).askingPrice,
+        negotiable: (listing as any).negotiable,
+        transferCostEstimate: (listing as any).transferCostEstimate,
+        monthlyRent: (listing as any).monthlyRent,
+        deposit: (listing as any).deposit,
+        leaseTerms: (listing as any).leaseTerms,
+        availableFrom: (listing as any).availableFrom,
+        utilitiesIncluded: (listing as any).utilitiesIncluded,
+        startingBid: (listing as any).startingBid,
+        reservePrice: (listing as any).reservePrice,
+        auctionDateTime: (listing as any).auctionDateTime,
+        auctionTermsDocumentUrl: (listing as any).auctionTermsDocumentUrl,
+        address: (listing as any).address,
+        latitude: (listing as any).latitude,
+        longitude: (listing as any).longitude,
+        city: (listing as any).city,
+        suburb: (listing as any).suburb,
+        province: (listing as any).province,
+        postalCode: (listing as any).postalCode,
+        placeId: (listing as any).placeId,
+        provinceId: (listing as any).provinceId,
+        cityId: (listing as any).cityId,
+        suburbId: (listing as any).suburbId,
+        privateAddress: (listing as any).privateAddress,
+        coordinateSource: (listing as any).coordinateSource,
+        locationConfirmationState: (listing as any).locationConfirmationState,
+        publicLocationPrecision: (listing as any).publicLocationPrecision,
+        propertyDetails: approvedPropertyDetails,
+        virtualTourUrl: approvedVirtualTour?.embedUrl || null,
+        title: listing.title,
+        description: listing.description,
+        updatedAt: approvedAt,
+      } as any)
+      .where(eq(listings.id, originalListingId));
+    await syncPublishedListingMediaToPropertyMirror(originalListingId, db);
+    await db
+      .update(properties)
+      .set({
+        price: approvedPricingProjection.price,
+        title: listing.title,
+        description: listing.description,
+        propertySettings: JSON.stringify(approvedPropertyDetails),
+        levies: approvedPricingProjection.legacyLevy,
+        ratesAndTaxes: approvedPricingProjection.ratesAndTaxes,
+        address: approvedLocationProjection.publicAddress || 'Location available on enquiry',
+        latitude: approvedLocationProjection.publicLatitude,
+        longitude: approvedLocationProjection.publicLongitude,
+        publicAddress: approvedLocationProjection.publicAddress,
+        publicLatitude: approvedLocationProjection.publicLatitude,
+        publicLongitude: approvedLocationProjection.publicLongitude,
+        publicLocationPrecision: approvedLocationProjection.publicLocationPrecision,
+        provinceId: (listing as any).provinceId,
+        cityId: (listing as any).cityId,
+        suburbId: (listing as any).suburbId,
+        locationText: approvedLocationProjection.publicAddress || 'Location available on enquiry',
+        placeId: null,
+        updatedAt: approvedAt,
+      } as any)
+      .where(
+        and(
+          eq(properties.sourceListingId, originalListingId),
+          isNotNull(properties.sourceListingId),
+        ),
+      );
+    await db
+      .update(listings)
+      .set({
+        status: 'archived' as any,
+        approvalStatus: 'approved' as any,
+        reviewedBy,
+        reviewedAt: approvedAt,
+        updatedAt: approvedAt,
+      } as any)
+      .where(eq(listings.id, listingId));
+    await db
+      .update(listingApprovalQueue)
+      .set({ status: 'approved' as any, reviewedBy, reviewedAt: approvedAt, reviewNotes: notes })
+      .where(eq(listingApprovalQueue.listingId, listingId));
     return;
   }
 
@@ -2787,10 +3438,6 @@ export async function approveListing(
     }
   }
 
-  // Determine price based on listing type
-  let price = 0;
-  price = pricingData.askingPrice || pricingData.monthlyRent || pricingData.startingBid || 0;
-
   // Parse propertyDetails JSON if it's a string
   let details: any = {};
   if (listing.propertyDetails) {
@@ -2804,20 +3451,40 @@ export async function approveListing(
     }
   }
 
-  const bedrooms = Number(details.bedrooms) || 0;
-  const bathrooms = Number(details.bathrooms) || 0;
+  const core = buildCorePropertyInformation(String(listing.propertyType) as any, details);
+  const featuresContext = normalizeFeaturesContext(details.featuresContext, details);
+  const canonicalDetails = {
+    ...details,
+    featuresContext,
+    ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, details),
+  };
+  const pricingProjection = getPricingProjection(
+    String(listing.action),
+    pricingData,
+    canonicalDetails,
+  );
+  if (pricingProjection.contract) {
+    canonicalDetails.pricingContract = pricingProjection.contract;
+  }
+  const knownNumber = (fact: any): number | null =>
+    fact?.status === 'known' && Number.isFinite(Number(fact.value)) ? Number(fact.value) : null;
+  const knownMeasurement = (fact: any): number | null =>
+    fact?.status === 'known' && Number.isFinite(Number(fact.valueM2)) ? Number(fact.valueM2) : null;
+  const bedrooms = knownNumber(core.bedrooms) ?? (Number(details.bedrooms) || 0);
+  const bathrooms = knownNumber(core.bathrooms) ?? (Number(details.bathrooms) || 0);
+  const internalAreaM2 = knownMeasurement(core.internalArea);
+  const erfSizeM2 = knownMeasurement(core.erfArea);
+  const landAreaM2 =
+    core.farmLandArea?.status === 'known' ? Number(core.farmLandArea.normalizedM2) : null;
 
-  // Determine area (prioritize building size, not land size)
+  // `area` remains a legacy compatibility field. The typed columns below are
+  // the authority for new public search/detail consumers.
   const area =
-    Number(details.unitSizeM2) || Number(details.houseAreaM2) || Number(details.floorAreaM2) || 0;
+    internalAreaM2 ??
+    (Number(details.unitSizeM2) || Number(details.houseAreaM2) || Number(details.floorAreaM2) || 0);
 
   // Map amenities
-  const amenitiesList = [
-    ...(details.amenities || []),
-    ...(details.amenitiesFeatures || []),
-    ...(details.securityFeatures || []),
-    ...(details.outdoorFeatures || []),
-  ];
+  const amenitiesList = [...featuresContext.spaces, ...featuresContext.security.features];
   const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
 
   // 3. Upsert the public property projection
@@ -2825,36 +3492,53 @@ export async function approveListing(
   // Re-evaluate immediately before the first public write. This is defence in
   // depth for entitlement changes between review and projection.
   await assertListingPublicationEntitled(db, { listingId, operation: 'public_projection' });
+  const publicLocationProjection = await buildPublicLocationProjection(db, listing);
 
   const propertyValues: any = {
     title: listing.title,
     description: listing.description,
-    propertyType: listing.propertyType,
+    propertyType: toPublicPropertyType(String(listing.propertyType)),
     listingType:
       listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
     transactionType:
       listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
-    price: price,
+    price: pricingProjection.price,
     bedrooms: bedrooms,
     bathrooms: bathrooms,
     area: area,
-    address: listing.address,
+    internalAreaM2,
+    erfSizeM2,
+    landAreaM2,
+    address: publicLocationProjection.publicAddress || 'Location available on enquiry',
     city: listing.city,
     province: listing.province,
     zipCode: listing.postalCode,
-    latitude: String(listing.latitude),
-    longitude: String(listing.longitude),
-    locationText: `${listing.city}, ${listing.province}`,
-    placeId: listing.placeId,
+    latitude: publicLocationProjection.publicLatitude,
+    longitude: publicLocationProjection.publicLongitude,
+    provinceId: listing.provinceId,
+    cityId: listing.cityId,
+    suburbId: listing.suburbId,
+    publicAddress: publicLocationProjection.publicAddress,
+    publicLatitude: publicLocationProjection.publicLatitude,
+    publicLongitude: publicLocationProjection.publicLongitude,
+    publicLocationPrecision: publicLocationProjection.publicLocationPrecision,
+    locationText: publicLocationProjection.publicAddress || `${listing.city}, ${listing.province}`,
+    // Provider IDs are authoring evidence, never a public location authority.
+    placeId: null,
     amenities: amenitiesString,
     status: 'available' as any,
     featured: listing.featured || 0,
     agentId: listing.agentId,
     ownerId: listing.ownerId,
     sourceListingId: listingId,
-    propertySettings: JSON.stringify(details),
-    levies: Number(details.levies) || Number(details.leviesHoaOperatingCosts) || null,
-    ratesAndTaxes: Number(details.ratesAndTaxes) || Number(details.ratesTaxes) || null,
+    propertySettings: JSON.stringify(canonicalDetails),
+    virtualTourUrl:
+      getSafePropertyPresentationVirtualTour(canonicalDetails.propertyPresentation)?.embedUrl ||
+      null,
+    // These columns are legacy compatibility projections. Public pricing
+    // detail reads the versioned contract stored in propertySettings.
+    levies: pricingProjection.legacyLevy,
+    ratesAndTaxes: pricingProjection.ratesAndTaxes,
     updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
   };
 
@@ -2881,8 +3565,10 @@ export async function approveListing(
 
   // 4. Sync Media
   const mediaItems = await getListingMedia(listingId, db);
-  const imageItems = mediaItems.filter(item => item.mediaType === 'image');
-  const mainMedia = imageItems.find(item => item.isPrimary) || imageItems[0] || null;
+  const imageItems = mediaItems.filter(
+    item => item.mediaType === 'image' && isCompletedListingMedia(item),
+  );
+  const mainMedia = getPrimaryListingImage(imageItems);
 
   await db
     .update(properties)
@@ -2895,7 +3581,7 @@ export async function approveListing(
     await db.insert(propertyImages).values({
       propertyId: newPropertyId,
       imageUrl: item.processedUrl || item.originalUrl,
-      isPrimary: item.isPrimary ? 1 : 0,
+      isPrimary: mainMedia && Number(mainMedia.id) === Number(item.id) ? 1 : 0,
       displayOrder: item.displayOrder,
       createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     });
@@ -2981,6 +3667,11 @@ export async function rejectListing(
 export async function archiveProperty(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+
+  const property = await getPropertyById(id);
+  if (!property) throw new Error('Property not found');
+  assertListingBackedPropertyProjectionIsReadOnly(property, 'archive this inventory');
+
   await db
     .update(properties)
     .set({
@@ -2997,31 +3688,39 @@ export async function deleteListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db
-    .update(properties)
-    .set({
-      status: 'archived',
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(properties.sourceListingId, id));
+  const listing = await getListingById(id);
+  if (!listing) throw new Error('Listing not found');
+  if (['published', 'approved'].includes(String(listing.status))) {
+    throw new Error('Published listings must be archived through the canonical lifecycle.');
+  }
 
-  // Delete related media first to avoid foreign key constraint errors
-  await db.delete(listingMedia).where(eq(listingMedia.listingId, id));
+  await db.transaction(async tx => {
+    await tx
+      .update(properties)
+      .set({
+        status: 'archived',
+        updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      })
+      .where(eq(properties.sourceListingId, id));
 
-  // Delete from approval queue if exists
-  await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, id));
+    // Delete related media first to avoid foreign key constraint errors
+    await tx.delete(listingMedia).where(eq(listingMedia.listingId, id));
 
-  // Delete analytics
-  await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, id));
+    // Delete from approval queue if exists
+    await tx.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, id));
 
-  // Delete leads
-  await db.delete(listingLeads).where(eq(listingLeads.listingId, id));
+    // Delete analytics
+    await tx.delete(listingAnalytics).where(eq(listingAnalytics.listingId, id));
 
-  // Delete viewings
-  await db.delete(listingViewings).where(eq(listingViewings.listingId, id));
+    // Delete leads
+    await tx.delete(listingLeads).where(eq(listingLeads.listingId, id));
 
-  // Now delete the listing
-  await db.delete(listings).where(eq(listings.id, id));
+    // Delete viewings
+    await tx.delete(listingViewings).where(eq(listingViewings.listingId, id));
+
+    // Now delete the listing
+    await tx.delete(listings).where(eq(listings.id, id));
+  });
 }
 
 /**
@@ -3030,21 +3729,60 @@ export async function deleteListing(id: number) {
 export async function archiveListing(id: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  await db
-    .update(listings)
-    .set({
-      status: 'archived' as any,
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(listings.id, id));
 
-  await db
-    .update(properties)
-    .set({
-      status: 'archived',
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(properties.sourceListingId, id));
+  const archivedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await db.transaction(async tx => {
+    await tx
+      .update(listings)
+      .set({
+        status: 'archived' as any,
+        archivedAt,
+        updatedAt: archivedAt,
+      })
+      .where(eq(listings.id, id));
+
+    await tx
+      .update(properties)
+      .set({
+        status: 'archived',
+        updatedAt: archivedAt,
+      })
+      .where(eq(properties.sourceListingId, id));
+  });
+}
+
+/**
+ * Update canonical listing custody and its public projection together.
+ *
+ * Agent assignment is an authored-listing decision. The public property row
+ * is updated only as the derived projection of that decision, in the same
+ * transaction, so a projection-only custody write cannot drift from source.
+ */
+export async function updateListingAgentAssignment(listingId: number, agentId: number | null) {
+  await updateListingAgentAssignments([listingId], agentId);
+}
+
+export async function updateListingAgentAssignments(listingIds: number[], agentId: number | null) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const uniqueListingIds = [
+    ...new Set(listingIds.map(Number).filter(id => Number.isSafeInteger(id) && id > 0)),
+  ];
+  if (uniqueListingIds.length === 0) return;
+
+  const updatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await db.transaction(async tx => {
+    await tx
+      .update(listings)
+      .set({ agentId, updatedAt })
+      .where(inArray(listings.id, uniqueListingIds));
+
+    await tx
+      .update(properties)
+      .set({ agentId, updatedAt })
+      .where(inArray(properties.sourceListingId, uniqueListingIds));
+  });
 }
 
 /**
@@ -3101,81 +3839,163 @@ export async function getAgentByUserId(userId: number) {
  */
 export function transformListingToProperty(listing: any, media: any[] = []) {
   const propertyDetails = (listing.propertyDetails as any) || {};
+  const canonicalDetails = {
+    ...propertyDetails,
+    featuresContext: normalizeFeaturesContext(propertyDetails.featuresContext, propertyDetails),
+    ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, propertyDetails),
+  };
+
+  const featuresContext = canonicalDetails.featuresContext;
+  const structuredFeatures = [...featuresContext.spaces, ...featuresContext.security.features];
+  const publicLocationPolicy = storedPrecisionToPublicLocationPolicy(
+    listing.publicLocationPrecision,
+  );
+  const { areaLabel: publicAreaLabel, streetLabel, fullAddressLabel } = locationLabels(listing);
+  const exactPublicLocation = publicLocationPolicy === 'full_address';
+  type PublicListingMedia = {
+    id: string | number;
+    url: string;
+    mediaType: 'image' | 'video' | 'floorplan' | 'pdf';
+    type: 'image' | 'video' | 'floorplan' | 'pdf';
+    isPrimary: number;
+    displayOrder: number;
+    thumbnailUrl: string | null;
+    previewUrl: string | null;
+    processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+    originalFileName: string | null;
+    mimeType?: string | null;
+    presentationKind?: 'floorplan' | 'document';
+    presentationLabel?: string | null;
+  };
+  const publicMediaCandidates = media
+    .map((item: any) => {
+      const rawUrl = getListingMediaUrl(item);
+      const mediaType = getListingMediaType(item);
+      if (!rawUrl || !mediaType) return null;
+
+      const presentationDescriptor = getPresentationMediaDescriptor(
+        propertyDetails.propertyPresentation,
+        {
+          id: item.id,
+          type: mediaType,
+          mediaType,
+          url: rawUrl,
+          originalUrl: item.originalUrl,
+          originalFileName: item.originalFileName,
+        },
+      );
+
+      const url = resolveMediaDeliveryUrl(rawUrl);
+      if (!url) return null;
+
+      return {
+        id: item.id,
+        url,
+        mediaType,
+        type: mediaType,
+        isPrimary: item.isPrimary ? 1 : 0,
+        displayOrder: Number(item.displayOrder || 0),
+        thumbnailUrl: item.thumbnailUrl || null,
+        previewUrl: item.previewUrl || null,
+        processingStatus: item.processingStatus || 'completed',
+        originalFileName: item.originalFileName || null,
+        mimeType: item.mimeType || null,
+        presentationKind: presentationDescriptor.kind,
+        presentationLabel: presentationDescriptor.label || null,
+      };
+    })
+    .filter(Boolean) as PublicListingMedia[];
+  const primaryPublicImage = getPrimaryListingImage(publicMediaCandidates);
+  const publicMedia = publicMediaCandidates.map(item => ({
+    ...item,
+    isPrimary: primaryPublicImage && Number(primaryPublicImage.id) === Number(item.id) ? 1 : 0,
+  }));
+  const mediaSummary = summarizePropertyPresentation(media, propertyDetails.propertyPresentation);
 
   return {
     id: listing.id,
     title: listing.title,
     description: listing.description,
     // Map price based on action type
-    price: listing.askingPrice || listing.monthlyRent || listing.startingBid || 0,
+    price: getPrimaryPrice(listing.action, listing.pricing || listing, canonicalDetails) || 0,
     listingType: listing.action, // 'sell', 'rent', 'auction'
-    propertyType: listing.propertyType,
+    propertyType: toPublicPropertyType(String(listing.propertyType)),
+    propertySettings: canonicalDetails,
+    propertyDetails: canonicalDetails,
     // Extract from propertyDetails JSON
-    bedrooms: propertyDetails.bedrooms || 0,
-    bathrooms: propertyDetails.bathrooms || 0,
+    bedrooms: canonicalDetails.bedrooms || 0,
+    bathrooms: canonicalDetails.bathrooms || 0,
     area:
-      propertyDetails.unitSizeM2 || propertyDetails.houseAreaM2 || propertyDetails.floorAreaM2 || 0,
-    yardSize: propertyDetails.erfSizeM2 || propertyDetails.landSizeM2OrHa || 0,
+      canonicalDetails.internalAreaM2 ||
+      canonicalDetails.unitSizeM2 ||
+      canonicalDetails.houseAreaM2 ||
+      canonicalDetails.floorAreaM2 ||
+      0,
+    yardSize:
+      canonicalDetails.erfAreaM2 || canonicalDetails.erfSizeM2 || canonicalDetails.landAreaM2 || 0,
     amenities: [
-      ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
-      ...(Array.isArray(propertyDetails.amenitiesFeatures)
-        ? propertyDetails.amenitiesFeatures
+      ...structuredFeatures,
+      ...(Array.isArray(canonicalDetails.amenities) ? canonicalDetails.amenities : []),
+      ...(Array.isArray(canonicalDetails.amenitiesFeatures)
+        ? canonicalDetails.amenitiesFeatures
         : []),
-      ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
-      ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
-      ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
-      ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
-      propertyDetails.waterHeating,
-      propertyDetails.waterSupply,
+      ...(Array.isArray(canonicalDetails.securityFeatures)
+        ? canonicalDetails.securityFeatures
+        : []),
+      ...(Array.isArray(canonicalDetails.kitchenFeatures) ? canonicalDetails.kitchenFeatures : []),
+      ...(Array.isArray(canonicalDetails.outdoorFeatures) ? canonicalDetails.outdoorFeatures : []),
+      ...(Array.isArray(canonicalDetails.energyFeatures) ? canonicalDetails.energyFeatures : []),
+      canonicalDetails.waterHeating,
+      canonicalDetails.waterSupply,
     ]
       .filter(Boolean)
       .flat(),
     features: [
-      ...(Array.isArray(propertyDetails.amenities) ? propertyDetails.amenities : []),
-      ...(Array.isArray(propertyDetails.amenitiesFeatures)
-        ? propertyDetails.amenitiesFeatures
+      ...structuredFeatures,
+      ...(Array.isArray(canonicalDetails.amenities) ? canonicalDetails.amenities : []),
+      ...(Array.isArray(canonicalDetails.amenitiesFeatures)
+        ? canonicalDetails.amenitiesFeatures
         : []),
-      ...(Array.isArray(propertyDetails.securityFeatures) ? propertyDetails.securityFeatures : []),
-      ...(Array.isArray(propertyDetails.kitchenFeatures) ? propertyDetails.kitchenFeatures : []),
-      ...(Array.isArray(propertyDetails.outdoorFeatures) ? propertyDetails.outdoorFeatures : []),
-      ...(Array.isArray(propertyDetails.energyFeatures) ? propertyDetails.energyFeatures : []),
-      propertyDetails.waterHeating,
-      propertyDetails.waterSupply,
+      ...(Array.isArray(canonicalDetails.securityFeatures)
+        ? canonicalDetails.securityFeatures
+        : []),
+      ...(Array.isArray(canonicalDetails.kitchenFeatures) ? canonicalDetails.kitchenFeatures : []),
+      ...(Array.isArray(canonicalDetails.outdoorFeatures) ? canonicalDetails.outdoorFeatures : []),
+      ...(Array.isArray(canonicalDetails.energyFeatures) ? canonicalDetails.energyFeatures : []),
+      canonicalDetails.waterHeating,
+      canonicalDetails.waterSupply,
     ]
       .filter(Boolean)
       .flat(),
     // Location fields
     city: listing.city,
     province: listing.province,
-    address: listing.streetAddress,
+    suburb: listing.suburb,
+    address: exactPublicLocation
+      ? fullAddressLabel || publicAreaLabel
+      : streetLabel || publicAreaLabel,
     zipCode: listing.postalCode,
-    latitude: listing.latitude,
-    longitude: listing.longitude,
-    // Media
-    // Media - prepend CDN URL if stored as path
-    images: media
-      .map((m: any) => {
-        const url = m.processedUrl || m.originalUrl || m.mediaUrl;
-        if (!url) return null;
-        if (url.startsWith('http')) return url;
-
-        // Prepend CDN URL or S3 URL
-        let cdn = process.env.CLOUDFRONT_URL;
-        const bucket = process.env.S3_BUCKET_NAME;
-        const region = process.env.AWS_REGION || 'us-east-1';
-
-        if (cdn) {
-          // Remove protocol if present to avoid double https://
-          cdn = cdn.replace(/^https?:\/\//, '');
-          // Remove trailing slash
-          cdn = cdn.replace(/\/$/, '');
-          return `https://${cdn}/${url}`;
-        } else if (bucket) {
-          return `https://${bucket}.s3.${region}.amazonaws.com/${url}`;
-        }
-        return url;
-      })
+    latitude: exactPublicLocation ? finiteCoordinate(listing.latitude) : null,
+    longitude: exactPublicLocation ? finiteCoordinate(listing.longitude) : null,
+    provinceId: listing.provinceId ?? null,
+    cityId: listing.cityId ?? null,
+    suburbId: listing.suburbId ?? null,
+    publicLocationPrecision: exactPublicLocation ? 'exact' : 'approximate',
+    publicLocationPolicy,
+    // Compatibility cards receive only completed image URLs. Typed consumers
+    // use `media` so video/document semantics are never discarded.
+    images: publicMedia
+      .filter(item => item.mediaType === 'image' && isCompletedListingMedia(item))
+      .map(item => item.url)
       .filter(Boolean),
+    media: publicMedia,
+    virtualTour:
+      getSafePropertyPresentationVirtualTour(propertyDetails.propertyPresentation) || null,
+    mediaSummary,
+    hasFloorplan: mediaSummary.hasFloorplan,
+    hasVirtualTour: mediaSummary.hasVirtualTour,
+    hasPublicDocuments: mediaSummary.hasDocuments,
+    mainImage: primaryPublicImage?.url || null,
     // Metadata
     status: listing.status,
     createdAt: listing.createdAt,
@@ -3245,6 +4065,7 @@ export async function searchListings(params: ListingSearchParams) {
   if (params.propertyType) conditions.push(eq(listings.propertyType, params.propertyType as any));
 
   // Listing type filter (map to action)
+  let actionFilter: string | undefined;
   if (params.listingType) {
     const actionMap: Record<string, string> = {
       sale: 'sell',
@@ -3253,15 +4074,26 @@ export async function searchListings(params: ListingSearchParams) {
       rent_to_buy: 'rent',
       shared_living: 'rent',
     };
-    const action = actionMap[params.listingType] || params.listingType;
-    conditions.push(eq(listings.action, action as any));
+    actionFilter = actionMap[params.listingType] || params.listingType;
+    conditions.push(eq(listings.action, actionFilter as any));
   }
 
   // Price filters - handle different price fields based on action
   if (params.minPrice || params.maxPrice) {
     const priceConditions: SQL[] = [];
 
-    if (params.minPrice) {
+    const priceColumn =
+      actionFilter === 'sell'
+        ? listings.askingPrice
+        : actionFilter === 'rent'
+          ? listings.monthlyRent
+          : actionFilter === 'auction'
+            ? listings.startingBid
+            : undefined;
+
+    if (priceColumn && params.minPrice) {
+      priceConditions.push(gte(priceColumn, params.minPrice.toString()));
+    } else if (!priceColumn && params.minPrice) {
       priceConditions.push(
         or(
           gte(listings.askingPrice, params.minPrice.toString()),
@@ -3271,7 +4103,9 @@ export async function searchListings(params: ListingSearchParams) {
       );
     }
 
-    if (params.maxPrice) {
+    if (priceColumn && params.maxPrice) {
+      priceConditions.push(lte(priceColumn, params.maxPrice.toString()));
+    } else if (!priceColumn && params.maxPrice) {
       priceConditions.push(
         or(
           lte(listings.askingPrice, params.maxPrice.toString()),

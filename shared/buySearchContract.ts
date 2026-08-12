@@ -7,17 +7,13 @@
  * must not survive as active Buy filters.
  */
 
+import { BUY_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
+
 export const BUY_TRANSACTION_TYPE = 'for-sale' as const;
 export const BUY_LISTING_TYPE = 'sale' as const;
 
-export const BUY_PROPERTY_TYPES = [
-  'apartment',
-  'house',
-  'villa',
-  'townhouse',
-  'cluster_home',
-  'farm',
-] as const;
+// Existing callers keep this export name; the taxonomy owns the values.
+export const BUY_PROPERTY_TYPES = BUY_PUBLIC_PROPERTY_TYPES;
 
 export type BuyPropertyType = (typeof BUY_PROPERTY_TYPES)[number];
 

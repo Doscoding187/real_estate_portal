@@ -2,7 +2,7 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
-  ACCEPTED_MIGRATION_HEAD,
+  COMMERCIAL_INVOICE_TERM_CAPABILITY,
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
@@ -236,7 +236,7 @@ export type CommercialReferenceEvidence = AdapterEvidence & {
       entitlementSource: string;
     }>;
   };
-  migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+  migrationHead: string;
 };
 
 export type CommercialReferencePlanEvidence = AdapterEvidence & {
@@ -252,7 +252,7 @@ export type CommercialReferencePlanEvidence = AdapterEvidence & {
     planId: number | null;
     missingEntitlementKeys: string[];
   }>;
-  migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+  migrationHead: string;
 };
 
 type Row = Record<string, unknown>;
@@ -547,9 +547,10 @@ export async function planCanonicalCommercialReferenceData(input: {
 }): Promise<CommercialReferencePlanEvidence> {
   assertOperation(input.decision, ['release-reference-plan']);
   const ownership = requireReleaseReferenceTarget(input.authority);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
+    requiredCapabilities: [COMMERCIAL_INVOICE_TERM_CAPABILITY],
   });
   const plan = await inspectCanonicalCommercialReferenceData(input.connection);
   return {
@@ -561,7 +562,7 @@ export async function planCanonicalCommercialReferenceData(input: {
     status: plan.pending.length ? 'pending' : 'ready',
     pending: plan.pending,
     products: plan.products,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }
 
@@ -639,10 +640,11 @@ export async function prepareCanonicalCommercialReferenceData(input: {
   const ownership = releaseScoped
     ? requireReleaseReferenceTarget(input.authority)
     : requireReferenceAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
+    requiredCapabilities: [COMMERCIAL_INVOICE_TERM_CAPABILITY],
   });
 
   const verified = await withCanonicalCommercialReferenceLock(input.connection, async () => {
@@ -678,7 +680,7 @@ export async function prepareCanonicalCommercialReferenceData(input: {
       entitlementKeys: Object.keys(CANONICAL_DEVELOPER_LAUNCH_ACCESS.entitlements),
     },
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }
 
@@ -693,10 +695,11 @@ export async function verifyCanonicalCommercialReference(input: {
   const ownership = releaseScoped
     ? requireProtectedCommercialReferenceTarget(input.authority)
     : requireReferenceAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
+    requiredCapabilities: [COMMERCIAL_INVOICE_TERM_CAPABILITY],
   });
   const verified = await verifyCanonicalCommercialReferenceData(input.connection);
   return {
@@ -714,6 +717,6 @@ export async function verifyCanonicalCommercialReference(input: {
       entitlementKeys: Object.keys(CANONICAL_DEVELOPER_LAUNCH_ACCESS.entitlements),
     },
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }

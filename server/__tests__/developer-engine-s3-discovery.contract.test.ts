@@ -23,12 +23,13 @@ describe('Developer Engine S3 discovery convergence contracts', () => {
     );
   });
 
-  it('routes Listing Wizard autocomplete through canonical discovery instead of the legacy db query', () => {
+  it('keeps the manual Listing Wizard independent from Developer Engine lifecycle queries', () => {
     const wizard = source('client/src/components/listing-wizard/steps/BasicInformationStep.tsx');
     const router = source('server/developerRouter.ts');
     const db = source('server/db.ts');
 
-    expect(wizard).toContain('trpc.developer.searchDevelopments.useQuery');
+    expect(wizard).not.toContain('trpc.developer.searchDevelopments.useQuery');
+    expect(wizard).not.toContain('trpc.developer.searchDevelopers.useQuery');
     expect(router).toContain('developmentService.searchPublicDevelopments');
     expect(router).not.toContain('db.searchDevelopments');
     expect(db).not.toContain('Search developments by name (for autocomplete)');

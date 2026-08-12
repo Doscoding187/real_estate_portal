@@ -42,8 +42,12 @@ import { ArrowLeft, ArrowRight, Home, Save, Check, AlertTriangle, ListChecks } f
 import { toast } from 'sonner';
 import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
 import { calculateListingReadiness } from '@/lib/readiness';
+import { buildCanonicalCorePropertyDetails } from '@/../../shared/core-property-information';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { buildListingWizardSubmitPayload } from '@/lib/listingWizardSubmitMapper';
+import { LISTING_MEDIA_TYPES } from '@/../../shared/listing-media';
+import { buildPricingContract } from '@/../../shared/pricing-contract';
+import { getPresentationMediaDescriptor } from '@/../../shared/property-presentation';
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
@@ -73,7 +77,14 @@ const ListingWizard: React.FC = () => {
       title: store.title,
       description: store.description,
       pricing: store.pricing,
-      propertyDetails: store.propertyDetails,
+      propertyDetails: {
+        ...store.propertyDetails,
+        ...buildCanonicalCorePropertyDetails(
+          store.propertyType,
+          store.propertyDetails,
+          store.basicInfo,
+        ),
+      },
       location: store.location,
       media: store.media,
       badges: store.badges,
@@ -136,7 +147,13 @@ const ListingWizard: React.FC = () => {
       console.log('Populating wizard with existing listing:', existingListing);
 
       const listing = (existingListing as any).property || existingListing;
-      const listingMedia = (existingListing as any).images || (listing as any).media || [];
+      const listingMedia = (
+        Array.isArray((existingListing as any).media) && (existingListing as any).media.length > 0
+          ? (existingListing as any).media
+          : Array.isArray((listing as any).media) && (listing as any).media.length > 0
+            ? (listing as any).media
+            : (existingListing as any).images || []
+      ) as any[];
 
       // Reset store first to clear any drafts
       store.reset();
@@ -149,23 +166,46 @@ const ListingWizard: React.FC = () => {
 
       // Set pricing
       const pricing: any = {};
-      if (listing.askingPrice) pricing.askingPrice = Number(listing.askingPrice);
-      if (listing.monthlyRent) pricing.monthlyRent = Number(listing.monthlyRent);
-      if (listing.deposit) pricing.deposit = Number(listing.deposit);
-      if (listing.transferCostEstimate)
-        pricing.transferCostEstimate = Number(listing.transferCostEstimate);
-      if (listing.startingBid) pricing.startingBid = Number(listing.startingBid);
-      if (listing.reservePrice) pricing.reservePrice = Number(listing.reservePrice);
-      if (listing.leaseTerms) pricing.leaseTerms = listing.leaseTerms;
-      if (listing.availableFrom)
-        pricing.availableFrom = new Date(listing.availableFrom);
-      if (listing.utilitiesIncluded)
-        pricing.utilitiesIncluded = Boolean(listing.utilitiesIncluded);
-      if (listing.auctionDateTime)
-        pricing.auctionDateTime = new Date(listing.auctionDateTime);
-      if (listing.auctionTermsDocumentUrl)
-        pricing.auctionTermsDocumentUrl = listing.auctionTermsDocumentUrl;
-      if (listing.negotiable) pricing.negotiable = Boolean(listing.negotiable);
+      const sourcePricing = listing.pricing || listing;
+      if (sourcePricing.askingPrice !== null && sourcePricing.askingPrice !== undefined)
+        pricing.askingPrice = Number(sourcePricing.askingPrice);
+      if (sourcePricing.monthlyRent !== null && sourcePricing.monthlyRent !== undefined)
+        pricing.monthlyRent = Number(sourcePricing.monthlyRent);
+      if (sourcePricing.deposit !== null && sourcePricing.deposit !== undefined)
+        pricing.deposit = Number(sourcePricing.deposit);
+      if (
+        sourcePricing.transferCostEstimate !== null &&
+        sourcePricing.transferCostEstimate !== undefined
+      )
+        pricing.transferCostEstimate = Number(sourcePricing.transferCostEstimate);
+      if (sourcePricing.startingBid !== null && sourcePricing.startingBid !== undefined)
+        pricing.startingBid = Number(sourcePricing.startingBid);
+      if (sourcePricing.reservePrice !== null && sourcePricing.reservePrice !== undefined)
+        pricing.reservePrice = Number(sourcePricing.reservePrice);
+      if (sourcePricing.leaseTerms) pricing.leaseTerms = sourcePricing.leaseTerms;
+      if (sourcePricing.availableFrom)
+        pricing.availableFrom = new Date(sourcePricing.availableFrom);
+      if (listing.action === 'rent' && sourcePricing.utilitiesIncluded !== undefined)
+        pricing.utilitiesIncluded = Boolean(sourcePricing.utilitiesIncluded);
+      if (sourcePricing.auctionDateTime)
+        pricing.auctionDateTime = new Date(sourcePricing.auctionDateTime);
+      if (sourcePricing.auctionTermsDocumentUrl)
+        pricing.auctionTermsDocumentUrl = sourcePricing.auctionTermsDocumentUrl;
+      if (sourcePricing.negotiable !== undefined)
+        pricing.negotiable = Boolean(sourcePricing.negotiable);
+
+      const pricingContract = buildPricingContract(
+        listing.action,
+        sourcePricing,
+        listing.propertyDetails,
+      );
+      if (pricingContract?.intent === 'sale') {
+        pricing.negotiability = pricingContract.negotiability;
+        pricing.recurringCosts = pricingContract.recurringCosts;
+      }
+      if (pricingContract?.intent === 'rent') {
+        pricing.depositFact = pricingContract.deposit;
+      }
 
       store.setPricing(pricing);
 
@@ -175,25 +215,29 @@ const ListingWizard: React.FC = () => {
         // Also map to basicInfo/additionalInfo if needed, or just rely on propertyDetails
         // The wizard seems to split these, so we might need to map them back if they are stored separately in the store
         // But setPropertyDetails should handle the main ones.
-        // Check if we need to populate additionalInfo for features
-        if ((listing.propertyDetails as any).features) {
-          store.setAdditionalInfo({
-            propertyHighlights: (listing.propertyDetails as any).features || [],
-            // Map other fields if necessary
-          });
+        const savedFeaturesContext = (listing.propertyDetails as any).featuresContext;
+        if (savedFeaturesContext) {
+          store.setAdditionalInfo({ featuresContext: savedFeaturesContext });
         }
       }
 
       // Set location
       store.setLocation({
-        address: listing.address,
-        latitude: Number(listing.latitude),
-        longitude: Number(listing.longitude),
+        address: listing.address || '',
+        latitude: listing.latitude == null ? null : Number(listing.latitude),
+        longitude: listing.longitude == null ? null : Number(listing.longitude),
         city: listing.city,
         suburb: listing.suburb || '',
         province: listing.province,
         postalCode: listing.postalCode || '',
         placeId: listing.placeId || '',
+        provinceId: listing.provinceId ?? null,
+        cityId: listing.cityId ?? null,
+        suburbId: listing.suburbId ?? null,
+        privateAddress: listing.privateAddress || null,
+        coordinateSource: listing.coordinateSource || null,
+        locationConfirmationState: listing.locationConfirmationState || 'needs_confirmation',
+        publicLocationPrecision: listing.publicLocationPrecision || 'approximate',
       });
 
       // Set media
@@ -205,18 +249,43 @@ const ListingWizard: React.FC = () => {
         // This might be tricky if store expects File objects for new uploads
         // But for existing ones, it should handle URL-based media
         listingMedia.forEach((m: any) => {
+          const url = m.url || m.processedUrl || m.previewUrl || m.originalUrl || m.imageUrl;
+          const type = LISTING_MEDIA_TYPES.includes(m.mediaType) ? m.mediaType : 'image';
+          if (!url) return;
+          const presentation = getPresentationMediaDescriptor(
+            listing.propertyDetails?.propertyPresentation,
+            {
+              id: m.id,
+              type,
+              url,
+              originalUrl: m.originalUrl,
+              fileName: m.originalFileName || m.fileName,
+            },
+          );
           store.addMedia({
             id: `existing:${m.id}`,
             file: null as any, // No file object for existing media
-            preview: m.url || m.originalUrl || m.imageUrl,
-            type: m.mediaType,
-            progress: 100,
+            url,
+            type,
+            thumbnailUrl: m.thumbnailUrl || m.thumbnail || undefined,
+            previewUrl: m.previewUrl || undefined,
+            fileName: m.originalFileName || m.fileName || undefined,
+            fileSize: m.originalFileSize || m.fileSize || undefined,
+            width: m.width || undefined,
+            height: m.height || undefined,
+            duration: m.duration || undefined,
+            orientation: m.orientation || undefined,
+            processingStatus: m.processingStatus || 'completed',
+            presentationLabel: presentation.label,
             displayOrder: m.displayOrder,
             isPrimary: Boolean(m.isPrimary),
-            description: '',
           });
 
-          if (m.isPrimary) {
+          if (
+            m.isPrimary &&
+            type === 'image' &&
+            (m.processingStatus || 'completed') === 'completed'
+          ) {
             store.setMainMedia(`existing:${m.id}`);
           }
         });
@@ -517,7 +586,9 @@ const ListingWizard: React.FC = () => {
       case 5:
         return <PricingStep />;
       case 6:
-        return <LocationStep addressHint={sellerProspectPrefill?.propertyLocation?.address || ''} />;
+        return (
+          <LocationStep addressHint={sellerProspectPrefill?.propertyLocation?.address || ''} />
+        );
       case 7:
         return <MediaUploadStep />;
       case 8:
@@ -532,10 +603,10 @@ const ListingWizard: React.FC = () => {
 
   // Step titles for progress indicator
   const stepTitles = [
-    'Action',
+    'Intent',
     'Type',
     'Basic Info',
-    'Additional Info',
+    'Features',
     'Pricing',
     'Location',
     'Media',
@@ -543,8 +614,15 @@ const ListingWizard: React.FC = () => {
   ];
 
   // Generate steps for progress indicator with error highlighting
+  const canAdvanceFromCurrentStep = store.canAdvanceFromStep(store.currentStep);
   const progressSteps = useMemo(() => {
-    const steps = generateSteps(stepTitles, store.currentStep, store.completedSteps);
+    const steps = generateSteps(
+      stepTitles,
+      store.currentStep,
+      store.completedSteps,
+      undefined,
+      canAdvanceFromCurrentStep,
+    );
 
     // Add error counts if validation errors exist
     if (validationErrors && validationErrors.affectedSteps.length > 0) {
@@ -560,12 +638,20 @@ const ListingWizard: React.FC = () => {
     }
 
     return steps;
-  }, [stepTitles, store.currentStep, store.completedSteps, validationErrors]);
+  }, [
+    stepTitles,
+    store.currentStep,
+    store.completedSteps,
+    validationErrors,
+    canAdvanceFromCurrentStep,
+  ]);
 
   // Calculate readiness
   const readiness = useMemo(() => {
     // Map store to listing object expected by readiness calculator
     const listingCandidate = {
+      action: store.action,
+      location: store.location,
       address: store.location?.address,
       latitude: store.location?.latitude,
       longitude: store.location?.longitude,
@@ -575,15 +661,18 @@ const ListingWizard: React.FC = () => {
       description: store.description,
       propertyType: store.propertyType,
       propertyDetails: store.propertyDetails,
+      basicInfo: store.basicInfo,
     };
     return calculateListingReadiness(listingCandidate);
   }, [
+    store.action,
     store.location,
     store.pricing,
     store.media,
     store.description,
     store.propertyType,
     store.propertyDetails,
+    store.basicInfo,
   ]);
 
   const readinessMissingItems = useMemo(() => {
@@ -674,16 +763,16 @@ const ListingWizard: React.FC = () => {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <div className="text-center flex-1">
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                  <h1 className="mb-3 text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent sm:text-4xl">
                     Create New Listing
                   </h1>
-                  <p className="text-gray-600 text-lg">
+                  <p className="text-base text-gray-600 sm:text-lg">
                     Follow the steps to create your property listing
                   </p>
                 </div>
                 {/* Auto-save status indicator */}
                 {store.currentStep > 1 && (
-                  <div className="absolute top-8 right-8 flex items-center gap-4">
+                  <div className="relative mt-4 flex items-center justify-center gap-4 md:absolute md:top-8 md:right-8 md:mt-0 md:justify-end">
                     <div className="bg-white/80 backdrop-blur-md p-1.5 rounded-full shadow-sm">
                       <ReadinessIndicator
                         score={readiness.score}
@@ -747,7 +836,9 @@ const ListingWizard: React.FC = () => {
                   </p>
                 </div>
                 {readinessMissingItems.length === 0 ? (
-                  <p className="mt-3 text-sm text-green-700">All readiness requirements are complete.</p>
+                  <p className="mt-3 text-sm text-green-700">
+                    All readiness requirements are complete.
+                  </p>
                 ) : (
                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                     {readinessMissingItems.map((item, index) => (
@@ -775,7 +866,7 @@ const ListingWizard: React.FC = () => {
                   Previous
                 </Button>
 
-                {/* Save Draft Button */}
+                {/* Local-only draft checkpoint until durable server drafts are implemented. */}
                 <Button
                   variant="outline"
                   onClick={handleSaveDraft}
@@ -785,12 +876,12 @@ const ListingWizard: React.FC = () => {
                   {draftSaved ? (
                     <>
                       <Check className="h-4 w-4" />
-                      Saved
+                      Saved on this device
                     </>
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      {isSavingDraft ? 'Saving...' : 'Save Draft'}
+                      {isSavingDraft ? 'Saving...' : 'Save on this device'}
                     </>
                   )}
                 </Button>
@@ -799,7 +890,7 @@ const ListingWizard: React.FC = () => {
               {store.currentStep < 8 ? (
                 <Button
                   onClick={store.nextStep}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !canAdvanceFromCurrentStep}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
                 >
                   Next

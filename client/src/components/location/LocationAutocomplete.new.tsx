@@ -30,8 +30,8 @@ export interface LocationData {
   place_id: string;
   name: string;
   formatted_address: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   address_components?: {
     province?: string;
     city?: string;
@@ -456,8 +456,8 @@ export function LocationAutocomplete({
           place_id: '', // No place ID for failed geocoding
           name: inputValue,
           formatted_address: inputValue,
-          latitude: 0, // Default coordinates
-          longitude: 0,
+          latitude: null,
+          longitude: null,
           address_components: {},
           gps_accuracy: 'manual',
         };
@@ -476,8 +476,8 @@ export function LocationAutocomplete({
         place_id: '',
         name: inputValue,
         formatted_address: inputValue,
-        latitude: 0,
-        longitude: 0,
+        latitude: null,
+        longitude: null,
         address_components: {},
         gps_accuracy: 'manual',
       };

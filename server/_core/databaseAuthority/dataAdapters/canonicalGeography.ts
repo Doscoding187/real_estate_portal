@@ -2,7 +2,6 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
-  ACCEPTED_MIGRATION_HEAD,
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
@@ -13,23 +12,65 @@ import {
   type AdapterEvidence,
 } from './common';
 
-export const CANONICAL_GEOGRAPHY_VERSION = 'canonical-geography-v1' as const;
+export const CANONICAL_GEOGRAPHY_VERSION = 'canonical-geography-v2' as const;
 
 const PROVINCES = [
-  { code: 'GP', name: 'Gauteng', slug: 'gauteng', latitude: '-26.2708', longitude: '28.1123' },
   {
-    code: 'WC',
-    name: 'Western Cape',
-    slug: 'western-cape',
-    latitude: '-33.2278',
-    longitude: '21.8569',
+    code: 'EC',
+    name: 'Eastern Cape',
+    slug: 'eastern-cape',
+    latitude: '-32.2968',
+    longitude: '26.4194',
   },
+  {
+    code: 'FS',
+    name: 'Free State',
+    slug: 'free-state',
+    latitude: '-28.4541',
+    longitude: '26.7968',
+  },
+  { code: 'GP', name: 'Gauteng', slug: 'gauteng', latitude: '-26.2708', longitude: '28.1123' },
   {
     code: 'KZN',
     name: 'KwaZulu-Natal',
     slug: 'kwazulu-natal',
     latitude: '-29.8587',
     longitude: '31.0218',
+  },
+  {
+    code: 'LP',
+    name: 'Limpopo',
+    slug: 'limpopo',
+    latitude: '-23.4013',
+    longitude: '29.4179',
+  },
+  {
+    code: 'MP',
+    name: 'Mpumalanga',
+    slug: 'mpumalanga',
+    latitude: '-25.5653',
+    longitude: '30.5279',
+  },
+  {
+    code: 'NC',
+    name: 'Northern Cape',
+    slug: 'northern-cape',
+    latitude: '-29.0467',
+    longitude: '21.8569',
+  },
+  {
+    code: 'NW',
+    name: 'North West',
+    slug: 'north-west',
+    latitude: '-26.6639',
+    longitude: '25.2838',
+  },
+  {
+    code: 'WC',
+    name: 'Western Cape',
+    slug: 'western-cape',
+    latitude: '-33.2278',
+    longitude: '21.8569',
   },
 ] as const;
 
@@ -49,6 +90,20 @@ const CITIES = [
     longitude: '28.2293',
   },
   {
+    provinceSlug: 'eastern-cape',
+    name: 'Gqeberha',
+    slug: 'gqeberha',
+    latitude: '-33.9608',
+    longitude: '25.6022',
+  },
+  {
+    provinceSlug: 'free-state',
+    name: 'Bloemfontein',
+    slug: 'bloemfontein',
+    latitude: '-29.0852',
+    longitude: '26.1596',
+  },
+  {
     provinceSlug: 'western-cape',
     name: 'Cape Town',
     slug: 'cape-town',
@@ -62,6 +117,34 @@ const CITIES = [
     latitude: '-29.8587',
     longitude: '31.0218',
   },
+  {
+    provinceSlug: 'limpopo',
+    name: 'Polokwane',
+    slug: 'polokwane',
+    latitude: '-23.8962',
+    longitude: '29.4486',
+  },
+  {
+    provinceSlug: 'mpumalanga',
+    name: 'Mbombela',
+    slug: 'mbombela',
+    latitude: '-25.4753',
+    longitude: '30.9694',
+  },
+  {
+    provinceSlug: 'northern-cape',
+    name: 'Kimberley',
+    slug: 'kimberley',
+    latitude: '-28.7282',
+    longitude: '24.7499',
+  },
+  {
+    provinceSlug: 'north-west',
+    name: 'Rustenburg',
+    slug: 'rustenburg',
+    latitude: '-25.6676',
+    longitude: '27.2421',
+  },
 ] as const;
 
 const SUBURBS = [
@@ -73,6 +156,78 @@ const SUBURBS = [
     latitude: '-26.1076',
     longitude: '28.0567',
   },
+  {
+    citySlug: 'pretoria',
+    name: 'Hatfield',
+    slug: 'hatfield',
+    postalCode: '0083',
+    latitude: '-25.7461',
+    longitude: '28.2353',
+  },
+  {
+    citySlug: 'gqeberha',
+    name: 'Summerstrand',
+    slug: 'summerstrand',
+    postalCode: '6001',
+    latitude: '-34.0067',
+    longitude: '25.6711',
+  },
+  {
+    citySlug: 'bloemfontein',
+    name: 'Universitas',
+    slug: 'universitas',
+    postalCode: '9301',
+    latitude: '-29.1312',
+    longitude: '26.1893',
+  },
+  {
+    citySlug: 'durban',
+    name: 'Umhlanga',
+    slug: 'umhlanga',
+    postalCode: '4319',
+    latitude: '-29.7279',
+    longitude: '31.0852',
+  },
+  {
+    citySlug: 'polokwane',
+    name: 'Bendor',
+    slug: 'bendor',
+    postalCode: '0699',
+    latitude: '-23.8725',
+    longitude: '29.4869',
+  },
+  {
+    citySlug: 'mbombela',
+    name: 'Sonheuwel',
+    slug: 'sonheuwel',
+    postalCode: '1201',
+    latitude: '-25.4655',
+    longitude: '30.9631',
+  },
+  {
+    citySlug: 'kimberley',
+    name: 'Heuwelsig',
+    slug: 'heuwelsig',
+    postalCode: '8301',
+    latitude: '-28.7358',
+    longitude: '24.7504',
+  },
+  {
+    citySlug: 'rustenburg',
+    name: 'Cashan',
+    slug: 'cashan',
+    postalCode: '2999',
+    latitude: '-25.6597',
+    longitude: '27.2472',
+  },
+  {
+    citySlug: 'cape-town',
+    name: 'Sea Point',
+    slug: 'sea-point',
+    postalCode: '8005',
+    latitude: '-33.9213',
+    longitude: '18.3786',
+  },
 ] as const;
 
 const REFERENCE_PAYLOAD = Object.freeze({ provinces: PROVINCES, cities: CITIES, suburbs: SUBURBS });
@@ -82,11 +237,12 @@ export const CANONICAL_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
   cities: CITIES.length,
   suburbs: SUBURBS.length,
 });
+const PROVINCE_SLUG_PLACEHOLDERS = PROVINCES.map(() => '?').join(', ');
 
 export type GeographyReferenceEvidence = AdapterEvidence & {
   expected: { provinces: number; cities: number; suburbs: number };
   verified: { provinces: number; cities: number; suburbs: number };
-  migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+  migrationHead: string;
 };
 
 type RowIdentity = { id: number; name: string; slug: string };
@@ -210,7 +366,7 @@ export async function verifyCanonicalGeographyReferenceData(
        FROM provinces p
        LEFT JOIN cities c ON c.provinceId = p.id
        LEFT JOIN suburbs s ON s.cityId = c.id
-      WHERE p.slug IN (?, ?, ?)
+      WHERE p.slug IN (${PROVINCE_SLUG_PLACEHOLDERS})
       ORDER BY p.slug, c.slug, s.slug`,
     PROVINCES.map(item => item.slug),
   );
@@ -276,7 +432,7 @@ export async function prepareCanonicalGeography(input: {
 }): Promise<GeographyReferenceEvidence> {
   assertOperation(input.decision, ['reference-seed', 'foundation-seed']);
   const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
@@ -309,7 +465,7 @@ export async function prepareCanonicalGeography(input: {
     digest: CANONICAL_GEOGRAPHY_DIGEST,
     expected: CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }
 
@@ -321,7 +477,7 @@ export async function verifyCanonicalGeography(input: {
 }): Promise<GeographyReferenceEvidence> {
   assertOperation(input.decision, ['verification', 'browser-verification', 'readiness']);
   const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
@@ -334,6 +490,6 @@ export async function verifyCanonicalGeography(input: {
     digest: CANONICAL_GEOGRAPHY_DIGEST,
     expected: CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }

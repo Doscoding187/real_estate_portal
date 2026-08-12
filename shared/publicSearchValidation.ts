@@ -18,6 +18,14 @@ interface PublicSearchInputLike {
   listingType?: 'sale' | 'rent';
   minPrice?: number;
   maxPrice?: number;
+  minArea?: number;
+  maxArea?: number;
+  minFloorSize?: number;
+  maxFloorSize?: number;
+  minErfSize?: number;
+  maxErfSize?: number;
+  minLandSize?: number;
+  maxLandSize?: number;
   minLat?: number;
   maxLat?: number;
   minLng?: number;
@@ -49,6 +57,21 @@ export function validatePublicSearchInput(
       path: 'minPrice',
       message: 'Minimum price must be less than or equal to maximum price.',
     };
+  }
+
+  const sizeRanges: Array<[string, number | undefined, number | undefined]> = [
+    ['minArea', input.minArea, input.maxArea],
+    ['minFloorSize', input.minFloorSize, input.maxFloorSize],
+    ['minErfSize', input.minErfSize, input.maxErfSize],
+    ['minLandSize', input.minLandSize, input.maxLandSize],
+  ];
+  for (const [path, minimum, maximum] of sizeRanges) {
+    if (minimum !== undefined && maximum !== undefined && minimum > maximum) {
+      return {
+        path,
+        message: 'Minimum size must be less than or equal to maximum size.',
+      };
+    }
   }
 
   const bounds = [input.minLat, input.maxLat, input.minLng, input.maxLng];

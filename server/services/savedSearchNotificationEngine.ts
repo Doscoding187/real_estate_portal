@@ -220,8 +220,10 @@ function normalizeSavedSearchCriteria(criteria: Record<string, unknown>): Normal
     minBedrooms: toNumber(criteria.minBedrooms),
     maxBedrooms: toNumber(criteria.maxBedrooms),
     minBathrooms: toNumber(criteria.minBathrooms),
-    minErfSize: toNumber(criteria.minErfSize ?? criteria.minLandSize),
-    maxErfSize: toNumber(criteria.maxErfSize ?? criteria.maxLandSize),
+    minErfSize: toNumber(criteria.minErfSize),
+    maxErfSize: toNumber(criteria.maxErfSize),
+    minLandSize: toNumber(criteria.minLandSize),
+    maxLandSize: toNumber(criteria.maxLandSize),
     minFloorSize: toNumber(criteria.minFloorSize ?? criteria.minArea),
     maxFloorSize: toNumber(criteria.maxFloorSize ?? criteria.maxArea),
     titleType: (() => {

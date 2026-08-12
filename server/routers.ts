@@ -35,6 +35,8 @@ import { priceInsightsRouter } from './priceInsightsRouter';
 import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
+import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
+import { resolveApprovedPublicProperty } from './services/approvedPublicPropertyService';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -74,10 +76,6 @@ function parseTextList(value?: string | null) {
 
 function isPublicPropertyStatus(status: unknown): boolean {
   return status === 'available' || status === 'published';
-}
-
-function isPublicListingStatus(status: unknown, approvalStatus?: unknown): boolean {
-  return (status === 'published' || status === 'approved') && approvalStatus === 'approved';
 }
 
 async function getPropertyContactAgent(
@@ -419,6 +417,12 @@ const appRouterConfig = {
           minBathrooms: z.number().optional(), // Added
           minArea: z.number().optional(),
           maxArea: z.number().optional(),
+          minErfSize: z.number().nonnegative().optional(),
+          maxErfSize: z.number().nonnegative().optional(),
+          minFloorSize: z.number().nonnegative().optional(),
+          maxFloorSize: z.number().nonnegative().optional(),
+          minLandSize: z.number().nonnegative().optional(),
+          maxLandSize: z.number().nonnegative().optional(),
           status: z.enum(['available', 'sold', 'rented', 'pending']).optional(),
           ownershipType: z.array(z.enum(OWNERSHIP_TYPES)).optional(),
           structuralType: z.array(z.enum(STRUCTURAL_TYPES)).optional(),
@@ -453,8 +457,12 @@ const appRouterConfig = {
           minBedrooms: input.minBedrooms,
           maxBedrooms: input.maxBedrooms,
           minBathrooms: input.minBathrooms,
-          minErfSize: input.minArea, // Map area to erfSize/floorSize as generic size filter
-          maxErfSize: input.maxArea,
+          minErfSize: input.minErfSize,
+          maxErfSize: input.maxErfSize,
+          minFloorSize: input.minFloorSize ?? input.minArea,
+          maxFloorSize: input.maxFloorSize ?? input.maxArea,
+          minLandSize: input.minLandSize,
+          maxLandSize: input.maxLandSize,
           status: input.status ? [input.status as any] : undefined, // Service expects array
           amenities: input.amenities, // Note: Service might need update if it processes amenities differently, but looks okay
           // postedBy handling might differ or need explicit mapping if service supports it
@@ -545,19 +553,7 @@ const appRouterConfig = {
             locationIds: z.array(z.string().trim().max(128)).max(10).optional(),
             searchAreaId: z.string().trim().max(120).optional(),
             searchAreaIds: z.array(z.string().trim().max(120)).max(10).optional(),
-            propertyType: z
-              .enum([
-                'apartment',
-                'house',
-                'villa',
-                'plot',
-                'commercial',
-                'townhouse',
-                'cluster_home',
-                'farm',
-                'shared_living',
-              ])
-              .optional(),
+            propertyType: z.enum(PUBLIC_PROPERTY_TYPES).optional(),
             listingType: z.enum(['sale', 'rent']).optional(),
             listingSource: z.enum(['manual', 'development']).optional(),
             minPrice: z.number().nonnegative().optional(),
@@ -568,6 +564,12 @@ const appRouterConfig = {
             maxBathrooms: z.number().nonnegative().optional(),
             minArea: z.number().nonnegative().optional(),
             maxArea: z.number().nonnegative().optional(),
+            minFloorSize: z.number().nonnegative().optional(),
+            maxFloorSize: z.number().nonnegative().optional(),
+            minErfSize: z.number().nonnegative().optional(),
+            maxErfSize: z.number().nonnegative().optional(),
+            minLandSize: z.number().nonnegative().optional(),
+            maxLandSize: z.number().nonnegative().optional(),
             minLat: z.number().optional(),
             maxLat: z.number().optional(),
             minLng: z.number().optional(),
@@ -704,7 +706,8 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        return await db.getFeaturedListings(input.limit);
+        const { propertySearchService } = await import('./services/propertySearchService');
+        return await propertySearchService.searchFeaturedProperties(input.limit);
       }),
 
     // Get filter counts for search refinement
@@ -832,12 +835,19 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        return await db.searchListings({
-          city: input.city,
-          propertyType: input.propertyType as any,
-          limit: input.limit,
-          offset: input.offset,
-        });
+        const { propertySearchService } = await import('./services/propertySearchService');
+        const pageSize = Math.max(1, Math.min(50, Math.floor(input.limit)));
+        const page = Math.floor(Math.max(0, input.offset) / pageSize) + 1;
+        const results = await propertySearchService.searchProperties(
+          {
+            city: input.city,
+            propertyType: input.propertyType ? [input.propertyType as any] : undefined,
+          },
+          'date_desc',
+          page,
+          pageSize,
+        );
+        return results.properties;
       }),
 
     getById: publicProcedure
@@ -847,91 +857,14 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        const drizzleDb = await getDb();
-
-        // Public property detail routes are keyed by properties.id. Listing data may enrich
-        // the mirror through sourceListingId, but listings.id must never hijack /property/:id.
-        const property = await db.getPropertyById(input.id);
-        if (!property || !isPublicPropertyStatus((property as any).status)) {
+        const approvedPublicProperty = await resolveApprovedPublicProperty(input.id);
+        if (!approvedPublicProperty) {
           return { property: null, images: [] };
         }
 
         await db.incrementPropertyViews(input.id);
-
-        const rawImages = await db.getPropertyImages(input.id);
-
-        const linkedListingId = Number((property as any).sourceListingId || 0);
-        const linkedListing =
-          Number.isFinite(linkedListingId) && linkedListingId > 0
-            ? await db.getListingById(linkedListingId)
-            : null;
-        const publicLinkedListing =
-          linkedListing &&
-          isPublicListingStatus(
-            (linkedListing as any).status,
-            (linkedListing as any).approvalStatus,
-          )
-            ? linkedListing
-            : null;
-        const linkedListingMedia = publicLinkedListing
-          ? await db.getListingMedia(linkedListingId)
-          : [];
-        const linkedPropertyDetails = publicLinkedListing
-          ? (publicLinkedListing.propertyDetails as any) || {}
-          : {};
-
-        const bucketName = ENV.s3BucketName || 'listify-properties-sa';
-        const awsRegion = ENV.awsRegion || 'eu-north-1';
-        const cdnUrl = ENV.cloudFrontUrl || `https://${bucketName}.s3.${awsRegion}.amazonaws.com`;
-
-        const propertyImages = rawImages.map(img => {
-          const imageUrl = img.imageUrl.startsWith('http')
-            ? img.imageUrl
-            : `${cdnUrl}/${img.imageUrl}`;
-          return {
-            ...img,
-            imageUrl,
-            url: imageUrl,
-          };
-        });
-
-        const listingImages = linkedListingMedia.map(img => {
-          const rawUrl = (img as any).originalUrl || (img as any).url || '';
-          const imageUrl = rawUrl.startsWith('http') ? rawUrl : `${cdnUrl}/${rawUrl}`;
-          return {
-            id: img.id,
-            imageUrl,
-            url: imageUrl,
-            isPrimary: img.isPrimary,
-            displayOrder: img.displayOrder,
-          };
-        });
-
-        const images = listingImages.length > 0 ? listingImages : propertyImages;
-
-        let amenities: string[] = [];
-        try {
-          if (typeof property.amenities === 'string' && !property.amenities.startsWith('[')) {
-            amenities.push(property.amenities);
-          } else if (typeof property.amenities === 'string') {
-            amenities = [...amenities, ...JSON.parse(property.amenities)];
-          }
-
-          if (property.propertySettings) {
-            const settings =
-              typeof property.propertySettings === 'string'
-                ? JSON.parse(property.propertySettings)
-                : property.propertySettings;
-
-            if (settings.propertyHighlights && Array.isArray(settings.propertyHighlights)) {
-              amenities = [...amenities, ...settings.propertyHighlights];
-            }
-          }
-        } catch (e) {
-          console.error('Failed to parse legacy amenities', e);
-        }
-
-        const uniqueAmenities = Array.from(new Set(amenities));
+        const property = approvedPublicProperty.property;
+        const drizzleDb = await getDb();
 
         let development: any = null;
         let developerBrand: any = null;
@@ -1026,138 +959,18 @@ const appRouterConfig = {
           }
         }
 
-        const linkedPrice =
-          Number((publicLinkedListing as any)?.askingPrice || 0) ||
-          Number((publicLinkedListing as any)?.monthlyRent || 0) ||
-          Number((publicLinkedListing as any)?.startingBid || 0) ||
-          0;
-
-        const resolvedPrice = Number((property as any).price || 0) || linkedPrice || 0;
-
-        const resolvedListingType =
-          (property as any).listingType ||
-          (property as any).transactionType ||
-          (publicLinkedListing as any)?.action ||
-          'sale';
-
-        const resolvedBedrooms =
-          Number((property as any).bedrooms || 0) ||
-          Number(linkedPropertyDetails.bedrooms || 0) ||
-          0;
-
-        const resolvedBathrooms =
-          Number((property as any).bathrooms || 0) ||
-          Number(linkedPropertyDetails.bathrooms || 0) ||
-          0;
-
-        const resolvedArea =
-          Number((property as any).area || 0) ||
-          Number(linkedPropertyDetails.erfSizeM2 || 0) ||
-          Number(linkedPropertyDetails.unitSizeM2 || 0) ||
-          Number(linkedPropertyDetails.houseAreaM2 || 0) ||
-          Number(linkedPropertyDetails.landSizeM2OrHa || 0) ||
-          0;
-
-        const linkedAmenities =
-          linkedPropertyDetails.amenitiesFeatures ||
-          linkedPropertyDetails.amenities ||
-          linkedPropertyDetails.propertyHighlights ||
-          [];
-
-        const normalizedPropertySettings = {
-          ...(typeof (property as any).propertySettings === 'string'
-            ? (() => {
-                try {
-                  return JSON.parse((property as any).propertySettings);
-                } catch {
-                  return {};
-                }
-              })()
-            : (property as any).propertySettings || {}),
-          ownershipType: linkedPropertyDetails.ownershipType,
-          powerBackup: linkedPropertyDetails.powerBackup,
-          security: linkedPropertyDetails.security || linkedPropertyDetails.securityLevel,
-          securityFeatures: linkedPropertyDetails.securityFeatures,
-          waterSupply: linkedPropertyDetails.waterSupply,
-          internetAccess: linkedPropertyDetails.internetAccess,
-          flooring: linkedPropertyDetails.flooring,
-          parkingType: linkedPropertyDetails.parkingType,
-          petFriendly: linkedPropertyDetails.petFriendly,
-          electricitySupply: linkedPropertyDetails.electricitySupply,
-          additionalRooms: linkedPropertyDetails.additionalRooms,
+        const publicProperty: Record<string, any> = {
+          ...property,
+          listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
+          development: development || undefined,
+          developerBrand: developerBrand || undefined,
+          agent: agent || undefined,
         };
-
-        const normalizedPropertyDetails = {
-          ...(typeof (property as any).propertyDetails === 'string'
-            ? (() => {
-                try {
-                  return JSON.parse((property as any).propertyDetails);
-                } catch {
-                  return {};
-                }
-              })()
-            : (property as any).propertyDetails || {}),
-          ...linkedPropertyDetails,
-          bedrooms: resolvedBedrooms,
-          bathrooms: resolvedBathrooms,
-          area: resolvedArea,
-        };
-
-        const resolvedMainImage =
-          images.find(img => Number(img.isPrimary) === 1)?.imageUrl ||
-          images[0]?.imageUrl ||
-          (property as any).mainImage ||
-          '';
 
         return {
-          property: {
-            ...property,
-            ...(publicLinkedListing
-              ? {
-                  sourceListing: {
-                    id: publicLinkedListing.id,
-                    slug: (publicLinkedListing as any).slug,
-                    action: (publicLinkedListing as any).action,
-                  },
-                }
-              : {}),
-            sourceType: publicLinkedListing ? 'property_mirror_listing' : 'property',
-            sourceListingId: linkedListingId || (property as any).sourceListingId,
-            title: (property as any).title || (publicLinkedListing as any)?.title,
-            description: (property as any).description || (publicLinkedListing as any)?.description,
-            price: resolvedPrice,
-            displayPrice: resolvedPrice,
-            listingType: resolvedListingType,
-            transactionType: resolvedListingType,
-            propertyType:
-              (property as any).propertyType || (publicLinkedListing as any)?.propertyType,
-            bedrooms: resolvedBedrooms,
-            bathrooms: resolvedBathrooms,
-            area: resolvedArea,
-            unitSizeM2: linkedPropertyDetails.unitSizeM2,
-            erfSizeM2: linkedPropertyDetails.erfSizeM2,
-            suburb: (publicLinkedListing as any)?.suburb || (property as any).suburb || undefined,
-            city: (publicLinkedListing as any)?.city || (property as any).city || undefined,
-            province:
-              (publicLinkedListing as any)?.province || (property as any).province || undefined,
-            address:
-              (publicLinkedListing as any)?.address || (property as any).address || undefined,
-            zipCode:
-              (publicLinkedListing as any)?.postalCode || (property as any).zipCode || undefined,
-            latitude: (publicLinkedListing as any)?.latitude || (property as any).latitude,
-            longitude: (publicLinkedListing as any)?.longitude || (property as any).longitude,
-            amenities: uniqueAmenities.length > 0 ? uniqueAmenities : linkedAmenities,
-            features: linkedPropertyDetails.propertyHighlights || linkedAmenities,
-            propertySettings: normalizedPropertySettings,
-            propertyDetails: normalizedPropertyDetails,
-            mainImage: resolvedMainImage,
-            listingSource: 'manual',
-            listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
-            development: development || undefined,
-            developerBrand: developerBrand || undefined,
-            agent: agent || undefined,
-          },
-          images,
+          property: publicProperty,
+          images: approvedPublicProperty.images,
+          media: approvedPublicProperty.media,
         };
       }),
 
@@ -1278,6 +1091,14 @@ const appRouterConfig = {
           throw new Error('Unauthorized');
         }
 
+        if (property.sourceListingId != null) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message:
+              'Listing-backed public properties are read-only. Update the source listing through the canonical listing workflow.',
+          });
+        }
+
         // Update property
         await db.updateProperty(
           input.id,
@@ -1307,7 +1128,15 @@ const appRouterConfig = {
           throw new Error('Unauthorized');
         }
 
-        // Delete property
+        if (property.sourceListingId != null) {
+          // A public property is a projection of its authored listing. Preserve
+          // the source and durable history by routing removal through the
+          // canonical archive lifecycle instead of deleting the projection.
+          await db.archiveListing(Number(property.sourceListingId));
+          return { success: true, status: 'archived' as const };
+        }
+
+        // Unlinked historical properties retain their legacy deletion path.
         await db.deleteProperty(input.id, user.id, user.role ?? undefined);
 
         return { success: true };

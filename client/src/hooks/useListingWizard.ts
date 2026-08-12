@@ -9,6 +9,7 @@ import { persist } from 'zustand/middleware';
 import type {
   ListingWizardState,
   ListingAction,
+  ListingIntent,
   PropertyType,
   PricingFields,
   PropertyDetails,
@@ -17,17 +18,35 @@ import type {
   ValidationError,
   ListingBadge,
 } from '../../../shared/listing-types';
+import { listingActionToIntent, listingIntentToAction } from '../../../shared/listing-types';
+import {
+  retainCorePropertyInformationForType,
+  validateCorePropertyInformation,
+} from '../../../shared/core-property-information';
+import { buildFeaturesContextFromWizardState } from '../../../shared/features-context';
+import { validatePricingContract } from '../../../shared/pricing-contract';
+import {
+  coordinatePairSchema,
+  validateManualLocationEvidence,
+} from '../../../shared/location-contract';
+import {
+  getPrimaryListingImage,
+  isCompletedListingImage,
+  normalizeListingMediaPrimary,
+} from '../../../shared/listing-media';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
 interface ListingWizardStore extends ListingWizardState {
   // Navigation
   goToStep: (step: number) => void;
-  nextStep: () => void;
+  nextStep: () => boolean;
   prevStep: () => void;
   markStepComplete: (step: number) => void;
+  canAdvanceFromStep: (step: number) => boolean;
 
-  // Step 1: Action
+  // Step 1: Listing intent (mapped to the legacy action transport field)
+  setListingIntent: (intent: ListingIntent) => void;
   setAction: (action: ListingAction) => void;
 
   // Step 1.5: Badges
@@ -93,6 +112,128 @@ const initialState: ListingWizardState = {
   status: 'draft',
 };
 
+type WizardNavigationState = Pick<
+  ListingWizardState,
+  | 'action'
+  | 'propertyType'
+  | 'title'
+  | 'description'
+  | 'pricing'
+  | 'propertyDetails'
+  | 'basicInfo'
+  | 'location'
+  | 'media'
+  | 'mainMediaId'
+>;
+
+export function getLocationValidationIssues(
+  state: Pick<WizardNavigationState, 'propertyType' | 'location'>,
+): string[] {
+  const location = state.location;
+  if (!location) return ['Enter the property location.'];
+
+  const issues = validateManualLocationEvidence({
+    propertyType: state.propertyType,
+    discovery: {
+      provinceId: location.provinceId ?? null,
+      cityId: location.cityId ?? null,
+      suburbId: location.suburbId ?? null,
+    },
+    privateAddress: location.privateAddress ?? null,
+  });
+
+  const hasLatitude = location.latitude !== null && location.latitude !== undefined;
+  const hasLongitude = location.longitude !== null && location.longitude !== undefined;
+  if (hasLatitude !== hasLongitude) {
+    issues.push('Enter both map coordinates or leave them blank.');
+  } else if (hasLatitude && hasLongitude) {
+    const coordinates = coordinatePairSchema.safeParse({
+      latitude: location.latitude,
+      longitude: location.longitude,
+    });
+    if (!coordinates.success) {
+      issues.push(coordinates.error.issues[0]?.message || 'Enter a valid map location.');
+    }
+  }
+
+  if (location.locationConfirmationState !== 'confirmed') {
+    issues.push('Confirm the current location before continuing.');
+  }
+
+  return issues;
+}
+
+const retainFeaturesForState = (
+  additionalInfo: unknown,
+  propertyDetails: unknown,
+  intent: ListingIntent | undefined,
+  propertyType: PropertyType | undefined,
+) => {
+  if (!propertyType) return undefined;
+  const context = buildFeaturesContextFromWizardState(
+    additionalInfo,
+    propertyDetails,
+    intent,
+    propertyType,
+  );
+  return { featuresContext: context };
+};
+
+/**
+ * The wizard shell owns forward-navigation prerequisites. Individual steps
+ * still own their detailed validation, but the shell must never let a user
+ * bypass a required step by clicking Next or a future progress step.
+ */
+export const canAdvanceFromStep = (state: WizardNavigationState, step: number): boolean => {
+  switch (step) {
+    case 1:
+      // Auction remains a legacy transport value, not a current Step 1 intent.
+      return state.action === 'sell' || state.action === 'rent';
+    case 2:
+      return Boolean(state.propertyType);
+    case 3:
+      return (
+        state.title.trim().length >= 10 &&
+        state.description.trim().length >= 50 &&
+        validateCorePropertyInformation(
+          listingActionToIntent(state.action),
+          state.propertyType,
+          state.propertyDetails,
+          state.basicInfo,
+        ).length === 0
+      );
+    case 4:
+      // Additional information is conditional and may be empty for MVP.
+      return true;
+    case 5: {
+      const pricing = state.pricing as Record<string, unknown> | undefined;
+      if (!pricing) return false;
+      if (state.action === 'sell' || state.action === 'rent') {
+        return (
+          validatePricingContract(state.action, pricing, state.propertyDetails, {
+            mode: 'publish',
+            enforceInputShape: true,
+          }).length === 0
+        );
+      }
+      // Preserve the legacy auction shape for already-loaded records without
+      // making it selectable from the current authoring journey.
+      return (
+        typeof pricing.startingBid === 'number' &&
+        Number.isFinite(pricing.startingBid) &&
+        pricing.startingBid > 0
+      );
+    }
+    case 6: {
+      return getLocationValidationIssues(state).length === 0;
+    }
+    case 7:
+      return Boolean(getPrimaryListingImage(state.media, state.mainMediaId));
+    default:
+      return false;
+  }
+};
+
 export const useListingWizardStore = create<ListingWizardStore>()(
   persist(
     (set, get) => ({
@@ -100,15 +241,47 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Navigation
       goToStep: step => {
-        const maxStep = Math.max(...get().completedSteps, get().currentStep);
-        if (step <= maxStep + 1) {
+        const state = get();
+        const current = state.currentStep;
+
+        if (step < 1 || step > 8) return;
+
+        // Backward navigation remains freely available.
+        if (step <= current) {
           set({ currentStep: step });
+          return;
+        }
+
+        const completedPrerequisites = Array.from(
+          { length: step - 1 },
+          (_, index) => index + 1,
+        ).every(prerequisite => state.completedSteps.includes(prerequisite));
+        const canOpenCompletedStep = state.completedSteps.includes(step) && completedPrerequisites;
+        const canOpenNextStep = step === current + 1 && canAdvanceFromStep(state, current);
+
+        if (canOpenCompletedStep || canOpenNextStep) {
+          set({
+            currentStep: step,
+            completedSteps: canOpenNextStep
+              ? Array.from(new Set([...state.completedSteps, current])).sort((a, b) => a - b)
+              : state.completedSteps,
+          });
         }
       },
 
       nextStep: () => {
-        const current = get().currentStep;
-        set({ currentStep: current + 1 });
+        const state = get();
+        const current = state.currentStep;
+
+        if (current >= 8 || !canAdvanceFromStep(state, current)) return false;
+
+        set({
+          currentStep: current + 1,
+          completedSteps: Array.from(new Set([...state.completedSteps, current])).sort(
+            (a, b) => a - b,
+          ),
+        });
+        return true;
       },
 
       prevStep: () => {
@@ -118,6 +291,8 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
       },
 
+      canAdvanceFromStep: step => canAdvanceFromStep(get(), step),
+
       markStepComplete: step => {
         const completed = get().completedSteps;
         if (!completed.includes(step)) {
@@ -125,11 +300,34 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
       },
 
-      // Step 1: Action
+      // Step 1: Listing intent
+      setListingIntent: intent => {
+        const state = get();
+        set({
+          action: listingIntentToAction(intent),
+          pricing: undefined,
+          additionalInfo: retainFeaturesForState(
+            state.additionalInfo,
+            state.propertyDetails,
+            intent,
+            state.propertyType,
+          ),
+        });
+      },
+
+      // Legacy/API transport compatibility
       setAction: action => {
-        set({ action });
-        // Clear pricing when action changes
-        set({ pricing: undefined });
+        const state = get();
+        set({
+          action,
+          pricing: undefined,
+          additionalInfo: retainFeaturesForState(
+            state.additionalInfo,
+            state.propertyDetails,
+            listingActionToIntent(action),
+            state.propertyType,
+          ),
+        });
       },
 
       // Step 1.5: Badges
@@ -139,9 +337,33 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Step 2: Property Type
       setPropertyType: propertyType => {
-        set({ propertyType });
-        // Clear property details when type changes
-        set({ propertyDetails: undefined });
+        const state = get();
+        if (state.propertyType === propertyType) return;
+
+        const retainedCore = retainCorePropertyInformationForType(
+          state.propertyType,
+          propertyType,
+          state.propertyDetails,
+          state.basicInfo,
+        );
+
+        set({
+          propertyType,
+          // Keep only facts whose semantics survive the type change. The
+          // canonical Step 3 object owns invalidation; legacy flat fields are
+          // never allowed to carry an area or farm fact into another type.
+          propertyDetails: retainedCore
+            ? ({ corePropertyInformation: retainedCore } as Partial<PropertyDetails>)
+            : undefined,
+          additionalInfo: retainFeaturesForState(
+            state.additionalInfo,
+            retainedCore ? { corePropertyInformation: retainedCore } : undefined,
+            listingActionToIntent(state.action),
+            propertyType,
+          ),
+          basicInfo: undefined,
+          badges: [],
+        });
       },
 
       // Basic Info
@@ -191,15 +413,46 @@ export const useListingWizardStore = create<ListingWizardStore>()(
 
       // Step 4: Location
       setLocation: location => {
-        set({ location });
+        const previous = get().location;
+        const materiallyChanged = previous
+          ? [
+              previous.address !== location.address,
+              previous.city !== location.city,
+              previous.suburb !== location.suburb,
+              previous.province !== location.province,
+              previous.postalCode !== location.postalCode,
+              previous.latitude !== location.latitude,
+              previous.longitude !== location.longitude,
+              previous.provinceId !== location.provinceId,
+              previous.cityId !== location.cityId,
+              previous.suburbId !== location.suburbId,
+              JSON.stringify(previous.privateAddress ?? null) !==
+                JSON.stringify(location.privateAddress ?? null),
+              previous.providerLocationPlaceId !== location.providerLocationPlaceId,
+            ].some(Boolean)
+          : false;
+        const nextLocation =
+          materiallyChanged && location.locationConfirmationState === undefined
+            ? {
+                ...location,
+                coordinateSource: null,
+                locationConfirmationState: 'needs_confirmation' as const,
+              }
+            : location;
+        set({ location: nextLocation });
         get().removeError('location');
       },
 
       // Step 5: Media
       addMedia: media => {
         const currentMedia = get().media;
+        const normalized = normalizeListingMediaPrimary(
+          [...currentMedia, { ...media, displayOrder: currentMedia.length }],
+          get().mainMediaId,
+        );
         set({
-          media: [...currentMedia, { ...media, displayOrder: currentMedia.length }],
+          media: normalized.media as MediaFile[],
+          mainMediaId: normalized.primaryId,
         });
       },
 
@@ -211,13 +464,15 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           ...m,
           displayOrder: i,
         }));
-        set({ media: reorderedMedia });
+        const normalized = normalizeListingMediaPrimary(reorderedMedia, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       updateMedia: (index, updates) => {
         const currentMedia = get().media;
         const newMedia = currentMedia.map((m, i) => (i === index ? { ...m, ...updates } : m));
-        set({ media: newMedia });
+        const normalized = normalizeListingMediaPrimary(newMedia, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       reorderMedia: (fromIndex, toIndex) => {
@@ -232,28 +487,23 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           displayOrder: i,
         }));
 
-        set({ media: reorderedMedia });
+        const normalized = normalizeListingMediaPrimary(reorderedMedia, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       setMedia: media => {
-        set({ media });
+        const normalized = normalizeListingMediaPrimary(media, get().mainMediaId);
+        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
       },
 
       setMainMedia: mediaId => {
         const media = get().media;
         const mainMedia = media.find(m => m.id === mediaId);
 
-        if (mainMedia) {
+        if (mainMedia && isCompletedListingImage(mainMedia)) {
           // Update all media to mark only one as primary
-          const updatedMedia = media.map(m => ({
-            ...m,
-            isPrimary: m.id === mediaId,
-          }));
-
-          set({
-            media: updatedMedia,
-            mainMediaId: mediaId,
-          });
+          const normalized = normalizeListingMediaPrimary(media, mediaId);
+          set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
         }
       },
 
@@ -304,11 +554,23 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         }
 
         if (state.currentStep >= 3) {
-          // Step 3 is Listing Badges - no required fields
+          const coreIssues = validateCorePropertyInformation(
+            listingActionToIntent(state.action),
+            state.propertyType,
+            state.propertyDetails,
+            state.basicInfo,
+          );
+          errors.push(
+            ...coreIssues.map(issue => ({
+              field: `propertyDetails.${issue.field}`,
+              message: issue.message,
+            })),
+          );
         }
 
         if (state.currentStep >= 4) {
-          // Step 4 is Property Details - no required fields at step level
+          // Additional Information remains conditional and optional for this
+          // bounded core-facts slice.
         }
 
         if (state.currentStep >= 5) {
@@ -328,23 +590,34 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           // Step 6 is Pricing Details - validate pricing information
           if (!state.pricing) {
             errors.push({ field: 'pricing', message: 'Please provide pricing information' });
+          } else if (state.action === 'sell' || state.action === 'rent') {
+            const pricingIssues = validatePricingContract(
+              state.action,
+              state.pricing as Record<string, unknown>,
+              state.propertyDetails,
+              { mode: 'publish', enforceInputShape: true },
+            );
+            errors.push(...pricingIssues);
           }
         }
 
         if (state.currentStep >= 7) {
-          // Step 7 is Location - validate location information
-          if (!state.location) {
-            errors.push({ field: 'location', message: 'Please provide location information' });
-          }
+          errors.push(
+            ...getLocationValidationIssues(state).map(message => ({
+              field: 'location',
+              message,
+            })),
+          );
         }
 
         if (state.currentStep >= 8) {
           // Step 8 is Media Upload - validate media requirements
-          if (state.media.length === 0) {
-            errors.push({ field: 'media', message: 'Please upload at least one image or video' });
-          }
-          if (!state.mainMediaId) {
-            errors.push({ field: 'mainMedia', message: 'Please select a main media item' });
+          if (!getPrimaryListingImage(state.media, state.mainMediaId)) {
+            errors.push({ field: 'media', message: 'Please upload at least one completed image' });
+            errors.push({
+              field: 'mainMedia',
+              message: 'Please select a completed image as the main media',
+            });
           }
         }
 

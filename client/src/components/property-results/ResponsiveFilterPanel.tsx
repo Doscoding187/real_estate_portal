@@ -75,7 +75,6 @@ export function ResponsiveFilterPanel({
     if (filters.propertyType?.length) count++;
     if (filters.titleType?.length) count++;
     if (filters.minPrice || filters.maxPrice) count++;
-    if (filters.maxLevy) count++;
     if (filters.minBedrooms) count++;
     if (filters.minErfSize || filters.maxErfSize) count++;
     if (filters.minFloorSize || filters.maxFloorSize) count++;

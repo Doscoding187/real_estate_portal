@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0003_paid_launch_access_invoice_term.sql",
+  "expectedHead": "0007_paid_launch_access_invoice_term.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -28,19 +28,62 @@
     },
     {
       "sequence": 2,
-      "filename": "0002_development_supersessions.sql",
-      "checksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
+      "filename": "0002_canonical_property_taxonomy.sql",
+      "checksum": "a0ac7ae582fa0b1910211bc20d99ba13064e74ac00d3413681b77a1476808801",
       "parent": "0001_public_search_to_lead_reliability.sql",
       "parentChecksum": "adb04a6e5655e4812ddd594d2b85cb5b218c6f54cb2fc0c029ecdc76325da5a0",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "PLE-2B-2026-08-08-Edward"
+    },
+    {
+      "sequence": 3,
+      "filename": "0003_canonical_property_measurements.sql",
+      "checksum": "773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c",
+      "parent": "0002_canonical_property_taxonomy.sql",
+      "parentChecksum": "a0ac7ae582fa0b1910211bc20d99ba13064e74ac00d3413681b77a1476808801",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
     },
     {
-      "sequence": 3,
-      "filename": "0003_paid_launch_access_invoice_term.sql",
+      "sequence": 4,
+      "filename": "0004_canonical_listing_location.sql",
+      "checksum": "b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe",
+      "parent": "0003_canonical_property_measurements.sql",
+      "parentChecksum": "773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "PLE-6B-2026-08-10-Edward"
+    },
+    {
+      "sequence": 5,
+      "filename": "0005_manual_location_without_coordinates.sql",
+      "checksum": "8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b",
+      "parent": "0004_canonical_listing_location.sql",
+      "parentChecksum": "b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "PLE-6C-2026-08-10-Edward"
+    },
+    {
+      "sequence": 6,
+      "filename": "0006_development_supersessions.sql",
+      "checksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
+      "parent": "0005_manual_location_without_coordinates.sql",
+      "parentChecksum": "8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 7,
+      "filename": "0007_paid_launch_access_invoice_term.sql",
       "checksum": "84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46",
-      "parent": "0002_development_supersessions.sql",
+      "parent": "0006_development_supersessions.sql",
       "parentChecksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
       "kind": "ddl",
       "statementPolicy": "single-ddl",

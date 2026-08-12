@@ -3,6 +3,7 @@ import {
   mysqlSchema,
   AnyMySqlColumn,
   index,
+  check,
   unique,
   foreignKey,
   int,
@@ -34,8 +35,15 @@ export const provinces = mysqlTable(
     placeId: varchar('place_id', { length: 255 }),
     seoTitle: varchar('seo_title', { length: 255 }),
     seoDescription: text('seo_description'),
+    status: mysqlEnum('status', ['verified', 'provisional', 'retired'])
+      .default('verified')
+      .notNull(),
+    origin: mysqlEnum('origin', ['internal', 'provider', 'manual']).default('internal').notNull(),
   },
-  table => [index('idx_province_slug').on(table.slug)],
+  table => [
+    index('idx_province_slug').on(table.slug),
+    index('idx_provinces_status').on(table.status),
+  ],
 );
 
 export const cities = mysqlTable(
@@ -55,8 +63,12 @@ export const cities = mysqlTable(
     placeId: varchar('place_id', { length: 255 }),
     seoTitle: varchar('seo_title', { length: 255 }),
     seoDescription: text('seo_description'),
+    status: mysqlEnum('status', ['verified', 'provisional', 'retired'])
+      .default('verified')
+      .notNull(),
+    origin: mysqlEnum('origin', ['internal', 'provider', 'manual']).default('internal').notNull(),
   },
-  table => [index('idx_city_slug').on(table.slug)],
+  table => [index('idx_city_slug').on(table.slug), index('idx_cities_status').on(table.status)],
 );
 
 export const suburbs = mysqlTable(
@@ -73,8 +85,44 @@ export const suburbs = mysqlTable(
     createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     slug: varchar({ length: 100 }),
+    status: mysqlEnum('status', ['verified', 'provisional', 'retired'])
+      .default('verified')
+      .notNull(),
+    origin: mysqlEnum('origin', ['internal', 'provider', 'manual']).default('internal').notNull(),
   },
-  table => [index('idx_suburb_slug').on(table.slug)],
+  table => [index('idx_suburb_slug').on(table.slug), index('idx_suburbs_status').on(table.status)],
+);
+
+export const locationProviderMappings = mysqlTable(
+  'location_provider_mappings',
+  {
+    id: int().autoincrement().primaryKey(),
+    provider: varchar({ length: 32 }).notNull(),
+    providerPlaceId: varchar('provider_place_id', { length: 255 }).notNull(),
+    providerLabel: varchar('provider_label', { length: 255 }).notNull(),
+    normalizedAlias: varchar('normalized_alias', { length: 255 }).notNull(),
+    provinceId: int('province_id').references(() => provinces.id, { onDelete: 'restrict' }),
+    cityId: int('city_id').references(() => cities.id, { onDelete: 'restrict' }),
+    suburbId: int('suburb_id').references(() => suburbs.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('location_provider_mappings_provider_place_uq').on(
+      table.provider,
+      table.providerPlaceId,
+    ),
+    check(
+      'location_provider_mappings_exactly_one_target',
+      sql.raw(
+        '(((`province_id` IS NOT NULL) + (`city_id` IS NOT NULL)) + (`suburb_id` IS NOT NULL)) = 1',
+      ),
+    ),
+    index('idx_location_provider_mappings_alias').on(table.provider, table.normalizedAlias),
+    index('idx_location_provider_mappings_province').on(table.provinceId),
+    index('idx_location_provider_mappings_city').on(table.cityId),
+    index('idx_location_provider_mappings_suburb').on(table.suburbId),
+  ],
 );
 
 export const locations = mysqlTable(

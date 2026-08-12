@@ -1,7 +1,7 @@
 import { router } from './_core/trpc';
 import { agentProcedure, publicProcedure } from './_core/trpc';
 import { z } from 'zod';
-import { getDb } from './db';
+import { archiveListing, getDb } from './db';
 import {
   properties,
   listings,
@@ -145,6 +145,65 @@ function buildAgentInventoryConditions(userId: number, agentId: number | null, s
   }
 
   return conditions;
+}
+
+async function requireAgentPropertyMutationTarget(
+  database: any,
+  propertyId: number,
+  userId: number,
+) {
+  const [property] = await database
+    .select()
+    .from(properties)
+    .where(eq(properties.id, propertyId))
+    .limit(1);
+
+  if (!property) {
+    throw new Error('Property not found');
+  }
+
+  const [agentRecord] = await database
+    .select({ id: agents.id })
+    .from(agents)
+    .where(eq(agents.userId, userId))
+    .limit(1);
+
+  const isOwner = property.ownerId === userId;
+  const isAgent = Boolean(
+    agentRecord && property.agentId && Number(property.agentId) === Number(agentRecord.id),
+  );
+  if (!isOwner && !isAgent) {
+    throw new Error('Not authorized to mutate this property');
+  }
+
+  const sourceListingId = property.sourceListingId == null ? null : Number(property.sourceListingId);
+  if (sourceListingId == null) {
+    return { property, sourceListingId: null as number | null };
+  }
+
+  const [sourceListing] = await database
+    .select({ id: listings.id, ownerId: listings.ownerId, agentId: listings.agentId })
+    .from(listings)
+    .where(eq(listings.id, sourceListingId))
+    .limit(1);
+
+  if (!sourceListing) {
+    throw new Error('Listing-backed property is missing its source listing');
+  }
+
+  const [sourceAgent] = sourceListing.agentId
+    ? await database
+        .select({ id: agents.id })
+        .from(agents)
+        .where(and(eq(agents.id, sourceListing.agentId), eq(agents.userId, userId)))
+        .limit(1)
+    : [];
+
+  if (sourceListing.ownerId !== userId && !sourceAgent) {
+    throw new Error('Not authorized to mutate the source listing for this property');
+  }
+
+  return { property, sourceListingId };
 }
 
 function parseSocialLinks(value?: string | null) {
@@ -1007,32 +1066,15 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
-      // Verify ownership - check both ownerId and agentId
-      const [property] = await db
-        .select()
-        .from(properties)
-        .where(eq(properties.id, input.id))
-        .limit(1);
+      const { sourceListingId } = await requireAgentPropertyMutationTarget(
+        db,
+        input.id,
+        requireUser(ctx).id,
+      );
 
-      if (!property) {
-        throw new Error('Property not found');
-      }
-
-      // Check if user owns this property (either as owner or as agent)
-      const isOwner = property.ownerId === requireUser(ctx).id;
-
-      let isAgent = false;
-      if (property.agentId) {
-        const [agentRecord] = await db
-          .select()
-          .from(agents)
-          .where(and(eq(agents.id, property.agentId), eq(agents.userId, requireUser(ctx).id)))
-          .limit(1);
-        isAgent = !!agentRecord;
-      }
-
-      if (!isOwner && !isAgent) {
-        throw new Error('Not authorized to archive this property');
+      if (sourceListingId != null) {
+        await archiveListing(sourceListingId);
+        return { success: true };
       }
 
       await db.update(properties).set({ status: 'archived' }).where(eq(properties.id, input.id));
@@ -1047,32 +1089,17 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
 
-      // Verify ownership - check both ownerId and agentId
-      const [property] = await db
-        .select()
-        .from(properties)
-        .where(eq(properties.id, input.id))
-        .limit(1);
+      const { sourceListingId } = await requireAgentPropertyMutationTarget(
+        db,
+        input.id,
+        requireUser(ctx).id,
+      );
 
-      if (!property) {
-        throw new Error('Property not found');
-      }
-
-      // Check if user owns this property (either as owner or as agent)
-      const isOwner = property.ownerId === requireUser(ctx).id;
-
-      let isAgent = false;
-      if (property.agentId) {
-        const [agentRecord] = await db
-          .select()
-          .from(agents)
-          .where(and(eq(agents.id, property.agentId), eq(agents.userId, requireUser(ctx).id)))
-          .limit(1);
-        isAgent = !!agentRecord;
-      }
-
-      if (!isOwner && !isAgent) {
-        throw new Error('Not authorized to delete this property');
+      if (sourceListingId != null) {
+        // A listing-backed property is a public projection. Preserve the
+        // source listing and durable history by archiving through its owner.
+        await archiveListing(sourceListingId);
+        return { success: true };
       }
 
       await db.delete(properties).where(eq(properties.id, input.id));
@@ -2440,6 +2467,14 @@ export const agentRouter = router({
 
       if (!property) {
         throw new Error('Property not found or unauthorized');
+      }
+
+      if (property.sourceListingId != null) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Listing-backed public properties are read-only. Update the source listing through the canonical listing workflow.',
+        });
       }
 
       // Update property

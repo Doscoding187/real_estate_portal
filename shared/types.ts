@@ -1,4 +1,5 @@
 import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from './db-enums';
+import type { PublicPropertyType } from './property-taxonomy';
 
 export type SubscriptionStatus =
   | 'incomplete'
@@ -727,22 +728,25 @@ export interface Property {
   suburb: string;
   city: string;
   province: string;
-  propertyType: 'house' | 'apartment' | 'townhouse' | 'plot' | 'commercial';
+  propertyType: PublicPropertyType;
   listingType: 'sale' | 'rent';
   listingSource?: 'manual' | 'development';
   listerType?: 'agent' | 'agency' | 'private';
   bedrooms?: number;
   bathrooms?: number;
+  internalAreaM2?: number;
+  erfSizeM2?: number;
+  landAreaM2?: number;
   erfSize?: number; // in m²
   floorSize?: number; // in m²
 
   // SA-specific fields
-  titleType: 'freehold' | 'sectional';
+  titleType?: 'freehold' | 'sectional';
   levy?: number; // monthly levy for sectional title
   rates?: number; // monthly rates estimate
-  securityEstate: boolean;
-  petFriendly: boolean;
-  fibreReady: boolean;
+  securityEstate?: boolean;
+  petFriendly?: boolean;
+  fibreReady?: boolean;
 
   // Load-shedding solutions
   loadSheddingSolutions: Array<'solar' | 'generator' | 'inverter' | 'none'>;
@@ -809,6 +813,8 @@ export interface PropertyFilters {
   maxErfSize?: number;
   minFloorSize?: number;
   maxFloorSize?: number;
+  minLandSize?: number;
+  maxLandSize?: number;
 
   // SA-specific filters
   titleType?: Property['titleType'][];
@@ -989,6 +995,9 @@ export interface SearchCardResult {
   bathrooms?: number;
   area?: number;
   yardSize?: number;
+  internalAreaM2?: number;
+  erfSizeM2?: number;
+  landAreaM2?: number;
   propertyType: Property['propertyType'];
   listingType: Property['listingType'];
   listingSource: 'manual' | 'development';
@@ -1001,6 +1010,9 @@ export interface SearchCardResult {
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
+  hasFloorplan?: boolean;
+  hasVirtualTour?: boolean;
+  hasPublicDocuments?: boolean;
   transactionType?: string;
   listedDate: Date;
   latitude?: number;
@@ -1066,7 +1078,7 @@ export interface PropertyClickAnalytics {
 // Filter counts for preview
 export interface FilterCounts {
   propertyType: Record<Property['propertyType'], number>;
-  titleType: Record<Property['titleType'], number>;
+  titleType: Record<Exclude<Property['titleType'], undefined>, number>;
   priceRanges: {
     range: string;
     count: number;

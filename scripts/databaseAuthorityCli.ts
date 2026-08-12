@@ -26,6 +26,18 @@ import {
   verifySearchToLeadScenario,
 } from '../server/_core/databaseAuthority/dataAdapters/searchToLeadScenario';
 import {
+  prepareListingPreviewFixture,
+  verifyListingPreviewFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/listingPreviewFixture';
+import {
+  preparePlePublicationEntitlement,
+  verifyPlePublicationEntitlement,
+} from '../server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement';
+import {
+  preparePleReviewerFixture,
+  verifyPleReviewerFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/pleReviewerFixture';
+import {
   compareNormalizedSchemas,
   normalizedDesiredSchema,
   normalizedPhysicalSchema,
@@ -64,7 +76,13 @@ type Command =
   | 'reference:prepare'
   | 'reference:verify'
   | 'scenario:prepare'
-  | 'scenario:verify';
+  | 'scenario:verify'
+  | 'listing-preview:prepare'
+  | 'listing-preview:verify'
+  | 'ple-publication-entitlement:prepare'
+  | 'ple-publication-entitlement:verify'
+  | 'ple-reviewer:prepare'
+  | 'ple-reviewer:verify';
 
 function option(name: string): string | undefined {
   const prefix = `--${name}=`;
@@ -246,8 +264,27 @@ async function run(command: Command): Promise<void> {
     command === 'reference:prepare' ||
     command === 'reference:verify' ||
     command === 'scenario:prepare' ||
-    command === 'scenario:verify'
+    command === 'scenario:verify' ||
+    command === 'listing-preview:prepare' ||
+    command === 'listing-preview:verify'
   ) {
+    if (command.startsWith('listing-preview:')) {
+      const isPrepare = command.endsWith(':prepare');
+      const operation = isPrepare ? 'demo-seed' : 'verification';
+      const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+      const decision = authorizationFor(authority);
+      const connection = await createAuthoritySqlConnection(authority, decision);
+      try {
+        const evidence = isPrepare
+          ? await prepareListingPreviewFixture({ authority, decision, connection })
+          : await verifyListingPreviewFixture({ authority, decision, connection });
+        print(evidence);
+      } finally {
+        await connection.end();
+      }
+      return;
+    }
+
     const isReference = command.startsWith('reference:');
     const isPrepare = command.endsWith(':prepare');
     const operation = isPrepare
@@ -271,6 +308,33 @@ async function run(command: Command): Promise<void> {
         : isPrepare
           ? await prepareSearchToLeadScenario({ authority, decision, connection })
           : await verifySearchToLeadScenario({ authority, decision, connection });
+      print(evidence);
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
+  if (
+    command === 'ple-publication-entitlement:prepare' ||
+    command === 'ple-publication-entitlement:verify' ||
+    command === 'ple-reviewer:prepare' ||
+    command === 'ple-reviewer:verify'
+  ) {
+    const isPrepare = command.endsWith(':prepare');
+    const operation = isPrepare ? 'test-fixture' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      const isReviewer = command.startsWith('ple-reviewer:');
+      const evidence = isReviewer
+        ? isPrepare
+          ? await preparePleReviewerFixture({ authority, decision, connection })
+          : await verifyPleReviewerFixture({ authority, decision, connection })
+        : isPrepare
+          ? await preparePlePublicationEntitlement({ authority, decision, connection })
+          : await verifyPlePublicationEntitlement({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -318,6 +382,12 @@ const commands = new Set<Command>([
   'reference:verify',
   'scenario:prepare',
   'scenario:verify',
+  'listing-preview:prepare',
+  'listing-preview:verify',
+  'ple-publication-entitlement:prepare',
+  'ple-publication-entitlement:verify',
+  'ple-reviewer:prepare',
+  'ple-reviewer:verify',
 ]);
 
 if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pathname) {

@@ -84,7 +84,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   return (
     <TooltipProvider>
       <div className={cn('w-full', className)}>
-        <div className="flex items-center justify-between">
+        <div className="flex min-w-0 items-start justify-between gap-1 sm:gap-0">
           {steps.map((step, index) => (
             <React.Fragment key={step.number}>
               {/* Step Circle */}
@@ -93,10 +93,12 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                   <motion.button
                     onClick={() => handleStepClick(step)}
                     disabled={!step.isAccessible}
+                    aria-label={`${step.number}. ${step.title}`}
+                    aria-current={step.isCurrent ? 'step' : undefined}
                     whileHover={step.isAccessible ? { scale: 1.1 } : {}}
                     whileTap={step.isAccessible ? { scale: 0.95 } : {}}
                     className={cn(
-                      'flex flex-col items-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-lg p-1',
+                      'flex min-w-0 flex-1 flex-col items-center rounded-lg p-0 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 sm:p-1',
                       step.isAccessible ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
                     )}
                   >
@@ -108,7 +110,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                       }}
                       className={cn(
                         'flex items-center justify-center font-semibold text-sm rounded-full transition-all relative',
-                        compact ? 'w-8 h-8' : 'w-10 h-10',
+                        compact ? 'h-8 w-8' : 'h-8 w-8 sm:h-10 sm:w-10',
                         step.hasError && 'ring-2 ring-red-500',
                         step.isComplete && !step.hasError && 'bg-green-500 text-white shadow-md',
                         step.isComplete && step.hasError && 'bg-red-500 text-white shadow-md',
@@ -157,7 +159,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                     {/* Step Title */}
                     <span
                       className={cn(
-                        'text-center max-w-[80px] transition-all mt-2',
+                        'mt-2 hidden max-w-[80px] text-center transition-all sm:block',
                         compact ? 'text-[10px]' : 'text-xs',
                         step.isCurrent && 'font-semibold text-gray-900',
                         !step.isCurrent && 'text-gray-500',
@@ -198,7 +200,7 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
 
               {/* Connector Line */}
               {index < steps.length - 1 && (
-                <div className="flex-1 mx-2 relative">
+                <div className="relative mx-1 flex min-w-0 flex-1 sm:mx-2">
                   <div
                     className={cn(
                       'h-0.5 w-full transition-all duration-300',
@@ -210,6 +212,11 @@ export const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             </React.Fragment>
           ))}
         </div>
+        {steps.find(step => step.isCurrent) && (
+          <p className="mt-2 text-center text-xs font-semibold text-slate-700 sm:hidden">
+            {steps.find(step => step.isCurrent)?.title}
+          </p>
+        )}
       </div>
     </TooltipProvider>
   );
@@ -223,12 +230,17 @@ export const generateSteps = (
   currentStep: number,
   completedSteps: number[],
   errorSteps?: number[],
+  canAdvanceFromCurrentStep = false,
 ): Step[] => {
   return stepTitles.map((title, index) => {
     const stepNumber = index + 1;
     const isComplete = completedSteps.includes(stepNumber) || stepNumber < currentStep;
     const isCurrent = stepNumber === currentStep;
-    const isAccessible = isComplete || isCurrent || stepNumber === currentStep + 1;
+    const isAccessible =
+      isComplete ||
+      isCurrent ||
+      completedSteps.includes(stepNumber) ||
+      (stepNumber === currentStep + 1 && canAdvanceFromCurrentStep);
     const hasError = errorSteps?.includes(stepNumber) || false;
 
     return {

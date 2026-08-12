@@ -1,6 +1,8 @@
 import { createListingValidationEngine } from '@/lib/validation/listingValidationRules';
 import type { ListingStepId, ListingFieldError, ListingWorkflowData } from '@shared/listing-workflow-types';
 import type { ValidationContext } from '@/lib/validation/ValidationEngine';
+import { listingActionToIntent } from '@shared/listing-types';
+import { validateCorePropertyInformation } from '@shared/core-property-information';
 
 /**
  * Map V2 step IDs to V1 numeric step numbers used by the existing
@@ -126,6 +128,22 @@ export async function validateListingWorkflowStep(
     }
   }
 
+  if (stepId === 'basic_information') {
+    const coreIssues = validateCorePropertyInformation(
+      listingActionToIntent(data.action),
+      data.propertyType,
+      data.propertyDetails,
+      (data as any).basicInfo,
+    );
+    errors.push(
+      ...coreIssues.map(issue => ({
+        field: `propertyDetails.${issue.field}`,
+        message: issue.message,
+        step: stepId,
+      })),
+    );
+  }
+
   return { valid: errors.length === 0, errors };
 }
 
@@ -157,6 +175,29 @@ export async function validateListingWorkflowPayload(
       allErrors.push(...result.errors);
     }
   }
+
+  // The basic-information step is validated above as well, but this explicit
+  // call keeps the full-payload contract authoritative if the workflow step
+  // list changes later.
+  const coreIssues = validateCorePropertyInformation(
+    listingActionToIntent(data.action),
+    data.propertyType,
+    data.propertyDetails,
+    (data as any).basicInfo,
+  );
+  const duplicateFreeCoreIssues = coreIssues.filter(
+    issue =>
+      !allErrors.some(
+        existing => existing.field === `propertyDetails.${issue.field}` && existing.step === 'basic_information',
+      ),
+  );
+  allErrors.push(
+    ...duplicateFreeCoreIssues.map(issue => ({
+      field: `propertyDetails.${issue.field}`,
+      message: issue.message,
+      step: 'basic_information' as ListingStepId,
+    })),
+  );
 
   return { valid: allErrors.length === 0, errors: allErrors };
 }

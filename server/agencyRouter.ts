@@ -58,6 +58,8 @@ import {
   getAgentPerformanceLeaderboard,
   submitListingForReview as submitListingForReviewById,
   archiveListing as archiveListingById,
+  updateListingAgentAssignment,
+  updateListingAgentAssignments,
 } from './db';
 import { logAudit } from './_core/auditLog';
 import { requireUser } from './_core/requireUser';
@@ -1604,11 +1606,20 @@ const listingInventoryFiltersSchema = z.object({
 });
 
 function priceForListing(row: {
+  action?: string | null;
   askingPrice?: string | number | null;
   monthlyRent?: string | number | null;
   startingBid?: string | number | null;
 }) {
-  const value = row.askingPrice || row.monthlyRent || row.startingBid || null;
+  const action = String(row.action || '').toLowerCase();
+  const value =
+    action === 'rent'
+      ? row.monthlyRent
+      : action === 'auction'
+        ? row.startingBid
+        : action === 'sell'
+          ? row.askingPrice
+          : row.askingPrice ?? row.monthlyRent ?? row.startingBid ?? null;
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
@@ -7309,23 +7320,8 @@ export const agencyRouter = router({
       const assignedAgent = input.agentId
         ? await requireAgencyAgent(db, agencyId, input.agentId)
         : null;
-      const now = nowAsDbTimestamp();
 
-      await db
-        .update(listings)
-        .set({
-          agentId: assignedAgent?.id || null,
-          updatedAt: now,
-        })
-        .where(eq(listings.id, input.listingId));
-
-      await db
-        .update(properties)
-        .set({
-          agentId: assignedAgent?.id || null,
-          updatedAt: now,
-        })
-        .where(and(eq(properties.sourceListingId, input.listingId), isNotNull(properties.sourceListingId)));
+      await updateListingAgentAssignment(input.listingId, assignedAgent?.id || null);
 
       await logAudit({
         userId: user.id,
@@ -7365,9 +7361,11 @@ export const agencyRouter = router({
       }
 
       try {
+        const originalListingId = Number((listing as any).revisionOfListingId || 0);
         await assertListingPublicationEntitled(db, {
           listingId: input.listingId,
           operation: 'submit',
+          ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
         });
       } catch (error) {
         if (error instanceof ListingPublicationEntitlementError) {
@@ -7675,12 +7673,9 @@ export const agencyRouter = router({
               ),
             );
 
-          await db
-            .update(listings)
-            .set({
-              agentId: reassignTo.agent.id,
-              updatedAt: now,
-            })
+          const listingsToReassign = await db
+            .select({ id: listings.id })
+            .from(listings)
             .where(
               and(
                 canonicalListingOwnerCondition(targetUser.id, targetAgent?.id || null),
@@ -7691,21 +7686,10 @@ export const agencyRouter = router({
               ),
             );
 
-          await db
-            .update(properties)
-            .set({
-              agentId: reassignTo.agent.id,
-              updatedAt: now,
-            })
-            .where(
-              and(
-                propertyOwnerCondition(targetUser.id, targetAgent?.id || null),
-                inArray(properties.status, [
-                  ...ACTIVE_WORK_LISTING_STATUSES,
-                  ...PENDING_WORK_LISTING_STATUSES,
-                ] as any),
-              ),
-            );
+          await updateListingAgentAssignments(
+            listingsToReassign.map(listing => Number(listing.id)),
+            reassignTo.agent.id,
+          );
         }
 
         await db

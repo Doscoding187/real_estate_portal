@@ -2,11 +2,12 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 import { afterEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import {
   agencies,
   agencyBranding,
+  cities,
   leads,
   listingAnalytics,
   listingApprovalQueue,
@@ -14,7 +15,9 @@ import {
   listings,
   planEntitlements,
   plans,
+  provinces,
   properties,
+  suburbs,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -70,6 +73,34 @@ function insertId(result: any) {
 
 function toMySqlTimestamp(value: Date) {
   return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+async function canonicalSandtonLocation(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+) {
+  const [location] = await db
+    .select({
+      provinceId: provinces.id,
+      cityId: cities.id,
+      suburbId: suburbs.id,
+    })
+    .from(provinces)
+    .innerJoin(cities, eq(cities.provinceId, provinces.id))
+    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
+    .where(
+      and(
+        eq(provinces.slug, 'gauteng'),
+        eq(cities.slug, 'johannesburg'),
+        eq(suburbs.slug, 'sandton'),
+      ),
+    )
+    .limit(1);
+
+  if (!location) {
+    throw new Error('Canonical Gauteng/Johannesburg/Sandton geography is required by this fixture.');
+  }
+
+  return location;
 }
 
 async function makeAgencyPublicationReady(
@@ -181,6 +212,7 @@ describeWithDb('agency principal listing attribution', () => {
     } as any);
     created.agencyId = insertId(agencyResult);
     await makeAgencyPublicationReady(db, created.agencyId, suffix);
+    const location = await canonicalSandtonLocation(db);
 
     const [userResult] = await db.insert(users).values({
       email: `principal-${suffix}@example.com`,
@@ -206,9 +238,21 @@ describeWithDb('agency principal listing attribution', () => {
       latitude: -26.1076,
       longitude: 28.0567,
       city: 'Johannesburg',
+      suburb: 'Sandton',
       province: 'Gauteng',
       postalCode: '2001',
       placeId: null,
+      provinceId: location.provinceId,
+      cityId: location.cityId,
+      suburbId: location.suburbId,
+      privateAddress: {
+        streetNumber: '1',
+        streetName: 'Agency Attribution Street',
+        postalCode: '2001',
+      },
+      coordinateSource: 'manual_confirmed',
+      locationConfirmationState: 'confirmed',
+      publicLocationPrecision: 'approximate',
       slug: `agency-owned-family-home-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
       media: [],
     });

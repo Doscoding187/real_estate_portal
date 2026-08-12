@@ -1,5 +1,5 @@
 import { router } from './_core/trpc';
-import { publicProcedure, agentProcedure } from './_core/trpc';
+import { publicProcedure, protectedProcedure, agentProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { getDb } from './db';
 import {
@@ -10,8 +10,19 @@ import {
   locationSearchCache,
   agentCoverageAreas,
 } from '../drizzle/schema';
-import { eq, and, or, like, desc, sql, count } from 'drizzle-orm';
+import { eq, and, or, like, desc, sql, count, ne, isNull } from 'drizzle-orm';
 import { requireUser } from './_core/requireUser';
+import { encodeCanonicalLocationId } from '../shared/locationAuthority';
+import {
+  ListingLocationResolutionError,
+  resolveCanonicalListingLocation,
+} from './services/listingLocationResolver';
+import {
+  LOCATION_CONFIRMATION_STATES,
+  LOCATION_COORDINATE_SOURCES,
+  PUBLIC_LOCATION_PRECISIONS,
+  privateAddressSchema,
+} from '../shared/location-contract';
 
 /**
  * Location Router - Location intelligence and search functionality
@@ -51,7 +62,14 @@ export const locationRouter = router({
         .limit(1);
 
       if (cached) {
-        return JSON.parse(cached.resultsJSON);
+        return (JSON.parse(cached.resultsJSON) as any[]).map(result => ({
+          ...result,
+          canonicalLocationId:
+            result.canonicalLocationId ||
+            (result.type && result.id
+              ? encodeCanonicalLocationId(result.type, Number(result.id))
+              : undefined),
+        }));
       }
 
       // Search based on type
@@ -62,11 +80,19 @@ export const locationRouter = router({
             name: provinces.name,
             code: provinces.code,
             type: sql`'province'`,
+            status: provinces.status,
+            origin: provinces.origin,
+            canonicalLocationId: sql<string>`CONCAT('province:', ${provinces.id})`,
             latitude: provinces.latitude,
             longitude: provinces.longitude,
           })
           .from(provinces)
-          .where(or(like(provinces.name, searchQuery), like(provinces.code, searchQuery)))
+          .where(
+            and(
+              ne(provinces.status, 'retired'),
+              or(like(provinces.name, searchQuery), like(provinces.code, searchQuery)),
+            ),
+          )
           .limit(input.type === 'province' ? input.limit : Math.ceil(input.limit / 3));
 
         results.push(...provinceResults);
@@ -81,13 +107,16 @@ export const locationRouter = router({
             provinceName: provinces.name,
             provinceCode: provinces.code,
             type: sql`'city'`,
+            status: cities.status,
+            origin: cities.origin,
+            canonicalLocationId: sql<string>`CONCAT('city:', ${cities.id})`,
             latitude: cities.latitude,
             longitude: cities.longitude,
             isMetro: cities.isMetro,
           })
           .from(cities)
           .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(like(cities.name, searchQuery))
+          .where(and(ne(cities.status, 'retired'), ne(provinces.status, 'retired'), like(cities.name, searchQuery)))
           .limit(input.type === 'city' ? input.limit : Math.ceil(input.limit / 3));
 
         results.push(...cityResults);
@@ -103,6 +132,9 @@ export const locationRouter = router({
             provinceName: provinces.name,
             provinceCode: provinces.code,
             type: sql`'suburb'`,
+            status: suburbs.status,
+            origin: suburbs.origin,
+            canonicalLocationId: sql<string>`CONCAT('suburb:', ${suburbs.id})`,
             latitude: suburbs.latitude,
             longitude: suburbs.longitude,
             postalCode: suburbs.postalCode,
@@ -110,7 +142,14 @@ export const locationRouter = router({
           .from(suburbs)
           .leftJoin(cities, eq(suburbs.cityId, cities.id))
           .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(like(suburbs.name, searchQuery))
+          .where(
+            and(
+              ne(suburbs.status, 'retired'),
+              ne(cities.status, 'retired'),
+              ne(provinces.status, 'retired'),
+              like(suburbs.name, searchQuery),
+            ),
+          )
           .limit(input.type === 'suburb' ? input.limit : Math.ceil(input.limit / 3));
 
         results.push(...suburbResults);
@@ -149,6 +188,50 @@ export const locationRouter = router({
       return uniqueResults.slice(0, input.limit);
     }),
 
+  /** Resolve authoring evidence into Property Listify geography identity. */
+  resolveForAuthoring: protectedProcedure
+    .input(
+      z.object({
+        address: z.string().max(500).optional(),
+        latitude: z.number().finite().nullable().optional(),
+        longitude: z.number().finite().nullable().optional(),
+        city: z.string().max(150).optional(),
+        suburb: z.string().max(200).optional(),
+        province: z.string().max(100).optional(),
+        postalCode: z.string().max(20).optional(),
+        placeId: z.string().max(255).optional(),
+        providerLocationPlaceId: z.string().max(255).nullable().optional(),
+        provider: z.string().max(32).nullable().optional(),
+        provinceId: z.number().int().positive().nullable().optional(),
+        cityId: z.number().int().positive().nullable().optional(),
+        suburbId: z.number().int().positive().nullable().optional(),
+        privateAddress: privateAddressSchema.nullable().optional(),
+        coordinateSource: z.enum(LOCATION_COORDINATE_SOURCES).nullable().optional(),
+        locationConfirmationState: z.enum(LOCATION_CONFIRMATION_STATES).optional(),
+        publicLocationPrecision: z.enum(PUBLIC_LOCATION_PRECISIONS).optional(),
+        propertyType: z.string().max(64).nullable().optional(),
+        addressComponents: z
+          .array(
+            z.object({
+              long_name: z.string(),
+              short_name: z.string(),
+              types: z.array(z.string()),
+            }),
+          )
+          .optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        return await resolveCanonicalListingLocation(input);
+      } catch (error) {
+        if (error instanceof ListingLocationResolutionError) {
+          throw new Error(error.message);
+        }
+        throw error;
+      }
+    }),
+
   /**
    * Get featured listings for a location
    */
@@ -161,9 +244,9 @@ export const locationRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const { getFeaturedListings } = await import('./db');
+      const { propertySearchService } = await import('./services/propertySearchService');
       try {
-        return await getFeaturedListings(input.limit);
+        return await propertySearchService.searchFeaturedProperties(input.limit);
       } catch (error) {
         console.error('Error fetching featured listings:', error);
         return [];
@@ -194,6 +277,7 @@ export const locationRouter = router({
             longitude: provinces.longitude,
           })
           .from(provinces)
+          .where(ne(provinces.status, 'retired'))
           .orderBy(provinces.name);
 
         return provincesList;
@@ -212,7 +296,13 @@ export const locationRouter = router({
           })
           .from(cities)
           .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(eq(cities.provinceId, input.provinceId))
+          .where(
+            and(
+              eq(cities.provinceId, input.provinceId),
+              ne(cities.status, 'retired'),
+              ne(provinces.status, 'retired'),
+            ),
+          )
           .orderBy(cities.name);
 
         return citiesList;
@@ -233,7 +323,14 @@ export const locationRouter = router({
           .from(suburbs)
           .leftJoin(cities, eq(suburbs.cityId, cities.id))
           .leftJoin(provinces, eq(cities.provinceId, provinces.id))
-          .where(eq(suburbs.cityId, input.cityId))
+          .where(
+            and(
+              eq(suburbs.cityId, input.cityId),
+              ne(suburbs.status, 'retired'),
+              ne(cities.status, 'retired'),
+              ne(provinces.status, 'retired'),
+            ),
+          )
           .orderBy(suburbs.name);
 
         return suburbsList;
@@ -268,6 +365,7 @@ export const locationRouter = router({
                 )
                 FROM ${suburbs}
                 WHERE ${suburbs.cityId} = ${cities.id}
+                  AND ${suburbs.status} <> 'retired'
               )
             )
           )`,
@@ -275,6 +373,12 @@ export const locationRouter = router({
         .from(provinces)
         .leftJoin(cities, eq(cities.provinceId, provinces.id))
         .leftJoin(suburbs, eq(suburbs.cityId, cities.id))
+        .where(
+          and(
+            ne(provinces.status, 'retired'),
+            or(isNull(cities.status), ne(cities.status, 'retired')),
+          ),
+        )
         .groupBy(
           provinces.id,
           provinces.name,
@@ -376,8 +480,8 @@ export const locationRouter = router({
       const db = await getDb();
 
       const conditions = [
-        sql`${properties.latitude} BETWEEN ${input.bounds.south} AND ${input.bounds.north}`,
-        sql`${properties.longitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
+        sql`${properties.publicLatitude} BETWEEN ${input.bounds.south} AND ${input.bounds.north}`,
+        sql`${properties.publicLongitude} BETWEEN ${input.bounds.west} AND ${input.bounds.east}`,
         eq(properties.status, 'published'),
       ];
 
@@ -419,8 +523,8 @@ export const locationRouter = router({
           listingType: properties.listingType,
           bedrooms: properties.bedrooms,
           bathrooms: properties.bathrooms,
-          latitude: properties.latitude,
-          longitude: properties.longitude,
+          latitude: properties.publicLatitude,
+          longitude: properties.publicLongitude,
           mainImage: properties.mainImage,
           city: properties.city,
           province: properties.province,
@@ -668,8 +772,8 @@ export const locationRouter = router({
             .from(properties)
             .where(
               and(
-                sql`${properties.latitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
-                sql`${properties.longitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
+                sql`${properties.publicLatitude} BETWEEN ${gridLat} AND ${gridLat + latStep}`,
+                sql`${properties.publicLongitude} BETWEEN ${gridLng} AND ${gridLng + lngStep}`,
                 eq(properties.status, 'published'),
               ),
             );

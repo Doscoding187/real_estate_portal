@@ -26,8 +26,8 @@ export interface SaveDraftInput {
   propertyDetails?: Record<string, unknown>;
   location?: {
     address?: string;
-    latitude?: number;
-    longitude?: number;
+    latitude?: number | null;
+    longitude?: number | null;
     city?: string;
     suburb?: string;
     province?: string;

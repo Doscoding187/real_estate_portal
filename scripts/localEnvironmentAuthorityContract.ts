@@ -72,7 +72,16 @@ const group = (
 
 const CONTRACT_GROUPS: readonly ContractGroup[] = [
   group(
-    ['NODE_ENV', 'APP_ENV', 'VITE_APP_ENV', 'VITE_DEPLOY_ENV', 'VITE_APP_ID', 'PORT'],
+    [
+      'NODE_ENV',
+      'APP_ENV',
+      'VITE_APP_ENV',
+      'VITE_DEPLOY_ENV',
+      'VITE_APP_ID',
+      'PORT',
+      'MEDIA_STORAGE_ADAPTER',
+      'MEDIA_LOCAL_STORAGE_DIR',
+    ],
     'TRACKED_SAFE_DEFAULT',
     'Tracked templates plus runtime mode authority',
     false,
@@ -90,6 +99,16 @@ const CONTRACT_GROUPS: readonly ContractGroup[] = [
     'The affected local capability must fail closed or remain unavailable.',
     'No secret fallback is permitted.',
     'A shared, remote, or production value could expose data or credentials.',
+  ),
+  group(
+    ['LOCAL_PLE_REVIEWER_PASSWORD'],
+    'REQUIRED_MACHINE_LOCAL_SECRET',
+    '~/.config/property-listify/local.env',
+    false,
+    false,
+    'The PLE reviewer fixture operation must refuse to run until this secret exists.',
+    'No secret fallback is permitted.',
+    'A privileged reviewer credential must never be stored in the repository or shared environment.',
   ),
   group(
     ['APP_URL', 'FRONTEND_URL', 'VITE_API_URL', 'VITE_API_BASE_URL'],

@@ -90,6 +90,41 @@ assert_service_artifacts_are_not_symlinked() {
   done
 }
 
+assert_runtime_pid_artifact() {
+  if [ -e "$PID_FILE" ] || [ -L "$PID_FILE" ]; then
+    [ -f "$PID_FILE" ] || die "service PID artifact is not a regular file: $PID_FILE"
+    assert_not_symlink "$PID_FILE"
+    [ "$(stat -c '%u' "$PID_FILE")" = "$SERVICE_USER_ID" ] || die "service PID artifact is not owned by the current user: $PID_FILE"
+    local pid
+    pid="$(tr -d '[:space:]' < "$PID_FILE")"
+    [[ "$pid" =~ ^[0-9]+$ ]] || die "service PID file is malformed: $PID_FILE"
+  fi
+}
+
+assert_runtime_socket_artifact() {
+  if [ -e "$SOCKET_PATH" ] || [ -L "$SOCKET_PATH" ]; then
+    [ -S "$SOCKET_PATH" ] || die "canonical Unix socket artifact is not a Unix socket: $SOCKET_PATH"
+    assert_not_symlink "$SOCKET_PATH"
+    [ "$(stat -c '%u' "$SOCKET_PATH")" = "$SERVICE_USER_ID" ] || die "canonical Unix socket is not owned by the current user: $SOCKET_PATH"
+  fi
+}
+
+assert_runtime_lock_artifact() {
+  if [ -e "$LOCK_FILE" ] || [ -L "$LOCK_FILE" ]; then
+    [ -f "$LOCK_FILE" ] || die "socket lock artifact is not a regular file: $LOCK_FILE"
+    assert_not_symlink "$LOCK_FILE"
+    [ "$(stat -c '%u' "$LOCK_FILE")" = "$SERVICE_USER_ID" ] || die "socket lock artifact is not owned by the current user: $LOCK_FILE"
+    [ "$(stat -c '%a' "$LOCK_FILE")" = "600" ] || die "socket lock must have mode 0600: $LOCK_FILE"
+    read_socket_lock_pid >/dev/null || die "socket lock contains malformed PID metadata: $LOCK_FILE"
+  fi
+}
+
+assert_runtime_artifact_shapes() {
+  assert_runtime_pid_artifact
+  assert_runtime_socket_artifact
+  assert_runtime_lock_artifact
+}
+
 ensure_service_root() {
   assert_non_root_user
   assert_shared_tmp_parent
@@ -155,11 +190,20 @@ read_socket_lock_pid() {
   ' "$LOCK_FILE"
 }
 
+mysql_server_executable_matches() {
+  case "$1" in
+    */mysqld|*/mariadbd) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 pid_matches_service() {
   local pid="$1"
   [ -d "/proc/$pid" ] || return 1
   [ "$(stat -c '%u' "/proc/$pid")" = "$SERVICE_USER_ID" ] || return 1
-  [ "$(readlink -f "/proc/$pid/exe")" = /usr/sbin/mysqld ] || return 1
+  local executable
+  executable="$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)"
+  mysql_server_executable_matches "$executable" || return 1
   local args
   args="$(ps -p "$pid" -o args=)"
   [[ "$args" == *"--datadir=$DATA_DIR"* ]] || return 1
@@ -174,10 +218,32 @@ service_processes_using_datadir() {
   while read -r pid args; do
     [[ "$pid" =~ ^[0-9]+$ ]] || continue
     [ -d "/proc/$pid" ] || continue
-    [ "$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)" = /usr/sbin/mysqld ] || continue
+    local executable
+    executable="$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)"
+    mysql_server_executable_matches "$executable" || continue
     [[ "$args" == *"--datadir=$DATA_DIR"* ]] || continue
     printf '%s\n' "$pid"
   done < <(ps -eo pid=,args=)
+}
+
+assert_no_openers() {
+  local path="$1"
+  local openers lsof_status
+  if openers="$(lsof -t -- "$path" 2>/dev/null)"; then
+    [ -z "$openers" ] || die "runtime artifact is open by a process: $path"
+  else
+    lsof_status="$?"
+    [ "$lsof_status" = "1" ] || die "could not inspect runtime artifact openers: $path"
+  fi
+}
+
+assert_no_runtime_openers() {
+  local path
+  for path in "$PID_FILE" "$SOCKET_PATH" "$LOCK_FILE"; do
+    if [ -e "$path" ] || [ -L "$path" ]; then
+      assert_no_openers "$path"
+    fi
+  done
 }
 
 assert_socket_lock_state() {
@@ -202,6 +268,7 @@ assert_socket_lock_state() {
 
 assert_known_process_or_stopped() {
   assert_command ps
+  assert_runtime_artifact_shapes
   local pid
   if pid="$(read_service_pid)"; then
     [ -d "/proc/$pid" ] || die "service PID file is stale; preserved evidence requires review: $PID_FILE"
@@ -227,6 +294,81 @@ assert_known_process_or_stopped() {
     die "port $PORT is occupied without an exact running service identity"
   fi
   return 0
+}
+
+RUNTIME_STATE=""
+
+classify_runtime_state() {
+  assert_runtime_artifact_shapes
+
+  local pid="" lock_pid="" service_pids
+  if pid="$(read_service_pid)"; then
+    :
+  fi
+  if [ -e "$LOCK_FILE" ] || [ -L "$LOCK_FILE" ]; then
+    lock_pid="$(read_socket_lock_pid)" || die "socket lock contains malformed PID metadata: $LOCK_FILE"
+  fi
+  if [ -n "$pid" ] && [ -n "$lock_pid" ] && [ "$pid" != "$lock_pid" ]; then
+    die "PID and socket-lock metadata contradict each other"
+  fi
+
+  if [ -n "$pid" ] && [ -d "/proc/$pid" ]; then
+    if pid_matches_service "$pid"; then
+      RUNTIME_STATE="running"
+      return 0
+    fi
+    die "service PID belongs to a live unexpected process; recovery is ambiguous and no process was terminated"
+  fi
+
+  if [ -n "$lock_pid" ] && [ -d "/proc/$lock_pid" ]; then
+    die "socket lock references a live process without a safely verified running service"
+  fi
+
+  service_pids="$(service_processes_using_datadir)"
+  [ -z "$service_pids" ] || die "approved mysqld/mariadbd process exists without an exact running service identity: $service_pids"
+  if port_has_listener; then
+    die "port $PORT is occupied without an exact running service identity"
+  fi
+
+  assert_no_runtime_openers
+
+  if [ -e "$PID_FILE" ] || [ -e "$SOCKET_PATH" ] || [ -e "$LOCK_FILE" ]; then
+    RUNTIME_STATE="safely-recoverable-stale-metadata"
+  else
+    RUNTIME_STATE="cleanly-stopped"
+  fi
+}
+
+remove_runtime_artifacts() {
+  local path
+  for path in "$PID_FILE" "$SOCKET_PATH" "$LOCK_FILE"; do
+    if [ -e "$path" ] || [ -L "$path" ]; then
+      rm -- "$path"
+    fi
+  done
+  for path in "$PID_FILE" "$SOCKET_PATH" "$LOCK_FILE"; do
+    [ ! -e "$path" ] && [ ! -L "$path" ] || die "runtime artifact remained after governed recovery: $path"
+  done
+}
+
+normalize_runtime_state() {
+  classify_runtime_state
+  case "$RUNTIME_STATE" in
+    cleanly-stopped)
+      echo "Runtime state: cleanly stopped; recovery is a safe no-op."
+      ;;
+    safely-recoverable-stale-metadata)
+      echo "Runtime state: safely recoverable stale metadata."
+      remove_runtime_artifacts
+      echo "Governed recovery removed only the exact stale PID/socket/lock artifacts."
+      ;;
+    running)
+      die "runtime state is running; governed recovery refuses to modify a live service"
+      ;;
+    *)
+      die "runtime state classification is unknown; recovery is refused"
+      ;;
+  esac
 }
 
 port_has_listener() {
@@ -353,6 +495,7 @@ stop() {
   assert_native_mode
   assert_command mysqladmin
   assert_command ss
+  assert_command lsof
   report_legacy_residue
   ensure_service_root
   assert_known_process_or_stopped
@@ -385,12 +528,24 @@ stop() {
     if [ ! -d "/proc/$pid" ]; then
       [ ! -e "$PID_FILE" ] && [ ! -L "$PID_FILE" ] || die "service PID file remained after graceful shutdown: $PID_FILE"
       assert_port_free
+      normalize_runtime_state
       echo "Database Authority MySQL service stopped via the exact Unix socket within the 30-second bound."
       return 0
     fi
     sleep 1
   done
   die "service did not stop within the 30-second bound; no force-kill or broad termination was attempted"
+}
+
+recover() {
+  assert_native_mode
+  assert_command ps
+  assert_command ss
+  assert_command lsof
+  report_legacy_residue
+  ensure_service_root
+  assert_data_state
+  normalize_runtime_state
 }
 
 retired() {
@@ -402,10 +557,11 @@ case "${1:-help}" in
   wait) wait_for_tcp ;;
   status) status ;;
   stop) stop ;;
+  recover) recover ;;
   destroy|test:rebuild|listing-performance-e2e:reset|listing-performance-e2e:drop|prospect-journey-e2e:reset|prospect-journey-e2e:drop) retired ;;
   *)
     cat <<EOF
-Usage: bash scripts/local-db.sh <start|wait|status|stop>
+Usage: bash scripts/local-db.sh <start|wait|status|stop|recover>
 
 This is the Database Authority service-only workflow. It binds only to
 $HOST:$PORT and stores native MySQL state only under the authority-derived

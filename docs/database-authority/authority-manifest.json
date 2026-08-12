@@ -49,10 +49,15 @@
     "db:authority:service:wait",
     "db:authority:service:status",
     "db:authority:service:stop",
+    "db:authority:service:recover",
     "db:reference:prepare",
     "db:reference:verify",
     "db:scenario:prepare",
-    "db:scenario:verify"
+    "db:scenario:verify",
+    "db:ple-publication-entitlement:prepare",
+    "db:ple-publication-entitlement:verify",
+    "db:ple-reviewer:prepare",
+    "db:ple-reviewer:verify"
   ],
   "destructiveLocalCommands": ["db:worktree:dispose"],
   "prohibitedCommandCategories": [
@@ -87,5 +92,7 @@
     "db:release:reference:apply",
     "db:release:reference:verify"
   ],
-  "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts"
+  "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
+  "plePublicationEntitlementAdapter": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
+  "pleReviewerFixtureAdapter": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts"
 }

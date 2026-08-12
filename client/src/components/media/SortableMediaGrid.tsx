@@ -45,6 +45,7 @@ export interface MediaItem {
     | 'render'
     | 'document';
   fileName?: string;
+  presentationLabel?: string;
   isPrimary?: boolean;
   displayOrder: number;
 }
@@ -106,7 +107,7 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
       )}
     >
       {/* Media Preview */}
-      {item.type === 'image' || item.type === 'floorplan' ? (
+      {item.type === 'image' ? (
         <img
           src={item.url}
           alt={item.fileName || 'Media'}
@@ -116,8 +117,9 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
       ) : item.type === 'video' ? (
         <video src={item.url} className="w-full h-full object-cover" muted />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+        <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gray-200 p-4 text-center">
           <FileText className="w-12 h-12 text-gray-400" />
+          <span className="text-xs font-semibold uppercase text-gray-600">{item.type}</span>
         </div>
       )}
 
@@ -166,7 +168,13 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
             <span className="capitalize">{item.type}</span>
           </div>
 
-          {onSetPrimary && (
+          {item.presentationLabel && (
+            <span className="max-w-[45%] truncate rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-700">
+              {item.presentationLabel}
+            </span>
+          )}
+
+          {onSetPrimary && item.type === 'image' && (
             <Button
               variant="ghost"
               size="sm"

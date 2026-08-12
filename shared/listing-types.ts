@@ -1,11 +1,63 @@
+import type {
+  CanonicalPropertyType,
+  LegacySourcePropertyType,
+  ListingPropertyType,
+  PropertyListingIntent,
+} from './property-taxonomy';
+import type { CorePropertyInformation } from './core-property-information';
+import type { FeaturesContext } from './features-context';
+import type { MoneyFact, Negotiability, RecurringCosts } from './pricing-contract';
+import type {
+  LocationCoordinateSource,
+  LocationConfirmationState,
+  PrivateAddress,
+  PublicLocationPrecision,
+} from './location-contract';
+import type { PropertyPresentation } from './property-presentation';
+
+export { PROPERTY_TYPE_TEMPLATES } from './property-taxonomy';
+export type {
+  ActiveManualPropertyType,
+  CanonicalPropertyType,
+  LegacySourcePropertyType,
+  ListingPropertyType,
+  PublicPropertyType,
+  PropertyListingIntent,
+} from './property-taxonomy';
+
 /**
  * Smart Listing Wizard - TypeScript Types
  *
  * Comprehensive type definitions for the listing creation wizard
  */
 
-// Step 1: Action Types
+// Step 1: Listing intent
+//
+// The authoring experience exposes the consumer-facing commercial intent. The
+// existing ListingAction values remain the transport contract for now so that
+// the bounded Step 1 correction does not silently rewrite legacy API payloads.
+export type ListingIntent = PropertyListingIntent;
 export type ListingAction = 'sell' | 'rent' | 'auction';
+
+export const LISTING_INTENT_TO_ACTION: Record<
+  ListingIntent,
+  Extract<ListingAction, 'sell' | 'rent'>
+> = {
+  sale: 'sell',
+  rent: 'rent',
+};
+
+export const listingIntentToAction = (
+  intent: ListingIntent,
+): Extract<ListingAction, 'sell' | 'rent'> => LISTING_INTENT_TO_ACTION[intent];
+
+export const listingActionToIntent = (
+  action: ListingAction | null | undefined,
+): ListingIntent | undefined => {
+  if (action === 'sell') return 'sale';
+  if (action === 'rent') return 'rent';
+  return undefined;
+};
 
 // Listing Badges
 export type ListingBadge =
@@ -23,7 +75,12 @@ export type ListingBadge =
   | 'export_quality';
 
 // Step 2: Property Types
-export type PropertyType = 'apartment' | 'house' | 'farm' | 'land' | 'commercial' | 'shared_living';
+//
+// `ListingPropertyType` is the complete source-column compatibility contract.
+// `CanonicalPropertyType` is the product vocabulary; `land` and
+// `shared_living` remain readable legacy source values and are not active
+// physical-type choices in the current manual authoring UI.
+export type PropertyType = ListingPropertyType;
 
 // Property-specific field types
 export interface ApartmentFields {
@@ -186,6 +243,8 @@ export type WaterHeating =
 
 // Extended property details interface
 export interface ExtendedPropertyDetails {
+  /** Canonical Step 3 facts; older flat fields remain read-compatible. */
+  corePropertyInformation?: CorePropertyInformation;
   // Basic property details
   propertySetting: PropertySetting;
   bedrooms?: number;
@@ -219,28 +278,43 @@ export interface ExtendedPropertyDetails {
 }
 
 // Union type for all property details
-export type PropertyDetails =
+export type PropertyDetails = (
   | ApartmentFields
   | HouseFields
   | FarmFields
   | LandFields
   | CommercialFields
   | SharedLivingFields
-  | ExtendedPropertyDetails;
+  | ExtendedPropertyDetails
+) & {
+  /** Typed semantic presentation metadata; media rows remain the asset authority. */
+  propertyPresentation?: PropertyPresentation;
+};
 
 // Step 3: Pricing Fields
 export interface SellPricing {
-  askingPrice: number;
-  negotiable: boolean;
+  askingPrice?: number;
+  /** Legacy boolean read compatibility. New authoring uses negotiability. */
+  negotiable?: boolean;
+  negotiability?: Negotiability;
+  recurringCosts?: RecurringCosts;
   transferCostEstimate?: number;
+  /** Legacy flat aliases are retained for existing readers only. */
+  ratesAndTaxes?: number;
+  levies?: number;
 }
 
 export interface RentPricing {
-  monthlyRent: number;
-  deposit: number;
+  monthlyRent?: number;
+  /** Legacy numeric read compatibility. New authoring uses depositFact. */
+  deposit?: number;
+  depositFact?: MoneyFact;
   leaseTerms?: string;
   availableFrom?: Date;
-  utilitiesIncluded: boolean;
+  utilitiesIncluded?: boolean;
+  /** Legacy flat aliases are retained for existing readers only. */
+  ratesAndTaxes?: number;
+  levies?: number;
 }
 
 export interface AuctionPricing {
@@ -329,6 +403,9 @@ export type HouseRule =
 export type BillIncluded = 'water' | 'electricity' | 'wifi' | 'cleaning' | 'gas';
 
 export interface AdditionalInformation {
+  /** Canonical PLE-4B Step 4 contract. Legacy flat fields below remain readable. */
+  featuresContext?: FeaturesContext;
+
   // Residential (House / Apartment)
   furnishingStatus?: FurnishingStatus;
   flooring?: FlooringType;
@@ -368,13 +445,22 @@ export interface AdditionalInformation {
 // Step 4: Location
 export interface LocationData {
   address: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   city: string;
   suburb?: string;
   province: string;
   postalCode?: string;
   placeId?: string; // Google Maps Place ID
+  providerLocationPlaceId?: string;
+  provider?: string;
+  provinceId?: number | null;
+  cityId?: number | null;
+  suburbId?: number | null;
+  privateAddress?: PrivateAddress | null;
+  coordinateSource?: LocationCoordinateSource | null;
+  locationConfirmationState?: LocationConfirmationState;
+  publicLocationPrecision?: PublicLocationPrecision;
   addressComponents?: Array<{
     long_name: string;
     short_name: string;
@@ -390,6 +476,8 @@ export interface MediaFile {
   file?: File;
   url: string;
   type: MediaType;
+  /** Server-issued confirmation proving the uploaded object and owner. */
+  uploadToken?: string;
   fileName?: string;
   fileSize?: number;
   thumbnailUrl?: string;
@@ -401,6 +489,8 @@ export interface MediaFile {
   displayOrder: number;
   isPrimary: boolean;
   processingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  /** Semantic label for plans/documents; never inferred from MIME alone. */
+  presentationLabel?: string;
   fileData?: string; // Base64 encoded file data for persistence
 }
 
@@ -484,6 +574,7 @@ export interface CreateListingRequest {
   media?: Array<{
     id: string;
     mediaType: MediaType;
+    uploadToken?: string | null;
     fileName?: string | null;
     fileSize?: number | null;
     thumbnailUrl?: string | null;
@@ -620,54 +711,6 @@ export const VALIDATION_RULES = {
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
   },
 } as const;
-
-// Property type templates (for UI)
-export const PROPERTY_TYPE_TEMPLATES: Record<
-  PropertyType,
-  {
-    label: string;
-    icon: string;
-    description: string;
-    requiredFields: string[];
-  }
-> = {
-  apartment: {
-    label: 'Apartment',
-    icon: 'Building2',
-    description: 'Flats, units, and sectional title properties',
-    requiredFields: ['bedrooms', 'bathrooms', 'unitSizeM2', 'propertySettings'],
-  },
-  house: {
-    label: 'House',
-    icon: 'Home',
-    description: 'Freestanding homes with land',
-    requiredFields: ['bedrooms', 'bathrooms', 'erfSizeM2', 'houseAreaM2'],
-  },
-  farm: {
-    label: 'Farm',
-    icon: 'Wheat',
-    description: 'Agricultural properties and farms',
-    requiredFields: ['landSizeHa', 'farmSuitability'],
-  },
-  land: {
-    label: 'Land/Plot',
-    icon: 'Map',
-    description: 'Vacant land and development plots',
-    requiredFields: ['landSizeM2OrHa', 'zoning'],
-  },
-  commercial: {
-    label: 'Commercial',
-    icon: 'Store',
-    description: 'Office, retail, industrial properties',
-    requiredFields: ['subtype', 'floorAreaM2'],
-  },
-  shared_living: {
-    label: 'Shared Living',
-    icon: 'Users',
-    description: 'Student accommodation, co-living spaces',
-    requiredFields: ['roomsAvailable', 'bathroomTypePerRoom'],
-  },
-};
 
 // Badge templates (for UI)
 export const BADGE_TEMPLATES: Record<

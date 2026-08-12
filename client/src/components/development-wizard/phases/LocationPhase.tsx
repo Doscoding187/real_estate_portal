@@ -42,8 +42,10 @@ export function LocationPhase() {
       province: data.province || developmentData.location.province,
       suburb: data.suburb || developmentData.location.suburb,
       postalCode: data.postalCode || developmentData.location.postalCode,
-      latitude: data.latitude.toString(),
-      longitude: data.longitude.toString(),
+      latitude:
+        data.latitude == null ? developmentData.location.latitude : data.latitude.toString(),
+      longitude:
+        data.longitude == null ? developmentData.location.longitude : data.longitude.toString(),
     };
 
     handleUpdate(updates);

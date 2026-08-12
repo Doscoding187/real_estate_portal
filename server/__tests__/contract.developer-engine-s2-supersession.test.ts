@@ -10,7 +10,7 @@ function source(relativePath: string): string {
 
 describe('Developer Engine S2 supersession authority contracts', () => {
   it('uses one restrictive, lifecycle-constrained persistence authority', () => {
-    const migration = source('server/migrations/0002_development_supersessions.sql');
+    const migration = source('server/migrations/0006_development_supersessions.sql');
     const schema = source('drizzle/schema/developments.ts');
 
     expect(migration).toContain('CREATE TABLE `development_supersessions`');

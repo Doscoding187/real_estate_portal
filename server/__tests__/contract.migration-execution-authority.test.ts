@@ -283,29 +283,71 @@ describe('migration execution authority', () => {
     expect(executionManifest.expectedHead).toBe(manifestFiles.at(-1));
     const baseline = executionManifest.migrations.find(entry => entry.sequence === 0);
     const incremental = executionManifest.migrations.find(entry => entry.sequence === 1);
+    const taxonomy = executionManifest.migrations.find(entry => entry.sequence === 2);
+    const measurements = executionManifest.migrations.find(entry => entry.sequence === 3);
+    const location = executionManifest.migrations.find(entry => entry.sequence === 4);
+    const manualLocation = executionManifest.migrations.find(entry => entry.sequence === 5);
     const developmentSupersessions = executionManifest.migrations.find(
-      entry => entry.sequence === 2,
+      entry => entry.sequence === 6,
     );
-    const launchAccess = executionManifest.migrations.find(entry => entry.sequence === 3);
+    const launchAccess = executionManifest.migrations.find(entry => entry.sequence === 7);
     expect(incremental).toMatchObject({
       filename: '0001_public_search_to_lead_reliability.sql',
       parent: baseline?.filename,
       parentChecksum: baseline?.checksum,
     });
-    expect(developmentSupersessions).toMatchObject({
+    expect(taxonomy).toMatchObject({
       sequence: 2,
-      filename: '0002_development_supersessions.sql',
+      filename: '0002_canonical_property_taxonomy.sql',
       parent: incremental?.filename,
       parentChecksum: incremental?.checksum,
+      checksum: 'a0ac7ae582fa0b1910211bc20d99ba13064e74ac00d3413681b77a1476808801',
+    });
+    expect(measurements).toMatchObject({
+      sequence: 3,
+      filename: '0003_canonical_property_measurements.sql',
+      parent: taxonomy?.filename,
+      parentChecksum: taxonomy?.checksum,
+      checksum: '773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c',
+    });
+    expect(location).toMatchObject({
+      sequence: 4,
+      filename: '0004_canonical_listing_location.sql',
+      parent: measurements?.filename,
+      parentChecksum: measurements?.checksum,
+      checksum: 'b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe',
+    });
+    expect(manualLocation).toMatchObject({
+      sequence: 5,
+      filename: '0005_manual_location_without_coordinates.sql',
+      parent: location?.filename,
+      parentChecksum: location?.checksum,
+      checksum: '8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b',
+    });
+    expect(developmentSupersessions).toMatchObject({
+      sequence: 6,
+      filename: '0006_development_supersessions.sql',
+      parent: manualLocation?.filename,
+      parentChecksum: manualLocation?.checksum,
       checksum: '9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655',
     });
     expect(launchAccess).toMatchObject({
-      sequence: 3,
-      filename: '0003_paid_launch_access_invoice_term.sql',
+      sequence: 7,
+      filename: '0007_paid_launch_access_invoice_term.sql',
       parent: developmentSupersessions?.filename,
       parentChecksum: developmentSupersessions?.checksum,
       checksum: '84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46',
     });
+    expect(manifestFiles).toEqual([
+      '0000_canonical_launch_baseline.sql',
+      '0001_public_search_to_lead_reliability.sql',
+      '0002_canonical_property_taxonomy.sql',
+      '0003_canonical_property_measurements.sql',
+      '0004_canonical_listing_location.sql',
+      '0005_manual_location_without_coordinates.sql',
+      '0006_development_supersessions.sql',
+      '0007_paid_launch_access_invoice_term.sql',
+    ]);
     expect(executionManifest.expectedHead).toBe(launchAccess?.filename);
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

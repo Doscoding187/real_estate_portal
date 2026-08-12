@@ -310,8 +310,6 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         agentName={identityDisplayName}
         agentPhone={data.contactPhone}
         agentEmail={data.contactEmail}
-        agentId={data.agentId}
-        agencyId={data.agencyId}
         developerBrandProfileId={data.developerBrandProfileId}
         developmentId={data.developmentId}
         source={contactIntent === 'whatsapp' ? 'property_search_whatsapp' : 'property_search'}

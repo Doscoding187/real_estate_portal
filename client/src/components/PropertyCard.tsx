@@ -1,5 +1,14 @@
 import { Button } from './ui/button';
-import { Heart, MapPin, Image as ImageIcon, PlayCircle, Home } from 'lucide-react';
+import {
+  Box,
+  FileText,
+  Heart,
+  MapPin,
+  Image as ImageIcon,
+  PlayCircle,
+  Home,
+  Ruler,
+} from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
 import { Badge } from './ui/badge';
@@ -75,6 +84,9 @@ export interface PropertyCardProps {
   badges?: string[];
   imageCount?: number;
   videoCount?: number;
+  hasFloorplan?: boolean;
+  hasVirtualTour?: boolean;
+  hasPublicDocuments?: boolean;
   highlights?: string[];
   suppressBadges?: boolean;
 }
@@ -105,6 +117,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   badges,
   imageCount = 15,
   videoCount = 2,
+  hasFloorplan = false,
+  hasVirtualTour = false,
+  hasPublicDocuments = false,
   highlights,
   suppressBadges = false,
 }) => {
@@ -278,6 +293,33 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             <div className="bg-black/60 hover:bg-black/70 transition-colors text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 backdrop-blur-sm shadow-sm">
               <PlayCircle className="h-3 w-3" />
               <span>{videoCount}</span>
+            </div>
+          )}
+          {hasFloorplan && (
+            <div
+              aria-label="Floor plan available"
+              className="bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 backdrop-blur-sm shadow-sm"
+            >
+              <Ruler className="h-3 w-3" />
+              <span>Plan</span>
+            </div>
+          )}
+          {hasVirtualTour && (
+            <div
+              aria-label="3D virtual tour available"
+              className="bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 backdrop-blur-sm shadow-sm"
+            >
+              <Box className="h-3 w-3" />
+              <span>3D</span>
+            </div>
+          )}
+          {hasPublicDocuments && (
+            <div
+              aria-label="Public property document available"
+              className="bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 backdrop-blur-sm shadow-sm"
+            >
+              <FileText className="h-3 w-3" />
+              <span>Doc</span>
             </div>
           )}
         </div>

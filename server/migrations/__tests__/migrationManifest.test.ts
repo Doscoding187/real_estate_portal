@@ -66,11 +66,20 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it('accepts the repository 0000 -> 0001 -> 0002 -> 0003 manifest with exact ancestry', () => {
+  it('accepts the integrated repository 0000 -> 0007 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const [baseline, incremental, developmentSupersessions, launchAccess] =
+    const [
+      baseline,
+      incremental,
+      taxonomy,
+      measurements,
+      location,
+      manualLocation,
+      supersessions,
+      launchAccess,
+    ] =
       manifest.orderedMigrations;
 
     expect(baseline).toMatchObject({
@@ -88,20 +97,58 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(developmentSupersessions).toMatchObject({
+    expect(taxonomy).toMatchObject({
       sequence: 2,
-      filename: '0002_development_supersessions.sql',
+      filename: '0002_canonical_property_taxonomy.sql',
       parent: incremental.filename,
       parentChecksum: incremental.checksum,
+      checksum: 'a0ac7ae582fa0b1910211bc20d99ba13064e74ac00d3413681b77a1476808801',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+    });
+    expect(measurements).toMatchObject({
+      sequence: 3,
+      filename: '0003_canonical_property_measurements.sql',
+      parent: taxonomy.filename,
+      parentChecksum: taxonomy.checksum,
+      checksum: '773c8488b1b574b958b92d484b2e20b504175ffa30aa035f5608d9d3716fe76c',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(location).toMatchObject({
+      sequence: 4,
+      filename: '0004_canonical_listing_location.sql',
+      parent: measurements.filename,
+      parentChecksum: measurements.checksum,
+      checksum: 'b772082a269b7e30ed514d9850b129192ddc0bd05842a558f46af017b3726dbe',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'PLE-6B-2026-08-10-Edward',
+    });
+    expect(manualLocation).toMatchObject({
+      sequence: 5,
+      filename: '0005_manual_location_without_coordinates.sql',
+      parent: location.filename,
+      parentChecksum: location.checksum,
+      checksum: '8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b',
+      kind: 'exceptional',
+      statementPolicy: 'approved-exception',
+      approvalReference: 'PLE-6C-2026-08-10-Edward',
+    });
+    expect(supersessions).toMatchObject({
+      sequence: 6,
+      filename: '0006_development_supersessions.sql',
+      parent: manualLocation.filename,
+      parentChecksum: manualLocation.checksum,
       checksum: '9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655',
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
     expect(launchAccess).toMatchObject({
-      sequence: 3,
-      filename: '0003_paid_launch_access_invoice_term.sql',
-      parent: developmentSupersessions.filename,
-      parentChecksum: developmentSupersessions.checksum,
+      sequence: 7,
+      filename: '0007_paid_launch_access_invoice_term.sql',
+      parent: supersessions.filename,
+      parentChecksum: supersessions.checksum,
       checksum: '84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46',
       kind: 'ddl',
       statementPolicy: 'single-ddl',
@@ -109,28 +156,28 @@ describe('canonical migration manifest', () => {
     expect(manifest.expectedHead.filename).toBe(launchAccess.filename);
   });
 
-  it('plans exactly one paid-launch migration from the current-main head', () => {
+  it('plans exactly one paid-launch migration from the integrated 0006 head', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const currentMainHead = manifest.orderedMigrations[2];
+    const currentIntegratedHead = manifest.orderedMigrations[6];
     const plan = buildMigrationPlan({
       manifest,
       targetFingerprintHash: 'a'.repeat(64),
-      applied: manifest.orderedMigrations.slice(0, 3).map(item => ({
+      applied: manifest.orderedMigrations.slice(0, 7).map(item => ({
         fileName: item.filename,
         checksum: item.checksum,
       })),
-      acceptedOldHead: currentMainHead.filename,
-      expectedNewHead: '0003_paid_launch_access_invoice_term.sql',
+      acceptedOldHead: currentIntegratedHead.filename,
+      expectedNewHead: '0007_paid_launch_access_invoice_term.sql',
     });
 
-    expect(plan.acceptedOldHead).toBe('0002_development_supersessions.sql');
+    expect(plan.acceptedOldHead).toBe('0006_development_supersessions.sql');
     expect(plan.pending).toHaveLength(1);
     expect(plan.pending.map(item => item.filename)).toEqual([
-      '0003_paid_launch_access_invoice_term.sql',
+      '0007_paid_launch_access_invoice_term.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0003_paid_launch_access_invoice_term.sql');
+    expect(plan.expectedNewHead).toBe('0007_paid_launch_access_invoice_term.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

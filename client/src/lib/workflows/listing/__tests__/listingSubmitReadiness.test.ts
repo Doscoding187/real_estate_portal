@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { calculateSubmitReadinessDryRun } from '../listingSubmitReadiness';
+import { calculateListingReadiness } from '../../../readiness';
 import type { ListingWorkflowData } from '@shared/listing-workflow-types';
 
 const completeData: ListingWorkflowData = {
@@ -8,7 +9,15 @@ const completeData: ListingWorkflowData = {
   title: 'Modern Family Home',
   description: 'Beautiful 4-bedroom family home in a prime location with modern finishes throughout. This home features an open-plan living area and a modern kitchen.',
   pricing: { askingPrice: 2500000, negotiable: true } as any,
-  propertyDetails: { bedrooms: 4, bathrooms: 2, houseAreaM2: 250 },
+  propertyDetails: {
+    corePropertyInformation: {
+      version: 1,
+      bedrooms: { status: 'known', value: 4 },
+      bathrooms: { status: 'known', value: 2 },
+      internalArea: { status: 'known', valueM2: 250, unit: 'm2' },
+      erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+    },
+  },
   additionalInfo: { furnishingStatus: 'fully_furnished', petPolicy: 'allowed' },
   basicInfo: { propertyCategory: 'existing', possessionStatus: 'immediate' },
   location: {
@@ -44,6 +53,20 @@ const emptyData: ListingWorkflowData = {
 };
 
 describe('calculateSubmitReadinessDryRun', () => {
+  it('counts canonical core bedrooms in the wizard readiness gate', () => {
+    const result = calculateListingReadiness({
+      propertyType: 'house',
+      propertyDetails: {
+        corePropertyInformation: {
+          version: 1,
+          bedrooms: { status: 'known', value: 3 },
+        },
+      },
+    });
+
+    expect(result.missing.specs).toEqual([]);
+  });
+
   it('returns ready for complete data', async () => {
     const result = await calculateSubmitReadinessDryRun(completeData);
     expect(result.ready).toBe(true);

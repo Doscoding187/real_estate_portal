@@ -145,9 +145,9 @@ describe('bounded Database Authority data adapters', () => {
   it('publishes deterministic versions and the required geography minimum', () => {
     expect(CANONICAL_GEOGRAPHY_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_GEOGRAPHY_EXPECTED_ROWS).toEqual({
-      provinces: 3,
-      cities: 4,
-      suburbs: 1,
+      provinces: 9,
+      cities: 10,
+      suburbs: 10,
     });
     expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v1');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
@@ -310,7 +310,7 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0003_paid_launch_access_invoice_term.sql');
+    expect(plan.migrationHead).toBe('0007_paid_launch_access_invoice_term.sql');
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {

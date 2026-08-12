@@ -41,11 +41,24 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
     expect(payload.status).toBeUndefined();
   });
 
-  it('merges propertyDetails and additionalInfo (basicInfo excluded)', () => {
+  it('maps canonical Features & Context and excludes arbitrary additionalInfo (basicInfo excluded)', () => {
     const state: Partial<ListingWizardState> = {
       ...minState,
       propertyDetails: { bedrooms: 2, bathrooms: 1, unitSizeM2: 80 },
-      additionalInfo: { furnishing: 'fully_furnished', petsAllowed: true },
+      additionalInfo: {
+        featuresContext: {
+          version: 1,
+          spaces: ['storage_room'],
+          context: {},
+          utilities: {},
+          security: { status: 'unknown', features: [] },
+          highlights: [],
+          customFeatures: ['sunroom'],
+          customHighlights: ['Quiet cul-de-sac'],
+        },
+        furnishing: 'fully_furnished',
+        petsAllowed: true,
+      } as any,
       basicInfo: { possessionStatus: 'immediate', completionDate: '2025-06-01' },
     };
     const payload = buildListingSubmitPayloadFromWizardState(state);
@@ -53,9 +66,15 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
       bedrooms: 2,
       bathrooms: 1,
       unitSizeM2: 80,
-      furnishing: 'fully_furnished',
-      petsAllowed: true,
+      featuresContext: {
+        version: 1,
+        spaces: ['storage_room'],
+        customFeatures: ['sunroom'],
+        customHighlights: ['Quiet cul-de-sac'],
+      },
     });
+    expect(payload.propertyDetails).not.toHaveProperty('furnishing');
+    expect(payload.propertyDetails).not.toHaveProperty('petsAllowed');
     // basicInfo fields intentionally excluded (duplicate with top-level/location/pricing)
     expect(payload.propertyDetails).not.toHaveProperty('possessionStatus');
     expect(payload.propertyDetails).not.toHaveProperty('completionDate');
@@ -119,7 +138,12 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
     expect(payload.description).toBe('');
     expect(payload.mediaIds).toEqual([]);
     expect(payload.mainMediaId).toBeUndefined();
-    expect(payload.propertyDetails).toEqual({});
+    expect(payload.propertyDetails.corePropertyInformation).toMatchObject({
+      version: 1,
+      bedrooms: { status: 'unknown' },
+      bathrooms: { status: 'unknown' },
+      internalArea: { status: 'unknown', unit: 'm2' },
+    });
   });
 
   it('handles rent action pricing', () => {

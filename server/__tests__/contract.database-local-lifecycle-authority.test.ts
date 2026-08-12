@@ -113,6 +113,12 @@ describe('database local lifecycle authority', () => {
       'assert_service_artifacts_are_not_symlinked',
       'report_legacy_residue',
       'pid_matches_service',
+      'assert_runtime_artifact_shapes',
+      'assert_no_runtime_openers',
+      'classify_runtime_state',
+      'normalize_runtime_state',
+      'recover()',
+      'lsof',
       '30-second bound',
     ]) {
       expect(shell).toContain(authority);
@@ -196,6 +202,7 @@ describe('database local lifecycle authority', () => {
     expect(stopBlock).toContain('--shutdown-timeout=30');
     expect(stopBlock).toContain('shutdown');
     expect(stopBlock).toContain('assert_port_free');
+    expect(stopBlock).toContain('normalize_runtime_state');
     expect(stopBlock).not.toContain('kill -');
     expect(stopBlock).not.toContain('tcp_ping');
     expect(stopBlock).not.toContain('pkill');
@@ -220,6 +227,8 @@ describe('database local lifecycle authority', () => {
     expect(stateBlock).toContain('if port_has_listener; then');
     expect(stateBlock).toContain('return 0');
     expect(stateBlock).not.toContain('rm -f');
+    expect(shell).toContain('for path in "$PID_FILE" "$SOCKET_PATH" "$LOCK_FILE"');
+    expect(shell).not.toContain('rm -rf');
     expect(shell).not.toContain('rm -f -- "$PID_FILE"');
 
     for (const command of ['start()', 'status()', 'stop()']) {

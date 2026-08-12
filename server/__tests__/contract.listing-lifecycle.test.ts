@@ -16,24 +16,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockDb, mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
   mockDb: {
-      getListingById: vi.fn(),
-      createListing: vi.fn(),
-      updateListing: vi.fn(),
-      submitListingForReview: vi.fn(),
-      approveListing: vi.fn(),
-      rejectListing: vi.fn(),
-      archiveListing: vi.fn(),
-      deleteListing: vi.fn(),
-      getListingMedia: vi.fn(),
-      replaceListingMedia: vi.fn(),
-      getUserListings: vi.fn(),
-      getListingAnalytics: vi.fn(),
-      getAgentById: vi.fn(),
-      getAgentByUserId: vi.fn(),
-      getUserById: vi.fn(),
-      getApprovalQueue: vi.fn(),
-      syncPublishedListingMediaToPropertyMirror: vi.fn(),
-      getDb: vi.fn(),
+    getListingById: vi.fn(),
+    createListing: vi.fn(),
+    createListingRevision: vi.fn(),
+    updateListing: vi.fn(),
+    submitListingForReview: vi.fn(),
+    approveListing: vi.fn(),
+    rejectListing: vi.fn(),
+    archiveListing: vi.fn(),
+    deleteListing: vi.fn(),
+    getListingMedia: vi.fn(),
+    replaceListingMedia: vi.fn(),
+    getUserListings: vi.fn(),
+    getListingAnalytics: vi.fn(),
+    getAgentById: vi.fn(),
+    getAgentByUserId: vi.fn(),
+    getUserById: vi.fn(),
+    getApprovalQueue: vi.fn(),
+    syncPublishedListingMediaToPropertyMirror: vi.fn(),
+    getDb: vi.fn(),
   },
   mockAssertListingPublicationEntitled: vi.fn(),
 }));
@@ -48,7 +49,10 @@ vi.mock('../services/agentOsEventService', () => ({
 vi.mock('../services/listingPublicationEntitlementService', () => ({
   assertListingPublicationEntitled: mockAssertListingPublicationEntitled,
   ListingPublicationEntitlementError: class ListingPublicationEntitlementError extends Error {
-    constructor(public readonly reason: string, message: string) {
+    constructor(
+      public readonly reason: string,
+      message: string,
+    ) {
       super(message);
     }
   },
@@ -79,6 +83,7 @@ vi.mock('../services/locationPagesServiceEnhanced', () => ({
 
 import { appRouter } from '../routers';
 import { ListingPublicationEntitlementError } from '../services/listingPublicationEntitlementService';
+import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
 
 // ---------------------------------------------------------------------------
 // Shared test helpers
@@ -123,7 +128,15 @@ const mockListing = (overrides: Record<string, any> = {}) => ({
   latitude: -26.2041,
   longitude: 28.0473,
   pricing: { askingPrice: 2500000 },
-  propertyDetails: { bedrooms: 4, bathrooms: 2 },
+  propertyDetails: {
+    corePropertyInformation: {
+      version: 1,
+      bedrooms: { status: 'known', value: 4 },
+      bathrooms: { status: 'known', value: 2 },
+      internalArea: { status: 'known', valueM2: 250, unit: 'm2' },
+      erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+    },
+  },
   featured: 0,
   readinessScore: 100,
   qualityScore: 90,
@@ -177,6 +190,10 @@ describe('listing lifecycle — canonical identity contract', () => {
     vi.mocked(mockDb.getListingMedia).mockResolvedValue([mockMediaItem()]);
     vi.mocked(mockDb.replaceListingMedia).mockResolvedValue(undefined);
     vi.mocked(mockDb.createListing).mockResolvedValue(1001);
+    vi.mocked(mockDb.createListingRevision).mockResolvedValue({
+      revisionListingId: 1002,
+      mediaIdMap: new Map(),
+    });
     vi.mocked(mockDb.updateListing).mockResolvedValue(undefined);
     vi.mocked(mockDb.submitListingForReview).mockResolvedValue(undefined);
     vi.mocked(mockDb.approveListing).mockResolvedValue(undefined);
@@ -347,7 +364,59 @@ describe('listing lifecycle — canonical identity contract', () => {
     await caller.listing.submitForReview({ listingId: LISTING_ID });
 
     // Submit must have been called with the same ID
+    expect(mockDb.createListingRevision).not.toHaveBeenCalled();
     expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+  });
+
+  it('excludes the published source listing when submitting its private revision', async () => {
+    const caller = makeCaller(ownerUser);
+    const REVISION_ID = 3004;
+    const SOURCE_LISTING_ID = 3005;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({
+        id: REVISION_ID,
+        status: 'draft',
+        revisionOfListingId: SOURCE_LISTING_ID,
+      }),
+    );
+
+    await caller.listing.submitForReview({ listingId: REVISION_ID });
+
+    expect(mockAssertListingPublicationEntitled).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        listingId: REVISION_ID,
+        operation: 'submit',
+        excludeListingIds: [SOURCE_LISTING_ID],
+      }),
+    );
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(REVISION_ID);
+  });
+
+  it('rejects submission when canonical core property facts are incomplete', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 3003;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({
+        id: LISTING_ID,
+        propertyDetails: {
+          corePropertyInformation: {
+            version: 1,
+            bedrooms: { status: 'known', value: 4 },
+            bathrooms: { status: 'known', value: 2 },
+            internalArea: { status: 'unknown', unit: 'm2' },
+            erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+          },
+        },
+      }),
+    );
+
+    await expect(caller.listing.submitForReview({ listingId: LISTING_ID })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    expect(mockDb.submitListingForReview).not.toHaveBeenCalled();
   });
 
   it('does not let verified-agent fast-track bypass the canonical entitlement assertion', async () => {
@@ -479,7 +548,73 @@ describe('listing lifecycle — canonical identity contract', () => {
     });
 
     expect(result).toMatchObject({ success: true, status: 'pending_review' });
-    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.createListingRevision).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(1002);
+    expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
+  });
+
+  it('maps existing media and presentation references onto the private revision', async () => {
+    const caller = makeCaller(ownerUser);
+    const LISTING_ID = 8051;
+    const REVISION_ID = 8052;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({
+        id: LISTING_ID,
+        status: 'published',
+        propertyDetails: {
+          propertyPresentation: {
+            media: [{ kind: 'floorplan', label: 'Ground floor', mediaId: 'existing:501' }],
+          },
+        },
+      }),
+    );
+    vi.mocked(mockDb.createListingRevision).mockResolvedValue({
+      revisionListingId: REVISION_ID,
+      mediaIdMap: new Map([
+        [500, 1500],
+        [501, 1501],
+      ]),
+    });
+    vi.mocked(mockDb.getListingMedia).mockResolvedValue([
+      mockMediaItem({ id: 500, isPrimary: 1 }),
+      mockMediaItem({ id: 501, mediaType: 'floorplan', isPrimary: 0 }),
+    ]);
+
+    await caller.listing.update({
+      id: LISTING_ID,
+      title: 'Revised Modern Family Home',
+      media: [
+        { id: 'existing:500', mediaType: 'image' },
+        { id: 'existing:501', mediaType: 'floorplan' },
+      ],
+      mainMediaId: 'existing:500',
+      propertyDetails: {
+        propertyPresentation: {
+          media: [{ kind: 'floorplan', label: 'Ground floor', mediaId: 'existing:501' }],
+        },
+      },
+    });
+
+    expect(mockDb.updateListing).toHaveBeenCalledWith(
+      REVISION_ID,
+      expect.objectContaining({
+        propertyDetails: expect.objectContaining({
+          propertyPresentation: {
+            media: [{ kind: 'floorplan', label: 'Ground floor', mediaId: 'existing:1501' }],
+          },
+        }),
+      }),
+    );
+    expect(mockDb.replaceListingMedia).toHaveBeenCalledWith(
+      REVISION_ID,
+      [
+        { id: 'existing:1500', mediaType: 'image', uploadToken: null },
+        { id: 'existing:1501', mediaType: 'floorplan', uploadToken: null },
+      ],
+      'existing:1500',
+    );
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(REVISION_ID);
     expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
   });
 
@@ -488,10 +623,20 @@ describe('listing lifecycle — canonical identity contract', () => {
     const LISTING_ID = 8101;
     const media = [
       {
-        id: 'uploads/listings/8101/walkthrough.mp4',
+        id: 'properties/8101/walkthrough.mp4',
         mediaType: 'video' as const,
         fileName: 'walkthrough.mp4',
         processingStatus: 'completed' as const,
+        uploadToken: createListingMediaUploadToken({
+          key: 'properties/8101/walkthrough.mp4',
+          mediaType: 'video',
+          contentType: 'video/mp4',
+          fileName: 'walkthrough.mp4',
+          fileSize: 1024,
+          userId: ownerUser.id,
+          listingId: LISTING_ID,
+          confirmed: true,
+        }),
       },
       {
         id: 'existing:701',
@@ -510,7 +655,14 @@ describe('listing lifecycle — canonical identity contract', () => {
       media,
     });
 
-    expect(mockDb.replaceListingMedia).toHaveBeenCalledWith(LISTING_ID, media, media[0].id);
+    expect(mockDb.replaceListingMedia).toHaveBeenCalledWith(
+      LISTING_ID,
+      [
+        { ...media[0], fileSize: 1024, uploadToken: null },
+        { ...media[1], uploadToken: null },
+      ],
+      media[0].id,
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -580,7 +732,9 @@ describe('listing lifecycle — canonical identity contract', () => {
       title: 'Updated Title',
     });
 
-    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.createListingRevision).toHaveBeenCalledWith(LISTING_ID);
+    expect(mockDb.updateListing).toHaveBeenCalledWith(1002, expect.any(Object));
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(1002);
     expect(mockDb.syncPublishedListingMediaToPropertyMirror).not.toHaveBeenCalled();
   });
 
@@ -589,7 +743,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   // -----------------------------------------------------------------------
   it.each(['sell', 'rent', 'auction'] as const)(
     'action "%s" follows same lifecycle through submit',
-    async (action) => {
+    async action => {
       const caller = makeCaller(ownerUser);
       const LISTING_ID = 12001;
 
@@ -597,7 +751,7 @@ describe('listing lifecycle — canonical identity contract', () => {
         action === 'sell'
           ? { askingPrice: 2000000 }
           : action === 'rent'
-            ? { monthlyRent: 15000 }
+            ? { monthlyRent: 15000, depositFact: { status: 'unknown' } }
             : { startingBid: 1000000 };
 
       vi.mocked(mockDb.getListingById).mockResolvedValue(
@@ -618,9 +772,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   it('approve rejects non-super-admin', async () => {
     const caller = makeCaller(ownerUser); // agent, not admin
 
-    await expect(
-      caller.listing.approve({ listingId: 13001 }),
-    ).rejects.toThrow();
+    await expect(caller.listing.approve({ listingId: 13001 })).rejects.toThrow();
   });
 
   it('approve returns listing lifecycle-state errors as BAD_REQUEST', async () => {
@@ -683,9 +835,7 @@ describe('listing lifecycle — canonical identity contract', () => {
   it('reject rejects non-super-admin', async () => {
     const caller = makeCaller(ownerUser); // agent, not admin
 
-    await expect(
-      caller.listing.reject({ listingId: 14001 }),
-    ).rejects.toThrow();
+    await expect(caller.listing.reject({ listingId: 14001 })).rejects.toThrow();
   });
 
   it('reject returns listing lifecycle-state errors as BAD_REQUEST', async () => {

@@ -64,7 +64,11 @@ export class SimilarPropertiesService {
       throw new Error('Reference property not found');
     }
 
-    const ref = referenceProperty[0];
+    const ref = {
+      ...referenceProperty[0],
+      latitude: referenceProperty[0].publicLatitude,
+      longitude: referenceProperty[0].publicLongitude,
+    };
 
     // Calculate price range (±20%)
     const priceMin = ref.price ? ref.price * 0.8 : 0;
@@ -84,8 +88,8 @@ export class SimilarPropertiesService {
         bedrooms: properties.bedrooms,
         bathrooms: properties.bathrooms,
         area: properties.area,
-        latitude: properties.latitude,
-        longitude: properties.longitude,
+        latitude: properties.publicLatitude,
+        longitude: properties.publicLongitude,
       })
       .from(properties)
       .where(
@@ -343,8 +347,8 @@ export class SimilarPropertiesService {
         bedrooms: properties.bedrooms,
         bathrooms: properties.bathrooms,
         area: properties.area,
-        latitude: properties.latitude,
-        longitude: properties.longitude,
+        latitude: properties.publicLatitude,
+        longitude: properties.publicLongitude,
       })
       .from(properties)
       .where(

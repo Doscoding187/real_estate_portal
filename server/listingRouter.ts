@@ -12,9 +12,11 @@ import { agents, leads, locations, properties } from '../drizzle/schema';
 import * as db from './db';
 import { ENV } from './_core/env';
 import {
-  autoCreateLocationHierarchy,
-  extractPlaceComponents,
-} from './services/locationAutoPopulation';
+  ListingLocationResolutionError,
+  parseOptionalCoordinatePair,
+  resolveCanonicalListingLocation,
+  validateListingRecordLocation,
+} from './services/listingLocationResolver';
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
 import { requireUser } from './_core/requireUser';
@@ -25,6 +27,49 @@ import {
   assertListingPublicationEntitled,
   ListingPublicationEntitlementError,
 } from './services/listingPublicationEntitlementService';
+import {
+  getListingAuthoringValidationMessage,
+  LISTING_PROPERTY_TYPES,
+} from '../shared/property-taxonomy';
+import {
+  buildCanonicalCorePropertyDetails,
+  validateCorePropertyInformation,
+} from '../shared/core-property-information';
+import { listingActionToIntent } from '../shared/listing-types';
+import {
+  LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+  normalizeFeaturesContext,
+  validateFeaturesContext,
+} from '../shared/features-context';
+import {
+  buildPricingContract,
+  getPrimaryPrice,
+  validatePricingContract,
+} from '../shared/pricing-contract';
+import { getPrimaryListingImage } from '../shared/listing-media';
+import {
+  LOCATION_CONFIRMATION_STATES,
+  LOCATION_COORDINATE_SOURCES,
+  PUBLIC_LOCATION_PRECISIONS,
+  privateAddressSchema,
+} from '../shared/location-contract';
+import {
+  createListingMediaUploadToken,
+  confirmListingMediaUploadToken,
+  isExistingListingMediaToken,
+  verifyListingMediaUploadToken,
+} from './services/listingMediaAuthority';
+import {
+  normalizePropertyPresentation,
+  type PresentationMediaLike,
+} from '../shared/property-presentation';
+import {
+  buildLocalMediaPublicUrl,
+  buildLocalMediaUploadUrl,
+  createLocalMediaKey,
+  getMediaStorageAdapter,
+  resolveMediaDeliveryUrl,
+} from './_core/mediaStorage';
 
 // Helper to normalize placeId vs locationId logic
 async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
@@ -71,6 +116,17 @@ async function normalizeLocationInput(inputLocation: { placeId?: string; locatio
   return { sanitizedPlaceId, resolvedLocationId };
 }
 
+function parseDraftCoordinates(location: { latitude?: number | null; longitude?: number | null }) {
+  try {
+    return parseOptionalCoordinatePair(location.latitude, location.longitude);
+  } catch (error) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: error instanceof Error ? error.message : 'Enter a valid property map location.',
+    });
+  }
+}
+
 const LISTING_LIFECYCLE_ERROR_PATTERNS = [
   /^Listing is already published$/,
   /^Listing cannot be approved from status ".+"$/,
@@ -113,17 +169,21 @@ const fillMissing = (target: Record<string, any>, key: string, value: unknown) =
 function normalizePropertyDetailsForPublicContract(
   propertyDetails: Record<string, any> | null | undefined,
   pricing: Record<string, any> | null | undefined,
+  action?: string,
+  propertyType?: string,
 ) {
   const normalized = { ...(propertyDetails || {}) };
-  const pricingData = pricing || {};
 
-  fillMissing(normalized, 'levies', pricingData.levies ?? normalized.leviesHoaOperatingCosts);
-  fillMissing(normalized, 'leviesHoaOperatingCosts', normalized.levies ?? pricingData.levies);
+  const pricingContract = buildPricingContract(action, pricing, normalized, {
+    preferEmbedded: false,
+  });
+  if (pricingContract) normalized.pricingContract = pricingContract;
 
-  const ratesValue =
-    pricingData.ratesAndTaxes ?? normalized.ratesAndTaxes ?? normalized.ratesTaxes;
-  fillMissing(normalized, 'ratesAndTaxes', ratesValue);
-  fillMissing(normalized, 'ratesTaxes', ratesValue);
+  // New writes have one versioned pricing authority. Historical aliases are
+  // handled only as read compatibility by buildPricingContract.
+  for (const key of ['levies', 'leviesHoaOperatingCosts', 'ratesAndTaxes', 'ratesTaxes']) {
+    delete normalized[key];
+  }
 
   const parkingValue = normalized.parkingCount ?? normalized.parkingBays;
   fillMissing(normalized, 'parkingCount', parkingValue);
@@ -151,19 +211,67 @@ function normalizePropertyDetailsForPublicContract(
     normalized.fibreReady = true;
   }
 
+  if (Object.prototype.hasOwnProperty.call(normalized, 'featuresContext')) {
+    const canonicalFeaturesContext = normalizeFeaturesContext(
+      normalized.featuresContext,
+      normalized,
+    );
+    for (const key of LEGACY_STEP4_PROPERTY_DETAIL_KEYS) {
+      if (key !== 'featuresContext') delete normalized[key];
+    }
+    normalized.featuresContext = canonicalFeaturesContext;
+  }
+
+  // Rebuild the canonical Step 3 object at the server boundary as well. This
+  // prevents a direct API caller from bypassing the wizard's typed payload
+  // mapping while retaining legacy flat aliases for existing consumers.
+  Object.assign(normalized, buildCanonicalCorePropertyDetails(propertyType as any, normalized));
+
+  if (normalized.propertyPresentation !== undefined) {
+    try {
+      normalized.propertyPresentation = normalizePropertyPresentation(
+        normalized.propertyPresentation,
+      );
+    } catch (error) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: error instanceof Error ? error.message : 'Property presentation is not valid.',
+      });
+    }
+  }
+
   return normalized;
+}
+
+function assertPropertyPresentationMediaReferences(
+  propertyDetails: Record<string, any>,
+  availableMedia: PresentationMediaLike[] | undefined,
+) {
+  const presentation = normalizePropertyPresentation(propertyDetails.propertyPresentation);
+  if (!presentation || presentation.media.length === 0) return;
+
+  const allowed = new Set(
+    (availableMedia || []).flatMap(media => {
+      const ids = media.id == null ? [] : [String(media.id), `existing:${String(media.id)}`];
+      return [...ids, media.url, media.originalUrl].filter((value): value is string =>
+        Boolean(value && value.trim()),
+      );
+    }),
+  );
+
+  for (const item of presentation.media) {
+    if (!allowed.has(item.mediaId)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Property presentation references media that is not part of this listing.',
+      });
+    }
+  }
 }
 
 // Validation schemas
 const listingActionSchema = z.enum(['sell', 'rent', 'auction']);
-const propertyTypeSchema = z.enum([
-  'apartment',
-  'house',
-  'farm',
-  'land',
-  'commercial',
-  'shared_living',
-]);
+const propertyTypeSchema = z.enum(LISTING_PROPERTY_TYPES);
 
 const listingMediaInputSchema = z.object({
   // Existing media uses `existing:<listing_media.id>`; new uploads use their
@@ -171,6 +279,7 @@ const listingMediaInputSchema = z.object({
   // listing-media record as though it were a new upload.
   id: z.string().min(1),
   mediaType: z.enum(['image', 'video', 'floorplan', 'pdf']),
+  uploadToken: z.string().min(1).optional().nullable(),
   fileName: z.string().max(255).optional().nullable(),
   fileSize: z.number().int().nonnegative().optional().nullable(),
   thumbnailUrl: z.string().optional().nullable(),
@@ -182,7 +291,121 @@ const listingMediaInputSchema = z.object({
   processingStatus: z.enum(['pending', 'processing', 'completed', 'failed']).optional().nullable(),
 });
 
-const createListingSchema = z.object({
+type ListingMediaInput = z.infer<typeof listingMediaInputSchema>;
+
+/**
+ * Convert client media references into a server-authorized manifest. Existing
+ * rows are represented by listing-scoped `existing:<id>` tokens and are
+ * checked again by replaceListingMedia. New storage keys must carry a
+ * server-issued, confirmed upload token bound to the authenticated user.
+ */
+async function authorizeListingMediaManifest(
+  media: ListingMediaInput[] | undefined,
+  mediaIds: string[] | undefined,
+  userId: number,
+  listingId?: number,
+): Promise<ListingMediaInput[] | undefined> {
+  if (!media?.length) {
+    if (mediaIds && mediaIds.length > 0) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Media must be submitted with a confirmed upload manifest.',
+      });
+    }
+    return media;
+  }
+
+  const normalized: ListingMediaInput[] = [];
+  for (const item of media) {
+    if (isExistingListingMediaToken(item.id)) {
+      if (listingId === undefined) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Existing listing media cannot be attached to a new listing.',
+        });
+      }
+      normalized.push({ ...item, uploadToken: null });
+      continue;
+    }
+
+    if (!item.uploadToken) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Every new media item must be uploaded and confirmed before submission.',
+      });
+    }
+
+    let token;
+    try {
+      token = verifyListingMediaUploadToken(item.uploadToken, {
+        userId,
+        key: item.id,
+        mediaType: item.mediaType,
+        requireConfirmed: true,
+      });
+    } catch (error) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: error instanceof Error ? error.message : 'Invalid media upload confirmation.',
+      });
+    }
+
+    if (token.listingId !== null && token.listingId !== listingId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Media upload is bound to a different listing.',
+      });
+    }
+
+    normalized.push({
+      ...item,
+      mediaType: token.mediaType,
+      fileName: token.fileName,
+      fileSize: token.fileSize,
+      // Processing metadata is server-owned for direct uploads. A successful
+      // confirmation is the only state accepted into listing authority.
+      processingStatus: 'completed',
+      // The signed reservation is authorization evidence, not listing data.
+      uploadToken: null,
+    });
+  }
+
+  return normalized;
+}
+
+function remapRevisionMediaToken(mediaId: string, mediaIdMap: Map<number, number>) {
+  if (!isExistingListingMediaToken(mediaId)) return mediaId;
+  const sourceMediaId = Number(mediaId.slice('existing:'.length));
+  const revisionMediaId = mediaIdMap.get(sourceMediaId);
+  if (!revisionMediaId) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Listing revision references media that is not part of the approved listing.',
+    });
+  }
+  return `existing:${revisionMediaId}`;
+}
+
+function remapRevisionPropertyDetails(
+  propertyDetails: Record<string, any>,
+  mediaIdMap: Map<number, number>,
+) {
+  const presentation = normalizePropertyPresentation(propertyDetails.propertyPresentation);
+  if (!presentation) return propertyDetails;
+
+  return {
+    ...propertyDetails,
+    propertyPresentation: {
+      ...presentation,
+      media: presentation.media.map(item => ({
+        ...item,
+        mediaId: remapRevisionMediaToken(item.mediaId, mediaIdMap),
+      })),
+    },
+  };
+}
+
+const createListingSchemaBase = z.object({
   action: listingActionSchema,
   propertyType: propertyTypeSchema,
   title: z.string().min(10).max(255),
@@ -191,12 +414,15 @@ const createListingSchema = z.object({
     // Sell fields
     askingPrice: z.number().optional(),
     negotiable: z.boolean().optional(),
+    negotiability: z.enum(['negotiable', 'not_negotiable', 'unknown']).optional(),
     transferCostEstimate: z.number().nullable().optional(),
     levies: z.number().optional(),
     ratesAndTaxes: z.number().optional(),
+    recurringCosts: z.record(z.string(), z.any()).optional(),
     // Rent fields
     monthlyRent: z.number().optional(),
     deposit: z.number().optional(),
+    depositFact: z.record(z.string(), z.any()).optional(),
     leaseTerms: z.string().optional(),
     availableFrom: z.date().optional(),
     utilitiesIncluded: z.boolean().optional(),
@@ -208,15 +434,24 @@ const createListingSchema = z.object({
   }),
   propertyDetails: z.record(z.string(), z.any()),
   location: z.object({
-    address: z.string(),
-    latitude: z.number(),
-    longitude: z.number(),
-    city: z.string(),
-    suburb: z.string().optional(),
-    province: z.string(),
-    postalCode: z.string().optional(),
+    address: z.string().max(500).optional().default(''),
+    latitude: z.number().finite().nullable().optional(),
+    longitude: z.number().finite().nullable().optional(),
+    city: z.string().max(150),
+    suburb: z.string().max(200).optional(),
+    province: z.string().max(100),
+    postalCode: z.string().max(20).optional(),
     placeId: z.string().optional(),
     locationId: z.number().optional(), // Added for internal Location ID support
+    providerLocationPlaceId: z.string().max(255).nullable().optional(),
+    provider: z.string().max(32).nullable().optional(),
+    provinceId: z.number().int().positive().nullable().optional(),
+    cityId: z.number().int().positive().nullable().optional(),
+    suburbId: z.number().int().positive().nullable().optional(),
+    privateAddress: privateAddressSchema.nullable().optional(),
+    coordinateSource: z.enum(LOCATION_COORDINATE_SOURCES).nullable().optional(),
+    locationConfirmationState: z.enum(LOCATION_CONFIRMATION_STATES).optional(),
+    publicLocationPrecision: z.enum(PUBLIC_LOCATION_PRECISIONS).optional(),
     // Google Places address components for auto-population
     addressComponents: z
       .array(
@@ -239,6 +474,45 @@ const createListingSchema = z.object({
   sellerProspectId: z.number().int().positive().optional(),
 });
 
+const createListingSchema = createListingSchemaBase.superRefine((input, context) => {
+  const message = getListingAuthoringValidationMessage(input.action, input.propertyType);
+  if (message) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['propertyType'],
+      message,
+    });
+  }
+
+  const featureIssues = validateFeaturesContext(
+    input.propertyDetails.featuresContext,
+    listingActionToIntent(input.action),
+    input.propertyType,
+    input.propertyDetails.corePropertyInformation,
+  );
+  for (const issue of featureIssues) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['propertyDetails', 'featuresContext', ...issue.field.split('.')],
+      message: issue.message,
+    });
+  }
+
+  const pricingIssues = validatePricingContract(
+    input.action,
+    input.pricing,
+    input.propertyDetails,
+    { mode: 'draft', enforceInputShape: true },
+  );
+  for (const issue of pricingIssues) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pricing', ...issue.field.split('.')],
+      message: issue.message,
+    });
+  }
+});
+
 export const listingRouter = router({
   /**
    * Create new listing
@@ -251,18 +525,23 @@ export const listingRouter = router({
 
     try {
       const sellerProspectId = input.sellerProspectId;
-      const sellerProspectConversion = sellerProspectId !== undefined
-        ? await (async () => {
-            const database = await db.getDb();
-            if (!database) {
-              throw new TRPCError({
-                code: 'INTERNAL_SERVER_ERROR',
-                message: 'Database not available',
-              });
-            }
-            return prepareSellerProspectListingConversion(database, requireUser(ctx), sellerProspectId);
-          })()
-        : undefined;
+      const sellerProspectConversion =
+        sellerProspectId !== undefined
+          ? await (async () => {
+              const database = await db.getDb();
+              if (!database) {
+                throw new TRPCError({
+                  code: 'INTERNAL_SERVER_ERROR',
+                  message: 'Database not available',
+                });
+              }
+              return prepareSellerProspectListingConversion(
+                database,
+                requireUser(ctx),
+                sellerProspectId,
+              );
+            })()
+          : undefined;
 
       // Generate slug from title
       const timestamp = Date.now().toString(36);
@@ -272,16 +551,22 @@ export const listingRouter = router({
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') + `-${timestamp}`;
 
-      // The typed manifest preserves video/floorplan/document semantics. Keep
-      // mediaIds as a compatibility fallback for older clients.
-      const media = input.media?.length
-        ? input.media.map((item, index) => ({
+      const authorizedMedia = await authorizeListingMediaManifest(
+        input.media,
+        input.mediaIds,
+        userId,
+      );
+
+      // The typed manifest preserves video/floorplan/document semantics. New
+      // media is accepted only after the upload-token boundary above.
+      const media = authorizedMedia?.length
+        ? authorizedMedia.map((item, index) => ({
             id: item.id,
             url: item.id,
             type: item.mediaType,
             displayOrder: index,
-            isPrimary: input.mainMediaId ? item.id === input.mainMediaId : index === 0,
-            processingStatus: item.processingStatus || 'completed',
+            isPrimary: input.mainMediaId ? item.id === input.mainMediaId : false,
+            processingStatus: 'completed' as const,
             thumbnailUrl: item.thumbnailUrl || null,
             previewUrl: item.previewUrl || null,
             fileName: item.fileName || null,
@@ -291,75 +576,57 @@ export const listingRouter = router({
             duration: item.duration || null,
             orientation: item.orientation || null,
           }))
-        : input.mediaIds.map((id, index) => ({
-            id,
-            url: id,
-            type: 'image' as const,
-            displayOrder: index,
-            isPrimary: input.mainMediaId ? id === input.mainMediaId : index === 0,
-            processingStatus: 'completed' as const,
-            thumbnailUrl: null,
-            previewUrl: null,
-            fileName: null,
-            fileSize: null,
-            width: null,
-            height: null,
-            duration: null,
-            orientation: null,
-          }));
+        : [];
 
-      // Auto-create location hierarchy from Google Places data
-      // This auto-populates cities and suburbs as agents add properties!
-      let provinceId: number | null = null;
-      let cityId: number | null = null;
-      let suburbId: number | null = null;
-
-      if (input.location.placeId && input.location.addressComponents) {
-        try {
-          console.log('[ListingRouter] Auto-populating location from Google Places...');
-
-          // Extract components from Google Places data
-          const components = extractPlaceComponents(input.location.addressComponents);
-
-          // Auto-create city/suburb if they don't exist
-          const locationIds = await autoCreateLocationHierarchy({
-            placeId: input.location.placeId,
-            formattedAddress: input.location.address,
-            latitude: input.location.latitude,
-            longitude: input.location.longitude,
-            components,
-          });
-
-          provinceId = locationIds.provinceId;
-          cityId = locationIds.cityId;
-          suburbId = locationIds.suburbId;
-
-          console.log('[ListingRouter] ✅ Auto-populated:', {
-            provinceId,
-            cityId,
-            suburbId,
-          });
-        } catch (error) {
-          console.error('[ListingRouter] Auto-population failed:', error);
-        }
-      }
-
-      // Fallback: Try legacy location resolution (for logging only)
-      if (!cityId && !input.location.locationId) {
-        try {
-          const { locationPagesServiceEnhanced } =
-            await import('./services/locationPagesServiceEnhanced');
-          const location = await locationPagesServiceEnhanced.resolveLocation(input.location);
-          console.log(
-            '[ListingRouter] Fallback: Resolved location:',
-            location.name,
-            `(ID: ${location.id})`,
-          );
-        } catch (error) {
-          console.warn(
-            '[ListingRouter] Location resolution failed, proceeding without location reference:',
-            error,
-          );
+      let resolvedLocation;
+      try {
+        resolvedLocation = await resolveCanonicalListingLocation({
+          ...input.location,
+          address: input.location.address || null,
+          providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+          provider: input.location.provider || null,
+          privateAddress: input.location.privateAddress || null,
+          locationConfirmationState: input.location.locationConfirmationState,
+          publicLocationPrecision: input.location.publicLocationPrecision,
+          propertyType: input.propertyType,
+        });
+      } catch (error) {
+        if (error instanceof ListingLocationResolutionError) {
+          if (input.status !== 'pending_review') {
+            const coordinatePair = parseDraftCoordinates(input.location);
+            console.warn('[ListingRouter] Draft location remains unresolved:', error.message);
+            resolvedLocation = {
+              provinceId: null,
+              cityId: null,
+              suburbId: null,
+              privateAddress: input.location.privateAddress || null,
+              coordinatePair,
+              coordinateSource: input.location.coordinateSource || null,
+              locationConfirmationState:
+                input.location.locationConfirmationState || 'needs_confirmation',
+              publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+              providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+            };
+          } else {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+          }
+        } else if (input.status !== 'pending_review') {
+          const coordinatePair = parseDraftCoordinates(input.location);
+          console.warn('[ListingRouter] Draft location resolver unavailable:', error);
+          resolvedLocation = {
+            provinceId: null,
+            cityId: null,
+            suburbId: null,
+            privateAddress: input.location.privateAddress || null,
+            coordinatePair,
+            coordinateSource: input.location.coordinateSource || null,
+            locationConfirmationState:
+              input.location.locationConfirmationState || 'needs_confirmation',
+            publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+            providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+          };
+        } else {
+          throw error;
         }
       }
 
@@ -368,7 +635,10 @@ export const listingRouter = router({
       const propertyDetails = normalizePropertyDetailsForPublicContract(
         input.propertyDetails,
         input.pricing,
+        input.action,
+        input.propertyType,
       );
+      assertPropertyPresentationMediaReferences(propertyDetails, authorizedMedia);
 
       // Create listing in database with auto-populated location IDs
       const listingId = await db.createListing({
@@ -388,9 +658,13 @@ export const listingRouter = router({
         postalCode: input.location.postalCode,
         placeId: sanitizedPlaceId,
         locationId: resolvedLocationId, // New: Direct location_id if from numeric placeId
-        provinceId, // New: Auto-populated province ID
-        cityId, // New: Auto-populated city ID
-        suburbId, // New: Auto-populated suburb ID
+        provinceId: resolvedLocation.provinceId,
+        cityId: resolvedLocation.cityId,
+        suburbId: resolvedLocation.suburbId,
+        privateAddress: resolvedLocation.privateAddress,
+        coordinateSource: resolvedLocation.coordinateSource,
+        locationConfirmationState: resolvedLocation.locationConfirmationState,
+        publicLocationPrecision: resolvedLocation.publicLocationPrecision,
         slug,
         media,
         sellerProspectConversion,
@@ -451,7 +725,7 @@ export const listingRouter = router({
     .input(
       z.object({
         id: z.number(),
-        ...createListingSchema.partial().shape,
+        ...createListingSchemaBase.partial().shape,
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -469,19 +743,77 @@ export const listingRouter = router({
             message: 'Not authorized to update this listing',
           });
         }
+
+        const taxonomyChanged =
+          (input.action !== undefined && input.action !== listing.action) ||
+          (input.propertyType !== undefined && input.propertyType !== listing.propertyType);
+        const nextPropertyType = input.propertyType ?? listing.propertyType;
+        if (taxonomyChanged) {
+          const nextAction = input.action ?? listing.action;
+          const taxonomyMessage = getListingAuthoringValidationMessage(
+            nextAction,
+            nextPropertyType,
+          );
+          if (taxonomyMessage) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: taxonomyMessage });
+          }
+        }
+
+        if (input.propertyDetails?.featuresContext !== undefined) {
+          const featureIssues = validateFeaturesContext(
+            input.propertyDetails.featuresContext,
+            listingActionToIntent(input.action ?? listing.action),
+            nextPropertyType,
+            input.propertyDetails.corePropertyInformation ??
+              (listing.propertyDetails as any)?.corePropertyInformation,
+          );
+          if (featureIssues.length > 0) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: featureIssues.map(issue => issue.message).join(' '),
+            });
+          }
+        }
+
+        const pricingIssues = validatePricingContract(
+          input.action ?? listing.action,
+          input.pricing ?? (listing.pricing as any),
+          input.propertyDetails ?? (listing.propertyDetails as any) ?? {},
+          {
+            mode: 'draft',
+            enforceInputShape: input.pricing !== undefined,
+          },
+        );
+        if (pricingIssues.length > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: pricingIssues.map(issue => issue.message).join(' '),
+          });
+        }
+
         const requiresReviewBeforePublicUpdate =
           listing.status === 'published' || listing.status === 'approved';
 
         // GUARD: Normalize placeId and validate location_id (if location is being updated)
         const {
           id: _id,
-          media: mediaManifest,
-          mediaIds: _mediaIds,
+          media: rawMediaManifest,
+          mediaIds: rawMediaIds,
           mainMediaId,
           sellerProspectId: _sellerProspectId,
           status: requestedStatus,
           ...listingInput
         } = input;
+
+        const mediaManifest = await authorizeListingMediaManifest(
+          rawMediaManifest,
+          rawMediaIds,
+          userId,
+          input.id,
+        );
+        let targetListingId = input.id;
+        let targetMediaManifest = mediaManifest;
+        let targetMainMediaId = mainMediaId;
 
         // Status changes are lifecycle transitions, not editable listing data.
         // Legacy clients may echo the current status, but cannot promote a
@@ -498,16 +830,131 @@ export const listingRouter = router({
           updatePayload.propertyDetails = normalizePropertyDetailsForPublicContract(
             input.propertyDetails || ((listing.propertyDetails as any) ?? {}),
             input.pricing || null,
+            input.action ?? listing.action,
+            nextPropertyType,
           );
         }
 
+        if (updatePayload.propertyDetails?.propertyPresentation) {
+          const availableMedia =
+            mediaManifest ||
+            (await db.getListingMedia(input.id)).map(item => ({
+              id: item.id,
+              originalUrl: item.originalUrl,
+              url: item.processedUrl || item.originalUrl,
+              mediaType: item.mediaType,
+            }));
+          assertPropertyPresentationMediaReferences(updatePayload.propertyDetails, availableMedia);
+        }
+
         if (input.location) {
+          let resolvedLocation;
+          try {
+            resolvedLocation = await resolveCanonicalListingLocation({
+              ...input.location,
+              address: input.location.address || null,
+              providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+              provider: input.location.provider || null,
+              privateAddress: input.location.privateAddress || null,
+              propertyType: nextPropertyType,
+            });
+          } catch (error) {
+            if (error instanceof ListingLocationResolutionError) {
+              if (listing.status !== 'draft') {
+                throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+              }
+              const coordinatePair = parseDraftCoordinates(input.location);
+              console.warn(
+                '[ListingRouter] Draft location remains unresolved during update:',
+                error.message,
+              );
+              resolvedLocation = {
+                provinceId: null,
+                cityId: null,
+                suburbId: null,
+                privateAddress: input.location.privateAddress || null,
+                coordinatePair,
+                coordinateSource: input.location.coordinateSource || null,
+                locationConfirmationState:
+                  input.location.locationConfirmationState || 'needs_confirmation',
+                publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+                providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+              };
+            } else if (listing.status !== 'draft') {
+              throw error;
+            } else {
+              const coordinatePair = parseDraftCoordinates(input.location);
+              console.warn(
+                '[ListingRouter] Draft location resolver unavailable during update:',
+                error,
+              );
+              resolvedLocation = {
+                provinceId: null,
+                cityId: null,
+                suburbId: null,
+                privateAddress: input.location.privateAddress || null,
+                coordinatePair,
+                coordinateSource: input.location.coordinateSource || null,
+                locationConfirmationState:
+                  input.location.locationConfirmationState || 'needs_confirmation',
+                publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
+                providerLocationPlaceId: input.location.providerLocationPlaceId || null,
+              };
+            }
+          }
+
           const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(
             input.location,
           );
+          const materialLocationChange = [
+            ['address', input.location.address, listing.address],
+            ['city', input.location.city, listing.city],
+            ['suburb', input.location.suburb, listing.suburb],
+            ['province', input.location.province, listing.province],
+            ['postalCode', input.location.postalCode, listing.postalCode],
+            ['latitude', input.location.latitude, listing.latitude],
+            ['longitude', input.location.longitude, listing.longitude],
+            ['provinceId', input.location.provinceId, listing.provinceId],
+            ['cityId', input.location.cityId, listing.cityId],
+            ['suburbId', input.location.suburbId, listing.suburbId],
+            [
+              'privateAddress',
+              JSON.stringify(input.location.privateAddress || null),
+              JSON.stringify(listing.privateAddress || null),
+            ],
+          ].some(([, next, previous]) => String(next ?? '') !== String(previous ?? ''));
+          const explicitlyReconfirmed =
+            input.location.locationConfirmationState === 'confirmed' &&
+            Boolean(input.location.coordinateSource);
+          const requiresReconfirmation =
+            listing.locationConfirmationState === 'confirmed' &&
+            materialLocationChange &&
+            !explicitlyReconfirmed;
+
+          updatePayload.address = input.location.address || null;
+          updatePayload.latitude =
+            input.location.latitude == null ? null : Number(input.location.latitude).toFixed(7);
+          updatePayload.longitude =
+            input.location.longitude == null ? null : Number(input.location.longitude).toFixed(7);
+          updatePayload.city = input.location.city;
+          updatePayload.suburb = input.location.suburb || null;
+          updatePayload.province = input.location.province;
+          updatePayload.postalCode = input.location.postalCode || null;
           updatePayload.placeId = sanitizedPlaceId;
           updatePayload.locationId = resolvedLocationId;
-          // Remove nested location object strictly to avoid Drizzle schema errors
+          updatePayload.provinceId = resolvedLocation.provinceId;
+          updatePayload.cityId = resolvedLocation.cityId;
+          updatePayload.suburbId = resolvedLocation.suburbId;
+          updatePayload.privateAddress = resolvedLocation.privateAddress;
+          updatePayload.coordinateSource = requiresReconfirmation
+            ? null
+            : resolvedLocation.coordinateSource;
+          updatePayload.locationConfirmationState = requiresReconfirmation
+            ? 'needs_confirmation'
+            : resolvedLocation.locationConfirmationState;
+          updatePayload.publicLocationPrecision = resolvedLocation.publicLocationPrecision;
+
+          // Remove nested location object strictly to avoid Drizzle schema errors.
           delete updatePayload.location;
         }
 
@@ -523,39 +970,62 @@ export const listingRouter = router({
             listingId: input.id,
             operation: 'republish',
           });
+
+          const revisionContext = await db.createListingRevision(input.id);
+          targetListingId = revisionContext.revisionListingId;
+          targetMediaManifest = mediaManifest?.map(item => ({
+            ...item,
+            id: remapRevisionMediaToken(item.id, revisionContext.mediaIdMap),
+          }));
+          targetMainMediaId = mainMediaId
+            ? remapRevisionMediaToken(mainMediaId, revisionContext.mediaIdMap)
+            : mainMediaId;
+
+          if (updatePayload.propertyDetails) {
+            updatePayload.propertyDetails = remapRevisionPropertyDetails(
+              updatePayload.propertyDetails,
+              revisionContext.mediaIdMap,
+            );
+            const availableRevisionMedia =
+              targetMediaManifest ||
+              (await db.getListingMedia(targetListingId)).map(item => ({
+                id: item.id,
+                originalUrl: item.originalUrl,
+                url: item.processedUrl || item.originalUrl,
+                mediaType: item.mediaType,
+              }));
+            assertPropertyPresentationMediaReferences(
+              updatePayload.propertyDetails,
+              availableRevisionMedia,
+            );
+          }
         }
 
         // Update listing
-        await db.updateListing(input.id, updatePayload);
+        await db.updateListing(targetListingId, updatePayload);
 
-        if (mediaManifest !== undefined) {
-          await db.replaceListingMedia(input.id, mediaManifest, mainMediaId);
+        if (targetMediaManifest !== undefined) {
+          await db.replaceListingMedia(targetListingId, targetMediaManifest, targetMainMediaId);
         }
 
         if (requiresReviewBeforePublicUpdate) {
-          await db.submitListingForReview(input.id);
+          await db.submitListingForReview(targetListingId);
         } else {
-          // Keep already-public mirror media in sync only for edits that do not need review.
-          try {
-            await db.syncPublishedListingMediaToPropertyMirror(input.id);
-          } catch (syncError) {
-            console.warn('[listing.update] Property media mirror sync skipped:', {
-              listingId: input.id,
-              message: syncError instanceof Error ? syncError.message : String(syncError),
-            });
-          }
+          // Keep an already-public mirror deterministic. A failed projection
+          // is a lifecycle error, not a warning that leaves stale public media.
+          await db.syncPublishedListingMediaToPropertyMirror(targetListingId);
         }
 
         // Recalculate readiness and quality
         // Fetch full listing with media to ensure accuracy (or construct from input + existing)
-        const fullListing = await db.getListingById(input.id);
-        const media = await db.getListingMedia(input.id);
+        const fullListing = await db.getListingById(targetListingId);
+        const media = await db.getListingMedia(targetListingId);
         const listingData = { ...fullListing, ...input, media }; // Merge input into full listing
 
         const readiness = calculateListingReadiness(listingData);
         const quality = calculateListingQualityScore(listingData);
 
-        await db.updateListing(input.id, {
+        await db.updateListing(targetListingId, {
           readinessScore: readiness.score,
           qualityScore: quality.score,
           qualityBreakdown: quality.breakdown,
@@ -581,84 +1051,96 @@ export const listingRouter = router({
    * Get listing by ID for private authoring/review workflows.
    * Public property detail reads must go through properties.getById.
    */
-  getById: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ ctx, input }) => {
-      try {
-        console.log('[listing.getById] Fetching listing ID:', input.id);
-        // Fetch listing
-        const listing = await db.getListingById(input.id);
-        console.log(
-          '[listing.getById] Result:',
-          listing ? `Found: ${listing.title}` : 'NOT FOUND',
-        );
-        if (!listing) {
-          return null; // Return null instead of throwing for consistency with properties.getById
-        }
+  getById: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ ctx, input }) => {
+    try {
+      console.log('[listing.getById] Fetching listing ID:', input.id);
+      // Fetch listing
+      const listing = await db.getListingById(input.id);
+      console.log('[listing.getById] Result:', listing ? `Found: ${listing.title}` : 'NOT FOUND');
+      if (!listing) {
+        return null; // Return null instead of throwing for consistency with properties.getById
+      }
 
-        const user = requireUser(ctx);
-        const isOwner =
-          Number((listing as any).userId || 0) === user.id ||
-          Number((listing as any).ownerId || 0) === user.id;
-        const isSuperAdmin = user.role === 'super_admin';
+      const user = requireUser(ctx);
+      const isOwner =
+        Number((listing as any).userId || 0) === user.id ||
+        Number((listing as any).ownerId || 0) === user.id;
+      const isSuperAdmin = user.role === 'super_admin';
 
-        if (!isOwner && !isSuperAdmin) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Not authorized to view this listing',
-          });
-        }
-
-        // Fetch media
-        const rawMedia = await db.getListingMedia(input.id);
-
-        // Transform media to include full URLs
-        // Frontend expects 'url' field, but database has 'originalUrl'
-        const cdnBaseUrl =
-          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-        const media = rawMedia.map(m => ({
-          ...m,
-          url: m.originalUrl.startsWith('http') ? m.originalUrl : `${cdnBaseUrl}/${m.originalUrl}`,
-          thumbnail: m.thumbnailUrl
-            ? m.thumbnailUrl.startsWith('http')
-              ? m.thumbnailUrl
-              : `${cdnBaseUrl}/${m.thumbnailUrl}`
-            : null,
-        }));
-
-        // Fetch agent if assigned
-        let agent = null;
-        if (listing.agentId) {
-          agent = await db.getAgentById(listing.agentId);
-        }
-
-        // Normalize price field for PropertyDetail compatibility
-        // PropertyDetail expects a single 'price' field
-        const price = listing.askingPrice || listing.monthlyRent || listing.startingBid || 0;
-
-        // Map listing fields to property-compatible format
-        const propertyCompatibleListing = {
-          ...listing,
-          price, // Add normalized price field
-          listingType: listing.action, // Map action → listingType for compatibility
-          mainImage: media[0]?.url || null, // Add mainImage for cards/previews
-          area: listing.propertyDetails?.size || listing.propertyDetails?.area || 0, // Fallback area
-        };
-
-        return {
-          property: propertyCompatibleListing,
-          images: media,
-          agent,
-        };
-      } catch (error) {
-        console.error('Error fetching listing:', error);
-        if (error instanceof TRPCError) throw error;
+      if (!isOwner && !isSuperAdmin) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch listing',
+          code: 'FORBIDDEN',
+          message: 'Not authorized to view this listing',
         });
       }
-    }),
+
+      // Fetch media
+      const rawMedia = await db.getListingMedia(input.id);
+
+      // Transform media to include full URLs
+      // Frontend expects 'url' field, but database has 'originalUrl'
+      const media = rawMedia.map(m => {
+        const presentation = normalizePropertyPresentation(
+          (listing.propertyDetails as any)?.propertyPresentation,
+        );
+        const descriptor = presentation?.media.find(item =>
+          [String(m.id), `existing:${String(m.id)}`, m.originalUrl].includes(item.mediaId),
+        );
+        return {
+          ...m,
+          url: resolveMediaDeliveryUrl(m.originalUrl),
+          thumbnail: resolveMediaDeliveryUrl(m.thumbnailUrl),
+          presentationKind:
+            descriptor?.kind ||
+            (m.mediaType === 'floorplan'
+              ? 'floorplan'
+              : m.mediaType === 'pdf'
+                ? 'document'
+                : undefined),
+          presentationLabel: descriptor?.label || null,
+        };
+      });
+      const primaryImage = getPrimaryListingImage(media as any[]);
+
+      // Fetch agent if assigned
+      let agent = null;
+      if (listing.agentId) {
+        agent = await db.getAgentById(listing.agentId);
+      }
+
+      // Normalize price field for PropertyDetail compatibility
+      // PropertyDetail expects a single 'price' field
+      const price =
+        getPrimaryPrice(
+          listing.action,
+          listing.pricing as Record<string, unknown>,
+          listing.propertyDetails as Record<string, unknown>,
+        ) || 0;
+
+      // Map listing fields to property-compatible format
+      const propertyCompatibleListing = {
+        ...listing,
+        price, // Add normalized price field
+        listingType: listing.action, // Map action → listingType for compatibility
+        mainImage: primaryImage?.url || null, // Hero is always a completed image
+        area: listing.propertyDetails?.size || listing.propertyDetails?.area || 0, // Fallback area
+      };
+
+      return {
+        property: propertyCompatibleListing,
+        images: media,
+        media,
+        agent,
+      };
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+      if (error instanceof TRPCError) throw error;
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch listing',
+      });
+    }
+  }),
 
   /**
    * Get user's listings
@@ -752,7 +1234,16 @@ export const listingRouter = router({
           });
         }
 
-        // Hard delete
+        // Published inventory is customer-visible supply. Removing it must
+        // preserve the source record and durable history, and must cascade
+        // through the canonical source-to-public lifecycle.
+        if (['published', 'approved'].includes(String(listing.status))) {
+          await db.archiveListing(input.id);
+          return { success: true, status: 'archived' as const };
+        }
+
+        // Private drafts and unresolved submissions may still use the legacy
+        // hard-delete path until the broader revision architecture replaces it.
         await db.deleteListing(input.id);
 
         return { success: true };
@@ -788,32 +1279,115 @@ export const listingRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        // Import the S3 upload service
-        const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
+        const user = requireUser(ctx);
+        if (input.listingId !== undefined) {
+          const listing = await db.getListingById(input.listingId);
+          const isOwner =
+            listing &&
+            (Number((listing as any).userId || 0) === user.id ||
+              Number((listing as any).ownerId || 0) === user.id);
+          if (!listing || (!isOwner && user.role !== 'super_admin')) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Not authorized to upload media for this listing',
+            });
+          }
+        }
 
-        // Generate presigned URL for S3
+        const storageScope = input.listingId?.toString() || `draft-${user.id}`;
+        if (getMediaStorageAdapter() === 'local') {
+          const key = createLocalMediaKey(input.filename, storageScope);
+          const uploadToken = createListingMediaUploadToken({
+            key,
+            mediaType: input.type,
+            contentType: input.contentType,
+            fileName: input.filename,
+            userId: user.id,
+            listingId: input.listingId ?? null,
+          });
+
+          return {
+            uploadUrl: buildLocalMediaUploadUrl(uploadToken),
+            mediaId: key,
+            publicUrl: buildLocalMediaPublicUrl(key),
+            uploadToken,
+          };
+        }
+
+        // Import the S3 upload service only for the explicitly selected S3 adapter.
+        const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
         const result = await generatePresignedUploadUrl(
           input.filename,
           input.contentType,
-          input.listingId?.toString() || 'draft',
+          storageScope,
         );
 
-        // Build the public CDN URL (CloudFront preferred)
-        const { ENV } = await import('./_core/env');
-        const cdnUrl =
-          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-        const publicUrl = `${cdnUrl}/${result.key}`;
+        const publicUrl = resolveMediaDeliveryUrl(result.key);
+        const uploadToken = createListingMediaUploadToken({
+          key: result.key,
+          mediaType: input.type,
+          contentType: input.contentType,
+          fileName: input.filename,
+          userId: user.id,
+          listingId: input.listingId ?? null,
+        });
 
         return {
           uploadUrl: result.uploadUrl,
           mediaId: result.key, // Use the S3 key as media ID
-          publicUrl,
+          publicUrl: publicUrl || result.key,
+          uploadToken,
         };
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        if (
+          error instanceof Error &&
+          /invalid|supported|content type|filename|media type/i.test(error.message)
+        ) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
+        }
         console.error('Error generating media upload URL:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to generate upload URL',
+        });
+      }
+    }),
+
+  /**
+   * Finalize a direct upload. The storage HEAD check is the point at which a
+   * presigned reservation becomes a confirmed media reference.
+   */
+  confirmMediaUpload: protectedProcedure
+    .input(z.object({ uploadToken: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      try {
+        const reservation = verifyListingMediaUploadToken(input.uploadToken, {
+          userId: user.id,
+          requireConfirmed: false,
+        });
+        const { assertUploadedMediaObject } = await import('./_core/imageUpload');
+        const verifiedObject = await assertUploadedMediaObject(
+          reservation.key,
+          reservation.contentType,
+        );
+        const uploadToken = confirmListingMediaUploadToken(
+          input.uploadToken,
+          verifiedObject.contentLength,
+        );
+
+        return {
+          uploadToken,
+          mediaId: reservation.key,
+          fileSize: verifiedObject.contentLength,
+          contentType: verifiedObject.contentType || reservation.contentType,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: error instanceof Error ? error.message : 'Unable to confirm media upload.',
         });
       }
     }),
@@ -981,10 +1555,7 @@ export const listingRouter = router({
             .orderBy(desc(leads.createdAt))
             .limit(input.limit)
             .offset(input.offset),
-          dbInstance
-            .select({ total: count() })
-            .from(leads)
-            .where(eq(leads.propertyId, propertyId)),
+          dbInstance.select({ total: count() }).from(leads).where(eq(leads.propertyId, propertyId)),
         ]);
 
         return {
@@ -1085,6 +1656,61 @@ export const listingRouter = router({
         // Check readiness before allowing submission
         const fullListing = await db.getListingById(input.listingId);
         const media = await db.getListingMedia(input.listingId);
+
+        if (fullListing.action === 'sell' || fullListing.action === 'rent') {
+          const locationIssues = validateListingRecordLocation(
+            fullListing as Record<string, unknown>,
+          );
+          if (locationIssues.length > 0) {
+            const message = locationIssues.join(' ');
+            await recordSubmitFailure('invalid_location', message, {
+              fields: ['location'],
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          const pricingIssues = validatePricingContract(
+            fullListing.action,
+            fullListing.pricing as Record<string, unknown>,
+            fullListing.propertyDetails as Record<string, unknown>,
+            { mode: 'publish', enforceInputShape: false },
+          );
+          if (pricingIssues.length > 0) {
+            const message = pricingIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_pricing', message, {
+              fields: pricingIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          const featureIssues = validateFeaturesContext(
+            (fullListing.propertyDetails as any)?.featuresContext,
+            fullListing.action === 'sell' ? 'sale' : 'rent',
+            fullListing.propertyType,
+            (fullListing.propertyDetails as any)?.corePropertyInformation,
+          );
+          if (featureIssues.length > 0) {
+            const message = featureIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_features_context', message, {
+              fields: featureIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+
+          const coreIssues = validateCorePropertyInformation(
+            fullListing.action === 'sell' ? 'sale' : 'rent',
+            fullListing.propertyType,
+            fullListing.propertyDetails,
+          );
+          if (coreIssues.length > 0) {
+            const message = coreIssues.map(issue => issue.message).join(' ');
+            await recordSubmitFailure('invalid_core_property_information', message, {
+              fields: coreIssues.map(issue => issue.field),
+            });
+            throw new TRPCError({ code: 'BAD_REQUEST', message });
+          }
+        }
+
         const readiness = calculateListingReadiness({ ...fullListing, media });
 
         if (readiness.score < 75) {
@@ -1107,9 +1733,11 @@ export const listingRouter = router({
         if (!database) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
         }
+        const originalListingId = Number((fullListing as any).revisionOfListingId || 0);
         await assertListingPublicationEntitled(database, {
           listingId: input.listingId,
           operation: 'submit',
+          ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
         });
 
         const agent = await db.getAgentByUserId(currentUser.id);

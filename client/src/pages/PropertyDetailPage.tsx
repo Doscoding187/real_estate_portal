@@ -11,6 +11,7 @@ import { useGuestActivity } from '@/contexts/GuestActivityContext';
 import { BADGE_TEMPLATES } from '@/../../shared/listing-types';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { formatFullPropertyLocation } from '@/lib/propertyLocationDisplay';
 import {
   MapPin,
@@ -25,6 +26,7 @@ import {
   Car,
   Wifi,
   Dumbbell,
+  Sparkles,
   Trees,
   Shield,
   Zap,
@@ -36,6 +38,10 @@ import {
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
+import {
+  PropertyMediaTypeSection,
+  type PublicPropertyMedia,
+} from '@/components/property/PropertyMediaTypeSection';
 import { PropertyServiceActions } from '@/components/property/PropertyServiceActions';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
@@ -65,8 +71,10 @@ import {
   getCompactPropertyFacts,
   getPropertyBuyerChecklist,
   getPropertyFeatureChecklistItems,
+  getPropertyFeaturesContextGroups,
   getPropertyRunningCostFacts,
 } from '@/lib/property';
+import { buildPricingContract, getMoneyFactAmount } from '@/../../shared/pricing-contract';
 
 interface PropertyDetailProps {
   propertyId?: number;
@@ -78,6 +86,7 @@ interface PropertyImageLike {
   url?: string;
   isPrimary?: number;
   displayOrder?: number;
+  mediaType?: 'image' | 'video' | 'floorplan' | 'pdf';
 }
 
 interface PropertySpecs {
@@ -147,6 +156,7 @@ interface PropertyPayload {
   features?: string | string[];
   propertySettings?: string | PropertySpecs;
   propertyDetails?: string | Record<string, unknown>;
+  pricingContract?: unknown;
   developerBrand?: DeveloperBrandLite;
   developerBrandProfile?: DeveloperBrandLite;
   listerType?: string;
@@ -158,13 +168,24 @@ interface PropertyPayload {
   latitude?: number | string;
   longitude?: number | string;
   area?: number;
+  internalAreaM2?: number | string | null;
+  erfSizeM2?: number | string | null;
+  landAreaM2?: number | string | null;
   mainImage?: string;
+  media?: PublicPropertyMedia[];
+  virtualTour?: {
+    provider: 'matterport';
+    embedUrl: string;
+    displayLabel?: string;
+    status: 'active';
+  } | null;
   agent?: ContactIdentityLite;
 }
 
 interface PropertyDetailResponse {
   property: PropertyPayload;
   images?: PropertyImageLike[];
+  media?: PublicPropertyMedia[];
   agent?: ContactIdentityLite;
 }
 
@@ -291,7 +312,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     );
   }
 
-  const { property, images } = data as PropertyDetailResponse;
+  const { property, images, media } = data as PropertyDetailResponse;
   const isFavorite = favorites.some(favorite => Number(favorite.propertyId) === propertyId);
   const agent = property.agent || (data as PropertyDetailResponse).agent;
 
@@ -448,11 +469,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     : null;
 
   const similarProperties = (similarPropertiesData ?? []).filter(p => {
-    if (p.id === propertyId) return false;
+    if (Number(p.id) === propertyId) return false;
 
-    // The detail page receives a broad legacy getAll feed. Keep the visible
-    // continuation in the same explicit transaction universe as the opened
-    // listing; do not let a rental detail silently recommend sale inventory.
+    // The continuation feed contains public property projections. Keep it in
+    // the same explicit transaction universe as the opened property; do not
+    // let a rental detail silently recommend sale inventory.
     if (normalizedListingType !== 'rent' && normalizedListingType !== 'sale') return true;
 
     const candidateListingType = String(
@@ -483,9 +504,29 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const propertyImages = (Array.isArray(images) ? images : []).filter(
     (image): image is PropertyImageLike =>
       Boolean(
-        (typeof image?.imageUrl === 'string' && image.imageUrl) ||
-        (typeof image?.url === 'string' && image.url),
+        (!image.mediaType || image.mediaType === 'image') &&
+        ((typeof image?.imageUrl === 'string' && image.imageUrl) ||
+          (typeof image?.url === 'string' && image.url)),
       ),
+  );
+  const propertyMedia: PublicPropertyMedia[] = (
+    Array.isArray(media)
+      ? media
+      : Array.isArray(property.media)
+        ? property.media
+        : propertyImages.map(image => ({
+            id: image.id,
+            url: image.imageUrl || image.url || '',
+            mediaType: 'image' as const,
+            displayOrder: image.displayOrder,
+          }))
+  ).filter((item): item is PublicPropertyMedia =>
+    Boolean(
+      item &&
+      typeof item.url === 'string' &&
+      item.url &&
+      ['image', 'video', 'floorplan', 'pdf'].includes(item.mediaType),
+    ),
   );
   const propertyImageUrls = propertyImages
     .map(image =>
@@ -509,10 +550,34 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       displayOrder: image.displayOrder,
     }))
     .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-  const houseSizeM2 = parseStrictNumber(rawPropertyDetails.houseAreaM2);
-  const erfSizeM2 = parseStrictNumber(rawPropertyDetails.erfSizeM2);
-  const unitSizeM2 = parseStrictNumber(rawPropertyDetails.unitSizeM2);
+  const coreDetails =
+    rawPropertyDetails.corePropertyInformation &&
+    typeof rawPropertyDetails.corePropertyInformation === 'object'
+      ? (rawPropertyDetails.corePropertyInformation as Record<string, any>)
+      : {};
+  const canonicalInternalArea =
+    coreDetails.internalArea?.status === 'known'
+      ? coreDetails.internalArea.valueM2
+      : property.internalAreaM2;
+  const canonicalErfArea =
+    coreDetails.erfArea?.status === 'known' ? coreDetails.erfArea.valueM2 : property.erfSizeM2;
+  const canonicalLandArea =
+    coreDetails.farmLandArea?.status === 'known'
+      ? coreDetails.farmLandArea.normalizedM2
+      : property.landAreaM2;
+  const houseSizeM2 = parseStrictNumber(canonicalInternalArea ?? rawPropertyDetails.houseAreaM2);
+  const erfSizeM2 = parseStrictNumber(canonicalErfArea ?? rawPropertyDetails.erfSizeM2);
+  const unitSizeM2 = parseStrictNumber(canonicalInternalArea ?? rawPropertyDetails.unitSizeM2);
+  const landAreaM2 = parseStrictNumber(canonicalLandArea ?? rawPropertyDetails.landAreaM2);
   const displayPrice = Number(property.price) || 0;
+  const publicPricingContract = buildPricingContract(
+    isRentalListing ? 'rent' : 'sell',
+    property as unknown as Record<string, unknown>,
+    rawPropertyDetails,
+  );
+  const rentDepositFact =
+    publicPricingContract?.intent === 'rent' ? publicPricingContract.deposit : undefined;
+  const rentDepositAmount = getMoneyFactAmount(rentDepositFact);
   const displayLocationLabel = formatFullPropertyLocation({
     address: property.address,
     suburb: property.suburb,
@@ -623,6 +688,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const propertyDetailItems = getCompactPropertyFacts(property, 4);
   const featureSpecItems = getPropertyBuyerChecklist(property);
   const propertyFeatureChecklistItems = getPropertyFeatureChecklistItems(property).slice(0, 18);
+  const propertyFeatureGroups = getPropertyFeaturesContextGroups(property);
   const runningCostItems = getPropertyRunningCostFacts(property);
   const openQualification = () => {
     setIsQualificationOpen(true);
@@ -712,6 +778,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           ? { name: 'Floor Size', value: houseSizeM2 || unitSizeM2 || 0, unitText: 'm2' }
           : null,
         erfSizeM2 ? { name: 'Erf Size', value: erfSizeM2, unitText: 'm2' } : null,
+        landAreaM2 ? { name: 'Farm / land size', value: landAreaM2, unitText: 'm2' } : null,
         specs.ownershipType
           ? { name: 'Ownership Type', value: String(specs.ownershipType).replace(/_/g, ' ') }
           : null,
@@ -855,6 +922,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           {/* Left Column - Image Gallery */}
           <div className="lg:col-span-7">
             <PropertyImageGallery images={propertyGalleryImages} propertyTitle={property.title} />
+            <PropertyMediaTypeSection media={propertyMedia} virtualTour={property.virtualTour} />
           </div>
 
           {/* Right Column - Buyer Decision Panel */}
@@ -880,6 +948,26 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                         normalizedListingType,
                       )}
                     </div>
+                    {publicPricingContract?.intent === 'sale' &&
+                      publicPricingContract.negotiability !== 'unknown' && (
+                        <p className="mt-2 text-xs font-semibold text-slate-500">
+                          {publicPricingContract.negotiability === 'negotiable'
+                            ? 'Price negotiable'
+                            : 'Price not negotiable'}
+                        </p>
+                      )}
+                    {isRentalListing && rentDepositFact && (
+                      <p className="mt-2 text-xs font-semibold text-slate-500">
+                        Deposit:{' '}
+                        {rentDepositFact.status === 'known' && rentDepositAmount !== undefined
+                          ? formatCurrency(rentDepositAmount)
+                          : rentDepositFact.status === 'zero'
+                            ? 'R0 (no deposit)'
+                            : rentDepositFact.status === 'unknown'
+                              ? 'To confirm'
+                              : 'Not applicable'}
+                      </p>
+                    )}
                   </div>
                   <Badge className="shrink-0 border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50">
                     <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
@@ -1041,7 +1129,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           </div>
         </div>
 
-        {(specs.ownershipType || runningCostItems.some(item => item.status === 'confirmed')) && (
+        {(specs.ownershipType || runningCostItems.length > 0) && (
           <section className="mb-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -1074,7 +1162,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               )}
 
               {runningCostItems
-                .filter(item => item.status === 'confirmed')
+                .filter(item => item.status !== 'not_applicable')
                 .map(item => {
                   const Icon = item.icon;
                   return (
@@ -1296,15 +1384,76 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               </Card>
             )}
 
-            {/* 2.3 Property Features & Specifications */}
-            {propertyFeatureChecklistItems.length > 0 && (
+            {/* 2.3 Canonical Features & Context */}
+            {propertyFeatureGroups.length > 0 ? (
+              <div
+                id={featureSpecItems.length === 0 ? 'features' : undefined}
+                className="space-y-4"
+              >
+                {propertyFeatureGroups.map(group => {
+                  const GroupIcon =
+                    group.key === 'security'
+                      ? Shield
+                      : group.key === 'utilities'
+                        ? Zap
+                        : group.key === 'highlights'
+                          ? Sparkles
+                          : group.key === 'context'
+                            ? Home
+                            : CheckCircle2;
+                  return (
+                    <Card key={group.key} className="border-slate-200 shadow-sm">
+                      <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-xl bg-blue-50 p-2 text-blue-700">
+                            <GroupIcon className="h-5 w-5" aria-hidden="true" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-fluid-h3 font-bold text-slate-900">
+                              {group.title}
+                            </CardTitle>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                              {group.description}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+                          {group.items.map(item => (
+                            <div
+                              key={item.key}
+                              className={cn(
+                                'flex min-h-[44px] items-center justify-between gap-3 rounded-xl border px-3 py-2.5',
+                                group.key === 'highlights' || item.source === 'highlight'
+                                  ? 'border-amber-100 bg-amber-50/60'
+                                  : 'border-slate-100 bg-slate-50',
+                              )}
+                            >
+                              <span className="text-sm font-semibold leading-snug text-slate-900">
+                                {item.label}
+                              </span>
+                              {item.value && (
+                                <span className="shrink-0 text-xs font-medium text-slate-500">
+                                  {item.value}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : propertyFeatureChecklistItems.length > 0 ? (
               <Card
                 id={featureSpecItems.length === 0 ? 'features' : undefined}
                 className="border-slate-200 shadow-sm"
               >
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Property Features & Specifications
+                    Property Features &amp; Specifications
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
@@ -1326,72 +1475,34 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            {/* 2.3 Additional Rooms */}
-            {propertyFeatureChecklistItems.length === 0 &&
-              specs.additionalRooms &&
-              specs.additionalRooms.length > 0 && (
-                <Card
-                  id={featureSpecItems.length === 0 ? 'features' : undefined}
-                  className="border-slate-200 shadow-sm"
-                >
-                  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                    <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                      Additional Rooms & Specifications
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="flex flex-wrap gap-2">
-                      {specs.additionalRooms.map(room => (
-                        <Badge
-                          key={room}
-                          variant="secondary"
-                          className="bg-blue-50 text-slate-900 hover:bg-blue-100 border-0 px-4 py-1.5 rounded-full font-medium"
-                        >
-                          {room}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-            {/* 2.4 Amenities */}
-            {propertyFeatureChecklistItems.length === 0 && highlights.length > 0 && (
+            ) : highlights.length > 0 ? (
               <Card
-                id={
-                  featureSpecItems.length === 0 &&
-                  (!specs.additionalRooms || specs.additionalRooms.length === 0)
-                    ? 'features'
-                    : undefined
-                }
+                id={featureSpecItems.length === 0 ? 'features' : undefined}
                 className="border-slate-200 shadow-sm"
               >
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                <CardHeader className="border-b border-slate-100 bg-slate-50/50">
                   <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Amenities & Features
+                    Property Features &amp; Specifications
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div
-                    className={`grid gap-y-3 gap-x-4 ${
-                      highlights.length < 4 ? 'grid-cols-2' : 'grid-cols-2 xl:grid-cols-3'
-                    }`}
-                  >
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {highlights.map((amenity: string, index: number) => {
                       const IconComponent = amenityIcons[amenity.toLowerCase()] || CheckCircle2;
                       return (
-                        <div key={index} className="flex items-center gap-3">
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5"
+                        >
                           <IconComponent className="h-5 w-5 text-blue-600" />
-                          <span className="capitalize text-slate-700 font-medium">{amenity}</span>
+                          <span className="font-medium capitalize text-slate-700">{amenity}</span>
                         </div>
                       );
                     })}
                   </div>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
 
             {/* 2.5 Developer Brand Section (when property is linked to a brand profile) */}
             {(property.developerBrand || property.developerBrandProfile) && (
@@ -1795,7 +1906,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                     {/* Image */}
                     <div className="relative h-44 overflow-hidden bg-slate-100">
                       <img
-                        src={prop.mainImage || '/placeholder-property.jpg'}
+                        src={prop.images[0]?.url || '/placeholder-property.jpg'}
                         alt={prop.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
@@ -1853,10 +1964,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                             <span>{prop.bathrooms}</span>
                           </div>
                         )}
-                        {prop.area && (
+                        {(prop.floorSize || prop.internalAreaM2) && (
                           <div className="flex items-center gap-1">
                             <Square className="h-3.5 w-3.5" />
-                            <span>{prop.area} m²</span>
+                            <span>{prop.floorSize || prop.internalAreaM2} m²</span>
                           </div>
                         )}
                       </div>
@@ -1898,14 +2009,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         agentName={contactIdentity?.name || 'Listing Contact'}
         agentPhone={undefined}
         agentEmail={undefined}
-        agentId={
-          contactIdentity?.id
-            ? Number(contactIdentity.id)
-            : property?.agentId
-              ? Number(property.agentId)
-              : undefined
-        }
-        agencyId={contactIdentity?.agencyId ? Number(contactIdentity.agencyId) : undefined}
         developmentId={
           !agent && property?.developmentId ? Number(property.developmentId) : undefined
         }

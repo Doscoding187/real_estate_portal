@@ -35,7 +35,10 @@ export const listings = mysqlTable(
     propertyType: mysqlEnum([
       'apartment',
       'house',
+      'townhouse',
+      'cluster_home',
       'farm',
+      'plot',
       'land',
       'commercial',
       'shared_living',
@@ -55,9 +58,9 @@ export const listings = mysqlTable(
     auctionDateTime: timestamp({ mode: 'string' }),
     auctionTermsDocumentUrl: text(),
     propertyDetails: json(),
-    address: text().notNull(),
-    latitude: decimal({ precision: 10, scale: 7 }).notNull(),
-    longitude: decimal({ precision: 10, scale: 7 }).notNull(),
+    address: text(),
+    latitude: decimal({ precision: 10, scale: 7 }),
+    longitude: decimal({ precision: 10, scale: 7 }),
     city: varchar({ length: 100 }).notNull(),
     suburb: varchar({ length: 100 }),
     province: varchar({ length: 100 }).notNull(),
@@ -100,11 +103,32 @@ export const listings = mysqlTable(
     locationId: int('location_id'),
     /** A private canonical draft which revises a published listing. */
     revisionOfListingId: int('revision_of_listing_id'),
+    provinceId: int('province_id').references(() => provinces.id, { onDelete: 'set null' }),
+    cityId: int('city_id').references(() => cities.id, { onDelete: 'set null' }),
+    suburbId: int('suburb_id').references(() => suburbs.id, { onDelete: 'set null' }),
+    privateAddress: json('private_address'),
+    coordinateSource: mysqlEnum('coordinate_source', [
+      'autocomplete',
+      'map',
+      'manual_confirmed',
+    ]),
+    locationConfirmationState: mysqlEnum('location_confirmation_state', [
+      'confirmed',
+      'needs_confirmation',
+    ])
+      .default('needs_confirmation')
+      .notNull(),
+    publicLocationPrecision: mysqlEnum('public_location_precision', ['approximate', 'exact'])
+      .default('approximate')
+      .notNull(),
   },
   table => [
     index('idx_listings_place_id').on(table.placeId),
     index('idx_listings_location_id').on(table.locationId),
     index('idx_listings_revision_of').on(table.revisionOfListingId),
+    index('idx_listings_province_id').on(table.provinceId),
+    index('idx_listings_city_id').on(table.cityId),
+    index('idx_listings_suburb_id').on(table.suburbId),
   ],
 );
 
@@ -326,6 +350,18 @@ export const properties = mysqlTable(
       () => developerBrandProfiles.id,
       { onDelete: 'set null' },
     ),
+    /** Canonical normalized internal/floor area for manual and public reads. */
+    internalAreaM2: decimal('internal_area_m2', { precision: 14, scale: 2 }),
+    /** Canonical normalized erf/stand area; never the dwelling area. */
+    erfSizeM2: decimal('erf_size_m2', { precision: 14, scale: 2 }),
+    /** Canonical normalized farm/smallholding land extent. */
+    landAreaM2: decimal('land_area_m2', { precision: 14, scale: 2 }),
+    publicAddress: text('public_address'),
+    publicLatitude: decimal('public_latitude', { precision: 10, scale: 7 }),
+    publicLongitude: decimal('public_longitude', { precision: 10, scale: 7 }),
+    publicLocationPrecision: mysqlEnum('public_location_precision', ['approximate', 'exact'])
+      .default('approximate')
+      .notNull(),
   },
   table => [
     index('price_idx').on(table.price),
@@ -340,6 +376,9 @@ export const properties = mysqlTable(
     index('idx_properties_suburbId').on(table.suburbId),
     index('idx_properties_cityId_status').on(table.cityId, table.status),
     index('idx_properties_cityId_area').on(table.cityId, table.area),
+    index('idx_properties_internal_area_m2').on(table.internalAreaM2),
+    index('idx_properties_erf_size_m2').on(table.erfSizeM2),
+    index('idx_properties_land_area_m2').on(table.landAreaM2),
     index('idx_properties_location_id').on(table.locationId),
     index('idx_properties_sourceListingId').on(table.sourceListingId),
   ],

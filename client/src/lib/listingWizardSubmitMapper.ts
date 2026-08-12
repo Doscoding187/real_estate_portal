@@ -1,6 +1,15 @@
 import type { inferRouterInputs } from '@trpc/server';
 import type { AppRouter } from '../../../server/routers';
 import type { ListingWizardState } from '../../../shared/listing-types';
+import { buildCanonicalCorePropertyDetails } from '../../../shared/core-property-information';
+import { listingActionToIntent } from '../../../shared/listing-types';
+import {
+  buildFeaturesContextFromWizardState,
+  LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+} from '../../../shared/features-context';
+import { buildPricingContract } from '../../../shared/pricing-contract';
+import { buildListingLocationAuthoringPayload } from '../../../shared/location-contract';
+import { buildPropertyPresentationForMedia } from '../../../shared/property-presentation';
 
 export type ListingWizardSubmitPayload = inferRouterInputs<AppRouter>['listing']['create'];
 
@@ -10,6 +19,7 @@ export type ListingWizardSubmitState = Pick<
   | 'propertyType'
   | 'title'
   | 'description'
+  | 'basicInfo'
   | 'pricing'
   | 'propertyDetails'
   | 'additionalInfo'
@@ -51,16 +61,24 @@ const normalizePricingForSubmit = (
 
 const normalizePropertyDetailsForPublicContract = (
   propertyDetails: Record<string, unknown>,
+  action: ListingWizardSubmitState['action'],
   pricing: ListingWizardSubmitPayload['pricing'],
 ) => {
   const normalized = { ...propertyDetails };
 
-  fillMissing(normalized, 'levies', pricing.levies ?? normalized.leviesHoaOperatingCosts);
-  fillMissing(normalized, 'leviesHoaOperatingCosts', normalized.levies ?? pricing.levies);
+  const pricingContract = buildPricingContract(
+    action,
+    pricing as Record<string, unknown>,
+    normalized,
+    { preferEmbedded: false },
+  );
+  if (pricingContract) normalized.pricingContract = pricingContract;
 
-  const ratesValue = pricing.ratesAndTaxes ?? normalized.ratesAndTaxes ?? normalized.ratesTaxes;
-  fillMissing(normalized, 'ratesAndTaxes', ratesValue);
-  fillMissing(normalized, 'ratesTaxes', ratesValue);
+  // New authoring has one governed pricing authority. These legacy aliases
+  // remain readable by compatibility code but are not written alongside it.
+  for (const key of ['levies', 'leviesHoaOperatingCosts', 'ratesAndTaxes', 'ratesTaxes']) {
+    delete normalized[key];
+  }
 
   const parkingValue = normalized.parkingCount ?? normalized.parkingBays;
   fillMissing(normalized, 'parkingCount', parkingValue);
@@ -95,12 +113,60 @@ const buildSubmittedPropertyDetails = (
   state: ListingWizardSubmitState,
   pricing: ListingWizardSubmitPayload['pricing'],
 ) => {
-  const propertyDetails = {
+  // Step 3 has one typed authority. Do not serialize the historical
+  // `basicInfo` object or arbitrary Step 3 state; only the approved core facts
+  // and the separately-owned Additional Information contract cross the API
+  // boundary. Legacy flat aliases are generated from the typed core object.
+  const historicalDetails = {
     ...((state.propertyDetails || {}) as Record<string, unknown>),
-    ...((state.additionalInfo || {}) as Record<string, unknown>),
   };
+  for (const key of [
+    'propertyCategory',
+    'developerName',
+    'developmentName',
+    'selectedDeveloperId',
+    'selectedDevelopmentId',
+    'landSizeUnit',
+    'landSizeHa',
+    'landSizeM2OrHa',
+    'badges',
+    ...LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
+  ]) {
+    delete historicalDetails[key];
+  }
 
-  return normalizePropertyDetailsForPublicContract(propertyDetails, pricing);
+  const propertyDetails = {
+    ...historicalDetails,
+    featuresContext: buildFeaturesContextFromWizardState(
+      state.additionalInfo,
+      state.propertyDetails,
+      listingActionToIntent(state.action),
+      state.propertyType,
+    ),
+    ...buildCanonicalCorePropertyDetails(
+      state.propertyType,
+      state.propertyDetails,
+      state.basicInfo,
+    ),
+  } as Record<string, unknown>;
+
+  const propertyPresentation = buildPropertyPresentationForMedia(
+    propertyDetails.propertyPresentation,
+    state.media.map(item => ({
+      id: item.id,
+      type: item.type,
+      url: item.url,
+      fileName: item.fileName,
+      presentationLabel: item.presentationLabel,
+    })),
+  );
+  if (propertyPresentation) {
+    propertyDetails.propertyPresentation = propertyPresentation;
+  } else {
+    delete propertyDetails.propertyPresentation;
+  }
+
+  return normalizePropertyDetailsForPublicContract(propertyDetails, state.action, pricing);
 };
 
 const getMediaId = (media: ListingWizardSubmitState['media'][number]) => media.id?.toString() || '';
@@ -117,6 +183,7 @@ const buildTypedMediaManifest = (
         mediaType: item.type,
       };
 
+      if (item.uploadToken !== undefined) manifestItem.uploadToken = item.uploadToken;
       if (item.fileName !== undefined) manifestItem.fileName = item.fileName;
       if (item.fileSize !== undefined) manifestItem.fileSize = item.fileSize;
       if (item.thumbnailUrl !== undefined) manifestItem.thumbnailUrl = item.thumbnailUrl;
@@ -125,7 +192,8 @@ const buildTypedMediaManifest = (
       if (item.height !== undefined) manifestItem.height = item.height;
       if (item.duration !== undefined) manifestItem.duration = item.duration;
       if (item.orientation !== undefined) manifestItem.orientation = item.orientation;
-      if (item.processingStatus !== undefined) manifestItem.processingStatus = item.processingStatus;
+      if (item.processingStatus !== undefined)
+        manifestItem.processingStatus = item.processingStatus;
 
       return manifestItem;
     })
@@ -138,7 +206,8 @@ export const buildListingWizardSubmitPayload = (
   const mediaIds = state.media.map(getMediaId);
   const media = buildTypedMediaManifest(state.media);
   const mainMediaId =
-    state.mainMediaId?.toString() || (state.media.length > 0 ? getMediaId(state.media[0]) : undefined);
+    state.mainMediaId?.toString() ||
+    (state.media.length > 0 ? getMediaId(state.media[0]) : undefined);
 
   return {
     action: state.action!,
@@ -147,7 +216,7 @@ export const buildListingWizardSubmitPayload = (
     description: state.description,
     pricing,
     propertyDetails: buildSubmittedPropertyDetails(state, pricing),
-    location: state.location!,
+    location: buildListingLocationAuthoringPayload(state.location)!,
     mediaIds,
     mainMediaId,
     media,

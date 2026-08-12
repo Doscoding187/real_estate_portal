@@ -44,6 +44,8 @@ const propertyFiltersSchema = z.object({
   maxErfSize: z.number().optional(),
   minFloorSize: z.number().optional(),
   maxFloorSize: z.number().optional(),
+  minLandSize: z.number().optional(),
+  maxLandSize: z.number().optional(),
   titleType: z.array(z.enum(['freehold', 'sectional'])).optional(),
   maxLevy: z.number().optional(),
   securityEstate: z.boolean().optional(),

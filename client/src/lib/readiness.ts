@@ -1,3 +1,8 @@
+import { getPrimaryPrice } from '@shared/pricing-contract';
+import { validateManualLocationEvidence } from '@shared/location-contract';
+import { getCompletedListingImages } from '@shared/listing-media';
+import { readCorePropertyInformation } from '@shared/core-property-information';
+
 export type ReadinessResult = {
   score: number;
   missing: Record<string, string[]>;
@@ -15,31 +20,61 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   let score = 0;
 
   // 1. Location (20%)
-  if (listing.address && listing.latitude && listing.longitude) {
+  const authoredLocation = listing.location || listing;
+  const hasCoordinates =
+    authoredLocation.latitude != null &&
+    authoredLocation.longitude != null &&
+    Number.isFinite(Number(authoredLocation.latitude)) &&
+    Number.isFinite(Number(authoredLocation.longitude)) &&
+    !(Number(authoredLocation.latitude) === 0 && Number(authoredLocation.longitude) === 0);
+  const locationIssues = validateManualLocationEvidence({
+    propertyType: listing.propertyType,
+    discovery: {
+      provinceId: authoredLocation.provinceId,
+      cityId: authoredLocation.cityId,
+      suburbId: authoredLocation.suburbId ?? null,
+    },
+    privateAddress: authoredLocation.privateAddress || null,
+  });
+  const hasCanonicalLocation =
+    locationIssues.length === 0 && authoredLocation.locationConfirmationState === 'confirmed';
+  const hasLegacyLocation = Boolean(authoredLocation.address) && hasCoordinates;
+  if (hasCanonicalLocation || hasLegacyLocation) {
     score += 20;
   } else {
-    if (!listing.address) missing.location.push('Address');
-    if (!listing.latitude || !listing.longitude) missing.location.push('Map Location');
+    if (locationIssues.some(issue => /province|city|suburb|locality/i.test(issue))) {
+      missing.location.push('Area');
+    }
+    if (locationIssues.some(issue => /street|farm|holding|portion/i.test(issue))) {
+      missing.location.push('Street or rural reference');
+    }
+    if (authoredLocation.locationConfirmationState !== 'confirmed') {
+      missing.location.push('Confirm Location');
+    }
+    const onlyOneCoordinate =
+      (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
+    if (onlyOneCoordinate || (hasCoordinates && locationIssues.length > 0)) {
+      missing.location.push('Map coordinates');
+    }
   }
 
   // 2. Pricing (20%)
-  if (
-    (listing.askingPrice && Number(listing.askingPrice) > 0) ||
-    (listing.monthlyRent && Number(listing.monthlyRent) > 0)
-  ) {
+  const primaryPrice = listing.action
+    ? getPrimaryPrice(listing.action, listing.pricing || listing, listing.propertyDetails)
+    : Number(listing.askingPrice ?? listing.monthlyRent ?? 0) || undefined;
+  if (primaryPrice !== undefined && primaryPrice > 0) {
     score += 20;
   } else {
     missing.pricing.push('Price');
   }
 
-  // 3. Media (25%)
-  let imageCount = 0;
-  if (Array.isArray(listing.images)) {
-    imageCount = listing.images.length;
-  } else if (Array.isArray(listing.media)) {
-    // Handle the shape returned by getById (media array of objects)
-    imageCount = listing.media.length;
+  // 3. Media (25%) — only completed qualifying images count. Videos,
+  // documents and failed/incomplete uploads never satisfy image readiness.
+  let mediaItems = Array.isArray(listing.media) ? listing.media : [];
+  if (mediaItems.length === 0 && Array.isArray(listing.images)) {
+    mediaItems = listing.images.map((url: unknown) => ({ url, type: 'image' as const }));
   }
+  const imageCount = getCompletedListingImages(mediaItems).length;
 
   if (imageCount >= 5) {
     score += 25;
@@ -67,8 +102,24 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
       }
     }
 
+    const corePropertyInformation = readCorePropertyInformation(
+      listing.propertyType,
+      details,
+      listing.basicInfo,
+    );
+    const hasKnownBedrooms =
+      corePropertyInformation.bedrooms?.status === 'known' &&
+      Number.isFinite(Number(corePropertyInformation.bedrooms.value)) &&
+      Number(corePropertyInformation.bedrooms.value) >= 0;
+    const hasLegacyBedrooms =
+      details.bedrooms !== undefined &&
+      details.bedrooms !== null &&
+      Number.isFinite(Number(details.bedrooms)) &&
+      Number(details.bedrooms) >= 0;
+
     if (
-      details.bedrooms ||
+      hasKnownBedrooms ||
+      hasLegacyBedrooms ||
       listing.propertyType === 'land' ||
       listing.propertyType === 'commercial'
     ) {

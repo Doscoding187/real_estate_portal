@@ -3,6 +3,15 @@ import { validateListingWorkflowPayload } from './listingWorkflowValidation';
 import { calculateListingReadiness } from '@/lib/readiness';
 import { calculateListingQualityScore, getQualityTier } from '@/lib/quality';
 import type { ListingWorkflowData, ListingFieldError } from '@shared/listing-workflow-types';
+import {
+  buildCanonicalCorePropertyDetails,
+  buildCorePropertyInformation,
+} from '@shared/core-property-information';
+import {
+  getCompletedListingImages,
+  getPrimaryListingImage,
+  isCompletedListingMedia,
+} from '@shared/listing-media';
 
 export interface SubmitReadinessResult {
   ready: boolean;
@@ -49,6 +58,13 @@ function getActionPrice(data: ListingWorkflowData): number {
  */
 function getPropertyArea(data: ListingWorkflowData): number {
   if (!data.propertyDetails) return 0;
+  const core = buildCorePropertyInformation(
+    data.propertyType,
+    data.propertyDetails,
+    (data as any).basicInfo,
+  );
+  if (core.internalArea?.status === 'known') return Number(core.internalArea.valueM2) || 0;
+  if (core.farmLandArea?.status === 'known') return Number(core.farmLandArea.normalizedM2) || 0;
   const d = data.propertyDetails as Record<string, any>;
   switch (data.propertyType) {
     case 'apartment':
@@ -114,7 +130,14 @@ export async function calculateSubmitReadinessDryRun(
   if (!data.description) blockingReasons.push('Description not set');
   if (!data.pricing) blockingReasons.push('Pricing not set');
   if (!data.location?.address) blockingReasons.push('Location address not set');
-  if (!data.media || data.media.length === 0) blockingReasons.push('No media uploaded');
+  const completedImages = getCompletedListingImages(data.media ?? []);
+  if (completedImages.length === 0) {
+    blockingReasons.push(
+      data.media && data.media.length > 0
+        ? 'No completed listing image uploaded'
+        : 'No media uploaded',
+    );
+  }
 
   if (validation.errors.length > 0) {
     blockingReasons.push(`${validation.errors.length} validation error(s)`);
@@ -123,8 +146,8 @@ export async function calculateSubmitReadinessDryRun(
   const ready = blockingReasons.length === 0;
 
   // 4. Derive shared values matching V1 PreviewStep conventions
-  const images = (data.media ?? []).filter((m) => m.type === 'image');
-  const videos = (data.media ?? []).filter((m) => m.type === 'video');
+  const images = completedImages;
+  const videos = (data.media ?? []).filter(m => m.type === 'video' && isCompletedListingMedia(m));
   const price = getActionPrice(data);
   const features = buildFeaturesList(data);
   const floorSize = getPropertyArea(data);
@@ -140,7 +163,13 @@ export async function calculateSubmitReadinessDryRun(
     media: data.media,
     description: data.description,
     propertyType: data.propertyType,
-    propertyDetails: data.propertyDetails,
+    propertyDetails:
+      builtPayload?.propertyDetails ||
+      buildCanonicalCorePropertyDetails(
+        data.propertyType,
+        data.propertyDetails,
+        (data as any).basicInfo,
+      ),
   };
   const readinessResult = calculateListingReadiness(readinessInput);
 
@@ -156,13 +185,19 @@ export async function calculateSubmitReadinessDryRun(
     latitude: data.location?.latitude,
     longitude: data.location?.longitude,
     floorSize,
-    propertyDetails: data.propertyDetails,
+    propertyDetails:
+      builtPayload?.propertyDetails ||
+      buildCanonicalCorePropertyDetails(
+        data.propertyType,
+        data.propertyDetails,
+        (data as any).basicInfo,
+      ),
   };
   const qualityResult = calculateListingQualityScore(qualityInput);
   const tierResult = getQualityTier(qualityResult.score);
 
   // 7. mainMediaPresent: only when mainMediaId is set or first media item has a valid ID
-  const mainMediaPresent = !!data.mainMediaId || (data.media?.[0]?.id ? true : false);
+  const mainMediaPresent = Boolean(getPrimaryListingImage(data.media ?? [], data.mainMediaId));
 
   return {
     ready,
