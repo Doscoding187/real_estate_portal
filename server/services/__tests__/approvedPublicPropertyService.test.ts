@@ -10,12 +10,12 @@ import {
 const APPROVED_AT = '2026-08-10 10:00:00';
 const PHOTO_URL = 'https://cdn.example.test/approved-photo.jpg';
 
-function approvedDetails() {
+function approvedDetails(bathrooms = 2) {
   const details = {
     corePropertyInformation: {
       version: 1,
       bedrooms: { status: 'known', value: 3 },
-      bathrooms: { status: 'known', value: 2 },
+      bathrooms: { status: 'known', value: bathrooms },
       parkingBays: { status: 'known', value: 2 },
       garages: { status: 'known', value: 1 },
       internalArea: { status: 'known', valueM2: 180 },
@@ -53,8 +53,8 @@ function approvedDetails() {
   return { details, canonical, pricing };
 }
 
-function canonicalFixture() {
-  const { details, canonical, pricing } = approvedDetails();
+function canonicalFixture(bathrooms = 2) {
+  const { details, canonical, pricing } = approvedDetails(bathrooms);
   const property = {
     id: 501,
     title: 'Approved Sandton Home',
@@ -64,7 +64,7 @@ function canonicalFixture() {
     transactionType: 'sale',
     price: 2_500_000,
     bedrooms: 3,
-    bathrooms: 2,
+    bathrooms,
     area: 180,
     internalAreaM2: 180,
     erfSizeM2: 420,
@@ -231,6 +231,15 @@ describe('ApprovedPublicProperty authority', () => {
 
     expect(result?.authority).toBe('approved_listing');
     expect(result?.property).toMatchObject({ id: 501, bedrooms: 3, bathrooms: 2 });
+  });
+
+  it('preserves a fractional approved bathroom fact in Detail despite a lossy scalar projection', async () => {
+    const fixture = canonicalFixture(2.5);
+    fixture.property.bathrooms = 3;
+
+    const result = await resolveApprovedPublicProperty(501, dataSource(fixture));
+
+    expect(result?.property).toMatchObject({ id: 501, bedrooms: 3, bathrooms: 2.5 });
   });
 
   it('never asks for or exposes an isolated pending revision candidate', async () => {

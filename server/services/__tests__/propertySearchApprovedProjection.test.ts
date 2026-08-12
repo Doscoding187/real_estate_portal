@@ -87,7 +87,11 @@ describe('manual property Search approved projection authority', () => {
             sourceListingId: 9001,
             ownerId: 100,
             agentId: 33,
-            propertySettings: '{}',
+            propertySettings: JSON.stringify({
+              corePropertyInformation: {
+                bathrooms: { status: 'known', value: 2 },
+              },
+            }),
             agentDisplayName: 'Jane Agent',
             agentPhone: '+27110001111',
             agentWhatsapp: '+27110001111',
@@ -164,4 +168,60 @@ describe('manual property Search approved projection authority', () => {
     expect(result.properties[0].mainImage).toBe('https://cdn.example.test/legacy-main.jpg');
     expect(result.cards[0].propertyId).toBe(77);
   });
+
+  it.each([1, 2, 2.5, 3])(
+    'preserves the approved %s bathroom value for listing-backed Search cards',
+    async bathrooms => {
+      mockSelect
+        .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
+        .mockReturnValueOnce(
+          pagedQuery([
+            {
+              id: 601,
+              title: 'Canonical bathroom fixture',
+              description: 'Approved projection fixture.',
+              price: 1_000_000,
+              suburb: 'Sandton',
+              address: 'Sandton, Johannesburg',
+              city: 'Johannesburg',
+              province: 'Gauteng',
+              propertyType: 'house',
+              listingType: 'sale',
+              bedrooms: 3,
+              // Simulate the legacy INT projection rounding 2.5 to 3.
+              bathrooms: bathrooms === 2.5 ? 3 : bathrooms,
+              internalAreaM2: 180,
+              erfSizeM2: 420,
+              landAreaM2: null,
+              floorSize: 180,
+              erfSize: 420,
+              landSize: 420,
+              status: 'available',
+              listedDate: new Date('2026-08-10T10:00:00Z'),
+              mainImage: 'https://cdn.example.test/approved-bathroom-photo.jpg',
+              sourceListingId: 9101,
+              ownerId: 100,
+              agentId: 33,
+              propertySettings: JSON.stringify({
+                corePropertyInformation: {
+                  bathrooms: { status: 'known', value: bathrooms },
+                },
+              }),
+              agentDisplayName: 'Jane Agent',
+              agentPhone: '+27110001111',
+              agentWhatsapp: '+27110001111',
+              agentEmail: 'jane@example.test',
+              agencyName: 'Approved Realty',
+              videoCount: 0,
+            },
+          ]),
+        )
+        .mockReturnValueOnce(orderedQuery([]));
+
+      const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
+
+      expect(result.properties[0].bathrooms).toBe(bathrooms);
+      expect(result.cards[0].bathrooms).toBe(bathrooms);
+    },
+  );
 });

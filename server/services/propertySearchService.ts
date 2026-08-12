@@ -27,14 +27,16 @@ import type {
 import { locationResolver, ResolvedLocation } from './locationResolverService';
 import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
 import { buildCorePropertyInformation } from '../../shared/core-property-information';
+import type { ListingPropertyType } from '../../shared/listing-types';
 import { normalizeFeaturesContext } from '../../shared/features-context';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 
 // Cache key prefix for property searches
-// Authority version: v4 routes approved image-mirror storage keys through the
-// configured media adapter. Advancing the namespace prevents a cached v3
-// payload with an undeliverable raw object key surviving this correction.
-const CACHE_PREFIX = 'property:search:v4:';
+// Authority version: v5 preserves fractional approved bathroom projections in
+// addition to routing approved image-mirror storage keys through the configured
+// media adapter. Advancing the namespace prevents a cached v4 payload with a
+// lossy integer bathroom value surviving this correction.
+const CACHE_PREFIX = 'property:search:v5:';
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 
@@ -91,6 +93,37 @@ function parseJsonObject(value: unknown): Record<string, any> {
 function asPositiveNumber(value: unknown): number | undefined {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/**
+ * Listing-backed public projections preserve fractional bathroom facts in the
+ * approval-written JSON snapshot. The legacy scalar column is INT and can
+ * round 2.5 to 3, so it is not authoritative for canonical PLE inventory.
+ * Unlinked inventory keeps the explicit legacy scalar path.
+ */
+function resolvePublicSearchBathrooms(property: {
+  sourceListingId?: unknown;
+  bathrooms?: unknown;
+  propertySettings?: unknown;
+  propertyType?: ListingPropertyType;
+}): number | undefined {
+  if (property.sourceListingId == null) return asPositiveNumber(property.bathrooms);
+
+  const details = parseJsonObject(property.propertySettings);
+  const core = buildCorePropertyInformation(property.propertyType, details);
+  const value = core.bathrooms?.status === 'known' ? Number(core.bathrooms.value) : undefined;
+  return asPositiveNumber(value);
+}
+
+/** Keep bathroom filtering on the same approved fact that cards expose. */
+function publicSearchBathroomsExpression() {
+  return sql<number | null>`CASE
+    WHEN ${properties.sourceListingId} IS NULL THEN ${properties.bathrooms}
+    WHEN JSON_VALID(${properties.propertySettings}) = 1
+      AND JSON_UNQUOTE(JSON_EXTRACT(${properties.propertySettings}, '$.corePropertyInformation.bathrooms.status')) = 'known' THEN
+      CAST(JSON_UNQUOTE(JSON_EXTRACT(${properties.propertySettings}, '$.corePropertyInformation.bathrooms.value')) AS DECIMAL(3,1))
+    ELSE NULL
+  END`;
 }
 
 function parseStringList(value: unknown): string[] {
@@ -433,7 +466,7 @@ export class PropertySearchService {
         propertyType: properties.propertyType,
         listingType: properties.listingType,
         bedrooms: properties.bedrooms,
-        bathrooms: properties.bathrooms,
+        bathrooms: publicSearchBathroomsExpression(),
         developmentId: properties.developmentId,
         developmentName: developments.name,
         developmentSlug: developments.slug,
@@ -687,7 +720,7 @@ export class PropertySearchService {
         propertyType: prop.propertyType as Property['propertyType'],
         listingType: prop.listingType as Property['listingType'],
         bedrooms: prop.bedrooms || undefined,
-        bathrooms: prop.bathrooms || undefined,
+        bathrooms: resolvePublicSearchBathrooms(prop),
         internalAreaM2: floorSize || undefined,
         erfSizeM2: erfSize || undefined,
         landAreaM2: landSize || undefined,
@@ -916,10 +949,10 @@ export class PropertySearchService {
 
     // Bathrooms
     if (filters.minBathrooms !== undefined) {
-      conditions.push(gte(properties.bathrooms, filters.minBathrooms));
+      conditions.push(gte(publicSearchBathroomsExpression(), filters.minBathrooms));
     }
     if (filters.maxBathrooms !== undefined) {
-      conditions.push(lte(properties.bathrooms, filters.maxBathrooms));
+      conditions.push(lte(publicSearchBathroomsExpression(), filters.maxBathrooms));
     }
 
     // Size filters use the canonical typed public measurements. The legacy
