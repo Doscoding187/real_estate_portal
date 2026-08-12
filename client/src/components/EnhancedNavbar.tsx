@@ -276,6 +276,7 @@ function AccountMenu({
   logout,
   onNavigate,
   onOpenChange,
+  onTriggerMouseEnter,
   closeSignal = 0,
   returnPath,
   mobile = false,
@@ -284,6 +285,7 @@ function AccountMenu({
   logout: () => Promise<void>;
   onNavigate?: () => void;
   onOpenChange?: (open: boolean) => void;
+  onTriggerMouseEnter?: () => void;
   closeSignal?: number;
   returnPath: string;
   mobile?: boolean;
@@ -291,11 +293,27 @@ function AccountMenu({
   const [open, setOpen] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const accountMenuCloseTimerRef = useRef<number | null>(null);
   const accountName = getAccountDisplayName(user);
   const accountDestination = getCanonicalAccountDestination(user);
   const accountRole = getAccountRoleLabel(user);
   const workspaceLabel = getAccountWorkspaceLabel(user);
   const accountInitials = getAccountInitials(user);
+
+  const cancelHoverClose = () => {
+    if (accountMenuCloseTimerRef.current !== null) {
+      window.clearTimeout(accountMenuCloseTimerRef.current);
+      accountMenuCloseTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (accountMenuCloseTimerRef.current !== null) {
+        window.clearTimeout(accountMenuCloseTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setOpen(false);
@@ -303,9 +321,25 @@ function AccountMenu({
   }, [closeSignal]);
 
   const handleOpenChange = (nextOpen: boolean) => {
+    cancelHoverClose();
     setOpen(nextOpen);
     if (nextOpen) setLogoutError(null);
     onOpenChange?.(nextOpen);
+  };
+
+  const handleTriggerMouseEnter = () => {
+    cancelHoverClose();
+    onTriggerMouseEnter?.();
+  };
+
+  const scheduleHoverClose = () => {
+    if (!open) return;
+
+    cancelHoverClose();
+    accountMenuCloseTimerRef.current = window.setTimeout(() => {
+      accountMenuCloseTimerRef.current = null;
+      handleOpenChange(false);
+    }, 220);
   };
 
   const handleLogout = async () => {
@@ -331,6 +365,8 @@ function AccountMenu({
           <button
             type="button"
             className="public-navbar__account-trigger public-navbar__account-trigger--mobile"
+            onMouseEnter={handleTriggerMouseEnter}
+            onMouseLeave={scheduleHoverClose}
             aria-label={
               user ? `Open account menu for ${accountName}` : 'Open login and account menu'
             }
@@ -354,6 +390,8 @@ function AccountMenu({
           <button
             type="button"
             className="public-navbar__account-trigger"
+            onMouseEnter={handleTriggerMouseEnter}
+            onMouseLeave={scheduleHoverClose}
             aria-label={
               user ? `Open account menu for ${accountName}` : 'Open login and account menu'
             }
@@ -370,6 +408,8 @@ function AccountMenu({
         align="end"
         sideOffset={8}
         className="public-navbar__account-menu-content"
+        onMouseEnter={cancelHoverClose}
+        onMouseLeave={scheduleHoverClose}
       >
         {user ? (
           <>
@@ -766,7 +806,11 @@ export function EnhancedNavbar() {
           </ul>
         </div>
 
-        <div className="public-navbar__desktop-actions">
+        <div
+          className="public-navbar__desktop-actions"
+          onMouseEnter={cancelDesktopMenuClose}
+          onMouseLeave={scheduleDesktopMenuClose}
+        >
           <Link
             href={PUBLIC_NAVIGATION_ACTIONS.referrals.href}
             className="public-navbar__action-link public-navbar__action-link--secondary"
@@ -807,6 +851,7 @@ export function EnhancedNavbar() {
             logout={logout}
             onNavigate={closeDesktopMenu}
             onOpenChange={open => handleAccountOpenChange(open, true)}
+            onTriggerMouseEnter={closeDesktopMenu}
             closeSignal={accountCloseSignal}
             returnPath={pathname}
           />

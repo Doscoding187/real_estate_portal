@@ -1,176 +1,152 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Network, Home, Building2, UserCircle, Globe, ChevronRight } from 'lucide-react';
+import {
+  BriefcaseBusiness,
+  Building2,
+  ChevronRight,
+  FileSearch,
+  MapPin,
+  Network,
+  Search,
+} from 'lucide-react';
 import { staggerContainer, staggerItem } from '@/lib/animations/advertiseAnimations';
 
-interface EcosystemNode {
-  id: string;
-  type: 'consumer' | 'partner' | 'infrastructure';
-  title: string;
-  description: string;
-  icon: React.ElementType;
-}
-
-const ecosystemNodes: EcosystemNode[] = [
+const ecosystemNodes = [
   {
-    id: 'consumer-portal',
-    type: 'consumer',
-    title: 'Consumer Portals',
-    description: 'Millions of monthly active home buyers and renters searching our consumer-facing platforms.',
-    icon: Globe,
+    title: 'PROPERTY SEEKERS',
+    description:
+      'Search, location discovery and property detail help seekers find relevant inventory.',
+    icon: Search,
+    supportingIcons: [Search, MapPin, FileSearch],
+    tone: 'blue',
   },
   {
-    id: 'data-engine',
-    type: 'infrastructure',
-    title: 'Core Infrastructure',
-    description: 'Our proprietary engine matches search behavior, verifies intent, and routes leads algorithmically.',
+    title: 'PROPERTY LISTIFY',
+    description: 'Inventory, discovery, enquiry capture and routing connect the journey.',
     icon: Network,
+    supportingIcons: [],
+    tone: 'slate',
   },
   {
-    id: 'partner-network',
-    type: 'partner',
-    title: 'Partner Network',
-    description: 'Agents, agencies, and developers receiving high-intent leads directly into their pipeline.',
-    icon: Building2,
-  }
-];
+    title: 'YOUR BUSINESS',
+    description: 'Listings, leads, team or workspace tools and follow-up support the next step.',
+    icon: BriefcaseBusiness,
+    supportingIcons: [Building2, FileSearch],
+    tone: 'emerald',
+  },
+] as const;
 
 export const EcosystemSection: React.FC = () => {
   return (
-    <section className="py-24 bg-white relative overflow-hidden">
+    <section
+      data-testid="ecosystem-section"
+      className="relative overflow-hidden bg-white py-24"
+      aria-labelledby="ecosystem-heading"
+    >
       {/* Background Grid Pattern */}
-      <div 
+      <div
         className="absolute inset-0 z-0 opacity-[0.03]"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}
+        aria-hidden="true"
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <motion.div 
-          className="text-center max-w-3xl mx-auto mb-20"
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          className="mx-auto mb-20 max-w-3xl text-center"
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
+          viewport={{ once: true, margin: '-100px' }}
           variants={staggerContainer}
         >
-          <motion.div variants={staggerItem} className="inline-flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-full mb-6">
-             <Network className="w-4 h-4 text-blue-700" />
-             <span className="text-sm font-semibold text-blue-800 uppercase tracking-wider">The Ecosystem</span>
+          <motion.div
+            variants={staggerItem}
+            className="mb-6 inline-flex items-center space-x-2 rounded-full bg-blue-50 px-4 py-2"
+          >
+            <Network className="h-4 w-4 text-blue-700" aria-hidden="true" />
+            <span className="text-sm font-semibold uppercase tracking-wider text-blue-800">
+              The Property Listify path
+            </span>
           </motion.div>
-          <motion.h2 variants={staggerItem} className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
-             Don't buy ads. <br className="hidden md:block" />
-             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Plug into the grid.</span>
+          <motion.h2
+            id="ecosystem-heading"
+            variants={staggerItem}
+            className="mb-6 text-4xl font-extrabold tracking-tight text-slate-900 md:text-5xl"
+          >
+            From discovery to <br className="hidden md:block" />
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
+              business follow-up.
+            </span>
           </motion.h2>
-          <motion.p variants={staggerItem} className="text-lg md:text-xl text-slate-600 mb-6">
-             You're not buying ads. You're buying access to active property demand. Every buyer in this system creates multiple monetization opportunities.
+          <motion.p variants={staggerItem} className="text-lg text-slate-600 md:text-xl">
+            One connected journey lets your inventory participate in discovery, capture interest and
+            reach the business workspace responsible for follow-up.
           </motion.p>
-          <motion.div variants={staggerItem} className="inline-flex items-start text-left sm:items-center sm:text-center space-x-3 bg-emerald-50 px-5 py-3 rounded-xl border border-emerald-100">
-             <span className="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-               <span className="text-sm font-bold">3x</span>
-             </span>
-             <span className="text-sm font-medium text-emerald-800">
-               <strong className="font-bold text-emerald-900">Multiplier Effect:</strong> One user generates 3-5 revenue events across agents, banks, attorneys, and service providers.
-             </span>
-          </motion.div>
         </motion.div>
 
-        <div className="relative max-w-5xl mx-auto">
-          {/* Ecosystem Visual map */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4 relative">
-            
-            {/* Consumer Node */}
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="flex-1 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl shadow-slate-100 text-center relative z-10 hover:border-blue-300 transition-colors"
-            >
-              <div className="w-16 h-16 mx-auto bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                 <Globe className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">{ecosystemNodes[0].title}</h3>
-              <p className="text-slate-600 text-sm">{ecosystemNodes[0].description}</p>
-              <div className="mt-4 flex justify-center space-x-2">
-                <Home className="w-5 h-5 text-slate-400" />
-                <UserCircle className="w-5 h-5 text-slate-400" />
-              </div>
-            </motion.div>
+        <div className="relative mx-auto max-w-5xl">
+          <div className="relative flex flex-col items-center justify-between gap-8 md:flex-row md:gap-4">
+            {ecosystemNodes.map((node, index) => {
+              const Icon = node.icon;
+              const isCenter = index === 1;
+              const cardClass = isCenter
+                ? 'relative z-20 flex-1 transform rounded-2xl border border-blue-200 bg-blue-50/80 p-8 text-center shadow-xl shadow-blue-100/70 md:scale-105'
+                : 'relative z-10 flex-1 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-100 transition-colors hover:border-blue-300';
+              const iconClass = isCenter
+                ? 'border border-blue-200 bg-white text-blue-700'
+                : node.tone === 'emerald'
+                  ? 'bg-emerald-50 text-emerald-600'
+                  : 'bg-blue-50 text-blue-600';
+              const titleClass = 'text-slate-900';
+              const descriptionClass = 'text-slate-600';
 
-            {/* Connecting Arrow 1 */}
-            <div className="hidden md:flex flex-col items-center justify-center w-24">
-              <div className="w-full h-0.5 bg-gradient-to-r from-blue-200 to-indigo-300 relative">
-                <motion.div 
-                  initial={{ left: 0 }}
-                  animate={{ left: '100%' }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" 
-                />
-              </div>
-              <ChevronRight className="text-indigo-300 mt-2" />
-            </div>
-            
-            {/* Arrow for mobile */}
-            <div className="md:hidden flex justify-center py-2">
-               <ChevronRight className="text-indigo-300 rotate-90 w-8 h-8" />
-            </div>
+              return (
+                <React.Fragment key={node.title}>
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      x: index === 0 ? -30 : index === 2 ? 30 : 0,
+                      scale: isCenter ? 0.9 : 1,
+                    }}
+                    whileInView={{ opacity: 1, x: 0, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: index * 0.2 }}
+                    className={cardClass}
+                  >
+                    <div
+                      className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full ${iconClass}`}
+                    >
+                      <Icon className="h-8 w-8" aria-hidden="true" />
+                    </div>
+                    <h3 className={`mb-3 text-xl font-bold ${titleClass}`}>{node.title}</h3>
+                    <p className={`text-sm ${descriptionClass}`}>{node.description}</p>
+                    {node.supportingIcons.length > 0 && (
+                      <div className="mt-4 flex justify-center space-x-2" aria-hidden="true">
+                        {node.supportingIcons.map(SupportingIcon => (
+                          <SupportingIcon
+                            key={SupportingIcon.displayName}
+                            className="h-5 w-5 text-slate-400"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
 
-            {/* Core Infrastructure Node */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex-1 bg-slate-900 p-8 rounded-2xl border border-slate-700 shadow-2xl text-center relative z-20 transform md:scale-110"
-            >
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-              <div className="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-6 relative z-10 border border-slate-600">
-                 <Network className="w-8 h-8 text-cyan-400" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3 relative z-10">{ecosystemNodes[1].title}</h3>
-              <p className="text-slate-400 text-sm relative z-10">{ecosystemNodes[1].description}</p>
-            </motion.div>
-
-            {/* Connecting Arrow 2 */}
-            <div className="hidden md:flex flex-col items-center justify-center w-24">
-              <div className="w-full h-0.5 bg-gradient-to-r from-indigo-300 to-emerald-200 relative">
-                <motion.div 
-                  initial={{ left: 0 }}
-                  animate={{ left: '100%' }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: 'linear', delay: 0.75 }}
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.8)]" 
-                />
-              </div>
-              <ChevronRight className="text-emerald-300 mt-2" />
-            </div>
-            
-            {/* Arrow for mobile */}
-            <div className="md:hidden flex justify-center py-2">
-               <ChevronRight className="text-emerald-300 rotate-90 w-8 h-8" />
-            </div>
-
-            {/* Partner Node */}
-            <motion.div 
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="flex-1 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl shadow-slate-100 text-center relative z-10 hover:border-emerald-300 transition-colors"
-            >
-              <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center mb-6">
-                 <Building2 className="w-8 h-8 text-emerald-600" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">{ecosystemNodes[2].title}</h3>
-              <p className="text-slate-600 text-sm">{ecosystemNodes[2].description}</p>
-              <div className="mt-4 flex justify-center">
-                 <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded">You are here</span>
-              </div>
-            </motion.div>
-
+                  {index < ecosystemNodes.length - 1 && (
+                    <div
+                      className="flex flex-col items-center justify-center md:w-24"
+                      aria-hidden="true"
+                    >
+                      <div className="hidden h-0.5 w-full bg-gradient-to-r from-blue-200 to-indigo-300 md:block" />
+                      <ChevronRight className="mt-2 rotate-90 text-indigo-300 md:rotate-0" />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
-
       </div>
     </section>
   );

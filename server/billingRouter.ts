@@ -1,28 +1,45 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { agencyAdminProcedure, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
+import {
+  agencyAdminProcedure,
+  protectedProcedure,
+  publicProcedure,
+  superAdminProcedure,
+} from './_core/trpc';
 import { getDb } from './db';
 import { billingInvoices, billingPayments, plans, subscriptions } from '../drizzle/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   getAdminFinanceQueue,
+  getAgentBillingWorkspace,
   getAgencyBillingWorkspace,
   getBillingDocumentForUser,
+  getDeveloperBillingWorkspace,
   getManualEftBankDetails,
   listBillingPlans,
   requestAgencyCancellationAtPeriodEnd,
+  requestPaidLaunchAccessInvoice,
+  requestDeveloperLaunchAccessInvoice,
   restoreAgencySubscription,
   reviewManualPayment,
   startAgencyManualCheckout,
   submitAgencyPaymentProof,
+  submitPaidLaunchAccessPaymentProof,
+  submitDeveloperPaymentProof,
   updateSubscriptionLifecycle,
   type BillingCycle,
   type CanonicalSubscriptionStatus,
   type PaymentState,
 } from './services/billingFoundationService';
+import {
+  COMMERCIAL_AUDIENCES,
+  getCommercialCatalog,
+  type CommercialAudience,
+} from './services/commercialCatalogService';
 import { requireUser } from './_core/requireUser';
 
 const billingCycleSchema = z.enum(['monthly', 'annual']);
+const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
 
 const createCheckoutSessionSchema = z.object({
   planId: z.number().int().positive(),
@@ -95,14 +112,75 @@ function requireAgencyId(ctx: { user?: { agencyId?: number | null } | null }): n
 
 export const billingRouter = {
   plans: publicProcedure
-    .input(z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional())
+    .input(
+      z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional(),
+    )
     .query(async ({ input }) => listBillingPlans(input?.segment || 'agency')),
+
+  /**
+   * Read-only commercial catalog projection. This is the public commercial
+   * authority; it deliberately does not provision subscriptions or start
+   * checkout as part of a read.
+   */
+  commercialCatalog: publicProcedure
+    .input(z.object({ audience: commercialAudienceSchema.optional() }).optional())
+    .query(async ({ input }) =>
+      getCommercialCatalog(input?.audience as CommercialAudience | undefined),
+    ),
 
   bankDetails: protectedProcedure.query(() => getManualEftBankDetails()),
 
   workspace: agencyAdminProcedure.query(async ({ ctx }) => {
     return getAgencyBillingWorkspace(requireUser(ctx));
   }),
+
+  developerWorkspace: protectedProcedure.query(async ({ ctx }) => {
+    return getDeveloperBillingWorkspace(requireUser(ctx));
+  }),
+
+  agentWorkspace: protectedProcedure.query(async ({ ctx }) => {
+    return getAgentBillingWorkspace(requireUser(ctx));
+  }),
+
+  requestLaunchAccessInvoice: protectedProcedure
+    .input(z.object({ planId: z.number().int().positive().optional() }).optional())
+    .mutation(async ({ ctx, input }) =>
+      requestPaidLaunchAccessInvoice({ user: requireUser(ctx), planId: input?.planId }),
+    ),
+
+  requestDeveloperLaunchAccessInvoice: protectedProcedure.mutation(async ({ ctx }) => {
+    return requestDeveloperLaunchAccessInvoice({ user: requireUser(ctx) });
+  }),
+
+  submitDeveloperPaymentProof: protectedProcedure
+    .input(submitPaymentProofSchema)
+    .mutation(async ({ ctx, input }) =>
+      submitDeveloperPaymentProof({
+        user: requireUser(ctx),
+        invoiceId: input.invoiceId,
+        amount: Math.round(input.amount),
+        bankReference: input.bankReference,
+        payerName: input.payerName,
+        paymentDate: input.paymentDate,
+        notes: input.notes,
+        file: input.file,
+      }),
+    ),
+
+  submitLaunchAccessPaymentProof: protectedProcedure
+    .input(submitPaymentProofSchema)
+    .mutation(async ({ ctx, input }) =>
+      submitPaidLaunchAccessPaymentProof({
+        user: requireUser(ctx),
+        invoiceId: input.invoiceId,
+        amount: Math.round(input.amount),
+        bankReference: input.bankReference,
+        payerName: input.payerName,
+        paymentDate: input.paymentDate,
+        notes: input.notes,
+        file: input.file,
+      }),
+    ),
 
   startManualEftCheckout: agencyAdminProcedure
     .input(startManualCheckoutSchema)
@@ -161,7 +239,8 @@ export const billingRouter = {
 
   subscription: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
     const [row] = await db
       .select({ subscription: subscriptions, plan: plans })
@@ -179,7 +258,8 @@ export const billingRouter = {
 
   invoices: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
     return db
       .select()
@@ -190,7 +270,8 @@ export const billingRouter = {
 
   payments: agencyAdminProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    if (!db)
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
     const agencyId = requireAgencyId(ctx);
     return db
       .select()
@@ -223,7 +304,8 @@ export const billingRouter = {
   admin: {
     plans: superAdminProcedure.query(async () => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
       return db.select().from(plans).orderBy(plans.sortOrder);
     }),
 
@@ -232,7 +314,15 @@ export const billingRouter = {
         z
           .object({
             status: z
-              .enum(['submitted', 'under_review', 'verified', 'rejected', 'reversed', 'refunded', 'all'])
+              .enum([
+                'submitted',
+                'under_review',
+                'verified',
+                'rejected',
+                'reversed',
+                'refunded',
+                'all',
+              ])
               .default('under_review'),
             limit: z.number().int().positive().max(100).default(50),
             offset: z.number().int().min(0).default(0),
@@ -280,7 +370,8 @@ export const billingRouter = {
 
     billingOverview: superAdminProcedure.query(async () => {
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+      if (!db)
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       const [revenue] = await db
         .select({ total: sql<number>`COALESCE(SUM(${billingInvoices.amountPaid}), 0)` })
@@ -289,7 +380,12 @@ export const billingRouter = {
       const [pendingPayments] = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(billingPayments)
-        .where(and(eq(billingPayments.paymentMethod, 'manual_eft'), eq(billingPayments.state, 'under_review')));
+        .where(
+          and(
+            eq(billingPayments.paymentMethod, 'manual_eft'),
+            eq(billingPayments.state, 'under_review'),
+          ),
+        );
       const [activeSubscriptions] = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(subscriptions)

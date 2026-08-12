@@ -2,7 +2,7 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import {
-  ACCEPTED_MIGRATION_HEAD,
+  PLE_MANUAL_LOCATION_CAPABILITY,
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
@@ -99,7 +99,7 @@ export type PlePublicationEntitlementEvidence = AdapterEvidence & {
   };
   verified: {
     exactTarget: true;
-    migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+    migrationHead: string;
     listingCommercialOwner: true;
     agencyProfile: true;
     agencyBranding: true;
@@ -456,9 +456,10 @@ async function verifyFixtureRecords(input: {
   assertApplicationEntitlement: boolean;
 }): Promise<PlePublicationEntitlementEvidence['verified']> {
   assertPlePublicationEntitlementTarget(input.authority);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
+    requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
   await assertListingCommercialContext(input.connection);
 
@@ -524,7 +525,7 @@ async function verifyFixtureRecords(input: {
 
   return {
     exactTarget: true,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
     listingCommercialOwner: true,
     agencyProfile: true,
     agencyBranding: true,
@@ -558,6 +559,7 @@ export async function preparePlePublicationEntitlement(input: {
   await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
+    requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
 
   const subscriptionsBefore = await listSubscriptions(input.connection);

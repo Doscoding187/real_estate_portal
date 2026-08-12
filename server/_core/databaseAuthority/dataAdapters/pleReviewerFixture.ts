@@ -4,7 +4,6 @@ import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assessAuthorizedDatabaseReadiness } from '../readiness';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import {
-  ACCEPTED_MIGRATION_HEAD,
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
@@ -76,7 +75,7 @@ export type PleReviewerFixtureEvidence = AdapterEvidence & {
   };
   verified: {
     exactTarget: true;
-    migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+    migrationHead: string;
     applicationReady: true;
     exactReviewer: true;
     role: 'super_admin';
@@ -324,6 +323,7 @@ async function assertNoReviewerAssociations(
 async function verifyReviewerRecords(
   connection: AuthoritySqlConnection,
   password: string,
+  migrationHead: string,
 ): Promise<PleReviewerFixtureEvidence['verified']> {
   const rows = await findReviewerIdentityRows(connection);
   if (rows.length !== 1) {
@@ -337,7 +337,7 @@ async function verifyReviewerRecords(
   const associations = await assertNoReviewerAssociations(connection);
   return {
     exactTarget: true,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead,
     applicationReady: true,
     exactReviewer: true,
     role: 'super_admin',
@@ -383,7 +383,7 @@ export async function preparePleReviewerFixture(input: {
   assertOperation(input.decision, ['test-fixture']);
   assertPleReviewerTarget(input.authority);
   const base = evidenceBase(input.authority);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
   });
@@ -427,7 +427,11 @@ export async function preparePleReviewerFixture(input: {
 
   const usersAfter = await listUserSafetySnapshot(input.connection);
   assertUnrelatedUsersUnchanged(usersBefore, usersAfter);
-  const verified = await verifyReviewerRecords(input.connection, password);
+  const verified = await verifyReviewerRecords(
+    input.connection,
+    password,
+    manifest.document.expectedHead,
+  );
   return {
     ...base,
     fixture: PLE_REVIEWER_FIXTURE_VERSION,
@@ -446,13 +450,17 @@ export async function verifyPleReviewerFixture(input: {
   assertOperation(input.decision, ['verification', 'browser-verification']);
   assertPleReviewerTarget(input.authority);
   const base = evidenceBase(input.authority);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
   });
   await requireApplicationReady(input);
   const password = localPleReviewerPassword();
-  const verified = await verifyReviewerRecords(input.connection, password);
+  const verified = await verifyReviewerRecords(
+    input.connection,
+    password,
+    manifest.document.expectedHead,
+  );
   return {
     ...base,
     fixture: PLE_REVIEWER_FIXTURE_VERSION,

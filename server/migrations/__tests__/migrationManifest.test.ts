@@ -8,6 +8,7 @@ import {
   type MigrationManifestDocument,
   type MigrationManifestEntry,
 } from '../migrationManifest';
+import { buildMigrationPlan } from '../runSqlMigrations';
 
 const roots: string[] = [];
 const checksum = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -65,11 +66,20 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
-  it('accepts the integrated repository 0000 -> 0001 -> 0002 -> 0003 -> 0004 -> 0005 -> 0006 manifest with exact ancestry', () => {
+  it('accepts the integrated repository 0000 -> 0007 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const [baseline, incremental, taxonomy, measurements, location, manualLocation, supersessions] =
+    const [
+      baseline,
+      incremental,
+      taxonomy,
+      measurements,
+      location,
+      manualLocation,
+      supersessions,
+      launchAccess,
+    ] =
       manifest.orderedMigrations;
 
     expect(baseline).toMatchObject({
@@ -134,7 +144,40 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe(supersessions.filename);
+    expect(launchAccess).toMatchObject({
+      sequence: 7,
+      filename: '0007_paid_launch_access_invoice_term.sql',
+      parent: supersessions.filename,
+      parentChecksum: supersessions.checksum,
+      checksum: '84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46',
+      kind: 'ddl',
+      statementPolicy: 'single-ddl',
+    });
+    expect(manifest.expectedHead.filename).toBe(launchAccess.filename);
+  });
+
+  it('plans exactly one paid-launch migration from the integrated 0006 head', () => {
+    const manifest = loadAndValidateMigrationManifest({
+      migrationsDirectory: resolve('server/migrations'),
+    });
+    const currentIntegratedHead = manifest.orderedMigrations[6];
+    const plan = buildMigrationPlan({
+      manifest,
+      targetFingerprintHash: 'a'.repeat(64),
+      applied: manifest.orderedMigrations.slice(0, 7).map(item => ({
+        fileName: item.filename,
+        checksum: item.checksum,
+      })),
+      acceptedOldHead: currentIntegratedHead.filename,
+      expectedNewHead: '0007_paid_launch_access_invoice_term.sql',
+    });
+
+    expect(plan.acceptedOldHead).toBe('0006_development_supersessions.sql');
+    expect(plan.pending).toHaveLength(1);
+    expect(plan.pending.map(item => item.filename)).toEqual([
+      '0007_paid_launch_access_invoice_term.sql',
+    ]);
+    expect(plan.expectedNewHead).toBe('0007_paid_launch_access_invoice_term.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

@@ -2,14 +2,9 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:f
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  authorizeDatabaseOperation,
-  expectedDatabaseAcknowledgement,
-} from '../authorization';
+import { authorizeDatabaseOperation, expectedDatabaseAcknowledgement } from '../authorization';
 import { resolveDatabaseAuthority } from '../context';
-import {
-  deriveGitWorktreeIdentity,
-} from '../worktreeIdentity';
+import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 
 const temporaryRoots: string[] = [];
 
@@ -168,7 +163,9 @@ describe('immutable resolved database context and operation authorization', () =
       processEnv: { NODE_ENV: 'development', APP_ENV: 'development' },
     });
     expect(remote.context.targetClass).toBe('shared-remote');
-    expect(() => authorizeDatabaseOperation(remote, { root: process.cwd() })).toThrow('fails closed');
+    expect(() => authorizeDatabaseOperation(remote, { root: process.cwd() })).toThrow(
+      'fails closed',
+    );
 
     const mislabeledProduction = resolveDatabaseAuthority({
       operation: 'release-plan',
@@ -179,9 +176,9 @@ describe('immutable resolved database context and operation authorization', () =
       processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
     });
     expect(mislabeledProduction.context.targetClass).toBe('shared-remote');
-    expect(() =>
-      authorizeDatabaseOperation(mislabeledProduction, { root: process.cwd() }),
-    ).toThrow('fails closed');
+    expect(() => authorizeDatabaseOperation(mislabeledProduction, { root: process.cwd() })).toThrow(
+      'fails closed',
+    );
 
     const local = resolveDatabaseAuthority({
       operation: 'test-fixture',
@@ -457,9 +454,9 @@ describe('immutable resolved database context and operation authorization', () =
       operation: release.context.operation,
       targetFingerprintHash: release.context.targetFingerprintHash,
     };
-    expect(() =>
-      authorizeDatabaseOperation(release, { root: process.cwd(), approval }),
-    ).toThrow('exact acknowledgement');
+    expect(() => authorizeDatabaseOperation(release, { root: process.cwd(), approval })).toThrow(
+      'exact acknowledgement',
+    );
     expect(
       authorizeDatabaseOperation(release, {
         root: process.cwd(),
@@ -467,6 +464,65 @@ describe('immutable resolved database context and operation authorization', () =
         acknowledgement: expectedDatabaseAcknowledgement(release.context),
       }),
     ).toMatchObject({ operation: 'release-apply', targetClass: 'production' });
+  });
+
+  it('authorizes canonical commercial reference release operations without widening disposable reference seeding', () => {
+    const identity = fixtureIdentity();
+    const target = 'mysql://release-user:private@db.prod.example.com/listify_property_sa';
+    const plan = resolveDatabaseAuthority({
+      operation: 'release-reference-plan',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: target,
+      credentialClass: 'read-only',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const planApproval = {
+      reference: 'CHANGE-456',
+      actor: 'release-owner',
+      operation: plan.context.operation,
+      targetFingerprintHash: plan.context.targetFingerprintHash,
+    };
+    expect(
+      authorizeDatabaseOperation(plan, { root: process.cwd(), approval: planApproval }),
+    ).toMatchObject({ operation: 'release-reference-plan', targetClass: 'production' });
+
+    const apply = resolveDatabaseAuthority({
+      operation: 'release-reference-apply',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: target,
+      credentialClass: 'migration',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const applyApproval = {
+      reference: 'CHANGE-456',
+      actor: 'release-owner',
+      operation: apply.context.operation,
+      targetFingerprintHash: apply.context.targetFingerprintHash,
+    };
+    expect(() =>
+      authorizeDatabaseOperation(apply, { root: process.cwd(), approval: applyApproval }),
+    ).toThrow('exact acknowledgement');
+    expect(
+      authorizeDatabaseOperation(apply, {
+        root: process.cwd(),
+        approval: applyApproval,
+        acknowledgement: expectedDatabaseAcknowledgement(apply.context),
+      }),
+    ).toMatchObject({ operation: 'release-reference-apply', targetClass: 'production' });
+
+    const generic = resolveDatabaseAuthority({
+      operation: 'reference-seed',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: target,
+      credentialClass: 'local-owner',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    expect(() => authorizeDatabaseOperation(generic, { root: process.cwd() })).toThrow(
+      'not allowed for production',
+    );
   });
 });
 

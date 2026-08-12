@@ -10,7 +10,6 @@ import { registerAuthRoutes } from './authRoutes';
 import { appRouter } from '../routers';
 import { createContext } from './context';
 import { serveStatic, setupVite } from './vite';
-import { handleStripeWebhook } from './stripeWebhooks';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
@@ -219,8 +218,6 @@ async function startServer() {
       });
     }
   });
-
-  app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
   app.use(
     '/api/trpc',

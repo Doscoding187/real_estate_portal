@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -7,17 +7,12 @@ function readRepoFile(relativePath: string) {
 }
 
 describe('launch safety contract', () => {
-  it('keeps the local dev activation helper unavailable to public production traffic', () => {
-    const devRouter = readRepoFile('server/devRouter.ts');
+  it('does not expose a local payment-activation helper', () => {
     const appRouter = readRepoFile('server/routers.ts');
 
-    expect(devRouter).toContain('triggerWebhookManual: protectedProcedure');
-    expect(devRouter).toContain('ENV.isProduction');
-    expect(devRouter).toContain("code: 'NOT_FOUND'");
-    expect(devRouter).not.toContain('triggerWebhookManual: publicProcedure');
-    expect(appRouter).toContain('if (!ENV.isProduction)');
-    expect(appRouter).toContain('mutableAppRouterConfig.dev = devRouter;');
-    expect(appRouter).not.toContain('dev: devRouter, //');
+    expect(existsSync(path.resolve(process.cwd(), 'server/devRouter.ts'))).toBe(false);
+    expect(appRouter).not.toContain("import { devRouter } from './devRouter'");
+    expect(appRouter).not.toContain('mutableAppRouterConfig.dev');
   });
 
   it('keeps migration execution outside hosted application startup', () => {

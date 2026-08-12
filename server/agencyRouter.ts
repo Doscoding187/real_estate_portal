@@ -15,7 +15,6 @@ import {
   leadActivities,
   leads,
   plans,
-  agencySubscriptions,
   showings,
   subscriptions,
   properties,
@@ -70,6 +69,7 @@ import {
   setSubscriptionPlanForOwner,
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
+import { getCommercialProductKey, getConfiguredLaunchFeeMinor, resolveCommercialTerm } from './services/commercialTerm';
 import {
   assertListingPublicationEntitled,
   ListingPublicationEntitlementError,
@@ -3602,16 +3602,6 @@ export const agencyRouter = router({
       .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, user.agencyId)))
       .limit(1);
 
-    const [stripeSubscription] = await db
-      .select({
-        subscription: agencySubscriptions,
-        plan: plans,
-      })
-      .from(agencySubscriptions)
-      .leftJoin(plans, eq(agencySubscriptions.planId, plans.id))
-      .where(eq(agencySubscriptions.agencyId, user.agencyId))
-      .limit(1);
-
     const availablePlans = await db
       .select()
       .from(plans)
@@ -3625,7 +3615,6 @@ export const agencyRouter = router({
       },
       accessState,
       canonicalSubscription: canonicalSubscription || null,
-      stripeSubscription: stripeSubscription || null,
       plans: availablePlans,
     };
   }),
@@ -3753,11 +3742,32 @@ export const agencyRouter = router({
         if (!plan || Number(plan.isActive) !== 1 || plan.segment !== 'agency') {
           throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Select an active agency plan.' });
         }
-        if (!['month', 'year'].includes(String(plan.interval))) {
-          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has an unsupported billing interval.' });
+        const commercialTerm = resolveCommercialTerm(plan);
+        if (commercialTerm.kind === 'free_trial') {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Free agency trials are retired. Request Agency Launch Access and complete manual-EFT verification.',
+          });
         }
-        if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
-          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has no valid manual-EFT price.' });
+        if (commercialTerm.kind === 'paid_launch_access') {
+          if (
+            getCommercialProductKey(plan) !== 'agency_launch_access' ||
+            commercialTerm.durationDays !== 90 ||
+            commercialTerm.autoRenews ||
+            getConfiguredLaunchFeeMinor(plan) !== 99900
+          ) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: 'The selected agency Launch Access product is not configured with its approved terms.',
+            });
+          }
+        } else {
+          if (!['month', 'year'].includes(String(plan.interval))) {
+            throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has an unsupported billing interval.' });
+          }
+          if (getManualEftBillingAmount(plan, 'monthly') <= 0) {
+            throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The selected agency plan has no valid manual-EFT price.' });
+          }
         }
         const entitlementRows = await tx
           .select({ featureKey: planEntitlements.featureKey, valueJson: planEntitlements.valueJson })
@@ -3832,10 +3842,13 @@ export const agencyRouter = router({
           ownerType: 'agency',
           ownerId: agencyId,
           planId: plan.id,
-          status: 'trial',
+          status: 'pending_payment',
+          allowPendingPayment: commercialTerm.kind === 'paid_launch_access',
           metadata: {
             source: 'agency_onboarding',
             legacy_agency_subscription_status: 'pending_payment',
+            commercial_term_kind: commercialTerm.kind,
+            commercial_product_key: getCommercialProductKey(plan),
           },
           actorUserId: principal.id,
           db: tx,

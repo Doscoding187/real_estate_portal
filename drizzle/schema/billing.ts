@@ -128,6 +128,9 @@ export const billingInvoices = mysqlTable(
       .default('issued')
       .notNull(),
     billingCycle: mysqlEnum('billing_cycle', ['monthly', 'annual']).default('monthly').notNull(),
+    commercialTermKind: varchar('commercial_term_kind', { length: 40 })
+      .default('recurring_subscription')
+      .notNull(),
     amountDue: int('amount_due').notNull(),
     amountPaid: int('amount_paid').default(0).notNull(),
     discountAmount: int('discount_amount').default(0).notNull(),

@@ -33,10 +33,6 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === 'production',
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? '',
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? '',
-  // Stripe configuration
-  stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? '',
-  stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? '',
-  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
   // Google Maps configuration
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY ?? '',
   googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY ?? '',

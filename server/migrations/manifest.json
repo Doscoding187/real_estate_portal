@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0006_development_supersessions.sql",
+  "expectedHead": "0007_paid_launch_access_invoice_term.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -75,6 +75,16 @@
       "checksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
       "parent": "0005_manual_location_without_coordinates.sql",
       "parentChecksum": "8f1e3c8481dc606a89d3fc8e01ffc72fecd02e7aa15cfb4b889a7a78d4abf51b",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 7,
+      "filename": "0007_paid_launch_access_invoice_term.sql",
+      "checksum": "84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46",
+      "parent": "0006_development_supersessions.sql",
+      "parentChecksum": "9171fe61ba526321847ef9615fe0121cd1e89812f4e8ef71c26350db37ae5655",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

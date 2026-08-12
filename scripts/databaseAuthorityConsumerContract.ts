@@ -12,6 +12,8 @@ import { loadAuthorityManifest, validateAuthorityManifest } from './databaseAuth
 
 const CONSUMER_CONTRACT_STEPS = [
   ['pnpm', ['db:migrate:test']],
+  ['pnpm', ['db:reference:prepare']],
+  ['pnpm', ['db:reference:verify']],
   ['pnpm', ['db:schema:congruency']],
   ['pnpm', ['db:verify:distribution']],
   ['pnpm', ['db:readiness']],
@@ -28,8 +30,12 @@ export function assertFreshDisposableTestTarget(
   rawUrl: string | undefined,
   env: Environment = process.env,
 ): ResolvedDatabaseAuthority {
-  const nodeEnv = String(env.NODE_ENV ?? '').trim().toLowerCase();
-  const appEnv = String(env.APP_ENV ?? '').trim().toLowerCase();
+  const nodeEnv = String(env.NODE_ENV ?? '')
+    .trim()
+    .toLowerCase();
+  const appEnv = String(env.APP_ENV ?? '')
+    .trim()
+    .toLowerCase();
   if (nodeEnv !== 'test' || appEnv !== 'test') {
     throw new Error(
       'Fresh-schema consumer contract refused: NODE_ENV and APP_ENV must both be exactly test.',
@@ -69,11 +75,7 @@ async function assertDatabaseIsFresh(authority: ResolvedDatabaseAuthority) {
   }
 }
 
-function runStep(
-  command: string,
-  args: readonly string[],
-  authority: ResolvedDatabaseAuthority,
-) {
+function runStep(command: string, args: readonly string[], authority: ResolvedDatabaseAuthority) {
   console.log(`[Consumer Contract] ${command} ${args.join(' ')}`);
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
@@ -101,7 +103,7 @@ async function main() {
     runStep(command, args, authority);
   }
   console.log(
-    '[Consumer Contract] Canonical migration, schema congruency, distribution contract, and layered readiness passed.',
+    '[Consumer Contract] Canonical migration, commercial reference data, schema congruency, distribution contract, and layered readiness passed.',
   );
 }
 

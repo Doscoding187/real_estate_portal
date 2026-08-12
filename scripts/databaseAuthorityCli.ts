@@ -17,6 +17,11 @@ import {
   verifyCanonicalGeography,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
 import {
+  planCanonicalCommercialReferenceData,
+  prepareCanonicalCommercialReferenceData,
+  verifyCanonicalCommercialReference,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalCommercial';
+import {
   prepareSearchToLeadScenario,
   verifySearchToLeadScenario,
 } from '../server/_core/databaseAuthority/dataAdapters/searchToLeadScenario';
@@ -63,6 +68,9 @@ type Command =
   | 'migration:apply'
   | 'release:plan'
   | 'release:apply'
+  | 'release-reference:plan'
+  | 'release-reference:apply'
+  | 'release-reference:verify'
   | 'readiness'
   | 'schema:check'
   | 'reference:prepare'
@@ -215,6 +223,34 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (
+    command === 'release-reference:plan' ||
+    command === 'release-reference:apply' ||
+    command === 'release-reference:verify'
+  ) {
+    const isPlan = command.endsWith(':plan');
+    const isApply = command.endsWith(':apply');
+    const operation: DatabaseOperation = isPlan
+      ? 'release-reference-plan'
+      : isApply
+        ? 'release-reference-apply'
+        : 'release-reference-verify';
+    const authority = authorityFor(operation, isApply ? 'migration' : 'read-only');
+    const decision = authorizationFor(authority, option('ack'));
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      const evidence = isPlan
+        ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
+        : isApply
+          ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+          : await verifyCanonicalCommercialReference({ authority, decision, connection });
+      print(evidence);
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   if (command === 'readiness') {
     print(
       await assessRuntimeDatabaseReadiness({
@@ -261,9 +297,14 @@ async function run(command: Command): Promise<void> {
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
       const evidence = isReference
-        ? isPrepare
-          ? await prepareCanonicalGeography({ authority, decision, connection })
-          : await verifyCanonicalGeography({ authority, decision, connection })
+        ? {
+            geography: isPrepare
+              ? await prepareCanonicalGeography({ authority, decision, connection })
+              : await verifyCanonicalGeography({ authority, decision, connection }),
+            commercial: isPrepare
+              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+              : await verifyCanonicalCommercialReference({ authority, decision, connection }),
+          }
         : isPrepare
           ? await prepareSearchToLeadScenario({ authority, decision, connection })
           : await verifySearchToLeadScenario({ authority, decision, connection });
@@ -332,6 +373,9 @@ const commands = new Set<Command>([
   'migration:apply',
   'release:plan',
   'release:apply',
+  'release-reference:plan',
+  'release-reference:apply',
+  'release-reference:verify',
   'readiness',
   'schema:check',
   'reference:prepare',

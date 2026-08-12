@@ -98,7 +98,7 @@ describe('provider-independent billing foundation contract', () => {
 
   it('does not activate access when proof is uploaded for review', () => {
     const uploadPath = billingService.slice(
-      billingService.indexOf('export async function submitAgencyPaymentProof'),
+      billingService.indexOf('export async function submitPaidLaunchAccessPaymentProof'),
       billingService.indexOf('export async function getAdminFinanceQueue'),
     );
 
@@ -127,9 +127,11 @@ describe('provider-independent billing foundation contract', () => {
     expect(reviewPath).toContain('overpaymentAmount');
     expect(reviewPath).toContain('partial_payment_does_not_activate');
     expect(reviewPath).toContain('activateSubscriptionForPaidInvoice');
-    expect(reviewPath).toContain(
-      "eventType: invoicePaid ? 'payment_approved_subscription_activated' : 'payment_partially_approved'",
-    );
+    expect(reviewPath).toContain('eventType: activationOccurred');
+    expect(reviewPath).toContain('payment_approved_invoice_already_paid');
+    expect(reviewPath).toContain('activation_transition: activationOccurred');
+    expect(reviewPath).toContain("'payment_approved_subscription_activated'");
+    expect(reviewPath).toContain("'payment_partially_approved'");
   });
 
   it('preserves invoice price snapshots and deterministic renewal period policy', () => {

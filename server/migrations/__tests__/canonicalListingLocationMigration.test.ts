@@ -21,7 +21,7 @@ describe('PLE-6B canonical listing location migration', () => {
       statementPolicy: 'approved-exception',
       approvalReference: 'PLE-6B-2026-08-10-Edward',
     });
-    expect(manifest.expectedHead.filename).toBe('0005_manual_location_without_coordinates.sql');
+    expect(manifest.expectedHead.filename).toBe('0007_paid_launch_access_invoice_term.sql');
   });
 
   it('contains only additive DDL and the approved location invariants', () => {

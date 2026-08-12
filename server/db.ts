@@ -13,7 +13,6 @@ import {
   isNull,
   isNotNull,
   not,
-  ne,
   count,
   avg,
   min,
@@ -98,6 +97,7 @@ import { validateListingRecordLocation } from './services/listingLocationResolve
 import {
   getPresentationMediaDescriptor,
   getSafePropertyPresentationVirtualTour,
+  normalizePropertyPresentation,
   summarizePropertyPresentation,
 } from '../shared/property-presentation';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
@@ -183,6 +183,11 @@ function getPricingProjection(
     ratesAndTaxes: getMoneyFactAmount(recurringCosts.ratesAndTaxes) ?? null,
     legacyLevy: getMoneyFactAmount(levyFact) ?? null,
   };
+}
+
+async function lockListingTransitionRow(database: any, listingId: number) {
+  if (typeof database.execute !== 'function') return;
+  await database.execute(sql`SELECT id FROM listings WHERE id = ${listingId} FOR UPDATE`);
 }
 
 // Export a synchronous db object that throws if not initialized
@@ -952,40 +957,6 @@ export async function searchDevelopers(query: string, limit: number = 10) {
         eq(developers.status, 'approved' as any), // Only show approved developers
       ),
     )
-    .limit(limit);
-}
-
-/**
- * Search developments by name (for autocomplete)
- */
-export async function searchDevelopments(query: string, developerId?: number, limit: number = 10) {
-  const db = await getDb();
-  if (!db) return [];
-
-  const conditions = [
-    sql`LOWER(${developments.name}) LIKE ${`%${query.toLowerCase()}%`}`,
-    eq(developments.isPublished, 1), // Only show published developments
-    eq(developments.approvalStatus, 'approved'),
-    ne(developments.transactionType, 'auction'),
-  ];
-
-  // Filter by developer if provided
-  if (developerId) {
-    conditions.push(eq(developments.developerId, developerId));
-  }
-
-  return await db
-    .select({
-      id: developments.id,
-      name: developments.name,
-      city: developments.city,
-      province: developments.province,
-      developerId: developments.developerId,
-      developmentType: developments.developmentType,
-      status: developments.status,
-    })
-    .from(developments)
-    .where(and(...conditions))
     .limit(limit);
 }
 
@@ -2351,8 +2322,8 @@ export async function createListing(
 /**
  * Get listing by ID
  */
-export async function getListingById(listingId: number) {
-  const db = await getDb();
+export async function getListingById(listingId: number, database?: any) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
   const [listing] = await db.select().from(listings).where(eq(listings.id, listingId)).limit(1);
@@ -2577,10 +2548,15 @@ export async function updateListing(listingId: number, updateData: any) {
 /**
  * Submit listing for review
  */
-export async function submitListingForReview(listingId: number) {
-  const db = await getDb();
+export async function submitListingForReview(listingId: number, database?: any) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
+  if (!database && typeof db.transaction === 'function') {
+    return db.transaction((transaction: any) => submitListingForReview(listingId, transaction));
+  }
+
+  await lockListingTransitionRow(db, listingId);
   const [transitionListing] = await db
     .select()
     .from(listings)
@@ -2591,7 +2567,7 @@ export async function submitListingForReview(listingId: number) {
     throw new Error(`Listing cannot be submitted from status "${transitionListing.status}"`);
   }
 
-  const listing = await getListingById(listingId);
+  const listing = await getListingById(listingId, db);
   if (!listing) throw new Error('Listing not found');
   const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
   if (locationIssues.length > 0) {
@@ -2624,7 +2600,7 @@ export async function submitListingForReview(listingId: number) {
   // Add to approval queue
   await db.insert(listingApprovalQueue).values({
     listingId,
-    submittedBy: listing.ownerId,
+    submittedBy: transitionListing.ownerId,
     submittedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
     status: 'pending' as any,
     priority: 'normal' as any,
@@ -2657,8 +2633,8 @@ export async function getListingAnalytics(listingId: number) {
 /**
  * Get listing media
  */
-export async function getListingMedia(listingId: number) {
-  const db = await getDb();
+export async function getListingMedia(listingId: number, database?: any) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
   return await db
@@ -3204,12 +3180,21 @@ export async function approveListing(
   reviewedBy: number,
   notes?: string,
   source: 'admin_approval' | 'fast_track' = 'admin_approval',
+  database?: any,
 ) {
-  const db = await getDb();
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
+  if (!database && typeof db.transaction === 'function') {
+    return db.transaction((transaction: any) =>
+      approveListing(listingId, reviewedBy, notes, source, transaction),
+    );
+  }
+
+  await lockListingTransitionRow(db, listingId);
+
   // 1. Get full listing data
-  const listing = await getListingById(listingId);
+  const listing = await getListingById(listingId, db);
   if (!listing) throw new Error('Listing not found');
 
   if (listing.status === 'published' || listing.status === 'approved') {
@@ -3227,10 +3212,15 @@ export async function approveListing(
 
   // This guard is deliberately in the persistence path. A router, script, or
   // future service that invokes approveListing cannot create a public property
-  // without the same commercial decision.
+  // without the same commercial decision. A revision replaces an existing
+  // active listing, so that original is excluded from the capacity count.
+  const originalListingIdForCapacity = Number((listing as any).revisionOfListingId || 0);
   const listingCommercialOwner = await assertListingPublicationEntitled(db, {
     listingId,
     operation: source === 'fast_track' ? 'fast_track' : 'admin_approval',
+    ...(originalListingIdForCapacity > 0
+      ? { excludeListingIds: [originalListingIdForCapacity] }
+      : {}),
   });
 
   const pricingIssues = validatePricingContract(
@@ -3258,11 +3248,12 @@ export async function approveListing(
       .limit(1);
     if (!original || original.status !== 'published')
       throw new Error('The original published listing is no longer available for this revision');
+    const revisionCommercialOwner = listingCommercialOwner;
     const originalCommercialOwner = await assertListingPublicationEntitled(db, {
       listingId: originalListingId,
       operation: 'republish',
     });
-    if (!isSameListingCommercialOwner(listingCommercialOwner, originalCommercialOwner)) {
+    if (!isSameListingCommercialOwner(revisionCommercialOwner, originalCommercialOwner)) {
       throw new Error('Listing revision commercial owner does not match the original listing');
     }
     const approvedPricingProjection = getPricingProjection(
@@ -3511,7 +3502,7 @@ export async function approveListing(
   }
 
   // 4. Sync Media
-  const mediaItems = await getListingMedia(listingId);
+  const mediaItems = await getListingMedia(listingId, db);
   const imageItems = mediaItems.filter(
     item => item.mediaType === 'image' && isCompletedListingMedia(item),
   );

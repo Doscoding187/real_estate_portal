@@ -3,7 +3,7 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import {
-  ACCEPTED_MIGRATION_HEAD,
+  PLE_MANUAL_LOCATION_CAPABILITY,
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
@@ -117,7 +117,7 @@ export type ListingPreviewFixtureEvidence = AdapterEvidence & {
     agencyMembership: true;
     contactPreflight: true;
   };
-  migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+  migrationHead: string;
 };
 
 type Row = Record<string, unknown>;
@@ -666,9 +666,10 @@ export async function prepareListingPreviewFixture(input: {
   assertOperation(input.decision, ['demo-seed']);
   assertListingPreviewTarget(input.authority);
   const base = evidenceBase(input.authority);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
+    requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
   const password = localPreviewPassword();
 
@@ -719,7 +720,7 @@ export async function prepareListingPreviewFixture(input: {
       agencyMembership: prepared.membership.state,
     },
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }
 
@@ -731,9 +732,10 @@ export async function verifyListingPreviewFixture(input: {
   assertOperation(input.decision, ['verification', 'browser-verification']);
   assertListingPreviewTarget(input.authority);
   const base = evidenceBase(input.authority);
-  await requireAcceptedMigrationHead({
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
+    requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
   const password = localPreviewPassword();
   const verified = await verifyFixtureRows(input.connection, password);
@@ -755,6 +757,6 @@ export async function verifyListingPreviewFixture(input: {
       agencyMembership: 'reused',
     },
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }

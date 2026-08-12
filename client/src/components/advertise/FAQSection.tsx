@@ -2,6 +2,14 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FAQAccordionItem } from './FAQAccordionItem';
 import { useScrollAnimation } from '../../hooks/useScrollAnimation';
+import type { CommercialProduct } from '@/hooks/useCommercialCatalog';
+import {
+  formatCommercialLimitLabel,
+  formatCommercialLimitValue,
+  getCommercialPricePresentation,
+  getCommercialPresentationLimits,
+  getCommercialTermPresentation,
+} from '@/lib/commercialCatalog';
 
 export interface FAQ {
   id: string;
@@ -12,104 +20,156 @@ export interface FAQ {
 
 export interface FAQSectionProps {
   faqs?: FAQ[];
+  commercialProducts?: CommercialProduct[];
 }
 
-const defaultFAQs: FAQ[] = [
-  {
-    id: '1',
-    question: 'How much does it cost to advertise on the platform?',
-    answer:
-      'Pricing varies by partner type and plan tier. Agents can start from R499/month, developers from R2,999/month, and banks/service providers have custom enterprise plans. All plans include core features like listing promotion and lead management, with premium tiers offering advanced analytics and priority placement.',
-    order: 1,
-  },
-  {
-    id: '2',
-    question: 'What types of advertising opportunities are available?',
-    answer:
-      'We offer multiple advertising formats including traditional property listings, Explore feed video ads, boost campaigns for increased visibility, featured placements on location pages, and sponsored content in our discovery engine. Each format is designed to reach high-intent property seekers at different stages of their journey.',
-    order: 2,
-  },
-  {
-    id: '3',
-    question: 'How do I get started with advertising?',
-    answer:
-      'Getting started is simple: Create your partner profile, add your listings or content, and start receiving leads. Our onboarding team will guide you through the setup process, help optimize your profile, and provide training on our dashboard tools. Most partners are fully set up within 24-48 hours.',
-    order: 3,
-  },
-  {
-    id: '4',
-    question: 'What makes your platform different from other property portals?',
-    answer:
-      "We combine AI-driven visibility with verified lead quality. Our recommendation engine ensures your properties reach the right audience, while our verification process filters out low-quality inquiries. Plus, our Explore feed offers unique short-form video advertising that traditional portals don't provide.",
-    order: 4,
-  },
-  {
-    id: '5',
-    question: 'How are leads verified and delivered?',
-    answer:
-      'All leads go through our verification process which checks contact information, filters spam, and assesses intent signals. Verified leads are delivered instantly to your dashboard with full contact details, property interest, and affordability indicators. You can also set up email and SMS notifications for immediate follow-up.',
-    order: 5,
-  },
-  {
-    id: '6',
-    question: 'Can I manage multiple properties or developments?',
-    answer:
-      'Yes! Our platform is built for scale. Agents can manage unlimited listings, developers can showcase multiple developments with unit-level detail, and agencies can collaborate with team members. All plans include bulk upload tools, media management, and centralized lead tracking.',
-    order: 6,
-  },
-  {
-    id: '7',
-    question: 'What kind of analytics and reporting do you provide?',
-    answer:
-      'Our dashboard provides comprehensive analytics including views, engagement rates, lead conversion metrics, and ROI tracking. Premium plans include advanced insights like audience demographics, competitor benchmarking, and predictive analytics to optimize your advertising strategy.',
-    order: 7,
-  },
-  {
-    id: '8',
-    question: 'Is there a contract or can I cancel anytime?',
-    answer:
-      'We offer flexible month-to-month plans with no long-term contracts. You can upgrade, downgrade, or cancel anytime. For annual commitments, we provide significant discounts (up to 20% off). Enterprise partners can discuss custom terms with our sales team.',
-    order: 8,
-  },
-];
+const launchAudiences = ['agent', 'agency', 'developer'] as const;
 
-/**
- * FAQSection Component
- *
- * Displays frequently asked questions in an accordion format.
- * Questions are organized by importance and frequency.
- *
- * Features:
- * - 6-10 FAQ items addressing common partner concerns
- * - Smooth expand/collapse animations
- * - Only one item open at a time
- * - Keyboard accessible
- * - Touch-friendly on mobile
- * - Scroll-triggered fade-in animation
- *
- * @example
- * ```tsx
- * <FAQSection />
- * // or with custom FAQs
- * <FAQSection faqs={customFAQs} />
- * ```
- */
-export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
+function getLaunchProduct(products: CommercialProduct[] | undefined, audience: string) {
+  return products?.find(
+    product => product.audience === audience && product.term.kind === 'paid_launch_access',
+  );
+}
+
+function productPriceAndTerm(product: CommercialProduct | undefined, fallback: string): string {
+  if (!product) return fallback;
+
+  const price = getCommercialPricePresentation(product);
+  const term = getCommercialTermPresentation(product);
+  return `${price.label}${price.period || ''} for ${term.label}`;
+}
+
+function productBenefits(product: CommercialProduct | undefined, fallback: string): string {
+  if (!product) return fallback;
+
+  const benefits = product.benefits.filter(Boolean);
+  const limits = getCommercialPresentationLimits(product).map(
+    ([key, value]) => `${formatCommercialLimitLabel(key)}: ${formatCommercialLimitValue(value)}`,
+  );
+  const facts = [...benefits, ...limits];
+  return facts.length > 0 ? facts.join('; ') : fallback;
+}
+
+function listingLimitSummary(products: CommercialProduct[] | undefined): string {
+  const summaries = launchAudiences.map(audience => {
+    const product = getLaunchProduct(products, audience);
+    const limit = product
+      ? getCommercialPresentationLimits(product).find(([key]) => key === 'max_active_listings')?.[1]
+      : undefined;
+    if (product && limit !== undefined && limit !== null) {
+      return `${product.displayName}: up to ${String(limit)} active listings`;
+    }
+    if (audience === 'developer') return 'Developer Launch Access: development portfolio access';
+    return `${audience[0].toUpperCase()}${audience.slice(1)} Launch Access: see the current catalogue`;
+  });
+
+  return summaries.join('; ');
+}
+
+function defaultFAQs(commercialProducts?: CommercialProduct[]): FAQ[] {
+  const agent = getLaunchProduct(commercialProducts, 'agent');
+  const agency = getLaunchProduct(commercialProducts, 'agency');
+  const developer = getLaunchProduct(commercialProducts, 'developer');
+  const priceSummary = launchAudiences
+    .map(audience => {
+      const product = getLaunchProduct(commercialProducts, audience);
+      const fallback = `${audience[0].toUpperCase()}${audience.slice(1)} Launch Access: see the current catalogue`;
+      return `${product?.displayName || `${audience[0].toUpperCase()}${audience.slice(1)} Launch Access`} — ${productPriceAndTerm(product, fallback)}`;
+    })
+    .join('; ');
+  const audienceSummary = [
+    `Agent Launch Access: ${productBenefits(agent, 'listing publication, property enquiry access and the supported Agent workspace')}`,
+    `Agency Launch Access: ${productBenefits(agency, 'agency inventory, team capability, lead routing and the supported Agency workspace')}`,
+    `Developer Launch Access: ${productBenefits(developer, 'development portfolio, unit inventory and the supported Developer workspace')}`,
+  ].join(' ');
+
+  return [
+    {
+      id: 'launch-access',
+      question: 'What is Launch Access?',
+      answer:
+        'Launch Access is a once-off, paid 90-day access term for the strongest currently supported Property Listify business experience. It connects inventory, discovery, enquiry capture and the relevant business workspace. It is not a monthly subscription.',
+      order: 1,
+    },
+    {
+      id: 'pricing',
+      question: 'How much does Launch Access cost?',
+      answer: `The current catalogue lists ${priceSummary}. Prices, terms and included entitlements are supplied by billing.commercialCatalog.`,
+      order: 2,
+    },
+    {
+      id: 'once-off',
+      question: 'Is this price monthly?',
+      answer:
+        'No. Agent, Agency and Developer Launch Access are once-off products for a 90-day term. They are not monthly packages, free trials or permanent discounted pricing.',
+      order: 3,
+    },
+    {
+      id: 'term-start',
+      question: 'When do the 90 days begin?',
+      answer:
+        'The 90 days begin only after the manual EFT payment has been verified by finance and the Launch Access activation has been recorded. Requesting an invoice or submitting payment proof does not start the term by itself.',
+      order: 4,
+    },
+    {
+      id: 'payment',
+      question: 'How do I pay?',
+      answer:
+        'Launch Access uses manual EFT. Request the product invoice, pay using the invoice reference, submit the payment proof through the supported billing path and wait for finance verification before access is activated.',
+      order: 5,
+    },
+    {
+      id: 'expiry-and-renewal',
+      question: 'What happens after 90 days, and does Launch Access automatically renew?',
+      answer:
+        'Launch Access expires at the end of its 90-day term. It does not renew automatically. Contact Property Listify for the current next-step options if you want to continue after expiry.',
+      order: 6,
+    },
+    {
+      id: 'audience-experiences',
+      question: 'What does Agent, Agency or Developer Launch Access include?',
+      answer: `The three products map to the supported business experiences in the current catalogue. ${audienceSummary}`,
+      order: 7,
+    },
+    {
+      id: 'listing-limits',
+      question: 'How many listings can I publish?',
+      answer: `The current catalogue lists these Launch Access safeguards: ${listingLimitSummary(commercialProducts)}. Product limits and entitlements come from billing.commercialCatalog.`,
+      order: 8,
+    },
+    {
+      id: 'guarantees',
+      question: 'Are leads, enquiries or sales guaranteed?',
+      answer:
+        'No. Launch Access provides the supported path to publish inventory, participate in discovery, capture enquiries and follow up in the relevant workspace. It does not guarantee a lead, enquiry, sale, delivery time, traffic volume or return on investment.',
+      order: 9,
+    },
+    {
+      id: 'custom-conversation',
+      question: 'Can I contact Property Listify for a custom conversation?',
+      answer:
+        'Yes. Contact Property Listify if you want to discuss a larger requirement, a custom business conversation or which supported Launch Access path fits your team. The assisted conversation does not change the canonical Launch Access pricing or policy unless a separately approved path is agreed.',
+      order: 10,
+    },
+  ];
+}
+
+export function FAQSection({ faqs, commercialProducts }: FAQSectionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const { ref, isVisible } = useScrollAnimation();
+  const resolvedFAQs = faqs || defaultFAQs(commercialProducts);
 
-  // Defensive check: ensure faqs is defined and is an array
-  if (!faqs || !Array.isArray(faqs) || faqs.length === 0) {
-    console.warn('FAQSection: faqs prop is missing or empty');
+  if (!Array.isArray(resolvedFAQs) || resolvedFAQs.length === 0) {
+    console.warn('FAQSection: faqs is missing or empty');
     return (
       <section
         ref={ref}
-        className="faq-section py-20 md:py-28 bg-gradient-to-b from-white to-gray-50"
+        className="faq-section bg-gradient-to-b from-white to-gray-50 py-16 md:py-20"
         aria-labelledby="faq-heading"
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-600">Loading frequently asked questions...</p>
+        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+          <p className="text-gray-600">Launch Access questions are being prepared.</p>
         </div>
       </section>
     );
@@ -119,33 +179,24 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
     setOpenIndex(openIndex === index ? null : index);
   };
 
-  // Sort FAQs by order
-  const sortedFAQs = [...faqs].sort((a, b) => a.order - b.order);
+  const sortedFAQs = [...resolvedFAQs].sort((a, b) => a.order - b.order);
 
-  // Handle arrow key navigation between FAQ items
-  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
-    switch (e.key) {
+  const handleKeyDown = (event: React.KeyboardEvent, index: number) => {
+    switch (event.key) {
       case 'ArrowDown':
-        e.preventDefault();
-        {
-          const nextIndex = (index + 1) % sortedFAQs.length;
-          setFocusedIndex(nextIndex);
-        }
-        // Focus will be handled by the FAQAccordionItem
+        event.preventDefault();
+        setFocusedIndex((index + 1) % sortedFAQs.length);
         break;
       case 'ArrowUp':
-        e.preventDefault();
-        {
-          const prevIndex = (index - 1 + sortedFAQs.length) % sortedFAQs.length;
-          setFocusedIndex(prevIndex);
-        }
+        event.preventDefault();
+        setFocusedIndex((index - 1 + sortedFAQs.length) % sortedFAQs.length);
         break;
       case 'Home':
-        e.preventDefault();
+        event.preventDefault();
         setFocusedIndex(0);
         break;
       case 'End':
-        e.preventDefault();
+        event.preventDefault();
         setFocusedIndex(sortedFAQs.length - 1);
         break;
     }
@@ -153,30 +204,31 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
 
   return (
     <section
+      data-testid="faq-section"
       ref={ref}
-      className="faq-section py-20 md:py-28 bg-gradient-to-b from-white to-gray-50"
+      className="faq-section bg-gradient-to-b from-white to-gray-50 py-16 md:py-20"
       aria-labelledby="faq-heading"
       aria-describedby="faq-description"
       role="region"
     >
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          className="text-center mb-12 md:mb-16"
+          className="mb-10 text-center md:mb-12"
         >
           <h2
             id="faq-heading"
-            className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4 leading-tight"
+            className="mb-4 text-3xl font-semibold leading-tight text-gray-900 md:text-4xl"
           >
-            Frequently Asked Questions
+            Frequently Asked Questions about Launch Access
           </h2>
           <p
             id="faq-description"
-            className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto"
+            className="mx-auto max-w-2xl text-lg leading-relaxed text-gray-600 md:text-xl"
           >
-            Find answers to common questions about advertising on our platform
+            Clear answers about pricing, payment, activation, entitlements and the 90-day term.
           </p>
         </motion.div>
 
@@ -184,9 +236,9 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
-          className="space-y-4"
+          className="grid items-start gap-4 md:grid-cols-2 md:gap-5"
           role="list"
-          aria-label="Frequently asked questions"
+          aria-label="Launch Access frequently asked questions"
         >
           {sortedFAQs.map((faq, index) => (
             <div key={faq.id} role="listitem">
@@ -195,7 +247,7 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
                 answer={faq.answer}
                 isOpen={openIndex === index}
                 onToggle={() => handleToggle(index)}
-                onKeyDown={e => handleKeyDown(e, index)}
+                onKeyDown={event => handleKeyDown(event, index)}
                 isFocused={focusedIndex === index}
                 index={index}
               />
@@ -207,13 +259,13 @@ export function FAQSection({ faqs = defaultFAQs }: FAQSectionProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={isVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
-          className="mt-12 md:mt-16 text-center"
+          className="mt-10 text-center md:mt-12"
         >
-          <p className="text-gray-600 mb-4">Still have questions?</p>
+          <p className="mb-4 text-gray-600">Still have questions?</p>
           <a
             href="/contact"
-            className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-gradient-to-r from-primary to-purple-600 rounded-xl hover:shadow-lg transition-all duration-300"
-            aria-label="Contact our team for more information"
+            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-base font-semibold text-white transition-all duration-300 hover:shadow-lg"
+            aria-label="Contact our team about Launch Access"
           >
             Contact Our Team
           </a>

@@ -1,31 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { developerSubscriptionService } from '../services/developerSubscriptionService';
+import { getDeveloperByUserId } from '../services/developerService';
 
 /**
  * Helper to get developer ID ONLY from authenticated user context.
  * NEVER trusts req.body, req.params, or any client-controlled input.
  */
-function getAuthedDeveloperId(req: Request): number | null {
-  // Adjust these paths to match your actual auth middleware payload
-  // Common variations — pick / combine the ones that exist in your req.user
-  const possibleIds = [
-    req.user?.developerProfileId,
-    req.user?.developerId,
-    req.user?.developer?.id,
-    req.user?.id, // sometimes the developer row ID is the user ID
-    req.user?.profile?.developerId,
-  ];
+async function getAuthedDeveloperId(req: Request): Promise<number | null> {
+  const userId = Number(req.user?.id);
+  if (!Number.isFinite(userId) || userId <= 0) return null;
 
-  for (const id of possibleIds) {
-    if (id != null) {
-      const parsed = typeof id === 'string' ? parseInt(id, 10) : Number(id);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
-    }
-  }
-
-  return null;
+  const profile = await getDeveloperByUserId(userId);
+  return profile ? Number(profile.id) : null;
 }
 
 /**
@@ -34,7 +20,7 @@ function getAuthedDeveloperId(req: Request): number | null {
  */
 export async function checkDevelopmentLimit(req: Request, res: Response, next: NextFunction) {
   try {
-    const developerId = getAuthedDeveloperId(req);
+    const developerId = await getAuthedDeveloperId(req);
 
     if (!developerId) {
       return res.status(401).json({
@@ -51,7 +37,7 @@ export async function checkDevelopmentLimit(req: Request, res: Response, next: N
       return res.status(403).json({
         error: {
           code: 'TIER_LIMIT_EXCEEDED',
-          message: `Development limit reached. Your ${limitCheck.tier} tier allows ${limitCheck.max} development(s). Please upgrade to create more developments.`,
+          message: `Development limit reached. Your ${limitCheck.tier} plan allows ${limitCheck.max} development(s). Please request a canonical plan change to create more developments.`,
           details: {
             current: limitCheck.current,
             max: limitCheck.max,
@@ -79,7 +65,7 @@ export async function checkDevelopmentLimit(req: Request, res: Response, next: N
  */
 export async function checkLeadLimit(req: Request, res: Response, next: NextFunction) {
   try {
-    const developerId = getAuthedDeveloperId(req);
+    const developerId = await getAuthedDeveloperId(req);
 
     if (!developerId) {
       return res.status(401).json({
@@ -96,7 +82,7 @@ export async function checkLeadLimit(req: Request, res: Response, next: NextFunc
       return res.status(403).json({
         error: {
           code: 'TIER_LIMIT_EXCEEDED',
-          message: `Monthly lead limit reached. Your ${limitCheck.tier} tier allows ${limitCheck.max} leads per month. Please upgrade for more leads.`,
+          message: `Monthly lead limit reached. Your ${limitCheck.tier} plan allows ${limitCheck.max} leads per month. Please request a canonical plan change for more leads.`,
           details: {
             current: limitCheck.current,
             max: limitCheck.max,
@@ -124,7 +110,7 @@ export async function checkLeadLimit(req: Request, res: Response, next: NextFunc
  */
 export async function checkTeamMemberLimit(req: Request, res: Response, next: NextFunction) {
   try {
-    const developerId = getAuthedDeveloperId(req);
+    const developerId = await getAuthedDeveloperId(req);
 
     if (!developerId) {
       return res.status(401).json({
@@ -141,7 +127,7 @@ export async function checkTeamMemberLimit(req: Request, res: Response, next: Ne
       return res.status(403).json({
         error: {
           code: 'TIER_LIMIT_EXCEEDED',
-          message: `Team member limit reached. Your ${limitCheck.tier} tier allows ${limitCheck.max} team member(s). Please upgrade to add more team members.`,
+          message: `Team member limit reached. Your ${limitCheck.tier} plan allows ${limitCheck.max} team member(s). Please request a canonical plan change to add more team members.`,
           details: {
             current: limitCheck.current,
             max: limitCheck.max,
@@ -169,7 +155,7 @@ export async function checkTeamMemberLimit(req: Request, res: Response, next: Ne
 export function checkFeatureAccess(feature: 'crm' | 'advanced_analytics' | 'bond_integration') {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const developerId = getAuthedDeveloperId(req);
+      const developerId = await getAuthedDeveloperId(req);
 
       if (!developerId) {
         return res.status(401).json({
@@ -180,9 +166,9 @@ export function checkFeatureAccess(feature: 'crm' | 'advanced_analytics' | 'bond
         });
       }
 
-      const subscription = await developerSubscriptionService.getSubscription(developerId);
+      const access = await developerSubscriptionService.checkFeatureAccess(developerId, feature);
 
-      if (!subscription) {
+      if (access.planName === 'Unavailable') {
         return res.status(404).json({
           error: {
             code: 'SUBSCRIPTION_NOT_FOUND',
@@ -191,31 +177,27 @@ export function checkFeatureAccess(feature: 'crm' | 'advanced_analytics' | 'bond
         });
       }
 
-      let hasAccess = false;
       let featureName = '';
 
       switch (feature) {
         case 'crm':
-          hasAccess = subscription.limits.crmIntegrationEnabled ?? false;
           featureName = 'CRM Integration';
           break;
         case 'advanced_analytics':
-          hasAccess = subscription.limits.advancedAnalyticsEnabled ?? false;
           featureName = 'Advanced Analytics';
           break;
         case 'bond_integration':
-          hasAccess = subscription.limits.bondIntegrationEnabled ?? false;
           featureName = 'Bond Originator Integration';
           break;
       }
 
-      if (!hasAccess) {
+      if (!access.allowed) {
         return res.status(403).json({
           error: {
             code: 'FEATURE_NOT_AVAILABLE',
-            message: `${featureName} is not available on your ${subscription.tier} tier. Please upgrade to access this feature.`,
+            message: `${featureName} is not available on your ${access.planName} plan. Please request a canonical plan change to access this feature.`,
             details: {
-              tier: subscription.tier,
+              plan: access.planName,
               feature: featureName,
             },
           },

@@ -534,7 +534,11 @@ export const developerRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      return await db.searchDevelopments(input.query, input.developerId, input.limit);
+      return await developmentService.searchPublicDevelopments({
+        query: input.query,
+        developerId: input.developerId,
+        limit: input.limit,
+      });
     }),
 
   createProfile: protectedProcedure
@@ -1534,8 +1538,8 @@ export const developerRouter = router({
         .passthrough(),
     )
     .mutation(async ({ ctx, input }) => {
-      const role = requireUser(ctx).role;
-
+      const user = requireUser(ctx);
+      const role = user.role;
       if (role === 'super_admin') {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
@@ -1544,16 +1548,54 @@ export const developerRouter = router({
         });
       }
 
-      // The authenticated developer identity, not a body-supplied developer or
-      // brand ID, is the authority for this authoring command.
-      await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      const identity = await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      if (identity.mode !== 'developer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'A canonical developer identity is required for development authoring.',
+        });
+      }
+
+      const developerId = identity.developerId;
+      const limitCheck = await developerSubscriptionService.checkLimit(developerId, 'developments');
+      if (!limitCheck.allowed) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message:
+            limitCheck.max !== null && limitCheck.max > 0
+              ? `Development limit reached for ${limitCheck.tier}. Request a canonical developer plan change to create more developments.`
+              : 'A canonical developer product and development entitlement are required before creating a development.',
+          cause: {
+            current: limitCheck.current,
+            max: limitCheck.max,
+            plan: limitCheck.tier,
+          },
+        });
+      }
+
+      const serverAuthorizedInput = { ...(input as Record<string, unknown>) };
+      for (const authorityField of [
+        'developerId',
+        'developerProfileId',
+        'developerBrandProfileId',
+        'brandProfileId',
+        'devOwnerType',
+        'ownerType',
+      ]) {
+        delete serverAuthorizedInput[authorityField];
+      }
 
       const development = await developmentService.createDevelopment(
-        requireUser(ctx).id,
-        input as any,
-        {},
-        ctx.operatingAs ?? null,
+        user.id,
+        serverAuthorizedInput as any,
+        {
+          brandProfileId: identity.brandProfileId ?? undefined,
+          ownerType: 'developer',
+        },
+        null,
       );
+
+      await developerSubscriptionService.incrementUsage(developerId, 'developments');
 
       return { development };
     }),
@@ -1580,7 +1622,25 @@ export const developerRouter = router({
 
       console.log('[deleteDevelopment Router] Built operatingContext:', operatingContext);
 
-      await developmentService.deleteDevelopment(input.id, user.id, operatingContext);
+      const deletionResult = await developmentService.deleteDevelopment(
+        input.id,
+        user.id,
+        operatingContext,
+      );
+      const affectedRows = Number(
+        (deletionResult as any)?.affectedRows ?? (deletionResult as any)?.[0]?.affectedRows ?? 0,
+      );
+      if (affectedRows !== 1) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Development deletion did not affect an authorized development.',
+        });
+      }
+
+      if (user.role === 'property_developer') {
+        const profile = await requireDeveloperProfileByUserId(user.id);
+        await developerSubscriptionService.decrementUsage(profile.id, 'developments');
+      }
 
       return { success: true, deletedId: input.id };
     }),
@@ -1928,8 +1988,9 @@ export const developerRouter = router({
       return {
         success: false,
         status: 'sales_assisted' as const,
-        currentTier: subscription.tier,
+        currentTier: subscription?.commercial.planName || null,
         requestedTier: input.tier,
+        currentPlan: subscription?.commercial.planDisplayName || null,
         message:
           'Paid developer plan changes are sales-assisted until developer EFT billing is enabled. Your current entitlement has not changed.',
       };

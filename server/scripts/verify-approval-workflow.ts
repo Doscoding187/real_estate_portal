@@ -43,18 +43,12 @@ async function verifyApprovalWorkflow() {
   console.log(`Using Admin User ID: ${adminUser.id}`);
 
   // Ensure Subscription
-  let sub = await developerSubscriptionService.getSubscription(dev.id);
+  const sub = await developerSubscriptionService.getSubscription(dev.id);
   if (!sub) {
-    console.log('No subscription found, creating trial...');
-    try {
-      await developerSubscriptionService.createSubscription(dev.id);
-      console.log('Subscription created.');
-    } catch (e: any) {
-      console.error('Failed to create subscription:', e);
-      // If create fails due to query issues, manual rollback or manual insert might be needed
-      // But let's assume valid relations fixed it or we refactor later.
-      process.exit(1);
-    }
+    console.error(
+      'No canonical developer Launch Access subscription found; approval verification requires a verified commercial activation.',
+    );
+    process.exit(1);
   }
 
   // 2. Create Draft Development

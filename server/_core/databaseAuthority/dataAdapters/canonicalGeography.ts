@@ -2,11 +2,10 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
-  ACCEPTED_MIGRATION_HEAD,
   assertOperation,
   queryRows,
   requireAcceptedMigrationHead,
-  requireExactAdapterTarget,
+  requireReferenceAdapterTarget,
   rowValue,
   stableDigest,
   withTransaction,
@@ -243,7 +242,7 @@ const PROVINCE_SLUG_PLACEHOLDERS = PROVINCES.map(() => '?').join(', ');
 export type GeographyReferenceEvidence = AdapterEvidence & {
   expected: { provinces: number; cities: number; suburbs: number };
   verified: { provinces: number; cities: number; suburbs: number };
-  migrationHead: typeof ACCEPTED_MIGRATION_HEAD;
+  migrationHead: string;
 };
 
 type RowIdentity = { id: number; name: string; slug: string };
@@ -432,8 +431,8 @@ export async function prepareCanonicalGeography(input: {
   profileRoot?: string;
 }): Promise<GeographyReferenceEvidence> {
   assertOperation(input.decision, ['reference-seed', 'foundation-seed']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
@@ -466,7 +465,7 @@ export async function prepareCanonicalGeography(input: {
     digest: CANONICAL_GEOGRAPHY_DIGEST,
     expected: CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }
 
@@ -477,8 +476,8 @@ export async function verifyCanonicalGeography(input: {
   profileRoot?: string;
 }): Promise<GeographyReferenceEvidence> {
   assertOperation(input.decision, ['verification', 'browser-verification', 'readiness']);
-  const ownership = requireExactAdapterTarget(input.authority, input.profileRoot);
-  await requireAcceptedMigrationHead({
+  const ownership = requireReferenceAdapterTarget(input.authority, input.profileRoot);
+  const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     profileRoot: input.profileRoot,
@@ -491,6 +490,6 @@ export async function verifyCanonicalGeography(input: {
     digest: CANONICAL_GEOGRAPHY_DIGEST,
     expected: CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
     verified,
-    migrationHead: ACCEPTED_MIGRATION_HEAD,
+    migrationHead: manifest.document.expectedHead,
   };
 }
