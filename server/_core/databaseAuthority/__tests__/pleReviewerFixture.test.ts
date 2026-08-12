@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   assertPleReviewerPassword,
@@ -5,6 +7,7 @@ import {
   assertPleReviewerUserRow,
   classifyPleReviewerUser,
   PLE_REVIEWER_EMAIL,
+  PLE_REVIEWER_FIXTURE_VERSION,
   PLE_REVIEWER_OPEN_ID,
   PLE_REVIEWER_TARGET,
   PLE_REVIEWER_USER_ID,
@@ -46,6 +49,16 @@ const exactReviewer = {
 };
 
 describe('PLE reviewer Database Authority adapter', () => {
+  it('keeps reviewer capability verification separate from global application readiness', () => {
+    expect(PLE_REVIEWER_FIXTURE_VERSION).toBe('ple-reviewer-v2');
+    const source = readFileSync(
+      join(process.cwd(), 'server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts'),
+      'utf8',
+    );
+    expect(source).toContain('requireAcceptedMigrationHead');
+    expect(source).not.toContain('assessAuthorizedDatabaseReadiness');
+  });
+
   it.each([
     ['wrong host', { host: 'localhost' }],
     ['wrong port', { port: '3306' }],

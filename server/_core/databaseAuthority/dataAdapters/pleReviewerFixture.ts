@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
-import { assessAuthorizedDatabaseReadiness } from '../readiness';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import {
   assertOperation,
@@ -76,7 +75,7 @@ export type PleReviewerFixtureEvidence = AdapterEvidence & {
   verified: {
     exactTarget: true;
     migrationHead: string;
-    applicationReady: true;
+    databaseCurrent: true;
     exactReviewer: true;
     role: 'super_admin';
     emailVerified: true;
@@ -337,7 +336,7 @@ async function verifyReviewerRecords(
   return {
     exactTarget: true,
     migrationHead,
-    applicationReady: true,
+    databaseCurrent: true,
     exactReviewer: true,
     role: 'super_admin',
     emailVerified: true,
@@ -345,24 +344,6 @@ async function verifyReviewerRecords(
     ...associations,
     unrelatedUsersUntouched: true,
   };
-}
-
-async function requireApplicationReady(input: {
-  authority: ResolvedDatabaseAuthority;
-  connection: AuthoritySqlConnection;
-  decision: AuthorizedDatabaseOperation;
-}): Promise<void> {
-  const readiness = await assessAuthorizedDatabaseReadiness({
-    authority: input.authority,
-    connection: input.connection,
-    authorization: input.decision,
-    purpose: 'database',
-  });
-  if (!readiness.applicationReady) {
-    throw new Error(
-      `PLE reviewer fixture refused: Database Authority application readiness is ${readiness.layers.application.code}.`,
-    );
-  }
 }
 
 function evidenceBase(authority: ResolvedDatabaseAuthority): AdapterEvidence {
@@ -386,7 +367,6 @@ export async function preparePleReviewerFixture(input: {
     authority: input.authority,
     connection: input.connection,
   });
-  await requireApplicationReady(input);
   const password = localPleReviewerPassword();
   const usersBefore = await listUserSafetySnapshot(input.connection);
 
@@ -453,7 +433,6 @@ export async function verifyPleReviewerFixture(input: {
     authority: input.authority,
     connection: input.connection,
   });
-  await requireApplicationReady(input);
   const password = localPleReviewerPassword();
   const verified = await verifyReviewerRecords(
     input.connection,
