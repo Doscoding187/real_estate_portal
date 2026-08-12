@@ -380,6 +380,170 @@ describe('publicLeadCaptureService contract', () => {
     );
   });
 
+  it('routes an assigned agency agent with both canonical agent and agency attribution', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 505,
+            status: 'published',
+            developmentId: null,
+            developerBrandProfileId: null,
+            agentId: 33,
+            ownerId: 81,
+          },
+        ],
+        [{ id: 33, userId: 70, agencyId: 44, status: 'approved' }],
+        [{ id: 70, role: 'agent' }],
+        [],
+        [{ id: 44, isVerified: 1 }],
+      ],
+      insertId: 904,
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(
+      baseInput({
+        propertyId: 505,
+        agentId: 999,
+        agencyId: 999,
+        source: 'property_detail',
+        sourceSurface: 'property_detail_contact_modal',
+        leadSource: 'property_detail',
+      }),
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 904,
+      deliveryStatus: 'delivered',
+      recipientType: 'agent',
+      recipientId: 33,
+    });
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 505,
+        agentId: 33,
+        agencyId: 44,
+      }),
+    );
+  });
+
+  it('routes an agency-owned property without an assigned agent to the verified agency', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 502,
+            status: 'published',
+            developmentId: null,
+            developerBrandProfileId: null,
+            agentId: null,
+            ownerId: 81,
+          },
+        ],
+        [{ id: 81, agencyId: 44, role: 'agency_admin' }],
+        [{ id: 44, isVerified: 1 }],
+      ],
+      insertId: 902,
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(
+      baseInput({
+        propertyId: 502,
+        agentId: 999,
+        agencyId: 999,
+        source: 'property_detail',
+        sourceSurface: 'property_detail_contact_modal',
+        leadSource: 'property_detail',
+      }),
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 902,
+      deliveryStatus: 'delivered',
+      supplyOrigin: 'customer_managed',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agency',
+      recipientId: 44,
+    });
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 502,
+        agentId: null,
+        agencyId: 44,
+      }),
+    );
+  });
+
+  it('keeps a public property without a verified agent or agency in platform custody', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 503,
+            status: 'published',
+            developmentId: null,
+            developerBrandProfileId: null,
+            agentId: null,
+            ownerId: 82,
+          },
+        ],
+        [{ id: 82, agencyId: null, role: 'visitor' }],
+      ],
+      insertId: 903,
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(baseInput({ propertyId: 503 }));
+
+    expect(result).toMatchObject({
+      success: true,
+      leadId: 903,
+      deliveryStatus: 'attention_required',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
+      recipientType: 'manual',
+      recipientId: null,
+    });
+    expect(database.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        propertyId: 503,
+        agentId: null,
+        agencyId: null,
+      }),
+    );
+  });
+
+  it('rejects a non-public property before creating a lead', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 504,
+            status: 'pending',
+            developmentId: null,
+            developerBrandProfileId: null,
+            agentId: null,
+            ownerId: 82,
+          },
+        ],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(capturePublicLead(baseInput({ propertyId: 504 }))).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    expect(database.insertValues).not.toHaveBeenCalled();
+  });
+
   it('rejects brand attribution that does not match the persisted public property', async () => {
     const database = makeFakeDatabase({
       selectResults: [

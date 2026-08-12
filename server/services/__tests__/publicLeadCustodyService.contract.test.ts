@@ -36,6 +36,22 @@ describe('publicLeadCustodyService contract', () => {
     });
   });
 
+  it('preserves assigned agent and verified agency attribution together', () => {
+    expect(
+      resolvePublicPropertyCustody({
+        propertyAgentId: 33,
+        directAgent: { ...activeAgent, agencyId: 44 },
+        directAgentAgency: verifiedAgency,
+      }),
+    ).toMatchObject({
+      recipientType: 'agent',
+      recipientId: 33,
+      agentId: 33,
+      agencyId: 44,
+      leadCustody: 'verified_customer_recipient',
+    });
+  });
+
   it('holds an inactive direct agent assignment for attention', () => {
     expect(
       resolvePublicPropertyCustody({

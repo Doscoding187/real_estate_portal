@@ -1,4 +1,4 @@
-import { act, render } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PropertyContactModal } from './PropertyContactModal';
 
@@ -149,5 +149,34 @@ describe('PropertyContactModal recipient-action custody', () => {
 
     expect(window.open).not.toHaveBeenCalled();
     expect(JSON.stringify(vi.mocked(window.open).mock.calls)).not.toContain(qualificationSummary);
+  });
+
+  it('submits a public property enquiry without client-owned recipient ids', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={502}
+        propertyTitle="Agency-owned listing"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/Your Name/), {
+      target: { value: 'Prospective Buyer' },
+    });
+    fireEvent.change(screen.getByLabelText(/Email Address/), {
+      target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/Message/), {
+      target: { value: 'Please share more details.' },
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.submit(screen.getByRole('button', { name: 'Send Inquiry' }).closest('form')!);
+
+    expect(testState.mutate).toHaveBeenCalledTimes(1);
+    const payload = testState.mutate.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(payload).toMatchObject({ propertyId: 502 });
+    expect(payload).not.toHaveProperty('agentId');
+    expect(payload).not.toHaveProperty('agencyId');
   });
 });

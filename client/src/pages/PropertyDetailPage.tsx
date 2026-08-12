@@ -2009,14 +2009,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         agentName={contactIdentity?.name || 'Listing Contact'}
         agentPhone={undefined}
         agentEmail={undefined}
-        agentId={
-          contactIdentity?.id
-            ? Number(contactIdentity.id)
-            : property?.agentId
-              ? Number(property.agentId)
-              : undefined
-        }
-        agencyId={contactIdentity?.agencyId ? Number(contactIdentity.agencyId) : undefined}
         developmentId={
           !agent && property?.developmentId ? Number(property.developmentId) : undefined
         }
