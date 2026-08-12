@@ -149,6 +149,41 @@ describe('commercial catalog projection', () => {
     expect(product.promotion).toMatchObject({ status: 'not_configured', offer: null });
   });
 
+  it('routes canonical Agent Launch Access to the authenticated invoice handoff', () => {
+    const product = buildCommercialProduct(
+      plan({
+        id: 44,
+        name: 'agent_launch_access',
+        displayName: 'Agent Launch Access',
+        description: 'Paid 90-day launch access',
+        segment: 'agent',
+        price: 49_900,
+        priceMonthly: 0,
+        trialDays: 0,
+        metadata: {
+          commercial_product_key: 'agent_launch_access',
+          commercial_term_kind: 'paid_launch_access',
+          commercial_term_duration_days: 90,
+          commercial_requires_verified_payment: true,
+          commercial_auto_renews: false,
+          commercial_pricing_mode: 'fixed',
+          commercial_action_mode: 'request_invoice',
+          commercial_price_configured: true,
+          commercial_launch_fee_minor: 49_900,
+          commercial_billing_interval: 'once_off',
+          catalogVisibility: 'public',
+        },
+      }),
+      { max_active_listings: 50 },
+    );
+
+    expect(product.action).toMatchObject({
+      mode: 'request_invoice',
+      target: { kind: 'route', value: '/agent/select-package' },
+      requiresAuthentication: false,
+    });
+  });
+
   it('excludes inactive and explicitly local/internal plans from a public catalog', () => {
     expect(isPublicCommercialPlan(plan({ isActive: 0 }))).toBe(false);
     expect(isPublicCommercialPlan(plan({ metadata: { localOnly: true } }))).toBe(false);

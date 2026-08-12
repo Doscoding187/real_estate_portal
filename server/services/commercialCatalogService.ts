@@ -252,7 +252,24 @@ function resolveAction(
     };
   }
 
-  if (configuredMode === 'request_invoice' || configuredMode === 'contact_sales') {
+  if (configuredMode === 'request_invoice') {
+    const target =
+      plan.segment === 'agent' && getCommercialProductKey(plan) === 'agent_launch_access'
+        ? '/agent/select-package'
+        : '/contact';
+
+    return {
+      mode: configuredMode,
+      target: { kind: 'route', value: target },
+      requiresAuthentication: false,
+      reason:
+        target === '/agent/select-package'
+          ? 'Uses the existing authenticated Agent Launch Access invoice and manual-EFT flow.'
+          : 'Paid activation is assisted and requires Property Listify commercial operations.',
+    };
+  }
+
+  if (configuredMode === 'contact_sales') {
     return {
       mode: configuredMode,
       target: { kind: 'route', value: '/contact' },
