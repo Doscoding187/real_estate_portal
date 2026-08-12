@@ -1733,9 +1733,11 @@ export const listingRouter = router({
         if (!database) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
         }
+        const originalListingId = Number((fullListing as any).revisionOfListingId || 0);
         await assertListingPublicationEntitled(database, {
           listingId: input.listingId,
           operation: 'submit',
+          ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
         });
 
         const agent = await db.getAgentByUserId(currentUser.id);

@@ -368,6 +368,32 @@ describe('listing lifecycle — canonical identity contract', () => {
     expect(mockDb.submitListingForReview).toHaveBeenCalledWith(LISTING_ID);
   });
 
+  it('excludes the published source listing when submitting its private revision', async () => {
+    const caller = makeCaller(ownerUser);
+    const REVISION_ID = 3004;
+    const SOURCE_LISTING_ID = 3005;
+
+    vi.mocked(mockDb.getListingById).mockResolvedValue(
+      mockListing({
+        id: REVISION_ID,
+        status: 'draft',
+        revisionOfListingId: SOURCE_LISTING_ID,
+      }),
+    );
+
+    await caller.listing.submitForReview({ listingId: REVISION_ID });
+
+    expect(mockAssertListingPublicationEntitled).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        listingId: REVISION_ID,
+        operation: 'submit',
+        excludeListingIds: [SOURCE_LISTING_ID],
+      }),
+    );
+    expect(mockDb.submitListingForReview).toHaveBeenCalledWith(REVISION_ID);
+  });
+
   it('rejects submission when canonical core property facts are incomplete', async () => {
     const caller = makeCaller(ownerUser);
     const LISTING_ID = 3003;

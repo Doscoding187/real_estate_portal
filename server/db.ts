@@ -2585,7 +2585,12 @@ export async function submitListingForReview(listingId: number, database?: any) 
 
   // This is the transition boundary for every caller, including agency routes,
   // generic routes, scripts, and lower-level tests.
-  await assertListingPublicationEntitled(db, { listingId, operation: 'submit' });
+  const originalListingId = Number((transitionListing as any).revisionOfListingId || 0);
+  await assertListingPublicationEntitled(db, {
+    listingId,
+    operation: 'submit',
+    ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
+  });
 
   // Update listing status
   await db

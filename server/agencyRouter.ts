@@ -7361,9 +7361,11 @@ export const agencyRouter = router({
       }
 
       try {
+        const originalListingId = Number((listing as any).revisionOfListingId || 0);
         await assertListingPublicationEntitled(db, {
           listingId: input.listingId,
           operation: 'submit',
+          ...(originalListingId > 0 ? { excludeListingIds: [originalListingId] } : {}),
         });
       } catch (error) {
         if (error instanceof ListingPublicationEntitlementError) {
