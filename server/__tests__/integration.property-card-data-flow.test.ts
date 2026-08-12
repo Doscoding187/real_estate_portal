@@ -302,7 +302,7 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched).toBeTruthy();
     expect(matched.mainImage).toBeUndefined();
     expect(matched.images).toEqual([]);
-    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.image).toBeUndefined();
+    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.image).toBe('');
   });
 
   it('does not fall back to mutable source listing identity when projection attribution is missing', async () => {
@@ -417,6 +417,13 @@ describe('Property Card Data Flow Integration', () => {
     expect(matched).toBeTruthy();
     expect(matched.listerType).toBe('private');
     expect(matched.agent).toBeUndefined();
-    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.identity).toBeUndefined();
+    expect(
+      result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.identity,
+    ).toMatchObject({
+      role: 'private',
+      name: 'Private Seller',
+      agentId: undefined,
+      agencyId: undefined,
+    });
   });
 });
