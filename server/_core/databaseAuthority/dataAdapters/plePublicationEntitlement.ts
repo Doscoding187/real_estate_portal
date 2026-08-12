@@ -432,7 +432,7 @@ async function resolvePublicationFixtureActors(
 
   const responsibleUsers = await queryRows(
     connection,
-    `SELECT u.id AS user_id, u.agencyId AS user_agency_id, a.id AS agent_id,
+    `SELECT u.id AS user_id, u.agencyId AS user_agency_id, a.id AS id,
             a.agencyId AS agent_agency_id
        FROM users u
        JOIN agents a ON a.userId = u.id
