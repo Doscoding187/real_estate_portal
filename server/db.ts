@@ -2915,14 +2915,12 @@ export async function replaceListingMedia(
  * listing. Revision rows remain intact for history; the original listing is
  * the canonical public source after approval.
  */
-export async function synchronizeApprovedRevisionMedia(
+async function synchronizeApprovedRevisionMediaWithDatabase(
   originalListingId: number,
   revisionListingId: number,
+  database: any,
 ) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const revisionMedia = await db
+  const revisionMedia = await database
     .select()
     .from(listingMedia)
     .where(eq(listingMedia.listingId, revisionListingId))
@@ -2930,48 +2928,63 @@ export async function synchronizeApprovedRevisionMedia(
   const primary = getPrimaryListingImage(revisionMedia);
   const mediaIdMap = new Map<number, number>();
 
-  await db.transaction(async tx => {
-    await tx.delete(listingMedia).where(eq(listingMedia.listingId, originalListingId));
-    for (const item of revisionMedia) {
-      const [inserted] = await tx.insert(listingMedia).values({
-        listingId: originalListingId,
-        originalUrl: item.originalUrl,
-        originalFileName: item.originalFileName,
-        originalFileSize: item.originalFileSize,
-        processedUrl: item.processedUrl,
-        thumbnailUrl: item.thumbnailUrl,
-        previewUrl: item.previewUrl,
-        width: item.width,
-        height: item.height,
-        duration: item.duration,
-        mimeType: item.mimeType,
-        orientation: item.orientation,
-        isVertical: item.isVertical,
-        mediaType: item.mediaType,
-        displayOrder: item.displayOrder,
-        isPrimary: primary && Number(primary.id) === Number(item.id) ? 1 : 0,
-        processingStatus: item.processingStatus,
-        processingError: item.processingError,
-        createdAt: item.createdAt,
-        uploadedAt: item.uploadedAt,
-        processedAt: item.processedAt,
-      });
-      mediaIdMap.set(Number(item.id), Number((inserted as any).insertId));
-    }
-  });
+  await database.delete(listingMedia).where(eq(listingMedia.listingId, originalListingId));
+  for (const item of revisionMedia) {
+    const [inserted] = await database.insert(listingMedia).values({
+      listingId: originalListingId,
+      originalUrl: item.originalUrl,
+      originalFileName: item.originalFileName,
+      originalFileSize: item.originalFileSize,
+      processedUrl: item.processedUrl,
+      thumbnailUrl: item.thumbnailUrl,
+      previewUrl: item.previewUrl,
+      width: item.width,
+      height: item.height,
+      duration: item.duration,
+      mimeType: item.mimeType,
+      orientation: item.orientation,
+      isVertical: item.isVertical,
+      mediaType: item.mediaType,
+      displayOrder: item.displayOrder,
+      isPrimary: primary && Number(primary.id) === Number(item.id) ? 1 : 0,
+      processingStatus: item.processingStatus,
+      processingError: item.processingError,
+      createdAt: item.createdAt,
+      uploadedAt: item.uploadedAt,
+      processedAt: item.processedAt,
+    });
+    mediaIdMap.set(Number(item.id), Number((inserted as any).insertId));
+  }
 
   return { copied: revisionMedia.length, primaryMediaId: primary?.id ?? null, mediaIdMap };
 }
 
-/**
- * Keep search mirror media in sync for already-published listings.
- * This updates properties.mainImage and property_images from listing_media.
- */
-export async function syncPublishedListingMediaToPropertyMirror(listingId: number) {
-  const db = await getDb();
+export async function synchronizeApprovedRevisionMedia(
+  originalListingId: number,
+  revisionListingId: number,
+  database?: any,
+) {
+  const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
-  const listing = await getListingById(listingId);
+  if (database) {
+    return synchronizeApprovedRevisionMediaWithDatabase(
+      originalListingId,
+      revisionListingId,
+      database,
+    );
+  }
+
+  return db.transaction((tx: any) =>
+    synchronizeApprovedRevisionMediaWithDatabase(originalListingId, revisionListingId, tx),
+  );
+}
+
+async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
+  listingId: number,
+  database: any,
+) {
+  const listing = await getListingById(listingId, database);
   if (!listing) {
     return { synced: false, reason: 'listing_not_found' as const };
   }
@@ -2982,9 +2995,9 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
 
   // Replacing public media is a public projection update, never a draft-only
   // action. This prevents repair/compatibility callers bypassing entitlement.
-  await assertListingPublicationEntitled(db, { listingId, operation: 'public_media_sync' });
+  await assertListingPublicationEntitled(database, { listingId, operation: 'public_media_sync' });
 
-  const [mirroredProperty] = await db
+  const [mirroredProperty] = await database
     .select({ id: properties.id })
     .from(properties)
     .where(eq(properties.sourceListingId, listingId))
@@ -2994,13 +3007,13 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
     return { synced: false, reason: 'property_mirror_not_found' as const };
   }
 
-  const mediaItems = await getListingMedia(listingId);
+  const mediaItems = await getListingMedia(listingId, database);
   const imageItems = mediaItems.filter(
     item => item.mediaType === 'image' && isCompletedListingMedia(item),
   );
   const mainMedia = getPrimaryListingImage(imageItems);
 
-  await db
+  await database
     .update(properties)
     .set({
       mainImage: mainMedia ? mainMedia.processedUrl || mainMedia.originalUrl : null,
@@ -3008,10 +3021,10 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
     })
     .where(eq(properties.id, mirroredProperty.id));
 
-  await db.delete(propertyImages).where(eq(propertyImages.propertyId, mirroredProperty.id));
+  await database.delete(propertyImages).where(eq(propertyImages.propertyId, mirroredProperty.id));
 
   for (const item of imageItems) {
-    await db.insert(propertyImages).values({
+    await database.insert(propertyImages).values({
       propertyId: mirroredProperty.id,
       imageUrl: item.processedUrl || item.originalUrl,
       isPrimary: mainMedia && Number(mainMedia.id) === Number(item.id) ? 1 : 0,
@@ -3025,6 +3038,28 @@ export async function syncPublishedListingMediaToPropertyMirror(listingId: numbe
     propertyId: mirroredProperty.id,
     imageCount: imageItems.length,
   };
+}
+
+/**
+ * Keep search mirror media in sync for already-published listings.
+ *
+ * Callers that already own a transaction must pass its executor. The wrapper
+ * retains standalone atomic behavior for callers outside an approval flow.
+ */
+export async function syncPublishedListingMediaToPropertyMirror(
+  listingId: number,
+  database?: any,
+) {
+  const db = database || (await getDb());
+  if (!db) throw new Error('Database not available');
+
+  if (database) {
+    return syncPublishedListingMediaToPropertyMirrorWithDatabase(listingId, database);
+  }
+
+  return db.transaction((tx: any) =>
+    syncPublishedListingMediaToPropertyMirrorWithDatabase(listingId, tx),
+  );
 }
 
 /**
@@ -3275,6 +3310,7 @@ export async function approveListing(
     const mediaSynchronization = await synchronizeApprovedRevisionMedia(
       originalListingId,
       listingId,
+      db,
     );
     const approvedPropertyDetails = remapApprovedRevisionPresentationMedia(
       approvedPropertyDetailsBeforeMedia as Record<string, any>,
@@ -3322,7 +3358,7 @@ export async function approveListing(
         updatedAt: approvedAt,
       } as any)
       .where(eq(listings.id, originalListingId));
-    await syncPublishedListingMediaToPropertyMirror(originalListingId);
+    await syncPublishedListingMediaToPropertyMirror(originalListingId, db);
     await db
       .update(properties)
       .set({

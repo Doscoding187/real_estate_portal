@@ -50,6 +50,9 @@ const resolveTableName = (table: any): string => {
 
 class FakeDrizzle {
   calls: DbCall[] = [];
+  transactionCount = 0;
+  activeTransactionCount = 0;
+  failureHook: ((call: DbCall) => Error | undefined) | undefined;
   private selectResults: Array<Record<string, unknown>[]> = [];
 
   constructor() {
@@ -58,6 +61,9 @@ class FakeDrizzle {
 
   reset() {
     this.calls = [];
+    this.transactionCount = 0;
+    this.activeTransactionCount = 0;
+    this.failureHook = undefined;
     this.selectResults = [];
   }
 
@@ -68,6 +74,8 @@ class FakeDrizzle {
 
   private record(call: DbCall) {
     this.calls.push(call);
+    const failure = this.failureHook?.(call);
+    if (failure) throw failure;
   }
 
   private resolveSelect(tableName: string) {
@@ -144,7 +152,23 @@ class FakeDrizzle {
 
   delete = this.delete_;
 
-  transaction = async <T>(callback: (tx: this) => Promise<T>) => callback(this);
+  transaction = async <T>(callback: (tx: this) => Promise<T>) => {
+    this.transactionCount += 1;
+    this.activeTransactionCount += 1;
+    const callsBefore = this.calls.length;
+    const selectsBefore = [...this.selectResults];
+    try {
+      return await callback(this);
+    } catch (error) {
+      // Model the observable contract of a real transaction: all operations
+      // issued through this executor disappear when the callback rejects.
+      this.calls.splice(callsBefore);
+      this.selectResults = selectsBefore;
+      throw error;
+    } finally {
+      this.activeTransactionCount -= 1;
+    }
+  };
 }
 
 const fakeDb = new FakeDrizzle();
@@ -161,6 +185,7 @@ vi.mock('../db-connection', () => ({
 
 vi.mock('../services/listingPublicationEntitlementService', () => ({
   assertListingPublicationEntitled: mockAssertListingPublicationEntitled,
+  isSameListingCommercialOwner: () => true,
 }));
 
 // Now import the real functions (no mock of ../db — internal calls are real)
@@ -174,6 +199,7 @@ import {
   syncPublishedListingMediaToPropertyMirror,
   updateListingAgentAssignment,
 } from '../db';
+import { getDb } from '../db-connection';
 import { assertListingPublicationEntitled } from '../services/listingPublicationEntitlementService';
 
 // ---------------------------------------------------------------------------
@@ -196,6 +222,10 @@ const listingRow = (overrides: Record<string, any> = {}) => ({
   propertyType: 'house',
   status: 'pending_review',
   approvalStatus: 'pending',
+  askingPrice: '2500000.00',
+  monthlyRent: '25000.00',
+  deposit: { status: 'zero' },
+  startingBid: '1500000.00',
   address: '42 Oak Ave',
   city: 'Johannesburg',
   province: 'Gauteng',
@@ -224,6 +254,64 @@ const listingMediaRow = (overrides: Record<string, any> = {}) => ({
   createdAt: '2026-01-01 00:00:00',
   ...overrides,
 });
+
+const configureRevisionApproval = (revisionId = 5602, originalId = 5601) => {
+  fakeDb.setNextSelectResult([
+    listingRow({
+      id: revisionId,
+      status: 'pending_review',
+      approvalStatus: 'pending',
+      revisionOfListingId: originalId,
+      propertyDetails: { bedrooms: 4, bathrooms: 2 },
+    }),
+  ]);
+  fakeDb.setNextSelectResult([
+    listingRow({
+      id: originalId,
+      status: 'published',
+      approvalStatus: 'approved',
+      revisionOfListingId: null,
+    }),
+  ]);
+  fakeDb.setNextSelectResult([
+    listingMediaRow({
+      id: 801,
+      listingId: revisionId,
+      mediaType: 'image',
+      originalUrl: 'revision-new.jpg',
+      processedUrl: 'revision-new-processed.jpg',
+      isPrimary: 1,
+      displayOrder: 0,
+    }),
+    listingMediaRow({
+      id: 802,
+      listingId: revisionId,
+      mediaType: 'video',
+      originalUrl: 'revision-video.webm',
+      isPrimary: 0,
+      displayOrder: 1,
+    }),
+  ]);
+  fakeDb.setNextSelectResult([
+    listingRow({
+      id: originalId,
+      status: 'published',
+      approvalStatus: 'approved',
+      revisionOfListingId: null,
+    }),
+  ]);
+  fakeDb.setNextSelectResult([{ id: 777 }]);
+  fakeDb.setNextSelectResult([
+    listingMediaRow({
+      id: 701,
+      listingId: originalId,
+      originalUrl: 'approved-old.jpg',
+      processedUrl: 'approved-old-processed.jpg',
+      isPrimary: 1,
+      displayOrder: 0,
+    }),
+  ]);
+};
 
 /** How many select results to configure for getListingById() to succeed */
 const SELECTS_GET_LISTING_BY_ID = 1; // db.select().from(listings).where(id).limit(1)
@@ -328,6 +416,76 @@ describe('approveListing (lower-level)', () => {
     expect(imgInserts).toHaveLength(2);
   });
 
+  it('approves a revision through one transaction and synchronizes the same property mirror', async () => {
+    configureRevisionApproval();
+
+    await approveListing(5602, 990005);
+
+    expect(fakeDb.transactionCount).toBe(1);
+    expect(fakeDb.activeTransactionCount).toBe(0);
+    expect(fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'listing_media')).toHaveLength(
+      2,
+    );
+    expect(fakeDb.calls.filter(c => c.type === 'insert' && c.table === 'propertyImages')).toHaveLength(
+      1,
+    );
+    expect(
+      fakeDb.calls.some(
+        call =>
+          call.type === 'update' &&
+          call.table === 'listing_approval_queue' &&
+          call.set?.status === 'approved',
+      ),
+    ).toBe(true);
+    expect(
+      fakeDb.calls.some(
+        call =>
+          call.type === 'update' &&
+          call.table === 'listings' &&
+          call.set?.status === 'archived',
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    ['before revision media promotion', (call: DbCall) => call.type === 'delete' && call.table === 'listing_media'],
+    [
+      'after revision media promotion and before public mirror lookup',
+      (call: DbCall) => call.type === 'select' && call.table === 'properties',
+    ],
+    [
+      'during public propertyImages synchronization',
+      (call: DbCall) => call.type === 'delete' && call.table === 'propertyImages',
+    ],
+    [
+      'after public projection and before queue transition',
+      (call: DbCall) => call.type === 'update' && call.table === 'listing_approval_queue',
+    ],
+  ])('rolls back the complete revision approval when failure occurs %s', async (_stage, failure) => {
+    configureRevisionApproval();
+    fakeDb.failureHook = call =>
+      failure(call) ? new Error(`fault injected: ${_stage}`) : undefined;
+
+    await expect(approveListing(5602, 990005)).rejects.toThrow(`fault injected: ${_stage}`);
+
+    expect(fakeDb.transactionCount).toBe(1);
+    expect(fakeDb.activeTransactionCount).toBe(0);
+    expect(fakeDb.calls.filter(call => call.type !== 'select')).toHaveLength(0);
+  });
+
+  it('does not open a competing connection or nested transaction for approval media synchronization', async () => {
+    configureRevisionApproval();
+
+    await approveListing(5602, 990005);
+
+    // The outer approval transaction is the only transaction. If either
+    // synchronization helper called getDb()/transaction independently, this
+    // count would be greater than one and the real agency lock could deadlock.
+    expect(fakeDb.transactionCount).toBe(1);
+    expect(fakeDb.activeTransactionCount).toBe(0);
+    expect(vi.mocked(getDb)).toHaveBeenCalledTimes(1);
+  });
+
   it.each(['sell', 'rent', 'auction'] as const)(
     'handles action "%s" with correct listingType mapping',
     async action => {
@@ -338,7 +496,16 @@ describe('approveListing (lower-level)', () => {
             ? JSON.stringify({ monthlyRent: 25000 })
             : JSON.stringify({ startingBid: 1500000 });
 
-      fakeDb.setNextSelectResult([listingRow({ id: 5100, action, pricing })]);
+      fakeDb.setNextSelectResult([
+        listingRow({
+          id: 5100,
+          action,
+          pricing,
+          ...(action === 'rent'
+            ? { monthlyRent: '25000.00', deposit: 0 }
+            : {}),
+        }),
+      ]);
       fakeDb.setNextSelectResult([]); // no existing property
 
       await approveListing(5100, 1);
