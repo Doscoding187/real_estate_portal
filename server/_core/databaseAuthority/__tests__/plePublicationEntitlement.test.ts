@@ -12,15 +12,23 @@ import {
   PLE_PUBLICATION_ENTITLEMENT_TARGET,
 } from '../dataAdapters/plePublicationEntitlement';
 
+const EXPECTED_DATABASE = 'listify_wt_ple_acceptance_0123456789ab';
+const actors = {
+  ownerKind: 'agency' as const,
+  agencyId: 990002,
+  responsibleAgentId: 990002,
+  administratorUserId: 990003,
+};
+
 const authority = (overrides: Record<string, unknown> = {}) =>
   ({
     context: {
       targetClass: 'disposable-worktree',
       host: PLE_PUBLICATION_ENTITLEMENT_TARGET.host,
       port: PLE_PUBLICATION_ENTITLEMENT_TARGET.port,
-      databaseName: PLE_PUBLICATION_ENTITLEMENT_TARGET.databaseName,
+      databaseName: EXPECTED_DATABASE,
       worktree: {
-        expectedDatabase: PLE_PUBLICATION_ENTITLEMENT_TARGET.databaseName,
+        expectedDatabase: EXPECTED_DATABASE,
         ownershipMatches: true,
       },
       ...overrides,
@@ -50,14 +58,14 @@ const exactPlan = {
 const exactSubscription = {
   id: 9001,
   owner_type: 'agency',
-  owner_id: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.agencyId,
+  owner_id: actors.agencyId,
   plan_id: exactPlan.id,
   status: 'active',
   current_period_start: '2099-01-01 00:00:00',
   current_period_end: '2099-02-01 00:00:00',
   cancel_at_period_end: 0,
-  created_by: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.administratorUserId,
-  updated_by: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.administratorUserId,
+  created_by: actors.administratorUserId,
+  updated_by: actors.administratorUserId,
   metadata: {
     fixture: 'ple-publication-acceptance',
     environment: 'local-disposable',
@@ -75,7 +83,7 @@ describe('PLE publication entitlement Database Authority adapter', () => {
       'wrong ownership',
       {
         worktree: {
-          expectedDatabase: PLE_PUBLICATION_ENTITLEMENT_TARGET.databaseName,
+          expectedDatabase: EXPECTED_DATABASE,
           ownershipMatches: false,
         },
       },
@@ -84,7 +92,7 @@ describe('PLE publication entitlement Database Authority adapter', () => {
     expect(() => assertPlePublicationEntitlementTarget(authority(overrides))).toThrow();
   });
 
-  it('accepts only the exact disposable PLE target', () => {
+  it('accepts any exact-owned localhost disposable PLE worktree target', () => {
     expect(() => assertPlePublicationEntitlementTarget(authority())).not.toThrow();
   });
 
@@ -120,34 +128,42 @@ describe('PLE publication entitlement Database Authority adapter', () => {
   });
 
   it('creates only an absent agency subscription and reuses an exact future subscription', () => {
-    expect(classifyPleFixtureSubscription([], exactPlan.id)).toEqual({ state: 'created' });
-    expect(classifyPleFixtureSubscription([exactSubscription], exactPlan.id)).toEqual({
+    expect(classifyPleFixtureSubscription([], exactPlan.id, actors)).toEqual({ state: 'created' });
+    expect(classifyPleFixtureSubscription([exactSubscription], exactPlan.id, actors)).toEqual({
       state: 'reused',
     });
   });
 
   it('fails closed for a foreign, conflicting, or expired subscription', () => {
     expect(() =>
-      assertPleFixtureSubscriptionRow({ ...exactSubscription, owner_id: 123456 }, exactPlan.id),
+      assertPleFixtureSubscriptionRow(
+        { ...exactSubscription, owner_id: 123456 },
+        exactPlan.id,
+        actors,
+      ),
     ).toThrow('subscription ownerId');
     expect(() =>
-      assertPleFixtureSubscriptionRow({ ...exactSubscription, plan_id: 7002 }, exactPlan.id),
+      assertPleFixtureSubscriptionRow(
+        { ...exactSubscription, plan_id: 7002 },
+        exactPlan.id,
+        actors,
+      ),
     ).toThrow('subscription plan');
     expect(() =>
       assertPleFixtureSubscriptionRow(
         { ...exactSubscription, current_period_end: '2000-01-01 00:00:00' },
         exactPlan.id,
+        actors,
       ),
     ).toThrow('period is not future-dated');
   });
 
-  it('requires the authorized fixture identity to remain agency 990002', () => {
+  it('anchors entitlement to the canonical listing-preview publisher identities', () => {
     expect(PLE_PUBLICATION_ENTITLEMENT_IDENTITIES).toMatchObject({
-      listingId: 1,
       ownerKind: 'agency',
-      agencyId: 990002,
-      responsibleAgentId: 990002,
-      administratorUserId: 990003,
+      agencySlug: 'listing-preview-agency-v1',
+      responsibleAgentOpenId: 'listing-preview-agent-v1',
+      administratorOpenId: 'listing-preview-agency-admin-v1',
     });
   });
 });

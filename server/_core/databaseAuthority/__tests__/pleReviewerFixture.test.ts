@@ -10,15 +10,17 @@ import {
   PLE_REVIEWER_USER_ID,
 } from '../dataAdapters/pleReviewerFixture';
 
+const EXPECTED_DATABASE = 'listify_wt_ple_acceptance_0123456789ab';
+
 const authority = (overrides: Record<string, unknown> = {}) =>
   ({
     context: {
       targetClass: 'disposable-worktree',
       host: PLE_REVIEWER_TARGET.host,
       port: PLE_REVIEWER_TARGET.port,
-      databaseName: PLE_REVIEWER_TARGET.databaseName,
+      databaseName: EXPECTED_DATABASE,
       worktree: {
-        expectedDatabase: PLE_REVIEWER_TARGET.databaseName,
+        expectedDatabase: EXPECTED_DATABASE,
         ownershipMatches: true,
       },
       ...overrides,
@@ -53,7 +55,7 @@ describe('PLE reviewer Database Authority adapter', () => {
       'wrong ownership',
       {
         worktree: {
-          expectedDatabase: PLE_REVIEWER_TARGET.databaseName,
+          expectedDatabase: EXPECTED_DATABASE,
           ownershipMatches: false,
         },
       },
@@ -62,7 +64,7 @@ describe('PLE reviewer Database Authority adapter', () => {
     expect(() => assertPleReviewerTarget(authority(overrides))).toThrow();
   });
 
-  it('accepts only the exact disposable PLE target', () => {
+  it('accepts any exact-owned localhost disposable PLE worktree target', () => {
     expect(() => assertPleReviewerTarget(authority())).not.toThrow();
   });
 

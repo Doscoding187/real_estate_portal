@@ -13,13 +13,9 @@ import {
   type AdapterEvidence,
 } from './common';
 import type { ResolvedDatabaseAuthority } from '../types';
-import { getDb } from '../../../db-connection';
-import {
-  assertListingPublicationEntitled,
-  resolveListingCommercialOwner,
-} from '../../../services/listingPublicationEntitlementService';
+import { LISTING_PREVIEW_FIXTURE_IDENTITIES } from './listingPreviewFixture';
 
-export const PLE_PUBLICATION_ENTITLEMENT_VERSION = 'ple-publication-entitlement-v1' as const;
+export const PLE_PUBLICATION_ENTITLEMENT_VERSION = 'ple-publication-entitlement-v2' as const;
 export const PLE_PUBLICATION_ENTITLEMENT_FIXTURE = 'ple-publication-acceptance' as const;
 export const PLE_PUBLICATION_ENTITLEMENT_PLAN_NAME =
   'listing_preview_agency_acceptance_v1' as const;
@@ -27,15 +23,14 @@ export const PLE_PUBLICATION_ENTITLEMENT_PLAN_NAME =
 export const PLE_PUBLICATION_ENTITLEMENT_TARGET = Object.freeze({
   host: '127.0.0.1',
   port: '3307',
-  databaseName: 'listify_wt_mvp_customer_journey_fbdb0f964b36',
+  targetClass: 'disposable-worktree' as const,
 });
 
 export const PLE_PUBLICATION_ENTITLEMENT_IDENTITIES = Object.freeze({
-  listingId: 1,
   ownerKind: 'agency' as const,
-  agencyId: 990002,
-  responsibleAgentId: 990002,
-  administratorUserId: 990003,
+  agencySlug: LISTING_PREVIEW_FIXTURE_IDENTITIES.agencySlug,
+  responsibleAgentOpenId: LISTING_PREVIEW_FIXTURE_IDENTITIES.agentOpenId,
+  administratorOpenId: LISTING_PREVIEW_FIXTURE_IDENTITIES.agencyAdminOpenId,
 });
 
 const FIXTURE_METADATA = Object.freeze({
@@ -66,11 +61,8 @@ const ENTITLEMENT_EXPECTED = Object.freeze({
 
 const SUBSCRIPTION_EXPECTED = Object.freeze({
   ownerType: 'agency',
-  ownerId: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.agencyId,
   status: 'active',
   cancelAtPeriodEnd: 0,
-  createdBy: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.administratorUserId,
-  updatedBy: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.administratorUserId,
   metadata: FIXTURE_METADATA,
 });
 
@@ -88,10 +80,17 @@ export const PLE_PUBLICATION_ENTITLEMENT_DIGEST = stableDigest(FIXTURE_PAYLOAD);
 type Row = Record<string, unknown>;
 type PreparedState = 'created' | 'reused';
 
+export type PlePublicationFixtureActors = {
+  ownerKind: 'agency';
+  agencyId: number;
+  responsibleAgentId: number;
+  administratorUserId: number;
+};
+
 export type PlePublicationEntitlementEvidence = AdapterEvidence & {
   fixture: typeof PLE_PUBLICATION_ENTITLEMENT_VERSION;
   target: typeof PLE_PUBLICATION_ENTITLEMENT_TARGET;
-  authorizedListing: typeof PLE_PUBLICATION_ENTITLEMENT_IDENTITIES;
+  authorizedPublisher: PlePublicationFixtureActors & typeof PLE_PUBLICATION_ENTITLEMENT_IDENTITIES;
   prepared: {
     plan: PreparedState;
     entitlement: PreparedState;
@@ -100,7 +99,7 @@ export type PlePublicationEntitlementEvidence = AdapterEvidence & {
   verified: {
     exactTarget: true;
     migrationHead: string;
-    listingCommercialOwner: true;
+    publicationOwnerReady: true;
     agencyProfile: true;
     agencyBranding: true;
     plan: true;
@@ -109,7 +108,6 @@ export type PlePublicationEntitlementEvidence = AdapterEvidence & {
     unrelatedOwnersUntouched: true;
     fixtureInvoices: 0;
     fixturePayments: 0;
-    publicationEntitled?: true;
   };
 };
 
@@ -176,11 +174,10 @@ export function assertPlePublicationEntitlementTarget(authority: ResolvedDatabas
   assertOwnedDisposableTarget(authority);
   const { context } = authority;
   if (
-    context.targetClass !== 'disposable-worktree' ||
+    context.targetClass !== PLE_PUBLICATION_ENTITLEMENT_TARGET.targetClass ||
     context.host !== PLE_PUBLICATION_ENTITLEMENT_TARGET.host ||
     context.port !== PLE_PUBLICATION_ENTITLEMENT_TARGET.port ||
-    context.databaseName !== PLE_PUBLICATION_ENTITLEMENT_TARGET.databaseName ||
-    context.worktree.expectedDatabase !== PLE_PUBLICATION_ENTITLEMENT_TARGET.databaseName ||
+    context.databaseName !== context.worktree.expectedDatabase ||
     !context.worktree.ownershipMatches
   ) {
     throw new Error(
@@ -232,13 +229,18 @@ export function classifyPleFixtureEntitlement(
   return { state: 'reused' };
 }
 
-export function assertPleFixtureSubscriptionRow(row: Row, planId: number, now = new Date()): void {
+export function assertPleFixtureSubscriptionRow(
+  row: Row,
+  planId: number,
+  actors: PlePublicationFixtureActors,
+  now = new Date(),
+): void {
   requireExact(
     rowValue(row, 'owner_type'),
     SUBSCRIPTION_EXPECTED.ownerType,
     'subscription ownerType',
   );
-  requireExact(rowValue(row, 'owner_id'), SUBSCRIPTION_EXPECTED.ownerId, 'subscription ownerId');
+  requireExact(rowValue(row, 'owner_id'), actors.agencyId, 'subscription ownerId');
   requireExact(rowValue(row, 'plan_id'), planId, 'subscription plan');
   requireExact(rowValue(row, 'status'), SUBSCRIPTION_EXPECTED.status, 'subscription status');
   requireExact(
@@ -246,16 +248,8 @@ export function assertPleFixtureSubscriptionRow(row: Row, planId: number, now = 
     SUBSCRIPTION_EXPECTED.cancelAtPeriodEnd,
     'subscription cancelAtPeriodEnd',
   );
-  requireExact(
-    rowValue(row, 'created_by'),
-    SUBSCRIPTION_EXPECTED.createdBy,
-    'subscription createdBy',
-  );
-  requireExact(
-    rowValue(row, 'updated_by'),
-    SUBSCRIPTION_EXPECTED.updatedBy,
-    'subscription updatedBy',
-  );
+  requireExact(rowValue(row, 'created_by'), actors.administratorUserId, 'subscription createdBy');
+  requireExact(rowValue(row, 'updated_by'), actors.administratorUserId, 'subscription updatedBy');
   requireJson(rowValue(row, 'metadata'), SUBSCRIPTION_EXPECTED.metadata, 'subscription metadata');
 
   if (!timestampMs(rowValue(row, 'current_period_start'))) {
@@ -272,11 +266,12 @@ export function assertPleFixtureSubscriptionRow(row: Row, planId: number, now = 
 export function classifyPleFixtureSubscription(
   rows: Row[],
   planId: number,
+  actors: PlePublicationFixtureActors,
   now = new Date(),
 ): { state: PreparedState } {
   const existing = requireOneOrNone(rows, 'agency subscription');
   if (!existing) return { state: 'created' };
-  assertPleFixtureSubscriptionRow(existing, planId, now);
+  assertPleFixtureSubscriptionRow(existing, planId, actors, now);
   return { state: 'reused' };
 }
 
@@ -313,7 +308,10 @@ async function findFixtureEntitlement(
   );
 }
 
-async function findAgencySubscription(connection: AuthoritySqlConnection): Promise<Row | null> {
+async function findAgencySubscription(
+  connection: AuthoritySqlConnection,
+  agencyId: number,
+): Promise<Row | null> {
   return requireOneOrNone(
     await queryRows(
       connection,
@@ -323,7 +321,7 @@ async function findAgencySubscription(connection: AuthoritySqlConnection): Promi
          FROM subscriptions
         WHERE owner_type = ? AND owner_id = ?
         ORDER BY id`,
-      [SUBSCRIPTION_EXPECTED.ownerType, SUBSCRIPTION_EXPECTED.ownerId],
+      [SUBSCRIPTION_EXPECTED.ownerType, agencyId],
     ),
     'agency subscription',
   );
@@ -351,8 +349,12 @@ function subscriptionSnapshot(rows: Row[]): string {
   );
 }
 
-function assertUnrelatedSubscriptionsUnchanged(before: Row[], after: Row[]): void {
-  const targetOwner = `${SUBSCRIPTION_EXPECTED.ownerType}:${SUBSCRIPTION_EXPECTED.ownerId}`;
+function assertUnrelatedSubscriptionsUnchanged(
+  before: Row[],
+  after: Row[],
+  agencyId: number,
+): void {
+  const targetOwner = `${SUBSCRIPTION_EXPECTED.ownerType}:${agencyId}`;
   const beforeById = new Map(before.map(row => [String(rowValue(row, 'id')), row]));
   const afterById = new Map(after.map(row => [String(rowValue(row, 'id')), row]));
 
@@ -392,41 +394,20 @@ async function countTaggedRows(
   return Number(rowValue(rows[0] ?? {}, 'row_count') ?? 0);
 }
 
-async function assertListingCommercialContext(connection: AuthoritySqlConnection): Promise<void> {
-  const [listing] = await queryRows(
-    connection,
-    `SELECT id, ownerId AS owner_id, agencyId AS agency_id, agentId AS agent_id
-       FROM listings
-      WHERE id = ?
-      LIMIT 1`,
-    [PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.listingId],
-  );
-  if (!listing) throw new Error('PLE publication entitlement fixture listing 1 is missing.');
-  requireExact(
-    rowValue(listing, 'id'),
-    PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.listingId,
-    'listing id',
-  );
-  requireExact(
-    rowValue(listing, 'agency_id'),
-    PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.agencyId,
-    'listing agency',
-  );
-  requireExact(
-    rowValue(listing, 'agent_id'),
-    PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.responsibleAgentId,
-    'listing agent',
-  );
-
-  const [agency] = await queryRows(
+async function resolvePublicationFixtureActors(
+  connection: AuthoritySqlConnection,
+): Promise<PlePublicationFixtureActors> {
+  const agencies = await queryRows(
     connection,
     `SELECT id, name, email, city, province
        FROM agencies
-      WHERE id = ?
-      LIMIT 1`,
-    [PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.agencyId],
+      WHERE slug = ?
+      ORDER BY id`,
+    [PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.agencySlug],
   );
+  const agency = requireOneOrNone(agencies, 'fixture agency');
   if (!agency) throw new Error('PLE publication entitlement fixture agency is missing.');
+  const agencyId = asId(agency, 'agency');
   for (const field of ['name', 'email', 'city', 'province']) {
     if (!String(rowValue(agency, field) ?? '').trim()) {
       throw new Error(`PLE publication entitlement fixture agency ${field} is incomplete.`);
@@ -440,7 +421,7 @@ async function assertListingCommercialContext(connection: AuthoritySqlConnection
        FROM agency_branding
       WHERE agencyId = ?
       LIMIT 1`,
-    [PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.agencyId],
+    [agencyId],
   );
   if (!branding) throw new Error('PLE publication entitlement fixture branding is missing.');
   for (const field of ['company_name', 'primary_color', 'secondary_color']) {
@@ -448,20 +429,64 @@ async function assertListingCommercialContext(connection: AuthoritySqlConnection
       throw new Error(`PLE publication entitlement fixture branding ${field} is incomplete.`);
     }
   }
+
+  const responsibleUsers = await queryRows(
+    connection,
+    `SELECT u.id AS user_id, u.agencyId AS user_agency_id, a.id AS agent_id,
+            a.agencyId AS agent_agency_id
+       FROM users u
+       JOIN agents a ON a.userId = u.id
+      WHERE u.openId = ? AND a.slug = ?
+      ORDER BY u.id, a.id`,
+    [
+      PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.responsibleAgentOpenId,
+      LISTING_PREVIEW_FIXTURE_IDENTITIES.agentSlug,
+    ],
+  );
+  const responsible = requireOneOrNone(responsibleUsers, 'responsible agent');
+  if (!responsible) {
+    throw new Error('PLE publication entitlement fixture responsible agent is missing.');
+  }
+  requireExact(rowValue(responsible, 'user_agency_id'), agencyId, 'agent user agency');
+  requireExact(rowValue(responsible, 'agent_agency_id'), agencyId, 'agent profile agency');
+
+  const administrators = await queryRows(
+    connection,
+    `SELECT id, agencyId AS agency_id, role
+       FROM users
+      WHERE openId = ?
+      ORDER BY id`,
+    [PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.administratorOpenId],
+  );
+  const administrator = requireOneOrNone(administrators, 'fixture administrator');
+  if (!administrator) {
+    throw new Error('PLE publication entitlement fixture administrator is missing.');
+  }
+  requireExact(rowValue(administrator, 'agency_id'), agencyId, 'administrator agency');
+  requireExact(rowValue(administrator, 'role'), 'agency_admin', 'administrator role');
+
+  return {
+    ownerKind: 'agency',
+    agencyId,
+    responsibleAgentId: asId(responsible, 'responsible agent profile'),
+    administratorUserId: asId(administrator, 'administrator user'),
+  };
 }
 
 async function verifyFixtureRecords(input: {
   authority: ResolvedDatabaseAuthority;
   connection: AuthoritySqlConnection;
-  assertApplicationEntitlement: boolean;
-}): Promise<PlePublicationEntitlementEvidence['verified']> {
+}): Promise<{
+  actors: PlePublicationFixtureActors;
+  verified: PlePublicationEntitlementEvidence['verified'];
+}> {
   assertPlePublicationEntitlementTarget(input.authority);
   const manifest = await requireAcceptedMigrationHead({
     authority: input.authority,
     connection: input.connection,
     requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
-  await assertListingCommercialContext(input.connection);
+  const actors = await resolvePublicationFixtureActors(input.connection);
 
   const plan = await findFixturePlan(input.connection);
   if (!plan) throw new Error('PLE publication entitlement fixture plan is missing.');
@@ -471,10 +496,10 @@ async function verifyFixtureRecords(input: {
   if (!entitlement) throw new Error('PLE publication entitlement fixture entitlement is missing.');
   assertPleFixtureEntitlementRow(entitlement, planId);
 
-  const subscription = await findAgencySubscription(input.connection);
+  const subscription = await findAgencySubscription(input.connection, actors.agencyId);
   if (!subscription)
     throw new Error('PLE publication entitlement fixture subscription is missing.');
-  assertPleFixtureSubscriptionRow(subscription, planId);
+  assertPleFixtureSubscriptionRow(subscription, planId, actors);
 
   const allSubscriptions = await listSubscriptions(input.connection);
   for (const row of allSubscriptions) {
@@ -482,7 +507,7 @@ async function verifyFixtureRecords(input: {
     if (
       metadata?.fixture === PLE_PUBLICATION_ENTITLEMENT_FIXTURE &&
       (rowValue(row, 'owner_type') !== SUBSCRIPTION_EXPECTED.ownerType ||
-        Number(rowValue(row, 'owner_id')) !== SUBSCRIPTION_EXPECTED.ownerId)
+        Number(rowValue(row, 'owner_id')) !== actors.agencyId)
     ) {
       throw new Error(
         'PLE publication entitlement fixture refused: fixture metadata is attached to an unrelated owner.',
@@ -498,44 +523,21 @@ async function verifyFixtureRecords(input: {
     );
   }
 
-  let publicationEntitled: true | undefined;
-  if (input.assertApplicationEntitlement) {
-    const applicationDb = await getDb();
-    if (!applicationDb)
-      throw new Error('PLE publication entitlement verification has no runtime DB.');
-    const owner = await resolveListingCommercialOwner(
-      applicationDb,
-      PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.listingId,
-    );
-    if (
-      owner.kind !== 'agency' ||
-      owner.agencyId !== PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.agencyId ||
-      owner.responsibleAgentId !== PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.responsibleAgentId
-    ) {
-      throw new Error(
-        'PLE publication entitlement verification resolved the wrong commercial owner.',
-      );
-    }
-    await assertListingPublicationEntitled(applicationDb, {
-      listingId: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES.listingId,
-      operation: 'submit',
-    });
-    publicationEntitled = true;
-  }
-
   return {
-    exactTarget: true,
-    migrationHead: manifest.document.expectedHead,
-    listingCommercialOwner: true,
-    agencyProfile: true,
-    agencyBranding: true,
-    plan: true,
-    maxActiveListings: ENTITLEMENT_EXPECTED.value,
-    subscription: true,
-    unrelatedOwnersUntouched: true,
-    fixtureInvoices,
-    fixturePayments,
-    ...(publicationEntitled ? { publicationEntitled: true as const } : {}),
+    actors,
+    verified: {
+      exactTarget: true,
+      migrationHead: manifest.document.expectedHead,
+      publicationOwnerReady: true,
+      agencyProfile: true,
+      agencyBranding: true,
+      plan: true,
+      maxActiveListings: ENTITLEMENT_EXPECTED.value,
+      subscription: true,
+      unrelatedOwnersUntouched: true,
+      fixtureInvoices,
+      fixturePayments,
+    },
   };
 }
 
@@ -561,6 +563,7 @@ export async function preparePlePublicationEntitlement(input: {
     connection: input.connection,
     requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY],
   });
+  const actors = await resolvePublicationFixtureActors(input.connection);
 
   const subscriptionsBefore = await listSubscriptions(input.connection);
   const prepared = await withTransaction(input.connection, async () => {
@@ -595,10 +598,11 @@ export async function preparePlePublicationEntitlement(input: {
       );
     }
 
-    const existingSubscription = await findAgencySubscription(input.connection);
+    const existingSubscription = await findAgencySubscription(input.connection, actors.agencyId);
     const subscriptionDecision = classifyPleFixtureSubscription(
       existingSubscription ? [existingSubscription] : [],
       planId,
+      actors,
     );
     if (subscriptionDecision.state === 'created') {
       await input.connection.execute(
@@ -610,11 +614,11 @@ export async function preparePlePublicationEntitlement(input: {
                  DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY), NULL, 0,
                  CURRENT_TIMESTAMP, CAST(? AS JSON), ?, ?)`,
         [
-          SUBSCRIPTION_EXPECTED.ownerId,
+          actors.agencyId,
           planId,
           JSON.stringify(SUBSCRIPTION_EXPECTED.metadata),
-          SUBSCRIPTION_EXPECTED.createdBy,
-          SUBSCRIPTION_EXPECTED.updatedBy,
+          actors.administratorUserId,
+          actors.administratorUserId,
         ],
       );
     }
@@ -627,20 +631,19 @@ export async function preparePlePublicationEntitlement(input: {
   });
 
   const subscriptionsAfter = await listSubscriptions(input.connection);
-  assertUnrelatedSubscriptionsUnchanged(subscriptionsBefore, subscriptionsAfter);
-  const verified = await verifyFixtureRecords({
+  assertUnrelatedSubscriptionsUnchanged(subscriptionsBefore, subscriptionsAfter, actors.agencyId);
+  const result = await verifyFixtureRecords({
     authority: input.authority,
     connection: input.connection,
-    assertApplicationEntitlement: false,
   });
 
   return {
     ...base,
     fixture: PLE_PUBLICATION_ENTITLEMENT_VERSION,
     target: PLE_PUBLICATION_ENTITLEMENT_TARGET,
-    authorizedListing: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES,
+    authorizedPublisher: { ...PLE_PUBLICATION_ENTITLEMENT_IDENTITIES, ...result.actors },
     prepared,
-    verified,
+    verified: result.verified,
   };
 }
 
@@ -652,22 +655,21 @@ export async function verifyPlePublicationEntitlement(input: {
   assertOperation(input.decision, ['verification', 'browser-verification']);
   assertPlePublicationEntitlementTarget(input.authority);
   const base = evidenceBase(input.authority);
-  const verified = await verifyFixtureRecords({
+  const result = await verifyFixtureRecords({
     authority: input.authority,
     connection: input.connection,
-    assertApplicationEntitlement: true,
   });
 
   return {
     ...base,
     fixture: PLE_PUBLICATION_ENTITLEMENT_VERSION,
     target: PLE_PUBLICATION_ENTITLEMENT_TARGET,
-    authorizedListing: PLE_PUBLICATION_ENTITLEMENT_IDENTITIES,
+    authorizedPublisher: { ...PLE_PUBLICATION_ENTITLEMENT_IDENTITIES, ...result.actors },
     prepared: {
       plan: 'reused',
       entitlement: 'reused',
       subscription: 'reused',
     },
-    verified,
+    verified: result.verified,
   };
 }

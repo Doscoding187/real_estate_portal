@@ -20,7 +20,7 @@ import {
   resolveCentralLocalEnvironment,
 } from '../../../../scripts/localEnvironmentAuthority';
 
-export const PLE_REVIEWER_FIXTURE_VERSION = 'ple-reviewer-v1' as const;
+export const PLE_REVIEWER_FIXTURE_VERSION = 'ple-reviewer-v2' as const;
 export const PLE_REVIEWER_FIXTURE = 'ple-reviewer-acceptance' as const;
 export const PLE_REVIEWER_PASSWORD_VARIABLE = 'LOCAL_PLE_REVIEWER_PASSWORD' as const;
 export const PLE_REVIEWER_USER_ID = 990005 as const;
@@ -30,7 +30,7 @@ export const PLE_REVIEWER_OPEN_ID = 'ple-reviewer-v1' as const;
 export const PLE_REVIEWER_TARGET = Object.freeze({
   host: '127.0.0.1',
   port: '3307',
-  databaseName: 'listify_wt_mvp_customer_journey_fbdb0f964b36',
+  targetClass: 'disposable-worktree' as const,
 });
 
 const REVIEWER_EXPECTED = Object.freeze({
@@ -146,11 +146,10 @@ export function assertPleReviewerTarget(authority: ResolvedDatabaseAuthority): v
   assertOwnedDisposableTarget(authority);
   const { context } = authority;
   if (
-    context.targetClass !== 'disposable-worktree' ||
+    context.targetClass !== PLE_REVIEWER_TARGET.targetClass ||
     context.host !== PLE_REVIEWER_TARGET.host ||
     context.port !== PLE_REVIEWER_TARGET.port ||
-    context.databaseName !== PLE_REVIEWER_TARGET.databaseName ||
-    context.worktree.expectedDatabase !== PLE_REVIEWER_TARGET.databaseName ||
+    context.databaseName !== context.worktree.expectedDatabase ||
     !context.worktree.ownershipMatches
   ) {
     throw new Error(
