@@ -3213,6 +3213,25 @@ function remapApprovedRevisionPresentationMedia(
 }
 
 /**
+ * Search results are cached independently from the approval transaction. The
+ * cache must be invalidated only after the transaction commits so a failed
+ * approval cannot disturb a still-valid public snapshot, and a successful
+ * approval cannot leave Search serving the previous projection indefinitely.
+ *
+ * This is intentionally a post-commit, best-effort side effect: approval has
+ * already committed at this point, so a cache-service failure must not report
+ * a false approval failure or trigger a retry of the lifecycle transaction.
+ */
+async function invalidateApprovedPropertySearchCacheAfterCommit(): Promise<void> {
+  try {
+    const { propertySearchService } = await import('./services/propertySearchService');
+    await propertySearchService.invalidateCache();
+  } catch (error) {
+    console.error('[Listings] Approved property Search cache invalidation failed', error);
+  }
+}
+
+/**
  * Approve listing
  */
 export async function approveListing(
@@ -3226,9 +3245,11 @@ export async function approveListing(
   if (!db) throw new Error('Database not available');
 
   if (!database && typeof db.transaction === 'function') {
-    return db.transaction((transaction: any) =>
+    const result = await db.transaction((transaction: any) =>
       approveListing(listingId, reviewedBy, notes, source, transaction),
     );
+    await invalidateApprovedPropertySearchCacheAfterCommit();
+    return result;
   }
 
   await lockListingTransitionRow(db, listingId);

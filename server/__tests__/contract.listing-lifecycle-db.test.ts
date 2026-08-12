@@ -173,8 +173,9 @@ class FakeDrizzle {
 
 const fakeDb = new FakeDrizzle();
 
-const { mockAssertListingPublicationEntitled } = vi.hoisted(() => ({
+const { mockAssertListingPublicationEntitled, mockInvalidatePublicSearchCache } = vi.hoisted(() => ({
   mockAssertListingPublicationEntitled: vi.fn(),
+  mockInvalidatePublicSearchCache: vi.fn(),
 }));
 
 // Mock db-connection BEFORE importing the db functions
@@ -186,6 +187,12 @@ vi.mock('../db-connection', () => ({
 vi.mock('../services/listingPublicationEntitlementService', () => ({
   assertListingPublicationEntitled: mockAssertListingPublicationEntitled,
   isSameListingCommercialOwner: () => true,
+}));
+
+vi.mock('../services/propertySearchService', () => ({
+  propertySearchService: {
+    invalidateCache: mockInvalidatePublicSearchCache,
+  },
 }));
 
 // Now import the real functions (no mock of ../db — internal calls are real)
@@ -325,6 +332,7 @@ beforeEach(() => {
     listingId: 1001,
     responsibleAgentId: 55,
   } as any);
+  vi.mocked(mockInvalidatePublicSearchCache).mockResolvedValue(undefined);
 });
 
 // ===========================================================================
@@ -445,6 +453,7 @@ describe('approveListing (lower-level)', () => {
           call.set?.status === 'archived',
       ),
     ).toBe(true);
+    expect(mockInvalidatePublicSearchCache).toHaveBeenCalledOnce();
   });
 
   it.each([
