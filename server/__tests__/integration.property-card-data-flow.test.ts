@@ -182,7 +182,7 @@ describe('Property Card Data Flow Integration', () => {
     });
   });
 
-  it('falls back to source listing media when searchable property images are missing', async () => {
+  it('fails closed when a listing-backed property has no public image mirror', async () => {
     if (skipTests) return;
 
     const db = await getDb();
@@ -259,7 +259,7 @@ describe('Property Card Data Flow Integration', () => {
 
     const propertyInsert = await db!.insert(properties).values({
       title: `Fallback Property ${suffix}`,
-      description: 'Property row is missing image sync and should fall back to listing media.',
+      description: 'Property row is missing its public image mirror and must fail closed.',
       propertyType: 'house',
       listingType: 'sale',
       transactionType: 'sale',
@@ -300,14 +300,12 @@ describe('Property Card Data Flow Integration', () => {
 
     const matched = result.properties.find(p => Number(p.id) === createdPropertyId) as any;
     expect(matched).toBeTruthy();
-    expect(matched.mainImage).toBe(listingImage);
-    expect(matched.images?.[0]?.url).toBe(listingImage);
-    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.image).toBe(
-      listingImage,
-    );
+    expect(matched.mainImage).toBeUndefined();
+    expect(matched.images).toEqual([]);
+    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.image).toBeUndefined();
   });
 
-  it('falls back to source listing agent identity when searchable property agent fields are missing', async () => {
+  it('does not fall back to mutable source listing identity when projection attribution is missing', async () => {
     if (skipTests) return;
 
     const db = await getDb();
@@ -376,7 +374,7 @@ describe('Property Card Data Flow Integration', () => {
 
     const propertyInsert = await db!.insert(properties).values({
       title: `Agent Identity Property ${suffix}`,
-      description: 'Property row is missing agent sync and should fall back to the source listing agent.',
+      description: 'Property row is missing its public attribution and must fail closed.',
       propertyType: 'house',
       listingType: 'sale',
       transactionType: 'sale',
@@ -417,12 +415,8 @@ describe('Property Card Data Flow Integration', () => {
 
     const matched = result.properties.find(p => Number(p.id) === createdPropertyId) as any;
     expect(matched).toBeTruthy();
-    expect(matched.listerType).toBe('agency');
-    expect(matched.agent?.name).toBe('Ava Broker');
-    expect(matched.agent?.agency).toBe(`Fallback Agent Realty ${suffix}`);
-    expect(matched.agent?.image).toBe(profileImage);
-    expect(
-      result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.identity.name,
-    ).toBe('Ava Broker');
+    expect(matched.listerType).toBe('private');
+    expect(matched.agent).toBeUndefined();
+    expect(result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.identity).toBeUndefined();
   });
 });

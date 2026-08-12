@@ -40,9 +40,13 @@ describe('database governance authority', () => {
     }
   });
 
-  it('starts with no approved compatibility exceptions', () => {
+  it('lists only the current approved compatibility exceptions', () => {
     expect(exceptions).toContain('## Current approved exceptions');
-    expect(exceptions).toContain('\nNone.\n');
+    expect(exceptions).toContain(
+      '### Exception ID: DBX-PLE-2B-property-taxonomy-enum-expansion',
+    );
+    expect(exceptions).toContain('Status: Approved for the PLE-2B implementation slice');
+    expect(exceptions).not.toContain('\nNone.\n');
     expect(exceptions.replace(/\s+/g, ' ')).toContain(
       'does not gain approval from historical presence',
     );
