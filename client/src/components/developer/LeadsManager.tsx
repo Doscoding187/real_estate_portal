@@ -83,6 +83,8 @@ const STAGE_TABS: Array<{ key: StageTab; label: string }> = [
   { key: 'lost', label: 'Lost' },
 ];
 
+const DEVELOPER_LEADS_QUERY_LIMIT = 200;
+
 function formatRelative(ts?: string | null): string {
   if (!ts) return 'n/a';
   const date = new Date(ts);
@@ -261,7 +263,7 @@ export default function LeadsManager() {
     q: debouncedSearch || undefined,
     from: toIsoRangeDateStart(dateFrom),
     to: toIsoRangeDateEnd(dateTo),
-    limit: 500,
+    limit: DEVELOPER_LEADS_QUERY_LIMIT,
     offset: 0,
   });
 
@@ -270,7 +272,7 @@ export default function LeadsManager() {
       developmentId: selectedDevelopmentId,
       range: rangeFilter,
       sla: attentionFilter === 'all' ? undefined : attentionFilter,
-      limit: 500,
+      limit: DEVELOPER_LEADS_QUERY_LIMIT,
     },
     {
       refetchOnWindowFocus: false,
