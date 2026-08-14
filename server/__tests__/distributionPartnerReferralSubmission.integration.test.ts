@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
 import {
   affordabilityAssessments,
   affordabilityMatchSnapshots,
-  developerBrandProfiles,
+  cataloguePublishers,
   developmentRequiredDocuments,
   developmentManagerAssignments,
   distributionBrandPartnerships,
@@ -20,6 +20,11 @@ import {
   unitTypes,
   users,
 } from '../../drizzle/schema';
+import { cataloguePublisherService } from '../services/cataloguePublisherService';
+import {
+  upsertBrandPartnership,
+  upsertDevelopmentAccess,
+} from '../services/distributionAccessRepository';
 
 // Requires DATABASE_URL test DB; skipped in local env when not set.
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -31,7 +36,7 @@ const describeWithDb: typeof describe = hasDb
 
 const createdState = {
   userIds: [] as number[],
-  brandProfileIds: [] as number[],
+  cataloguePublisherIds: [] as number[],
   developmentIds: [] as number[],
   unitTypeIds: [] as string[],
   programIds: [] as number[],
@@ -60,40 +65,22 @@ function createCaller(userId: number, role: 'agent' | 'agency_admin' | 'visitor'
   } as any);
 }
 
-async function insertUser(role: 'agent' | 'agency_admin' | 'visitor') {
+async function insertUser(role: 'agent' | 'agency_admin' | 'visitor' | 'super_admin') {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `distribution-referral-${role}-${suffix}@example.com`;
-  const [columnRows] = await db.execute(`SHOW COLUMNS FROM users`);
-  const availableColumns = new Set(
-    (Array.isArray(columnRows) ? columnRows : []).map((row: any) => String(row.Field || '')),
-  );
-
-  const valuesByColumn = new Map<string, any>([
-    ['email', email],
-    ['role', role],
-    ['firstName', 'Flow'],
-    ['lastName', 'Tester'],
-    ['name', 'Flow Tester'],
-    ['emailVerified', 1],
-  ]);
-
-  const insertColumns = Array.from(valuesByColumn.keys()).filter(column =>
-    availableColumns.has(column),
-  );
-  const insertValues = insertColumns.map(column => valuesByColumn.get(column));
-  const valuesSql = sql.join(insertValues.map(value => sql`${value}`), sql`, `);
-  await db.execute(
-    sql`INSERT INTO users (${sql.raw(insertColumns.join(', '))}) VALUES (${valuesSql})`,
-  );
-  const [createdUser] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-  const userId = Number(createdUser?.id || 0);
+  const [result] = await db.insert(users).values({
+    email,
+    role,
+    firstName: 'Flow',
+    lastName: 'Tester',
+    name: 'Flow Tester',
+    emailVerified: 1,
+    onboardingComplete: 1,
+  });
+  const userId = Number(result.insertId);
   createdState.userIds.push(userId);
   return userId;
 }
@@ -103,18 +90,17 @@ async function insertDevelopment(name: string) {
   if (!db) throw new Error('Database not available');
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const [brandInsertResult] = await db.insert(developerBrandProfiles).values({
-    brandName: `${name} Brand`,
+  const curatorUserId = await insertUser('super_admin');
+  const publisher = await cataloguePublisherService.createPlatformReferencePublisher({
+    brandName: `${name} Publisher`,
     slug: `distribution-brand-${suffix}`,
-    ownerType: 'platform',
-    profileType: 'industry_reference',
-    isVisible: 1,
     identityType: 'developer',
     sourceAttribution: 'Publicly available referral integration fixture source',
-    linkedDeveloperAccountId: null,
-  } as any);
-  const brandProfileId = Number((brandInsertResult as any).insertId || 0);
-  createdState.brandProfileIds.push(brandProfileId);
+    isVisible: true,
+    createdBy: curatorUserId,
+  });
+  const cataloguePublisherId = Number(publisher.id);
+  createdState.cataloguePublisherIds.push(cataloguePublisherId);
 
   const [insertResult] = await db.insert(developments).values({
     name,
@@ -122,8 +108,7 @@ async function insertDevelopment(name: string) {
     city: 'Johannesburg',
     province: 'Gauteng',
     developerId: null,
-    developerBrandProfileId: brandProfileId,
-    devOwnerType: 'platform',
+    cataloguePublisherId,
     transactionType: 'for_sale',
     isPublished: 1,
     approvalStatus: 'approved',
@@ -178,60 +163,37 @@ async function insertProgram(input: {
   return programId;
 }
 
-async function insertNetworkAccess(developmentId: number) {
+async function insertNetworkAccess(developmentId: number, actorUserId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const [development] = await db
-    .select({ brandProfileId: developments.developerBrandProfileId })
+    .select({ cataloguePublisherId: developments.cataloguePublisherId })
     .from(developments)
     .where(eq(developments.id, developmentId))
     .limit(1);
-  const brandProfileId = Number(development?.brandProfileId || 0);
-  if (!brandProfileId) throw new Error('Development brand profile missing');
+  const cataloguePublisherId = Number(development?.cataloguePublisherId || 0);
+  if (!cataloguePublisherId) throw new Error('Development Catalogue Publisher missing');
 
-  const [existingPartnership] = await db
-    .select({ id: distributionBrandPartnerships.id })
-    .from(distributionBrandPartnerships)
-    .where(eq(distributionBrandPartnerships.brandProfileId, brandProfileId))
-    .limit(1);
+  const partnership = await upsertBrandPartnership(db, {
+    cataloguePublisherId,
+    status: 'active',
+    actorUserId,
+  });
+  const brandPartnershipId = Number(partnership.id);
+  createdState.brandPartnershipIds.push(brandPartnershipId);
 
-  let brandPartnershipId = Number(existingPartnership?.id || 0);
-  if (!brandPartnershipId) {
-    const [partnershipInsert] = await db.insert(distributionBrandPartnerships).values({
-      brandProfileId,
-      status: 'active',
-      partneredAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    });
-    brandPartnershipId = Number((partnershipInsert as any).insertId || 0);
-    createdState.brandPartnershipIds.push(brandPartnershipId);
-  }
-
-  const [existingAccess] = await db
-    .select({ id: distributionDevelopmentAccess.id })
-    .from(distributionDevelopmentAccess)
-    .where(
-      and(
-        eq(distributionDevelopmentAccess.developmentId, developmentId),
-        eq(distributionDevelopmentAccess.brandPartnershipId, brandPartnershipId),
-      ),
-    )
-    .limit(1);
-
-  const existingAccessId = Number(existingAccess?.id || 0);
-  if (existingAccessId) return existingAccessId;
-
-  const [accessInsert] = await db.insert(distributionDevelopmentAccess).values({
+  const access = await upsertDevelopmentAccess(db, {
     developmentId,
     brandPartnershipId,
-    brandProfileId,
+    cataloguePublisherId,
     status: 'included',
-    submissionAllowed: 1,
-    excludedByMandate: 0,
-    excludedByExclusivity: 0,
-    includedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+    submissionAllowed: true,
+    excludedByMandate: false,
+    excludedByExclusivity: false,
+    actorUserId,
   });
-  const accessId = Number((accessInsert as any).insertId || 0);
+  const accessId = Number(access.id);
   createdState.accessIds.push(accessId);
   return accessId;
 }
@@ -397,11 +359,11 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
-    const brandProfileIds = uniqueIds(createdState.brandProfileIds);
-    if (brandProfileIds.length) {
+    const cataloguePublisherIds = uniqueIds(createdState.cataloguePublisherIds);
+    if (cataloguePublisherIds.length) {
       await db
-        .delete(developerBrandProfiles)
-        .where(inArray(developerBrandProfiles.id, brandProfileIds));
+        .delete(cataloguePublishers)
+        .where(inArray(cataloguePublishers.id, cataloguePublisherIds));
     }
 
     const userIds = uniqueIds(createdState.userIds);
@@ -410,7 +372,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     }
 
     createdState.userIds = [];
-    createdState.brandProfileIds = [];
+    createdState.cataloguePublisherIds = [];
     createdState.developmentIds = [];
     createdState.unitTypeIds = [];
     createdState.programIds = [];
@@ -425,6 +387,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
   it('blocks submission when program is inactive or referrals are disabled', async () => {
     const actorUserId = await insertUser('agent');
+    const managerUserId = await insertUser('agent');
     const caller = createCaller(actorUserId, 'agent');
 
     const inactiveDevelopmentId = await insertDevelopment(`Inactive Program ${Date.now()}`);
@@ -433,6 +396,14 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: false,
       isReferralEnabled: true,
     });
+    await insertManagerAssignment({
+      developmentId: inactiveDevelopmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
+    });
+    await insertRequiredDocument(inactiveDevelopmentId);
+    await insertNetworkAccess(inactiveDevelopmentId, actorUserId);
 
     const inactiveError = (await caller.distribution.partner
       .submitReferral({
@@ -458,6 +429,14 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
       isReferralEnabled: false,
     });
+    await insertManagerAssignment({
+      developmentId: disabledDevelopmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
+    });
+    await insertRequiredDocument(disabledDevelopmentId);
+    await insertNetworkAccess(disabledDevelopmentId, actorUserId);
 
     const disabledError = (await caller.distribution.partner
       .submitReferral({
@@ -497,7 +476,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorUserId);
 
     const result = await caller.distribution.partner.submitReferral({
       developmentId,
@@ -531,7 +510,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     const documentId = await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorUserId);
 
     const submitted = await caller.distribution.partner.submitReferral({
       developmentId,
@@ -597,7 +576,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorUserId);
     await insertManagerAssignment({
       developmentId,
       managerUserId: primaryManagerId,
@@ -605,7 +584,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorUserId);
 
     const result = await caller.distribution.partner.submitReferral({
       developmentId,
@@ -635,7 +614,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorUserId);
 
     const clientReference = `CLIENT-REF-${Date.now()}`;
     const first = await caller.distribution.partner.submitReferral({
@@ -674,7 +653,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorUserId);
 
     const assessment = await insertAssessment({
       actorUserId: ownerUserId,
@@ -715,7 +694,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorUserId);
 
     const assessment = await insertAssessment({
       actorUserId,
@@ -801,7 +780,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isActive: true,
     });
     await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId);
+    await insertNetworkAccess(developmentId, actorAUserId);
 
     const actorADeal = await callerA.distribution.partner.submitReferral({
       developmentId,

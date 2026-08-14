@@ -137,6 +137,7 @@ export function deriveInventoryState(input: {
   developmentAccessStatus: DevelopmentAccessStatus | null;
   submissionAllowed: boolean;
   readinessReady: boolean;
+  programActive: boolean;
   referralEnabled: boolean;
   excludedByMandate: boolean;
   excludedByExclusivity: boolean;
@@ -162,7 +163,7 @@ export function deriveInventoryState(input: {
   if (
     input.developmentAccessStatus === 'included' &&
     input.readinessReady &&
-    (!input.submissionAllowed || !input.referralEnabled)
+    (!input.programActive || !input.submissionAllowed || !input.referralEnabled)
   ) {
     return 'ready';
   }
@@ -170,6 +171,7 @@ export function deriveInventoryState(input: {
   if (
     input.developmentAccessStatus === 'included' &&
     input.readinessReady &&
+    input.programActive &&
     input.submissionAllowed &&
     input.referralEnabled
   ) {
@@ -587,6 +589,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     developmentAccessStatus,
     submissionAllowed,
     readinessReady: readiness.canEnable,
+    programActive,
     referralEnabled,
     excludedByMandate,
     excludedByExclusivity,
