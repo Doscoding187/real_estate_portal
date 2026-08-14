@@ -7,16 +7,13 @@ import { describe, expect } from 'vitest';
 import { it, fc } from '@fast-check/vitest';
 import { developmentService } from '../developmentService';
 import { db } from '../../db';
-import {
-  developers,
-  developments,
-  developmentPhases,
-  developerSubscriptions,
-  developerSubscriptionLimits,
-  developerSubscriptionUsage,
-  users,
-} from '../../../drizzle/schema';
+import { developments, developmentPhases, users } from '../../../drizzle/schema';
 import { eq, inArray } from 'drizzle-orm';
+import {
+  createDeveloperTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../../test-utils/developerTestContext';
 
 describe('Development Service - Property Tests', { timeout: 30000 }, () => {
   const skipTests = !process.env.DATABASE_URL;
@@ -29,7 +26,7 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
     throw new Error('Unable to read insertId from insert result');
   };
 
-  // Helper function to create a test developer
+  // Create the same canonical identity context used by Developer runtime authorization.
   async function createTestDeveloper(userId: number) {
     const userInsert = await db.insert(users).values({
       email: `dev-service-user-${userId}-${Date.now()}-${Math.floor(Math.random() * 10000)}@example.com`,
@@ -39,70 +36,30 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
     });
     const createdUserId = getInsertId(userInsert);
 
-    const result = await db.insert(developers).values({
+    return createDeveloperTestContext({
       userId: createdUserId,
       name: `Test Developer ${userId}`,
       email: `dev-service-dev-${userId}-${Date.now()}-${Math.floor(Math.random() * 10000)}@example.com`,
-      category: 'residential',
-      isVerified: 1,
-      status: 'approved',
     });
-
-    // MySQL specific: Get inserted ID and fetch the record
-    const insertId = getInsertId(result);
-    const [developer] = await db.select().from(developers).where(eq(developers.id, insertId));
-
-    if (!developer) {
-      throw new Error(`Failed to create test developer with ID ${insertId}`);
-    }
-
-    return developer;
   }
 
   // Helper function to cleanup test data
-  async function cleanupTestData(developerId: number) {
-    const [developer] = await db.select().from(developers).where(eq(developers.id, developerId));
-    if (!developer) {
-      return;
-    }
-
-    const developerRows = await db
-      .select({ id: developers.id })
-      .from(developers)
-      .where(eq(developers.userId, developer.userId));
-    const developerIds = developerRows.map(row => row.id);
-
-    const subscriptionRows = await db
-      .select({ id: developerSubscriptions.id })
-      .from(developerSubscriptions)
-      .where(inArray(developerSubscriptions.developerId, developerIds));
-    const subscriptionIds = subscriptionRows.map(row => row.id);
-
-    if (subscriptionIds.length > 0) {
-      await db
-        .delete(developerSubscriptionUsage)
-        .where(inArray(developerSubscriptionUsage.subscriptionId, subscriptionIds));
-      await db
-        .delete(developerSubscriptionLimits)
-        .where(inArray(developerSubscriptionLimits.subscriptionId, subscriptionIds));
-      await db
-        .delete(developerSubscriptions)
-        .where(inArray(developerSubscriptions.id, subscriptionIds));
-    }
-
+  async function cleanupTestData(context: DeveloperTestContext) {
     const devs = await db
       .select({ id: developments.id })
       .from(developments)
-      .where(inArray(developments.developerId, developerIds));
+      .where(eq(developments.cataloguePublisherId, context.cataloguePublisherId));
     const developmentIds = devs.map(dev => dev.id);
 
     if (developmentIds.length > 0) {
-      await db.delete(developmentPhases).where(inArray(developmentPhases.developmentId, developmentIds));
+      await db
+        .delete(developmentPhases)
+        .where(inArray(developmentPhases.developmentId, developmentIds));
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
-    await db.delete(developers).where(inArray(developers.id, developerIds));
-    await db.delete(users).where(eq(users.id, developer.userId));
+    await deleteDeveloperTestContext(context);
+    await db.delete(users).where(eq(users.id, context.userId));
   }
 
   /**
@@ -125,12 +82,12 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
     // TODO(test-infra): Run development service property tests only when DATABASE_URL is configured.
     if (skipTests) return;
 
-    let developerId: number | null = null;
+    let developerContext: DeveloperTestContext | null = null;
 
     try {
       // Create a test developer
       const developer = await createTestDeveloper(userId);
-      developerId = developer.id;
+      developerContext = developer;
 
       // Create development with amenities
       const development = await developmentService.createDevelopment(developer.userId, {
@@ -163,8 +120,8 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       });
     } finally {
       // Cleanup
-      if (developerId) {
-        await cleanupTestData(developerId);
+      if (developerContext) {
+        await cleanupTestData(developerContext);
       }
     }
   });
@@ -187,12 +144,12 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
   )('Property 35: Phase status transitions are valid', async (userId, newStatus) => {
     if (skipTests) return;
 
-    let developerId: number | null = null;
+    let developerContext: DeveloperTestContext | null = null;
 
     try {
       // Create a test developer
       const developer = await createTestDeveloper(userId);
-      developerId = developer.id;
+      developerContext = developer;
 
       // Create development
       const development = await developmentService.createDevelopment(developer.userId, {
@@ -226,8 +183,8 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       expect(updatedPhase.phaseNumber).toBe(phase.phaseNumber);
     } finally {
       // Cleanup
-      if (developerId) {
-        await cleanupTestData(developerId);
+      if (developerContext) {
+        await cleanupTestData(developerContext);
       }
     }
   });
@@ -240,12 +197,12 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
     async userId => {
       if (skipTests) return;
 
-      let developerId: number | null = null;
+      let developerContext: DeveloperTestContext | null = null;
 
       try {
         // Create a test developer
         const developer = await createTestDeveloper(userId);
-        developerId = developer.id;
+        developerContext = developer;
 
         // Create development
         const development = await developmentService.createDevelopment(developer.userId, {
@@ -268,8 +225,8 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
         expect(validStatuses).toContain(phase.status);
       } finally {
         // Cleanup
-        if (developerId) {
-          await cleanupTestData(developerId);
+        if (developerContext) {
+          await cleanupTestData(developerContext);
         }
       }
     },
@@ -296,21 +253,19 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
           city: data.city.trim().length > 0 ? data.city.trim() : 'Test City',
           province: data.province.trim().length > 0 ? data.province.trim() : 'Test Province',
           description:
-            data.description && data.description.trim().length > 0
-              ? data.description.trim()
-              : null,
+            data.description && data.description.trim().length > 0 ? data.description.trim() : null,
         })),
     ],
     { numRuns: 20 },
   )('Development profile captures all required fields', async (userId, developmentData) => {
     if (skipTests) return;
 
-    let developerId: number | null = null;
+    let developerContext: DeveloperTestContext | null = null;
 
     try {
       // Create a test developer
       const developer = await createTestDeveloper(userId);
-      developerId = developer.id;
+      developerContext = developer;
 
       // Create development
       const development = await developmentService.createDevelopment(
@@ -331,13 +286,13 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
 
       // Property: System fields should be set
       expect(development.id).toBeDefined();
-      expect(development.developerId).toBe(developer.id);
+      expect(development.cataloguePublisherId).toBe(developer.cataloguePublisherId);
       expect(development.createdAt).toBeDefined();
       expect(development.updatedAt).toBeDefined();
     } finally {
       // Cleanup
-      if (developerId) {
-        await cleanupTestData(developerId);
+      if (developerContext) {
+        await cleanupTestData(developerContext);
       }
     }
   });

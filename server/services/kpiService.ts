@@ -62,10 +62,10 @@ function isCacheValid(lastCalculation: Date | null): boolean {
 }
 
 /**
- * Calculate total leads for a developer in a time range
+ * Calculate total leads for a Catalogue Publisher in a time range
  */
 async function calculateTotalLeads(
-  developerId: number,
+  cataloguePublisherId: number,
   timeRange: TimeRange,
 ): Promise<{ current: number; previous: number }> {
   // Query leads joined with developments
@@ -75,7 +75,7 @@ async function calculateTotalLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
       ),
@@ -87,7 +87,7 @@ async function calculateTotalLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
       ),
@@ -103,7 +103,7 @@ async function calculateTotalLeads(
  * Calculate qualified leads percentage
  */
 async function calculateQualifiedLeads(
-  developerId: number,
+  cataloguePublisherId: number,
   timeRange: TimeRange,
 ): Promise<{ current: number; previous: number }> {
   const currentQualified = await db
@@ -112,7 +112,7 @@ async function calculateQualifiedLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -125,7 +125,7 @@ async function calculateQualifiedLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -142,7 +142,7 @@ async function calculateQualifiedLeads(
  * Calculate conversion rate (leads to sales)
  */
 async function calculateConversionRate(
-  developerId: number,
+  cataloguePublisherId: number,
   timeRange: TimeRange,
 ): Promise<{ current: number; previous: number }> {
   const currentConverted = await db
@@ -151,7 +151,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         eq(leads.status, 'converted'),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -164,7 +164,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
       ),
@@ -176,7 +176,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         eq(leads.status, 'converted'),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -189,7 +189,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
       ),
@@ -215,7 +215,7 @@ async function calculateConversionRate(
  * Calculate units sold vs available
  */
 async function calculateUnitsMetrics(
-  developerId: number,
+  cataloguePublisherId: number,
 ): Promise<{ sold: number; available: number }> {
   try {
     const units = await db
@@ -228,7 +228,9 @@ async function calculateUnitsMetrics(
       })
       .from(unitTypes)
       .innerJoin(developments, eq(developments.id, unitTypes.developmentId))
-      .where(and(eq(developments.cataloguePublisherId, developerId), eq(unitTypes.isActive, 1)));
+      .where(
+        and(eq(developments.cataloguePublisherId, cataloguePublisherId), eq(unitTypes.isActive, 1)),
+      );
 
     return {
       sold: Number(units[0]?.sold || 0),
@@ -245,7 +247,7 @@ async function calculateUnitsMetrics(
  * Calculate affordability match percentage
  */
 async function calculateAffordabilityMatch(
-  developerId: number,
+  cataloguePublisherId: number,
   timeRange: TimeRange,
 ): Promise<{ current: number; previous: number }> {
   // Calculate percentage of leads that have affordability match
@@ -255,7 +257,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         gte(leads.qualificationScore, 80),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -268,7 +270,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         sql`${leads.qualificationScore} IS NOT NULL`,
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -281,7 +283,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         gte(leads.qualificationScore, 80),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -294,7 +296,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.cataloguePublisherId, developerId),
+        eq(developments.cataloguePublisherId, cataloguePublisherId),
         sql`${leads.qualificationScore} IS NOT NULL`,
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -322,15 +324,15 @@ async function calculateAffordabilityMatch(
  * Based on: lead quality, conversion rate, response time, engagement
  */
 async function calculateMarketingScore(
-  developerId: number,
+  cataloguePublisherId: number,
   timeRange: TimeRange,
 ): Promise<{ current: number; previous: number }> {
   // Simplified scoring algorithm (0-100)
   // In production, this would be more sophisticated
 
-  const conversionRate = await calculateConversionRate(developerId, timeRange);
-  const qualifiedLeads = await calculateQualifiedLeads(developerId, timeRange);
-  const totalLeads = await calculateTotalLeads(developerId, timeRange);
+  const conversionRate = await calculateConversionRate(cataloguePublisherId, timeRange);
+  const qualifiedLeads = await calculateQualifiedLeads(cataloguePublisherId, timeRange);
+  const totalLeads = await calculateTotalLeads(cataloguePublisherId, timeRange);
 
   const currentQualifiedRate =
     totalLeads.current > 0 ? (qualifiedLeads.current / totalLeads.current) * 100 : 0;
@@ -357,10 +359,10 @@ function calculateTrend(current: number, previous: number): number {
 }
 
 /**
- * Calculate all KPIs for a developer
+ * Calculate all KPIs for a Catalogue Publisher
  */
 export async function calculateKPIs(
-  developerId: number,
+  cataloguePublisherId: number,
   timeRange: '7d' | '30d' | '90d' = '30d',
 ): Promise<DeveloperKPIs> {
   const range = getTimeRange(timeRange);
@@ -374,12 +376,12 @@ export async function calculateKPIs(
     affordabilityMatch,
     marketingScore,
   ] = await Promise.all([
-    calculateTotalLeads(developerId, range),
-    calculateQualifiedLeads(developerId, range),
-    calculateConversionRate(developerId, range),
-    calculateUnitsMetrics(developerId),
-    calculateAffordabilityMatch(developerId, range),
-    calculateMarketingScore(developerId, range),
+    calculateTotalLeads(cataloguePublisherId, range),
+    calculateQualifiedLeads(cataloguePublisherId, range),
+    calculateConversionRate(cataloguePublisherId, range),
+    calculateUnitsMetrics(cataloguePublisherId),
+    calculateAffordabilityMatch(cataloguePublisherId, range),
+    calculateMarketingScore(cataloguePublisherId, range),
   ]);
 
   return {
@@ -408,7 +410,7 @@ export async function calculateKPIs(
  * Get KPIs with caching
  */
 export async function getKPIsWithCache(
-  developerId: number,
+  cataloguePublisherId: number,
   timeRange: '7d' | '30d' | '90d' = '30d',
   forceRefresh: boolean = false,
 ): Promise<DeveloperKPIs> {
@@ -416,12 +418,12 @@ export async function getKPIsWithCache(
   // Until a publisher-scoped read projection exists, calculate from canonical
   // development/lead/unit facts and let the caller cache at the query layer.
   void forceRefresh;
-  return calculateKPIs(developerId, timeRange);
+  return calculateKPIs(cataloguePublisherId, timeRange);
 }
 
 /**
  * Invalidate KPI cache for a developer
  */
-export async function invalidateKPICache(developerId: number): Promise<void> {
-  void developerId;
+export async function invalidateKPICache(cataloguePublisherId: number): Promise<void> {
+  void cataloguePublisherId;
 }

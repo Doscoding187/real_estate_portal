@@ -107,7 +107,6 @@ async function insertDevelopment(name: string) {
     developmentType: 'residential',
     city: 'Johannesburg',
     province: 'Gauteng',
-    developerId: null,
     cataloguePublisherId,
     transactionType: 'for_sale',
     isPublished: 1,
