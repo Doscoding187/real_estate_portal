@@ -191,7 +191,10 @@ acknowledgement between targets or operations.
 - Apply records a durable running attempt before statements. MySQL/TiDB DDL is
   not described as transactionally rolled back.
 - Running, failed, or blocked attempts stop ordinary future application until
-  an explicitly reviewed recovery workflow exists.
+  an explicitly reviewed recovery workflow exists. A reviewed migration that
+  failed before its first statement may only be replaced through
+  `db:migration-recovery:plan` followed by an exact-plan-digest
+  `db:migration-recovery:apply`; never retry or edit its ledger row manually.
 - Never edit a ledger, rewrite an applied migration, delete attempt evidence,
   silently retry ambiguous DDL, or introduce generic down migrations.
 

@@ -89,8 +89,10 @@ describe('durable Database Authority migration guard', () => {
       requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY, COMMERCIAL_INVOICE_TERM_CAPABILITY],
     });
 
-    expect(result.document.expectedHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(result.orderedMigrations).toHaveLength(8);
+    expect(result.document.expectedHead).toBe(
+      '0018_distribution_access_publisher_authority.sql',
+    );
+    expect(result.orderedMigrations).toHaveLength(19);
   });
 
   it('rejects an otherwise valid prefix when the database is behind the manifest head', async () => {

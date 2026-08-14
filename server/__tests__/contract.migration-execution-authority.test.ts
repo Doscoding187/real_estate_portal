@@ -8,6 +8,8 @@ const APPROVED_OPERATIONAL_ENTRYPOINTS = new Set([
   'db:migrate',
   'db:migrate:plan',
   'db:migrate:apply',
+  'db:migration-recovery:plan',
+  'db:migration-recovery:apply',
   'db:migrate:test',
   'db:migrate:local',
   'db:release:plan',
@@ -90,7 +92,14 @@ function resolvePackageScript(
         : null;
     const authorityCliUsesMigrationRunner =
       authorityCliCommand !== null &&
-      ['migration:plan', 'migration:apply', 'release:plan', 'release:apply'].includes(
+      [
+        'migration:plan',
+        'migration:apply',
+        'migration-recovery:plan',
+        'migration-recovery:apply',
+        'release:plan',
+        'release:apply',
+      ].includes(
         authorityCliCommand,
       );
     if (executable !== 'scripts/databaseAuthorityCli.ts' || authorityCliUsesMigrationRunner) {
@@ -347,8 +356,21 @@ describe('migration execution authority', () => {
       '0005_manual_location_without_coordinates.sql',
       '0006_development_supersessions.sql',
       '0007_paid_launch_access_invoice_term.sql',
+      '0008_developer_organisations.sql',
+      '0009_developer_organisation_memberships.sql',
+      '0010_catalogue_publishers.sql',
+      '0011_catalogue_publisher_developments.sql',
+      '0012_catalogue_publisher_properties.sql',
+      '0013_catalogue_publisher_leads.sql',
+      '0014_catalogue_publisher_drafts.sql',
+      '0015_catalogue_publisher_distribution_partnerships.sql',
+      '0016_catalogue_publisher_distribution_access.sql',
+      '0017_distribution_publisher_authority.sql',
+      '0018_distribution_access_publisher_authority.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe(launchAccess?.filename);
+    expect(executionManifest.expectedHead).toBe(
+      '0018_distribution_access_publisher_authority.sql',
+    );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');
@@ -356,7 +378,7 @@ describe('migration execution authority', () => {
     expect(runner).toContain('checksum drift');
     expect(runner).toContain('await acquireMigrationLock(connection, manifest.document.lockName)');
     expect(runner.indexOf('await recordMigrationSuccess(')).toBeGreaterThan(
-      runner.indexOf('await input.connection.execute(statement)'),
+      runner.indexOf('await executeMigrationStatement(input.connection, statement)'),
     );
     expect(runner).toContain('accepted old head');
     expect(runner).toContain('incomplete or failed attempt');

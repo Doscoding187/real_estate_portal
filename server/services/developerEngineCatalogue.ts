@@ -1,15 +1,15 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import type {
-  developerBrandProfiles,
+  cataloguePublishers,
   developmentApprovalQueue,
-  developers,
+  developerOrganisations,
   developments,
   unitTypes,
 } from '../../drizzle/schema';
 
 export type CanonicalDevelopmentRow = InferSelectModel<typeof developments>;
-export type CanonicalDeveloperRow = InferSelectModel<typeof developers>;
-export type CanonicalBrandRow = InferSelectModel<typeof developerBrandProfiles>;
+export type CanonicalOrganisationRow = InferSelectModel<typeof developerOrganisations>;
+export type CanonicalPublisherRow = InferSelectModel<typeof cataloguePublishers>;
 export type CanonicalUnitTypeRow = InferSelectModel<typeof unitTypes>;
 export type CanonicalApprovalHistoryRow = InferSelectModel<typeof developmentApprovalQueue>;
 
@@ -22,19 +22,21 @@ export type CanonicalDevelopmentCatalogue = {
   development: Pick<
     CanonicalDevelopmentRow,
     | 'id'
-    | 'developerId'
-    | 'developerBrandProfileId'
-    | 'devOwnerType'
+    | 'cataloguePublisherId'
     | 'developmentType'
     | 'transactionType'
     | 'isPublished'
     | 'approvalStatus'
   >;
-  brand: Pick<
-    CanonicalBrandRow,
-    'id' | 'ownerType' | 'linkedDeveloperAccountId' | 'isVisible' | 'sourceAttribution'
+  publisher: Pick<
+    CanonicalPublisherRow,
+    | 'id'
+    | 'authorityKind'
+    | 'developerOrganisationId'
+    | 'isVisible'
+    | 'sourceAttribution'
   > | null;
-  developer: Pick<CanonicalDeveloperRow, 'id' | 'status'> | null;
+  organisation: Pick<CanonicalOrganisationRow, 'id' | 'status'> | null;
   unitTypes: Pick<CanonicalUnitTypeRow, 'id' | 'developmentId' | 'isActive'>[];
   /** Optional SQL aggregate used when a consumer does not need full unit rows. */
   activeUnitTypeCount?: number;

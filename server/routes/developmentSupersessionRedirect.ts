@@ -18,7 +18,7 @@ router.get('/development/:routeKey', async (req, res, next) => {
     // The origin resolves redirects dynamically so reversal remains possible;
     // cached/materialized public projections are invalidated after cutover.
     res.setHeader('Cache-Control', 'no-store');
-    return res.redirect(308, target);
+    return res.redirect(307, target);
   } catch (error) {
     return next(error);
   }

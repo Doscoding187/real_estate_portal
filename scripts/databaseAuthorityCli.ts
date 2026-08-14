@@ -56,6 +56,7 @@ import {
   type DatabaseOperation,
 } from '../server/_core/databaseAuthority/types';
 import { loadAndValidateMigrationManifest } from '../server/migrations/migrationManifest';
+import { runRejectedZeroStatementRecovery } from '../server/migrations/recoverRejectedZeroStatementMigration';
 import { runSqlMigrations } from '../server/migrations/runSqlMigrations';
 
 type Command =
@@ -66,6 +67,8 @@ type Command =
   | 'worktree:ack'
   | 'migration:plan'
   | 'migration:apply'
+  | 'migration-recovery:plan'
+  | 'migration-recovery:apply'
   | 'release:plan'
   | 'release:apply'
   | 'release-reference:plan'
@@ -90,6 +93,12 @@ function option(name: string): string | undefined {
     .slice(3)
     .find(value => value.startsWith(prefix))
     ?.slice(prefix.length);
+}
+
+function requiredOption(name: string): string {
+  const value = option(name)?.trim();
+  if (!value) throw new Error(`Missing required --${name}=... option.`);
+  return value;
 }
 
 function operationOption(fallback: DatabaseOperation): DatabaseOperation {
@@ -185,6 +194,26 @@ async function run(command: Command): Promise<void> {
     const acknowledgement = option('ack');
     const decision = authorizationFor(authority, acknowledgement);
     print(await disposeOwnedWorktreeDatabase({ authority, decision }));
+    return;
+  }
+
+  if (
+    command === 'migration-recovery:plan' ||
+    command === 'migration-recovery:apply'
+  ) {
+    const planOnly = command.endsWith(':plan');
+    const authority = authorityFor(planOnly ? 'migration-plan' : 'migration-apply');
+    const decision = authorizationFor(authority);
+    const result = await runRejectedZeroStatementRecovery({
+      mode: planOnly ? 'plan' : 'apply',
+      authority,
+      authorization: decision,
+      attemptId: requiredOption('attempt-id'),
+      approvalReference: requiredOption('approval-reference'),
+      approvalActor: requiredOption('approval-actor'),
+      expectedPlanDigest: planOnly ? undefined : requiredOption('plan-digest'),
+    });
+    print(result);
     return;
   }
 
@@ -371,6 +400,8 @@ const commands = new Set<Command>([
   'worktree:ack',
   'migration:plan',
   'migration:apply',
+  'migration-recovery:plan',
+  'migration-recovery:apply',
   'release:plan',
   'release:apply',
   'release-reference:plan',

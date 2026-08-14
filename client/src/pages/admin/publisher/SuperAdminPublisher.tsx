@@ -15,11 +15,10 @@ import {
   BarChart3,
   LockKeyhole,
   Edit,
-  Trash2,
+  EyeOff,
   Sparkles,
 } from 'lucide-react';
-import { EditBrandProfileDialog } from '@/components/admin/publisher/EditBrandProfileDialog';
-import { LinkSubscriberDialog } from '@/components/admin/publisher/LinkSubscriberDialog';
+import { EditCataloguePublisherDialog } from '@/components/admin/publisher/EditCataloguePublisherDialog';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -34,37 +33,32 @@ const PublisherContent: React.FC = () => {
   const { isContextSet, selectedBrand, setSelectedBrandId } = useDeveloperContext();
   const [activeTab, setActiveTab] = useState('developments');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const utils = trpc.useUtils();
 
   // Fetch lead count for badge
   const selectedBrandId = selectedBrand?.id;
-  const { data: leads } = trpc.superAdminPublisher.getBrandLeads.useQuery(
-    { brandProfileId: selectedBrandId ?? 0, limit: 100 },
+  const { data: leads } = trpc.superAdminPublisher.getPublisherLeads.useQuery(
+    { cataloguePublisherId: selectedBrandId ?? 0, limit: 100 },
     { enabled: !!selectedBrandId },
   );
 
-  const deleteMutation = trpc.superAdminPublisher.deleteBrandProfile.useMutation({
-    onSuccess: data => {
-      toast.success(
-        data.mode === 'soft'
-          ? 'Brand profile archived (soft delete)'
-          : 'Brand profile permanently deleted',
-      );
-      utils.superAdminPublisher.listBrandProfiles.invalidate();
+  const hideMutation = trpc.superAdminPublisher.hidePublisher.useMutation({
+    onSuccess: () => {
+      toast.success('Catalogue Publisher hidden from public discovery');
+      utils.superAdminPublisher.listPublishers.invalidate();
       setSelectedBrandId(null); // Clear context
     },
-    onError: error => toast.error(error.message || 'Failed to delete profile'),
+    onError: error => toast.error(error.message || 'Failed to hide Catalogue Publisher'),
   });
 
-  const handleDelete = () => {
+  const handleHide = () => {
     if (!selectedBrand) return;
     if (
       confirm(
-        `Are you sure you want to delete "${selectedBrand.brandName}"? This action cannot be undone.`,
+        `Hide "${selectedBrand.brandName}" from public discovery? Its identity and history will be preserved.`,
       )
     ) {
-      deleteMutation.mutate({ brandProfileId: selectedBrand.id });
+      hideMutation.mutate({ cataloguePublisherId: selectedBrand.id });
     }
   };
 
@@ -78,7 +72,7 @@ const PublisherContent: React.FC = () => {
           <h2 className="text-2xl font-bold tracking-tight">Select a Developer Brand</h2>
           <p className="text-muted-foreground">
             To start emulating workflows, publishing properties, or viewing leads, please select a
-            developer brand profile from the selector above.
+            developer Catalogue Publisher from the selector above.
           </p>
         </div>
         <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg max-w-lg text-sm text-orange-800">
@@ -101,16 +95,10 @@ const PublisherContent: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {selectedBrand && (
         <>
-          <EditBrandProfileDialog
+          <EditCataloguePublisherDialog
             open={isEditDialogOpen}
             setOpen={setIsEditDialogOpen}
             brandData={selectedBrand}
-          />
-          <LinkSubscriberDialog
-            open={isLinkDialogOpen}
-            setOpen={setIsLinkDialogOpen}
-            brandProfile={selectedBrand}
-            onSuccess={() => utils.superAdminPublisher.listBrandProfiles.invalidate()}
           />
         </>
       )}
@@ -190,12 +178,12 @@ const PublisherContent: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
+                onClick={handleHide}
+                disabled={hideMutation.isPending}
                 className="h-9 gap-2 px-4 bg-white border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:shadow-md transition-all duration-200"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span className="font-medium">Delete</span>
+                <EyeOff className="w-3.5 h-3.5" />
+                <span className="font-medium">Hide</span>
               </Button>
             </div>
           </div>
@@ -219,7 +207,7 @@ const PublisherContent: React.FC = () => {
 
 export const SuperAdminPublisher: React.FC = () => {
   // Fetch global stats for quick stats bar
-  const { data: allBrands } = trpc.superAdminPublisher.listBrandProfiles.useQuery({});
+  const { data: allBrands } = trpc.superAdminPublisher.listPublishers.useQuery({});
   const { data: globalMetrics } = trpc.superAdminPublisher.getGlobalMetrics.useQuery(undefined, {
     enabled: true,
   });
@@ -246,7 +234,7 @@ export const SuperAdminPublisher: React.FC = () => {
                     </span>
                   </h1>
                   <p className="text-slate-600 max-w-3xl text-lg leading-relaxed">
-                    Browse and edit all developments by province, or select a brand profile to
+                    Browse and edit all developments by province, or select a Catalogue Publisher to
                     emulate developer workflows.
                   </p>
                 </div>
@@ -289,9 +277,10 @@ export const SuperAdminPublisher: React.FC = () => {
           {/* Brand Context Section */}
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-semibold mb-2">Brand Profile Mode</h2>
+              <h2 className="text-lg font-semibold mb-2">Catalogue Publisher Mode</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Select a brand profile to create new developments, manage leads, and view metrics.
+                Select a Catalogue Publisher to create new developments, manage leads, and view
+                metrics.
               </p>
             </div>
 

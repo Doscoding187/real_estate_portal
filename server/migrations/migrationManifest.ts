@@ -2,11 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 
-export type MigrationKind =
-  | 'establishment'
-  | 'ddl'
-  | 'transactional-data'
-  | 'exceptional';
+export type MigrationKind = 'establishment' | 'ddl' | 'transactional-data' | 'exceptional';
 
 export type MigrationManifestEntry = {
   sequence: number;
@@ -53,12 +49,7 @@ export class MigrationManifestError extends Error {
 
 const MIGRATION_FILENAME = /^(\d{4})_[a-z0-9]+(?:_[a-z0-9]+)*\.sql$/;
 const SHA256 = /^[a-f0-9]{64}$/;
-const KINDS = new Set<MigrationKind>([
-  'establishment',
-  'ddl',
-  'transactional-data',
-  'exceptional',
-]);
+const KINDS = new Set<MigrationKind>(['establishment', 'ddl', 'transactional-data', 'exceptional']);
 const STATEMENT_POLICIES = new Set([
   'immutable-baseline',
   'single-ddl',
@@ -154,6 +145,95 @@ export function parseSqlStatements(sql: string): string[] {
   return statements;
 }
 
+function sqlCodeOnly(sql: string): string {
+  let output = '';
+  let quote: "'" | '"' | '`' | null = null;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < sql.length; index += 1) {
+    const character = sql[index];
+    const next = sql[index + 1];
+    if (lineComment) {
+      if (character === '\n') {
+        lineComment = false;
+        output += '\n';
+      } else {
+        output += ' ';
+      }
+      continue;
+    }
+    if (blockComment) {
+      output += character === '\n' ? '\n' : ' ';
+      if (character === '*' && next === '/') {
+        output += ' ';
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (!quote && character === '/' && next === '*') {
+      output += '  ';
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (!quote && character === '#') {
+      output += ' ';
+      lineComment = true;
+      continue;
+    }
+    if (!quote && character === '-' && next === '-' && /\s/.test(sql[index + 2] ?? ' ')) {
+      output += '  ';
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+    if (quote) {
+      output += character === '\n' ? '\n' : ' ';
+      if (character === '\\' && next) {
+        output += next === '\n' ? '\n' : ' ';
+        index += 1;
+      } else if (character === quote) {
+        if (next === quote && quote !== '`') {
+          output += ' ';
+          index += 1;
+        } else {
+          quote = null;
+        }
+      }
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      output += ' ';
+      continue;
+    }
+    output += character;
+  }
+  return output;
+}
+
+/**
+ * Property Listify deploys the canonical schema to TiDB. Reject MySQL stored
+ * program primitives that TiDB cannot execute before they can enter the
+ * runnable migration lineage.
+ */
+export function assertTidbCompatibleMigrationSql(sql: string): void {
+  const controlSurface = sqlCodeOnly(sql);
+  if (/^\s*delimiter\b/im.test(controlSurface)) {
+    throw new Error('TiDB compatibility guard: DELIMITER directives are unsupported.');
+  }
+  const storedProgram = controlSurface.match(
+    /\b(?:create(?:\s+or\s+replace)?|alter|drop)\s+(?:definer\s*=\s*[^\s]+\s+)?(trigger|procedure|function|event)\b/i,
+  );
+  if (storedProgram) {
+    throw new Error(
+      `TiDB compatibility guard: ${storedProgram[1].toLowerCase()} definitions are unsupported.`,
+    );
+  }
+}
+
 function withoutStringLiterals(statement: string): string {
   let output = '';
   let quote: "'" | '"' | null = null;
@@ -190,6 +270,14 @@ function validateStatementStyle(
   sql: string,
   issues: string[],
 ): number {
+  try {
+    assertTidbCompatibleMigrationSql(sql);
+  } catch (error) {
+    issues.push(
+      `${entry.filename}: ${error instanceof Error ? error.message : 'TiDB-incompatible SQL'}`,
+    );
+    return 0;
+  }
   let statements: string[];
   try {
     statements = parseSqlStatements(sql);
@@ -201,7 +289,8 @@ function validateStatementStyle(
     issues.push(`${entry.filename}: migrations may not be empty.`);
     return 0;
   }
-  const executable = /^(alter|create|drop|update|insert|delete|replace|truncate|rename|set|prepare|execute|deallocate)\b/i;
+  const executable =
+    /^(alter|create|drop|update|insert|delete|replace|truncate|rename|set|prepare|execute|deallocate)\b/i;
   const databaseLifecycle = /^(?:create|alter|drop)\s+(?:database|schema)\b|^use\b/i;
   const identifier = '(?:`[a-zA-Z0-9_$]+`|[a-zA-Z_][a-zA-Z0-9_$]*)';
   const crossSchemaObject = new RegExp(
@@ -227,7 +316,9 @@ function validateStatementStyle(
       entry.filename !== '0000_canonical_launch_baseline.sql' ||
       entry.statementPolicy !== 'immutable-baseline'
     ) {
-      issues.push(`${entry.filename}: establishment authority is reserved for the immutable baseline.`);
+      issues.push(
+        `${entry.filename}: establishment authority is reserved for the immutable baseline.`,
+      );
     }
   } else if (entry.kind === 'ddl') {
     if (entry.statementPolicy !== 'single-ddl' || statements.length !== 1) {
@@ -238,11 +329,15 @@ function validateStatementStyle(
       issues.push(`${entry.filename}: ordinary DDL must be a bounded table or index expansion.`);
     }
     if (/\b(?:drop|truncate|rename|modify|change)\b/i.test(withoutStringLiterals(statement))) {
-      issues.push(`${entry.filename}: destructive or shape-changing DDL requires an approved exceptional migration.`);
+      issues.push(
+        `${entry.filename}: destructive or shape-changing DDL requires an approved exceptional migration.`,
+      );
     }
   } else if (entry.kind === 'transactional-data') {
     if (entry.statementPolicy !== 'transactional-dml') {
-      issues.push(`${entry.filename}: transactional data migration has the wrong statement policy.`);
+      issues.push(
+        `${entry.filename}: transactional data migration has the wrong statement policy.`,
+      );
     }
     if (statements.some(statement => !/^(update|insert|delete|replace)\b/i.test(statement))) {
       issues.push(`${entry.filename}: transactional data migration may contain only DML.`);
@@ -258,13 +353,17 @@ function validateStatementStyle(
 
 function insideDirectory(path: string, directory: string): boolean {
   const relative = path.slice(directory.length);
-  return path === directory || (path.startsWith(directory + sep) && !relative.startsWith(`${sep}..`));
+  return (
+    path === directory || (path.startsWith(directory + sep) && !relative.startsWith(`${sep}..`))
+  );
 }
 
-export function loadAndValidateMigrationManifest(input: {
-  migrationsDirectory?: string;
-  manifestPath?: string;
-} = {}): ValidatedMigrationManifest {
+export function loadAndValidateMigrationManifest(
+  input: {
+    migrationsDirectory?: string;
+    manifestPath?: string;
+  } = {},
+): ValidatedMigrationManifest {
   const migrationsDirectory = realpathSync(
     resolve(input.migrationsDirectory ?? dirname(new URL(import.meta.url).pathname)),
   );
@@ -339,14 +438,18 @@ export function loadAndValidateMigrationManifest(input: {
       const sql = readFileSync(absolutePath, 'utf8');
       const actualChecksum = migrationChecksum(sql);
       if (actualChecksum !== entry.checksum) {
-        issues.push(`${entry.filename}: checksum drift (expected ${entry.checksum}, actual ${actualChecksum}).`);
+        issues.push(
+          `${entry.filename}: checksum drift (expected ${entry.checksum}, actual ${actualChecksum}).`,
+        );
       }
       statementCounts.set(entry.filename, validateStatementStyle(entry, sql, issues));
     }
   }
   for (const [sequence, files] of sequences) {
     if (files.length > 1) {
-      issues.push(`duplicate numeric migration identity ${String(sequence).padStart(4, '0')}: ${files.join(', ')}`);
+      issues.push(
+        `duplicate numeric migration identity ${String(sequence).padStart(4, '0')}: ${files.join(', ')}`,
+      );
     }
   }
 
@@ -395,7 +498,9 @@ export function loadAndValidateMigrationManifest(input: {
   if (heads.length !== 1) {
     issues.push(`manifest must have exactly one head; found ${heads.length}.`);
   } else if (document.expectedHead !== heads[0].filename) {
-    issues.push(`expected head ${document.expectedHead} does not match ancestry head ${heads[0].filename}.`);
+    issues.push(
+      `expected head ${document.expectedHead} does not match ancestry head ${heads[0].filename}.`,
+    );
   }
 
   const expectedSequences = entries.map((_, index) => index);

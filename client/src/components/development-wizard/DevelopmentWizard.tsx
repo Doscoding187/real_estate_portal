@@ -49,8 +49,8 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const urlParams = new URLSearchParams(window.location.search);
   const draftIdFromUrl = urlParams.get('draftId');
   const idFromUrl = urlParams.get('id');
-  const brandProfileId = urlParams.get('brandProfileId')
-    ? parseInt(urlParams.get('brandProfileId')!, 10)
+  const cataloguePublisherId = urlParams.get('cataloguePublisherId')
+    ? parseInt(urlParams.get('cataloguePublisherId')!, 10)
     : undefined;
 
   const editId = parseNumericParam(idFromUrl);
@@ -144,7 +144,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       await saveDraft(async data => {
         const result = await saveDraftMutation.mutateAsync({
           ...(currentDraftId ? { id: currentDraftId } : {}),
-          ...(brandProfileId ? { brandProfileId } : {}),
+          ...(cataloguePublisherId ? { cataloguePublisherId } : {}),
           draftData: data,
         });
         if (result?.id && !currentDraftId) setCurrentDraftId(result.id);
@@ -159,7 +159,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
         saveDraft,
         mutateDraft: input => saveDraftMutation.mutateAsync(input),
         currentDraftId,
-        brandProfileId,
+        cataloguePublisherId,
         setCurrentDraftId,
       });
 
@@ -177,7 +177,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       });
       throw error;
     }
-  }, [brandProfileId, currentDraftId, saveDraft, saveDraftMutation, utils]);
+  }, [cataloguePublisherId, currentDraftId, saveDraft, saveDraftMutation, utils]);
 
   // Save on phase transition (only after hydration)
   const prevPhaseRef = useRef(currentPhase);
@@ -191,19 +191,19 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
   const { context: publisherContext } = usePublisherContext();
-  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.brandProfileId;
+  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.cataloguePublisherId;
   const persistStorageKey = shouldUsePublisherApi
     ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
     : DEVELOPMENT_WIZARD_STORAGE_KEY;
   const persistKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!shouldUsePublisherApi || !publisherContext?.brandProfileId) return;
+    if (!shouldUsePublisherApi || !publisherContext?.cataloguePublisherId) return;
     setListingIdentity({
       identityType: 'brand',
-      developerBrandProfileId: publisherContext.brandProfileId,
+      cataloguePublisherId: publisherContext.cataloguePublisherId,
     });
-  }, [shouldUsePublisherApi, publisherContext?.brandProfileId, setListingIdentity]);
+  }, [shouldUsePublisherApi, publisherContext?.cataloguePublisherId, setListingIdentity]);
 
   // Isolate persisted wizard state between publisher-emulator and real-developer flows.
   useEffect(() => {
@@ -261,7 +261,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     error: publisherLoadError,
   } = trpc.superAdminPublisher.getDevelopmentById.useQuery(
     {
-      brandProfileId: publisherContext?.brandProfileId ?? -1,
+      cataloguePublisherId: publisherContext?.cataloguePublisherId ?? -1,
       developmentId: editId ?? -1,
     },
     {

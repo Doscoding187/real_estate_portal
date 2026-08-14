@@ -19,8 +19,8 @@ const PublisherLeads: React.FC = () => {
   const { selectedBrandId } = useDeveloperContext();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: leads, isLoading } = trpc.superAdminPublisher.getBrandLeads.useQuery(
-    { brandProfileId: selectedBrandId!, limit: 100 },
+  const { data: leads, isLoading } = trpc.superAdminPublisher.getPublisherLeads.useQuery(
+    { cataloguePublisherId: selectedBrandId!, limit: 100 },
     { enabled: !!selectedBrandId },
   );
 

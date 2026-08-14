@@ -26,8 +26,8 @@ vi.mock('../prospectJourneyService', () => ({
   recordProspectLeadAction: mockRecordProspectLeadAction,
 }));
 
-vi.mock('../developerBrandProfileService', () => ({
-  developerBrandProfileService: {
+vi.mock('../cataloguePublisherService', () => ({
+  cataloguePublisherService: {
     incrementLeadCountAsync: mockIncrementLeadCountAsync,
   },
 }));
@@ -122,7 +122,7 @@ function existingLead(overrides: Record<string, unknown> = {}) {
     id: 812,
     propertyId: 501,
     developmentId: null,
-    developerBrandProfileId: null,
+    cataloguePublisherId: null,
     agentId: 33,
     agencyId: null,
     name: 'Jane Doe',
@@ -176,9 +176,7 @@ describe('publicLeadCaptureService contract', () => {
         [
           {
             id: 77,
-            developerId: null,
-            developerBrandProfileId: 13,
-            devOwnerType: 'platform',
+            cataloguePublisherId: 13,
             isPublished: 1,
             approvalStatus: 'approved',
             transactionType: 'for_sale',
@@ -190,8 +188,8 @@ describe('publicLeadCaptureService contract', () => {
         [
           {
             id: 13,
-            ownerType: 'platform',
-            linkedDeveloperAccountId: null,
+            authorityKind: 'platform_reference',
+            developerOrganisationId: null,
             isVisible: 1,
             isSubscriber: 0,
             sourceAttribution: 'contract-test-source',
@@ -222,7 +220,7 @@ describe('publicLeadCaptureService contract', () => {
     expect(database.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         developmentId: 77,
-        developerBrandProfileId: 13,
+        cataloguePublisherId: 13,
         unitId: 'unit-1',
         unitName: 'Type A',
         captureRequestId: 'capture-request-001',
@@ -250,9 +248,7 @@ describe('publicLeadCaptureService contract', () => {
         [
           {
             id: 77,
-            developerId: null,
-            developerBrandProfileId: 13,
-            devOwnerType: 'platform',
+            cataloguePublisherId: 13,
             isPublished: 0,
             approvalStatus: 'draft',
             transactionType: 'for_sale',
@@ -264,8 +260,8 @@ describe('publicLeadCaptureService contract', () => {
         [
           {
             id: 13,
-            ownerType: 'platform',
-            linkedDeveloperAccountId: null,
+            authorityKind: 'platform_reference',
+            developerOrganisationId: null,
             isVisible: 1,
             isSubscriber: 0,
             sourceAttribution: 'contract-test-source',
@@ -289,9 +285,7 @@ describe('publicLeadCaptureService contract', () => {
         [
           {
             id: 77,
-            developerId: 7,
-            developerBrandProfileId: 13,
-            devOwnerType: 'developer',
+            cataloguePublisherId: 13,
             isPublished: 1,
             approvalStatus: 'approved',
             transactionType: 'for_sale',
@@ -303,8 +297,8 @@ describe('publicLeadCaptureService contract', () => {
         [
           {
             id: 13,
-            ownerType: 'developer',
-            linkedDeveloperAccountId: 7,
+            authorityKind: 'developer_first_party',
+            developerOrganisationId: 7,
             isVisible: 1,
             isSubscriber: 1,
             sourceAttribution: null,
@@ -338,7 +332,7 @@ describe('publicLeadCaptureService contract', () => {
             id: 501,
             status: 'available',
             developmentId: null,
-            developerBrandProfileId: null,
+            cataloguePublisherId: null,
             agentId: 33,
             // The bridge is deliberately present: public enquiry ownership
             // must still come from the approved property projection.
@@ -375,7 +369,7 @@ describe('publicLeadCaptureService contract', () => {
         propertyId: 501,
         agentId: 33,
         agencyId: null,
-        developerBrandProfileId: null,
+        cataloguePublisherId: null,
       }),
     );
   });
@@ -389,7 +383,7 @@ describe('publicLeadCaptureService contract', () => {
             id: 505,
             status: 'published',
             developmentId: null,
-            developerBrandProfileId: null,
+            cataloguePublisherId: null,
             agentId: 33,
             ownerId: 81,
           },
@@ -439,7 +433,7 @@ describe('publicLeadCaptureService contract', () => {
             id: 502,
             status: 'published',
             developmentId: null,
-            developerBrandProfileId: null,
+            cataloguePublisherId: null,
             agentId: null,
             ownerId: 81,
           },
@@ -489,7 +483,7 @@ describe('publicLeadCaptureService contract', () => {
             id: 503,
             status: 'published',
             developmentId: null,
-            developerBrandProfileId: null,
+            cataloguePublisherId: null,
             agentId: null,
             ownerId: 82,
           },
@@ -529,7 +523,7 @@ describe('publicLeadCaptureService contract', () => {
             id: 504,
             status: 'pending',
             developmentId: null,
-            developerBrandProfileId: null,
+            cataloguePublisherId: null,
             agentId: null,
             ownerId: 82,
           },
@@ -553,7 +547,7 @@ describe('publicLeadCaptureService contract', () => {
             id: 501,
             status: 'available',
             developmentId: null,
-            developerBrandProfileId: null,
+            cataloguePublisherId: null,
             agentId: null,
             sourceListingId: null,
             ownerId: null,
@@ -564,7 +558,7 @@ describe('publicLeadCaptureService contract', () => {
     mockGetDb.mockResolvedValue(database);
 
     await expect(
-      capturePublicLead(baseInput({ propertyId: 501, developerBrandProfileId: 999 })),
+      capturePublicLead(baseInput({ propertyId: 501, cataloguePublisherId: 999 })),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(database.insertValues).not.toHaveBeenCalled();
   });
@@ -578,7 +572,7 @@ describe('publicLeadCaptureService contract', () => {
             id: 501,
             status: 'published',
             developmentId: null,
-            developerBrandProfileId: 13,
+            cataloguePublisherId: 13,
             agentId: null,
             sourceListingId: null,
             ownerId: null,
@@ -587,8 +581,8 @@ describe('publicLeadCaptureService contract', () => {
         [
           {
             id: 13,
-            ownerType: 'platform',
-            linkedDeveloperAccountId: null,
+            authorityKind: 'platform_reference',
+            developerOrganisationId: null,
             isVisible: 1,
             isSubscriber: 0,
           },
@@ -609,7 +603,7 @@ describe('publicLeadCaptureService contract', () => {
     expect(database.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         propertyId: 501,
-        developerBrandProfileId: 13,
+        cataloguePublisherId: 13,
         agentId: null,
         agencyId: null,
       }),
@@ -619,7 +613,7 @@ describe('publicLeadCaptureService contract', () => {
   it('accepts a property replay when canonical development and brand attribution were omitted', async () => {
     mockGetDb.mockResolvedValue(
       makeFakeDatabase({
-        selectResults: [[existingLead({ developmentId: 77, developerBrandProfileId: 13 })]],
+        selectResults: [[existingLead({ developmentId: 77, cataloguePublisherId: 13 })]],
       }),
     );
 
@@ -643,7 +637,7 @@ describe('publicLeadCaptureService contract', () => {
             existingLead({
               propertyId: null,
               developmentId: 77,
-              developerBrandProfileId: 13,
+              cataloguePublisherId: 13,
               agentId: null,
               source: 'development_detail',
               leadSource: 'development_detail_contact',

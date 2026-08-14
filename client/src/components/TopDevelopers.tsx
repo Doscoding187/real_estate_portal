@@ -27,8 +27,8 @@ export function TopDevelopers() {
     return Number.isFinite(num) && num > 0;
   };
 
-  // Fetch visible brand profiles (now enriched with stats)
-  const { data: developers, isLoading } = trpc.brandProfile.listBrandProfiles.useQuery({
+  // Fetch visible Catalogue Publishers (now enriched with stats)
+  const { data: developers, isLoading } = trpc.cataloguePublisher.listPublishers.useQuery({
     isVisible: true,
     limit: 12,
   });

@@ -147,7 +147,7 @@ async function startServer() {
         'Content-Type',
         'Authorization',
         'trpc-batch-mode',
-        'x-operating-as-brand',
+        'x-operating-as-publisher',
         'x-request-id',
       ],
       exposedHeaders: ['Set-Cookie'],

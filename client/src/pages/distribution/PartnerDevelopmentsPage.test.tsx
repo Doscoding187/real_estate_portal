@@ -59,7 +59,7 @@ describe('PartnerDevelopmentsPage', () => {
             priceFrom: 1000000,
             priceTo: 1500000,
             brand: {
-              brandProfileId: 1,
+              cataloguePublisherId: 1,
               brandName: 'Ubuntu Homes',
               publicContactEmail: 'sales@ubuntu.example',
             },

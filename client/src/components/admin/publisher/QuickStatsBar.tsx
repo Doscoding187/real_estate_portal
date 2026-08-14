@@ -23,7 +23,7 @@ export const QuickStatsBar: React.FC<QuickStatsBarProps> = ({
 }) => {
   const stats: QuickStat[] = [
     {
-      label: 'Brand Profiles',
+      label: 'Catalogue Publishers',
       value: totalBrands,
       icon: <Building2 className="w-4 h-4" />,
     },

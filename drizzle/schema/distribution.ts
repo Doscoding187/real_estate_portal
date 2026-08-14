@@ -13,6 +13,7 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { users } from './core';
 import { developments, developerBrandProfiles } from './developments';
+import { cataloguePublishers } from './developerIdentity';
 
 export const DISTRIBUTION_DEAL_STAGE_VALUES = [
   'viewing_scheduled',
@@ -243,9 +244,10 @@ export const distributionBrandPartnerships = mysqlTable(
   'distribution_brand_partnerships',
   {
     id: int().autoincrement().primaryKey(),
-    brandProfileId: int('brand_profile_id')
-      .notNull()
-      .references(() => developerBrandProfiles.id, { onDelete: 'cascade' }),
+    /** Compatibility column. New distribution authority is cataloguePublisherId. */
+    brandProfileId: int('brand_profile_id').references(() => developerBrandProfiles.id, {
+      onDelete: 'cascade',
+    }),
     status: mysqlEnum(
       'status',
       DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES as unknown as [string, ...string[]],
@@ -261,9 +263,14 @@ export const distributionBrandPartnerships = mysqlTable(
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    cataloguePublisherId: int('catalogue_publisher_id').references(
+      () => cataloguePublishers.id,
+      { onDelete: 'restrict' },
+    ),
   },
   table => [
     unique('ux_distribution_brand_partnerships_brand').on(table.brandProfileId),
+    unique('ux_distribution_brand_partnerships_publisher').on(table.cataloguePublisherId),
     index('idx_distribution_brand_partnerships_status').on(table.status),
     index('idx_distribution_brand_partnerships_updated_at').on(table.updatedAt),
   ],
@@ -279,9 +286,10 @@ export const distributionDevelopmentAccess = mysqlTable(
     brandPartnershipId: int('brand_partnership_id')
       .notNull()
       .references(() => distributionBrandPartnerships.id, { onDelete: 'cascade' }),
-    brandProfileId: int('brand_profile_id')
-      .notNull()
-      .references(() => developerBrandProfiles.id, { onDelete: 'cascade' }),
+    /** Compatibility column. New distribution authority is cataloguePublisherId. */
+    brandProfileId: int('brand_profile_id').references(() => developerBrandProfiles.id, {
+      onDelete: 'cascade',
+    }),
     status: mysqlEnum(
       'status',
       DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES as unknown as [string, ...string[]],
@@ -301,6 +309,10 @@ export const distributionDevelopmentAccess = mysqlTable(
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    cataloguePublisherId: int('catalogue_publisher_id').references(
+      () => cataloguePublishers.id,
+      { onDelete: 'restrict' },
+    ),
   },
   table => [
     unique('ux_distribution_development_access_development').on(table.developmentId),
@@ -308,6 +320,7 @@ export const distributionDevelopmentAccess = mysqlTable(
     index('idx_distribution_development_access_brand').on(table.brandProfileId),
     index('idx_distribution_development_access_status').on(table.status),
     index('idx_distribution_development_access_submit').on(table.submissionAllowed),
+    index('idx_distribution_development_access_publisher').on(table.cataloguePublisherId),
   ],
 );
 

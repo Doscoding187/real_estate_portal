@@ -41,8 +41,9 @@ import {
   prospectFavorites,
   scheduledViewings,
   recentlyViewed,
-  developers,
-  developerBrandProfiles,
+  developerOrganisationMemberships,
+  developerOrganisations,
+  cataloguePublishers,
   developments,
   commissions,
   platformSettings,
@@ -106,6 +107,7 @@ import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 // and break circular dependency with locationResolverService
 export { getDb } from './db-connection';
 import { getDb, _db } from './db-connection';
+import { developerIdentityService } from './services/developerIdentityService';
 
 export type User = InferSelectModel<typeof users>;
 export type InsertUser = InferInsertModel<typeof users>;
@@ -943,18 +945,26 @@ export async function searchDevelopers(query: string, limit: number = 10) {
 
   return await db
     .select({
-      id: developers.id,
-      name: developers.name,
-      city: developers.city,
-      province: developers.province,
-      status: developers.status,
-      logo: developers.logo,
+      id: cataloguePublishers.id,
+      developerId: developerOrganisations.id,
+      cataloguePublisherId: cataloguePublishers.id,
+      name: cataloguePublishers.name,
+      city: developerOrganisations.city,
+      province: developerOrganisations.province,
+      status: developerOrganisations.status,
+      logo: cataloguePublishers.logoUrl,
     })
-    .from(developers)
+    .from(cataloguePublishers)
+    .innerJoin(
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+    )
     .where(
       and(
-        sql`LOWER(${developers.name}) LIKE ${`%${query.toLowerCase()}%`}`,
-        eq(developers.status, 'approved' as any), // Only show approved developers
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+        eq(cataloguePublishers.isVisible, 1),
+        eq(developerOrganisations.status, 'approved'),
+        sql`LOWER(${cataloguePublishers.name}) LIKE ${`%${query.toLowerCase()}%`}`,
       ),
     )
     .limit(limit);
@@ -1922,7 +1932,7 @@ export async function getPlatformAnalytics() {
       (SELECT COUNT(*) FROM ${listings} WHERE ${listings.status} IN ('pending_review', 'approved', 'published')) as activePropertyCount,
       (SELECT COUNT(*) FROM ${agents}) as agentCount,
       (SELECT COUNT(*) FROM ${agencies} WHERE ${agencies.subscriptionPlan} != 'free') as paidSubsCount,
-      (SELECT COUNT(*) FROM ${developers}) as developerCount
+      (SELECT COUNT(*) FROM ${cataloguePublishers} WHERE ${cataloguePublishers.authorityKind} = 'developer_first_party') as developerCount
   `);
 
   // Monthly revenue (from commissions) - assume last 30 days
@@ -4234,8 +4244,131 @@ export async function getFeaturedListings(limit: number = 6) {
 // ==================== DEVELOPER FUNCTIONS ====================
 
 /**
- * Create developer profile
+ * Developer identity compatibility boundary.
+ *
+ * These helpers retain the old database-module API for callers that still
+ * need the shape, but all reads and writes resolve through the new
+ * organisation/membership/publisher authority. They never read or write the
+ * retired `developers` or `developer_brand_profiles` tables.
  */
+type DeveloperOrganisationRow = {
+  organisation: typeof developerOrganisations.$inferSelect;
+  publisher: typeof cataloguePublishers.$inferSelect;
+  userId: number | null;
+};
+
+function projectDeveloperOrganisation(row: DeveloperOrganisationRow) {
+  const { organisation, publisher } = row;
+  return {
+    ...organisation,
+    id: organisation.id,
+    userId: row.userId,
+    name: organisation.name,
+    description: organisation.description,
+    logo: publisher.logoUrl ?? organisation.logo,
+    website: publisher.websiteUrl ?? organisation.website,
+    email: publisher.publicContactEmail ?? organisation.email,
+    phone: organisation.phone,
+    address: organisation.address,
+    city: organisation.city,
+    province: organisation.province,
+    category: organisation.category,
+    establishedYear: organisation.establishedYear,
+    specializations: organisation.specializations,
+    isVerified: organisation.isVerified,
+    isTrusted: organisation.isTrusted,
+    status: organisation.status,
+    cataloguePublisherId: publisher.id,
+    publisherId: publisher.id,
+    organisationId: organisation.id,
+    publisher,
+  };
+}
+
+async function getDeveloperOrganisationRow(id: number): Promise<DeveloperOrganisationRow | null> {
+  const database = await getDb();
+  if (!database) return null;
+  const rows = await database
+    .select({
+      organisation: developerOrganisations,
+      publisher: cataloguePublishers,
+      userId: developerOrganisationMemberships.userId,
+    })
+    .from(developerOrganisations)
+    .innerJoin(
+      cataloguePublishers,
+      and(
+        eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+      ),
+    )
+    .leftJoin(
+      developerOrganisationMemberships,
+      and(
+        eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
+        eq(developerOrganisationMemberships.role, 'owner'),
+        eq(developerOrganisationMemberships.status, 'active'),
+      ),
+    )
+    .where(eq(developerOrganisations.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+async function listDeveloperOrganisationRows(
+  status?: 'pending' | 'approved' | 'rejected',
+  filters?: {
+    category?: string;
+    city?: string;
+    province?: string;
+    isVerified?: number;
+    limit?: number;
+    offset?: number;
+  },
+) {
+  const database = await getDb();
+  if (!database) return [];
+  const conditions: SQL[] = [
+    eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+  ];
+  if (status) conditions.push(eq(developerOrganisations.status, status));
+  if (filters?.category) conditions.push(eq(developerOrganisations.category, filters.category as any));
+  if (filters?.city) conditions.push(like(developerOrganisations.city, `%${filters.city}%`));
+  if (filters?.province) conditions.push(like(developerOrganisations.province, `%${filters.province}%`));
+  if (filters?.isVerified !== undefined) {
+    conditions.push(eq(developerOrganisations.isVerified, filters.isVerified));
+  }
+
+  let query = database
+    .select({
+      organisation: developerOrganisations,
+      publisher: cataloguePublishers,
+      userId: developerOrganisationMemberships.userId,
+    })
+    .from(developerOrganisations)
+    .innerJoin(
+      cataloguePublishers,
+      and(
+        eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+      ),
+    )
+    .leftJoin(
+      developerOrganisationMemberships,
+      and(
+        eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
+        eq(developerOrganisationMemberships.role, 'owner'),
+        eq(developerOrganisationMemberships.status, 'active'),
+      ),
+    )
+    .where(and(...conditions))
+    .orderBy(desc(developerOrganisations.createdAt));
+  if (filters?.limit) query = query.limit(filters.limit) as any;
+  if (filters?.offset) query = query.offset(filters.offset) as any;
+  const rows = await query;
+  return rows.map(projectDeveloperOrganisation);
+}
+
 export async function createDeveloper(data: {
   name: string;
   description?: string;
@@ -4246,108 +4379,40 @@ export async function createDeveloper(data: {
   address?: string | null;
   city: string;
   province: string;
-  category?: 'residential' | 'commercial' | 'mixed_use' | 'industrial'; // Deprecated, use specializations
-  specializations?: string[]; // Array of development types
+  category?: 'residential' | 'commercial' | 'mixed_use' | 'industrial';
+  specializations?: string[];
   establishedYear?: number | null;
-  totalProjects?: number;
-  completedProjects?: number;
-  currentProjects?: number;
-  upcomingProjects?: number;
   userId: number;
   status?: 'pending' | 'approved' | 'rejected';
   isVerified?: number;
 }) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // Valid category values for the enum
-  const validCategories = ['residential', 'commercial', 'mixed_use', 'industrial'];
-
-  // Find first valid category from specializations, or use provided category, or default to residential
-  const category =
-    data.category || data.specializations?.find(s => validCategories.includes(s)) || 'residential';
-
-  const [result] = await db.insert(developers).values({
+  const identity = await developerIdentityService.createDeveloperOrganisation({
     name: data.name,
-    description: data.description || null,
-    logo: data.logo && data.logo.trim() !== '' ? data.logo : null,
-    website: data.website && data.website.trim() !== '' ? data.website : null,
-    email: data.email || null,
-    phone: data.phone && data.phone.trim() !== '' ? data.phone : null,
-    address: data.address && data.address.trim() !== '' ? data.address : null,
-    city: data.city || null,
-    province: data.province || null,
-    establishedYear: data.establishedYear || null,
-    trackRecord: null, // Will be added later after profile creation
-    pastProjects: null, // Will be added later after profile creation
-    userId: data.userId,
-    // Convert specializations array to JSON string, or use category as fallback
-    specializations: data.specializations ? JSON.stringify(data.specializations) : null,
-    category: category as 'residential' | 'commercial' | 'mixed_use' | 'industrial', // Keep for backward compatibility
-    isVerified: data.isVerified ?? 0,
-    status: data.status ?? 'pending',
-    rejectionReason: null, // No rejection reason for new developers
-    approvedBy: null, // Not approved yet
-    approvedAt: null, // Not approved yet
-    rejectedBy: null, // Not rejected yet
-    rejectedAt: null, // Not rejected yet
-    totalProjects: data.totalProjects ?? 0,
-    completedProjects: data.completedProjects ?? 0,
-    currentProjects: data.currentProjects ?? 0,
-    upcomingProjects: data.upcomingProjects ?? 0,
-    rating: 0,
-    reviewCount: 0,
-    kpiCache: null, // No KPI cache initially
-    lastKpiCalculation: null, // No KPI calculation initially
+    description: data.description ?? null,
+    logo: data.logo ?? null,
+    website: data.website ?? null,
+    email: data.email,
+    phone: data.phone ?? null,
+    address: data.address ?? null,
+    city: data.city,
+    province: data.province,
+    category: data.category ?? 'residential',
+    specializations: data.specializations ?? [],
+    establishedYear: data.establishedYear ?? null,
+    createdByUserId: data.userId,
   });
-
-  return result.insertId;
+  return identity.organisationId;
 }
 
-/**
- * Get developer by user ID
- */
 export async function getDeveloperByUserId(userId: number) {
-  try {
-    const db = await getDb();
-    if (!db) {
-      console.error('[Database] getDeveloperByUserId: Database not available');
-      return null;
-    }
-
-    const [developer] = await db
-      .select()
-      .from(developers)
-      .where(eq(developers.userId, userId))
-      .limit(1);
-
-    return developer || null;
-  } catch (error: any) {
-    console.error('[Database] Error in getDeveloperByUserId for userId:', userId, error);
-    console.error('[Database] Error details:', {
-      message: error.message,
-      code: error.code,
-      sqlMessage: error.sqlMessage,
-    });
-    throw error; // Re-throw to be caught by the router
-  }
+  return developerIdentityService.getDeveloperByUserId(userId);
 }
 
-/**
- * Get developer by ID
- */
 export async function getDeveloperById(id: number) {
-  const db = await getDb();
-  if (!db) return null;
-
-  const [developer] = await db.select().from(developers).where(eq(developers.id, id)).limit(1);
-
-  return developer || null;
+  const row = await getDeveloperOrganisationRow(id);
+  return row ? projectDeveloperOrganisation(row) : null;
 }
 
-/**
- * Update developer profile
- */
 export async function updateDeveloper(
   id: number,
   data: Partial<{
@@ -4360,39 +4425,37 @@ export async function updateDeveloper(
     address: string | null;
     city: string;
     province: string;
-    specializations: string[]; // Array of development types
+    specializations: string[];
     establishedYear: number | null;
-    totalProjects: number;
-    completedProjects: number;
-    currentProjects: number;
-    upcomingProjects: number;
   }>,
 ) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  const row = await getDeveloperOrganisationRow(id);
+  if (!row) return false;
 
-  // Prepare update data with JSON serialization for specializations
-  const updateData: any = { ...data };
-  if (data.specializations) {
-    updateData.specializations = JSON.stringify(data.specializations);
-    // Also update category for backward compatibility (use first specialization)
-    updateData.category = data.specializations[0] || 'residential';
+  const organisationValues: Record<string, unknown> = {};
+  for (const key of ['name', 'description', 'website', 'email', 'phone', 'address', 'city', 'province', 'establishedYear'] as const) {
+    if (data[key] !== undefined) organisationValues[key] = data[key];
+  }
+  if (data.logo !== undefined) organisationValues.logo = data.logo;
+  if (data.specializations !== undefined) organisationValues.specializations = data.specializations;
+  if (Object.keys(organisationValues).length) {
+    await database.update(developerOrganisations).set(organisationValues as any).where(eq(developerOrganisations.id, id));
   }
 
-  await db
-    .update(developers)
-    .set({
-      ...updateData,
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(developers.id, id));
-
+  const publisherValues: Record<string, unknown> = {};
+  if (data.name !== undefined) publisherValues.name = data.name;
+  if (data.logo !== undefined) publisherValues.logoUrl = data.logo;
+  if (data.description !== undefined) publisherValues.about = data.description;
+  if (data.website !== undefined) publisherValues.websiteUrl = data.website;
+  if (data.email !== undefined) publisherValues.publicContactEmail = data.email;
+  if (Object.keys(publisherValues).length) {
+    await database.update(cataloguePublishers).set(publisherValues as any).where(eq(cataloguePublishers.id, row.publisher.id));
+  }
   return true;
 }
 
-/**
- * List developers with filters
- */
 export async function listDevelopers(filters: {
   category?: string;
   city?: string;
@@ -4401,134 +4464,82 @@ export async function listDevelopers(filters: {
   limit?: number;
   offset?: number;
 }) {
-  const db = await getDb();
-  if (!db) return [];
-
-  const conditions: SQL[] = [eq(developers.status, 'approved')];
-
-  if (filters.category) {
-    conditions.push(eq(developers.category, filters.category as any));
-  }
-  if (filters.city) {
-    conditions.push(like(developers.city, `%${filters.city}%`));
-  }
-  if (filters.province) {
-    conditions.push(like(developers.province, `%${filters.province}%`));
-  }
-  if (typeof filters.isVerified !== 'undefined') {
-    conditions.push(eq(developers.isVerified, filters.isVerified));
-  }
-
-  let query = db
-    .select()
-    .from(developers)
-    .where(and(...conditions))
-    .orderBy(desc(developers.createdAt));
-
-  if (filters.limit) {
-    query = query.limit(filters.limit) as any;
-  }
-  if (filters.offset) {
-    query = query.offset(filters.offset) as any;
-  }
-
-  return await query;
+  return listDeveloperOrganisationRows('approved', filters);
 }
 
-/**
- * Admin: List pending developers
- */
 export async function listPendingDevelopers() {
-  const db = await getDb();
-  if (!db) return [];
-
-  return await db
-    .select()
-    .from(developers)
-    .where(eq(developers.status, 'pending'))
-    .orderBy(desc(developers.createdAt));
+  return listDeveloperOrganisationRows('pending');
 }
 
-/**
- * Admin: List all developers (all statuses)
- */
 export async function listAllDevelopers() {
-  const db = await getDb();
-  if (!db) return [];
-
-  return await db.select().from(developers).orderBy(desc(developers.createdAt));
+  return listDeveloperOrganisationRows();
 }
 
-/**
- * Admin: Approve developer
- */
 export async function approveDeveloper(id: number, approvedBy: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  await db
-    .update(developers)
-    .set({
-      isVerified: 1,
-      status: 'approved',
-      approvedBy,
-      approvedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(developers.id, id));
-
-  await db
-    .update(developerBrandProfiles)
-    .set({
-      isVisible: 1,
-      isContactVerified: 1,
-    })
-    .where(eq(developerBrandProfiles.linkedDeveloperAccountId, id));
-
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await database.transaction(async (tx: any) => {
+    await tx
+      .update(developerOrganisations)
+      .set({ isVerified: 1, status: 'approved', approvedBy, approvedAt: now })
+      .where(eq(developerOrganisations.id, id));
+    const [row] = await tx
+      .select({ publisherId: cataloguePublishers.id })
+      .from(cataloguePublishers)
+      .where(
+        and(
+          eq(cataloguePublishers.developerOrganisationId, id),
+          eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+        ),
+      )
+      .limit(1);
+    if (row) {
+      await tx
+        .update(cataloguePublishers)
+        .set({ isVisible: 1, isContactVerified: 1 })
+        .where(eq(cataloguePublishers.id, row.publisherId));
+    }
+  });
   return true;
 }
 
-/**
- * Admin: Reject developer
- */
 export async function rejectDeveloper(id: number, rejectedBy: number, reason: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  await db
-    .update(developers)
-    .set({
-      status: 'rejected',
-      rejectionReason: reason,
-      rejectedBy,
-      rejectedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(developers.id, id));
-
-  await db
-    .update(developerBrandProfiles)
-    .set({ isVisible: 0 })
-    .where(eq(developerBrandProfiles.linkedDeveloperAccountId, id));
-
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await database.transaction(async (tx: any) => {
+    await tx
+      .update(developerOrganisations)
+      .set({ status: 'rejected', rejectionReason: reason, rejectedBy, rejectedAt: now })
+      .where(eq(developerOrganisations.id, id));
+    const [row] = await tx
+      .select({ publisherId: cataloguePublishers.id })
+      .from(cataloguePublishers)
+      .where(
+        and(
+          eq(cataloguePublishers.developerOrganisationId, id),
+          eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+        ),
+      )
+      .limit(1);
+    if (row) {
+      await tx
+        .update(cataloguePublishers)
+        .set({ isVisible: 0 })
+        .where(eq(cataloguePublishers.id, row.publisherId));
+    }
+  });
   return true;
 }
 
-/**
- * Admin: Set developer trust
- */
 export async function setDeveloperTrust(id: number, isTrusted: boolean) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  await db
-    .update(developers)
-    .set({
-      isTrusted,
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    })
-    .where(eq(developers.id, id));
-
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+  await database
+    .update(developerOrganisations)
+    .set({ isTrusted: isTrusted ? 1 : 0 })
+    .where(eq(developerOrganisations.id, id));
   return true;
 }
 
@@ -4671,13 +4682,24 @@ export async function getEcosystemStats() {
       .where(sql`${agents.createdAt} > ${dateStr}`),
   ]);
 
+  const firstPartyPublisher = eq(
+    cataloguePublishers.authorityKind,
+    'developer_first_party',
+  );
   const [totalDevelopers, activeDevelopers, newDevelopers] = await Promise.all([
-    db.select({ count: count() }).from(developers),
-    db.select({ count: count() }).from(developers).where(eq(developers.status, 'approved')),
+    db.select({ count: count() }).from(cataloguePublishers).where(firstPartyPublisher),
     db
       .select({ count: count() })
-      .from(developers)
-      .where(sql`${developers.createdAt} > ${dateStr}`),
+      .from(cataloguePublishers)
+      .innerJoin(
+        developerOrganisations,
+        eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+      )
+      .where(and(firstPartyPublisher, eq(developerOrganisations.status, 'approved'))),
+    db
+      .select({ count: count() })
+      .from(cataloguePublishers)
+      .where(and(firstPartyPublisher, sql`${cataloguePublishers.createdAt} > ${dateStr}`)),
   ]);
 
   const [totalUsers, newUsers] = await Promise.all([

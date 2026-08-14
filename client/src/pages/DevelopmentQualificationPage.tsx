@@ -253,7 +253,7 @@ export default function DevelopmentQualificationPage() {
 
     createLead.mutate({
       developmentId: dev.id,
-      developerBrandProfileId: (dev as any).developerBrandProfileId ?? undefined,
+      cataloguePublisherId: (dev as any).cataloguePublisherId ?? undefined,
       unitId: selectedUnit ? toUnitRouteKey(selectedUnit) : undefined,
       unitName: selectedUnit?.name || undefined,
       unitPriceFrom: selectedUnit?.basePriceFrom != null ? Number(selectedUnit.basePriceFrom) : undefined,

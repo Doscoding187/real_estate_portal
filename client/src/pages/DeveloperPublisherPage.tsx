@@ -1,15 +1,13 @@
 // @ts-nocheck
 /**
- * Developer Brand Profile Component
+ * Public Developer Publisher Page
  *
- * Unified public-facing component for both:
- * 1. Subscriber Developers (Developer Accounts)
- * 2. Platform Brand Profiles (Managed Brands)
- * 3. Super Admin Emulation Review
+ * Governed projection of a Catalogue Publisher at the durable /developer/:slug route.
  */
 
 import React from 'react';
-import { useLocation } from 'wouter';
+import { useRoute, useLocation } from 'wouter';
+import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -20,72 +18,60 @@ import {
   Loader2,
   MapPin,
   Globe,
+  Mail,
+  Phone,
   Building2,
+  CheckCircle,
   CheckCircle2,
+  Award,
+  ArrowRight,
   ShieldCheck,
+  Home,
+  BarChart3,
   Calendar,
   AlertCircle,
-  Home,
 } from 'lucide-react';
 
-interface DeveloperBrandProfileProps {
-  slug?: string;
-  className?: string;
-  hideNavbar?: boolean;
-}
-
-export function DeveloperBrandProfile({
-  slug,
-  className,
-  hideNavbar = false,
-}: DeveloperBrandProfileProps) {
+export default function DeveloperPublisherPage() {
+  const [, params] = useRoute('/developer/:slug');
   const [, setLocation] = useLocation();
+  const slug = params?.slug || '';
 
-  // Fetch unified profile (Subscriber or Brand)
+  // Fetch the governed public Catalogue Publisher projection.
   const {
     data: profile,
     isLoading,
     error,
-  } = trpc.developer.getPublicDeveloperBySlug.useQuery(
-    { slug: slug || '' },
-    { enabled: !!slug, retry: false },
-  );
+  } = trpc.developer.getPublicDeveloperBySlug.useQuery({ slug }, { enabled: !!slug, retry: false });
 
   // Fetch developments for this profile
   const { data: developments, isLoading: isLoadingDevs } =
-    trpc.developer.getPublicDevelopmentsForProfile.useQuery(
+    trpc.developer.getPublicDevelopmentsForPublisher.useQuery(
       {
-        profileType: profile?.type || 'subscriber',
-        profileId: profile?.id || 0,
+        cataloguePublisherId: profile?.cataloguePublisherId || 0,
       },
       { enabled: !!profile },
     );
 
   if (isLoading) {
     return (
-      <div className={`flex items-center justify-center py-40 ${className}`}>
-        <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+      <div className="min-h-screen bg-slate-50">
+        <ListingNavbar />
+        <div className="flex items-center justify-center py-40">
+          <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+        </div>
       </div>
     );
   }
 
   if (error || !profile) {
-    if (hideNavbar) {
-      // Simple error state for embedded view
-      return (
-        <div className="flex flex-col items-center justify-center py-20 text-center select-none opacity-50">
-          <AlertCircle className="h-10 w-10 text-slate-300 mb-2" />
-          <p className="font-semibold text-slate-500">Profile Not Found</p>
-        </div>
-      );
-    }
     return (
       <div className="min-h-screen bg-slate-50">
         <Helmet>
           <title>Developer Not Found | Property Listify</title>
           <meta name="robots" content="noindex" />
         </Helmet>
-
+        <ListingNavbar />
         <div className="container py-20 text-center">
           <AlertCircle className="h-16 w-16 text-slate-300 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Developer Not Found</h2>
@@ -101,7 +87,7 @@ export function DeveloperBrandProfile({
   // Construct JSON-LD Schema
   const schemaData = {
     '@context': 'https://schema.org',
-    '@type': 'RealEstateAgent',
+    '@type': 'RealEstateAgent', // Using RealEstateAgent as it covers property developers well in schema.org context
     name: profile.name,
     image: profile.logo,
     description: profile.description,
@@ -118,26 +104,23 @@ export function DeveloperBrandProfile({
   };
 
   return (
-    <div className={`min-h-screen bg-slate-50 ${className}`}>
-      {!hideNavbar && (
-        <Helmet>
-          <title>{`${profile.name} - Property Developer Profile | Property Listify`}</title>
-          <meta
-            name="description"
-            content={
-              profile.description
-                ? profile.description.slice(0, 160)
-                : `Learn more about ${profile.name}, a property developer on Property Listify.`
-            }
-          />
-          <script type="application/ld+json">{JSON.stringify(schemaData)}</script>
-        </Helmet>
-      )}
+    <div className="min-h-screen bg-slate-50">
+      <Helmet>
+        <title>{`${profile.name} - Property Developer Profile | Property Listify`}</title>
+        <meta
+          name="description"
+          content={
+            profile.description
+              ? profile.description.slice(0, 160)
+              : `Learn more about ${profile.name}, a property developer on Property Listify.`
+          }
+        />
+        <script type="application/ld+json">{JSON.stringify(schemaData)}</script>
+      </Helmet>
+      <ListingNavbar />
 
       {/* Hero Section */}
-      <div
-        className={`${hideNavbar ? 'rounded-xl overflow-hidden shadow-sm mx-4 mt-4' : ''} bg-gradient-to-b from-indigo-900 to-indigo-800 text-white pt-24 pb-16`}
-      >
+      <div className="bg-gradient-to-b from-indigo-900 to-indigo-800 text-white pt-24 pb-16">
         <div className="container">
           <div className="flex flex-col md:flex-row items-start gap-6">
             {/* Logo */}
@@ -156,7 +139,7 @@ export function DeveloperBrandProfile({
 
                 {profile.stats.isVerified && (
                   <Badge className="bg-emerald-500/20 text-emerald-100 border-emerald-500/50 flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
+                    <CheckCircle className="h-3 w-3" />
                     Verified
                   </Badge>
                 )}
@@ -216,16 +199,6 @@ export function DeveloperBrandProfile({
               <Building2 className="h-6 w-6 text-indigo-600" />
               Developments by {profile.name}
             </h2>
-
-            <Button
-              size="sm"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-              onClick={() =>
-                setLocation(`/developer/create-development?brandProfileId=${profile.id}`)
-              }
-            >
-              + Add Development
-            </Button>
           </div>
 
           {!isLoadingDevs && developments && developments.length > 0 ? (
@@ -292,8 +265,8 @@ export function DeveloperBrandProfile({
 
         <Separator className="my-8" />
 
-        {/* Claim CTA (only for unmanaged platform brands, and not in dashboard mode) */}
-        {!hideNavbar && profile.type === 'brand' && (
+        {/* Claim CTA (only for unmanaged platform brands) */}
+        {profile.isClaimable && (
           <div className="bg-slate-100 rounded-xl p-6 mt-8 text-center max-w-2xl mx-auto">
             <p className="text-slate-600 mb-3">
               Are you part of the <strong>{profile.name}</strong> team?
@@ -309,16 +282,14 @@ export function DeveloperBrandProfile({
         )}
       </div>
 
-      {/* Footer Disclaimer - Only show on full page */}
-      {!hideNavbar && (
-        <div className="bg-slate-100 py-6">
-          <div className="container">
-            <p className="text-center text-sm text-slate-500 max-w-2xl mx-auto">
-              Developer information is provided for identification purposes only.
-            </p>
-          </div>
+      {/* Footer Disclaimer */}
+      <div className="bg-slate-100 py-6">
+        <div className="container">
+          <p className="text-center text-sm text-slate-500 max-w-2xl mx-auto">
+            Developer information is provided for identification purposes only.
+          </p>
         </div>
-      )}
+      </div>
     </div>
   );
 }

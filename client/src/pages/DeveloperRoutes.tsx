@@ -16,7 +16,7 @@ import BillingPanel from '@/components/developer/BillingPanel';
 import CreateDevelopment from '@/pages/CreateDevelopment';
 import DeveloperPerformancePage from '@/pages/DeveloperPerformancePage';
 import DeveloperPlans from '@/pages/DeveloperPlans';
-import DeveloperBrandProfilePage from '@/pages/DeveloperBrandProfilePage';
+import DeveloperPublisherPage from '@/pages/DeveloperPublisherPage';
 import DevelopmentHome from '@/pages/developer/DevelopmentHome';
 import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 
@@ -68,7 +68,7 @@ export function DeveloperRouteBoundary() {
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
 
   if (isPublicDeveloperProfilePath(pathname)) {
-    return <DeveloperBrandProfilePage />;
+    return <DeveloperPublisherPage />;
   }
 
   return <DeveloperRoutes />;
@@ -80,7 +80,7 @@ export default function DeveloperRoutes() {
   const { status, isLoading: statusLoading } = useDeveloperOnboardingStatus();
   const isSuperAdmin = user?.role === 'super_admin';
   const isDeveloper = user?.role === 'property_developer';
-  const hasPublisherContext = !!publisherContext?.brandProfileId;
+  const hasPublisherContext = !!publisherContext?.cataloguePublisherId;
   const pathname =
     typeof window !== 'undefined' ? window.location.pathname : '/developer/dashboard';
 

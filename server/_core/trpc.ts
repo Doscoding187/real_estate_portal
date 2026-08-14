@@ -3,7 +3,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { ZodError } from 'zod';
 import superjson from 'superjson';
 import type { TrpcContext } from './context';
-import { applyBrandContext, type EnhancedTRPCContext } from './brandContext';
+import { applyPublisherContext, type EnhancedTRPCContext } from './publisherContext';
 
 export function formatTrpcError({ shape, error }: any) {
   const cause = error.cause;
@@ -48,7 +48,7 @@ const requireUser = t.middleware(async opts => {
   }
 
   // Resolve a requested platform-curator identity on the server.
-  const enhancedCtx = await applyBrandContext(ctx);
+  const enhancedCtx = await applyPublisherContext(ctx);
 
   return next({
     ctx: enhancedCtx,

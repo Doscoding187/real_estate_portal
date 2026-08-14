@@ -38,7 +38,7 @@ export interface ListingResultCardData {
   propertyId?: number;
   agentId?: number;
   agencyId?: number;
-  developerBrandProfileId?: number;
+  cataloguePublisherId?: number;
   developmentId?: number;
   contactPhone?: string;
   contactWhatsapp?: string;
@@ -123,7 +123,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const whatsappPrefill = `Hi, I'm interested in ${modalTitle}. Please share more details.`;
   const canOpenContact = !!(
     data.agentId ||
-    data.developerBrandProfileId ||
+    data.cataloguePublisherId ||
     emailTarget ||
     whatsappTarget
   );
@@ -310,7 +310,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         agentName={identityDisplayName}
         agentPhone={data.contactPhone}
         agentEmail={data.contactEmail}
-        developerBrandProfileId={data.developerBrandProfileId}
+        cataloguePublisherId={data.cataloguePublisherId}
         developmentId={data.developmentId}
         source={contactIntent === 'whatsapp' ? 'property_search_whatsapp' : 'property_search'}
         submitLabel={contactIntent === 'whatsapp' ? 'Continue to WhatsApp' : contactCtaLabel}

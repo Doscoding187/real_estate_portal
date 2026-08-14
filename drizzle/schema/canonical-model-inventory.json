@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "660d46ed8c2b194677fb660bfc9961f3489008b0f3b0113f1cde8293dfb4fba6",
+  "structuralDigest": "1c6208ec8b731b869daf67413c095819a7df3cb35fa71f211cb0dbeca5be9269",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 182,
+  "tableCount": 185,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -48,6 +48,7 @@
     "boost_campaigns",
     "boost_credits",
     "bundle_partners",
+    "catalogue_publishers",
     "cities",
     "city_price_analytics",
     "commissions",
@@ -63,6 +64,8 @@
     "demand_unmatched_leads",
     "developer_brand_profiles",
     "developer_notifications",
+    "developer_organisation_memberships",
+    "developer_organisations",
     "developer_subscription_limits",
     "developer_subscription_usage",
     "developer_subscriptions",

@@ -1,7 +1,8 @@
 import { and, asc, eq } from 'drizzle-orm';
 import {
   agencies,
-  developers,
+  developerOrganisationMemberships,
+  developerOrganisations,
   plans,
   planEntitlements,
   subscriptions,
@@ -221,20 +222,30 @@ async function getOwnerContextForUser(
   }
 
   if (user.role === 'property_developer') {
-    const [developer] = await db
-      .select({ id: developers.id })
-      .from(developers)
-      .where(eq(developers.userId, user.id))
+    const [membership] = await db
+      .select({ organisationId: developerOrganisationMemberships.organisationId })
+      .from(developerOrganisationMemberships)
+      .innerJoin(
+        developerOrganisations,
+        eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
+      )
+      .where(
+        and(
+          eq(developerOrganisationMemberships.userId, user.id),
+          eq(developerOrganisationMemberships.status, 'active'),
+          eq(developerOrganisations.status, 'approved'),
+        ),
+      )
+      .orderBy(developerOrganisationMemberships.id)
       .limit(1);
 
-    // A developer subscription is owned by the developer profile, not the
-    // login row. Do not fall back to user.id: that would create a second,
-    // ambiguous owner identity for canonical subscriptions.
-    if (!developer) return null;
+    // Commercial access is owned by the Developer Organisation, not the
+    // login row. Do not fall back to user.id or the retired developers row.
+    if (!membership) return null;
 
     return {
       ownerType: 'developer',
-      ownerId: Number(developer.id),
+      ownerId: Number(membership.organisationId),
     };
   }
 
@@ -723,13 +734,24 @@ export async function getDeveloperUserId(developerId: number): Promise<number | 
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const [developer] = await db
-    .select({ userId: developers.userId })
-    .from(developers)
-    .where(eq(developers.id, developerId))
+  const [membership] = await db
+    .select({ userId: developerOrganisationMemberships.userId })
+    .from(developerOrganisationMemberships)
+    .innerJoin(
+      developerOrganisations,
+      eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
+    )
+    .where(
+      and(
+        eq(developerOrganisationMemberships.organisationId, developerId),
+        eq(developerOrganisationMemberships.status, 'active'),
+        eq(developerOrganisations.status, 'approved'),
+      ),
+    )
+    .orderBy(developerOrganisationMemberships.id)
     .limit(1);
 
-  return developer ? Number(developer.userId) : null;
+  return membership ? Number(membership.userId) : null;
 }
 
 export async function getPlanAccessProjectionForDeveloperId(

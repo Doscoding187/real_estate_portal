@@ -6,6 +6,7 @@ export * from './billing';
 export * from './partners';
 export * from './listings';
 export * from './developments';
+export * from './developerIdentity';
 export * from './media';
 export * from './explore';
 export * from './marketplace';

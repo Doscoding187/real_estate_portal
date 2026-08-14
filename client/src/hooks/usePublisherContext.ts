@@ -2,7 +2,7 @@
  * Publisher Context Store
  *
  * Global state for the platform-curator operating identity.
- * Persists the selected brand profile context across navigation.
+ * Persists the selected Catalogue Publisher context across navigation.
  *
  * Used by:
  * - SuperAdminPublisher: Sets context when brand is selected
@@ -12,25 +12,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export interface PublisherBrandContext {
+export interface PublisherContext {
   mode: 'platform_curator';
-  brandProfileId: number;
-  brandProfileName: string;
-  brandProfileType: 'developer' | 'marketing_agency' | 'hybrid';
+  cataloguePublisherId: number;
+  publisherName: string;
+  publisherType: 'developer' | 'marketing_agency' | 'hybrid';
   logoUrl?: string | null;
 }
 
 interface PublisherContextState {
-  context: PublisherBrandContext | null;
+  context: PublisherContext | null;
 
   // Set the "Operate As" context
-  setOperatingAs: (brand: PublisherBrandContext) => void;
+  setOperatingAs: (publisher: PublisherContext) => void;
 
   // Clear context (e.g., when exiting Publisher Emulator)
   clearContext: () => void;
 
-  // Helper: Check if actively operating as a brand
-  isOperatingAsBrand: () => boolean;
+  isOperatingAsPublisher: () => boolean;
 }
 
 export const usePublisherContext = create<PublisherContextState>()(
@@ -38,9 +37,9 @@ export const usePublisherContext = create<PublisherContextState>()(
     (set, get) => ({
       context: null,
 
-      setOperatingAs: brand => {
-        console.log('[PublisherContext] Operating as:', brand.brandProfileName);
-        set({ context: brand });
+      setOperatingAs: publisher => {
+        console.log('[PublisherContext] Operating as:', publisher.publisherName);
+        set({ context: publisher });
       },
 
       clearContext: () => {
@@ -48,13 +47,13 @@ export const usePublisherContext = create<PublisherContextState>()(
         set({ context: null });
       },
 
-      isOperatingAsBrand: () => {
+      isOperatingAsPublisher: () => {
         return get().context !== null;
       },
     }),
     {
       name: 'publisher-context',
-      version: 1,
+      version: 2,
     },
   ),
 );
@@ -67,23 +66,23 @@ export const usePublisherContext = create<PublisherContextState>()(
  */
 export function resolvePublishingIdentity(
   userRole: string | undefined,
-  publisherContext: PublisherBrandContext | null,
+  publisherContext: PublisherContext | null,
 ): {
   identityType: 'developer' | 'marketing_agency' | 'brand';
-  brandProfileId: number;
+  cataloguePublisherId: number;
   source: 'platform_curator';
 } | null {
   // Only resolve for Super Admin with active publisher context
   if (userRole === 'super_admin' && publisherContext?.mode === 'platform_curator') {
-    // Map brand profile type to wizard identity type
+    // Map publisher type to the wizard's presentation identity type.
     const identityType =
-      publisherContext.brandProfileType === 'developer'
+      publisherContext.publisherType === 'developer'
         ? 'brand' // Super Admin publishing as a developer brand
         : 'marketing_agency';
 
     return {
       identityType,
-      brandProfileId: publisherContext.brandProfileId,
+      cataloguePublisherId: publisherContext.cataloguePublisherId,
       source: 'platform_curator',
     };
   }

@@ -4,7 +4,9 @@ import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  assertTidbCompatibleMigrationSql,
   loadAndValidateMigrationManifest,
+  parseSqlStatements,
   type MigrationManifestDocument,
   type MigrationManifestEntry,
 } from '../migrationManifest';
@@ -66,6 +68,24 @@ afterEach(() => {
 });
 
 describe('canonical migration manifest', () => {
+  it.each([
+    ['trigger', 'CREATE TRIGGER immutable_widget BEFORE UPDATE ON widget FOR EACH ROW SET @x = 1;'],
+    ['procedure', 'CREATE PROCEDURE rebuild_widget() SELECT 1;'],
+    ['function', 'CREATE FUNCTION widget_value() RETURNS INT RETURN 1;'],
+    ['event', 'CREATE EVENT rebuild_widget ON SCHEDULE EVERY 1 DAY DO SELECT 1;'],
+    ['delimiter', 'DELIMITER $$\nCREATE TABLE widget_two (id int)$$'],
+  ])('rejects TiDB-unsupported %s migration primitives', (_label, sql) => {
+    expect(() => assertTidbCompatibleMigrationSql(sql)).toThrow('TiDB compatibility guard');
+  });
+
+  it('does not confuse ordinary table or column names with stored programs', () => {
+    expect(() =>
+      assertTidbCompatibleMigrationSql(
+        'CREATE TABLE scheduled_events (trigger_stage varchar(32), event_name varchar(64));',
+      ),
+    ).not.toThrow();
+  });
+
   it('accepts the integrated repository 0000 -> 0007 manifest with exact ancestry', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
@@ -79,8 +99,7 @@ describe('canonical migration manifest', () => {
       manualLocation,
       supersessions,
       launchAccess,
-    ] =
-      manifest.orderedMigrations;
+    ] = manifest.orderedMigrations;
 
     expect(baseline).toMatchObject({
       sequence: 0,
@@ -153,31 +172,41 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe(launchAccess.filename);
+    expect(manifest.expectedHead.filename).toBe('0018_distribution_access_publisher_authority.sql');
   });
 
-  it('plans exactly one paid-launch migration from the integrated 0006 head', () => {
+  it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
     const manifest = loadAndValidateMigrationManifest({
       migrationsDirectory: resolve('server/migrations'),
     });
-    const currentIntegratedHead = manifest.orderedMigrations[6];
+    const currentIntegratedHead = manifest.orderedMigrations[7];
     const plan = buildMigrationPlan({
       manifest,
       targetFingerprintHash: 'a'.repeat(64),
-      applied: manifest.orderedMigrations.slice(0, 7).map(item => ({
+      applied: manifest.orderedMigrations.slice(0, 8).map(item => ({
         fileName: item.filename,
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0007_paid_launch_access_invoice_term.sql',
+      expectedNewHead: '0018_distribution_access_publisher_authority.sql',
     });
 
-    expect(plan.acceptedOldHead).toBe('0006_development_supersessions.sql');
-    expect(plan.pending).toHaveLength(1);
+    expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
+    expect(plan.pending).toHaveLength(11);
     expect(plan.pending.map(item => item.filename)).toEqual([
-      '0007_paid_launch_access_invoice_term.sql',
+      '0008_developer_organisations.sql',
+      '0009_developer_organisation_memberships.sql',
+      '0010_catalogue_publishers.sql',
+      '0011_catalogue_publisher_developments.sql',
+      '0012_catalogue_publisher_properties.sql',
+      '0013_catalogue_publisher_leads.sql',
+      '0014_catalogue_publisher_drafts.sql',
+      '0015_catalogue_publisher_distribution_partnerships.sql',
+      '0016_catalogue_publisher_distribution_access.sql',
+      '0017_distribution_publisher_authority.sql',
+      '0018_distribution_access_publisher_authority.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0007_paid_launch_access_invoice_term.sql');
+    expect(plan.expectedNewHead).toBe('0018_distribution_access_publisher_authority.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

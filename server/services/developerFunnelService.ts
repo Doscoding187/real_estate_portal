@@ -3,8 +3,8 @@ import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, ne, or, sql } from '
 import { db } from '../db';
 import {
   developments,
-  developerBrandProfiles,
-  developers,
+  cataloguePublishers,
+  developerOrganisations,
   distributionAgentAccess,
   distributionIdentities,
   distributionPrograms,
@@ -625,21 +625,20 @@ async function getDeveloperLeadRow(developerId: number, leadId: number) {
     })
     .from(leads)
     .innerJoin(developments, eq(leads.developmentId, developments.id))
-    .innerJoin(developers, eq(developments.developerId, developers.id))
-    .leftJoin(developerBrandProfiles, eq(developments.developerBrandProfileId, developerBrandProfiles.id))
+    .innerJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+    .innerJoin(
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+    )
     .leftJoin(users, eq(leads.assignedTo, users.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
-        eq(developments.devOwnerType, 'developer'),
-        eq(developers.status, 'approved'),
+        eq(developments.cataloguePublisherId, developerId),
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+        eq(developerOrganisations.status, 'approved'),
         ne(leads.deliveryStatus, 'attention_required'),
         or(
-          isNull(developerBrandProfiles.id),
-          and(
-            eq(developerBrandProfiles.ownerType, 'developer'),
-            eq(developerBrandProfiles.linkedDeveloperAccountId, developers.id),
-          ),
+          eq(leads.cataloguePublisherId, developerId),
         )!,
         eq(leads.id, leadId),
       ),
@@ -658,16 +657,12 @@ async function getDeveloperLeadRow(developerId: number, leadId: number) {
 
 export async function listDeveloperLeads(params: FunnelListParams) {
   const conditions: any[] = [
-    eq(developments.developerId, params.developerId),
-    eq(developments.devOwnerType, 'developer'),
-    eq(developers.status, 'approved'),
+    eq(developments.cataloguePublisherId, params.developerId),
+    eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+    eq(developerOrganisations.status, 'approved'),
     ne(leads.deliveryStatus, 'attention_required'),
     or(
-      isNull(developerBrandProfiles.id),
-      and(
-        eq(developerBrandProfiles.ownerType, 'developer'),
-        eq(developerBrandProfiles.linkedDeveloperAccountId, developers.id),
-      ),
+      eq(leads.cataloguePublisherId, params.developerId),
     )!,
   ];
 
@@ -711,8 +706,11 @@ export async function listDeveloperLeads(params: FunnelListParams) {
     })
     .from(leads)
     .innerJoin(developments, eq(leads.developmentId, developments.id))
-    .innerJoin(developers, eq(developments.developerId, developers.id))
-    .leftJoin(developerBrandProfiles, eq(developments.developerBrandProfileId, developerBrandProfiles.id))
+    .innerJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+    .innerJoin(
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+    )
     .leftJoin(users, eq(leads.assignedTo, users.id))
     .where(and(...conditions))
     .orderBy(desc(leads.createdAt));
@@ -986,7 +984,7 @@ export async function getDeveloperDistributionSettings(params: {
     .where(
       and(
         eq(developments.id, params.developmentId),
-        eq(developments.developerId, params.developerId),
+        eq(developments.cataloguePublisherId, params.developerId),
       ),
     )
     .limit(1);
@@ -1107,7 +1105,7 @@ export async function setDeveloperDistributionEnabled(params: {
     .where(
       and(
         eq(developments.id, params.developmentId),
-        eq(developments.developerId, params.developerId),
+        eq(developments.cataloguePublisherId, params.developerId),
       ),
     )
     .limit(1);

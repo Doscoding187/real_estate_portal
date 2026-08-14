@@ -31,7 +31,11 @@ function formatMoney(value: number | null | undefined) {
 
 function collectErrorMessages(...errors: Array<{ message?: string } | null | undefined>) {
   return Array.from(
-    new Set(errors.map(error => error?.message?.trim()).filter((value): value is string => Boolean(value))),
+    new Set(
+      errors
+        .map(error => error?.message?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
   );
 }
 
@@ -54,32 +58,27 @@ async function copyActivationResetLink(link: string, label: string) {
   toast.error(`${label} reset link available in console.`);
 }
 
-function groupBrandLinkedDevelopments(
-  rows: any[],
-  programByDevelopmentId: Map<number, any>,
-) {
+function groupBrandLinkedDevelopments(rows: any[], programByDevelopmentId: Map<number, any>) {
   const groups = new Map<
     number,
     {
-      brandProfileId: number;
-      brandProfileName: string;
+      cataloguePublisherId: number;
+      publisherName: string;
       activeRows: any[];
       availableRows: any[];
     }
   >();
 
   for (const row of rows) {
-    const brandProfileId = Number(row.brandProfileId || 0);
-    if (!brandProfileId) continue;
+    const cataloguePublisherId = Number(row.cataloguePublisherId || 0);
+    if (!cataloguePublisherId) continue;
 
-    const group =
-      groups.get(brandProfileId) ||
-      {
-        brandProfileId,
-        brandProfileName: String(row.brandProfileName || `Brand #${brandProfileId}`),
-        activeRows: [],
-        availableRows: [],
-      };
+    const group = groups.get(cataloguePublisherId) || {
+      cataloguePublisherId,
+      publisherName: String(row.publisherName || `Brand #${cataloguePublisherId}`),
+      activeRows: [],
+      availableRows: [],
+    };
 
     const state = getPartnerDevelopmentSetupState(row, programByDevelopmentId);
     if (state === 'already_in_partner_developments') {
@@ -88,7 +87,7 @@ function groupBrandLinkedDevelopments(
       group.availableRows.push(row);
     }
 
-    groups.set(brandProfileId, group);
+    groups.set(cataloguePublisherId, group);
   }
 
   return Array.from(groups.values())
@@ -101,15 +100,15 @@ function groupBrandLinkedDevelopments(
         String(a.developmentName || '').localeCompare(String(b.developmentName || '')),
       ),
     }))
-    .sort((a, b) => a.brandProfileName.localeCompare(b.brandProfileName));
+    .sort((a, b) => a.publisherName.localeCompare(b.publisherName));
 }
 
 export default function DistributionNetworkPage() {
   const [location, setLocation] = useLocation();
   const [search, setSearch] = useState('');
   const [brandSearch, setBrandSearch] = useState('');
-  const [selectedBrandProfileId, setSelectedBrandProfileId] = useState<number | null>(null);
-  const [selectedBrandName, setSelectedBrandName] = useState('');
+  const [selectedPublisherId, setSelectedPublisherId] = useState<number | null>(null);
+  const [selectedPublisherName, setSelectedBrandName] = useState('');
   const [onboardingDrawerOpen, setOnboardingDrawerOpen] = useState(false);
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -137,9 +136,9 @@ export default function DistributionNetworkPage() {
   const catalogQuery = trpc.distribution.admin.listDevelopmentCatalog.useQuery(
     {
       search,
-      brandProfileId: selectedBrandProfileId || undefined,
+      cataloguePublisherId: selectedPublisherId || undefined,
       includeUnpublished: true,
-      onlyBrandProfileLinked: true,
+      onlyPublisherLinked: true,
       limit: 300,
     },
     {
@@ -174,7 +173,7 @@ export default function DistributionNetworkPage() {
         submoduleSlug === 'distribution-managers' || submoduleSlug === 'partner-developments',
     },
   );
-  const brandProfilesQuery = trpc.superAdminPublisher.listBrandProfiles.useQuery(
+  const publishersQuery = trpc.superAdminPublisher.listPublishers.useQuery(
     {
       search: brandSearch.trim() || undefined,
       limit: 20,
@@ -188,7 +187,7 @@ export default function DistributionNetworkPage() {
     {
       search,
       includeUnpublished: true,
-      onlyBrandProfileLinked: false,
+      onlyPublisherLinked: false,
       limit: 300,
     },
     {
@@ -304,27 +303,30 @@ export default function DistributionNetworkPage() {
     }
     return map;
   }, [programsQuery.data]);
-  const brandProfileDevelopmentRows = useMemo(() => {
+  const publisherDevelopmentRows = useMemo(() => {
     return (catalogQuery.data || []) as any[];
   }, [catalogQuery.data]);
   const allDevelopmentRows = useMemo(() => {
     return (allCatalogQuery.data || []) as any[];
   }, [allCatalogQuery.data]);
   const activePartnerRows = useMemo(() => {
-    return brandProfileDevelopmentRows.filter(
+    return publisherDevelopmentRows.filter(
       row => Boolean(row.program) || programByDevelopmentId.has(Number(row.developmentId)),
     );
-  }, [brandProfileDevelopmentRows, programByDevelopmentId]);
+  }, [publisherDevelopmentRows, programByDevelopmentId]);
   const availablePartnerRows = useMemo(() => {
-    return brandProfileDevelopmentRows.filter(
+    return publisherDevelopmentRows.filter(
       row => !(Boolean(row.program) || programByDevelopmentId.has(Number(row.developmentId))),
     );
-  }, [brandProfileDevelopmentRows, programByDevelopmentId]);
+  }, [publisherDevelopmentRows, programByDevelopmentId]);
   const groupedBrandDevelopmentRows = useMemo(() => {
-    return groupBrandLinkedDevelopments(brandProfileDevelopmentRows, programByDevelopmentId);
-  }, [brandProfileDevelopmentRows, programByDevelopmentId]);
+    return groupBrandLinkedDevelopments(publisherDevelopmentRows, programByDevelopmentId);
+  }, [publisherDevelopmentRows, programByDevelopmentId]);
   const unlinkedDevelopmentRows = useMemo(() => {
-    return allDevelopmentRows.filter(row => getPartnerDevelopmentSetupState(row, programByDevelopmentId) === 'needs_brand_link');
+    return allDevelopmentRows.filter(
+      row =>
+        getPartnerDevelopmentSetupState(row, programByDevelopmentId) === 'needs_publisher_link',
+    );
   }, [allDevelopmentRows, programByDevelopmentId]);
   const partnerDevelopmentErrorMessages = useMemo(
     () =>
@@ -334,7 +336,12 @@ export default function DistributionNetworkPage() {
         programsQuery.error,
         onboardDevelopmentMutation.error,
       ),
-    [allCatalogQuery.error, catalogQuery.error, onboardDevelopmentMutation.error, programsQuery.error],
+    [
+      allCatalogQuery.error,
+      catalogQuery.error,
+      onboardDevelopmentMutation.error,
+      programsQuery.error,
+    ],
   );
   const managerErrorMessages = useMemo(
     () => collectErrorMessages(teamRegistrationsQuery.error, createManagerInviteMutation.error),
@@ -372,10 +379,14 @@ export default function DistributionNetworkPage() {
       const result = await onboardDevelopmentMutation.mutateAsync({
         developmentId: Number(row.developmentId),
       });
-      await Promise.all([catalogQuery.refetch(), allCatalogQuery.refetch(), programsQuery.refetch()]);
-      if (row.brandProfileId) {
-        setSelectedBrandProfileId(Number(row.brandProfileId));
-        setSelectedBrandName(String(row.brandProfileName || `Brand #${row.brandProfileId}`));
+      await Promise.all([
+        catalogQuery.refetch(),
+        allCatalogQuery.refetch(),
+        programsQuery.refetch(),
+      ]);
+      if (row.cataloguePublisherId) {
+        setSelectedPublisherId(Number(row.cataloguePublisherId));
+        setSelectedBrandName(String(row.publisherName || `Brand #${row.cataloguePublisherId}`));
       }
       setOnboardingDrawerOpen(true);
       toast.success(
@@ -443,26 +454,26 @@ export default function DistributionNetworkPage() {
               />
               <div className="w-full max-w-md space-y-2">
                 <Input
-                  placeholder="Search brand profile..."
-                  value={selectedBrandProfileId ? selectedBrandName : brandSearch}
+                  placeholder="Search Catalogue Publishers..."
+                  value={selectedPublisherId ? selectedPublisherName : brandSearch}
                   onChange={e => {
                     const value = e.target.value;
-                    if (selectedBrandProfileId) {
-                      setSelectedBrandProfileId(null);
+                    if (selectedPublisherId) {
+                      setSelectedPublisherId(null);
                       setSelectedBrandName('');
                     }
                     setBrandSearch(value);
                   }}
                 />
-                {!!brandSearch.trim() && !selectedBrandProfileId && (
+                {!!brandSearch.trim() && !selectedPublisherId && (
                   <div className="max-h-56 overflow-auto rounded border bg-white p-1">
-                    {(brandProfilesQuery.data || []).length ? (
-                      (brandProfilesQuery.data || []).map((brand: any) => (
+                    {(publishersQuery.data || []).length ? (
+                      (publishersQuery.data || []).map((brand: any) => (
                         <button
                           key={brand.id}
                           className="w-full rounded px-2 py-1 text-left text-sm hover:bg-slate-100"
                           onClick={() => {
-                            setSelectedBrandProfileId(Number(brand.id));
+                            setSelectedPublisherId(Number(brand.id));
                             setSelectedBrandName(String(brand.brandName || 'Brand'));
                             setBrandSearch('');
                             setOnboardingDrawerOpen(true);
@@ -472,20 +483,22 @@ export default function DistributionNetworkPage() {
                         </button>
                       ))
                     ) : (
-                      <p className="px-2 py-1 text-xs text-slate-500">No brand profiles found.</p>
+                      <p className="px-2 py-1 text-xs text-slate-500">
+                        No Catalogue Publishers found.
+                      </p>
                     )}
                   </div>
                 )}
-                {selectedBrandProfileId ? (
+                {selectedPublisherId ? (
                   <div className="flex items-center gap-2 text-xs text-slate-600">
                     <span>
-                      Selected brand: <strong>{selectedBrandName}</strong>
+                      Selected brand: <strong>{selectedPublisherName}</strong>
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setSelectedBrandProfileId(null);
+                        setSelectedPublisherId(null);
                         setSelectedBrandName('');
                         setBrandSearch('');
                         setOnboardingDrawerOpen(false);
@@ -509,7 +522,7 @@ export default function DistributionNetworkPage() {
               <p className="text-sm font-medium text-slate-900">Setup path</p>
               <p className="mt-1 text-sm text-slate-600">
                 Brand-linked developments can be added to Partner Developments. Use Publisher admin
-                to create a brand profile or development. Unlinked developments must use the
+                to create a Catalogue Publisher or development. Unlinked developments must use the
                 canonical brand or claim workflow before partner setup.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -527,7 +540,10 @@ export default function DistributionNetworkPage() {
             </div>
 
             {partnerDevelopmentErrorMessages.map(message => (
-              <div key={message} className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <div
+                key={message}
+                className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+              >
                 {message}
               </div>
             ))}
@@ -542,27 +558,32 @@ export default function DistributionNetworkPage() {
               <div className="space-y-6">
                 <div>
                   <p className="mb-2 text-sm font-medium text-slate-700">
-                    Brand-Linked Developments ({brandProfileDevelopmentRows.length})
+                    Publisher-Linked Developments ({publisherDevelopmentRows.length})
                   </p>
                   <div className="space-y-2">
                     {groupedBrandDevelopmentRows.map(group => (
-                      <div key={group.brandProfileId} className="rounded border p-4">
+                      <div key={group.cataloguePublisherId} className="rounded border p-4">
                         <div className="flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
                           <div>
-                            <p className="font-semibold">{group.brandProfileName}</p>
+                            <p className="font-semibold">{group.publisherName}</p>
                             <p className="text-xs text-slate-500">
-                              {group.activeRows.length + group.availableRows.length} linked developments
+                              {group.activeRows.length + group.availableRows.length} linked
+                              developments
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <Badge variant="default">In Partner Developments: {group.activeRows.length}</Badge>
-                            <Badge variant="secondary">Available To Add: {group.availableRows.length}</Badge>
+                            <Badge variant="default">
+                              In Partner Developments: {group.activeRows.length}
+                            </Badge>
+                            <Badge variant="secondary">
+                              Available To Add: {group.availableRows.length}
+                            </Badge>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setSelectedBrandProfileId(group.brandProfileId);
-                                setSelectedBrandName(group.brandProfileName);
+                                setSelectedPublisherId(group.cataloguePublisherId);
+                                setSelectedBrandName(group.publisherName);
                                 setOnboardingDrawerOpen(true);
                               }}
                             >
@@ -577,9 +598,15 @@ export default function DistributionNetworkPage() {
                               In Partner Developments
                             </p>
                             {group.activeRows.map((row: any) => {
-                              const state = getPartnerDevelopmentSetupState(row, programByDevelopmentId);
+                              const state = getPartnerDevelopmentSetupState(
+                                row,
+                                programByDevelopmentId,
+                              );
                               return (
-                                <div key={row.developmentId} className="rounded border bg-slate-50 p-3">
+                                <div
+                                  key={row.developmentId}
+                                  className="rounded border bg-slate-50 p-3"
+                                >
                                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                     <div>
                                       <p className="font-semibold">{row.developmentName}</p>
@@ -588,7 +615,9 @@ export default function DistributionNetworkPage() {
                                       </p>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
-                                      <Badge variant="default">{getPartnerDevelopmentSetupLabel(state)}</Badge>
+                                      <Badge variant="default">
+                                        {getPartnerDevelopmentSetupLabel(state)}
+                                      </Badge>
                                       <Badge variant="outline">
                                         {formatMoney(row.priceFrom)} - {formatMoney(row.priceTo)}
                                       </Badge>
@@ -596,8 +625,8 @@ export default function DistributionNetworkPage() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() => {
-                                          setSelectedBrandProfileId(group.brandProfileId);
-                                          setSelectedBrandName(group.brandProfileName);
+                                          setSelectedPublisherId(group.cataloguePublisherId);
+                                          setSelectedBrandName(group.publisherName);
                                           setOnboardingDrawerOpen(true);
                                         }}
                                       >
@@ -617,8 +646,12 @@ export default function DistributionNetworkPage() {
                               Available To Add
                             </p>
                             {group.availableRows.map((row: any) => {
-                              const state = getPartnerDevelopmentSetupState(row, programByDevelopmentId);
-                              const isProcessing = onboardingDevelopmentId === Number(row.developmentId);
+                              const state = getPartnerDevelopmentSetupState(
+                                row,
+                                programByDevelopmentId,
+                              );
+                              const isProcessing =
+                                onboardingDevelopmentId === Number(row.developmentId);
                               return (
                                 <div key={row.developmentId} className="rounded border p-3">
                                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -662,9 +695,7 @@ export default function DistributionNetworkPage() {
                                         disabled={isProcessing}
                                         onClick={() => void handleOnboardDevelopment(row)}
                                       >
-                                        {isProcessing
-                                          ? 'Adding...'
-                                          : 'Add to Partner Developments'}
+                                        {isProcessing ? 'Adding...' : 'Add to Partner Developments'}
                                       </Button>
                                     </div>
                                   </div>
@@ -697,11 +728,11 @@ export default function DistributionNetworkPage() {
                               {row.city}, {row.province}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                              {getPartnerDevelopmentSetupDescription('needs_brand_link')}
+                              {getPartnerDevelopmentSetupDescription('needs_publisher_link')}
                             </p>
                           </div>
                           <Badge variant="outline">
-                            {getPartnerDevelopmentSetupLabel('needs_brand_link')}
+                            {getPartnerDevelopmentSetupLabel('needs_publisher_link')}
                           </Badge>
                         </div>
                       </div>
@@ -714,7 +745,7 @@ export default function DistributionNetworkPage() {
                   </div>
                 </div>
 
-                {!brandProfileDevelopmentRows.length && !unlinkedDevelopmentRows.length && (
+                {!publisherDevelopmentRows.length && !unlinkedDevelopmentRows.length && (
                   <p className="text-sm text-slate-500">
                     No developments found for current search.
                   </p>
@@ -727,9 +758,9 @@ export default function DistributionNetworkPage() {
       <PartnerDevelopmentOnboardingDrawer
         open={onboardingDrawerOpen}
         onOpenChange={setOnboardingDrawerOpen}
-        brandProfileId={selectedBrandProfileId}
-        brandProfileName={selectedBrandName}
-        developments={brandProfileDevelopmentRows}
+        cataloguePublisherId={selectedPublisherId}
+        publisherName={selectedPublisherName}
+        developments={publisherDevelopmentRows}
         isLoading={catalogQuery.isLoading}
         isError={Boolean(catalogQuery.error)}
         onRetry={() => {
@@ -737,7 +768,11 @@ export default function DistributionNetworkPage() {
         }}
         managerOptions={managerOptions}
         onRefreshCatalog={async () => {
-          await Promise.all([catalogQuery.refetch(), allCatalogQuery.refetch(), programsQuery.refetch()]);
+          await Promise.all([
+            catalogQuery.refetch(),
+            allCatalogQuery.refetch(),
+            programsQuery.refetch(),
+          ]);
         }}
       />
 
@@ -752,7 +787,10 @@ export default function DistributionNetworkPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {managerErrorMessages.map(message => (
-                <div key={message} className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <div
+                  key={message}
+                  className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+                >
                   {message}
                 </div>
               ))}

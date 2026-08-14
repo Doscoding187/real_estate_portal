@@ -9,8 +9,8 @@ import {
   properties,
   propertyImages,
   developments,
-  developers,
-  developerBrandProfiles,
+  cataloguePublishers,
+  developerOrganisations,
   agents,
   agencies,
   suburbs,
@@ -470,9 +470,9 @@ export class PropertySearchService {
         developmentId: properties.developmentId,
         developmentName: developments.name,
         developmentSlug: developments.slug,
-        developerId: developments.developerId,
-        developerName: developers.name,
-        developerLogo: developers.logo,
+        developerId: sql<number | null>`NULL`,
+        developerName: developerOrganisations.name,
+        developerLogo: developerOrganisations.logo,
         // New listings use typed measurement columns. COALESCE keeps old
         // published rows searchable through the legacy `area` field until
         // their source listing is republished with canonical facts.
@@ -511,22 +511,25 @@ export class PropertySearchService {
         agentProfileImage: agents.profileImage,
         agencyName: agencies.name,
         agentId: properties.agentId,
-        developerBrandProfileId: sql<number>`COALESCE(${properties.developerBrandProfileId}, ${developments.developerBrandProfileId})`,
-        builderBrandName: developerBrandProfiles.brandName,
-        builderLogoUrl: developerBrandProfiles.logoUrl,
-        builderSlug: developerBrandProfiles.slug,
-        builderPublicContactEmail: developerBrandProfiles.publicContactEmail,
+        cataloguePublisherId: sql<number>`COALESCE(${properties.cataloguePublisherId}, ${developments.cataloguePublisherId})`,
+        builderBrandName: cataloguePublishers.name,
+        builderLogoUrl: cataloguePublishers.logoUrl,
+        builderSlug: cataloguePublishers.slug,
+        builderPublicContactEmail: cataloguePublishers.publicContactEmail,
       })
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
-      .leftJoin(developers, eq(developments.developerId, developers.id))
+      .leftJoin(
+        cataloguePublishers,
+        sql`${cataloguePublishers.id} = COALESCE(${properties.cataloguePublisherId}, ${developments.cataloguePublisherId})`,
+      )
+      .leftJoin(
+        developerOrganisations,
+        eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+      )
       .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
       .leftJoin(agents, and(eq(properties.agentId, agents.id), eq(agents.status, 'approved')))
       .leftJoin(agencies, and(eq(agents.agencyId, agencies.id), eq(agencies.isVerified, 1)))
-      .leftJoin(
-        developerBrandProfiles,
-        sql`${developerBrandProfiles.id} = COALESCE(${properties.developerBrandProfileId}, ${developments.developerBrandProfileId})`,
-      )
       .where(and(...conditions))
       .orderBy(orderBy)
       .limit(pageSize)
@@ -684,11 +687,11 @@ export class PropertySearchService {
             }
           : undefined;
 
-      const developerBrandProfileId = Number(prop.developerBrandProfileId || 0);
+      const cataloguePublisherId = Number(prop.cataloguePublisherId || 0);
       const developerBrand =
-        Number.isFinite(developerBrandProfileId) && developerBrandProfileId > 0
+        Number.isFinite(cataloguePublisherId) && cataloguePublisherId > 0
           ? {
-              id: developerBrandProfileId,
+              id: cataloguePublisherId,
               brandName: builderName || 'Developer',
               slug:
                 String(prop.builderSlug || '').trim() || slugifyText(builderName || 'developer'),

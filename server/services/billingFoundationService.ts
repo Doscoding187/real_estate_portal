@@ -9,7 +9,8 @@ import {
   billingPaymentDocuments,
   billingPayments,
   coupons,
-  developers,
+  developerOrganisationMemberships,
+  developerOrganisations,
   notifications,
   plans,
   subscriptions,
@@ -692,15 +693,25 @@ async function assertDeveloperOwner(db: DbOrTx, user: BillingUser): Promise<numb
     });
   }
 
-  const [developer] = await db
-    .select({ id: developers.id })
-    .from(developers)
-    .where(eq(developers.userId, user.id))
+  const [membership] = await db
+    .select({ organisationId: developerOrganisationMemberships.organisationId })
+    .from(developerOrganisationMemberships)
+    .innerJoin(
+      developerOrganisations,
+      eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
+    )
+    .where(
+      and(
+        eq(developerOrganisationMemberships.userId, user.id),
+        eq(developerOrganisationMemberships.status, 'active'),
+        eq(developerOrganisations.status, 'approved'),
+      ),
+    )
     .limit(1);
-  if (!developer) {
+  if (!membership) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer profile not found.' });
   }
-  return Number(developer.id);
+  return Number(membership.organisationId);
 }
 
 type LaunchBillingOwnerType = 'agent' | 'agency' | 'developer';
@@ -767,7 +778,9 @@ async function lockLaunchBillingState(tx: BillingTx, owner: LaunchBillingOwner) 
   if (owner.ownerType === 'agent') {
     await tx.execute(sql`SELECT id FROM users WHERE id = ${owner.ownerId} FOR UPDATE`);
   } else {
-    await tx.execute(sql`SELECT id FROM developers WHERE id = ${owner.ownerId} FOR UPDATE`);
+    await tx.execute(
+      sql`SELECT id FROM developer_organisations WHERE id = ${owner.ownerId} FOR UPDATE`,
+    );
   }
   await tx.execute(sql`
     SELECT id
@@ -2722,16 +2735,26 @@ export async function getBillingDocumentForUser(input: { user: BillingUser; docu
   const isFinanceAdmin = isBillingFinanceAdmin(input.user);
   const isOwningAgencyUser =
     document.ownerType === 'agency' && Number(input.user.agencyId || 0) === document.ownerId;
-  const [developerProfile] =
+  const [developerOrganisation] =
     input.user.role === 'property_developer'
       ? await db
-          .select({ id: developers.id })
-          .from(developers)
-          .where(eq(developers.userId, input.user.id))
+          .select({ id: developerOrganisations.id })
+          .from(developerOrganisations)
+          .innerJoin(
+            developerOrganisationMemberships,
+            eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
+          )
+          .where(
+            and(
+              eq(developerOrganisationMemberships.userId, input.user.id),
+              eq(developerOrganisationMemberships.status, 'active'),
+            ),
+          )
           .limit(1)
       : [];
   const isOwningDeveloperUser =
-    document.ownerType === 'developer' && Number(developerProfile?.id || 0) === document.ownerId;
+    document.ownerType === 'developer' &&
+    Number(developerOrganisation?.id || 0) === document.ownerId;
   const isOwningAgentUser =
     document.ownerType === 'agent' &&
     input.user.role === 'agent' &&

@@ -5,8 +5,8 @@ import { evaluatePublicDevelopmentEligibility } from '../publicDevelopmentEligib
 function catalogue(
   overrides: {
     development?: Partial<CanonicalDevelopmentCatalogue['development']>;
-    brand?: Partial<NonNullable<CanonicalDevelopmentCatalogue['brand']>>;
-    developer?: CanonicalDevelopmentCatalogue['developer'];
+    publisher?: Partial<NonNullable<CanonicalDevelopmentCatalogue['publisher']>> | null;
+    organisation?: CanonicalDevelopmentCatalogue['organisation'];
     unitTypes?: CanonicalDevelopmentCatalogue['unitTypes'];
     activeUnitTypeCount?: number;
     activeSupersessionSource?: boolean;
@@ -14,26 +14,27 @@ function catalogue(
 ): CanonicalDevelopmentCatalogue {
   const defaultDevelopment: CanonicalDevelopmentCatalogue['development'] = {
     id: 101,
-    developerId: null,
-    developerBrandProfileId: 21,
-    devOwnerType: 'platform',
+    cataloguePublisherId: 21,
     developmentType: 'residential',
     transactionType: 'for_sale',
     isPublished: 1,
     approvalStatus: 'approved',
   };
-  const defaultBrand: NonNullable<CanonicalDevelopmentCatalogue['brand']> = {
+  const defaultPublisher: NonNullable<CanonicalDevelopmentCatalogue['publisher']> = {
     id: 21,
-    ownerType: 'platform',
-    linkedDeveloperAccountId: null,
+    authorityKind: 'platform_reference',
+    developerOrganisationId: null,
     isVisible: 1,
     sourceAttribution: 'verified-source',
   };
 
   return {
     development: { ...defaultDevelopment, ...overrides.development },
-    brand: { ...defaultBrand, ...overrides.brand },
-    developer: overrides.developer ?? null,
+    publisher:
+      overrides.publisher === null
+        ? null
+        : { ...defaultPublisher, ...overrides.publisher },
+    organisation: overrides.organisation ?? null,
     unitTypes: overrides.unitTypes ?? [{ id: 'unit-101', developmentId: 101, isActive: 1 }],
     ...(overrides.activeUnitTypeCount === undefined
       ? {}
@@ -57,45 +58,42 @@ describe('public development eligibility authority', () => {
     expect(
       evaluatePublicDevelopmentEligibility(
         catalogue({
-          development: {
-            developerId: 7,
-            devOwnerType: 'developer',
+          development: { cataloguePublisherId: 22 },
+          publisher: {
+            id: 22,
+            authorityKind: 'developer_first_party',
+            developerOrganisationId: 7,
+            sourceAttribution: null,
           },
-          brand: {
-            ownerType: 'developer',
-            linkedDeveloperAccountId: 7,
-          },
-          developer: { id: 7, status: 'approved' },
+          organisation: { id: 7, status: 'approved' },
         }),
       ),
     ).toMatchObject({ eligible: true, operatingMode: 'developer', reasons: [] });
   });
 
-  it('accepts developer-scoped public inventory before a brand profile is linked', () => {
+  it('rejects developer inventory without a first-party publisher authority', () => {
     expect(
       evaluatePublicDevelopmentEligibility(
         catalogue({
-          development: {
-            developerId: 7,
-            developerBrandProfileId: null,
-            devOwnerType: 'developer',
-          },
-          brand: null,
-          developer: { id: 7, status: 'approved' },
+          development: { cataloguePublisherId: null },
+          publisher: null,
         }),
       ),
-    ).toMatchObject({ eligible: true, operatingMode: 'developer', reasons: [] });
+    ).toMatchObject({
+      eligible: false,
+      reasons: expect.arrayContaining(['missing_publisher']),
+    });
   });
 
   it.each([
     ['draft', { isPublished: 0, approvalStatus: 'draft' }, 'not_published'],
     ['rejected', { isPublished: 1, approvalStatus: 'rejected' }, 'not_approved'],
     ['auction', { transactionType: 'auction' }, 'unsupported_transaction'],
-    ['claimed platform identity', { developerId: null }, 'invalid_platform_custody'],
+    ['claimed platform identity', {}, 'invalid_publisher_custody'],
   ])('rejects %s without inventing a second public rule', (_label, development, reason) => {
     const input =
       _label === 'claimed platform identity'
-        ? catalogue({ brand: { linkedDeveloperAccountId: 7 } })
+        ? catalogue({ publisher: { developerOrganisationId: 7 } })
         : catalogue({ development });
 
     expect(evaluatePublicDevelopmentEligibility(input)).toMatchObject({
@@ -117,7 +115,7 @@ describe('public development eligibility authority', () => {
 
   it('keeps source attribution as a platform-custody requirement', () => {
     const result = evaluatePublicDevelopmentEligibility(
-      catalogue({ brand: { sourceAttribution: null } }),
+      catalogue({ publisher: { sourceAttribution: null } }),
     );
 
     expect(result).toMatchObject({
@@ -126,25 +124,29 @@ describe('public development eligibility authority', () => {
     });
   });
 
-  it('rejects an invisible platform brand and a broken developer custody chain', () => {
+  it('rejects an invisible platform publisher and a broken developer custody chain', () => {
     expect(
-      evaluatePublicDevelopmentEligibility(catalogue({ brand: { isVisible: 0 } })),
+      evaluatePublicDevelopmentEligibility(catalogue({ publisher: { isVisible: 0 } })),
     ).toMatchObject({
       eligible: false,
-      reasons: expect.arrayContaining(['brand_not_visible']),
+      reasons: expect.arrayContaining(['publisher_not_visible']),
     });
 
     expect(
       evaluatePublicDevelopmentEligibility(
         catalogue({
-          development: { developerId: 7, devOwnerType: 'developer' },
-          brand: { ownerType: 'developer', linkedDeveloperAccountId: 99 },
-          developer: { id: 7, status: 'pending' },
+          development: { cataloguePublisherId: 22 },
+          publisher: {
+            id: 22,
+            authorityKind: 'developer_first_party',
+            developerOrganisationId: 99,
+          },
+          organisation: { id: 7, status: 'pending' },
         }),
       ),
     ).toMatchObject({
       eligible: false,
-      reasons: expect.arrayContaining(['invalid_developer_custody']),
+      reasons: expect.arrayContaining(['invalid_publisher_custody']),
     });
   });
 

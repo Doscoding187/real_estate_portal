@@ -87,7 +87,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
     : undefined;
 
   const developerBrand = (() => {
-    const candidate = raw.developerBrand || raw.developerBrandProfile;
+    const candidate = raw.developerBrand;
     if (candidate && typeof candidate === 'object') {
       const id = Number((candidate as any).id || 0);
       const brandName = String(
@@ -106,7 +106,7 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
       }
     }
 
-    const legacyId = Number(raw.developerBrandProfileId || 0);
+    const legacyId = Number(raw.cataloguePublisherId || 0);
     const legacyName = String(raw.builderBrandName || '').trim();
     const legacySlug = String(raw.builderSlug || '').trim();
     if (Number.isFinite(legacyId) && legacyId > 0 && legacyName && legacySlug) {

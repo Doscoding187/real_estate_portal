@@ -5,7 +5,7 @@
  */
 
 import { db } from '../db';
-import { developers, developments, leads, unitTypes } from '../../drizzle/schema';
+import { developments, leads, unitTypes } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql, count, avg } from 'drizzle-orm';
 import type { DeveloperKPIs, DeveloperKPICache } from '../../shared/types';
 
@@ -75,7 +75,7 @@ async function calculateTotalLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
       ),
@@ -87,7 +87,7 @@ async function calculateTotalLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
       ),
@@ -112,7 +112,7 @@ async function calculateQualifiedLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -125,7 +125,7 @@ async function calculateQualifiedLeads(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         sql`${leads.status} IN ('qualified', 'viewing_scheduled', 'offer_made', 'converted')`,
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -151,7 +151,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         eq(leads.status, 'converted'),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -164,7 +164,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
       ),
@@ -176,7 +176,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         eq(leads.status, 'converted'),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -189,7 +189,7 @@ async function calculateConversionRate(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
       ),
@@ -228,7 +228,7 @@ async function calculateUnitsMetrics(
       })
       .from(unitTypes)
       .innerJoin(developments, eq(developments.id, unitTypes.developmentId))
-      .where(and(eq(developments.developerId, developerId), eq(unitTypes.isActive, 1)));
+      .where(and(eq(developments.cataloguePublisherId, developerId), eq(unitTypes.isActive, 1)));
 
     return {
       sold: Number(units[0]?.sold || 0),
@@ -255,7 +255,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         gte(leads.qualificationScore, 80),
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -268,7 +268,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         sql`${leads.qualificationScore} IS NOT NULL`,
         gte(leads.createdAt, timeRange.start.toISOString()),
         lte(leads.createdAt, timeRange.end.toISOString()),
@@ -281,7 +281,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         gte(leads.qualificationScore, 80),
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -294,7 +294,7 @@ async function calculateAffordabilityMatch(
     .innerJoin(developments, eq(leads.developmentId, developments.id))
     .where(
       and(
-        eq(developments.developerId, developerId),
+        eq(developments.cataloguePublisherId, developerId),
         sql`${leads.qualificationScore} IS NOT NULL`,
         gte(leads.createdAt, timeRange.previousStart.toISOString()),
         lte(leads.createdAt, timeRange.previousEnd.toISOString()),
@@ -412,62 +412,16 @@ export async function getKPIsWithCache(
   timeRange: '7d' | '30d' | '90d' = '30d',
   forceRefresh: boolean = false,
 ): Promise<DeveloperKPIs> {
-  // Get developer with cache data
-  const [developer] = await db
-    .select()
-    .from(developers)
-    .where(eq(developers.id, developerId))
-    .limit(1);
-
-  if (!developer) {
-    throw new Error(`Developer ${developerId} not found`);
-  }
-
-  // Check if cache is valid
-  if (!forceRefresh && developer.kpiCache && developer.lastKpiCalculation) {
-    const cache = developer.kpiCache as DeveloperKPICache;
-
-    if (cache.timeRange === timeRange && isCacheValid(developer.lastKpiCalculation)) {
-      console.log(`Using cached KPIs for developer ${developerId}`);
-      return cache.kpis;
-    }
-  }
-
-  // Calculate fresh KPIs
-  console.log(`Calculating fresh KPIs for developer ${developerId}`);
-  const kpis = await calculateKPIs(developerId, timeRange);
-
-  // Update cache
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + CACHE_TTL_MINUTES * 60 * 1000);
-
-  const cacheData: DeveloperKPICache = {
-    kpis,
-    timeRange,
-    calculatedAt: now,
-    expiresAt,
-  };
-
-  await db
-    .update(developers)
-    .set({
-      kpiCache: cacheData as any,
-      lastKpiCalculation: now.toISOString(),
-    })
-    .where(eq(developers.id, developerId));
-
-  return kpis;
+  // The old mutable developers.kpiCache field was never a business authority.
+  // Until a publisher-scoped read projection exists, calculate from canonical
+  // development/lead/unit facts and let the caller cache at the query layer.
+  void forceRefresh;
+  return calculateKPIs(developerId, timeRange);
 }
 
 /**
  * Invalidate KPI cache for a developer
  */
 export async function invalidateKPICache(developerId: number): Promise<void> {
-  await db
-    .update(developers)
-    .set({
-      kpiCache: null,
-      lastKpiCalculation: null,
-    })
-    .where(eq(developers.id, developerId));
+  void developerId;
 }

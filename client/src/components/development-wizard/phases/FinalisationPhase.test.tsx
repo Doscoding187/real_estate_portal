@@ -17,7 +17,7 @@ const testState = vi.hoisted(() => {
   const setPhaseMock = vi.fn();
   let validationErrors: string[] = [];
   let authUser = { id: 1, role: 'property_developer' };
-  let publisherContext: { brandProfileId: number } | null = null;
+  let publisherContext: { cataloguePublisherId: number } | null = null;
 
   const rentUnit = {
     id: 'rent-unit-final',
@@ -125,7 +125,7 @@ const testState = vi.hoisted(() => {
     },
     setActor: (
       user: { id: number; role: string } = { id: 1, role: 'property_developer' },
-      context: { brandProfileId: number } | null = null,
+      context: { cataloguePublisherId: number } | null = null,
     ) => {
       authUser = user;
       publisherContext = context;
@@ -305,7 +305,7 @@ describe('FinalisationPhase', () => {
   });
 
   it('uses direct-publication wording and publisher mutations for a super-admin publisher context', async () => {
-    testState.setActor({ id: 2, role: 'super_admin' }, { brandProfileId: 44 });
+    testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
 
     render(<FinalisationPhase />);
 
@@ -326,7 +326,7 @@ describe('FinalisationPhase', () => {
     await waitFor(() => expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1));
 
     expect(testState.publishPublisherDevelopmentMock).toHaveBeenCalledWith({
-      brandProfileId: 44,
+      cataloguePublisherId: 44,
       developmentId: 456,
     });
     expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();

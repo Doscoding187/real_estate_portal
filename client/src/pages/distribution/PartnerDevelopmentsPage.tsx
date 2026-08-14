@@ -401,10 +401,10 @@ export default function PartnerDevelopmentsPage() {
     const map = new Map<number, string>();
     for (const item of allItems) {
       if (item.brand)
-        map.set(Number(item.brand.brandProfileId), String(item.brand.brandName || ''));
+        map.set(Number(item.brand.cataloguePublisherId), String(item.brand.brandName || ''));
     }
     return Array.from(map.entries())
-      .map(([brandProfileId, brandName]) => ({ brandProfileId, brandName }))
+      .map(([cataloguePublisherId, brandName]) => ({ cataloguePublisherId, brandName }))
       .sort((a, b) => a.brandName.localeCompare(b.brandName));
   }, [allItems]);
 
@@ -431,7 +431,7 @@ export default function PartnerDevelopmentsPage() {
     return modeItems.filter(item => {
       if (
         selectedBrandId !== ALL_FILTER_VALUE &&
-        Number(item.brand?.brandProfileId || 0) !== Number(selectedBrandId)
+        Number(item.brand?.cataloguePublisherId || 0) !== Number(selectedBrandId)
       ) {
         return false;
       }
@@ -545,7 +545,7 @@ export default function PartnerDevelopmentsPage() {
             >
               <option value={ALL_FILTER_VALUE}>All brands</option>
               {brandOptions.map(option => (
-                <option key={option.brandProfileId} value={option.brandProfileId}>
+                <option key={option.cataloguePublisherId} value={option.cataloguePublisherId}>
                   {option.brandName}
                 </option>
               ))}

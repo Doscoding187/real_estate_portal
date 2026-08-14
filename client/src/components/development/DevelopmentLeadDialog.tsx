@@ -39,7 +39,7 @@ interface DevelopmentLeadDialogProps {
   development: {
     id: number;
     name: string;
-    developerBrandProfileId?: number | null;
+    cataloguePublisherId?: number | null;
     brochureUrl?: string | null;
   };
   affordabilityData?: {
@@ -223,7 +223,7 @@ export function DevelopmentLeadDialog({
 
     createLead.mutate({
       developmentId: development.id,
-      developerBrandProfileId: development.developerBrandProfileId ?? undefined,
+      cataloguePublisherId: development.cataloguePublisherId ?? undefined,
       unitId: resolvedUnitId,
       unitName: resolvedUnitName || undefined,
       unitPriceFrom: unitContext?.unitPriceFrom,

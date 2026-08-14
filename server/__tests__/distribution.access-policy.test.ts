@@ -11,7 +11,7 @@ function buildEvaluation(
   overrides: Partial<DevelopmentDistributionAccessEvaluation> = {},
 ): DevelopmentDistributionAccessEvaluation {
   return {
-    brandProfileId: 10,
+    cataloguePublisherId: 10,
     brandPartnershipId: 20,
     brandPartnershipStatus: 'active',
     developmentAccessId: 30,

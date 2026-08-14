@@ -1,14 +1,14 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, like, or, type SQL } from 'drizzle-orm';
 
-import { developerBrandProfiles, developments } from '../../drizzle/schema';
+import { cataloguePublishers, developments } from '../../drizzle/schema';
 import { getDb } from '../db';
 import {
   evaluateDevelopmentDistributionAccess,
   type DevelopmentDistributionAccessEvaluation,
 } from './distributionAccessPolicy';
 import {
-  getBrandPartnershipByBrandProfileId,
+  getBrandPartnershipByPublisherId,
   getDevelopmentAccessByDevelopmentId,
 } from './distributionAccessRepository';
 
@@ -29,39 +29,34 @@ function buildInventoryStateCounts(): InventoryStateCounts {
   };
 }
 
-async function listLinkedDevelopmentIdsForBrand(db: DbHandle, brandProfileId: number) {
+async function listLinkedDevelopmentIdsForBrand(db: DbHandle, cataloguePublisherId: number) {
   const rows = await db
     .select({ developmentId: developments.id })
     .from(developments)
-    .where(
-      or(
-        eq(developments.developerBrandProfileId, brandProfileId),
-        eq(developments.marketingBrandProfileId, brandProfileId),
-      )!,
-    );
+    .where(eq(developments.cataloguePublisherId, cataloguePublisherId));
 
   return rows.map(row => Number(row.developmentId)).filter(Boolean);
 }
 
-export async function getBrandPartnershipDetails(db: DbHandle, brandProfileId: number) {
+export async function getBrandPartnershipDetails(db: DbHandle, cataloguePublisherId: number) {
   const [brand] = await db
     .select({
-      id: developerBrandProfiles.id,
-      brandName: developerBrandProfiles.brandName,
-      slug: developerBrandProfiles.slug,
-      isVisible: developerBrandProfiles.isVisible,
-      ownerType: developerBrandProfiles.ownerType,
+      id: cataloguePublishers.id,
+      brandName: cataloguePublishers.name,
+      slug: cataloguePublishers.slug,
+      isVisible: cataloguePublishers.isVisible,
+      ownerType: cataloguePublishers.authorityKind,
     })
-    .from(developerBrandProfiles)
-    .where(eq(developerBrandProfiles.id, brandProfileId))
+    .from(cataloguePublishers)
+    .where(eq(cataloguePublishers.id, cataloguePublisherId))
     .limit(1);
 
   if (!brand) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Brand profile not found.' });
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Catalogue Publisher not found.' });
   }
 
-  const entity = await getBrandPartnershipByBrandProfileId(db, brandProfileId);
-  const developmentIds = await listLinkedDevelopmentIdsForBrand(db, brandProfileId);
+  const entity = await getBrandPartnershipByPublisherId(db, cataloguePublisherId);
+  const developmentIds = await listLinkedDevelopmentIdsForBrand(db, cataloguePublisherId);
   const evaluations = await Promise.all(
     developmentIds.map(developmentId =>
       evaluateDevelopmentDistributionAccess({
@@ -118,8 +113,7 @@ export async function getDevelopmentAccessDetails(db: DbHandle, developmentId: n
       name: developments.name,
       city: developments.city,
       province: developments.province,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      marketingBrandProfileId: developments.marketingBrandProfileId,
+      cataloguePublisherId: developments.cataloguePublisherId,
       isPublished: developments.isPublished,
       approvalStatus: developments.approvalStatus,
     })
@@ -137,11 +131,8 @@ export async function getDevelopmentAccessDetails(db: DbHandle, developmentId: n
       name: String(development.name || ''),
       city: development.city || null,
       province: development.province || null,
-      developerBrandProfileId: development.developerBrandProfileId
-        ? Number(development.developerBrandProfileId)
-        : null,
-      marketingBrandProfileId: development.marketingBrandProfileId
-        ? Number(development.marketingBrandProfileId)
+      cataloguePublisherId: development.cataloguePublisherId
+        ? Number(development.cataloguePublisherId)
         : null,
       isPublished: Number(development.isPublished || 0) === 1,
       approvalStatus: development.approvalStatus || null,
@@ -159,7 +150,7 @@ export async function getDevelopmentAccessDetails(db: DbHandle, developmentId: n
 export async function listDevelopmentAccessDetails(
   db: DbHandle,
   filters: {
-    brandProfileId?: number;
+    cataloguePublisherId?: number;
     partnershipStatus?: Array<'pending' | 'active' | 'paused' | 'ended'>;
     accessStatus?: Array<'listed' | 'included' | 'excluded' | 'paused'>;
     submitReady?: boolean;
@@ -169,12 +160,9 @@ export async function listDevelopmentAccessDetails(
 ) {
   const conditions: SQL[] = [];
 
-  if (typeof filters.brandProfileId === 'number') {
+  if (typeof filters.cataloguePublisherId === 'number') {
     conditions.push(
-      or(
-        eq(developments.developerBrandProfileId, filters.brandProfileId),
-        eq(developments.marketingBrandProfileId, filters.brandProfileId),
-      )!,
+      eq(developments.cataloguePublisherId, filters.cataloguePublisherId),
     );
   }
 
@@ -195,8 +183,7 @@ export async function listDevelopmentAccessDetails(
       name: developments.name,
       city: developments.city,
       province: developments.province,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      marketingBrandProfileId: developments.marketingBrandProfileId,
+      cataloguePublisherId: developments.cataloguePublisherId,
       isPublished: developments.isPublished,
       approvalStatus: developments.approvalStatus,
       status: developments.status,
@@ -221,19 +208,16 @@ export async function listDevelopmentAccessDetails(
           name: String(row.name || ''),
           city: row.city || null,
           province: row.province || null,
-          developerBrandProfileId: row.developerBrandProfileId
-            ? Number(row.developerBrandProfileId)
-            : null,
-          marketingBrandProfileId: row.marketingBrandProfileId
-            ? Number(row.marketingBrandProfileId)
+          cataloguePublisherId: row.cataloguePublisherId
+            ? Number(row.cataloguePublisherId)
             : null,
           isPublished: Number(row.isPublished || 0) === 1,
           approvalStatus: row.approvalStatus || null,
           status: row.status || null,
           updatedAt: row.updatedAt || null,
         },
-        partnership: evaluation.brandProfileId
-          ? await getBrandPartnershipByBrandProfileId(db, evaluation.brandProfileId)
+        partnership: evaluation.cataloguePublisherId
+          ? await getBrandPartnershipByPublisherId(db, evaluation.cataloguePublisherId)
           : null,
         access: await getDevelopmentAccessByDevelopmentId(db, Number(row.id)),
         evaluation,

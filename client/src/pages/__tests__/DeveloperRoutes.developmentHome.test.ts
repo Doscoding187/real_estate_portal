@@ -45,7 +45,7 @@ vi.mock('@/pages/CreateDevelopment', () => ({
 }));
 vi.mock('@/pages/DeveloperPerformancePage', () => ({ default: () => 'Performance' }));
 vi.mock('@/pages/DeveloperPlans', () => ({ default: () => 'Plans' }));
-vi.mock('@/pages/DeveloperBrandProfilePage', () => ({ default: () => 'Brand profile' }));
+vi.mock('@/pages/DeveloperPublisherPage', () => ({ default: () => 'Catalogue Publisher' }));
 vi.mock('@/pages/developer/DevelopmentHome', () => ({
   default: () => {
     homeQuerySpy();

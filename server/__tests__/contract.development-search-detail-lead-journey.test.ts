@@ -53,9 +53,9 @@ vi.mock('../db', () => ({
   getDb: mockGetDb,
 }));
 
-vi.mock('../services/brandLeadService', () => ({
-  brandLeadService: {
-    captureBrandLead: mockCaptureBrandLead,
+vi.mock('../services/publisherLeadService', () => ({
+  publisherLeadService: {
+    capturePublisherLead: mockCaptureBrandLead,
   },
 }));
 
@@ -72,7 +72,7 @@ import { appRouter } from '../routers';
 const approvedDevelopmentDetail = {
   id: 77,
   developerId: 7,
-  developerBrandProfileId: 13,
+  cataloguePublisherId: 13,
   name: 'Cosmopolitan Projects',
   slug: 'cosmopolitan-projects',
   isPublished: 1,
@@ -152,7 +152,7 @@ describe('development search-detail-lead public journey contract', () => {
           identity: {
             role: 'developer',
             name: 'Cosmopolitan Projects',
-            developerBrandProfileId: 13,
+            cataloguePublisherId: 13,
           },
           development: {
             id: 77,
@@ -235,12 +235,11 @@ describe('development search-detail-lead public journey contract', () => {
       availableUnits: 4,
       totalUnits: 8,
       identity: {
-        developerBrandProfileId: 13,
+        cataloguePublisherId: 13,
       },
     });
 
-    const [, slug, unitTypeId] =
-      card.href.match(/^\/development\/([^/]+)\/unit\/([^/]+)$/) ?? [];
+    const [, slug, unitTypeId] = card.href.match(/^\/development\/([^/]+)\/unit\/([^/]+)$/) ?? [];
     expect(slug).toBe('cosmopolitan-projects');
     expect(unitTypeId).toBe('unit-a');
 
@@ -251,7 +250,7 @@ describe('development search-detail-lead public journey contract', () => {
 
     expect(detail).toMatchObject({
       id: 77,
-      developerBrandProfileId: 13,
+      cataloguePublisherId: 13,
       isPublished: 1,
       approvalStatus: 'approved',
     });
@@ -273,7 +272,7 @@ describe('development search-detail-lead public journey contract', () => {
     };
     const lead = await caller.developer.createLead({
       developmentId: card.developmentId,
-      developerBrandProfileId: 999,
+      cataloguePublisherId: 999,
       unitId: unit.id,
       unitName: unit.name,
       unitPriceFrom: unit.basePriceFrom,
@@ -307,7 +306,7 @@ describe('development search-detail-lead public journey contract', () => {
     expect(mockCaptureBrandLead).toHaveBeenCalledWith(
       expect.objectContaining({
         developmentId: 77,
-        developerBrandProfileId: 999,
+        cataloguePublisherId: 999,
         unitId: 'unit-a',
         unitName: 'Type A',
         unitPriceFrom: 1299000,

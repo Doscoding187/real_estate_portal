@@ -1,6 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 
-import { agencies, agents, developers, developments } from '../../drizzle/schema';
+import {
+  agencies,
+  agents,
+  developerOrganisationMemberships,
+  developerOrganisations,
+  developments,
+} from '../../drizzle/schema';
 import {
   canUploadToExploreRole,
   hasExplorePublisherIdentityRole,
@@ -103,9 +109,19 @@ export async function getExplorePublishingEligibility(
   }
 
   const [developer] = await db
-    .select({ id: developers.id })
-    .from(developers)
-    .where(and(eq(developers.userId, user.id), eq(developers.status, 'approved')))
+    .select({ id: developerOrganisations.id })
+    .from(developerOrganisationMemberships)
+    .innerJoin(
+      developerOrganisations,
+      eq(developerOrganisationMemberships.organisationId, developerOrganisations.id),
+    )
+    .where(
+      and(
+        eq(developerOrganisationMemberships.userId, user.id),
+        eq(developerOrganisationMemberships.status, 'active'),
+        eq(developerOrganisations.status, 'approved'),
+      ),
+    )
     .limit(1);
 
   if (!developer) return { allowed: false, reason: 'developer_not_approved' };
@@ -153,12 +169,12 @@ export async function assertExploreReferenceOwnership(
     }
 
     const [development] = await db
-      .select({ developerId: developments.developerId })
+      .select({ publisherId: developments.cataloguePublisherId })
       .from(developments)
       .where(eq(developments.id, input.developmentId))
       .limit(1);
 
-    if (!development || development.developerId !== publisher.developerId) {
+    if (!development || development.publisherId !== publisher.publisherId) {
       throw new ExplorePublishingAuthorizationError(
         'Only the development owner may attach it to Explore content.',
       );

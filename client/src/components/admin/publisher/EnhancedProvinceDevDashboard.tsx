@@ -36,7 +36,7 @@ const SA_PROVINCES = [
   { name: 'Northern Cape', code: 'NC', cities: 6, developments: 23 },
 ];
 
-interface BrandProfile {
+interface CataloguePublisherSummary {
   id: number;
   brandName: string;
   slug: string;
@@ -48,7 +48,7 @@ interface BrandProfile {
   identityType: string;
 }
 
-interface EnhancedBrandProfile extends BrandProfile {
+interface EnhancedCataloguePublisher extends CataloguePublisherSummary {
   developmentCount?: number;
   leadCount?: number;
   avgPropertyValue?: number;
@@ -86,7 +86,7 @@ const getTierColor = (tier: string | null) => {
 
 const EnhancedProvinceCard: React.FC<{
   province: (typeof SA_PROVINCES)[0];
-  brands: EnhancedBrandProfile[];
+  brands: EnhancedCataloguePublisher[];
   isActive: boolean;
 }> = ({ province, brands, isActive }) => {
   const { setSelectedBrandId } = useDeveloperContext();
@@ -212,7 +212,7 @@ const EnhancedProvinceCard: React.FC<{
   );
 };
 
-const EnhancedBrandCard: React.FC<{ brand: EnhancedBrandProfile }> = ({ brand }) => {
+const EnhancedBrandCard: React.FC<{ brand: EnhancedCataloguePublisher }> = ({ brand }) => {
   const { setSelectedBrandId } = useDeveloperContext();
   const [, setLocation] = useLocation();
 
@@ -335,7 +335,7 @@ const EnhancedBrandCard: React.FC<{ brand: EnhancedBrandProfile }> = ({ brand })
 
 export const ProvinceDevDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('provinces');
-  const { data: brands, isLoading } = trpc.superAdminPublisher.listBrandProfiles.useQuery({});
+  const { data: brands, isLoading } = trpc.superAdminPublisher.listPublishers.useQuery({});
 
   // Enhanced brands with mock metrics for demo
   const enhancedBrands = React.useMemo(() => {
@@ -345,7 +345,7 @@ export const ProvinceDevDashboard: React.FC = () => {
       leadCount: Math.floor(Math.random() * 150) + 10,
       avgPropertyValue: Math.floor(Math.random() * 5000000) + 500000,
       activeProjects: Math.floor(Math.random() * 15) + 1,
-    })) as EnhancedBrandProfile[];
+    })) as EnhancedCataloguePublisher[];
   }, [brands]);
 
   if (isLoading) {
@@ -367,7 +367,7 @@ export const ProvinceDevDashboard: React.FC = () => {
           Provincial Development Overview
         </h2>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          Browse developments by province or operate directly as a brand profile
+          Browse developments by province or operate directly as a Catalogue Publisher
         </p>
       </div>
 
@@ -428,9 +428,9 @@ export const ProvinceDevDashboard: React.FC = () => {
               <Card className="max-w-md mx-auto border-0 shadow-xl">
                 <CardContent className="p-8 text-center space-y-4">
                   <Building2 className="w-16 h-16 mx-auto text-blue-600" />
-                  <h3 className="text-xl font-bold text-gray-800">No Brand Profiles</h3>
+                  <h3 className="text-xl font-bold text-gray-800">No Catalogue Publishers</h3>
                   <p className="text-gray-600">
-                    Start by creating brand profiles to manage developments and track leads.
+                    Start by creating Catalogue Publishers to manage developments and track leads.
                   </p>
                   <Button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
                     Create First Brand

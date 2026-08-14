@@ -36,7 +36,7 @@ import { Building2, Phone, Briefcase } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
-  brandProfileId: z.number(),
+  cataloguePublisherId: z.number(),
   // Identity
   brandName: z.string().min(2, 'Brand name must be at least 2 characters'),
   brandTier: z.enum(['national', 'regional', 'boutique']),
@@ -72,19 +72,19 @@ const SPECIALIZATION_OPTIONS = [
   'Industrial',
 ];
 
-interface EditBrandProfileDialogProps {
+interface EditCataloguePublisherDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   brandData: any; // Full brand object
   onSuccess?: () => void;
 }
 
-export function EditBrandProfileDialog({
+export function EditCataloguePublisherDialog({
   open,
   setOpen,
   brandData,
   onSuccess,
-}: EditBrandProfileDialogProps) {
+}: EditCataloguePublisherDialogProps) {
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState('identity');
 
@@ -95,7 +95,7 @@ export function EditBrandProfileDialog({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      brandProfileId: brandData?.id,
+      cataloguePublisherId: brandData?.id,
       brandName: brandData?.brandName || '',
       brandTier: brandData?.brandTier || 'regional',
       logoUrl: brandData?.logoUrl || '',
@@ -135,7 +135,7 @@ export function EditBrandProfileDialog({
       }
 
       form.reset({
-        brandProfileId: brandData.id,
+        cataloguePublisherId: brandData.id,
         brandName: brandData.brandName || '',
         brandTier: brandData.brandTier || 'regional',
         logoUrl: brandData.logoUrl || '',
@@ -153,10 +153,10 @@ export function EditBrandProfileDialog({
     }
   }, [brandData, form]);
 
-  const updateMutation = trpc.superAdminPublisher.updateBrandProfile.useMutation({
+  const updateMutation = trpc.superAdminPublisher.updatePublisher.useMutation({
     onSuccess: () => {
-      toast.success('Brand profile updated successfully');
-      utils.superAdminPublisher.listBrandProfiles.invalidate();
+      toast.success('Catalogue Publisher updated successfully');
+      utils.superAdminPublisher.listPublishers.invalidate();
       setOpen(false);
       if (onSuccess) onSuccess();
     },
@@ -212,7 +212,7 @@ export function EditBrandProfileDialog({
 
   const onSubmit = (values: FormValues) => {
     updateMutation.mutate({
-      brandProfileId: values.brandProfileId,
+      cataloguePublisherId: values.cataloguePublisherId,
       brandName: values.brandName,
       brandTier: values.brandTier,
       logoUrl: values.logoUrl || undefined,
@@ -235,7 +235,7 @@ export function EditBrandProfileDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
-            Edit Brand Profile
+            Edit Catalogue Publisher
           </DialogTitle>
           <DialogDescription>
             Update details for platform-owned developer profile.

@@ -20,9 +20,9 @@ vi.mock('../db', () => ({
   getDb: mockGetDb,
 }));
 
-vi.mock('../services/brandLeadService', () => ({
-  brandLeadService: {
-    retryBrandLeadDelivery: vi.fn(),
+vi.mock('../services/publisherLeadService', () => ({
+  publisherLeadService: {
+    retryPublisherLeadDelivery: vi.fn(),
   },
 }));
 

@@ -36,7 +36,7 @@ interface PropertyContactModalProps {
   agentName?: string;
   agentPhone?: string;
   agentEmail?: string;
-  developerBrandProfileId?: number;
+  cataloguePublisherId?: number;
   developmentId?: number;
   initialMessage?: string;
   source?: string;
@@ -77,7 +77,7 @@ export function PropertyContactModal({
   agentName = 'Listing Contact',
   agentPhone,
   agentEmail,
-  developerBrandProfileId,
+  cataloguePublisherId,
   developmentId,
   initialMessage,
   source = 'property_search',
@@ -176,7 +176,7 @@ export function PropertyContactModal({
       message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
       leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry',
       source,
-      developerBrandProfileId,
+      cataloguePublisherId,
       developmentId,
       affordabilityData,
       captureRequestId,

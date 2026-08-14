@@ -1,15 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TRPCError } from '@trpc/server';
 
-const { mockVerifyBrandContext, mockGetDeveloperByUserId, mockGetDb } = vi.hoisted(() => ({
-  mockVerifyBrandContext: vi.fn(),
+const { mockVerifyPublisherContext, mockGetDeveloperByUserId } = vi.hoisted(() => ({
+  mockVerifyPublisherContext: vi.fn(),
   mockGetDeveloperByUserId: vi.fn(),
-  mockGetDb: vi.fn(),
 }));
 
-vi.mock('../services/brandContextService', () => ({
-  brandContextService: {
-    verifyBrandContext: mockVerifyBrandContext,
+vi.mock('../services/cataloguePublisherContextService', () => ({
+  cataloguePublisherContextService: {
+    verifyPublisherContext: mockVerifyPublisherContext,
   },
 }));
 
@@ -17,85 +16,68 @@ vi.mock('../services/developerService', () => ({
   getDeveloperByUserId: mockGetDeveloperByUserId,
 }));
 
-vi.mock('../db-connection', () => ({
-  getDb: mockGetDb,
-}));
+import { resolveOperatingIdentity, validateOwnership } from '../_core/identityResolver';
 
-import { resolveOperatingIdentity } from '../_core/identityResolver';
-
-function context(user: { id: number; role: string }, brandProfileId?: number) {
+function context(user: { id: number; role: string }, cataloguePublisherId?: number) {
   return {
     req: { headers: {} },
     res: {},
     user,
     requestId: 's1-actor-contract',
     operatingAs:
-      brandProfileId === undefined
+      cataloguePublisherId === undefined
         ? undefined
         : {
-            brandProfileId,
-            brandType: 'developer' as const,
-            brandName: 'Requested Brand',
+            cataloguePublisherId,
+            publisherType: 'developer' as const,
+            publisherName: 'Requested Publisher',
             originalUserId: user.id,
-            ownerType: 'platform' as const,
+            authorityKind: 'platform_reference' as const,
             mode: 'platform_curator' as const,
           },
   } as any;
 }
 
-function developerBrandDatabase() {
-  const limit = vi.fn().mockResolvedValue([
-    {
-      id: 44,
-      ownerType: 'developer',
-      linkedDeveloperAccountId: 7,
-    },
-  ]);
-  const where = vi.fn().mockReturnValue({ limit });
-  const from = vi.fn().mockReturnValue({ where });
-  return { select: vi.fn().mockReturnValue({ from }) };
-}
-
 describe('Developer Engine S1 actor authority', () => {
   it('resolves a valid platform-curator identity from server-validated brand state', async () => {
-    mockVerifyBrandContext.mockResolvedValue({
-      brandProfileId: 21,
-      brandName: 'Curated Homes',
-      ownerType: 'platform',
-      identityType: 'developer',
+    mockVerifyPublisherContext.mockResolvedValue({
+      cataloguePublisherId: 21,
+      publisherName: 'Curated Homes',
+      authorityKind: 'platform_reference',
+      publisherType: 'developer',
       brandTier: 'regional',
       isOperatingAs: false,
     });
 
     const identity = await resolveOperatingIdentity(context({ id: 5, role: 'super_admin' }, 21), {
       mode: 'platform_curator',
-      brandProfileId: 21,
+      cataloguePublisherId: 21,
     });
 
     expect(identity).toMatchObject({
       mode: 'platform_curator',
       actor: { userId: 5, role: 'super_admin' },
-      brandProfileId: 21,
-      ownerType: 'platform',
+      cataloguePublisherId: 21,
+      publisherType: 'developer',
     });
-    expect(mockVerifyBrandContext).toHaveBeenCalledWith(21);
+    expect(mockVerifyPublisherContext).toHaveBeenCalledWith(21);
   });
 
   it('rejects an ordinary actor before a curator brand can be resolved', async () => {
     await expect(
       resolveOperatingIdentity(context({ id: 8, role: 'property_developer' }, 21), {
         mode: 'platform_curator',
-        brandProfileId: 21,
+        cataloguePublisherId: 21,
       }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    expect(mockVerifyBrandContext).not.toHaveBeenCalled();
+    expect(mockVerifyPublisherContext).not.toHaveBeenCalled();
   });
 
   it('rejects a stale or cross-brand curator request', async () => {
     await expect(
       resolveOperatingIdentity(context({ id: 5, role: 'super_admin' }, 21), {
         mode: 'platform_curator',
-        brandProfileId: 22,
+        cataloguePublisherId: 22,
       }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
@@ -104,73 +86,76 @@ describe('Developer Engine S1 actor authority', () => {
     await expect(
       resolveOperatingIdentity(context({ id: 5, role: 'super_admin' }), {
         mode: 'platform_curator',
-        brandProfileId: 21,
+        cataloguePublisherId: 21,
       }),
     ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-    expect(mockVerifyBrandContext).not.toHaveBeenCalled();
+    expect(mockVerifyPublisherContext).not.toHaveBeenCalled();
   });
 
-  it('uses the canonical brandProfile relationship instead of a stale developerBrandProfileId field', async () => {
+  it('uses the canonical Catalogue Publisher relationship for a developer organisation', async () => {
     mockGetDeveloperByUserId.mockResolvedValue({
       id: 7,
       userId: 70,
-      developerBrandProfileId: 999,
-      brandProfile: { id: 44 },
+      organisationId: 7,
+      publisherId: 44,
+      cataloguePublisherId: 44,
     });
-    mockGetDb.mockResolvedValue(developerBrandDatabase());
 
     const identity = await resolveOperatingIdentity(
       context({ id: 70, role: 'property_developer' }),
-      { mode: 'developer', brandProfileId: 44 },
+      { mode: 'developer', cataloguePublisherId: 44 },
     );
 
     expect(identity).toMatchObject({
       mode: 'developer',
       actor: { userId: 70, role: 'property_developer' },
       developerId: 7,
-      brandProfileId: 44,
-      ownerType: 'developer',
+      organisationId: 7,
+      cataloguePublisherId: 44,
     });
 
     await expect(
       resolveOperatingIdentity(context({ id: 70, role: 'property_developer' }), {
         mode: 'developer',
-        brandProfileId: 45,
+        cataloguePublisherId: 45,
       }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
-  it('allows developer-scoped onboarding before a public brand is linked', async () => {
+  it('requires the transactional onboarding identity to include a publisher', async () => {
     mockGetDeveloperByUserId.mockResolvedValue({
       id: 8,
       userId: 80,
-      developerBrandProfileId: null,
-      brandProfile: null,
+      organisationId: 8,
+      publisherId: null,
     });
 
     await expect(
       resolveOperatingIdentity(context({ id: 80, role: 'property_developer' }), {
         mode: 'developer',
       }),
-    ).resolves.toMatchObject({
-      mode: 'developer',
-      developerId: 8,
-      brandProfileId: null,
-      ownerType: 'developer',
-    });
-    expect(mockGetDb).not.toHaveBeenCalled();
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
   it('propagates claimed or otherwise unavailable curator identities as authorization failures', async () => {
-    mockVerifyBrandContext.mockRejectedValue(
-      new TRPCError({ code: 'FORBIDDEN', message: 'Brand is claimed.' }),
+    mockVerifyPublisherContext.mockRejectedValue(
+      new TRPCError({ code: 'FORBIDDEN', message: 'Publisher is unavailable.' }),
     );
 
     await expect(
       resolveOperatingIdentity(context({ id: 5, role: 'super_admin' }, 21), {
         mode: 'platform_curator',
-        brandProfileId: 21,
+        cataloguePublisherId: 21,
       }),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  it('rejects conflicting organisation aliases while accepting canonical publisher ownership', () => {
+    expect(() =>
+      validateOwnership({ developerId: 31, organisationId: 32 }),
+    ).toThrow('Conflicting ownership aliases supplied');
+    expect(() =>
+      validateOwnership({ cataloguePublisherId: 21, organisationId: 31 }),
+    ).not.toThrow();
   });
 });

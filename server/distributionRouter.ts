@@ -8,8 +8,7 @@ import {
   DISTRIBUTION_TIER_VALUES,
   DISTRIBUTION_VIEWING_STATUS_VALUES,
   DISTRIBUTION_IDENTITY_TYPE_VALUES,
-  developers,
-  developerBrandProfiles,
+  cataloguePublishers,
   developments,
   developmentRequiredDocuments,
   distributionAgentAccess,
@@ -32,6 +31,7 @@ import {
 import { ENV } from './_core/env';
 import { protectedProcedure, publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { getDb } from './db';
+import { developerIdentityService } from './services/developerIdentityService';
 import { authService } from './_core/auth';
 import { EmailService } from './_core/emailService';
 import { ensureCommissionEntryForDeal } from './services/distributionCommissionService';
@@ -550,7 +550,7 @@ function normalizeRequiredDocumentLabel(value: string) {
 }
 
 function getDefaultOnboardingRequiredDocuments(
-  brandProfileName?: string | null,
+  publisherName?: string | null,
 ): RequiredDocumentTemplateSeed[] {
   const templates: RequiredDocumentTemplateSeed[] = [
     {
@@ -579,7 +579,7 @@ function getDefaultOnboardingRequiredDocuments(
     },
   ];
 
-  const normalizedBrandName = String(brandProfileName || '').trim().toLowerCase();
+  const normalizedBrandName = String(publisherName || '').trim().toLowerCase();
   if (normalizedBrandName.includes('cosmopolitan')) {
     templates.push(
       {
@@ -615,7 +615,7 @@ function getDefaultOnboardingRequiredDocuments(
 async function seedDevelopmentRequiredDocumentsIfEmpty(input: {
   db: any;
   developmentId: number;
-  brandProfileName?: string | null;
+  publisherName?: string | null;
 }) {
   const [existingRow] = await input.db
     .select({ id: developmentRequiredDocuments.id })
@@ -627,7 +627,7 @@ async function seedDevelopmentRequiredDocumentsIfEmpty(input: {
     return { seeded: false as const, count: 0 };
   }
 
-  const templates = getDefaultOnboardingRequiredDocuments(input.brandProfileName);
+  const templates = getDefaultOnboardingRequiredDocuments(input.publisherName);
   if (!templates.length) {
     return { seeded: false as const, count: 0 };
   }
@@ -1349,7 +1349,7 @@ const upsertProgramInput = z.object({
 });
 
 const upsertBrandPartnershipInput = z.object({
-  brandProfileId: z.number().int().positive(),
+  cataloguePublisherId: z.number().int().positive(),
   status: z.enum(DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES),
   reasonCode: z.string().trim().max(80).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
@@ -1377,7 +1377,7 @@ const developmentBrochureConfigSchema = z.object({
 });
 
 const getBrandPartnershipInput = z.object({
-  brandProfileId: z.number().int().positive(),
+  cataloguePublisherId: z.number().int().positive(),
 });
 
 const getDevelopmentAccessInput = z.object({
@@ -1386,7 +1386,7 @@ const getDevelopmentAccessInput = z.object({
 
 const listDevelopmentAccessInput = z
   .object({
-    brandProfileId: z.number().int().positive().optional(),
+    cataloguePublisherId: z.number().int().positive().optional(),
     partnershipStatus: z.array(z.enum(DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES)).optional(),
     accessStatus: z.array(z.enum(DISTRIBUTION_DEVELOPMENT_ACCESS_STATUS_VALUES)).optional(),
     submitReady: z.boolean().optional(),
@@ -1655,9 +1655,9 @@ const adminDistributionRouter = router({
       z
         .object({
           search: z.string().trim().max(200).optional(),
-          brandProfileId: z.number().int().positive().optional(),
+          cataloguePublisherId: z.number().int().positive().optional(),
           includeUnpublished: z.boolean().default(false),
-          onlyBrandProfileLinked: z.boolean().default(true),
+          onlyPublisherLinked: z.boolean().default(true),
           limit: z.number().int().min(1).max(500).default(200),
         })
         .optional(),
@@ -1670,9 +1670,9 @@ const adminDistributionRouter = router({
       if (!db) throw new Error('Database not available');
 
       const search = input?.search?.trim().toLowerCase() || '';
-      const brandProfileId = input?.brandProfileId;
+      const cataloguePublisherId = input?.cataloguePublisherId;
       const includeUnpublished = input?.includeUnpublished ?? false;
-      const onlyBrandProfileLinked = input?.onlyBrandProfileLinked ?? true;
+      const onlyPublisherLinked = input?.onlyPublisherLinked ?? true;
       const limit = input?.limit ?? 200;
 
       const conditions: SQL[] = [];
@@ -1680,15 +1680,11 @@ const adminDistributionRouter = router({
         conditions.push(eq(developments.isPublished, 1));
         conditions.push(eq(developments.approvalStatus, 'approved'));
       }
-      if (onlyBrandProfileLinked) {
-        conditions.push(
-          sql`(${developments.developerBrandProfileId} IS NOT NULL OR ${developments.marketingBrandProfileId} IS NOT NULL)`,
-        );
+      if (onlyPublisherLinked) {
+        conditions.push(sql`${developments.cataloguePublisherId} IS NOT NULL`);
       }
-      if (typeof brandProfileId === 'number') {
-        conditions.push(
-          sql`(${developments.developerBrandProfileId} = ${brandProfileId} OR ${developments.marketingBrandProfileId} = ${brandProfileId})`,
-        );
+      if (typeof cataloguePublisherId === 'number') {
+        conditions.push(eq(developments.cataloguePublisherId, cataloguePublisherId));
       }
 
       if (search) {
@@ -1698,7 +1694,7 @@ const adminDistributionRouter = router({
             LOWER(COALESCE(${developments.name}, '')) LIKE ${term}
             OR LOWER(COALESCE(${developments.city}, '')) LIKE ${term}
             OR LOWER(COALESCE(${developments.province}, '')) LIKE ${term}
-            OR LOWER(COALESCE(${developerBrandProfiles.brandName}, '')) LIKE ${term}
+            OR LOWER(COALESCE(${cataloguePublishers.name}, '')) LIKE ${term}
           )`,
         );
       }
@@ -1707,9 +1703,8 @@ const adminDistributionRouter = router({
         .select({
           developmentId: developments.id,
           developmentName: developments.name,
-          brandProfileId: developments.developerBrandProfileId,
-          marketingBrandProfileId: developments.marketingBrandProfileId,
-          brandProfileName: developerBrandProfiles.brandName,
+          cataloguePublisherId: developments.cataloguePublisherId,
+          publisherName: cataloguePublishers.name,
           city: developments.city,
           province: developments.province,
           developmentStatus: developments.status,
@@ -1733,8 +1728,8 @@ const adminDistributionRouter = router({
         })
         .from(developments)
         .leftJoin(
-          developerBrandProfiles,
-          eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+          cataloguePublishers,
+          eq(developments.cataloguePublisherId, cataloguePublishers.id),
         )
         .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
         .where(withConditions(conditions))
@@ -1744,9 +1739,9 @@ const adminDistributionRouter = router({
       // Fallback safety net:
       // If a specific brand is selected and primary filtered query returns no rows,
       // run a direct brand-link query to avoid false-empty states due filter interaction.
-      if (!rows.length && typeof brandProfileId === 'number') {
+      if (!rows.length && typeof cataloguePublisherId === 'number') {
         const fallbackConditions: SQL[] = [
-          sql`(${developments.developerBrandProfileId} = ${brandProfileId} OR ${developments.marketingBrandProfileId} = ${brandProfileId})`,
+          eq(developments.cataloguePublisherId, cataloguePublisherId),
         ];
         if (!includeUnpublished) {
           fallbackConditions.push(eq(developments.isPublished, 1));
@@ -1767,9 +1762,8 @@ const adminDistributionRouter = router({
           .select({
             developmentId: developments.id,
             developmentName: developments.name,
-            brandProfileId: developments.developerBrandProfileId,
-            marketingBrandProfileId: developments.marketingBrandProfileId,
-            brandProfileName: developerBrandProfiles.brandName,
+            cataloguePublisherId: developments.cataloguePublisherId,
+            publisherName: cataloguePublishers.name,
             city: developments.city,
             province: developments.province,
             developmentStatus: developments.status,
@@ -1793,8 +1787,8 @@ const adminDistributionRouter = router({
           })
           .from(developments)
           .leftJoin(
-            developerBrandProfiles,
-            eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+            cataloguePublishers,
+            eq(developments.cataloguePublisherId, cataloguePublishers.id),
           )
           .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
           .where(withConditions(fallbackConditions))
@@ -1805,12 +1799,11 @@ const adminDistributionRouter = router({
       const developmentIds: number[] = Array.from(
         new Set(rows.map(row => Number(row.developmentId)).filter(Boolean)),
       );
-      const linkedBrandProfileIds: number[] = Array.from(
+      const linkedPublisherIds: number[] = Array.from(
         new Set(
           rows
             .flatMap(row => [
-              Number(row.brandProfileId || 0),
-              Number(row.marketingBrandProfileId || 0),
+              Number(row.cataloguePublisherId || 0),
             ])
             .filter(Boolean),
         ),
@@ -1820,16 +1813,16 @@ const adminDistributionRouter = router({
       );
 
       const brandDirectory =
-        linkedBrandProfileIds.length > 0
+        linkedPublisherIds.length > 0
           ? new Map<number, string>(
               (
                 await db
                   .select({
-                    id: developerBrandProfiles.id,
-                    brandName: developerBrandProfiles.brandName,
+                    id: cataloguePublishers.id,
+                    brandName: cataloguePublishers.name,
                   })
-                  .from(developerBrandProfiles)
-                  .where(inArray(developerBrandProfiles.id, linkedBrandProfileIds))
+                  .from(cataloguePublishers)
+                  .where(inArray(cataloguePublishers.id, linkedPublisherIds))
               ).map(row => [Number(row.id), String(row.brandName || '')]),
             )
           : new Map<number, string>();
@@ -2026,21 +2019,14 @@ const adminDistributionRouter = router({
         return {
           developmentId,
           developmentName: row.developmentName,
-          brandProfileId:
-            row.brandProfileId || row.marketingBrandProfileId
-              ? Number(row.brandProfileId || row.marketingBrandProfileId)
-              : null,
-          brandLinkType:
-            row.brandProfileId || row.marketingBrandProfileId
-              ? row.brandProfileId
-                ? ('developer' as const)
-                : ('marketing' as const)
-              : null,
-          brandProfileName:
-            (row.brandProfileId || row.marketingBrandProfileId
-              ? brandDirectory.get(Number(row.brandProfileId || row.marketingBrandProfileId))
+          cataloguePublisherId: row.cataloguePublisherId
+            ? Number(row.cataloguePublisherId)
+            : null,
+          publisherName:
+            (row.cataloguePublisherId
+              ? brandDirectory.get(Number(row.cataloguePublisherId))
               : null) ||
-            row.brandProfileName ||
+            row.publisherName ||
             null,
           city: row.city,
           province: row.province,
@@ -2107,7 +2093,7 @@ const adminDistributionRouter = router({
   debugBrandDevelopments: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int().positive(),
+        cataloguePublisherId: z.number().int().positive(),
       }),
     )
     .query(async ({ input }) => {
@@ -2117,28 +2103,28 @@ const adminDistributionRouter = router({
 
       const [brand] = await db
         .select({
-          id: developerBrandProfiles.id,
-          brandName: developerBrandProfiles.brandName,
+          id: cataloguePublishers.id,
+          brandName: cataloguePublishers.name,
         })
-        .from(developerBrandProfiles)
-        .where(eq(developerBrandProfiles.id, input.brandProfileId))
+        .from(cataloguePublishers)
+        .where(eq(cataloguePublishers.id, input.cataloguePublisherId))
         .limit(1);
 
       if (!brand) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Brand profile not found.' });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Catalogue Publisher not found.' });
       }
 
       const [summary] = await db
         .select({
           totalLinked: sql<number>`COUNT(*)`,
-          developerLinked: sql<number>`SUM(CASE WHEN ${developments.developerBrandProfileId} = ${input.brandProfileId} THEN 1 ELSE 0 END)`,
-          marketingLinked: sql<number>`SUM(CASE WHEN ${developments.marketingBrandProfileId} = ${input.brandProfileId} THEN 1 ELSE 0 END)`,
+          developerLinked: sql<number>`SUM(CASE WHEN ${developments.cataloguePublisherId} = ${input.cataloguePublisherId} THEN 1 ELSE 0 END)`,
+          marketingLinked: sql<number>`0`,
           publishedApproved: sql<number>`SUM(CASE WHEN ${developments.isPublished} = 1 AND ${developments.approvalStatus} = 'approved' THEN 1 ELSE 0 END)`,
           unpublishedOrUnapproved: sql<number>`SUM(CASE WHEN NOT (${developments.isPublished} = 1 AND ${developments.approvalStatus} = 'approved') THEN 1 ELSE 0 END)`,
         })
         .from(developments)
         .where(
-          sql`(${developments.developerBrandProfileId} = ${input.brandProfileId} OR ${developments.marketingBrandProfileId} = ${input.brandProfileId})`,
+          eq(developments.cataloguePublisherId, input.cataloguePublisherId),
         );
 
       const samples = await db
@@ -2149,13 +2135,12 @@ const adminDistributionRouter = router({
           province: developments.province,
           isPublished: developments.isPublished,
           approvalStatus: developments.approvalStatus,
-          developerBrandProfileId: developments.developerBrandProfileId,
-          marketingBrandProfileId: developments.marketingBrandProfileId,
+          cataloguePublisherId: developments.cataloguePublisherId,
           updatedAt: developments.updatedAt,
         })
         .from(developments)
         .where(
-          sql`(${developments.developerBrandProfileId} = ${input.brandProfileId} OR ${developments.marketingBrandProfileId} = ${input.brandProfileId})`,
+          eq(developments.cataloguePublisherId, input.cataloguePublisherId),
         )
         .orderBy(desc(developments.updatedAt))
         .limit(20);
@@ -2172,11 +2157,9 @@ const adminDistributionRouter = router({
           ...row,
           isPublished: boolFromTinyInt(row.isPublished),
           linkType:
-            Number(row.developerBrandProfileId || 0) === input.brandProfileId
-              ? ('developer' as const)
-              : Number(row.marketingBrandProfileId || 0) === input.brandProfileId
-                ? ('marketing' as const)
-                : ('unknown' as const),
+            Number(row.cataloguePublisherId || 0) === input.cataloguePublisherId
+              ? ('catalogue_publisher' as const)
+              : ('unknown' as const),
         })),
       };
     }),
@@ -2195,7 +2178,7 @@ const adminDistributionRouter = router({
           const result = await upsertBrandPartnershipWithAudit({
             db,
             actorUserId: ctx.user.id,
-            brandProfileId: input.brandProfileId,
+            cataloguePublisherId: input.cataloguePublisherId,
             status: input.status,
             reasonCode: input.reasonCode,
             notes: input.notes,
@@ -2264,7 +2247,7 @@ const adminDistributionRouter = router({
           const db = await getDb();
           if (!db) throw new Error('Database not available');
 
-          const result = await getBrandPartnershipDetails(db, input.brandProfileId);
+          const result = await getBrandPartnershipDetails(db, input.cataloguePublisherId);
           return {
             success: true as const,
             entity: result.entity,
@@ -2278,7 +2261,7 @@ const adminDistributionRouter = router({
   getBrandOnboardingPreset: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int().positive(),
+        cataloguePublisherId: z.number().int().positive(),
       }),
     )
     .query(async ({ input }) => {
@@ -2288,15 +2271,15 @@ const adminDistributionRouter = router({
 
       return {
         success: true as const,
-        brandProfileId: input.brandProfileId,
-        preset: await getBrandOnboardingPreset(db, input.brandProfileId),
+        cataloguePublisherId: input.cataloguePublisherId,
+        preset: await getBrandOnboardingPreset(db, input.cataloguePublisherId),
       };
     }),
 
   setBrandOnboardingPreset: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int().positive(),
+        cataloguePublisherId: z.number().int().positive(),
         preset: brandOnboardingPresetSchema,
       }),
     )
@@ -2308,10 +2291,10 @@ const adminDistributionRouter = router({
       try {
         return {
           success: true as const,
-          brandProfileId: input.brandProfileId,
+          cataloguePublisherId: input.cataloguePublisherId,
           preset: await setBrandOnboardingPreset({
             db,
-            brandProfileId: input.brandProfileId,
+            cataloguePublisherId: input.cataloguePublisherId,
             actorUserId: ctx.user.id,
             preset: input.preset,
           }),
@@ -2413,7 +2396,7 @@ const adminDistributionRouter = router({
           if (!db) throw new Error('Database not available');
 
           const rows = await listDevelopmentAccessDetails(db, {
-            brandProfileId: input?.brandProfileId,
+            cataloguePublisherId: input?.cataloguePublisherId,
             partnershipStatus: input?.partnershipStatus,
             accessStatus: input?.accessStatus,
             submitReady: input?.submitReady,
@@ -2454,8 +2437,7 @@ const adminDistributionRouter = router({
                 .select({
                   id: developments.id,
                   name: developments.name,
-                  developerBrandProfileId: developments.developerBrandProfileId,
-                  marketingBrandProfileId: developments.marketingBrandProfileId,
+                  cataloguePublisherId: developments.cataloguePublisherId,
                 })
                 .from(developments)
                 .where(eq(developments.id, input.developmentId))
@@ -2465,32 +2447,29 @@ const adminDistributionRouter = router({
                 throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
               }
 
-              const brandProfileId =
-                Number(development.developerBrandProfileId || 0) ||
-                Number(development.marketingBrandProfileId || 0) ||
-                null;
+              const cataloguePublisherId = Number(development.cataloguePublisherId || 0) || null;
 
-              if (!brandProfileId) {
+              if (!cataloguePublisherId) {
                 throw new TRPCError({
                   code: 'BAD_REQUEST',
                   message:
-                    'Development must be linked to a brand profile before it can be added to partner developments.',
+                    'Development must be linked to a Catalogue Publisher before it can be added to partner developments.',
                 });
               }
 
-              const [brandProfile] = await tx
+              const [publisher] = await tx
                 .select({
-                  id: developerBrandProfiles.id,
-                  brandName: developerBrandProfiles.brandName,
+                  id: cataloguePublishers.id,
+                  brandName: cataloguePublishers.name,
                 })
-                .from(developerBrandProfiles)
-                .where(eq(developerBrandProfiles.id, brandProfileId))
+                .from(cataloguePublishers)
+                .where(eq(cataloguePublishers.id, cataloguePublisherId))
                 .limit(1);
 
               const partnershipResult = await upsertBrandPartnershipWithAudit({
                 db: tx as any,
                 actorUserId: ctx.user.id,
-                brandProfileId,
+                cataloguePublisherId,
                 status: 'active',
                 reasonCode: 'admin_onboarding',
                 notes: 'Activated via partner development onboarding.',
@@ -2546,14 +2525,14 @@ const adminDistributionRouter = router({
               const seededDocs = await seedDevelopmentRequiredDocumentsIfEmpty({
                 db: tx as any,
                 developmentId: input.developmentId,
-                brandProfileName: brandProfile?.brandName || null,
+                publisherName: publisher?.brandName || null,
               });
 
               return {
                 success: true as const,
                 developmentId: input.developmentId,
                 developmentName: String(development.name || 'Development'),
-                brandProfileId,
+                cataloguePublisherId,
                 partnership: {
                   changed: partnershipResult.changed,
                   status: partnershipResult.partnership.status,
@@ -6353,7 +6332,7 @@ const partnerDistributionRouter = router({
     .input(
       z
         .object({
-          brandProfileId: z.number().int().positive().optional(),
+          cataloguePublisherId: z.number().int().positive().optional(),
           includeUnavailable: z.boolean().default(false),
         })
         .optional(),
@@ -6366,7 +6345,7 @@ const partnerDistributionRouter = router({
       await assertPartnerTermsAccess(db, ctx.user!);
 
       return await listPartnerProgramTerms({
-        brandProfileId: input?.brandProfileId,
+        cataloguePublisherId: input?.cataloguePublisherId,
         includeDisabled: input?.includeUnavailable ?? false,
       });
     }),
@@ -6375,7 +6354,7 @@ const partnerDistributionRouter = router({
     .input(
       z
         .object({
-          brandProfileId: z.number().int().positive().optional(),
+          cataloguePublisherId: z.number().int().positive().optional(),
           developmentIds: z.array(z.number().int().positive()).max(200).optional(),
           includeDisabled: z.boolean().default(false),
         })
@@ -6389,7 +6368,7 @@ const partnerDistributionRouter = router({
       await assertPartnerTermsAccess(db, ctx.user!);
 
       return await listPartnerProgramTerms({
-        brandProfileId: input?.brandProfileId,
+        cataloguePublisherId: input?.cataloguePublisherId,
         developmentIds: input?.developmentIds,
         includeDisabled: input?.includeDisabled ?? false,
       });
@@ -7513,22 +7492,19 @@ const developerDistributionRouter = router({
       }
 
       const dealLimit = input?.dealLimit ?? 1000;
-      let developerIds: number[] = [];
+      let publisherIds: number[] = [];
 
       if (role === 'property_developer') {
-        const rows = await db
-          .select({ id: developers.id })
-          .from(developers)
-          .where(eq(developers.userId, ctx.user!.id));
-        developerIds = Array.from(new Set(rows.map(row => Number(row.id)).filter(Boolean)));
+        const identity = await developerIdentityService.getDeveloperByUserId(ctx.user!.id);
+        publisherIds = identity ? [identity.publisherId] : [];
       }
 
       const programConditions: SQL[] = [];
       if (role === 'property_developer') {
-        if (!developerIds.length) {
+        if (!publisherIds.length) {
           return {
             scope: 'developer' as const,
-            developerIds,
+            developerIds: publisherIds,
             metrics: {
               totalPrograms: 0,
               activePrograms: 0,
@@ -7548,7 +7524,7 @@ const developerDistributionRouter = router({
             truncated: false,
           };
         }
-        programConditions.push(inArray(developments.developerId, developerIds));
+        programConditions.push(inArray(developments.cataloguePublisherId, publisherIds));
       }
 
       const programRows = await db
@@ -7575,7 +7551,7 @@ const developerDistributionRouter = router({
       if (!programs.length) {
         return {
           scope: role === 'property_developer' ? ('developer' as const) : ('global' as const),
-          developerIds,
+          developerIds: publisherIds,
           metrics: {
             totalPrograms: 0,
             activePrograms: 0,
@@ -7775,7 +7751,7 @@ const developerDistributionRouter = router({
 
       return {
         scope: role === 'property_developer' ? ('developer' as const) : ('global' as const),
-        developerIds,
+        developerIds: publisherIds,
         metrics: {
           totalPrograms: programs.length,
           activePrograms: programs.filter(program => program.isActive).length,
@@ -7824,16 +7800,13 @@ const developerDistributionRouter = router({
       const conditions: SQL[] = [];
 
       if (role === 'property_developer') {
-        const rows = await db
-          .select({ id: developers.id })
-          .from(developers)
-          .where(eq(developers.userId, ctx.user!.id));
-        const developerIds = Array.from(new Set(rows.map(row => Number(row.id)).filter(Boolean)));
-        if (!developerIds.length) {
+        const identity = await developerIdentityService.getDeveloperByUserId(ctx.user!.id);
+        const publisherIds = identity ? [identity.publisherId] : [];
+        if (!publisherIds.length) {
           return [];
         }
-        const scopeConditions = developerIds.map(
-          developerId => sql`${developments.developerId} = ${developerId}`,
+        const scopeConditions = publisherIds.map(
+          publisherId => sql`${developments.cataloguePublisherId} = ${publisherId}`,
         );
         conditions.push(sql`(${sql.join(scopeConditions, sql` OR `)})`);
       }
@@ -7926,16 +7899,13 @@ const developerDistributionRouter = router({
 
       const scopeConditions: SQL[] = [eq(distributionDeals.id, input.dealId)];
       if (role === 'property_developer') {
-        const rows = await db
-          .select({ id: developers.id })
-          .from(developers)
-          .where(eq(developers.userId, ctx.user!.id));
-        const developerIds = Array.from(new Set(rows.map(row => Number(row.id)).filter(Boolean)));
-        if (!developerIds.length) {
+        const identity = await developerIdentityService.getDeveloperByUserId(ctx.user!.id);
+        const publisherIds = identity ? [identity.publisherId] : [];
+        if (!publisherIds.length) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'No developer profile scope found.' });
         }
-        const developerScopeConditions = developerIds.map(
-          developerId => sql`${developments.developerId} = ${developerId}`,
+        const developerScopeConditions = publisherIds.map(
+          publisherId => sql`${developments.cataloguePublisherId} = ${publisherId}`,
         );
         scopeConditions.push(sql`(${sql.join(developerScopeConditions, sql` OR `)})`);
       }

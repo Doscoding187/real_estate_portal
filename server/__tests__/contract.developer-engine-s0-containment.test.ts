@@ -34,12 +34,12 @@ describe('Developer Engine S0 containment contracts', () => {
   });
 
   it('retires the arbitrary cross-brand development linking authority', () => {
-    const brandProfileRouter = source('server/brandProfileRouter.ts');
-    const brandProfileService = source('server/services/developerBrandProfileService.ts');
+    const cataloguePublisherRouter = source('server/cataloguePublisherRouter.ts');
+    const brandProfileService = source('server/services/cataloguePublisherService.ts');
     const distributionPage = source('client/src/pages/admin/DistributionNetworkPage.tsx');
 
-    expect(brandProfileRouter).not.toContain('adminAttachDevelopment');
-    expect(brandProfileRouter).not.toContain('adminDetachDevelopment');
+    expect(cataloguePublisherRouter).not.toContain('adminAttachDevelopment');
+    expect(cataloguePublisherRouter).not.toContain('adminDetachDevelopment');
     expect(brandProfileService).not.toContain('attachDevelopmentToBrand');
     expect(brandProfileService).not.toContain('detachDevelopmentFromBrand');
     expect(distributionPage).not.toContain('adminAttachDevelopment');
@@ -59,21 +59,22 @@ describe('Developer Engine S0 containment contracts', () => {
   });
 
   it('requires an explicit unclaimed platform curator context', () => {
-    const contextService = source('server/services/brandContextService.ts');
-    const middleware = source('server/_core/brandContext.ts');
+    const contextService = source('server/services/cataloguePublisherContextService.ts');
+    const middleware = source('server/_core/publisherContext.ts');
     const trpc = source('server/_core/trpc.ts');
     const developmentService = source('server/services/developmentService.ts');
 
-    expect(
-      (contextService.match(/isNull\(developerBrandProfiles\.linkedDeveloperAccountId\)/g) || [])
-        .length,
-    ).toBeGreaterThanOrEqual(2);
-    expect(middleware).toContain('brandContextService.verifyBrandContext');
+    expect(contextService).not.toContain('developerBrandProfiles');
+    expect(contextService).toContain("eq(cataloguePublishers.authorityKind, 'platform_reference')");
+    expect(contextService).toContain('eq(cataloguePublishers.isVisible, 1)');
+    expect(middleware).toContain('cataloguePublisherContextService.verifyPublisherContext');
     expect(trpc).toContain(
       'export const superAdminProcedure = protectedProcedure.use(requireSuperAdmin)',
     );
-    expect(developmentService).toContain('A valid platform curator brand context is required');
-    expect(developmentService).not.toContain('operatingContext?.brandProfileId || brandProfileId');
+    expect(developmentService).toContain('A valid platform-curator publisher context is required');
+    expect(developmentService).not.toContain(
+      'operatingContext?.cataloguePublisherId || cataloguePublisherId',
+    );
     expect(developmentService).not.toContain(
       'insertPayload.developerBrandProfileId = brandProfileId',
     );

@@ -77,11 +77,31 @@ function normalizeDevelopmentAccessStatus(status: string | null | undefined) {
   return normalized;
 }
 
+type PersistedBrandPartnershipRow = typeof distributionBrandPartnerships.$inferSelect;
+type PersistedDevelopmentAccessRow = typeof distributionDevelopmentAccess.$inferSelect;
+
+export type DistributionBrandPartnershipRow = Omit<
+  PersistedBrandPartnershipRow,
+  'brandProfileId'
+>;
+export type DistributionDevelopmentAccessRow = Omit<
+  PersistedDevelopmentAccessRow,
+  'brandProfileId'
+>;
+
+function projectBrandPartnershipRow(
+  row: PersistedBrandPartnershipRow,
+): DistributionBrandPartnershipRow {
+  const { brandProfileId: _retiredPhysicalAlias, ...publisherPartnership } = row;
+  return publisherPartnership;
+}
+
 function normalizeDevelopmentAccessRow(
-  row: DistributionDevelopmentAccessRow,
+  row: PersistedDevelopmentAccessRow,
 ): DistributionDevelopmentAccessRow {
+  const { brandProfileId: _retiredPhysicalAlias, ...publisherAccess } = row;
   return {
-    ...row,
+    ...publisherAccess,
     status: normalizeDevelopmentAccessStatus(String(row.status || '')) as DistributionDevelopmentAccessRow['status'],
   };
 }
@@ -91,11 +111,8 @@ function getDevelopmentAccessStatusCandidates(status: DistributionDevelopmentAcc
   return Array.from(new Set(candidates));
 }
 
-export type DistributionBrandPartnershipRow = typeof distributionBrandPartnerships.$inferSelect;
-export type DistributionDevelopmentAccessRow = typeof distributionDevelopmentAccess.$inferSelect;
-
 export type UpsertBrandPartnershipInput = {
-  brandProfileId: number;
+  cataloguePublisherId: number;
   status: DistributionBrandPartnershipRow['status'];
   reasonCode?: string | null;
   notes?: string | null;
@@ -105,7 +122,7 @@ export type UpsertBrandPartnershipInput = {
 export type UpsertDevelopmentAccessInput = {
   developmentId: number;
   brandPartnershipId: number;
-  brandProfileId: number;
+  cataloguePublisherId: number;
   status: DistributionDevelopmentAccessRow['status'];
   submissionAllowed?: boolean;
   excludedByMandate?: boolean;
@@ -119,18 +136,18 @@ function nowSqlDateTime() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
 
-export async function getBrandPartnershipByBrandProfileId(
+export async function getBrandPartnershipByPublisherId(
   db: DbHandle,
-  brandProfileId: number,
+  cataloguePublisherId: number,
 ): Promise<DistributionBrandPartnershipRow | null> {
   try {
     const [row] = await db
       .select()
       .from(distributionBrandPartnerships)
-      .where(eq(distributionBrandPartnerships.brandProfileId, brandProfileId))
+      .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
       .limit(1);
 
-    return row || null;
+    return row ? projectBrandPartnershipRow(row) : null;
   } catch (error) {
     if (isMissingSchemaError(error)) return null;
     throw error;
@@ -141,11 +158,12 @@ export async function upsertBrandPartnership(
   db: DbHandle,
   input: UpsertBrandPartnershipInput,
 ): Promise<DistributionBrandPartnershipRow> {
-  const existing = await getBrandPartnershipByBrandProfileId(db, input.brandProfileId);
+  const existing = await getBrandPartnershipByPublisherId(db, input.cataloguePublisherId);
 
   if (!existing) {
     const [insertResult] = await db.insert(distributionBrandPartnerships).values({
-      brandProfileId: input.brandProfileId,
+      brandProfileId: null,
+      cataloguePublisherId: input.cataloguePublisherId,
       status: input.status,
       partneredAt: input.status === 'active' ? nowSqlDateTime() : null,
       endedAt: input.status === 'ended' ? nowSqlDateTime() : null,
@@ -163,7 +181,7 @@ export async function upsertBrandPartnership(
       .limit(1);
 
     if (!inserted) throw new Error('Failed to load inserted brand partnership.');
-    return inserted;
+    return projectBrandPartnershipRow(inserted);
   }
 
   const updateSet: Partial<typeof distributionBrandPartnerships.$inferInsert> = {
@@ -192,7 +210,7 @@ export async function upsertBrandPartnership(
     .limit(1);
 
   if (!updated) throw new Error('Failed to load updated brand partnership.');
-  return updated;
+  return projectBrandPartnershipRow(updated);
 }
 
 export async function getDevelopmentAccessByDevelopmentId(
@@ -232,7 +250,8 @@ export async function upsertDevelopmentAccess(
         const values: Partial<typeof distributionDevelopmentAccess.$inferInsert> = {
           developmentId: input.developmentId,
           brandPartnershipId: input.brandPartnershipId,
-          brandProfileId: input.brandProfileId,
+          brandProfileId: null,
+          cataloguePublisherId: input.cataloguePublisherId,
           status: statusCandidate as any,
           submissionAllowed: input.submissionAllowed ? 1 : 0,
           excludedByMandate: input.excludedByMandate ? 1 : 0,
@@ -304,7 +323,8 @@ export async function upsertDevelopmentAccess(
     while (true) {
       const updateSet: Partial<typeof distributionDevelopmentAccess.$inferInsert> = {
         brandPartnershipId: input.brandPartnershipId,
-        brandProfileId: input.brandProfileId,
+        brandProfileId: null,
+        cataloguePublisherId: input.cataloguePublisherId,
         status: statusCandidate as any,
         updatedBy: input.actorUserId,
       };
@@ -378,7 +398,7 @@ export async function upsertDevelopmentAccess(
 export async function listDevelopmentAccess(
   db: DbHandle,
   filters: {
-    brandProfileId?: number;
+    cataloguePublisherId?: number;
     partnershipStatus?: Array<DistributionBrandPartnershipRow['status']>;
     accessStatus?: Array<DistributionDevelopmentAccessRow['status']>;
     search?: string;
@@ -387,8 +407,10 @@ export async function listDevelopmentAccess(
 ) {
   const conditions: SQL[] = [];
 
-  if (typeof filters.brandProfileId === 'number') {
-    conditions.push(eq(distributionDevelopmentAccess.brandProfileId, filters.brandProfileId));
+  if (typeof filters.cataloguePublisherId === 'number') {
+    conditions.push(
+      eq(distributionDevelopmentAccess.cataloguePublisherId, filters.cataloguePublisherId),
+    );
   }
   if (filters.partnershipStatus?.length) {
     conditions.push(inArray(distributionBrandPartnerships.status, filters.partnershipStatus));
@@ -413,7 +435,7 @@ export async function listDevelopmentAccess(
       developmentName: developments.name,
       city: developments.city,
       province: developments.province,
-      brandProfileId: distributionDevelopmentAccess.brandProfileId,
+      cataloguePublisherId: distributionDevelopmentAccess.cataloguePublisherId,
       partnershipId: distributionBrandPartnerships.id,
       partnershipStatus: distributionBrandPartnerships.status,
       accessId: distributionDevelopmentAccess.id,

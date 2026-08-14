@@ -3,9 +3,8 @@ import { type Request, type Response, Router } from 'express';
 
 import {
   cities,
-  developers,
   developments,
-  developerBrandProfiles,
+  cataloguePublishers,
   listings,
   properties,
   provinces,
@@ -270,11 +269,7 @@ router.get('/sitemap-developments.xml', async (_req, res, next) => {
         updatedAt: developments.updatedAt,
       })
       .from(developments)
-      .leftJoin(developers, eq(developments.developerId, developers.id))
-      .leftJoin(
-        developerBrandProfiles,
-        eq(developments.developerBrandProfileId, developerBrandProfiles.id),
-      )
+      .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
       .where(
         and(
           publicDevelopmentEligibilityConditions(),
@@ -665,14 +660,15 @@ router.get('/sitemap-static.xml', async (_req, res, next) => {
 
     const developerRows = await db
       .select({
-        slug: developerBrandProfiles.slug,
-        updatedAt: developerBrandProfiles.updatedAt,
+        slug: cataloguePublishers.slug,
+        updatedAt: cataloguePublishers.updatedAt,
       })
-      .from(developerBrandProfiles)
+      .from(cataloguePublishers)
       .where(
         and(
-          eq(developerBrandProfiles.isVisible, 1),
-          sql`COALESCE(${developerBrandProfiles.slug}, '') <> ''`,
+          eq(cataloguePublishers.isVisible, 1),
+          sql`COALESCE(${cataloguePublishers.slug}, '') <> ''`,
+          eq(cataloguePublishers.authorityKind, 'developer_first_party'),
         ),
       );
 

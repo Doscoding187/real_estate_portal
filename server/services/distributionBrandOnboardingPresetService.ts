@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { distributionBrandPartnerships } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { getBrandPartnershipByBrandProfileId } from './distributionAccessRepository';
+import { getBrandPartnershipByPublisherId } from './distributionAccessRepository';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -83,7 +83,7 @@ function normalizePreset(input: BrandOnboardingPreset): BrandOnboardingPreset {
 
 export async function getBrandOnboardingPreset(
   db: DbHandle,
-  brandProfileId: number,
+  cataloguePublisherId: number,
 ): Promise<BrandOnboardingPreset | null> {
   try {
     const [row] = await db
@@ -91,7 +91,7 @@ export async function getBrandOnboardingPreset(
         onboardingDefaultsJson: distributionBrandPartnerships.onboardingDefaultsJson,
       })
       .from(distributionBrandPartnerships)
-      .where(eq(distributionBrandPartnerships.brandProfileId, brandProfileId))
+      .where(eq(distributionBrandPartnerships.cataloguePublisherId, cataloguePublisherId))
       .limit(1);
 
     if (!row?.onboardingDefaultsJson) return null;
@@ -105,18 +105,18 @@ export async function getBrandOnboardingPreset(
 
 export async function setBrandOnboardingPreset(input: {
   db: DbHandle;
-  brandProfileId: number;
+  cataloguePublisherId: number;
   actorUserId: number;
   preset: BrandOnboardingPreset;
 }): Promise<BrandOnboardingPreset> {
   const normalized = normalizePreset(brandOnboardingPresetSchema.parse(input.preset));
 
   try {
-    const existing = await getBrandPartnershipByBrandProfileId(input.db, input.brandProfileId);
+    const existing = await getBrandPartnershipByPublisherId(input.db, input.cataloguePublisherId);
 
     if (!existing) {
       await input.db.insert(distributionBrandPartnerships).values({
-        brandProfileId: input.brandProfileId,
+        cataloguePublisherId: input.cataloguePublisherId,
         status: 'pending',
         onboardingDefaultsJson: normalized,
         createdBy: input.actorUserId,

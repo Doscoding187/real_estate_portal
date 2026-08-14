@@ -294,8 +294,8 @@ const EnhancedLeadsGrid: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
 
-  const { data: leads, isLoading } = trpc.superAdminPublisher.getBrandLeads.useQuery(
-    { brandProfileId: selectedBrandId!, limit: 100 },
+  const { data: leads, isLoading } = trpc.superAdminPublisher.getPublisherLeads.useQuery(
+    { cataloguePublisherId: selectedBrandId!, limit: 100 },
     { enabled: !!selectedBrandId },
   );
 

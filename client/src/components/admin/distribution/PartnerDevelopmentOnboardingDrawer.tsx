@@ -460,14 +460,14 @@ function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null
 
 function DevelopmentProgramConfigPanel({
   development,
-  brandProfileId,
+  cataloguePublisherId,
   managerOptions,
   onMutationSuccess,
   focusSection,
   otherDevelopments,
 }: {
   development: DevelopmentRow;
-  brandProfileId: number | null;
+  cataloguePublisherId: number | null;
   managerOptions: ManagerOption[];
   onMutationSuccess: (developmentIds: number[]) => Promise<void> | void;
   focusSection?: string | null;
@@ -485,10 +485,10 @@ function DevelopmentProgramConfigPanel({
   });
   const brandPresetQuery = trpc.distribution.admin.getBrandOnboardingPreset.useQuery(
     {
-      brandProfileId: Number(brandProfileId || 0),
+      cataloguePublisherId: Number(cataloguePublisherId || 0),
     },
     {
-      enabled: typeof brandProfileId === 'number' && brandProfileId > 0,
+      enabled: typeof cataloguePublisherId === 'number' && cataloguePublisherId > 0,
     },
   );
 
@@ -1268,13 +1268,13 @@ function DevelopmentProgramConfigPanel({
   }
 
   async function handleSaveBrandPreset() {
-    if (!brandProfileId) {
+    if (!cataloguePublisherId) {
       toast.error('Select a brand-linked development before saving a brand preset');
       return;
     }
 
     await setBrandPresetMutation.mutateAsync({
-      brandProfileId,
+      cataloguePublisherId,
       preset: buildBrandPresetInput(),
     });
     await brandPresetQuery.refetch();
@@ -1907,8 +1907,8 @@ function DevelopmentOnboardingRow({
 export function PartnerDevelopmentOnboardingDrawer({
   open,
   onOpenChange,
-  brandProfileId,
-  brandProfileName,
+  cataloguePublisherId,
+  publisherName,
   developments,
   isLoading,
   isError,
@@ -1918,8 +1918,8 @@ export function PartnerDevelopmentOnboardingDrawer({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  brandProfileId: number | null;
-  brandProfileName: string;
+  cataloguePublisherId: number | null;
+  publisherName: string;
   developments: DevelopmentRow[];
   isLoading: boolean;
   isError: boolean;
@@ -2009,9 +2009,9 @@ export function PartnerDevelopmentOnboardingDrawer({
         <SheetHeader className="border-b pb-4">
           <SheetTitle>Partner Development Onboarding</SheetTitle>
           <SheetDescription>
-            {brandProfileId
-              ? `Brand: ${brandProfileName || `#${brandProfileId}`}`
-              : 'Select a brand profile to start onboarding.'}
+            {cataloguePublisherId
+              ? `Publisher: ${publisherName || `#${cataloguePublisherId}`}`
+              : 'Select a Catalogue Publisher to start onboarding.'}
           </SheetDescription>
         </SheetHeader>
 
@@ -2035,7 +2035,7 @@ export function PartnerDevelopmentOnboardingDrawer({
           ) : !developments.length ? (
             <Card>
               <CardContent className="py-8 text-center text-sm text-slate-500">
-                No eligible developments found for this brand profile.
+                No eligible developments found for this Catalogue Publisher.
               </CardContent>
             </Card>
           ) : (
@@ -2126,7 +2126,7 @@ export function PartnerDevelopmentOnboardingDrawer({
                     <DevelopmentProgramConfigPanel
                       key={selectedDevelopment.developmentId}
                       development={selectedDevelopment}
-                      brandProfileId={brandProfileId}
+                      cataloguePublisherId={cataloguePublisherId}
                       otherDevelopments={developments.filter(
                         row => row.developmentId !== selectedDevelopment.developmentId,
                       )}

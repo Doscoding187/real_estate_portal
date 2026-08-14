@@ -177,7 +177,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       isPending: false,
     });
     mockGetBrandOnboardingPresetUseQuery.mockReturnValue({
-      data: { success: true, brandProfileId: 44, preset: null },
+      data: { success: true, cataloguePublisherId: 44, preset: null },
       isLoading: false,
       refetch: vi.fn().mockResolvedValue(undefined),
     });
@@ -238,8 +238,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -275,8 +275,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -336,8 +336,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -369,8 +369,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -428,8 +428,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -491,8 +491,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -549,8 +549,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -606,8 +606,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -677,8 +677,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -738,8 +738,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -820,8 +820,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -864,8 +864,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -911,8 +911,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,
@@ -935,7 +935,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     await waitFor(() =>
       expect(savePresetMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({
-          brandProfileId: 44,
+          cataloguePublisherId: 44,
           preset: expect.objectContaining({
             commissionModel: 'flat_percentage',
             currencyCode: 'ZAR',
@@ -972,7 +972,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     const docsMutateAsync = vi.fn().mockResolvedValue({ success: true });
 
     mockGetBrandOnboardingPresetUseQuery.mockReturnValue({
-      data: { success: true, brandProfileId: 44, preset },
+      data: { success: true, cataloguePublisherId: 44, preset },
       isLoading: false,
       refetch: vi.fn().mockResolvedValue(undefined),
     });
@@ -993,8 +993,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       <PartnerDevelopmentOnboardingDrawer
         open
         onOpenChange={vi.fn()}
-        brandProfileId={44}
-        brandProfileName="Cosmopolitan"
+        cataloguePublisherId={44}
+        publisherName="Cosmopolitan"
         developments={[
           {
             developmentId: 1001,

@@ -9,7 +9,7 @@ export type ProgramTermsItem = {
   developmentName: string;
   city?: string | null;
   province?: string | null;
-  brand?: { brandProfileId: number; brandName: string } | null;
+  brand?: { cataloguePublisherId: number; brandName: string } | null;
   program: {
     programId: number;
     isActive: boolean;

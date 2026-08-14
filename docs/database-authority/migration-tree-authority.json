@@ -508,6 +508,66 @@
       "purpose": "Allows canonical billing invoices to preserve paid fixed-term Launch Access as a once-off commercial term."
     },
     {
+      "path": "server/migrations/0008_developer_organisations.sql",
+      "classification": "canonical active",
+      "purpose": "Creates the Developer Organisation authority for first-party developer ownership and operating scope."
+    },
+    {
+      "path": "server/migrations/0009_developer_organisation_memberships.sql",
+      "classification": "canonical active",
+      "purpose": "Creates organisation membership authority for authenticated developer access and tenant isolation."
+    },
+    {
+      "path": "server/migrations/0010_catalogue_publishers.sql",
+      "classification": "canonical active",
+      "purpose": "Creates immutable platform-reference and developer-first-party Catalogue Publisher authority."
+    },
+    {
+      "path": "server/migrations/0011_catalogue_publisher_developments.sql",
+      "classification": "canonical active",
+      "purpose": "Connects developments to the new Catalogue Publisher authority without rewriting the physical development substrate."
+    },
+    {
+      "path": "server/migrations/0012_catalogue_publisher_properties.sql",
+      "classification": "canonical active",
+      "purpose": "Adds publisher attribution to the public property projection for governed development/property handoff."
+    },
+    {
+      "path": "server/migrations/0013_catalogue_publisher_leads.sql",
+      "classification": "canonical active",
+      "purpose": "Adds publisher attribution to public enquiry custody and developer lead routing."
+    },
+    {
+      "path": "server/migrations/0014_catalogue_publisher_drafts.sql",
+      "classification": "canonical active",
+      "purpose": "Adds organisation and publisher custody to private development drafts."
+    },
+    {
+      "path": "server/migrations/0015_catalogue_publisher_distribution_partnerships.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the new publisher authority to distribution partnership records."
+    },
+    {
+      "path": "server/migrations/0016_catalogue_publisher_distribution_access.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the new publisher authority to distribution development access records."
+    },
+    {
+      "path": "server/migrations/0017_distribution_publisher_authority.sql",
+      "classification": "canonical active",
+      "purpose": "Makes the legacy distribution partnership publisher column compatible with the new authority while preserving the old physical shape pending explicit cleanup."
+    },
+    {
+      "path": "server/migrations/0018_distribution_access_publisher_authority.sql",
+      "classification": "canonical active",
+      "purpose": "Makes the legacy distribution access publisher column compatible with the new authority while preserving the old physical shape pending explicit cleanup."
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",
