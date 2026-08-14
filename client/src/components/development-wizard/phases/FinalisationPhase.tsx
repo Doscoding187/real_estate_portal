@@ -15,7 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
-import { invalidateDevelopmentHomeRanges } from '@/lib/developmentHomeInvalidation';
+import {
+  invalidateDeveloperOperatingHomeRanges,
+  invalidateDevelopmentHomeRanges,
+} from '@/lib/developmentHomeInvalidation';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
@@ -130,7 +133,9 @@ export function FinalisationPhase({
   // Run validation
   const validationResult = validateForPublish();
   const errors = validationResult?.errors || [];
-  const warnings: string[] = getCardFieldRecommendations().filter(message => !errors.includes(message));
+  const warnings: string[] = getCardFieldRecommendations().filter(
+    message => !errors.includes(message),
+  );
   const canPublish = errors.length === 0;
   const publisherId = publisherContext?.cataloguePublisherId ?? null;
   const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherId === 'number';
@@ -362,6 +367,9 @@ export function FinalisationPhase({
 
       await invalidateDevelopmentHomeRanges(developmentId, input =>
         utils.developer.getDevelopmentHome.invalidate(input),
+      );
+      await invalidateDeveloperOperatingHomeRanges(input =>
+        utils.developer.getOperatingHome.invalidate(input),
       );
 
       setShowConfirmPublish(false);
@@ -631,8 +639,7 @@ export function FinalisationPhase({
                       Type
                     </span>
                     <span className="font-medium text-slate-900 capitalize">
-                      {classification?.type?.replace('_', ' ')} |{' '}
-                      {ownershipDisplay}
+                      {classification?.type?.replace('_', ' ')} | {ownershipDisplay}
                     </span>
                   </div>
                 </div>

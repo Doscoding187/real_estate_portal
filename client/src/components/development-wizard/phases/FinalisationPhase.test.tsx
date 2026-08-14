@@ -13,6 +13,7 @@ const testState = vi.hoisted(() => {
   const updatePublisherDevelopmentMock = vi.fn();
   const publishPublisherDevelopmentMock = vi.fn();
   const invalidateDevelopmentHomeMock = vi.fn().mockResolvedValue(undefined);
+  const invalidateOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
   const resetMock = vi.fn();
   const setPhaseMock = vi.fn();
   let validationErrors: string[] = [];
@@ -115,6 +116,7 @@ const testState = vi.hoisted(() => {
     publishDevelopmentMock,
     publishPublisherDevelopmentMock,
     invalidateDevelopmentHomeMock,
+    invalidateOperatingHomeMock,
     resetMock,
     toastErrorMock,
     toastSuccessMock,
@@ -146,6 +148,7 @@ vi.mock('@/lib/trpc', () => ({
     useUtils: () => ({
       developer: {
         getDevelopmentHome: { invalidate: testState.invalidateDevelopmentHomeMock },
+        getOperatingHome: { invalidate: testState.invalidateOperatingHomeMock },
       },
     }),
     developer: {
@@ -207,6 +210,7 @@ describe('FinalisationPhase', () => {
     testState.updatePublisherDevelopmentMock.mockResolvedValue({ success: true });
     testState.publishPublisherDevelopmentMock.mockResolvedValue({ success: true });
     testState.invalidateDevelopmentHomeMock.mockResolvedValue(undefined);
+    testState.invalidateOperatingHomeMock.mockResolvedValue(undefined);
   });
 
   it('submits create-mode DLE payloads through the canonical submit mapper', async () => {

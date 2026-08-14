@@ -7,6 +7,10 @@ type DevelopmentHomeInput = {
   range: DevelopmentHomeRange;
 };
 
+type DeveloperOperatingHomeInput = {
+  range: DevelopmentHomeRange;
+};
+
 /**
  * Refreshes every cached Development Home period for one development after a
  * successful specialist mutation. Keeping the input explicit avoids evicting
@@ -21,4 +25,10 @@ export async function invalidateDevelopmentHomeRanges(
   await Promise.all(
     developmentHomeRanges.map(range => invalidate({ developmentId: developmentId!, range })),
   );
+}
+
+export async function invalidateDeveloperOperatingHomeRanges(
+  invalidate: (input: DeveloperOperatingHomeInput) => Promise<unknown>,
+): Promise<void> {
+  await Promise.all(developmentHomeRanges.map(range => invalidate({ range })));
 }

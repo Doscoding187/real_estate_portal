@@ -31,11 +31,13 @@ describe('developer canonical commercial contract', () => {
     expect(service).toContain('organisation-owned facts');
     expect(service).toContain('evaluateDeveloperLimitAccess');
     expect(service).toContain('developmentPortfolioUnlimited');
-    expect(router).toContain('developerSubscriptionService.checkLimit(');
-    expect(router).toContain(
+    expect(router).toContain('getOperatingHome');
+    expect(router).toContain("ownerType: 'developer'");
+    expect(router).not.toContain('developerSubscriptionService.checkLimit(');
+    expect(router).not.toContain(
       "developerSubscriptionService.incrementUsage(developerId, 'developments')",
     );
-    expect(router).toContain(
+    expect(router).not.toContain(
       "developerSubscriptionService.decrementUsage(profile.organisationId, 'developments')",
     );
   });

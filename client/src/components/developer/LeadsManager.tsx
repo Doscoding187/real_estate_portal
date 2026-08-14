@@ -27,7 +27,10 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { invalidateDevelopmentHomeRanges } from '@/lib/developmentHomeInvalidation';
+import {
+  invalidateDeveloperOperatingHomeRanges,
+  invalidateDevelopmentHomeRanges,
+} from '@/lib/developmentHomeInvalidation';
 import { stageGroupMatches, useDeveloperLeadsQuery } from '@/hooks/useDeveloperLeadsQuery';
 import { useLocation } from 'wouter';
 
@@ -182,9 +185,14 @@ export default function LeadsManager() {
 
   const selectedDevelopmentId = developmentFilter === 'all' ? undefined : Number(developmentFilter);
 
-  const { data: developments = [] } = trpc.developer.getDevelopments.useQuery(undefined, {
-    refetchOnWindowFocus: false,
-  });
+  const operatingHomeQuery = trpc.developer.getOperatingHome.useQuery(
+    { range: rangeFilter },
+    { refetchOnWindowFocus: false },
+  );
+  const developments = (operatingHomeQuery.data?.developments ?? []).map(development => ({
+    id: development.identity.id,
+    name: development.identity.name,
+  }));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -277,6 +285,9 @@ export default function LeadsManager() {
       invalidateDevelopmentHomeRanges(selectedDevelopmentId, input =>
         utils.developer.getDevelopmentHome.invalidate(input),
       ),
+      invalidateDeveloperOperatingHomeRanges(input =>
+        utils.developer.getOperatingHome.invalidate(input),
+      ),
     ]);
   };
 
@@ -316,13 +327,20 @@ export default function LeadsManager() {
 
   const allLeads = (leadsQuery.items ?? []) as LeadItem[];
   const pipelineLeads = useMemo(() => {
-    if (selectedStage === 'new') return allLeads.filter(lead => stageGroupMatches('new', lead.stage));
-    if (selectedStage === 'contacted') return allLeads.filter(lead => stageGroupMatches('contacted', lead.stage));
-    if (selectedStage === 'qualified') return allLeads.filter(lead => stageGroupMatches('qualified', lead.stage));
-    if (selectedStage === 'viewing') return allLeads.filter(lead => stageGroupMatches('viewing', lead.stage));
-    if (selectedStage === 'offer') return allLeads.filter(lead => stageGroupMatches('offer', lead.stage));
-    if (selectedStage === 'deal') return allLeads.filter(lead => stageGroupMatches('deal', lead.stage));
-    if (selectedStage === 'won') return allLeads.filter(lead => stageGroupMatches('won', lead.stage));
+    if (selectedStage === 'new')
+      return allLeads.filter(lead => stageGroupMatches('new', lead.stage));
+    if (selectedStage === 'contacted')
+      return allLeads.filter(lead => stageGroupMatches('contacted', lead.stage));
+    if (selectedStage === 'qualified')
+      return allLeads.filter(lead => stageGroupMatches('qualified', lead.stage));
+    if (selectedStage === 'viewing')
+      return allLeads.filter(lead => stageGroupMatches('viewing', lead.stage));
+    if (selectedStage === 'offer')
+      return allLeads.filter(lead => stageGroupMatches('offer', lead.stage));
+    if (selectedStage === 'deal')
+      return allLeads.filter(lead => stageGroupMatches('deal', lead.stage));
+    if (selectedStage === 'won')
+      return allLeads.filter(lead => stageGroupMatches('won', lead.stage));
     return allLeads.filter(lead => stageGroupMatches('lost', lead.stage));
   }, [allLeads, selectedStage]);
 
@@ -442,7 +460,9 @@ export default function LeadsManager() {
 
   const quickActionPreset = (kind: 'call' | 'whatsapp' | 'email', hoursFromNow: number) => {
     setNextActionType(kind);
-    setNextActionAtLocal(toLocalDateTimeInput(new Date(Date.now() + hoursFromNow * 60 * 60 * 1000)));
+    setNextActionAtLocal(
+      toLocalDateTimeInput(new Date(Date.now() + hoursFromNow * 60 * 60 * 1000)),
+    );
   };
 
   const timeline = useMemo(() => {
@@ -620,8 +640,12 @@ export default function LeadsManager() {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="font-medium text-sm">{lead.contact.name || 'Unnamed lead'}</p>
-                            <p className="text-xs text-muted-foreground">{lead.contact.email || '-'}</p>
+                            <p className="font-medium text-sm">
+                              {lead.contact.name || 'Unnamed lead'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {lead.contact.email || '-'}
+                            </p>
                           </div>
                           <Badge className={stageBadgeClass(lead.stage)}>{lead.stage}</Badge>
                         </div>
@@ -630,7 +654,9 @@ export default function LeadsManager() {
                           <span>{lead.source.channel}</span>
                           <span>•</span>
                           <span>{formatRelative(lead.lastActivityAt || lead.createdAt)}</span>
-                          <Badge className={slaBadgeClass(lead.sla.status)}>{lead.sla.status}</Badge>
+                          <Badge className={slaBadgeClass(lead.sla.status)}>
+                            {lead.sla.status}
+                          </Badge>
                           <Badge className={deliveryBadgeClass(lead.delivery?.status)}>
                             {deliveryLabel(lead.delivery?.status)}
                           </Badge>
@@ -643,7 +669,9 @@ export default function LeadsManager() {
                                 : 'bg-amber-100 text-amber-700 border-amber-200'
                             }
                           >
-                            {lead.consent?.capturedAt ? 'Consent recorded' : 'Consent evidence missing'}
+                            {lead.consent?.capturedAt
+                              ? 'Consent recorded'
+                              : 'Consent evidence missing'}
                           </Badge>
                         </div>
                       </button>
@@ -708,11 +736,15 @@ export default function LeadsManager() {
                   <div className="border rounded-md p-2 space-y-1">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Stage</span>
-                      <Badge className={stageBadgeClass(selectedLead.stage)}>{selectedLead.stage}</Badge>
+                      <Badge className={stageBadgeClass(selectedLead.stage)}>
+                        {selectedLead.stage}
+                      </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">SLA</span>
-                      <Badge className={slaBadgeClass(selectedLead.sla.status)}>{selectedLead.sla.status}</Badge>
+                      <Badge className={slaBadgeClass(selectedLead.sla.status)}>
+                        {selectedLead.sla.status}
+                      </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Owner</span>
@@ -725,7 +757,8 @@ export default function LeadsManager() {
                   <div className="border rounded-md p-3 space-y-1">
                     <p className="font-medium">Inventory context</p>
                     <p className="text-muted-foreground">
-                      Development #{selectedLead.inventory?.developmentId || selectedLead.developmentId || '-'}
+                      Development #
+                      {selectedLead.inventory?.developmentId || selectedLead.developmentId || '-'}
                     </p>
                     {selectedLead.inventory?.propertyId ? (
                       <p className="text-muted-foreground">
@@ -760,7 +793,9 @@ export default function LeadsManager() {
                 {selectedLead.message ? (
                   <div className="border rounded-md p-3 text-sm">
                     <p className="font-medium">Prospect message</p>
-                    <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{selectedLead.message}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-muted-foreground">
+                      {selectedLead.message}
+                    </p>
                   </div>
                 ) : null}
 
@@ -879,7 +914,11 @@ export default function LeadsManager() {
                 <div className="space-y-2 border rounded-md p-3">
                   <p className="text-sm font-medium">Next Action</p>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => quickActionPreset('call', 1)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => quickActionPreset('call', 1)}
+                    >
                       Call in 1h
                     </Button>
                     <Button
@@ -938,7 +977,10 @@ export default function LeadsManager() {
                     <ScrollArea className="h-36">
                       <div className="space-y-2 pr-2">
                         {timeline.slice(0, 12).map((line, idx) => (
-                          <div key={`${line}-${idx}`} className="text-xs border rounded p-2 bg-slate-50">
+                          <div
+                            key={`${line}-${idx}`}
+                            className="text-xs border rounded p-2 bg-slate-50"
+                          >
                             {line}
                           </div>
                         ))}
@@ -957,7 +999,9 @@ export default function LeadsManager() {
                       <Clock3 className="inline h-3 w-3 mr-1" />
                       Last activity:{' '}
                       {formatRelative(
-                        selectedLead.lastActivityAt || selectedLead.updatedAt || selectedLead.createdAt,
+                        selectedLead.lastActivityAt ||
+                          selectedLead.updatedAt ||
+                          selectedLead.createdAt,
                       )}
                     </p>
                     {selectedLead.nextAction?.at && (

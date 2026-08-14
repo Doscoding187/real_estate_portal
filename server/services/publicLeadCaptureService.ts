@@ -33,6 +33,7 @@ import {
   type PublicSupplyOrigin,
 } from './publicLeadCustodyService';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
+import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -539,6 +540,10 @@ export async function resolveLeadOwnership(
     );
     const developerMap = await loadDeveloperCandidates(database, developerIds);
     const developerId = positiveId(brand?.developerOrganisationId);
+    const commercialAccess =
+      brand?.authorityKind === 'developer_first_party' && developerId
+        ? (await getDeveloperPublicationAccess(developerId, { db: database })).eligible
+        : true;
     const eligibility = evaluatePublicDevelopmentEligibility({
       development: {
         id: Number(development?.id || 0),
@@ -553,6 +558,7 @@ export async function resolveLeadOwnership(
       unitTypes: [],
       activeUnitTypeCount: Number(development?.activeUnitTypeCount || 0),
       activeSupersessionSource: Number(development?.activeSupersessionSource || 0) === 1,
+      commercialAccess,
     } as any);
     if (!eligibility.eligible) {
       throw new TRPCError({

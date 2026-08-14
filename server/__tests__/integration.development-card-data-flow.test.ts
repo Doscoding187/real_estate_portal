@@ -16,6 +16,7 @@ import { getDb } from '../db-connection';
 import { developmentApprovalQueue, developments, users } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
 import {
+  activateDeveloperTestLaunchAccess,
   createDeveloperTestContext,
   deleteDeveloperTestContext,
   type DeveloperTestContext,
@@ -111,6 +112,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
       name: builderName,
       email: `card-flow-${suffix}@example.com`,
     });
+    await activateDeveloperTestLaunchAccess(developerContext);
 
     const createdDevelopment = await developmentService.createDevelopment(testUserId, {
       name: developmentName,

@@ -15,6 +15,7 @@ import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligi
 import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { developerIdentityService } from './developerIdentityService';
+import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 
 import {
   developments,
@@ -676,6 +677,7 @@ export async function getPublicDevelopment(id: number) {
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
       isPublished: developments.isPublished,
+      approvalStatus: developments.approvalStatus,
       cataloguePublisherId: developments.cataloguePublisherId,
       developerName: developerOrganisations.name,
       brandName: cataloguePublishers.name,
@@ -2540,6 +2542,45 @@ async function publishDevelopment(
       });
     }
 
+    if (ownedDevelopment.approvalStatus === 'approved') {
+      if (Number(ownedDevelopment.isPublished) === 1) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Development is already publicly published.',
+        });
+      }
+
+      const publicationAccess = await getDeveloperPublicationAccess(devProfile.organisationId, {
+        db: tx,
+      });
+      if (!publicationAccess.eligible) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Valid Developer Launch Access is required before public publication.',
+          cause: publicationAccess,
+        });
+      }
+
+      const now = mysqlDateTime();
+      await tx
+        .update(developments)
+        .set({ isPublished: 1, publishedAt: now, rejectionNote: null, updatedAt: now })
+        .where(
+          and(
+            eq(developments.id, id),
+            eq(developments.cataloguePublisherId, devProfile.publisherId),
+            eq(developments.approvalStatus, 'approved'),
+            eq(developments.isPublished, 0),
+          ),
+        );
+      const [published] = await tx
+        .select()
+        .from(developments)
+        .where(eq(developments.id, id))
+        .limit(1);
+      return published;
+    }
+
     const priorRows = await tx
       .select({ id: developmentApprovalQueue.id })
       .from(developmentApprovalQueue)
@@ -2857,13 +2898,30 @@ export async function completeReviewInTransaction(
     });
   }
 
+  let commercialEligible = true;
+  const [publisher] = await tx
+    .select({
+      authorityKind: cataloguePublishers.authorityKind,
+      developerOrganisationId: cataloguePublishers.developerOrganisationId,
+    })
+    .from(cataloguePublishers)
+    .where(eq(cataloguePublishers.id, development.cataloguePublisherId))
+    .limit(1);
+  if (publisher?.authorityKind === 'developer_first_party' && publisher.developerOrganisationId) {
+    const publicationAccess = await getDeveloperPublicationAccess(
+      publisher.developerOrganisationId,
+      { db: tx },
+    );
+    commercialEligible = publicationAccess.eligible;
+  }
+
   const now = mysqlDateTime();
   const developmentProjection =
     decision === 'approved'
       ? {
           approvalStatus: 'approved' as const,
-          isPublished: 1,
-          publishedAt: now,
+          isPublished: commercialEligible ? 1 : 0,
+          publishedAt: commercialEligible ? now : null,
           rejectionNote: null,
         }
       : decision === 'changes_requested'
@@ -2943,6 +3001,16 @@ export async function publishDeveloperOwnedDevelopmentInTransaction(
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Replacement development must remain developer-owned.',
+    });
+  }
+  const publicationAccess = await getDeveloperPublicationAccess(publisher.developerOrganisationId, {
+    db: tx,
+  });
+  if (!publicationAccess.eligible) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Valid Developer Launch Access is required before public publication.',
+      cause: publicationAccess,
     });
   }
   if (Number(development.isPublished) === 1) {

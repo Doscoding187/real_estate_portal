@@ -1,229 +1,222 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { trpc } from '@/lib/trpc';
-import { Plus, Search, Filter, MoreVertical, AlertCircle, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, CheckCircle2, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
-import { calculateDevelopmentReadiness } from '@/lib/readiness';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { invalidateDeveloperOperatingHomeRanges } from '@/lib/developmentHomeInvalidation';
+import { trpc } from '@/lib/trpc';
 
-const DevelopmentsList: React.FC = () => {
+function lifecycleLabel(state: string): string {
+  return (
+    {
+      live: 'Live',
+      approved_private: 'Approved · private',
+      in_review: 'In review',
+      changes_required: 'Changes requested',
+      rejected: 'Rejected',
+      draft_ready_to_submit: 'Ready to submit',
+      draft_action_required: 'Draft · action required',
+    }[state] ?? state
+  );
+}
+
+function lifecycleVariant(state: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+  if (state === 'live') return 'default';
+  if (state === 'rejected') return 'destructive';
+  if (state === 'changes_required' || state === 'draft_action_required') return 'secondary';
+  return 'outline';
+}
+
+function numberLabel(value: number | null | undefined): string {
+  return value === null || value === undefined ? '—' : new Intl.NumberFormat().format(value);
+}
+
+export default function DevelopmentsList() {
   const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
   const [searchTerm, setSearchTerm] = useState('');
-
-  /* replaced by tRPC query */
-  const { data: developments, isLoading, refetch } = trpc.developer.getDevelopments.useQuery();
-
-  // Delete mutation
-  const deleteMutation = trpc.developer.deleteDevelopment.useMutation({
-    onSuccess: () => {
-      toast.success('Development deleted successfully');
-      refetch();
-    },
-    onError: error => {
-      toast.error(error.message || 'Failed to delete development');
-    },
-  });
-
-  const handleDelete = (devId: number, devName: string) => {
-    // HARD GUARD: Prevent sending undefined/bad IDs to the server
-    if (!devId || typeof devId !== 'number') {
-      console.error('[DevelopmentsList] Cannot delete: Invalid ID', { devId, devName });
-      toast.error('Cannot delete: Missing development ID');
-      return;
-    }
-
-    if (
-      window.confirm(`Are you sure you want to delete "${devName}"? This action cannot be undone.`)
-    ) {
-      deleteMutation.mutate({ id: devId });
-    }
-  };
-
-  const safeDevelopments = developments || [];
-
-  const filteredDevelopments = safeDevelopments.filter(
-    (dev: any) =>
-      dev.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (dev.city && dev.city.toLowerCase().includes(searchTerm.toLowerCase())),
+  const homeQuery = trpc.developer.getOperatingHome.useQuery(
+    { range: '30d' },
+    { refetchOnWindowFocus: false },
   );
 
-  // Status Badge Logic
-  const getStatusBadge = (dev: any) => {
-    switch (dev.approvalStatus) {
-      case 'rejected':
-        return (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge variant="destructive" className="cursor-help flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Rejected
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-red-900 text-white border-red-800">
-                <p className="font-semibold mb-1">Reason for Rejection:</p>
-                <p>{dev.rejectionReason || 'Please contact support for details.'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        );
-      case 'pending':
-        return (
-          <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200">
-            Pending Review
-          </Badge>
-        );
-      case 'approved':
-        // If approved, check if published
-        // Note: Backend might need to return isPublished
-        return (
-          <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
-            Live
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary">Draft</Badge>;
+  const deleteMutation = trpc.developer.deleteDevelopment.useMutation({
+    onSuccess: async () => {
+      toast.success('Development deleted successfully');
+      await invalidateDeveloperOperatingHomeRanges(input =>
+        utils.developer.getOperatingHome.invalidate(input),
+      );
+      await utils.developer.getDevelopments.invalidate();
+    },
+    onError: error => toast.error(error.message || 'Failed to delete development'),
+  });
+
+  const developments = homeQuery.data?.developments ?? [];
+  const filteredDevelopments = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return developments;
+    return developments.filter(development => {
+      const location = development.identity.location;
+      return [development.identity.name, location.city, location.province]
+        .filter(Boolean)
+        .some(value => value.toLowerCase().includes(query));
+    });
+  }, [developments, searchTerm]);
+
+  const handleDelete = (id: number, name: string) => {
+    if (
+      !window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)
+    ) {
+      return;
     }
+    deleteMutation.mutate({ id });
   };
 
-  // Robust image parser helper
-  const safelyParseImages = (imagesData: any): string[] => {
-    let images: any[] = [];
-    if (!imagesData) return [];
+  if (homeQuery.isLoading) {
+    return <div className="h-64 rounded-2xl bg-slate-100 animate-pulse" />;
+  }
 
-    if (Array.isArray(imagesData)) {
-      images = imagesData;
-    } else if (typeof imagesData === 'string') {
-      try {
-        const parsed = JSON.parse(imagesData);
-        if (Array.isArray(parsed)) images = parsed;
-        else if (typeof parsed === 'string') images = [parsed];
-      } catch (e) {
-        // If parsing fails, it might be a raw comma-separated list or a single URL
-        if (imagesData.startsWith('http')) images = [imagesData];
-      }
-    }
-
-    // Normalize elements to strings
-    return images
-      .map(img => {
-        // Handle string URLs
-        if (typeof img === 'string') return img;
-        // Handle image objects (e.g. { url: "...", category: "hero" })
-        if (typeof img === 'object' && img !== null && img.url) return img.url;
-        return null;
-      })
-      .filter(url => typeof url === 'string' && url.length > 0) as string[];
-  };
+  if (homeQuery.error) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center space-y-3">
+          <h3 className="text-lg font-semibold">Unable to load developments</h3>
+          <p className="text-sm text-slate-600">{homeQuery.error.message}</p>
+          <Button variant="outline" onClick={() => homeQuery.refetch()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Developments</h1>
-          <p className="text-muted-foreground">
-            Manage all your property developments in one place
-          </p>
-        </div>
-        <Button
-          className="bg-accent hover:bg-accent/90"
-          onClick={() => setLocation('/developer/create-development')}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Development
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Developments</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage private drafts, review progress, inventory, and publication actions.
+            </p>
+          </div>
+          <Button onClick={() => setLocation('/developer/create-development')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Development
+          </Button>
+        </CardContent>
+      </Card>
 
-      {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search developments..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-10"
+              placeholder="Search developments..."
+              value={searchTerm}
+              onChange={event => setSearchTerm(event.target.value)}
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Developments Grid */}
-      <div className="grid grid-cols-1 gap-4">
-        {filteredDevelopments.map(dev => {
-          // Debugging: Check if ID is present
-          if (!dev.id) console.warn('[DevelopmentsList] Item missing ID:', dev);
-
-          const parsedImages = safelyParseImages(dev.images);
-          return (
-            <EntityStatusCard
-              key={dev.id}
-              type="development"
-              data={{
-                ...dev,
-                // Map backend status to frontend status for the card
-                status: dev.isPublished
-                  ? 'published'
-                  : dev.approvalStatus === 'approved'
-                    ? 'approved'
-                    : dev.approvalStatus === 'pending'
-                      ? 'pending'
-                      : dev.approvalStatus === 'rejected'
-                        ? 'rejected'
-                        : 'draft',
-                images: parsedImages, // Use safely parsed images
-                priceFrom: dev.priceFrom,
-              }}
-              readiness={calculateDevelopmentReadiness({
-                name: dev.name,
-                description: dev.description, // Ensure description is fetched
-                address: dev.address || dev.city,
-                latitude: dev.latitude,
-                longitude: dev.longitude,
-                images: parsedImages,
-                priceFrom: dev.priceFrom, // Ensure priceFrom is fetched
-              })}
-              onEdit={id => setLocation(`/developer/create-development?id=${id}`)}
-              onDelete={id => handleDelete(id, dev.name)}
-              onView={id => setLocation(`/developer/developments/${id}`)}
-            />
-          );
-        })}
-
-        {filteredDevelopments.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg border border-dashed text-slate-500">
-            No developments found matching your search.
-          </div>
-        )}
+      <div className="space-y-4">
+        {filteredDevelopments.map(development => (
+          <Card key={development.identity.id}>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="truncate">{development.identity.name}</CardTitle>
+                    <Badge variant={lifecycleVariant(development.lifecycle.state)}>
+                      {lifecycleLabel(development.lifecycle.state)}
+                    </Badge>
+                    <Badge variant="outline">
+                      {development.readiness.status === 'ready' ? 'Ready' : 'Readiness blocked'}
+                    </Badge>
+                  </div>
+                  <CardDescription>
+                    {development.identity.location.city}, {development.identity.location.province}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {development.nextAction && (
+                    <Button size="sm" onClick={() => setLocation(development.nextAction!.href)}>
+                      {development.nextAction.label}
+                      <ArrowUpRight className="ml-2 h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setLocation(`/developer/create-development?id=${development.identity.id}`)
+                    }
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => handleDelete(development.identity.id, development.identity.name)}
+                  >
+                    <Trash2 className="h-4 w-4 text-rose-600" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
+                <Metric label="Blockers" value={development.readiness.blockerCount} />
+                <Metric label="Total units" value={development.inventory.totalUnits} />
+                <Metric label="Available" value={development.inventory.availableUnits} />
+                <Metric label="Open leads" value={development.leads.openLeadCount} />
+                <Metric label="SLA breaches" value={development.leads.slaBreachCount} />
+              </div>
+              {development.nextAction && (
+                <div className="flex items-start gap-2 rounded-md bg-blue-50 p-3 text-sm text-blue-950">
+                  {development.readiness.status === 'ready' ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                  ) : (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  )}
+                  <span>{development.nextAction.explanation}</span>
+                </div>
+              )}
+              {development.lifecycle.latestReview?.feedback && (
+                <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+                  Review feedback: {development.lifecycle.latestReview.feedback}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
+      {filteredDevelopments.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            {developments.length === 0
+              ? 'No developments yet. Create a private draft to get started.'
+              : 'No developments match your search.'}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
-};
+}
 
-export default DevelopmentsList;
+function Metric({ label, value }: { label: string; value: number | null | undefined }) {
+  return (
+    <div className="rounded-md bg-slate-50 p-2">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-medium">{numberLabel(value)}</p>
+    </div>
+  );
+}

@@ -4,6 +4,7 @@ export type DevelopmentHomeAttentionItem = {
   type:
     | 'review_rejected'
     | 'review_changes_requested'
+    | 'commercial_access_required'
     | 'lead_sla_breach'
     | 'readiness_blockers'
     | 'catalogue_invalid'
@@ -43,12 +44,25 @@ const catalogueWarningClasses = new Set<CatalogueWarningClass>([
 const attentionPriority: Record<DevelopmentHomeAttentionItem['type'], number> = {
   review_rejected: 1,
   review_changes_requested: 2,
-  lead_sla_breach: 3,
-  readiness_blockers: 4,
-  catalogue_invalid: 5,
-  zero_aggregate_availability: 6,
-  lead_sla_warning: 7,
+  commercial_access_required: 3,
+  lead_sla_breach: 4,
+  readiness_blockers: 5,
+  catalogue_invalid: 6,
+  zero_aggregate_availability: 7,
+  lead_sla_warning: 8,
 };
+
+export function compareDevelopmentHomeAttentionItems(
+  left: DevelopmentHomeAttentionItem,
+  right: DevelopmentHomeAttentionItem,
+): number {
+  return (
+    attentionPriority[left.type] - attentionPriority[right.type] ||
+    (left.severity === 'critical' ? -1 : 1) - (right.severity === 'critical' ? -1 : 1) ||
+    left.actionLabel.localeCompare(right.actionLabel) ||
+    left.href.localeCompare(right.href)
+  );
+}
 
 /**
  * Maps persisted DOE-S0 field authority to the matching aggregate-catalogue
@@ -103,6 +117,7 @@ export function buildDevelopmentHomeAttention(input: {
   blockers: readonly ReadinessBlocker[];
   inventory: Pick<DevelopmentHomeInventory, 'availableUnits' | 'totalUnits' | 'warnings'>;
   funnel: { slaWarningCount: number; slaBreachCount: number };
+  commercialAccessRequired?: boolean;
 }): DevelopmentHomeAttention {
   const items: DevelopmentHomeAttentionItem[] = [];
   const feedback = input.latestReviewFeedback?.trim();
@@ -127,6 +142,17 @@ export function buildDevelopmentHomeAttention(input: {
         : 'Review changes were requested for this development.',
       actionLabel: 'Review requested changes',
       href: editHref,
+    });
+  }
+
+  if (input.commercialAccessRequired) {
+    items.push({
+      type: 'commercial_access_required',
+      severity: 'critical',
+      explanation:
+        'Launch Access is not active for this Developer Organisation, so the approved development remains private.',
+      actionLabel: 'Activate Launch Access',
+      href: '/developer/plans',
     });
   }
 
@@ -200,8 +226,6 @@ export function buildDevelopmentHomeAttention(input: {
     });
   }
 
-  const ordered = items.sort(
-    (left, right) => attentionPriority[left.type] - attentionPriority[right.type],
-  );
+  const ordered = items.sort(compareDevelopmentHomeAttentionItems);
   return { totalCount: ordered.length, items: ordered.slice(0, 5) };
 }
