@@ -13,9 +13,16 @@ vi.mock('../services/propertySearchService', () => ({
 
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
-import { developmentApprovalQueue, developments, unitTypes, users } from '../../drizzle/schema';
+import {
+  developmentApprovalQueue,
+  developments,
+  subscriptions,
+  unitTypes,
+  users,
+} from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
 import {
+  activateDeveloperTestLaunchAccess,
   createDeveloperTestContext,
   deleteDeveloperTestContext,
   type DeveloperTestContext,
@@ -35,7 +42,10 @@ type Fixture = {
 
 const fixtures: Fixture[] = [];
 
-async function createFixture(role: 'property_developer' | 'super_admin' = 'property_developer') {
+async function createFixture(
+  role: 'property_developer' | 'super_admin' = 'property_developer',
+  options: { launchAccess?: boolean } = {},
+) {
   const db = await getDb();
   if (!db) throw new Error('Database connection failed');
 
@@ -56,6 +66,9 @@ async function createFixture(role: 'property_developer' | 'super_admin' = 'prope
       name: `Lifecycle Developer ${suffix}`,
       email: `development-lifecycle-developer-${suffix}@example.com`,
     });
+    if (options.launchAccess !== false) {
+      await activateDeveloperTestLaunchAccess(fixture.developerContext);
+    }
   }
 
   fixtures.push(fixture);
@@ -195,6 +208,78 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         })
       ).some(item => Number(item.id) === developmentId),
     ).toBe(true);
+  });
+
+  it('keeps approval private without Launch Access and restores publication after activation', async () => {
+    const owner = await createFixture('property_developer', { launchAccess: false });
+    const reviewer = await createFixture('super_admin');
+    const development = await createDevelopmentFor(owner);
+    const developmentId = Number(development.id);
+    const ownerCaller = callerFor(owner.userId, 'property_developer');
+
+    await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    await callerFor(reviewer.userId, 'super_admin').admin.adminApproveDevelopment({
+      developmentId,
+    });
+
+    const db = await getDb();
+    const [privateProjection] = await db!
+      .select({ approvalStatus: developments.approvalStatus, isPublished: developments.isPublished })
+      .from(developments)
+      .where(eq(developments.id, developmentId));
+    expect(privateProjection).toMatchObject({ approvalStatus: 'approved', isPublished: 0 });
+    expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
+
+    const privateHome = await ownerCaller.developer.getOperatingHome({ range: '30d' });
+    expect(privateHome.developments[0]).toMatchObject({
+      lifecycle: { state: 'approved_private', publicEligible: false },
+      publication: { commercialAccessRequired: true },
+      nextAction: { code: 'activate_launch_access' },
+    });
+
+    await activateDeveloperTestLaunchAccess(owner.developerContext!);
+    await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    expect(await developmentService.getPublicDevelopment(developmentId)).toMatchObject({
+      id: developmentId,
+      isPublished: 1,
+      approvalStatus: 'approved',
+    });
+  });
+
+  it('removes expired public eligibility without destroying the approved development', async () => {
+    const owner = await createFixture();
+    const reviewer = await createFixture('super_admin');
+    const development = await createDevelopmentFor(owner);
+    const developmentId = Number(development.id);
+    const ownerCaller = callerFor(owner.userId, 'property_developer');
+
+    await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    await callerFor(reviewer.userId, 'super_admin').admin.adminApproveDevelopment({
+      developmentId,
+    });
+
+    const db = await getDb();
+    await db!
+      .update(subscriptions)
+      .set({ status: 'active', currentPeriodEnd: '2020-01-01 00:00:00' })
+      .where(
+        and(
+          eq(subscriptions.ownerType, 'developer'),
+          eq(subscriptions.ownerId, owner.developerContext!.organisationId),
+        ),
+      );
+
+    expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
+    const home = await ownerCaller.developer.getOperatingHome({ range: '30d' });
+    expect(home.developments[0]).toMatchObject({
+      lifecycle: { state: 'approved_private', publicEligible: false, isPublished: true },
+      nextAction: { code: 'activate_launch_access' },
+    });
+    const [preserved] = await db!
+      .select({ id: developments.id, approvalStatus: developments.approvalStatus })
+      .from(developments)
+      .where(eq(developments.id, developmentId));
+    expect(preserved).toMatchObject({ id: developmentId, approvalStatus: 'approved' });
   });
 
   it('does not transition incomplete development data to pending through the active developer procedure', async () => {

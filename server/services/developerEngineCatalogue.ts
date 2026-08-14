@@ -38,6 +38,8 @@ export type CanonicalDevelopmentCatalogue = {
   > | null;
   organisation: Pick<CanonicalOrganisationRow, 'id' | 'status'> | null;
   unitTypes: Pick<CanonicalUnitTypeRow, 'id' | 'developmentId' | 'isActive'>[];
+  /** First-party publication is also gated by organisation-owned Launch Access. */
+  commercialAccess?: boolean;
   /** Optional SQL aggregate used when a consumer does not need full unit rows. */
   activeUnitTypeCount?: number;
   /** S2 defense-in-depth flag for an active curated-source supersession. */

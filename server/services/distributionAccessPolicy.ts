@@ -21,6 +21,7 @@ import {
   type DistributionDevelopmentAccessRow,
 } from './distributionAccessRepository';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
+import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -451,6 +452,13 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const cataloguePublisherId =
     Number(development.cataloguePublisherId || 0) ||
     null;
+  const commercialAccess =
+    development.brand?.authorityKind === 'developer_first_party' &&
+    development.organisation?.id
+      ? (await getDeveloperPublicationAccess(Number(development.organisation.id), {
+          db: input.db,
+        })).eligible
+      : true;
   const publicEligibility = evaluatePublicDevelopmentEligibility({
     development: {
       id: Number(development.id),
@@ -465,6 +473,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     unitTypes: [],
     activeUnitTypeCount: Number(development.activeUnitTypeCount || 0),
     activeSupersessionSource: Number(development.activeSupersessionSource || 0) === 1,
+    commercialAccess,
   } as any);
   const developmentVisible = publicEligibility.eligible;
 

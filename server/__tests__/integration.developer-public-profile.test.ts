@@ -5,6 +5,7 @@ import { developerRouter } from '../developerRouter';
 import { getDb } from '../db-connection';
 import { developerOrganisations, developments, unitTypes, users } from '../../drizzle/schema';
 import {
+  activateDeveloperTestLaunchAccess,
   createDeveloperTestContext,
   deleteDeveloperTestContext,
   type DeveloperTestContext,
@@ -60,6 +61,7 @@ describeWithDb('developer public profile integration', () => {
       isTrusted: true,
       publicContactEmail: `sales-${suffix}@example.com`,
     });
+    await activateDeveloperTestLaunchAccess(developerContext);
     const slug = developerContext.publisher.slug;
 
     const [publishedInsert] = await db!.insert(developments).values({

@@ -16,6 +16,7 @@ import {
   verifyCanonicalGeographyReferenceData,
   type GeographyReferenceEvidence,
 } from './canonicalGeography';
+import { CANONICAL_DEVELOPER_LAUNCH_ACCESS } from './canonicalCommercial';
 
 export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v1' as const;
 export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v1-property-enquiry';
@@ -336,6 +337,7 @@ async function prepareScenarioRows(
       1,
     ],
   });
+  await ensureDeveloperLaunchAccess(connection);
   await ensureDeterministicRow({
     connection,
     table: 'developments',
@@ -534,6 +536,71 @@ async function prepareScenarioRows(
       SCENARIO_IDS.cataloguePublisher,
     ],
   });
+}
+
+async function ensureDeveloperLaunchAccess(connection: AuthoritySqlConnection): Promise<void> {
+  const planRows = await queryRows(
+    connection,
+    'SELECT id FROM plans WHERE name = ? AND segment = ?',
+    [CANONICAL_DEVELOPER_LAUNCH_ACCESS.name, CANONICAL_DEVELOPER_LAUNCH_ACCESS.segment],
+  );
+  if (planRows.length !== 1) {
+    throw new Error('Search-to-Lead scenario requires the canonical developer Launch Access plan.');
+  }
+  const planId = asId({ id: rowValue(planRows[0], 'id') }, 'developer Launch Access plan');
+  const subscriptionRows = await queryRows(
+    connection,
+    `SELECT id, plan_id, status, current_period_end
+       FROM subscriptions
+      WHERE owner_type = 'developer' AND owner_id = ?
+      ORDER BY id`,
+    [SCENARIO_IDS.developerOrganisation],
+  );
+  if (subscriptionRows.length > 1) {
+    throw new Error(
+      'Search-to-Lead scenario found duplicate developer Launch Access subscriptions.',
+    );
+  }
+  if (subscriptionRows.length === 1) {
+    const row = subscriptionRows[0];
+    const expiresAt = new Date(String(rowValue(row, 'current_period_end') || '')).getTime();
+    if (
+      Number(rowValue(row, 'plan_id')) !== planId ||
+      rowValue(row, 'status') !== 'active' ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= Date.now()
+    ) {
+      throw new Error('Search-to-Lead scenario developer Launch Access is not currently eligible.');
+    }
+    return;
+  }
+  await connection.execute(
+    `INSERT INTO subscriptions
+      (owner_type, owner_id, plan_id, status, trial_ends_at,
+       current_period_start, current_period_end, grace_ends_at,
+       cancel_at_period_end, billing_cycle_anchor, metadata, created_by, updated_by)
+     VALUES ('developer', ?, ?, 'active', NULL, CURRENT_TIMESTAMP,
+             DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), NULL, 0,
+             DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 90 DAY), CAST(? AS JSON), ?, ?)`,
+    [
+      SCENARIO_IDS.developerOrganisation,
+      planId,
+      JSON.stringify({
+        fixture: SEARCH_TO_LEAD_SCENARIO_VERSION,
+        commercial_product_key: CANONICAL_DEVELOPER_LAUNCH_ACCESS.name,
+        commercial_term_kind: 'paid_launch_access',
+        commercial_access_activated: true,
+        commercial_requires_verified_payment: true,
+        commercial_auto_renews: false,
+        billing_provider: 'manual_eft',
+        verified_invoice_id: SCENARIO_IDS.development,
+        verified_payment_id: SCENARIO_IDS.development,
+        verified_payment_amount_minor: CANONICAL_DEVELOPER_LAUNCH_ACCESS.price,
+      }),
+      SCENARIO_IDS.developerUser,
+      SCENARIO_IDS.developerUser,
+    ],
+  );
 }
 
 export async function verifySearchToLeadScenarioData(

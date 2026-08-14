@@ -54,26 +54,45 @@ import { buildDevelopmentHomeInventory } from './services/developmentInventorySu
 import { buildDevelopmentHomeAttention } from './services/developmentHomeAttention';
 import { getDevelopmentHomeDistribution } from './services/developmentHomeDistribution';
 import { developmentSupersessionService } from './services/developmentSupersessionService';
+import {
+  developerVisibleReviewFeedback,
+  deriveDevelopmentHomeLifecycleState,
+  isDevelopmentHomePublicEligible,
+  type DevelopmentHomeLifecycleState,
+  type DevelopmentHomeReadinessBlocker,
+  type DevelopmentHomeReviewRow,
+} from './services/developmentOperatingLifecycle';
+import {
+  getDeveloperOperatingHome,
+  type DeveloperOperatingHomeScope,
+} from './services/developerOperatingHome';
+import { getDeveloperPublicationAccess } from './services/developerPublicationAccess';
+import type { DeveloperPublicationAccess } from './services/developerPublicationAccess';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
-export type DevelopmentHomeLifecycleState =
-  | 'live'
-  | 'approved_private'
-  | 'in_review'
-  | 'changes_required'
-  | 'rejected'
-  | 'draft_ready_to_submit'
-  | 'draft_action_required';
-
-export type CanonicalDevelopmentReviewStatus = NonNullable<
-  (typeof developmentApprovalQueue.$inferSelect)['status']
->;
+export {
+  developerVisibleReviewFeedback,
+  deriveDevelopmentHomeLifecycleState,
+  isDevelopmentHomePublicEligible,
+} from './services/developmentOperatingLifecycle';
+export type {
+  CanonicalDevelopmentReviewStatus,
+  DevelopmentHomeLifecycleState,
+  DevelopmentHomeReadinessBlocker,
+  DevelopmentHomeReviewRow,
+} from './services/developmentOperatingLifecycle';
 
 export const DevelopmentHomeInputSchema = z
   .object({
     developmentId: z.number().int().positive(),
     range: z.enum(['7d', '30d', '90d']),
+  })
+  .strict();
+
+export const DeveloperOperatingHomeInputSchema = z
+  .object({
+    range: z.enum(['7d', '30d', '90d']).default('30d'),
   })
   .strict();
 
@@ -97,47 +116,6 @@ type DevelopmentHomeIdentityRow = Pick<
   | 'developmentType'
   | 'rejectionNote'
 >;
-
-type DevelopmentHomeReviewRow = Pick<
-  typeof developmentApprovalQueue.$inferSelect,
-  'id' | 'status' | 'submittedAt' | 'reviewedAt' | 'reviewNotes' | 'rejectionReason'
->;
-
-type DevelopmentHomeReadinessBlocker = {
-  field: string;
-  message: string;
-  severity: 'critical';
-};
-
-function developerVisibleReviewFeedback(
-  review: Pick<DevelopmentHomeReviewRow, 'status' | 'reviewNotes' | 'rejectionReason'>,
-): string | null {
-  if (review.status === 'changes_requested') return review.reviewNotes?.trim() || null;
-  if (review.status === 'rejected') return review.rejectionReason?.trim() || null;
-  return null;
-}
-
-export function deriveDevelopmentHomeLifecycleState(input: {
-  approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
-  isPublished: (typeof developments.$inferSelect)['isPublished'];
-  blockers?: readonly DevelopmentHomeReadinessBlocker[];
-  currentChangesRequestedFeedback?: string | null;
-}): DevelopmentHomeLifecycleState {
-  if (input.approvalStatus === 'approved' && Number(input.isPublished) === 1) return 'live';
-  if (input.approvalStatus === 'approved') return 'approved_private';
-  if (input.approvalStatus === 'pending') return 'in_review';
-  if (input.approvalStatus === 'rejected') return 'rejected';
-  if (input.currentChangesRequestedFeedback?.trim()) return 'changes_required';
-  if ((input.blockers?.length ?? 0) === 0) return 'draft_ready_to_submit';
-  return 'draft_action_required';
-}
-
-export function isDevelopmentHomePublicEligible(input: {
-  approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
-  isPublished: (typeof developments.$inferSelect)['isPublished'];
-}): boolean {
-  return input.approvalStatus === 'approved' && Number(input.isPublished) === 1;
-}
 
 function assertDeveloperDistributionEnabled() {
   if (!ENV.distributionNetworkEnabled) {
@@ -560,144 +538,158 @@ export const developerRouter = router({
         String((sanitized as any).developmentData?.name ?? (sanitized as any).name ?? '').trim() ||
         'Untitled Draft';
 
-      try {
-        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-        const dbConn = await db.getDb();
-        if (!dbConn) {
-          return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
-        }
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
 
-        if (
-          input.cataloguePublisherId !== undefined &&
-          Number(input.cataloguePublisherId) !== Number(profile.publisherId)
-        ) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'The draft publisher must belong to the authenticated organisation.',
-          });
-        }
+      if (
+        input.cataloguePublisherId !== undefined &&
+        Number(input.cataloguePublisherId) !== Number(profile.publisherId)
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'The draft publisher must belong to the authenticated organisation.',
+        });
+      }
 
-        if (input.id) {
-          const updateSet: Record<string, any> = {
-            draftName,
-            draftData: sanitized,
-            progress,
-            currentStep,
-            lastModified: new Date().toISOString(),
-          };
-          updateSet.cataloguePublisherId = profile.publisherId;
-          updateSet.developerOrganisationId = profile.organisationId;
-
-          await dbConn
-            .update(developmentDrafts)
-            .set(updateSet)
-            .where(
-              and(
-                eq(developmentDrafts.id, input.id),
-                eq(developmentDrafts.developerOrganisationId, profile.organisationId),
-              ),
-            );
-
-          return { id: input.id, success: true, draftData: sanitized };
-        }
-
-        const insertResult = await dbConn.insert(developmentDrafts).values({
-          developerOrganisationId: profile.organisationId,
-          cataloguePublisherId: profile.publisherId,
+      if (input.id) {
+        const updateSet: Record<string, any> = {
           draftName,
           draftData: sanitized,
           progress,
           currentStep,
-        });
-        const inserted = Array.isArray(insertResult) ? insertResult[0] : insertResult;
-
-        return {
-          id: Number(inserted?.insertId ?? 0),
-          success: true,
-          draftData: sanitized,
+          lastModified: new Date().toISOString(),
+          cataloguePublisherId: profile.publisherId,
+          developerOrganisationId: profile.organisationId,
         };
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        console.warn('[developer.saveDraft] Falling back to safe response:', error);
-        return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
-      }
-    }),
 
-  getDraft: protectedProcedure
-    .input(z.object({ id: z.number().int() }))
-    .query(async ({ ctx, input }) => {
-      try {
-        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-        const dbConn = await db.getDb();
-        if (!dbConn) return null;
-
-        const [draft] = await dbConn
-          .select()
+        const [existingDraft] = await dbConn
+          .select({ id: developmentDrafts.id })
           .from(developmentDrafts)
           .where(
             and(
               eq(developmentDrafts.id, input.id),
               eq(developmentDrafts.developerOrganisationId, profile.organisationId),
+              eq(developmentDrafts.cataloguePublisherId, profile.publisherId),
             ),
           )
           .limit(1);
+        if (!existingDraft) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
+        }
 
-        if (!draft) return null;
+        await dbConn
+          .update(developmentDrafts)
+          .set(updateSet)
+          .where(
+            and(
+              eq(developmentDrafts.id, input.id),
+              eq(developmentDrafts.developerOrganisationId, profile.organisationId),
+              eq(developmentDrafts.cataloguePublisherId, profile.publisherId),
+            ),
+          );
 
-        return {
-          ...draft,
-          draftData: sanitizeDraftData((draft as any).draftData ?? {}),
-        };
-      } catch (error) {
-        console.warn('[developer.getDraft] Returning null due to error:', error);
-        return null;
+        return { id: input.id, success: true, draftData: sanitized };
       }
+
+      const insertResult = await dbConn.insert(developmentDrafts).values({
+        developerOrganisationId: profile.organisationId,
+        cataloguePublisherId: profile.publisherId,
+        draftName,
+        draftData: sanitized,
+        progress,
+        currentStep,
+      });
+      const inserted = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+
+      return {
+        id: Number(inserted?.insertId ?? 0),
+        success: true,
+        draftData: sanitized,
+      };
+    }),
+
+  getDraft: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .query(async ({ ctx, input }) => {
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+
+      const [draft] = await dbConn
+        .select()
+        .from(developmentDrafts)
+        .where(
+          and(
+            eq(developmentDrafts.id, input.id),
+            eq(developmentDrafts.developerOrganisationId, profile.organisationId),
+            eq(developmentDrafts.cataloguePublisherId, profile.publisherId),
+          ),
+        )
+        .limit(1);
+
+      if (!draft) return null;
+
+      return {
+        ...draft,
+        draftData: sanitizeDraftData((draft as any).draftData ?? {}),
+      };
     }),
 
   getDrafts: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-      const dbConn = await db.getDb();
-      if (!dbConn) return [];
-
-      const drafts = await dbConn
-        .select()
-        .from(developmentDrafts)
-        .where(eq(developmentDrafts.developerOrganisationId, profile.organisationId))
-        .orderBy(desc(developmentDrafts.lastModified));
-
-      return drafts.map((draft: any) => ({
-        ...draft,
-        draftData: sanitizeDraftData(draft?.draftData ?? {}),
-      }));
-    } catch (error) {
-      console.warn('[developer.getDrafts] Returning empty list due to error:', error);
-      return [];
+    const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+    const dbConn = await db.getDb();
+    if (!dbConn) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
     }
+
+    const drafts = await dbConn
+      .select()
+      .from(developmentDrafts)
+      .where(
+        and(
+          eq(developmentDrafts.developerOrganisationId, profile.organisationId),
+          eq(developmentDrafts.cataloguePublisherId, profile.publisherId),
+        ),
+      )
+      .orderBy(desc(developmentDrafts.lastModified));
+
+    return drafts.map((draft: any) => ({
+      ...draft,
+      draftData: sanitizeDraftData(draft?.draftData ?? {}),
+    }));
   }),
 
   deleteDraft: protectedProcedure
     .input(z.object({ id: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
-      try {
-        const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-        const dbConn = await db.getDb();
-        if (!dbConn) return { success: false, id: input.id };
-
-        await dbConn
-          .delete(developmentDrafts)
-          .where(
-            and(
-              eq(developmentDrafts.id, input.id),
-              eq(developmentDrafts.developerOrganisationId, profile.organisationId),
-            ),
-          );
-
-        return { success: true, id: input.id };
-      } catch (error) {
-        console.warn('[developer.deleteDraft] Safe fallback after error:', error);
-        return { success: false, id: input.id };
+      const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
       }
+
+      const deleteResult = await dbConn
+        .delete(developmentDrafts)
+        .where(
+          and(
+            eq(developmentDrafts.id, input.id),
+            eq(developmentDrafts.developerOrganisationId, profile.organisationId),
+            eq(developmentDrafts.cataloguePublisherId, profile.publisherId),
+          ),
+        );
+      const affectedRows = Number(
+        (deleteResult as any)?.affectedRows ?? (deleteResult as any)?.[0]?.affectedRows ?? 0,
+      );
+      if (affectedRows !== 1) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Draft not found' });
+      }
+
+      return { success: true, id: input.id };
     }),
   getPublishedDevelopments: publicProcedure
     .input(
@@ -1479,23 +1471,6 @@ export const developerRouter = router({
         });
       }
 
-      const developerId = identity.developerId;
-      const limitCheck = await developerSubscriptionService.checkLimit(developerId, 'developments');
-      if (!limitCheck.allowed) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message:
-            limitCheck.max !== null && limitCheck.max > 0
-              ? `Development limit reached for ${limitCheck.tier}. Request a canonical developer plan change to create more developments.`
-              : 'A canonical developer product and development entitlement are required before creating a development.',
-          cause: {
-            current: limitCheck.current,
-            max: limitCheck.max,
-            plan: limitCheck.tier,
-          },
-        });
-      }
-
       const serverAuthorizedInput = { ...(input as Record<string, unknown>) };
       for (const authorityField of [
         'developerId',
@@ -1517,8 +1492,6 @@ export const developerRouter = router({
         },
         null,
       );
-
-      await developerSubscriptionService.incrementUsage(developerId, 'developments');
 
       return { development };
     }),
@@ -1558,11 +1531,6 @@ export const developerRouter = router({
           code: 'CONFLICT',
           message: 'Development deletion did not affect an authorized development.',
         });
-      }
-
-      if (user.role === 'property_developer') {
-        const profile = await requireDeveloperProfileByUserId(user.id);
-        await developerSubscriptionService.decrementUsage(profile.organisationId, 'developments');
       }
 
       return { success: true, deletedId: input.id };
@@ -1722,6 +1690,28 @@ export const developerRouter = router({
       }
     }),
 
+  getOperatingHome: protectedProcedure
+    .input(DeveloperOperatingHomeInputSchema)
+    .query(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const identity = await resolveOperatingIdentity(ctx, {
+        mode: user.role === 'super_admin' ? 'platform_curator' : 'developer',
+      });
+      const scope: DeveloperOperatingHomeScope =
+        identity.mode === 'developer'
+          ? {
+              mode: 'developer',
+              organisationId: identity.organisationId,
+              cataloguePublisherId: identity.cataloguePublisherId,
+            }
+          : {
+              mode: 'platform_curator',
+              cataloguePublisherId: identity.cataloguePublisherId,
+            };
+
+      return getDeveloperOperatingHome({ scope, range: input.range });
+    }),
+
   getDevelopmentHome: protectedProcedure
     .input(DevelopmentHomeInputSchema)
     .query(async ({ ctx, input }) => {
@@ -1752,6 +1742,7 @@ export const developerRouter = router({
       };
 
       let row: DevelopmentHomeIdentityRow | undefined;
+      let publicationAccess: DeveloperPublicationAccess | null = null;
 
       if (user.role === 'property_developer') {
         // Development Home is a read model. Its existing ownership helper is
@@ -1767,6 +1758,11 @@ export const developerRouter = router({
             ),
           )
           .limit(1);
+        if (profile.organisationId) {
+          publicationAccess = await getDeveloperPublicationAccess(profile.organisationId, {
+            db: dbConn,
+          });
+        }
       } else if (user.role === 'super_admin') {
         const operatingAs = ctx.operatingAs;
         if (!operatingAs?.cataloguePublisherId) {
@@ -1840,10 +1836,13 @@ export const developerRouter = router({
         row.approvalStatus === 'draft' && latestReview?.status === 'changes_requested'
           ? latestReview.feedback
           : null;
+      const commercialEligible = publicationAccess?.eligible ?? true;
       const lifecycleState = deriveDevelopmentHomeLifecycleState({
         ...row,
         blockers,
+        currentReviewStatus: latestReview?.status ?? null,
         currentChangesRequestedFeedback,
+        commercialEligible,
       });
       const isPublished = Number(row.isPublished) === 1;
       // A single server timestamp keeps all selected-period demand, funnel, and SLA values aligned.
@@ -1860,6 +1859,8 @@ export const developerRouter = router({
         blockers,
         inventory,
         funnel: leadSummary.funnel,
+        commercialAccessRequired:
+          row.approvalStatus === 'approved' && !commercialEligible,
       });
       const distribution = await getDevelopmentHomeDistribution({
         db: dbConn,
@@ -1881,7 +1882,7 @@ export const developerRouter = router({
           approvalStatus: row.approvalStatus,
           isPublished,
           publishedAt: row.publishedAt,
-          publicEligible: isDevelopmentHomePublicEligible(row),
+          publicEligible: isDevelopmentHomePublicEligible({ ...row, commercialEligible }),
           lifecycleState,
         },
         readiness: {
@@ -1899,17 +1900,54 @@ export const developerRouter = router({
         funnel: leadSummary.funnel,
         inventory,
         attention,
+        publication: {
+          publicEligible: isDevelopmentHomePublicEligible({ ...row, commercialEligible }),
+          commercialAccess: publicationAccess,
+        },
         distribution,
         range: input.range,
       };
     }),
 
   getDevelopments: protectedProcedure.query(async ({ ctx }) => {
-    const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-    console.log(
-      `[developer.getDevelopments] userId=${requireUser(ctx).id} developerProfileId=${profile.id} filterDeveloperId=${profile.id}`,
-    );
-    return await developmentService.getDevelopmentsByDeveloperId(profile.publisherId);
+    const user = requireUser(ctx);
+    const identity = await resolveOperatingIdentity(ctx, {
+      mode: user.role === 'super_admin' ? 'platform_curator' : 'developer',
+    });
+    const scope: DeveloperOperatingHomeScope =
+      identity.mode === 'developer'
+        ? {
+            mode: 'developer',
+            organisationId: identity.organisationId,
+            cataloguePublisherId: identity.cataloguePublisherId,
+          }
+        : {
+            mode: 'platform_curator',
+            cataloguePublisherId: identity.cataloguePublisherId,
+          };
+    const home = await getDeveloperOperatingHome({ scope, range: '30d' });
+
+    return home.developments.map(development => ({
+      id: development.identity.id,
+      name: development.identity.name,
+      slug: development.identity.slug,
+      address: development.identity.location.address,
+      suburb: development.identity.location.suburb,
+      city: development.identity.location.city,
+      province: development.identity.location.province,
+      images: development.identity.imageUrl ? [development.identity.imageUrl] : [],
+      approvalStatus: development.lifecycle.approvalStatus,
+      isPublished: development.lifecycle.isPublished ? 1 : 0,
+      publishedAt: development.lifecycle.publishedAt,
+      lifecycleState: development.lifecycle.state,
+      readiness: development.readiness,
+      inventory: development.inventory,
+      leads: development.leads,
+      attention: development.attention,
+      nextAction: development.nextAction,
+      rejectionReason: development.lifecycle.latestReview?.feedback ?? null,
+      priceFrom: development.inventory.pricing.from,
+    }));
   }),
 
   upgradeSubscription: protectedProcedure

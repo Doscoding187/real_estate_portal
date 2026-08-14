@@ -5,6 +5,8 @@ import {
   developmentSupersessions,
   developments,
   developerOrganisations,
+  plans,
+  subscriptions,
   unitTypes,
 } from '../../drizzle/schema';
 import {
@@ -22,6 +24,7 @@ export type PublicDevelopmentEligibilityReason =
   | 'missing_source_attribution'
   | 'invalid_publisher_custody'
   | 'missing_active_unit_types'
+  | 'missing_launch_access'
   | 'active_supersession_source';
 
 export type PublicDevelopmentEligibilityResult = {
@@ -82,6 +85,7 @@ export function evaluatePublicDevelopmentEligibility(
     ) {
       reasons.push('invalid_publisher_custody');
     }
+    if (catalogue.commercialAccess !== true) reasons.push('missing_launch_access');
   } else {
     reasons.push('invalid_publisher_custody');
   }
@@ -120,7 +124,21 @@ export function publicDevelopmentEligibilityConditions(): SQL {
         OR
         (p.authority_kind = 'developer_first_party'
           AND p.developer_organisation_id IS NOT NULL
-          AND o.status = 'approved')
+          AND o.status = 'approved'
+          AND EXISTS (
+            SELECT 1
+            FROM ${subscriptions} s
+            INNER JOIN ${plans} launch_plan ON launch_plan.id = s.plan_id
+            WHERE s.owner_type = 'developer'
+              AND s.owner_id = p.developer_organisation_id
+              AND s.status IN ('active', 'grace_period')
+              AND s.current_period_end IS NOT NULL
+              AND s.current_period_end > UTC_TIMESTAMP()
+              AND launch_plan.segment = 'developer'
+              AND launch_plan.name = 'developer_launch_access'
+              AND JSON_UNQUOTE(JSON_EXTRACT(launch_plan.metadata, '$.commercial_term_kind')) = 'paid_launch_access'
+              AND JSON_UNQUOTE(JSON_EXTRACT(launch_plan.metadata, '$.commercial_product_key')) = 'developer_launch_access'
+          ))
       )
   )`;
 

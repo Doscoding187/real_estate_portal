@@ -8,6 +8,7 @@ function catalogue(
     publisher?: Partial<NonNullable<CanonicalDevelopmentCatalogue['publisher']>> | null;
     organisation?: CanonicalDevelopmentCatalogue['organisation'];
     unitTypes?: CanonicalDevelopmentCatalogue['unitTypes'];
+    commercialAccess?: boolean;
     activeUnitTypeCount?: number;
     activeSupersessionSource?: boolean;
   } = {},
@@ -36,6 +37,7 @@ function catalogue(
         : { ...defaultPublisher, ...overrides.publisher },
     organisation: overrides.organisation ?? null,
     unitTypes: overrides.unitTypes ?? [{ id: 'unit-101', developmentId: 101, isActive: 1 }],
+    commercialAccess: overrides.commercialAccess ?? true,
     ...(overrides.activeUnitTypeCount === undefined
       ? {}
       : { activeUnitTypeCount: overrides.activeUnitTypeCount }),
@@ -69,6 +71,28 @@ describe('public development eligibility authority', () => {
         }),
       ),
     ).toMatchObject({ eligible: true, operatingMode: 'developer', reasons: [] });
+  });
+
+  it('keeps an approved developer development private without Launch Access', () => {
+    const result = evaluatePublicDevelopmentEligibility(
+      catalogue({
+        development: { cataloguePublisherId: 22 },
+        publisher: {
+          id: 22,
+          authorityKind: 'developer_first_party',
+          developerOrganisationId: 7,
+          sourceAttribution: null,
+        },
+        organisation: { id: 7, status: 'approved' },
+        commercialAccess: false,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      eligible: false,
+      operatingMode: 'developer',
+      reasons: expect.arrayContaining(['missing_launch_access']),
+    });
   });
 
   it('rejects developer inventory without a first-party publisher authority', () => {

@@ -1,13 +1,16 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import {
   cataloguePublishers,
   developerOrganisationMemberships,
   developerOrganisations,
+  plans,
+  subscriptions,
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
 import { developerIdentityService } from '../services/developerIdentityService';
+import { activatePaidLaunchAccessForOwner } from '../services/planAccessService';
 
 type OrganisationStatus = 'pending' | 'approved' | 'rejected';
 
@@ -126,6 +129,36 @@ export async function createPlatformPublisherTestContext(input: {
   return { cataloguePublisherId: publisher.id, publisher };
 }
 
+export async function activateDeveloperTestLaunchAccess(
+  context: DeveloperTestContext,
+  options: { activatedAt?: Date } = {},
+) {
+  const database = await getDb();
+  if (!database) throw new Error('Database not available');
+
+  const [plan] = await database
+    .select()
+    .from(plans)
+    .where(eq(plans.name, 'developer_launch_access'))
+    .limit(1);
+  if (!plan) throw new Error('Developer Launch Access reference plan is missing.');
+
+  const paymentKey = Math.floor(Date.now() * 10 + context.organisationId);
+  return activatePaidLaunchAccessForOwner({
+    ownerType: 'developer',
+    ownerId: context.organisationId,
+    planId: plan.id,
+    activatedAt: options.activatedAt,
+    verifiedPayment: {
+      invoiceId: paymentKey,
+      paymentId: paymentKey + 1,
+      amountMinor: 149900,
+      state: 'verified',
+    },
+    db: database,
+  });
+}
+
 /**
  * Delete canonical identity rows after each test has removed dependent domain
  * data. Catalogue Publisher is deleted before its owning organisation because
@@ -135,6 +168,9 @@ export async function deleteDeveloperTestContext(context: DeveloperTestContext):
   const database = await getDb();
   if (!database) return;
 
+  await database
+    .delete(subscriptions)
+    .where(and(eq(subscriptions.ownerType, 'developer'), eq(subscriptions.ownerId, context.organisationId)));
   await database
     .delete(cataloguePublishers)
     .where(eq(cataloguePublishers.id, context.cataloguePublisherId));

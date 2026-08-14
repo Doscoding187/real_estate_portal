@@ -103,9 +103,9 @@ describe('Development Home route registration', () => {
   it('uses Development Home as the owned portfolio open action while retaining wizard edit navigation', () => {
     const source = readRepoFile('client/src/components/developer/DevelopmentsList.tsx');
 
-    expect(source).toContain('onView={id => setLocation(`/developer/developments/${id}`)}');
+    expect(source).toContain('development.nextAction!.href');
     expect(source).toContain(
-      'onEdit={id => setLocation(`/developer/create-development?id=${id}`)}',
+      'setLocation(`/developer/create-development?id=${development.identity.id}`)',
     );
   });
 });

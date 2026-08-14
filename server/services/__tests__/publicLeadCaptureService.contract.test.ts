@@ -305,6 +305,24 @@ describe('publicLeadCaptureService contract', () => {
           },
         ],
         [{ id: 7, userId: 70, status: 'approved' }],
+        [
+          {
+            subscription: {
+              status: 'active',
+              currentPeriodEnd: '2099-01-01 00:00:00',
+            },
+            plan: {
+              name: 'developer_launch_access',
+              displayName: 'Launch Access',
+              segment: 'developer',
+              metadata: JSON.stringify({
+                commercial_term_kind: 'paid_launch_access',
+                commercial_product_key: 'developer_launch_access',
+                commercial_term_duration_days: 90,
+              }),
+            },
+          },
+        ],
         [{ id: 70, role: 'property_developer' }],
       ],
     });
