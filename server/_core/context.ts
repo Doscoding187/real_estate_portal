@@ -6,7 +6,7 @@ export type User = typeof users.$inferSelect;
 
 /**
  * Base tRPC context created for each request.
- * Server-authorized operating identity is applied later by brandContext
+ * Server-authorized operating identity is applied later by publisher-context
  * middleware. A browser header is only a request for that resolution.
  */
 export type TrpcContext = {

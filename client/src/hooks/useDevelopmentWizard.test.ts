@@ -24,7 +24,7 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(invalid.errors).toContain('Select the Developer Brand you are representing');
 
       act(() => {
-        result.current.setListingIdentity({ developerBrandProfileId: 123 });
+        result.current.setListingIdentity({ cataloguePublisherId: 123 });
       });
 
       const valid = result.current.validatePhase(1);
@@ -224,13 +224,13 @@ describe('useDevelopmentWizard Validation Logic', () => {
       const result = await persistManualDevelopmentDraft({
         saveDraft,
         mutateDraft,
-        brandProfileId: 7,
+        cataloguePublisherId: 7,
         setCurrentDraftId,
       });
 
       expect(saveDraft).toHaveBeenCalledTimes(1);
       expect(mutateDraft).toHaveBeenCalledWith({
-        brandProfileId: 7,
+        cataloguePublisherId: 7,
         draftData,
       });
       expect(setCurrentDraftId).toHaveBeenCalledWith(42);

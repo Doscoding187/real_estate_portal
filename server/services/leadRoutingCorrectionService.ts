@@ -1,13 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db';
-import {
-  agencies,
-  agents,
-  developerBrandProfiles,
-  leadActivities,
-  leads,
-} from '../../drizzle/schema';
+import { agencies, agents, cataloguePublishers, leadActivities, leads } from '../../drizzle/schema';
 import { nowAsDbTimestamp } from '../utils/dbTypeUtils';
 
 export type LeadRoutingCorrectionRoute = 'agent' | 'agency' | 'brand' | 'private' | 'clear';
@@ -17,30 +11,30 @@ export interface LeadRoutingCorrectionInput {
   routeType: LeadRoutingCorrectionRoute;
   agentId?: number;
   agencyId?: number;
-  developerBrandProfileId?: number;
+  cataloguePublisherId?: number;
   note?: string;
 }
 
-function getBrandRoutingState(brandProfile: {
+function getPublisherRoutingState(publisher: {
   isSubscriber: number;
   publicContactEmail: string | null;
   isContactVerified: number;
 }) {
-  if (brandProfile.isSubscriber) {
+  if (publisher.isSubscriber) {
     return {
       brandLeadStatus: 'delivered_subscriber' as const,
       leadDeliveryMethod: 'crm_export' as const,
     };
   }
 
-  if (brandProfile.publicContactEmail && brandProfile.isContactVerified) {
+  if (publisher.publicContactEmail && publisher.isContactVerified) {
     return {
       brandLeadStatus: 'delivered_unsubscribed' as const,
       leadDeliveryMethod: 'email' as const,
     };
   }
 
-  if (brandProfile.publicContactEmail) {
+  if (publisher.publicContactEmail) {
     return {
       brandLeadStatus: 'delivered_unsubscribed' as const,
       leadDeliveryMethod: 'email' as const,
@@ -65,13 +59,14 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
   }
 
-  const currentRouteLabel = [
-    existingLead.developerBrandProfileId ? `brand:${existingLead.developerBrandProfileId}` : null,
-    existingLead.agentId ? `agent:${existingLead.agentId}` : null,
-    existingLead.agencyId ? `agency:${existingLead.agencyId}` : null,
-  ]
-    .filter(Boolean)
-    .join(', ') || 'unassigned';
+  const currentRouteLabel =
+    [
+      existingLead.cataloguePublisherId ? `publisher:${existingLead.cataloguePublisherId}` : null,
+      existingLead.agentId ? `agent:${existingLead.agentId}` : null,
+      existingLead.agencyId ? `agency:${existingLead.agencyId}` : null,
+    ]
+      .filter(Boolean)
+      .join(', ') || 'unassigned';
 
   const updateData: Record<string, any> = {
     updatedAt: nowAsDbTimestamp(),
@@ -98,7 +93,7 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
 
     updateData.agentId = agent.id;
     updateData.agencyId = agent.agencyId ?? null;
-    updateData.developerBrandProfileId = null;
+    updateData.cataloguePublisherId = null;
     updateData.brandLeadStatus = null;
     updateData.leadDeliveryMethod = null;
   } else if (input.routeType === 'agency') {
@@ -119,23 +114,23 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
 
     updateData.agentId = null;
     updateData.agencyId = agency.id;
-    updateData.developerBrandProfileId = null;
+    updateData.cataloguePublisherId = null;
     updateData.brandLeadStatus = null;
     updateData.leadDeliveryMethod = null;
   } else if (input.routeType === 'brand') {
-    if (!input.developerBrandProfileId) {
+    if (!input.cataloguePublisherId) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'Developer brand ID is required.' });
     }
 
     const brandRows = await db
       .select({
-        id: developerBrandProfiles.id,
-        isSubscriber: developerBrandProfiles.isSubscriber,
-        publicContactEmail: developerBrandProfiles.publicContactEmail,
-        isContactVerified: developerBrandProfiles.isContactVerified,
+        id: cataloguePublishers.id,
+        authorityKind: cataloguePublishers.authorityKind,
+        publicContactEmail: cataloguePublishers.publicContactEmail,
+        isContactVerified: cataloguePublishers.isContactVerified,
       })
-      .from(developerBrandProfiles)
-      .where(eq(developerBrandProfiles.id, input.developerBrandProfileId))
+      .from(cataloguePublishers)
+      .where(eq(cataloguePublishers.id, input.cataloguePublisherId))
       .limit(1);
 
     const brand = brandRows[0];
@@ -143,22 +138,26 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer brand not found' });
     }
 
-    const brandRouting = getBrandRoutingState(brand);
+    const brandRouting = getPublisherRoutingState({
+      isSubscriber: brand.authorityKind === 'developer_first_party' ? 1 : 0,
+      publicContactEmail: brand.publicContactEmail,
+      isContactVerified: brand.isContactVerified,
+    });
     updateData.agentId = null;
     updateData.agencyId = null;
-    updateData.developerBrandProfileId = brand.id;
+    updateData.cataloguePublisherId = brand.id;
     updateData.brandLeadStatus = brandRouting.brandLeadStatus;
     updateData.leadDeliveryMethod = brandRouting.leadDeliveryMethod;
   } else if (input.routeType === 'private') {
     updateData.agentId = null;
     updateData.agencyId = null;
-    updateData.developerBrandProfileId = null;
+    updateData.cataloguePublisherId = null;
     updateData.brandLeadStatus = null;
     updateData.leadDeliveryMethod = null;
   } else {
     updateData.agentId = null;
     updateData.agencyId = null;
-    updateData.developerBrandProfileId = null;
+    updateData.cataloguePublisherId = null;
     updateData.brandLeadStatus = null;
     updateData.leadDeliveryMethod = null;
   }
@@ -171,7 +170,7 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
       : input.routeType === 'agency'
         ? `agency:${input.agencyId}`
         : input.routeType === 'brand'
-          ? `brand:${input.developerBrandProfileId}`
+          ? `publisher:${input.cataloguePublisherId}`
           : input.routeType;
 
   const noteSuffix = input.note?.trim();
@@ -193,7 +192,7 @@ export async function correctLeadRouting(input: LeadRoutingCorrectionInput, acto
     id: updatedLead.id,
     agentId: updatedLead.agentId,
     agencyId: updatedLead.agencyId,
-    developerBrandProfileId: updatedLead.developerBrandProfileId,
+    cataloguePublisherId: updatedLead.cataloguePublisherId,
     brandLeadStatus: updatedLead.brandLeadStatus,
     leadDeliveryMethod: updatedLead.leadDeliveryMethod,
   };

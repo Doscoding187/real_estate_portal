@@ -1,10 +1,11 @@
-import { db } from '../db.ts';
+import { getDb } from '../db-connection';
+import { and, eq, gte, sql } from 'drizzle-orm';
 import {
-  developerSubscriptions,
-  developerSubscriptionUsage,
+  cataloguePublishers,
+  developerOrganisationMemberships,
   developments,
+  leads,
 } from '../../drizzle/schema.ts';
-import { eq, sql } from 'drizzle-orm';
 import {
   DeveloperSubscription,
   DeveloperSubscriptionLimits,
@@ -23,10 +24,6 @@ import {
 import { resolveCommercialTerm } from './commercialTerm';
 
 type DeveloperLimitType = 'developments' | 'leads' | 'teamMembers';
-
-function toMysqlDateTime(value: Date): string {
-  return value.toISOString().slice(0, 19).replace('T', ' ');
-}
 
 function toDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null;
@@ -169,10 +166,10 @@ export class DeveloperSubscriptionService {
   }
 
   /**
-   * Return canonical commercial state plus the retained developer-domain
-   * usage meter. `developer_subscriptions` is used only as a foreign-key
-   * anchor for that meter; its tier/status/limits are never read as authority.
-   */
+ * Return canonical commercial state plus usage derived from the current
+ * organisation-owned facts. No historical developer subscription or usage
+ * table is created or consulted by the new identity authority.
+  */
   async getSubscription(developerId: number): Promise<DeveloperSubscriptionWithDetails | null> {
     const projection = await getPlanAccessProjectionForDeveloperId(developerId);
     if (
@@ -184,12 +181,14 @@ export class DeveloperSubscriptionService {
       return null;
     }
 
-    const { anchor, usage } = await this.ensureUsageAnchor(developerId);
+    const database = await getDb();
+    if (!database) throw new Error('Database not available');
+    const usage = await this.getDerivedUsage(database, developerId, projection.subscription.id);
     const now = new Date();
     const canonicalStatus = projection.subscription.status;
 
     return {
-      id: Number(anchor.id),
+      id: Number(projection.subscription.id),
       developerId,
       planId: projection.currentPlan.id,
       tier: toCompatibilityTier(projection),
@@ -199,9 +198,9 @@ export class DeveloperSubscriptionService {
       currentPeriodEnd: toDate(projection.subscription.currentPeriodEnd),
       stripeSubscriptionId: null,
       stripeCustomerId: null,
-      createdAt: toDate(anchor.createdAt) || now,
-      updatedAt: toDate(anchor.updatedAt) || now,
-      limits: getCanonicalLimits(Number(anchor.id), projection.entitlements),
+      createdAt: toDate(projection.subscription.createdAt) || now,
+      updatedAt: toDate(projection.subscription.createdAt) || now,
+      limits: getCanonicalLimits(Number(projection.subscription.id), projection.entitlements),
       usage,
       commercial: {
         ownerType: 'developer',
@@ -304,67 +303,20 @@ export class DeveloperSubscriptionService {
   async incrementUsage(developerId: number, usageType: DeveloperLimitType): Promise<void> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) throw new Error('Canonical developer subscription not found');
-
-    const updates: Partial<DeveloperSubscriptionUsage> = {
-      updatedAt: new Date(),
-    };
-
-    switch (usageType) {
-      case 'developments':
-        updates.developmentsCount = subscription.usage.developmentsCount + 1;
-        break;
-      case 'leads':
-        updates.leadsThisMonth = subscription.usage.leadsThisMonth + 1;
-        break;
-      case 'teamMembers':
-        updates.teamMembersCount = subscription.usage.teamMembersCount + 1;
-        break;
-    }
-
-    await db
-      .update(developerSubscriptionUsage)
-      .set(updates)
-      .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
+    void usageType;
+    // Usage is a projection of organisation-owned facts. Mutation callers are
+    // retained for API compatibility, but there is no mutable meter to drift.
   }
 
   async decrementUsage(developerId: number, usageType: DeveloperLimitType): Promise<void> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) throw new Error('Canonical developer subscription not found');
-
-    const updates: Partial<DeveloperSubscriptionUsage> = {
-      updatedAt: new Date(),
-    };
-
-    switch (usageType) {
-      case 'developments':
-        updates.developmentsCount = Math.max(0, subscription.usage.developmentsCount - 1);
-        break;
-      case 'leads':
-        updates.leadsThisMonth = Math.max(0, subscription.usage.leadsThisMonth - 1);
-        break;
-      case 'teamMembers':
-        updates.teamMembersCount = Math.max(0, subscription.usage.teamMembersCount - 1);
-        break;
-    }
-
-    await db
-      .update(developerSubscriptionUsage)
-      .set(updates)
-      .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
+    void usageType;
   }
 
   async resetMonthlyLeadCount(developerId: number): Promise<void> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) throw new Error('Canonical developer subscription not found');
-
-    await db
-      .update(developerSubscriptionUsage)
-      .set({
-        leadsThisMonth: 0,
-        lastResetAt: toMysqlDateTime(new Date()),
-        updatedAt: toMysqlDateTime(new Date()),
-      })
-      .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
   }
 
   /** Trial state is read from canonical subscriptions; this method is now a
@@ -384,82 +336,67 @@ export class DeveloperSubscriptionService {
   async resetDevelopmentCount(developerId: number): Promise<{ newCount: number }> {
     const subscription = await this.getSubscription(developerId);
     if (!subscription) throw new Error('Canonical developer subscription not found');
-
-    const [result] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(developments)
-      .where(eq(developments.developerId, developerId));
-
-    const actualCount = Number(result?.count || 0);
-
-    await db
-      .update(developerSubscriptionUsage)
-      .set({
-        developmentsCount: actualCount,
-        updatedAt: toMysqlDateTime(new Date()),
-      })
-      .where(eq(developerSubscriptionUsage.subscriptionId, subscription.id));
-
-    return { newCount: actualCount };
+    return { newCount: subscription.usage.developmentsCount };
   }
 
-  private async ensureUsageAnchor(developerId: number): Promise<{
-    anchor: typeof developerSubscriptions.$inferSelect;
-    usage: DeveloperSubscriptionUsage;
-  }> {
-    let [anchor] = await db
-      .select()
-      .from(developerSubscriptions)
-      .where(eq(developerSubscriptions.developerId, developerId))
+  private async getDerivedUsage(
+    database: any,
+    organisationId: number,
+    subscriptionId: number,
+  ): Promise<DeveloperSubscriptionUsage> {
+    const [publisher] = await database
+      .select({ id: cataloguePublishers.id })
+      .from(cataloguePublishers)
+      .where(
+        and(
+          eq(cataloguePublishers.developerOrganisationId, organisationId),
+          eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+        ),
+      )
       .limit(1);
 
-    if (!anchor) {
-      const result = await db.insert(developerSubscriptions).values({
-        developerId,
-        planId: null,
-        // These columns are required by the historical table and are not
-        // read by the commercial runtime. Canonical state is above this row.
-        tier: 'free_trial',
-        status: 'active',
-        trialEndsAt: null,
-        currentPeriodStart: null,
-        currentPeriodEnd: null,
-        stripeSubscriptionId: null,
-        stripeCustomerId: null,
-      });
-      const anchorId = Number(result[0].insertId);
-      [anchor] = await db
-        .select()
-        .from(developerSubscriptions)
-        .where(eq(developerSubscriptions.id, anchorId))
-        .limit(1);
-    }
-
-    if (!anchor) throw new Error('Unable to establish developer usage anchor');
-
-    let [usage] = await db
-      .select()
-      .from(developerSubscriptionUsage)
-      .where(eq(developerSubscriptionUsage.subscriptionId, anchor.id))
-      .limit(1);
-
-    if (!usage) {
-      await db.insert(developerSubscriptionUsage).values({
-        subscriptionId: anchor.id,
-        developmentsCount: 0,
-        leadsThisMonth: 0,
-        teamMembersCount: 0,
-        lastResetAt: toMysqlDateTime(new Date()),
-      });
-      [usage] = await db
-        .select()
-        .from(developerSubscriptionUsage)
-        .where(eq(developerSubscriptionUsage.subscriptionId, anchor.id))
-        .limit(1);
-    }
-
-    if (!usage) return { anchor, usage: getUsageDefaults(Number(anchor.id)) };
-    return { anchor, usage };
+    const publisherId = publisher?.id ?? 0;
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+    const monthStartValue = monthStart.toISOString().slice(0, 19).replace('T', ' ');
+    const [developmentResult] = publisherId
+      ? await database
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(developments)
+          .where(eq(developments.cataloguePublisherId, publisherId))
+      : [{ count: 0 }];
+    const [leadResult] = publisherId
+      ? await database
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(leads)
+          .where(
+            and(
+              eq(leads.cataloguePublisherId, publisherId),
+              gte(leads.createdAt, monthStartValue),
+            ),
+          )
+      : [{ count: 0 }];
+    const [memberResult] = await database
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(developerOrganisationMemberships)
+      .where(
+        and(
+          eq(developerOrganisationMemberships.organisationId, organisationId),
+          eq(developerOrganisationMemberships.status, 'active'),
+        ),
+      );
+    const now = new Date();
+    return {
+      id: 0,
+      subscriptionId,
+      developmentsCount: Number(developmentResult?.count ?? 0),
+      leadsThisMonth: Number(leadResult?.count ?? 0),
+      teamMembersCount: Number(memberResult?.count ?? 0),
+      lastResetAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 }
 

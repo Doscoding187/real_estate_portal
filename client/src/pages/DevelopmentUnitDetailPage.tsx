@@ -284,8 +284,6 @@ export default function DevelopmentUnitDetailPage() {
 
     const publisher =
       (dev as any).publisher ||
-      (dev as any).brandProfile ||
-      (dev as any).developerBrandProfile ||
       null;
 
     let parsedImages: any[] = [];
@@ -332,7 +330,7 @@ export default function DevelopmentUnitDetailPage() {
       city: dev.city,
       heroImage,
       brochureUrl,
-      developerBrandProfileId: (dev as any).developerBrandProfileId ?? publisher?.id ?? null,
+      cataloguePublisherId: (dev as any).cataloguePublisherId ?? publisher?.id ?? null,
       developerName: publisher?.name || dev.developer?.name || null,
       units: (Array.isArray(dev.unitTypes) ? dev.unitTypes : []).map((unit: any) => ({
         ...unit,
@@ -1043,7 +1041,7 @@ export default function DevelopmentUnitDetailPage() {
         development={{
           id: development.id,
           name: development.name,
-          developerBrandProfileId: development.developerBrandProfileId,
+          cataloguePublisherId: development.cataloguePublisherId,
           brochureUrl: development.brochureUrl,
         }}
       />

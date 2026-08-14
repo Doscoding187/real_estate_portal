@@ -14,14 +14,15 @@ import { throwAuctionPublicationDisabled } from './developerEngineContainment';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
+import { developerIdentityService } from './developerIdentityService';
 
 import {
   developments,
-  developers,
   users,
   unitTypes,
   developmentPhases,
-  developerBrandProfiles,
+  cataloguePublishers,
+  developerOrganisations,
   developmentDrafts,
   developmentApprovalQueue,
   developmentSupersessions,
@@ -34,7 +35,6 @@ import {
 // ===========================================================================
 
 type DevelopmentRow = InferSelectModel<typeof developments>;
-type DeveloperRow = InferSelectModel<typeof developers>;
 type UnitTypeRow = InferSelectModel<typeof unitTypes>;
 type DevelopmentPhaseRow = InferSelectModel<typeof developmentPhases>;
 
@@ -54,7 +54,7 @@ interface CreateDevelopmentData {
 }
 
 interface DevelopmentMetadata {
-  brandProfileId?: number;
+  cataloguePublisherId?: number;
   ownerType?: 'platform' | 'developer';
   [key: string]: unknown;
 }
@@ -244,49 +244,58 @@ function toPositiveInteger(value: unknown): number | null {
   return Math.trunc(parsed);
 }
 
-async function resolveWritableDeveloperBrandProfileId(
+async function resolveWritableCataloguePublisherId(
   db: any,
   input: {
     developerProfileId: number;
     userId: number;
-    explicitBrandProfileId?: unknown;
+    explicitCataloguePublisherId?: unknown;
   },
 ): Promise<number | null> {
-  const explicitBrandProfileId = toPositiveInteger(input.explicitBrandProfileId);
+  const explicitCataloguePublisherId = toPositiveInteger(input.explicitCataloguePublisherId);
 
-  if (explicitBrandProfileId) {
-    const brand = await db.query.developerBrandProfiles.findFirst({
-      where: eq(developerBrandProfiles.id, explicitBrandProfileId),
-      columns: { id: true, linkedDeveloperAccountId: true, ownerType: true, createdBy: true },
-    });
+  if (explicitCataloguePublisherId) {
+    const [brand] = await db
+      .select({
+        id: cataloguePublishers.id,
+        authorityKind: cataloguePublishers.authorityKind,
+        developerOrganisationId: cataloguePublishers.developerOrganisationId,
+      })
+      .from(cataloguePublishers)
+      .where(eq(cataloguePublishers.id, explicitCataloguePublisherId))
+      .limit(1);
 
     if (!brand) {
-      throw createError(`Brand Profile with ID ${explicitBrandProfileId} not found`, 'NOT_FOUND', {
-        brandProfileId: explicitBrandProfileId,
+      throw createError(`Catalogue Publisher ${explicitCataloguePublisherId} not found`, 'NOT_FOUND', {
+        cataloguePublisherId: explicitCataloguePublisherId,
       });
     }
 
-    const linkedToDeveloper =
-      Number(brand.linkedDeveloperAccountId || 0) === input.developerProfileId;
-    const createdByDeveloper =
-      brand.ownerType === 'developer' && Number(brand.createdBy || 0) === input.userId;
-
-    if (!linkedToDeveloper && !createdByDeveloper) {
+    if (
+      brand.authorityKind !== 'developer_first_party' ||
+      Number(brand.developerOrganisationId) !== Number(input.developerProfileId)
+    ) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'Brand profile does not belong to this developer account.',
+        message: 'Catalogue Publisher does not belong to this developer organisation.',
       });
     }
 
     return Number(brand.id);
   }
 
-  const linkedBrand = await db.query.developerBrandProfiles.findFirst({
-    where: eq(developerBrandProfiles.linkedDeveloperAccountId, input.developerProfileId),
-    columns: { id: true },
-  });
+  const [linkedPublisher] = await db
+    .select({ id: cataloguePublishers.id })
+    .from(cataloguePublishers)
+    .where(
+      and(
+        eq(cataloguePublishers.developerOrganisationId, input.developerProfileId),
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+      ),
+    )
+    .limit(1);
 
-  return linkedBrand?.id ? Number(linkedBrand.id) : null;
+  return linkedPublisher?.id ? Number(linkedPublisher.id) : null;
 }
 
 function handleDatabaseError(error: unknown, context?: Record<string, unknown>): never {
@@ -409,7 +418,7 @@ function validateDevelopmentData(input: any, _userId: number) {
 // ===========================================================================
 
 function buildDeveloperDisplay(dev: any) {
-  const brand = dev?.brandProfile ?? dev?.publisher ?? null;
+  const brand = dev?.publisher ?? null;
   const developer = dev?.developer ?? null;
 
   // Schema-safe: verification fields are not guaranteed to exist yet.
@@ -417,7 +426,7 @@ function buildDeveloperDisplay(dev: any) {
 
   if (brand?.name) {
     return {
-      type: 'brand_profile' as const,
+      type: 'catalogue_publisher' as const,
       name: brand.name,
       logoUrl: brand.logoUrl ?? null,
       websiteUrl: brand.websiteUrl ?? null,
@@ -467,7 +476,8 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 
   const results = await db
     .select({
-      developerId: developments.developerId,
+      developerId: sql<number | null>`NULL`,
+      cataloguePublisherId: developments.cataloguePublisherId,
       id: developments.id,
       name: developments.name,
       slug: developments.slug,
@@ -491,8 +501,6 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       locationId: developments.locationId,
       isPublished: developments.isPublished,
       publishedAt: developments.publishedAt,
-      developerBrandProfileId: developments.developerBrandProfileId,
-
       // ✅ chips + status row + availability bar
       approvalStatus: developments.approvalStatus,
       status: developments.status,
@@ -505,19 +513,19 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       availableUnits: developments.availableUnits,
 
       developer: {
-        id: developers.id,
-        name: developers.name,
-        slug: developers.slug,
-        logo: developers.logo,
-        description: developers.description,
-        website: developers.website,
+        id: developerOrganisations.id,
+        name: developerOrganisations.name,
+        slug: developerOrganisations.slug,
+        logo: developerOrganisations.logo,
+        description: developerOrganisations.description,
+        website: developerOrganisations.website,
       },
     })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
     .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
     )
     .where(whereClause)
     .limit(1);
@@ -526,27 +534,27 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
 
   const dev: any = results[0];
 
-  // Attach brand profile (optional)
+  // Attach the governed public Catalogue Publisher projection.
   try {
-    if (dev?.developerBrandProfileId) {
+    if (dev?.cataloguePublisherId) {
       const brand = await db
         .select({
-          id: developerBrandProfiles.id,
-          brandName: developerBrandProfiles.brandName,
-          slug: developerBrandProfiles.slug,
-          logoUrl: developerBrandProfiles.logoUrl,
-          websiteUrl: developerBrandProfiles.websiteUrl,
-          about: developerBrandProfiles.about,
-          foundedYear: developerBrandProfiles.foundedYear,
-          headOfficeLocation: developerBrandProfiles.headOfficeLocation,
+          id: cataloguePublishers.id,
+          brandName: cataloguePublishers.name,
+          slug: cataloguePublishers.slug,
+          logoUrl: cataloguePublishers.logoUrl,
+          websiteUrl: cataloguePublishers.websiteUrl,
+          about: cataloguePublishers.about,
+          foundedYear: cataloguePublishers.foundedYear,
+          headOfficeLocation: cataloguePublishers.headOfficeLocation,
         })
-        .from(developerBrandProfiles)
-        .where(eq(developerBrandProfiles.id, dev.developerBrandProfileId))
+        .from(cataloguePublishers)
+        .where(eq(cataloguePublishers.id, dev.cataloguePublisherId))
         .limit(1);
 
       const bp = brand?.[0];
       if (bp) {
-        dev.brandProfile = {
+        dev.publisher = {
           id: bp.id,
           name: bp.brandName,
           slug: bp.slug,
@@ -556,11 +564,10 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
           foundedYear: bp.foundedYear ?? null,
           headOfficeLocation: bp.headOfficeLocation ?? null,
         };
-        dev.publisher = dev.brandProfile; // alias for older UI code
       }
     }
   } catch (err) {
-    console.warn('[getPublicDevelopmentBySlug] Brand profile attachment failed (non-fatal):', err);
+    console.warn('[getPublicDevelopmentBySlug] Publisher attachment failed (non-fatal):', err);
   }
 
   // Units (for unit cards)
@@ -644,7 +651,6 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
         ? (parseJsonMaybeTwice(dev.estateSpecs, {}) as any)
         : (dev.estateSpecs ?? {}),
 
-    brandProfile: dev.brandProfile,
     publisher: dev.publisher,
 
     unitTypes: unitsWithMedia,
@@ -670,12 +676,15 @@ export async function getPublicDevelopment(id: number) {
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
       isPublished: developments.isPublished,
+      cataloguePublisherId: developments.cataloguePublisherId,
+      developerName: developerOrganisations.name,
+      brandName: cataloguePublishers.name,
     })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
     .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
     )
     .where(and(eq(developments.id, id), publicDevelopmentEligibilityConditions()))
     .limit(1);
@@ -694,7 +703,7 @@ export async function listPublicDevelopments(options: {
   city?: string;
   suburb?: string;
   developerId?: number;
-  developerBrandProfileId?: number;
+  cataloguePublisherId?: number;
   developmentType?: 'residential' | 'commercial' | 'mixed_use' | 'land';
   transactionType?: 'for_sale' | 'for_rent' | 'auction';
 }) {
@@ -707,7 +716,7 @@ export async function listPublicDevelopments(options: {
     city,
     suburb,
     developerId,
-    developerBrandProfileId,
+    cataloguePublisherId,
     developmentType,
     transactionType,
   } = options;
@@ -716,9 +725,9 @@ export async function listPublicDevelopments(options: {
   if (province) conditions.push(eq(developments.province, province));
   if (city) conditions.push(eq(developments.city, city));
   if (suburb) conditions.push(eq(developments.suburb, suburb));
-  if (developerId) conditions.push(eq(developments.developerId, developerId));
-  if (developerBrandProfileId) {
-    conditions.push(eq(developments.developerBrandProfileId, developerBrandProfileId));
+  if (developerId) conditions.push(eq(developments.cataloguePublisherId, developerId));
+  if (cataloguePublisherId) {
+    conditions.push(eq(developments.cataloguePublisherId, cataloguePublisherId));
   }
   if (developmentType) conditions.push(eq(developments.developmentType, developmentType as any));
   if (transactionType) conditions.push(eq(developments.transactionType, transactionType as any));
@@ -739,21 +748,21 @@ export async function listPublicDevelopments(options: {
       isFeatured: developments.isFeatured,
       rating: developments.rating,
       highlights: developments.highlights,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      developerName: developers.name,
-      developerLogoUrl: developers.logo,
-      brandName: developerBrandProfiles.brandName,
-      brandLogoUrl: developerBrandProfiles.logoUrl,
+      cataloguePublisherId: developments.cataloguePublisherId,
+      developerName: developerOrganisations.name,
+      developerLogoUrl: developerOrganisations.logo,
+      brandName: cataloguePublishers.name,
+      brandLogoUrl: cataloguePublishers.logoUrl,
       commissionModel: distributionPrograms.commissionModel,
       referrerCommissionType: distributionPrograms.referrerCommissionType,
       referrerCommissionValue: distributionPrograms.referrerCommissionValue,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
     })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
     .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
     )
     .leftJoin(distributionPrograms, eq(developments.id, distributionPrograms.developmentId))
     .where(and(...conditions))
@@ -842,6 +851,7 @@ export async function listPublicDevelopments(options: {
 export async function searchPublicDevelopments(options: {
   query: string;
   developerId?: number;
+  cataloguePublisherId?: number;
   limit?: number;
 }) {
   const db = await getDb();
@@ -857,7 +867,10 @@ export async function searchPublicDevelopments(options: {
   ];
 
   if (options.developerId !== undefined) {
-    conditions.push(eq(developments.developerId, options.developerId));
+    conditions.push(eq(developments.cataloguePublisherId, options.developerId));
+  }
+  if (options.cataloguePublisherId !== undefined) {
+    conditions.push(eq(developments.cataloguePublisherId, options.cataloguePublisherId));
   }
 
   const results = await db
@@ -867,15 +880,18 @@ export async function searchPublicDevelopments(options: {
       slug: developments.slug,
       city: developments.city,
       province: developments.province,
-      developerId: developments.developerId,
+      developerId: sql<number | null>`NULL`,
+      cataloguePublisherId: developments.cataloguePublisherId,
+      developerName: developerOrganisations.name,
+      brandName: cataloguePublishers.name,
       developmentType: developments.developmentType,
       status: developments.status,
     })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
+    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
     .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
     )
     .where(and(...conditions))
     .limit(limit);
@@ -894,12 +910,12 @@ export async function createDevelopment(
   userId: number,
   data: CreateDevelopmentData,
   metadata: DevelopmentMetadata = {},
-  operatingContext?: { brandProfileId: number } | null,
+  operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const { brandProfileId, ownerType, ...restMetadata } = metadata;
+  const { cataloguePublisherId, ownerType, ...restMetadata } = metadata;
   const {
     unitTypes: unitTypesData,
     amenities: amenitiesData,
@@ -918,7 +934,7 @@ export async function createDevelopment(
   console.log('[createDevelopment] Input params:', {
     userId,
     operatingContext,
-    brandProfileId,
+    cataloguePublisherId,
     ownerType,
   });
 
@@ -929,7 +945,7 @@ export async function createDevelopment(
   });
 
   let developerProfileId: number | null = null;
-  let resolvedBrandProfileId: number | null = null;
+  let resolvedCataloguePublisherId: number | null = null;
   let effectiveOwnerType: 'platform' | 'developer' = ownerType || 'developer';
 
   // Platform curator creation is still a canonical authoring operation, but
@@ -938,27 +954,24 @@ export async function createDevelopment(
   if (user?.role === 'super_admin') {
     // Super admin mode - use only the server-derived operating context. Body
     // metadata is never allowed to select a different platform brand.
-    resolvedBrandProfileId = operatingContext?.brandProfileId || null;
+    resolvedCataloguePublisherId = operatingContext?.cataloguePublisherId || null;
     developerProfileId = null;
     effectiveOwnerType = 'platform';
 
-    if (!resolvedBrandProfileId) {
+    if (!resolvedCataloguePublisherId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'A valid platform curator brand context is required to create a development.',
+        message: 'A valid platform-curator publisher context is required to create a development.',
       });
     }
 
     console.log('[createDevelopment] Platform curator mode:', {
-      brandProfileId: resolvedBrandProfileId,
+      cataloguePublisherId: resolvedCataloguePublisherId,
       ownerType: effectiveOwnerType,
     });
   } else {
     // Regular developer mode - require developer profile
-    const devProfile = await db.query.developers.findFirst({
-      where: eq(developers.userId, userId),
-      columns: { id: true },
-    });
+    const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
 
     if (!devProfile) {
       throw createError(
@@ -968,21 +981,19 @@ export async function createDevelopment(
       );
     }
 
-    const explicitBrandProfileId =
-      (developmentData as any).developerBrandProfileId ??
-      (developmentData as any).brandProfileId ??
-      brandProfileId;
-    developerProfileId = devProfile.id;
-    resolvedBrandProfileId = await resolveWritableDeveloperBrandProfileId(db, {
+    const explicitCataloguePublisherId =
+      (developmentData as any).cataloguePublisherId ?? cataloguePublisherId;
+    developerProfileId = devProfile.organisationId;
+    resolvedCataloguePublisherId = await resolveWritableCataloguePublisherId(db, {
       developerProfileId: devProfile.id,
       userId,
-      explicitBrandProfileId,
+      explicitCataloguePublisherId,
     });
     effectiveOwnerType = 'developer';
 
     console.log('[createDevelopment] Developer mode:', {
       developerId: developerProfileId,
-      brandProfileId: resolvedBrandProfileId,
+      cataloguePublisherId: resolvedCataloguePublisherId,
     });
   }
 
@@ -991,45 +1002,32 @@ export async function createDevelopment(
   //   userId,
   // );
 
-  // 2) brand profile validation (only if brandProfileId is set)
-  const targetBrandId = resolvedBrandProfileId;
+  // 2) publisher validation (the browser may select a publisher only as a
+  // server-verified context; it cannot establish ownership).
+  const targetBrandId = resolvedCataloguePublisherId;
   if (targetBrandId) {
-    const validBrand = await db.query.developerBrandProfiles.findFirst({
-      where:
-        user?.role === 'super_admin'
-          ? and(
-              eq(developerBrandProfiles.id, targetBrandId),
-              eq(developerBrandProfiles.ownerType, 'platform'),
-              isNull(developerBrandProfiles.linkedDeveloperAccountId),
-              eq(developerBrandProfiles.isVisible, 1),
-            )
-          : eq(developerBrandProfiles.id, targetBrandId),
-      columns: { id: true },
-    });
+    const validBrand =
+      user?.role === 'super_admin'
+        ? await developerIdentityService.getPlatformPublisherById(targetBrandId)
+        : await developerIdentityService.assertPublisherForOrganisation(targetBrandId, developerProfileId!);
     if (!validBrand) {
       throw new TRPCError({
         code: user?.role === 'super_admin' ? 'FORBIDDEN' : 'NOT_FOUND',
         message:
           user?.role === 'super_admin'
             ? 'The selected brand is not an available platform curator context.'
-            : `Brand Profile with ID ${targetBrandId} not found`,
+            : `Catalogue Publisher ${targetBrandId} not found`,
       });
     }
   }
 
-  // 3) marketing brand validation
-  if ((developmentData as any).marketingBrandProfileId) {
-    const validMarketing = await db.query.developerBrandProfiles.findFirst({
-      where: eq(developerBrandProfiles.id, (developmentData as any).marketingBrandProfileId),
-      columns: { id: true },
+  // 3) Marketing agency publisher integration is deliberately not part of
+  // Slice 1. Do not allow the old mixed brand field to become a second owner.
+  if ((developmentData as any).marketingCataloguePublisherId) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Marketing publisher distribution is not enabled in Slice 1.',
     });
-    if (!validMarketing) {
-      throw createError(
-        `Marketing Brand Profile with ID ${(developmentData as any).marketingBrandProfileId} not found`,
-        'NOT_FOUND',
-        { marketingBrandProfileId: (developmentData as any).marketingBrandProfileId },
-      );
-    }
   }
 
   // 4) location validation (soft strip)
@@ -1083,8 +1081,6 @@ export async function createDevelopment(
     normalizedTransactionType === 'auction' ? computeAuctionRangeFromUnits(unitTypesData) : null;
 
   const insertPayload: Record<string, any> = {
-    // Use resolved identity for ownership
-    developerId: developerProfileId, // null for emulator mode
     name: (developmentData as any).name,
     slug,
     city: (developmentData as any).city,
@@ -1096,7 +1092,6 @@ export async function createDevelopment(
       ['launching-soon', 'selling', 'sold-out'],
       'launching-soon',
     ),
-    devOwnerType: effectiveOwnerType,
 
     isFeatured: 0,
     isPublished: 0,
@@ -1124,9 +1119,9 @@ export async function createDevelopment(
       ? JSON.stringify((developmentData as any).propertyTypes)
       : null,
 
-    // Use resolved brand profile ID
-    developerBrandProfileId: resolvedBrandProfileId,
-    marketingBrandProfileId: (developmentData as any).marketingBrandProfileId || null,
+    // New authority. Legacy ownership columns are intentionally omitted and
+    // remain compatibility residue until separately authorised for removal.
+    cataloguePublisherId: resolvedCataloguePublisherId,
     locationId: (developmentData as any).locationId || null,
 
     marketingRole: sanitizeEnum(
@@ -1322,7 +1317,7 @@ export async function createDevelopment(
     handleDatabaseError(error, {
       developerId: developerProfileId,
       devOwnerType: effectiveOwnerType,
-      developerBrandProfileId: resolvedBrandProfileId ?? null,
+      cataloguePublisherId: resolvedCataloguePublisherId ?? null,
     });
   }
 
@@ -1351,7 +1346,7 @@ export async function updateDevelopment(
   id: number,
   userId: number,
   data: CreateDevelopmentData,
-  operatingContext?: { brandProfileId: number } | null,
+  operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   console.log('[updateDevelopment] Starting update for development:', id);
   console.log('[updateDevelopment] Payload keys:', Object.keys(data));
@@ -1361,20 +1356,18 @@ export async function updateDevelopment(
 
   // ✅ Resolve developer PROFILE id from user id (same as createDevelopment)
   let developerProfileId: number | null = null;
-  let superAdminBrandProfileId: number | null = null;
+  let developerPublisherId: number | null = null;
+  let superAdminCataloguePublisherId: number | null = null;
 
   const user = await db.query.users.findFirst({
     where: (u, { eq }) => eq(u.id, userId),
     columns: { id: true, role: true },
   });
 
-  if (user?.role === 'super_admin' && operatingContext?.brandProfileId) {
-    superAdminBrandProfileId = operatingContext.brandProfileId;
+  if (user?.role === 'super_admin' && operatingContext?.cataloguePublisherId) {
+    superAdminCataloguePublisherId = operatingContext.cataloguePublisherId;
   } else {
-    const devProfile = await db.query.developers.findFirst({
-      where: eq(developers.userId, userId),
-      columns: { id: true },
-    });
+    const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
 
     if (!devProfile) {
       throw new TRPCError({
@@ -1383,7 +1376,8 @@ export async function updateDevelopment(
       });
     }
 
-    developerProfileId = devProfile.id;
+    developerProfileId = devProfile.organisationId;
+    developerPublisherId = devProfile.publisherId;
   }
 
   const {
@@ -1689,29 +1683,31 @@ export async function updateDevelopment(
   // ---------------------------------------------------------------------------
   // Branding / agent
   // ---------------------------------------------------------------------------
-  const requestedDeveloperBrandProfileId =
-    (developmentData as any).developerBrandProfileId ?? (developmentData as any).brandProfileId;
-  if (requestedDeveloperBrandProfileId !== undefined) {
-    if (requestedDeveloperBrandProfileId === null) {
-      updatePayload.developerBrandProfileId = null;
+  const requestedCataloguePublisherId = (developmentData as any).cataloguePublisherId;
+  if (requestedCataloguePublisherId !== undefined) {
+    if (requestedCataloguePublisherId === null) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'A development cannot be detached from its catalogue publisher.',
+      });
     } else {
-      const normalizedBrandProfileId = toPositiveInteger(requestedDeveloperBrandProfileId);
-      if (!normalizedBrandProfileId) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid developer brand profile id' });
+      const normalizedCataloguePublisherId = toPositiveInteger(requestedCataloguePublisherId);
+      if (!normalizedCataloguePublisherId) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid Catalogue Publisher ID' });
       }
-      if (superAdminBrandProfileId !== null) {
-        if (normalizedBrandProfileId !== superAdminBrandProfileId) {
+      if (superAdminCataloguePublisherId !== null) {
+        if (normalizedCataloguePublisherId !== superAdminCataloguePublisherId) {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Development brand does not match active publisher context.',
+            message: 'Development does not match the active Catalogue Publisher context.',
           });
         }
-        updatePayload.developerBrandProfileId = normalizedBrandProfileId;
+        updatePayload.cataloguePublisherId = normalizedCataloguePublisherId;
       } else {
-        updatePayload.developerBrandProfileId = await resolveWritableDeveloperBrandProfileId(db, {
+        updatePayload.cataloguePublisherId = await resolveWritableCataloguePublisherId(db, {
           developerProfileId: developerProfileId!,
           userId,
-          explicitBrandProfileId: normalizedBrandProfileId,
+          explicitCataloguePublisherId: normalizedCataloguePublisherId,
         });
       }
     }
@@ -1759,12 +1755,12 @@ export async function updateDevelopment(
     }
 
     const ownershipPredicate =
-      superAdminBrandProfileId !== null
+      superAdminCataloguePublisherId !== null
         ? and(
             eq(developments.id, id),
-            eq(developments.developerBrandProfileId, superAdminBrandProfileId),
+            eq(developments.cataloguePublisherId, superAdminCataloguePublisherId),
           )
-        : and(eq(developments.id, id), eq(developments.developerId, developerProfileId!));
+        : and(eq(developments.id, id), eq(developments.cataloguePublisherId, developerPublisherId!));
 
     await writeDb.update(developments).set(persistedPayload).where(ownershipPredicate);
 
@@ -1799,22 +1795,23 @@ export async function updateDevelopment(
     return updated;
   };
 
-  if (superAdminBrandProfileId !== null) {
+  if (superAdminCataloguePublisherId !== null) {
     await db.transaction(async (tx: any) => {
       const [curatorBrand] = await tx
         .select({
-          id: developerBrandProfiles.id,
-          ownerType: developerBrandProfiles.ownerType,
-          isVisible: developerBrandProfiles.isVisible,
-          linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
+          id: cataloguePublishers.id,
+          authorityKind: cataloguePublishers.authorityKind,
+          isVisible: cataloguePublishers.isVisible,
+          developerOrganisationId: cataloguePublishers.developerOrganisationId,
+          sourceAttribution: cataloguePublishers.sourceAttribution,
         })
-        .from(developerBrandProfiles)
+        .from(cataloguePublishers)
         .where(
           and(
-            eq(developerBrandProfiles.id, superAdminBrandProfileId),
-            eq(developerBrandProfiles.ownerType, 'platform'),
-            eq(developerBrandProfiles.isVisible, 1),
-            isNull(developerBrandProfiles.linkedDeveloperAccountId),
+            eq(cataloguePublishers.id, superAdminCataloguePublisherId),
+            eq(cataloguePublishers.authorityKind, 'platform_reference'),
+            eq(cataloguePublishers.isVisible, 1),
+            isNull(cataloguePublishers.developerOrganisationId),
           ),
         )
         .limit(1)
@@ -1833,7 +1830,7 @@ export async function updateDevelopment(
         .where(
           and(
             eq(developments.id, id),
-            eq(developments.developerBrandProfileId, superAdminBrandProfileId),
+            eq(developments.cataloguePublisherId, superAdminCataloguePublisherId),
           ),
         )
         .limit(1)
@@ -2336,7 +2333,7 @@ async function getDevelopmentsByDeveloperId(developerProfileId: number) {
   const results = await db
     .select()
     .from(developments)
-    .where(eq(developments.developerId, developerProfileId));
+    .where(eq(developments.cataloguePublisherId, developerProfileId));
 
   const safeParse = (val: any, fallback: any) => {
     if (val === null || val === undefined || val === '') return fallback;
@@ -2377,17 +2374,16 @@ async function createPhase(developmentId: number, developerId: number, data: any
   if (!db) throw new Error('Database not available');
 
   // (optional but recommended) ownership check: dev must own the development
-  const devProfile = await db.query.developers.findFirst({
-    where: eq(developers.userId, developerId),
-    columns: { id: true },
-  });
+  const devProfile = await developerIdentityService.getDeveloperByUserId(developerId);
   if (!devProfile)
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
 
   const [owned] = await db
     .select({ id: developments.id })
     .from(developments)
-    .where(and(eq(developments.id, developmentId), eq(developments.developerId, devProfile.id)))
+    .where(
+      and(eq(developments.id, developmentId), eq(developments.cataloguePublisherId, devProfile.publisherId)),
+    )
     .limit(1);
 
   if (!owned) {
@@ -2425,10 +2421,7 @@ async function updatePhase(phaseId: number, developerId: number, data: any) {
   }
 
   // (optional but recommended) ownership check via phase -> development -> developer
-  const devProfile = await db.query.developers.findFirst({
-    where: eq(developers.userId, developerId),
-    columns: { id: true },
-  });
+  const devProfile = await developerIdentityService.getDeveloperByUserId(developerId);
   if (!devProfile)
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
 
@@ -2446,7 +2439,7 @@ async function updatePhase(phaseId: number, developerId: number, data: any) {
     .where(
       and(
         eq(developments.id, Number(phaseRow.developmentId)),
-        eq(developments.developerId, devProfile.id),
+        eq(developments.cataloguePublisherId, devProfile.publisherId),
       ),
     )
     .limit(1);
@@ -2475,7 +2468,7 @@ async function updatePhase(phaseId: number, developerId: number, data: any) {
 async function publishDevelopment(
   id: number,
   userId: number,
-  operatingContext?: { brandProfileId: number } | null,
+  operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -2493,16 +2486,13 @@ async function publishDevelopment(
   });
 
   // Platform curator publication is a separate, readiness-gated transition.
-  // It must have an explicit, unclaimed platform brand context.
+  // It must have an explicit platform-reference Catalogue Publisher context.
   if (user?.role === 'super_admin') {
     return publishPlatformCuratedDevelopment(id, userId, operatingContext);
   }
 
   // Real developer mode - check ownership
-  const devProfile = await db.query.developers.findFirst({
-    where: eq(developers.userId, userId),
-    columns: { id: true },
-  });
+  const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
 
   if (!devProfile) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
@@ -2512,7 +2502,7 @@ async function publishDevelopment(
     const [ownedDevelopment] = await tx
       .select()
       .from(developments)
-      .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
+      .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile!.publisherId)))
       .limit(1)
       .for('update');
     if (!ownedDevelopment) {
@@ -2559,7 +2549,7 @@ async function publishDevelopment(
     await tx
       .update(developments)
       .set({ approvalStatus: 'pending', isPublished: 0, publishedAt: null, rejectionNote: null })
-      .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)));
+      .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile!.publisherId)));
     await tx.insert(developmentApprovalQueue).values({
       developmentId: id,
       submittedBy: userId,
@@ -2595,7 +2585,7 @@ async function publishDevelopment(
 async function publishPlatformCuratedDevelopment(
   id: number,
   userId: number,
-  operatingContext?: { brandProfileId: number } | null,
+  operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -2609,12 +2599,12 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
   tx: any,
   id: number,
   userId: number,
-  operatingContext?: { brandProfileId: number } | null,
+  operatingContext?: { cataloguePublisherId: number } | null,
 ) {
-  if (!operatingContext?.brandProfileId) {
+  if (!operatingContext?.cataloguePublisherId) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
-      message: 'An explicit platform curator brand context is required to publish a development.',
+      message: 'An explicit platform curator publisher context is required to publish a development.',
     });
   }
 
@@ -2649,16 +2639,16 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
 
     const [brand] = await tx
       .select({
-        id: developerBrandProfiles.id,
-        sourceAttribution: developerBrandProfiles.sourceAttribution,
+        id: cataloguePublishers.id,
+        sourceAttribution: cataloguePublishers.sourceAttribution,
       })
-      .from(developerBrandProfiles)
+      .from(cataloguePublishers)
       .where(
         and(
-          eq(developerBrandProfiles.id, operatingContext.brandProfileId),
-          eq(developerBrandProfiles.ownerType, 'platform'),
-          eq(developerBrandProfiles.isVisible, 1),
-          isNull(developerBrandProfiles.linkedDeveloperAccountId),
+          eq(cataloguePublishers.id, operatingContext.cataloguePublisherId),
+          eq(cataloguePublishers.authorityKind, 'platform_reference'),
+          eq(cataloguePublishers.isVisible, 1),
+          isNull(cataloguePublishers.developerOrganisationId),
         ),
       )
       .limit(1)
@@ -2673,10 +2663,10 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
     if (!String(brand.sourceAttribution ?? '').trim()) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'Platform-curated publication requires source attribution on the brand profile.',
+        message: 'Platform-curated publication requires source attribution on the Catalogue Publisher.',
       });
     }
-    if (Number(existingDev.developerBrandProfileId) !== Number(operatingContext.brandProfileId)) {
+    if (Number(existingDev.cataloguePublisherId) !== Number(operatingContext.cataloguePublisherId)) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Development not found in the selected platform curator context.',
@@ -2736,7 +2726,7 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
       .where(
         and(
           eq(developments.id, id),
-          eq(developments.developerBrandProfileId, operatingContext.brandProfileId),
+          eq(developments.cataloguePublisherId, operatingContext.cataloguePublisherId),
         ),
       );
 
@@ -2940,7 +2930,16 @@ export async function publishDeveloperOwnedDevelopmentInTransaction(
   if (!development) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Replacement development not found.' });
   }
-  if (development.devOwnerType !== 'developer' || development.developerId === null) {
+  const [publisher] = await tx
+    .select({ authorityKind: cataloguePublishers.authorityKind, developerOrganisationId: cataloguePublishers.developerOrganisationId })
+    .from(cataloguePublishers)
+    .where(eq(cataloguePublishers.id, development.cataloguePublisherId))
+    .limit(1);
+  if (
+    !publisher ||
+    publisher.authorityKind !== 'developer_first_party' ||
+    publisher.developerOrganisationId === null
+  ) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Replacement development must remain developer-owned.',
@@ -3025,10 +3024,7 @@ async function unpublishDevelopment(id: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database unavailable');
 
-  const devProfile = await db.query.developers.findFirst({
-    where: eq(developers.userId, userId),
-    columns: { id: true },
-  });
+  const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
 
   if (!devProfile) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
@@ -3038,7 +3034,7 @@ async function unpublishDevelopment(id: number, userId: number) {
     const [ownedDevelopment] = await tx
       .select({ id: developments.id })
       .from(developments)
-      .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
+      .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile.publisherId)))
       .limit(1)
       .for('update');
 
@@ -3064,11 +3060,8 @@ export async function saveDraft(
   if (!db) throw new Error('Database not available');
   if (!developerId) throw new Error('Developer ID is required');
 
-  // ✅ resolve developer PROFILE id (developers.id) from userId
-  const devProfile = await db.query.developers.findFirst({
-    where: eq(developers.userId, developerId),
-    columns: { id: true },
-  });
+  // Resolve the organisation/publisher identity from the authenticated user.
+  const devProfile = await developerIdentityService.getDeveloperByUserId(developerId);
 
   if (!devProfile) {
     throw new TRPCError({
@@ -3079,8 +3072,8 @@ export async function saveDraft(
 
   try {
     const draftPayload = {
-      developerId: devProfile.id, // ✅ FK-compatible (developers.id)
-      developerBrandProfileId: (wizardState as any).developerBrandProfileId || null,
+      developerOrganisationId: devProfile.organisationId,
+      cataloguePublisherId: devProfile.publisherId,
       draftName: (wizardState as any).name || 'Untitled Draft',
       draftData: wizardState,
       progress: 0,
@@ -3102,7 +3095,7 @@ export async function saveDraft(
 async function deleteDevelopment(
   id: number,
   userId?: number,
-  operatingContext?: { brandProfileId: number } | null,
+  operatingContext?: { cataloguePublisherId: number } | null,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -3116,9 +3109,9 @@ async function deleteDevelopment(
       columns: { id: true, role: true },
     });
 
-    // If super admin with brand context, use brand profile ownership check
-    if (user?.role === 'super_admin' && operatingContext?.brandProfileId) {
-      console.log('[deleteDevelopment] ✅ SUPER ADMIN MODE - Using brand profile ownership');
+    // A super admin operates only within a server-resolved Catalogue Publisher context.
+    if (user?.role === 'super_admin' && operatingContext?.cataloguePublisherId) {
+      console.log('[deleteDevelopment] SUPER ADMIN MODE - Using Catalogue Publisher authority');
 
       const [owned] = await db
         .select({ id: developments.id })
@@ -3126,7 +3119,7 @@ async function deleteDevelopment(
         .where(
           and(
             eq(developments.id, id),
-            eq(developments.developerBrandProfileId, operatingContext.brandProfileId),
+            eq(developments.cataloguePublisherId, operatingContext.cataloguePublisherId),
           ),
         )
         .limit(1);
@@ -3142,17 +3135,14 @@ async function deleteDevelopment(
 
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Unauthorized: Development belongs to a different brand profile',
+          message: 'Unauthorized: Development belongs to a different Catalogue Publisher',
         });
       }
 
-      console.log('[deleteDevelopment] ✅ Brand ownership verified, proceeding with delete');
+      console.log('[deleteDevelopment] Catalogue Publisher authority verified');
     } else {
       // Real developer mode - check developer ownership
-      const devProfile = await db.query.developers.findFirst({
-        where: eq(developers.userId, userId),
-        columns: { id: true },
-      });
+      const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
 
       if (!devProfile) {
         throw new TRPCError({
@@ -3164,7 +3154,7 @@ async function deleteDevelopment(
       const [owned] = await db
         .select({ id: developments.id })
         .from(developments)
-        .where(and(eq(developments.id, id), eq(developments.developerId, devProfile.id)))
+        .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile.publisherId)))
         .limit(1);
 
       if (!owned) {
@@ -3206,7 +3196,7 @@ async function getDevelopmentById(id: number) {
     .select({
       id: developments.id,
       title: developments.name,
-      brandProfileId: developments.developerBrandProfileId,
+      cataloguePublisherId: developments.cataloguePublisherId,
       slug: developments.slug,
       status: developments.status,
       // Add other required fields as needed

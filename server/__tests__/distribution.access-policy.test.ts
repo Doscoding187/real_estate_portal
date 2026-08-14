@@ -11,7 +11,7 @@ function buildEvaluation(
   overrides: Partial<DevelopmentDistributionAccessEvaluation> = {},
 ): DevelopmentDistributionAccessEvaluation {
   return {
-    brandProfileId: 10,
+    cataloguePublisherId: 10,
     brandPartnershipId: 20,
     brandPartnershipStatus: 'active',
     developmentAccessId: 30,
@@ -54,6 +54,7 @@ describe('distribution access policy', () => {
         developmentAccessStatus: 'included',
         submissionAllowed: true,
         readinessReady: true,
+        programActive: true,
         referralEnabled: true,
         excludedByMandate: false,
         excludedByExclusivity: false,
@@ -69,6 +70,7 @@ describe('distribution access policy', () => {
         developmentAccessStatus: 'included',
         submissionAllowed: true,
         readinessReady: false,
+        programActive: true,
         referralEnabled: false,
         excludedByMandate: false,
         excludedByExclusivity: false,
@@ -84,11 +86,44 @@ describe('distribution access policy', () => {
         developmentAccessStatus: 'included',
         submissionAllowed: true,
         readinessReady: true,
+        programActive: true,
         referralEnabled: false,
         excludedByMandate: false,
         excludedByExclusivity: false,
       }),
     ).toBe('ready');
+  });
+
+  it('derives enabled state when the program and every other submission gate are active', () => {
+    expect(
+      deriveInventoryState({
+        developmentVisible: true,
+        brandPartnershipStatus: 'active',
+        developmentAccessStatus: 'included',
+        submissionAllowed: true,
+        readinessReady: true,
+        programActive: true,
+        referralEnabled: true,
+        excludedByMandate: false,
+        excludedByExclusivity: false,
+      }),
+    ).toBe('enabled');
+  });
+
+  it('does not derive enabled state when the program is inactive', () => {
+    expect(
+      deriveInventoryState({
+        developmentVisible: true,
+        brandPartnershipStatus: 'active',
+        developmentAccessStatus: 'included',
+        submissionAllowed: true,
+        readinessReady: true,
+        programActive: false,
+        referralEnabled: true,
+        excludedByMandate: false,
+        excludedByExclusivity: false,
+      }),
+    ).not.toBe('enabled');
   });
 
   it('summarizes access, readiness, and program blockers separately', () => {

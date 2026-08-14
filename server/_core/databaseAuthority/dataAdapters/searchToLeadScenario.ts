@@ -25,7 +25,9 @@ const SCENARIO_IDS = Object.freeze({
   agentUser: 990002,
   agency: 990001,
   agent: 990001,
-  developer: 990001,
+  developerOrganisation: 990001,
+  developerMembership: 990001,
+  cataloguePublisher: 990001,
   development: 990001,
   property: 990001,
   unit: '00000000-0000-4000-8000-000000000001',
@@ -265,23 +267,73 @@ async function prepareScenarioRows(
   });
   await ensureDeterministicRow({
     connection,
-    table: 'developers',
-    id: SCENARIO_IDS.developer,
-    columns: ['id', 'userId', 'name', 'status', 'isVerified'],
+    table: 'developer_organisations',
+    id: SCENARIO_IDS.developerOrganisation,
+    columns: ['id', 'slug', 'name', 'status', 'is_verified'],
     expected: {
-      userId: SCENARIO_IDS.developerUser,
+      slug: 'dba-verification-developer-v1',
       name: 'DBA Verification Developer',
       status: 'approved',
-      isVerified: 1,
+      is_verified: 1,
     },
-    insertColumns: ['id', 'userId', 'name', 'isVerified', 'status', 'slug'],
+    insertColumns: ['id', 'slug', 'name', 'status', 'is_verified'],
     insertValues: [
-      SCENARIO_IDS.developer,
+      SCENARIO_IDS.developerOrganisation,
+      'dba-verification-developer-v1',
+      'DBA Verification Developer',
+      'approved',
+      1,
+    ],
+  });
+  await ensureDeterministicRow({
+    connection,
+    table: 'developer_organisation_memberships',
+    id: SCENARIO_IDS.developerMembership,
+    columns: ['id', 'organisation_id', 'user_id', 'role', 'status'],
+    expected: {
+      organisation_id: SCENARIO_IDS.developerOrganisation,
+      user_id: SCENARIO_IDS.developerUser,
+      role: 'owner',
+      status: 'active',
+    },
+    insertColumns: ['id', 'organisation_id', 'user_id', 'role', 'status'],
+    insertValues: [
+      SCENARIO_IDS.developerMembership,
+      SCENARIO_IDS.developerOrganisation,
       SCENARIO_IDS.developerUser,
+      'owner',
+      'active',
+    ],
+  });
+  await ensureDeterministicRow({
+    connection,
+    table: 'catalogue_publishers',
+    id: SCENARIO_IDS.cataloguePublisher,
+    columns: ['id', 'authority_kind', 'developer_organisation_id', 'slug', 'name', 'is_visible'],
+    expected: {
+      authority_kind: 'developer_first_party',
+      developer_organisation_id: SCENARIO_IDS.developerOrganisation,
+      slug: 'dba-verification-developer-v1',
+      name: 'DBA Verification Developer',
+      is_visible: 1,
+    },
+    insertColumns: [
+      'id',
+      'authority_kind',
+      'publisher_type',
+      'developer_organisation_id',
+      'slug',
+      'name',
+      'is_visible',
+    ],
+    insertValues: [
+      SCENARIO_IDS.cataloguePublisher,
+      'developer_first_party',
+      'developer',
+      SCENARIO_IDS.developerOrganisation,
+      'dba-verification-developer-v1',
       'DBA Verification Developer',
       1,
-      'approved',
-      'dba-verification-developer-v1',
     ],
   });
   await ensureDeterministicRow({
@@ -290,7 +342,7 @@ async function prepareScenarioRows(
     id: SCENARIO_IDS.development,
     columns: [
       'id',
-      'developer_id',
+      'catalogue_publisher_id',
       'name',
       'slug',
       'city',
@@ -301,7 +353,7 @@ async function prepareScenarioRows(
       'transaction_type',
     ],
     expected: {
-      developer_id: SCENARIO_IDS.developer,
+      catalogue_publisher_id: SCENARIO_IDS.cataloguePublisher,
       name: 'DBA Verification Development',
       slug: 'dba-verification-development-v1',
       city: 'Johannesburg',
@@ -313,7 +365,7 @@ async function prepareScenarioRows(
     },
     insertColumns: [
       'id',
-      'developer_id',
+      'catalogue_publisher_id',
       'name',
       'developmentType',
       'city',
@@ -331,7 +383,7 @@ async function prepareScenarioRows(
     ],
     insertValues: [
       SCENARIO_IDS.development,
-      SCENARIO_IDS.developer,
+      SCENARIO_IDS.cataloguePublisher,
       'DBA Verification Development',
       'residential',
       'Johannesburg',
@@ -414,6 +466,7 @@ async function prepareScenarioRows(
       'suburbId',
       'agentId',
       'ownerId',
+      'catalogue_publisher_id',
     ],
     expected: {
       title: 'DBA Verification Property',
@@ -424,6 +477,7 @@ async function prepareScenarioRows(
       suburbId,
       agentId: SCENARIO_IDS.agent,
       ownerId: SCENARIO_IDS.developerUser,
+      catalogue_publisher_id: SCENARIO_IDS.cataloguePublisher,
     },
     insertColumns: [
       'id',
@@ -450,6 +504,7 @@ async function prepareScenarioRows(
       'ownerId',
       'latitude',
       'longitude',
+      'catalogue_publisher_id',
     ],
     insertValues: [
       SCENARIO_IDS.property,
@@ -476,6 +531,7 @@ async function prepareScenarioRows(
       SCENARIO_IDS.developerUser,
       '-26.1076',
       '28.0567',
+      SCENARIO_IDS.cataloguePublisher,
     ],
   });
 }
@@ -486,22 +542,32 @@ export async function verifySearchToLeadScenarioData(
   const propertyRows = await queryRows(
     connection,
     `SELECT p.id, p.provinceId AS province_id, p.cityId AS city_id, p.suburbId AS suburb_id,
+            p.catalogue_publisher_id AS catalogue_publisher_id,
             a.id AS agent_id, a.status AS agent_status, ag.id AS agency_id, ag.isVerified AS agency_verified
        FROM properties p
        INNER JOIN agents a ON a.id = p.agentId
        INNER JOIN agencies ag ON ag.id = a.agencyId
-      WHERE p.id = ? AND p.status IN ('available', 'published') AND p.listingType = 'sale'
+      WHERE p.id = ? AND p.catalogue_publisher_id = ?
+        AND p.status IN ('available', 'published') AND p.listingType = 'sale'
         AND a.status = 'approved' AND a.isVerified = 1 AND ag.isVerified = 1`,
-    [SCENARIO_IDS.property],
+    [SCENARIO_IDS.property, SCENARIO_IDS.cataloguePublisher],
   );
   const developmentRows = await queryRows(
     connection,
     `SELECT d.id AS development_id, d.slug AS development_slug, u.id AS unit_id
        FROM developments d
        INNER JOIN unit_types u ON u.development_id = d.id
-      WHERE d.id = ? AND d.isPublished = 1 AND d.approval_status = 'approved'
+       INNER JOIN catalogue_publishers cp
+               ON cp.id = d.catalogue_publisher_id
+              AND cp.authority_kind = 'developer_first_party'
+              AND cp.developer_organisation_id = ?
+       INNER JOIN developer_organisations o
+               ON o.id = cp.developer_organisation_id
+              AND o.status = 'approved'
+      WHERE d.id = ? AND d.catalogue_publisher_id = ?
+        AND d.isPublished = 1 AND d.approval_status = 'approved'
         AND d.transaction_type = 'for_sale' AND u.is_active = 1 AND u.available_units > 0`,
-    [SCENARIO_IDS.development],
+    [SCENARIO_IDS.developerOrganisation, SCENARIO_IDS.development, SCENARIO_IDS.cataloguePublisher],
   );
   if (propertyRows.length !== 1)
     throw new Error('Search-to-Lead scenario is missing one eligible public property.');

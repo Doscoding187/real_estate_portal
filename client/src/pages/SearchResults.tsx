@@ -860,7 +860,7 @@ export default function SearchResults({
                                 propertyId: card.propertyId,
                                 agentId: card.identity?.agentId,
                                 agencyId: card.identity?.agencyId,
-                                developerBrandProfileId: card.identity?.developerBrandProfileId,
+                                cataloguePublisherId: card.identity?.cataloguePublisherId,
                                 developmentId: card.developmentId,
                                 postedBy: card.identity?.name,
                                 agentAvatarUrl: card.identity?.avatarUrl ?? undefined,

@@ -289,7 +289,7 @@ const EcosystemOverviewPage: React.FC = () => {
       routeType: correctionRouteType,
       agentId: correctionRouteType === 'agent' ? numericTargetId : undefined,
       agencyId: correctionRouteType === 'agency' ? numericTargetId : undefined,
-      developerBrandProfileId: correctionRouteType === 'brand' ? numericTargetId : undefined,
+      cataloguePublisherId: correctionRouteType === 'brand' ? numericTargetId : undefined,
       note: trimmedNote || undefined,
     });
   };

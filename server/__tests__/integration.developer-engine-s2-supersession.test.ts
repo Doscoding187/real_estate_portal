@@ -654,7 +654,7 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
     });
   }
 
-  it('reverses without republishing A, changing B, or rewriting lead attribution', async () => {
+  it('reverses the public cutover without rewriting historical lead attribution', async () => {
     const pair = await insertPair('reversal');
     const db = await database();
     const source = await readDevelopment(pair.sourceId);
@@ -685,7 +685,6 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       supersessionId: Number(verified.id),
       actorUserId: pair.superAdminId,
     });
-    const replacementBefore = await readDevelopment(pair.replacementId);
     const leadBefore = (
       await db
         .select()
@@ -702,24 +701,24 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       status: 'reversed',
       sourcePublicRootPath: activated.sourcePublicRootPath,
     });
-    expect(await readDevelopment(pair.sourceId)).toMatchObject({ isPublished: 0 });
-    expect(await readDevelopment(pair.replacementId)).toMatchObject({
-      isPublished: replacementBefore.isPublished,
-      publishedAt: replacementBefore.publishedAt,
+    expect(await readDevelopment(pair.sourceId)).toMatchObject({
+      approvalStatus: 'approved',
+      isPublished: 1,
     });
+    expect(await readDevelopment(pair.replacementId)).toMatchObject({ isPublished: 0 });
     const reversedPublicIds = (await developmentService.listPublicDevelopments({ limit: 50 })).map(
       row => Number(row.id),
     );
-    expect(reversedPublicIds).not.toEqual(expect.arrayContaining([pair.sourceId]));
-    expect(reversedPublicIds).toEqual(expect.arrayContaining([pair.replacementId]));
+    expect(reversedPublicIds).toEqual(expect.arrayContaining([pair.sourceId]));
+    expect(reversedPublicIds).not.toEqual(expect.arrayContaining([pair.replacementId]));
     const reversedAutocomplete = await developmentService.searchPublicDevelopments({
       query: 'S2 Development',
       limit: 50,
     });
-    expect(reversedAutocomplete.map(row => Number(row.id))).not.toEqual(
+    expect(reversedAutocomplete.map(row => Number(row.id))).toEqual(
       expect.arrayContaining([pair.sourceId]),
     );
-    expect(reversedAutocomplete.map(row => Number(row.id))).toEqual(
+    expect(reversedAutocomplete.map(row => Number(row.id))).not.toEqual(
       expect.arrayContaining([pair.replacementId]),
     );
     expect(

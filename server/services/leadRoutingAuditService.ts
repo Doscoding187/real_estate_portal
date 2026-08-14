@@ -14,7 +14,7 @@ export interface LeadRoutingAuditRow {
   developmentId: number | null;
   agentId: number | null;
   agencyId: number | null;
-  developerBrandProfileId: number | null;
+  cataloguePublisherId: number | null;
   leadSource: string | null;
   source: string | null;
   brandLeadStatus: string | null;
@@ -74,7 +74,7 @@ function normalizeSource(value?: string | null) {
 export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassification {
   const normalizedSource = normalizeSource(row.leadSource || row.source);
 
-  if (row.developerBrandProfileId) {
+  if (row.cataloguePublisherId) {
     return {
       routeType: 'brand',
       recipientType: 'brand',
@@ -225,7 +225,7 @@ export async function getLeadRoutingAudit(input?: {
       developmentId: leads.developmentId,
       agentId: leads.agentId,
       agencyId: leads.agencyId,
-      developerBrandProfileId: leads.developerBrandProfileId,
+      cataloguePublisherId: leads.cataloguePublisherId,
       leadSource: leads.leadSource,
       source: leads.source,
       brandLeadStatus: leads.brandLeadStatus,

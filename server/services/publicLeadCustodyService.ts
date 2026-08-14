@@ -29,15 +29,18 @@ export interface PublicAgencyOwnershipCandidate {
 
 export interface PublicDeveloperOwnershipCandidate {
   id: number;
-  userId: number | null;
+  userId?: number | null;
   status: string | null;
   userRole?: string | null;
+  organisationId?: number | null;
 }
 
 export interface PublicBrandOwnershipCandidate {
   id: number;
-  ownerType: string | null;
-  linkedDeveloperAccountId: number | null;
+  authorityKind?: 'platform_reference' | 'developer_first_party' | string | null;
+  developerOrganisationId?: number | null;
+  ownerType?: string | null;
+  linkedDeveloperAccountId?: number | null;
   isVisible: number | null;
   isSubscriber?: number | null;
 }
@@ -47,7 +50,7 @@ export interface PublicPropertyOwnershipCandidates {
   sourceListingAgentId?: number | null;
   sourceListingAgencyId?: number | null;
   ownerAgencyId?: number | null;
-  developerBrandProfileId?: number | null;
+  cataloguePublisherId?: number | null;
   directAgent?: PublicAgentOwnershipCandidate | null;
   sourceAgent?: PublicAgentOwnershipCandidate | null;
   directAgentAgency?: PublicAgencyOwnershipCandidate | null;
@@ -59,8 +62,9 @@ export interface PublicPropertyOwnershipCandidates {
 }
 
 export interface PublicDevelopmentOwnershipCandidates {
+  cataloguePublisherId?: number | null;
+  developerOrganisationId?: number | null;
   developerId?: number | null;
-  developerBrandProfileId?: number | null;
   devOwnerType?: string | null;
   developer?: PublicDeveloperOwnershipCandidate | null;
   brand?: PublicBrandOwnershipCandidate | null;
@@ -68,7 +72,7 @@ export interface PublicDevelopmentOwnershipCandidates {
 }
 
 export interface PublicBrandOnlyOwnershipCandidates {
-  developerBrandProfileId: number;
+  cataloguePublisherId?: number;
   developer?: PublicDeveloperOwnershipCandidate | null;
   brand?: PublicBrandOwnershipCandidate | null;
 }
@@ -114,8 +118,8 @@ function isVerifiedDeveloper(
   return Boolean(
     developer &&
       developer.status === 'approved' &&
-      positiveId(developer.userId) &&
-      developer.userRole === 'property_developer',
+      (positiveId(developer.organisationId) || positiveId(developer.id)) &&
+      (developer.userRole === undefined || developer.userRole === 'property_developer'),
   );
 }
 
@@ -123,7 +127,8 @@ function isPlatformBrand(brand: PublicBrandOwnershipCandidate | null | undefined
   return Boolean(
     brand &&
       Number(brand.isVisible) === 1 &&
-      brand.ownerType === 'platform' &&
+      (brand.authorityKind === 'platform_reference' || brand.ownerType === 'platform') &&
+      !positiveId(brand.developerOrganisationId) &&
       !positiveId(brand.linkedDeveloperAccountId),
   );
 }
@@ -332,6 +337,46 @@ export function resolvePublicPropertyCustody(
 export function resolvePublicDevelopmentCustody(
   input: PublicDevelopmentOwnershipCandidates,
 ): PublicLeadCustodyResolution {
+  const publisher = input.brand;
+  const publisherId = positiveId(input.cataloguePublisherId);
+  const organisationId =
+    positiveId(input.developerOrganisationId) ||
+    positiveId(publisher?.developerOrganisationId) ||
+    positiveId(input.developerId);
+  if (publisher?.authorityKind === 'platform_reference') {
+    if (organisationId || input.devOwnerType === 'developer') {
+      return attentionResolution(
+        'platform_curated',
+        'The development mixes platform publisher and first-party organisation ownership.',
+        publisher,
+      );
+    }
+    return platformResolution(publisher);
+  }
+  if (publisher?.authorityKind === 'developer_first_party') {
+    if (
+      !publisherId ||
+      !organisationId ||
+      !input.developer ||
+      !isVerifiedDeveloper(input.developer) ||
+      Number(publisher.developerOrganisationId) !== Number(organisationId)
+    ) {
+      return attentionResolution(
+        'customer_managed',
+        'The first-party publisher and developer organisation could not be verified.',
+        publisher,
+      );
+    }
+    return customerResolution({
+      recipientType: 'developer',
+      recipientId: organisationId,
+      developerId: organisationId,
+      brand: publisher,
+    });
+  }
+
+  // Compatibility input for pure policy callers. Production persistence now
+  // supplies authorityKind/developerOrganisationId from catalogue_publishers.
   const developerId = positiveId(input.developerId);
   const developerIsValid = isVerifiedDeveloper(input.developer);
   const brand = input.brand;
@@ -401,14 +446,20 @@ export function resolvePublicDevelopmentCustody(
 export function resolvePublicBrandOnlyCustody(
   input: PublicBrandOnlyOwnershipCandidates,
 ): PublicLeadCustodyResolution {
-  if (!input.brand || Number(input.brand.id) !== Number(input.developerBrandProfileId)) {
-    return attentionResolution('customer_managed', 'The public brand profile could not be verified.');
+  const publisherId = input.cataloguePublisherId;
+  if (!input.brand || !publisherId || Number(input.brand.id) !== Number(publisherId)) {
+    return attentionResolution('customer_managed', 'The public Catalogue Publisher could not be verified.');
   }
 
   if (isPlatformBrand(input.brand)) return platformResolution(input.brand);
 
-  const developerId = positiveId(input.brand.linkedDeveloperAccountId);
-  if (developerId && isVerifiedDeveloper(input.developer)) {
+  const developerId = positiveId(input.brand.developerOrganisationId) || positiveId(input.brand.linkedDeveloperAccountId);
+  if (
+    input.brand.authorityKind === 'developer_first_party' &&
+    developerId &&
+    input.developer &&
+    isVerifiedDeveloper(input.developer)
+  ) {
     return customerResolution({
       recipientType: 'developer',
       recipientId: developerId,
@@ -419,7 +470,7 @@ export function resolvePublicBrandOnlyCustody(
 
   return attentionResolution(
     'customer_managed',
-    'The brand profile is marked customer-managed but has no verified developer recipient.',
+    'The Catalogue Publisher is marked customer-managed but has no verified developer recipient.',
     input.brand,
   );
 }

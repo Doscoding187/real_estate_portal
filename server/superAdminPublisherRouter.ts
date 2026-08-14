@@ -2,18 +2,17 @@ import { z } from 'zod';
 import { router, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
-import { developerBrandProfileService } from './services/developerBrandProfileService';
-import { brandLeadService } from './services/brandLeadService';
-import { developments, properties, developerBrandProfiles, leads } from '../drizzle/schema';
+import { cataloguePublisherService } from './services/cataloguePublisherService';
+import { developments, properties, cataloguePublishers, leads } from '../drizzle/schema';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import { developmentService } from './services/developmentService';
 import { resolveOperatingIdentity } from './_core/identityResolver';
-import type { EnhancedTRPCContext } from './_core/brandContext';
+import type { EnhancedTRPCContext } from './_core/publisherContext';
 
-async function requireActivePublisherContext(ctx: EnhancedTRPCContext, brandProfileId: number) {
+async function requireActivePublisherContext(ctx: EnhancedTRPCContext, cataloguePublisherId: number) {
   const identity = await resolveOperatingIdentity(ctx, {
     mode: 'platform_curator',
-    brandProfileId,
+    cataloguePublisherId,
   });
 
   if (identity.mode !== 'platform_curator') {
@@ -23,14 +22,14 @@ async function requireActivePublisherContext(ctx: EnhancedTRPCContext, brandProf
     });
   }
 
-  return { brandProfileId: identity.brandProfileId };
+  return { cataloguePublisherId: identity.cataloguePublisherId };
 }
 
 /**
  * Super Admin Publisher Router
  *
  * Allows Super Admins to act as platform-owned developer brands.
- * All actions MUST be scoped to a developerBrandProfileId.
+ * All actions MUST be scoped to a cataloguePublisherId.
  */
 export const superAdminPublisherRouter = router({
   // ==========================================================================
@@ -38,9 +37,9 @@ export const superAdminPublisherRouter = router({
   // ==========================================================================
 
   /**
-   * List all brand profiles for the context selector
+   * List all Catalogue Publishers for the context selector
    */
-  listBrandProfiles: superAdminProcedure
+  listPublishers: superAdminProcedure
     .input(
       z.object({
         search: z.string().optional(),
@@ -49,16 +48,16 @@ export const superAdminPublisherRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const profiles = await developerBrandProfileService.listBrandProfiles({
+      const profiles = await cataloguePublisherService.listPublishers({
         search: input.search,
         limit: input.limit,
-        ownerType: input.emulatorOnly ? 'platform' : undefined,
+        authorityKind: input.emulatorOnly ? 'platform_reference' : undefined,
       });
 
       if (!input.emulatorOnly) return profiles;
 
-      // Emulator context must only expose unclaimed platform-owned brands.
-      return profiles.filter(profile => !profile.linkedDeveloperAccountId);
+      // Emulator context must only expose immutable platform-reference publishers.
+      return profiles.filter(profile => profile.authorityKind === 'platform_reference');
     }),
 
   /**
@@ -75,9 +74,9 @@ export const superAdminPublisherRouter = router({
       isPlatformCuratorMode: !!enhancedCtx.operatingAs,
       operatingAs: enhancedCtx.operatingAs
         ? {
-            brandProfileId: enhancedCtx.operatingAs.brandProfileId,
-            brandType: enhancedCtx.operatingAs.brandType,
-            brandName: enhancedCtx.operatingAs.brandName,
+          cataloguePublisherId: enhancedCtx.operatingAs.cataloguePublisherId,
+            publisherType: enhancedCtx.operatingAs.publisherType,
+            publisherName: enhancedCtx.operatingAs.publisherName,
           }
         : null,
       timestamp: new Date().toISOString(),
@@ -85,39 +84,39 @@ export const superAdminPublisherRouter = router({
   }),
 
   /**
-   * Create a development under the selected brand context
+   * Create a development under the selected publisher context
    */
   createDevelopment: superAdminProcedure
     .input(
       z
         .object({
-          brandProfileId: z.number().int(),
+          cataloguePublisherId: z.number().int(),
         })
         .passthrough(),
     )
     .mutation(async ({ input, ctx }) => {
-      const selectedBrand = await developerBrandProfileService.getBrandProfileById(
-        input.brandProfileId,
+      const selectedBrand = await cataloguePublisherService.getPublisherById(
+        input.cataloguePublisherId,
       );
       if (!selectedBrand) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `Brand profile ${input.brandProfileId} not found`,
+          message: `Catalogue Publisher ${input.cataloguePublisherId} not found`,
         });
       }
-      if (selectedBrand.ownerType !== 'platform' || selectedBrand.linkedDeveloperAccountId) {
+      if (selectedBrand.authorityKind !== 'platform_reference') {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message:
-            'Publisher emulator can only create content for unclaimed platform-owned brands.',
+            'Publisher emulator can only create content for platform-reference publishers.',
         });
       }
 
-      const operatingContext = await requireActivePublisherContext(ctx, input.brandProfileId);
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
 
       const metadata = {
         ownerType: 'platform' as const,
-        brandProfileId: input.brandProfileId,
+        cataloguePublisherId: input.cataloguePublisherId,
       };
 
       // Call service with operating context for identity resolution
@@ -131,14 +130,14 @@ export const superAdminPublisherRouter = router({
       return {
         id: development.id,
         development,
-        message: 'Development created under brand context',
+        message: 'Development created under publisher context',
       };
     }),
 
   /**
-   * Get brand profile by ID for identity resolution
+   * Get Catalogue Publisher by ID for identity resolution
    */
-  getBrandProfileById: superAdminProcedure
+  getPublisherById: superAdminProcedure
     .input(
       z.object({
         id: z.number().int(),
@@ -146,25 +145,19 @@ export const superAdminPublisherRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const profile = await developerBrandProfileService.getBrandProfileById(input.id);
+      const profile = await cataloguePublisherService.getPublisherById(input.id);
       if (!profile) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `Brand profile ${input.id} not found`,
+          message: `Catalogue Publisher ${input.id} not found`,
         });
       }
 
       if (input.emulatorOnly) {
-        if (profile.ownerType !== 'platform') {
+        if (profile.authorityKind !== 'platform_reference') {
           throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Publisher emulator only supports platform-owned brand profiles.',
-          });
-        }
-        if (profile.linkedDeveloperAccountId) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Publisher emulator cannot operate on claimed subscriber-linked brands.',
+            message: 'Publisher emulator only supports platform-owned Catalogue Publishers.',
           });
         }
       }
@@ -173,9 +166,9 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Create a development under the selected brand context
+   * Create a development under the selected publisher context
    */
-  createBrandProfile: superAdminProcedure
+  createPlatformReferencePublisher: superAdminProcedure
     .input(
       z.object({
         // Identity
@@ -205,11 +198,11 @@ export const superAdminPublisherRouter = router({
         specializations: z.array(z.string()).default([]),
 
         operatingProvinces: z.array(z.string()).optional(),
-      }),
+      }).strict(),
     )
     .mutation(async ({ input }) => {
-      // Create new platform-owned brand profile
-      const result = await developerBrandProfileService.createBrandProfile({
+      // Create a new platform-reference catalogue publisher.
+      const result = await cataloguePublisherService.createPlatformReferencePublisher({
         brandName: input.brandName,
         brandTier: input.brandTier,
         identityType: input.identityType,
@@ -218,10 +211,8 @@ export const superAdminPublisherRouter = router({
         // Map extended fields
         about: input.description,
         sourceAttribution: input.sourceAttribution,
-        // Category is not directly on developerBrandProfiles schema based on service check,
-        // but we can map it to 'propertyFocus' or store in 'about' if needed.
-        // Re-checking service definition: propertyFocus is string[].
-        // We'll treat category as primary property focus.
+        // Category is represented in the publisher's allowlisted property-focus
+        // projection until publisher taxonomy is split into its own authority.
         propertyFocus: input.category
           ? [input.category, ...input.specializations]
           : input.specializations,
@@ -238,11 +229,8 @@ export const superAdminPublisherRouter = router({
 
         operatingProvinces: input.operatingProvinces || (input.province ? [input.province] : []),
 
-        // Note: Project counts are currently not in createBrandProfileInput in service
-        // We might need to handle them separately or update service if they are critical
-        // Looking at service, it has 'totalLeadsReceived' etc but not project counts?
-        // Wait, 'developerBrandProfiles' table schema check needed.
-        // Based on service 'createBrandProfile', it takes 'CreateBrandProfileInput'.
+        // Project counts are derived elsewhere; they are not publisher write
+        // authority and are intentionally not persisted here.
 
         isVisible: true,
       });
@@ -251,17 +239,16 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Update an existing brand profile
+   * Update an existing Catalogue Publisher
    */
-  updateBrandProfile: superAdminProcedure
+  updatePublisher: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
 
         // Identity
         brandName: z.string().min(2).optional(),
         brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
-        identityType: z.enum(['developer', 'marketing_agency', 'hybrid']).optional(),
         logoUrl: z.string().optional(),
 
         // Company Info
@@ -282,10 +269,10 @@ export const superAdminPublisherRouter = router({
         specializations: z.array(z.string()).optional(),
 
         operatingProvinces: z.array(z.string()).optional(),
-      }),
+      }).strict(),
     )
     .mutation(async ({ input, ctx }) => {
-      await requireActivePublisherContext(ctx, input.brandProfileId);
+      await requireActivePublisherContext(ctx, input.cataloguePublisherId);
       // Logic to combine address if partial updates are provided is tricky without reading first.
       // ideally frontend sends full address data if updating address.
       // We will perform a simple mapping assuming what is sent is what is intended.
@@ -300,10 +287,9 @@ export const superAdminPublisherRouter = router({
           .replace(/, ,/, ',');
       }
 
-      await developerBrandProfileService.updateBrandProfile(input.brandProfileId, {
+      await cataloguePublisherService.updatePublisher(input.cataloguePublisherId, {
         brandName: input.brandName,
         brandTier: input.brandTier,
-        identityType: input.identityType,
         logoUrl: input.logoUrl,
         about: input.description,
         sourceAttribution: input.sourceAttribution,
@@ -319,19 +305,19 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Delete a brand profile
+   * Delete a Catalogue Publisher
    */
-  deleteBrandProfile: superAdminProcedure
+  hidePublisher: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
         force: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await requireActivePublisherContext(ctx, input.brandProfileId);
-      return await developerBrandProfileService.deleteBrandProfile(
-        input.brandProfileId,
+      await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      return await cataloguePublisherService.hidePublisher(
+        input.cataloguePublisherId,
         input.force,
       );
     }),
@@ -341,21 +327,21 @@ export const superAdminPublisherRouter = router({
   // ==========================================================================
 
   /**
-   * List developments for the selected brand context
+   * List developments for the selected publisher context
    */
   getDevelopments: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
         status: z.enum(['all', 'draft', 'pending', 'approved', 'rejected', 'published']).optional(),
         search: z.string().optional(),
       }),
     )
     .query(async ({ input, ctx }) => {
-      await requireActivePublisherContext(ctx, input.brandProfileId);
+      await requireActivePublisherContext(ctx, input.cataloguePublisherId);
       try {
-        // Use service to get developments specifically linked to this brand profile
-        return await developerBrandProfileService.getBrandDevelopments(input.brandProfileId);
+        // Use service to get developments specifically linked to this Catalogue Publisher
+        return await cataloguePublisherService.getPublisherDevelopments(input.cataloguePublisherId);
       } catch (error) {
         console.warn(
           '[superAdminPublisher.getDevelopments] Returning empty list due to error:',
@@ -366,22 +352,22 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Get one development for the selected brand context.
+   * Get one development for the selected publisher context.
    */
   getDevelopmentById: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
         developmentId: z.number().int(),
       }),
     )
     .query(async ({ input, ctx }) => {
-      await requireActivePublisherContext(ctx, input.brandProfileId);
+      await requireActivePublisherContext(ctx, input.cataloguePublisherId);
       const dev = await developmentService.getDevelopmentWithPhases(input.developmentId);
-      if (!dev || Number(dev.developerBrandProfileId || 0) !== Number(input.brandProfileId)) {
+      if (!dev || Number(dev.cataloguePublisherId || 0) !== Number(input.cataloguePublisherId)) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Development not found or does not belong to this brand context',
+          message: 'Development not found or does not belong to this publisher context',
         });
       }
 
@@ -389,18 +375,18 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Update a development (must check brand context ownership)
+   * Update a development (must check publisher context ownership)
    */
   updateDevelopment: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
         developmentId: z.number().int(),
         data: z.any(), // Flexible partial update, validating ownership first
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const operatingContext = await requireActivePublisherContext(ctx, input.brandProfileId);
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
       const updated = await developmentService.updateDevelopment(
         input.developmentId,
         ctx.user.id,
@@ -412,17 +398,17 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Publish one development for the selected brand context.
+   * Publish one development for the selected publisher context.
    */
   publishDevelopment: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
         developmentId: z.number().int(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const operatingContext = await requireActivePublisherContext(ctx, input.brandProfileId);
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
       const development = await developmentService.publishPlatformCuratedDevelopment(
         input.developmentId,
         ctx.user.id,
@@ -439,32 +425,32 @@ export const superAdminPublisherRouter = router({
   /**
    * Get leads captured for this brand
    */
-  getBrandLeads: superAdminProcedure
+  getPublisherLeads: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
         limit: z.number().default(50),
         offset: z.number().default(0),
       }),
     )
     .query(async ({ input, ctx }) => {
-      await requireActivePublisherContext(ctx, input.brandProfileId);
+      await requireActivePublisherContext(ctx, input.cataloguePublisherId);
       try {
         const dbConn = await db.getDb();
         if (!dbConn) return [];
 
-        const brandLeads = await dbConn
+        const publisherLeads = await dbConn
           .select()
           .from(leads)
-          .where(eq(leads.developerBrandProfileId, input.brandProfileId))
+          .where(eq(leads.cataloguePublisherId, input.cataloguePublisherId))
           .orderBy(desc(leads.createdAt))
           .limit(input.limit)
           .offset(input.offset);
 
-        return brandLeads;
+        return publisherLeads;
       } catch (error) {
         console.warn(
-          '[superAdminPublisher.getBrandLeads] Returning empty list due to error:',
+          '[superAdminPublisher.getPublisherLeads] Returning empty list due to error:',
           error,
         );
         return [];
@@ -492,15 +478,12 @@ export const superAdminPublisherRouter = router({
           lead: leads,
           property: properties,
           development: developments,
-          brand: developerBrandProfiles,
+          brand: cataloguePublishers,
         })
         .from(leads)
         .leftJoin(properties, eq(leads.propertyId, properties.id))
         .leftJoin(developments, eq(leads.developmentId, developments.id))
-        .leftJoin(
-          developerBrandProfiles,
-          eq(leads.developerBrandProfileId, developerBrandProfiles.id),
-        )
+        .leftJoin(cataloguePublishers, eq(leads.cataloguePublisherId, cataloguePublishers.id))
         .where(
           and(
             eq(leads.deliveryStatus, 'attention_required'),
@@ -550,15 +533,15 @@ export const superAdminPublisherRouter = router({
   /**
    * Get aggregated metrics for this brand
    */
-  getBrandMetrics: superAdminProcedure
+  getPublisherMetrics: superAdminProcedure
     .input(
       z.object({
-        brandProfileId: z.number().int(),
+        cataloguePublisherId: z.number().int(),
       }),
     )
     .query(async ({ input, ctx }) => {
-      await requireActivePublisherContext(ctx, input.brandProfileId);
+      await requireActivePublisherContext(ctx, input.cataloguePublisherId);
       // Reuse the service's lead stats which aggregates leads, views, etc.
-      return await developerBrandProfileService.getBrandLeadStats(input.brandProfileId);
+      return await cataloguePublisherService.getPublisherLeadStats(input.cataloguePublisherId);
     }),
 });

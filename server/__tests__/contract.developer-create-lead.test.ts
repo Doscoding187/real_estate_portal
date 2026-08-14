@@ -41,7 +41,7 @@ describe('developer.createLead contract', () => {
 
     const result = await caller.developer.createLead({
       developmentId: 77,
-      developerBrandProfileId: 13,
+      cataloguePublisherId: 13,
       unitId: 'unit-1',
       unitName: 'Type A',
       unitPriceFrom: 1299000,
@@ -73,7 +73,7 @@ describe('developer.createLead contract', () => {
     });
     expect(mockCapturePublicLead).toHaveBeenCalledWith({
       developmentId: 77,
-      developerBrandProfileId: 13,
+      cataloguePublisherId: 13,
       unitId: 'unit-1',
       unitName: 'Type A',
       unitPriceFrom: 1299000,

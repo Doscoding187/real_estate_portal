@@ -870,7 +870,7 @@ export interface SearchResults {
       priceFrom?: number | null;
       priceTo?: number | null;
       images?: any[];
-      developerBrandProfileId?: number | null;
+      cataloguePublisherId?: number | null;
     }>;
     total: number;
   };
@@ -974,7 +974,7 @@ export interface SearchCardIdentity {
   email?: string | null;
   agentId?: number;
   agencyId?: number;
-  developerBrandProfileId?: number;
+  cataloguePublisherId?: number;
 }
 
 export interface SearchCardResult {

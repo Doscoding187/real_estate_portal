@@ -98,7 +98,7 @@ describe('developmentService public development contract', () => {
         slug: 'harbour-heights',
         city: 'Cape Town',
         province: 'Western Cape',
-        developerId: 7,
+        cataloguePublisherId: 7,
         developmentType: 'residential',
         status: 'selling',
       },
@@ -106,7 +106,7 @@ describe('developmentService public development contract', () => {
 
     const result = await searchPublicDevelopments({
       query: 'Harbour',
-      developerId: 7,
+      cataloguePublisherId: 7,
       limit: 10,
     });
 
@@ -126,14 +126,14 @@ describe('developmentService public development contract', () => {
         'isPublished',
         'approval_status',
         'transaction_type',
-        'developer_id',
+        'catalogue_publisher_id',
         'status',
         'source_development_id',
         'is_active',
       ]),
     );
     expect(parts.params).toEqual(
-      expect.arrayContaining([7, 1, 'approved', 'for_sale', 'for_rent']),
+      expect.arrayContaining([7, 1, 'approved']),
     );
   });
 });

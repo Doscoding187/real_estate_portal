@@ -136,7 +136,7 @@ function createClientRequestId() {
 const links = [
   // Debug link to log tRPC paths
   trpcDebugLink(),
-  // Brand emulation link to inject X-Brand-Emulation headers when in emulator mode
+  // Inject the requested publisher selector; the server resolves its authority.
   httpBatchLink({
     url: TRPC_URL,
     transformer: superjson,
@@ -145,16 +145,16 @@ const links = [
       const headers: Record<string, string> = {};
 
       try {
-        // Get brand context from localStorage directly
+        // Get publisher context from localStorage directly.
         // We can't easily reuse the service here as it's outside React context
         const storedContext = localStorage.getItem('publisher-context');
         if (storedContext) {
           const publisherContext = JSON.parse(storedContext);
           // Zustand persistence wraps state in 'state' property
-          const brandId = publisherContext.state?.context?.brandProfileId;
+          const publisherId = publisherContext.state?.context?.cataloguePublisherId;
 
-          if (brandId) {
-            headers['x-operating-as-brand'] = String(brandId);
+          if (publisherId) {
+            headers['x-operating-as-publisher'] = String(publisherId);
           }
         }
       } catch {

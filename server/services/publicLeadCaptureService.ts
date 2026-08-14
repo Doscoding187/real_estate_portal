@@ -4,8 +4,8 @@ import { getDb } from '../db';
 import {
   agents,
   agencies,
-  developerBrandProfiles,
-  developers,
+  cataloguePublishers,
+  developerOrganisations,
   developmentSupersessions,
   developments,
   leads,
@@ -13,7 +13,7 @@ import {
   unitTypes,
   users,
 } from '../../drizzle/schema';
-import { developerBrandProfileService } from './developerBrandProfileService';
+import { cataloguePublisherService } from './cataloguePublisherService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
 import { recordProspectLeadAction } from './prospectJourneyService';
 import {
@@ -51,7 +51,7 @@ export interface PublicLeadCaptureInput {
   authenticatedUserId?: number;
   propertyId?: number;
   developmentId?: number;
-  developerBrandProfileId?: number;
+  cataloguePublisherId?: number;
   agencyId?: number;
   agentId?: number;
   unitId?: string;
@@ -83,7 +83,7 @@ export interface PublicLeadCaptureInput {
 interface ResolvedLeadOwnership {
   propertyId?: number;
   developmentId?: number;
-  developerBrandProfileId?: number;
+  cataloguePublisherId?: number;
   agencyId?: number;
   agentId?: number;
   developerId?: number;
@@ -225,7 +225,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 function getPublicTargetCount(input: PublicLeadCaptureInput): number {
-  return [input.propertyId, input.developmentId, input.developerBrandProfileId].filter(
+  return [input.propertyId, input.developmentId, input.cataloguePublisherId].filter(
     value => positiveId(value) !== undefined,
   ).length;
 }
@@ -279,15 +279,14 @@ function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
 async function selectBrand(database: any, brandId: number) {
   const [brand] = await database
     .select({
-      id: developerBrandProfiles.id,
-      ownerType: developerBrandProfiles.ownerType,
-      linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
-      isVisible: developerBrandProfiles.isVisible,
-      isSubscriber: developerBrandProfiles.isSubscriber,
-      sourceAttribution: developerBrandProfiles.sourceAttribution,
+      id: cataloguePublishers.id,
+      authorityKind: cataloguePublishers.authorityKind,
+      developerOrganisationId: cataloguePublishers.developerOrganisationId,
+      isVisible: cataloguePublishers.isVisible,
+      sourceAttribution: cataloguePublishers.sourceAttribution,
     })
-    .from(developerBrandProfiles)
-    .where(eq(developerBrandProfiles.id, brandId))
+    .from(cataloguePublishers)
+    .where(eq(cataloguePublishers.id, brandId))
     .limit(1);
   return brand || null;
 }
@@ -374,32 +373,19 @@ async function loadDeveloperCandidates(database: any, ids: number[]) {
   const normalizedIds = Array.from(new Set(ids.filter(id => id > 0)));
   if (normalizedIds.length === 0) return new Map<number, any>();
 
-  const developerRows = await database
-    .select({ id: developers.id, userId: developers.userId, status: developers.status })
-    .from(developers)
-    .where(inArray(developers.id, normalizedIds));
-  const userIds = developerRows
-    .map((developer: any) => positiveId(developer.userId))
-    .filter((id: number | undefined): id is number => id !== undefined);
-  const userRows =
-    userIds.length > 0
-      ? await database
-          .select({ id: users.id, role: users.role })
-          .from(users)
-          .where(inArray(users.id, userIds))
-      : [];
-  const roleByUserId = new Map<number, string | null>(
-    userRows.map((user: any) => [Number(user.id), user.role || null]),
-  );
+  const organisationRows = await database
+    .select({ id: developerOrganisations.id, status: developerOrganisations.status })
+    .from(developerOrganisations)
+    .where(inArray(developerOrganisations.id, normalizedIds));
 
   return new Map<number, any>(
-    developerRows.map((developer: any) => [
-      Number(developer.id),
+    organisationRows.map((organisation: any) => [
+      Number(organisation.id),
       {
-        id: Number(developer.id),
-        userId: positiveId(developer.userId) || null,
-        status: developer.status || null,
-        userRole: roleByUserId.get(Number(developer.userId)) || null,
+        id: Number(organisation.id),
+        organisationId: Number(organisation.id),
+        userId: null,
+        status: organisation.status || null,
       },
     ]),
   );
@@ -409,14 +395,14 @@ function mapCustodyResolution(
   input: {
     propertyId?: number;
     developmentId?: number;
-    developerBrandProfileId?: number;
+    cataloguePublisherId?: number;
   },
   custody: ReturnType<typeof resolvePublicPropertyCustody>,
 ): ResolvedLeadOwnership {
   return {
     propertyId: input.propertyId,
     developmentId: input.developmentId,
-    developerBrandProfileId: input.developerBrandProfileId,
+    cataloguePublisherId: input.cataloguePublisherId,
     agencyId: custody.agencyId || undefined,
     agentId: custody.agentId || undefined,
     developerId: custody.developerId || undefined,
@@ -438,7 +424,7 @@ export async function resolveLeadOwnership(
 
   const propertyId = positiveId(input.propertyId);
   const requestedDevelopmentId = positiveId(input.developmentId);
-  const requestedBrandId = positiveId(input.developerBrandProfileId);
+  const requestedBrandId = positiveId(input.cataloguePublisherId);
   const targetKind: 'property' | 'development' | 'brand' = propertyId
     ? 'property'
     : requestedDevelopmentId
@@ -452,7 +438,7 @@ export async function resolveLeadOwnership(
         id: properties.id,
         status: properties.status,
         developmentId: properties.developmentId,
-        developerBrandProfileId: properties.developerBrandProfileId,
+        cataloguePublisherId: properties.cataloguePublisherId,
         agentId: properties.agentId,
         ownerId: properties.ownerId,
       })
@@ -483,9 +469,7 @@ export async function resolveLeadOwnership(
     [development] = await database
       .select({
         id: developments.id,
-        developerId: developments.developerId,
-        developerBrandProfileId: developments.developerBrandProfileId,
-        devOwnerType: developments.devOwnerType,
+        cataloguePublisherId: developments.cataloguePublisherId,
         isPublished: developments.isPublished,
         approvalStatus: developments.approvalStatus,
         transactionType: developments.transactionType,
@@ -493,13 +477,13 @@ export async function resolveLeadOwnership(
         activeUnitTypeCount: sql<number>`(
           SELECT COUNT(*)
           FROM ${unitTypes}
-          WHERE ${unitTypes.developmentId} = ${developments.id}
+          WHERE ${unitTypes.developmentId} = ${sql.raw('developments.id')}
             AND ${unitTypes.isActive} = 1
         )`,
         activeSupersessionSource: sql<number>`EXISTS (
           SELECT 1
           FROM ${developmentSupersessions}
-          WHERE ${developmentSupersessions.sourceDevelopmentId} = ${developments.id}
+          WHERE ${developmentSupersessions.sourceDevelopmentId} = ${sql.raw('developments.id')}
             AND ${developmentSupersessions.status} = 'active'
         )`,
       })
@@ -528,8 +512,8 @@ export async function resolveLeadOwnership(
   }
 
   const persistedBrandId =
-    positiveId(property?.developerBrandProfileId) ??
-    positiveId(development?.developerBrandProfileId);
+    positiveId(property?.cataloguePublisherId) ??
+    positiveId(development?.cataloguePublisherId);
   if (targetKind !== 'brand' && requestedBrandId && requestedBrandId !== persistedBrandId) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -550,26 +534,22 @@ export async function resolveLeadOwnership(
   }
 
   if (targetKind === 'development') {
-    const developerIds = [
-      positiveId(development?.developerId),
-      positiveId(brand?.linkedDeveloperAccountId),
-    ].filter((id): id is number => id !== undefined);
+    const developerIds = [positiveId(brand?.developerOrganisationId)].filter(
+      (id): id is number => id !== undefined,
+    );
     const developerMap = await loadDeveloperCandidates(database, developerIds);
-    const developerId =
-      positiveId(development?.developerId) || positiveId(brand?.linkedDeveloperAccountId);
+    const developerId = positiveId(brand?.developerOrganisationId);
     const eligibility = evaluatePublicDevelopmentEligibility({
       development: {
         id: Number(development?.id || 0),
-        developerId: positiveId(development?.developerId) ?? null,
-        developerBrandProfileId: positiveId(development?.developerBrandProfileId) ?? null,
-        devOwnerType: development?.devOwnerType || null,
+        cataloguePublisherId: positiveId(development?.cataloguePublisherId) ?? null,
         developmentType: development?.developmentType || null,
         transactionType: development?.transactionType || null,
         isPublished: development?.isPublished,
         approvalStatus: development?.approvalStatus || null,
       },
-      brand,
-      developer: developerId ? developerMap.get(developerId) : null,
+      publisher: brand,
+      organisation: developerId ? developerMap.get(developerId) : null,
       unitTypes: [],
       activeUnitTypeCount: Number(development?.activeUnitTypeCount || 0),
       activeSupersessionSource: Number(development?.activeSupersessionSource || 0) === 1,
@@ -581,9 +561,8 @@ export async function resolveLeadOwnership(
       });
     }
     const custody = resolvePublicDevelopmentCustody({
-      developerId: development?.developerId,
-      developerBrandProfileId: development?.developerBrandProfileId,
-      devOwnerType: development?.devOwnerType,
+      cataloguePublisherId: development?.cataloguePublisherId,
+      developerOrganisationId: brand?.developerOrganisationId,
       developer: developerId ? developerMap.get(developerId) : null,
       brand,
       brandReferenceInvalid,
@@ -592,22 +571,22 @@ export async function resolveLeadOwnership(
     return mapCustodyResolution(
       {
         developmentId: developmentId || undefined,
-        developerBrandProfileId: brand?.id,
+        cataloguePublisherId: brand?.id,
       },
       custody,
     );
   }
 
   if (targetKind === 'brand') {
-    const developerId = positiveId(brand?.linkedDeveloperAccountId);
+    const developerId = positiveId(brand?.developerOrganisationId);
     const developerMap = await loadDeveloperCandidates(database, developerId ? [developerId] : []);
     const custody = resolvePublicBrandOnlyCustody({
-      developerBrandProfileId: canonicalBrandId!,
+      cataloguePublisherId: canonicalBrandId!,
       brand: brand as PublicBrandOwnershipCandidate,
       developer: developerId ? developerMap.get(developerId) : null,
     });
 
-    return mapCustodyResolution({ developerBrandProfileId: brand?.id }, custody);
+    return mapCustodyResolution({ cataloguePublisherId: brand?.id }, custody);
   }
 
   // Public enquiry attribution is projection-owned. sourceListingId is an
@@ -626,7 +605,7 @@ export async function resolveLeadOwnership(
   const custody = resolvePublicPropertyCustody({
     propertyAgentId: property.agentId,
     ownerAgencyId: userMap.get(Number(property.ownerId))?.agencyId,
-    developerBrandProfileId: brand?.id,
+    cataloguePublisherId: brand?.id,
     directAgent: property.agentId ? agentMap.get(Number(property.agentId)) : null,
     directAgentAgency: property.agentId
       ? agencyMap.get(Number(agentMap.get(Number(property.agentId))?.agencyId))
@@ -642,7 +621,7 @@ export async function resolveLeadOwnership(
     {
       propertyId: property.id,
       developmentId: developmentId || undefined,
-      developerBrandProfileId: brand?.id,
+      cataloguePublisherId: brand?.id,
     },
     custody,
   );
@@ -668,8 +647,8 @@ function isEquivalentReplay(
   const existingDevelopmentId = positiveId(existing.developmentId);
   const inputPropertyId = positiveId(input.propertyId);
   const inputDevelopmentId = positiveId(input.developmentId);
-  const existingBrandId = positiveId(existing.developerBrandProfileId);
-  const inputBrandId = positiveId(input.developerBrandProfileId);
+  const existingBrandId = positiveId(existing.cataloguePublisherId);
+  const inputBrandId = positiveId(input.cataloguePublisherId);
 
   // A property may canonically derive development and brand attribution, and
   // a development may derive brand attribution. Those server-owned fields are
@@ -737,7 +716,7 @@ function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadC
       : 'verified_customer_recipient');
   const recipientType: PublicLeadCaptureResult['recipientType'] =
     latestAttempt?.recipientType ||
-    (existing.developerBrandProfileId
+    (existing.cataloguePublisherId
       ? 'brand'
       : existing.agentId
         ? 'agent'
@@ -780,7 +759,8 @@ function deliveryKeyForOwnership(resolved: ResolvedLeadOwnership): string {
   if (resolved.recipientType === 'developer' && resolved.developerId) {
     return `direct:developer:${resolved.developerId}`;
   }
-  if (resolved.developerBrandProfileId) return `platform:brand:${resolved.developerBrandProfileId}`;
+  if (resolved.cataloguePublisherId)
+    return `platform:publisher:${resolved.cataloguePublisherId}`;
   if (resolved.propertyId) return `platform:property:${resolved.propertyId}`;
   if (resolved.developmentId) return `platform:development:${resolved.developmentId}`;
   return 'platform:manual';
@@ -823,7 +803,8 @@ export async function capturePublicLead(
     resolved.leadCustody === 'verified_customer_recipient' ? 'delivered' : 'attention_required';
   const route: PublicLeadCaptureResult['route'] =
     resolved.recipientType === 'developer' ||
-    (resolved.recipientType === 'manual' && resolved.developerBrandProfileId)
+    (resolved.recipientType === 'manual' &&
+      resolved.cataloguePublisherId)
       ? 'brand'
       : 'direct';
 
@@ -832,7 +813,7 @@ export async function capturePublicLead(
     [insertResult] = await database.insert(leads).values({
       propertyId: resolved.propertyId || null,
       developmentId: resolved.developmentId || null,
-      developerBrandProfileId: resolved.developerBrandProfileId || null,
+      cataloguePublisherId: resolved.cataloguePublisherId || null,
       agencyId: resolved.agencyId || null,
       agentId: resolved.agentId || null,
       unitId: input.unitId || null,
@@ -929,9 +910,9 @@ export async function capturePublicLead(
     utmCampaign: input.utmCampaign,
   });
 
-  if (resolved.developerBrandProfileId) {
-    void developerBrandProfileService
-      .incrementLeadCountAsync(resolved.developerBrandProfileId)
+  if (resolved.cataloguePublisherId) {
+    void cataloguePublisherService
+      .incrementLeadCountAsync(resolved.cataloguePublisherId)
       .catch(error =>
         console.error('[capturePublicLead] Failed to update brand lead metrics:', error),
       );

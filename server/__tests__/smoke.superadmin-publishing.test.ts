@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { getDb } from '../db-connection';
-import { developerBrandProfileService } from '../services/developerBrandProfileService';
+import { cataloguePublisherService } from '../services/cataloguePublisherService';
 import { developmentService } from '../services/developmentService';
 import { propertySearchService } from '../services/propertySearchService';
 
@@ -15,8 +15,16 @@ describe('Demo Gate v1: super admin publishing smoke', () => {
     const dbConn = await getDb();
     expect(dbConn).toBeTruthy();
 
-    const brand = await developerBrandProfileService.createBrandProfile({
+    // This smoke test deliberately uses the repository's lightweight mock DB.
+    // Keep the orchestration contract independent of physical-table emulation;
+    // the new publisher authority is covered by the focused authority suite.
+    vi.spyOn(cataloguePublisherService, 'createPlatformReferencePublisher').mockResolvedValue({
+      id: 501,
+      slug: 'demo-gate-brand',
+    });
+    const brand = await cataloguePublisherService.createPlatformReferencePublisher({
       brandName: 'Demo Gate Brand',
+      sourceAttribution: 'Smoke-test platform reference fixture',
     });
 
     expect(typeof brand.id).toBe('number');
@@ -75,7 +83,7 @@ describe('Demo Gate v1: super admin publishing smoke', () => {
         priceFrom: 1200000,
         priceTo: 2500000,
         images: [],
-        developerBrandProfileId: 1,
+        cataloguePublisherId: 1,
       },
     ] as any);
 

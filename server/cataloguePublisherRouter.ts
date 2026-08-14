@@ -1,15 +1,14 @@
 /**
- * Brand Profile Router
+ * Catalogue Publisher Router
  *
- * Public and admin endpoints for developer brand profiles.
- * Implements the API routes from the implementation plan.
+ * Public and platform-curator endpoints for governed Catalogue Publishers.
  */
 
 import { z } from 'zod';
 import { router, protectedProcedure, publicProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
-import { developerBrandProfileService } from './services/developerBrandProfileService';
-import { brandLeadService } from './services/brandLeadService';
+import { cataloguePublisherService } from './services/cataloguePublisherService';
+import { publisherLeadService } from './services/publisherLeadService';
 import { capturePublicLead } from './services/publicLeadCaptureService';
 import {
   checkPublicLeadRateLimit,
@@ -22,7 +21,7 @@ import { requireUser } from './_core/requireUser';
 // Input Schemas
 // ============================================================================
 
-const createBrandProfileSchema = z.object({
+const createPlatformReferencePublisherSchema = z.object({
   brandName: z.string().min(2, 'Brand name must be at least 2 characters'),
   slug: z.string().optional(),
   logoUrl: z.string().nullable().optional(),
@@ -34,12 +33,12 @@ const createBrandProfileSchema = z.object({
   websiteUrl: z.string().url().nullable().optional(),
   publicContactEmail: z.string().email().nullable().optional(),
   brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
-  sourceAttribution: z.string().nullable().optional(),
+  sourceAttribution: z.string().trim().min(1).max(255),
   isVisible: z.boolean().optional(),
   isContactVerified: z.boolean().optional(),
 });
 
-const updateBrandProfileSchema = z.object({
+const updatePublisherSchema = z.object({
   id: z.number().int(),
   data: z.object({
     brandName: z.string().min(2).optional(),
@@ -53,17 +52,16 @@ const updateBrandProfileSchema = z.object({
     websiteUrl: z.string().nullable().optional(),
     publicContactEmail: z.string().nullable().optional(),
     brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
-    sourceAttribution: z.string().nullable().optional(),
-    profileType: z.enum(['industry_reference', 'verified_partner']).optional(),
+    sourceAttribution: z.string().trim().min(1).max(255).optional(),
     isVisible: z.boolean().optional(),
     isContactVerified: z.boolean().optional(),
-  }),
-});
+  }).strict(),
+}).strict();
 
-const listBrandProfilesSchema = z
+const listPublishersSchema = z
   .object({
     brandTier: z.enum(['national', 'regional', 'boutique']).optional(),
-    isSubscriber: z.boolean().optional(),
+    authorityKind: z.enum(['platform_reference', 'developer_first_party']).optional(),
     isVisible: z.boolean().optional(),
     search: z.string().optional(),
     limit: z.number().int().positive().max(100).optional(),
@@ -71,8 +69,8 @@ const listBrandProfilesSchema = z
   })
   .optional();
 
-const captureBrandLeadSchema = z.object({
-  developerBrandProfileId: z.number().int(),
+const capturePublisherLeadSchema = z.object({
+  cataloguePublisherId: z.number().int(),
   developmentId: z.number().int().optional(),
   propertyId: z.number().int().optional(),
   unitId: z.string().trim().max(36).optional(),
@@ -112,23 +110,23 @@ const captureBrandLeadSchema = z.object({
 // Router
 // ============================================================================
 
-export const brandProfileRouter = router({
+export const cataloguePublisherRouter = router({
   // ============================================================================
   // PUBLIC ENDPOINTS
   // ============================================================================
 
   /**
-   * Get brand profile by slug (public)
+   * Get a publisher by slug (public)
    */
-  getBrandProfile: publicProcedure
+  getPublisher: publicProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
-      const profile = await developerBrandProfileService.getBrandProfileBySlug(input.slug);
+      const profile = await cataloguePublisherService.getPublicPublisherBySlug(input.slug);
 
       if (!profile) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Developer brand not found',
+          message: 'Catalogue Publisher not found',
         });
       }
 
@@ -136,33 +134,34 @@ export const brandProfileRouter = router({
     }),
 
   /**
-   * List brand profiles with filters (public)
+   * List public publishers with filters.
    */
-  listBrandProfiles: publicProcedure.input(listBrandProfilesSchema).query(async ({ input }) => {
-    return await developerBrandProfileService.listBrandProfiles(input || {});
+  listPublishers: publicProcedure.input(listPublishersSchema).query(async ({ input }) => {
+    return await cataloguePublisherService.listPublicPublishers(input || {});
   }),
 
   /**
-   * Get developments for a brand (public)
+   * Get developments for a publisher (public).
    */
-  getBrandDevelopments: publicProcedure
-    .input(z.object({ brandProfileId: z.number().int() }))
+  getPublisherDevelopments: publicProcedure
+    .input(z.object({ cataloguePublisherId: z.number().int().positive() }))
     .query(async ({ input }) => {
-      const profile = await developerBrandProfileService.getBrandProfileById(input.brandProfileId);
+      const profile = await cataloguePublisherService.getPublicPublisherById(
+        input.cataloguePublisherId,
+      );
       if (!profile || Number(profile.isVisible) !== 1) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer brand not found' });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Catalogue Publisher not found' });
       }
 
       return developmentService.listPublicDevelopments({
-        developerBrandProfileId: input.brandProfileId,
+        cataloguePublisherId: input.cataloguePublisherId,
       });
     }),
 
   /**
-   * Capture lead for brand profile (public)
-   * This is the main lead capture endpoint
+   * Capture an enquiry attributed to a Catalogue Publisher.
    */
-  captureLead: publicProcedure.input(captureBrandLeadSchema).mutation(async ({ input, ctx }) => {
+  captureLead: publicProcedure.input(capturePublisherLeadSchema).mutation(async ({ input, ctx }) => {
     try {
       if (!checkPublicLeadRateLimit(getPublicLeadClientIp(ctx))) {
         throw new TRPCError({
@@ -174,9 +173,9 @@ export const brandProfileRouter = router({
       return await capturePublicLead({
         ...input,
         leadType: 'inquiry',
-        source: input.sourceSurface || input.leadSource || 'brand_profile',
-        sourceSurface: input.sourceSurface || 'brand_profile',
-        leadSource: input.leadSource || 'brand_profile',
+        source: input.sourceSurface || input.leadSource || 'catalogue_publisher',
+        sourceSurface: input.sourceSurface || 'catalogue_publisher',
+        leadSource: input.leadSource || 'catalogue_publisher',
       });
     } catch (error) {
       if (error instanceof TRPCError) throw error;
@@ -193,20 +192,20 @@ export const brandProfileRouter = router({
   // ============================================================================
 
   /**
-   * Create new brand profile (admin)
+   * Create a platform-reference publisher (admin).
    */
-  adminCreateBrandProfile: protectedProcedure
-    .input(createBrandProfileSchema)
+  adminCreatePublisher: protectedProcedure
+    .input(createPlatformReferencePublisherSchema)
     .mutation(async ({ input, ctx }) => {
       const user = requireUser(ctx);
       if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only super admins can create brand profiles',
+          message: 'Only super admins can create Catalogue Publishers',
         });
       }
 
-      const result = await developerBrandProfileService.createBrandProfile({
+      const result = await cataloguePublisherService.createPlatformReferencePublisher({
         ...input,
         createdBy: user.id,
       });
@@ -215,20 +214,20 @@ export const brandProfileRouter = router({
     }),
 
   /**
-   * Update brand profile (admin)
+   * Update editable publisher content (admin).
    */
-  adminUpdateBrandProfile: protectedProcedure
-    .input(updateBrandProfileSchema)
+  adminUpdatePublisher: protectedProcedure
+    .input(updatePublisherSchema)
     .mutation(async ({ input, ctx }) => {
       const user = requireUser(ctx);
       if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only super admins can update brand profiles',
+          message: 'Only super admins can update Catalogue Publishers',
         });
       }
 
-      return await developerBrandProfileService.updateBrandProfile(input.id, input.data);
+      return await cataloguePublisherService.updatePublisher(input.id, input.data);
     }),
 
   /**
@@ -250,14 +249,14 @@ export const brandProfileRouter = router({
         });
       }
 
-      return await developerBrandProfileService.toggleVisibility(input.id, input.visible);
+      return await cataloguePublisherService.toggleVisibility(input.id, input.visible);
     }),
 
   /**
    * Get brand lead stats (admin)
    */
-  adminGetBrandLeadStats: protectedProcedure
-    .input(z.object({ brandProfileId: z.number().int() }))
+  adminGetPublisherLeadStats: protectedProcedure
+    .input(z.object({ cataloguePublisherId: z.number().int().positive() }))
     .query(async ({ input, ctx }) => {
       const user = requireUser(ctx);
       if (user.role !== 'super_admin') {
@@ -267,61 +266,35 @@ export const brandProfileRouter = router({
         });
       }
 
-      return await developerBrandProfileService.getBrandLeadStats(input.brandProfileId);
+      return await cataloguePublisherService.getPublisherLeadStats(input.cataloguePublisherId);
     }),
 
   /**
-   * Get all brand profiles with stats (admin only, includes hidden)
+   * Get all publishers (admin only, includes hidden).
    */
-  adminListAllBrandProfiles: protectedProcedure
-    .input(listBrandProfilesSchema)
+  adminListAllPublishers: protectedProcedure
+    .input(listPublishersSchema)
     .query(async ({ input, ctx }) => {
       const user = requireUser(ctx);
       if (user.role !== 'super_admin') {
         throw new TRPCError({
           code: 'FORBIDDEN',
-          message: 'Only super admins can list all brand profiles',
+          message: 'Only super admins can list all Catalogue Publishers',
         });
       }
 
       // Admin can see hidden profiles
-      return await developerBrandProfileService.listBrandProfiles({
+      return await cataloguePublisherService.listPublishers({
         ...input,
         isVisible: undefined, // Show all, including hidden
       });
     }),
 
   /**
-   * Convert brand to subscriber (admin)
-   * Links brand profile to developer account after claim approval
-   */
-  adminConvertToSubscriber: protectedProcedure
-    .input(
-      z.object({
-        brandProfileId: z.number().int(),
-        developerAccountId: z.number().int(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const user = requireUser(ctx);
-      if (user.role !== 'super_admin') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Only super admins can convert brands to subscribers',
-        });
-      }
-
-      return await developerBrandProfileService.convertToSubscriber(
-        input.brandProfileId,
-        input.developerAccountId,
-      );
-    }),
-
-  /**
    * Get sales pitch stats for outreach (admin)
    */
   adminGetSalesPitchStats: protectedProcedure
-    .input(z.object({ brandProfileId: z.number().int() }))
+    .input(z.object({ cataloguePublisherId: z.number().int().positive() }))
     .query(async ({ input, ctx }) => {
       const user = requireUser(ctx);
       if (user.role !== 'super_admin') {
@@ -331,6 +304,6 @@ export const brandProfileRouter = router({
         });
       }
 
-      return await brandLeadService.getSalesPitchStats(input.brandProfileId);
+      return await publisherLeadService.getSalesPitchStats(input.cataloguePublisherId);
     }),
 });

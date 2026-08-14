@@ -3,7 +3,6 @@ client/src/components/admin/publisher/AdvancedFilterSystem.tsx
 client/src/components/admin/publisher/BulkOperationsAndDataVisualization.tsx
 client/src/components/admin/publisher/EnhancedLeadsGrid.tsx
 client/src/components/admin/publisher/EnhancedProvinceDevDashboard.tsx
-client/src/components/admin/publisher/LinkSubscriberDialog.tsx
 client/src/components/advertise/PreviewCarousel.tsx
 client/src/components/agent/AgentSetupWizard.tsx
 client/src/components/agent/LeadPipeline.tsx
@@ -12,7 +11,6 @@ client/src/components/developer/ActivityFeed.tsx
 client/src/components/developer/AffordabilityCalculatorWidget.tsx
 client/src/components/developer/AnalyticsPanel.tsx
 client/src/components/developer/BillingPanel.tsx
-client/src/components/developer/DeveloperBrandProfile.tsx
 client/src/components/developer/DeveloperSetupWizard.tsx
 client/src/components/developer/DeveloperSetupWizardEnhanced.tsx
 client/src/components/developer/EnhancedSidebar.tsx
@@ -52,8 +50,6 @@ client/src/components/maps/StreetViewPanel.tsx
 client/src/components/marketing/wizard/Step3Targeting.tsx
 client/src/components/marketing/wizard/Step4Budget.tsx
 client/src/components/marketing/wizard/Step6Creative.tsx
-client/src/components/partnerships/AddPartnerDialog.tsx
-client/src/components/partnerships/PartnershipManager.tsx
 client/src/components/PropertyCategories.tsx
 client/src/components/property-results/QuickFilters.tsx
 client/src/components/ProspectDashboard.tsx
@@ -79,5 +75,5 @@ client/src/pages/agency/SubscriptionPage.tsx
 client/src/pages/AgencyFeed.tsx
 client/src/pages/AgentDetail.tsx
 client/src/pages/Agents.tsx
-client/src/pages/DeveloperBrandProfilePage.tsx
+client/src/pages/DeveloperPublisherPage.tsx
 client/src/pages/OnboardingSuccess.tsx

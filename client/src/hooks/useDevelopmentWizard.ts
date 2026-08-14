@@ -319,8 +319,7 @@ export interface DevelopmentWizardState {
   // NEW: Listing Identity (Step 0)
   listingIdentity: {
     identityType: 'developer' | 'marketing_agency' | 'private_owner' | 'brand';
-    developerBrandProfileId?: number; // The Developer (Builder/Brand)
-    marketingBrandProfileId?: number; // Marketing agency's own brand (if applicable)
+    cataloguePublisherId?: number; // The Developer (Builder/Brand)
     marketingRole?: MarketingRole;
   };
 
@@ -560,7 +559,7 @@ export interface DevelopmentWizardState {
 
 type DraftSaveMutationInput = {
   id?: number;
-  brandProfileId?: number;
+  cataloguePublisherId?: number;
   draftData: any;
 };
 
@@ -574,13 +573,13 @@ export async function persistManualDevelopmentDraft({
   saveDraft,
   mutateDraft,
   currentDraftId,
-  brandProfileId,
+  cataloguePublisherId,
   setCurrentDraftId,
 }: {
   saveDraft: (saveCallback?: (data: any) => Promise<void>) => Promise<void>;
   mutateDraft: (input: DraftSaveMutationInput) => Promise<DraftSaveMutationResult>;
   currentDraftId?: number;
-  brandProfileId?: number;
+  cataloguePublisherId?: number;
   setCurrentDraftId?: (id: number) => void;
 }) {
   let saveResult: DraftSaveMutationResult | undefined;
@@ -588,7 +587,7 @@ export async function persistManualDevelopmentDraft({
   await saveDraft(async draftData => {
     saveResult = await mutateDraft({
       ...(currentDraftId ? { id: currentDraftId } : {}),
-      ...(brandProfileId ? { brandProfileId } : {}),
+      ...(cataloguePublisherId ? { cataloguePublisherId } : {}),
       draftData,
     });
   });
@@ -894,16 +893,6 @@ const createActions = (
         );
       }
 
-      const linkedBrandProfileId =
-        state.listingIdentity?.developerBrandProfileId ??
-        (state.developmentData as any)?.developerBrandProfileId ??
-        null;
-      if (!linkedBrandProfileId) {
-        recommendations.push(
-          'Link a developer brand profile (with logo) to keep builder name/avatar consistent on cards.',
-        );
-      }
-
       const photosCount = wizardData.media?.photos?.length ?? 0;
       const heroImage =
         (wizardData as any).heroImage ||
@@ -1149,7 +1138,7 @@ const createActions = (
         case 1:
           if (
             state.listingIdentity.identityType === 'marketing_agency' &&
-            !state.listingIdentity.developerBrandProfileId
+            !state.listingIdentity.cataloguePublisherId
           )
             errors.push('Select the Developer Brand you are representing');
           break;

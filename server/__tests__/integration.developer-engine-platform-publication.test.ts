@@ -3,13 +3,16 @@ import { asc, eq, inArray } from 'drizzle-orm';
 
 import { getDb } from '../db-connection';
 import {
-  developerBrandProfiles,
+  cataloguePublishers,
+  developerOrganisationMemberships,
+  developerOrganisations,
   developmentApprovalQueue,
-  developers,
   developments,
   unitTypes,
   users,
 } from '../../drizzle/schema';
+import { cataloguePublisherService } from '../services/cataloguePublisherService';
+import { developerIdentityService } from '../services/developerIdentityService';
 import { developmentService } from '../services/developmentService';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -22,17 +25,16 @@ type UserRole = 'property_developer' | 'super_admin';
 
 type CreatedState = {
   userIds: number[];
-  developerIds: number[];
-  brandProfileIds: number[];
+  organisationIds: number[];
+  membershipIds: number[];
+  cataloguePublisherIds: number[];
   developmentIds: number[];
   unitTypeIds: string[];
 };
 
-type PlatformBrandOptions = {
-  ownerType?: 'platform' | 'developer';
-  linkedDeveloperAccountId?: number | null;
+type PlatformPublisherOptions = {
   sourceAttribution?: string | null;
-  isClaimable?: number;
+  isVisible?: boolean;
 };
 
 type DevelopmentOptions = {
@@ -48,15 +50,15 @@ type PublicationState = {
   approvalStatus: string | null;
   publishedAt: string | null;
   rejectionNote: string | null;
-  developerBrandProfileId: number | null;
-  devOwnerType: string | null;
+  cataloguePublisherId: number | null;
   transactionType: string;
 };
 
 const createdState: CreatedState = {
   userIds: [],
-  developerIds: [],
-  brandProfileIds: [],
+  organisationIds: [],
+  membershipIds: [],
+  cataloguePublisherIds: [],
   developmentIds: [],
   unitTypeIds: [],
 };
@@ -96,42 +98,41 @@ async function insertUser(role: UserRole) {
   return userId;
 }
 
-async function insertDeveloperProfile(userId: number) {
-  const db = await database();
+async function insertDeveloperIdentity(userId: number) {
   const suffix = fixtureSuffix();
-  const [result] = await db.insert(developers).values({
-    userId,
+  const identity = await developerIdentityService.createDeveloperOrganisation({
     name: `Platform Publication Developer ${suffix}`,
     email: `platform-publication-developer-${suffix}@example.com`,
     category: 'residential',
-    status: 'approved',
-    isVerified: 1,
+    city: 'Johannesburg',
+    province: 'Gauteng',
+    createdByUserId: userId,
   });
-  const developerId = Number(result.insertId);
-  createdState.developerIds.push(developerId);
-  return developerId;
+  createdState.organisationIds.push(identity.organisationId);
+  createdState.membershipIds.push(identity.membership.id);
+  createdState.cataloguePublisherIds.push(identity.publisherId);
+  return identity;
 }
 
-async function insertBrand(createdBy: number, options: PlatformBrandOptions = {}) {
-  const db = await database();
+async function insertPlatformPublisher(
+  createdBy: number,
+  options: PlatformPublisherOptions = {},
+) {
   const suffix = fixtureSuffix();
-  const [result] = await db.insert(developerBrandProfiles).values({
+  const publisher = await cataloguePublisherService.createPlatformReferencePublisher({
     brandName: `Platform Publication Brand ${suffix}`,
     slug: `platform-publication-brand-${suffix}`,
-    ownerType: options.ownerType ?? 'platform',
-    linkedDeveloperAccountId: options.linkedDeveloperAccountId ?? null,
     sourceAttribution:
       options.sourceAttribution === undefined
         ? 'Official developer website, accessed for Property Listify catalogue curation.'
         : options.sourceAttribution,
-    profileType: 'industry_reference',
-    isVisible: 1,
-    isClaimable: options.isClaimable ?? 1,
+    identityType: 'developer',
+    isVisible: options.isVisible ?? true,
     createdBy,
   });
-  const brandProfileId = Number(result.insertId);
-  createdState.brandProfileIds.push(brandProfileId);
-  return brandProfileId;
+  const cataloguePublisherId = Number(publisher.id);
+  createdState.cataloguePublisherIds.push(cataloguePublisherId);
+  return cataloguePublisherId;
 }
 
 function canonicalUnitType(overrides: Record<string, unknown> = {}) {
@@ -151,7 +152,7 @@ function canonicalUnitType(overrides: Record<string, unknown> = {}) {
 
 async function insertDevelopment(
   actorUserId: number,
-  brandProfileId: number,
+  cataloguePublisherId: number,
   options: DevelopmentOptions = {},
 ) {
   const suffix = fixtureSuffix();
@@ -175,7 +176,7 @@ async function insertDevelopment(
       unitTypes: options.unitTypes ?? [canonicalUnitType()],
     } as any,
     {},
-    { brandProfileId },
+    { cataloguePublisherId },
   );
   const developmentId = Number(development.id);
   createdState.developmentIds.push(developmentId);
@@ -200,8 +201,7 @@ async function readPublicationState(developmentId: number): Promise<PublicationS
       approvalStatus: developments.approvalStatus,
       publishedAt: developments.publishedAt,
       rejectionNote: developments.rejectionNote,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      devOwnerType: developments.devOwnerType,
+      cataloguePublisherId: developments.cataloguePublisherId,
       transactionType: developments.transactionType,
     })
     .from(developments)
@@ -261,16 +261,25 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
-    const brandProfileIds = uniqueNumbers(createdState.brandProfileIds);
-    if (brandProfileIds.length) {
+    const cataloguePublisherIds = uniqueNumbers(createdState.cataloguePublisherIds);
+    if (cataloguePublisherIds.length) {
       await db
-        .delete(developerBrandProfiles)
-        .where(inArray(developerBrandProfiles.id, brandProfileIds));
+        .delete(cataloguePublishers)
+        .where(inArray(cataloguePublishers.id, cataloguePublisherIds));
     }
 
-    const developerIds = uniqueNumbers(createdState.developerIds);
-    if (developerIds.length) {
-      await db.delete(developers).where(inArray(developers.id, developerIds));
+    const membershipIds = uniqueNumbers(createdState.membershipIds);
+    if (membershipIds.length) {
+      await db
+        .delete(developerOrganisationMemberships)
+        .where(inArray(developerOrganisationMemberships.id, membershipIds));
+    }
+
+    const organisationIds = uniqueNumbers(createdState.organisationIds);
+    if (organisationIds.length) {
+      await db
+        .delete(developerOrganisations)
+        .where(inArray(developerOrganisations.id, organisationIds));
     }
 
     const userIds = uniqueNumbers(createdState.userIds);
@@ -279,16 +288,17 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     }
 
     createdState.userIds = [];
-    createdState.developerIds = [];
-    createdState.brandProfileIds = [];
+    createdState.organisationIds = [];
+    createdState.membershipIds = [];
+    createdState.cataloguePublisherIds = [];
     createdState.developmentIds = [];
     createdState.unitTypeIds = [];
   });
 
   it('publishes a valid platform-curated sale development with canonical attribution and state', async () => {
     const superAdminId = await insertUser('super_admin');
-    const brandProfileId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
 
     const db = await database();
     const persistedUnits = await db
@@ -298,18 +308,24 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     expect(persistedUnits.length).toBeGreaterThan(0);
     expect(persistedUnits.every(unit => Number(unit.developmentId) === developmentId)).toBe(true);
 
+    const publisher = await cataloguePublisherService.getPublisherById(cataloguePublisherId);
+    expect(publisher).toMatchObject({
+      id: cataloguePublisherId,
+      authorityKind: 'platform_reference',
+      developerOrganisationId: null,
+    });
+
     const published = await developmentService.publishPlatformCuratedDevelopment(
       developmentId,
       superAdminId,
-      { brandProfileId },
+      { cataloguePublisherId },
     );
 
     expect(published).toMatchObject({
       id: developmentId,
       isPublished: 1,
       approvalStatus: 'approved',
-      developerBrandProfileId: brandProfileId,
-      devOwnerType: 'platform',
+      cataloguePublisherId,
       transactionType: 'for_sale',
     });
     expect(published.publishedAt).toBeTruthy();
@@ -318,8 +334,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     expect(persisted).toMatchObject({
       isPublished: 1,
       approvalStatus: 'approved',
-      developerBrandProfileId: brandProfileId,
-      devOwnerType: 'platform',
+      cataloguePublisherId,
       transactionType: 'for_sale',
     });
     expect(persisted.publishedAt).toBeTruthy();
@@ -340,7 +355,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
 
     await expect(
       developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-        brandProfileId,
+        cataloguePublisherId,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
     const afterRetryHistory = await readApprovalHistory(developmentId);
@@ -349,11 +364,11 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
 
   it('takes a published curator development private before a successful update republish', async () => {
     const superAdminId = await insertUser('super_admin');
-    const brandProfileId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
 
     await developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-      brandProfileId,
+      cataloguePublisherId,
     });
 
     const editedName = 'Platform Publication Development — Updated Catalogue';
@@ -363,7 +378,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       developmentId,
       superAdminId,
       { name: editedName, description: editedDescription } as any,
-      { brandProfileId },
+      { cataloguePublisherId },
     );
 
     const privateState = await readPublicationState(developmentId);
@@ -373,7 +388,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       isPublished: 0,
       approvalStatus: 'draft',
       publishedAt: null,
-      developerBrandProfileId: brandProfileId,
+      cataloguePublisherId,
     });
 
     const beforeRepublishHistory = await readApprovalHistory(developmentId);
@@ -387,7 +402,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     const republished = await developmentService.publishPlatformCuratedDevelopment(
       developmentId,
       superAdminId,
-      { brandProfileId },
+      { cataloguePublisherId },
     );
 
     expect(republished).toMatchObject({
@@ -395,7 +410,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       description: editedDescription,
       isPublished: 1,
       approvalStatus: 'approved',
-      developerBrandProfileId: brandProfileId,
+      cataloguePublisherId,
     });
     expect(republished.publishedAt).toBeTruthy();
 
@@ -405,7 +420,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       description: editedDescription,
       isPublished: 1,
       approvalStatus: 'approved',
-      developerBrandProfileId: brandProfileId,
+      cataloguePublisherId,
     });
     expect(liveState.publishedAt).toBeTruthy();
 
@@ -423,7 +438,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
 
     await expect(
       developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-        brandProfileId,
+        cataloguePublisherId,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
     expect(await readApprovalHistory(developmentId)).toHaveLength(2);
@@ -431,18 +446,18 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
 
   it('keeps an edited curator development private when republish readiness fails', async () => {
     const superAdminId = await insertUser('super_admin');
-    const brandProfileId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
 
     await developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-      brandProfileId,
+      cataloguePublisherId,
     });
 
     await developmentService.updateDevelopment(
       developmentId,
       superAdminId,
       { description: '' } as any,
-      { brandProfileId },
+      { cataloguePublisherId },
     );
 
     const privateState = await readPublicationState(developmentId);
@@ -451,12 +466,12 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       isPublished: 0,
       approvalStatus: 'draft',
       publishedAt: null,
-      developerBrandProfileId: brandProfileId,
+      cataloguePublisherId,
     });
 
     await expect(
       developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-        brandProfileId,
+        cataloguePublisherId,
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
@@ -466,7 +481,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       isPublished: 0,
       approvalStatus: 'draft',
       publishedAt: null,
-      developerBrandProfileId: brandProfileId,
+      cataloguePublisherId,
     });
 
     const history = await readApprovalHistory(developmentId);
@@ -482,99 +497,96 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
   it('rejects an ordinary persisted developer actor at the service boundary', async () => {
     const superAdminId = await insertUser('super_admin');
     const ordinaryUserId = await insertUser('property_developer');
-    await insertDeveloperProfile(ordinaryUserId);
-    const brandProfileId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
+    await insertDeveloperIdentity(ordinaryUserId);
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
 
     await expectRejectedWithoutMutation(
       developmentId,
       () =>
         developmentService.publishPlatformCuratedDevelopment(developmentId, ordinaryUserId, {
-          brandProfileId,
+          cataloguePublisherId,
         }),
       'FORBIDDEN',
     );
   });
 
-  it('rejects a developer-owned brand even for a valid super-admin actor', async () => {
+  it('rejects a first-party publisher even for a valid super-admin actor', async () => {
     const superAdminId = await insertUser('super_admin');
     const developerUserId = await insertUser('property_developer');
-    const developerId = await insertDeveloperProfile(developerUserId);
-    const brandProfileId = await insertBrand(superAdminId, {
-      ownerType: 'developer',
-      linkedDeveloperAccountId: developerId,
-      isClaimable: 0,
+    const developerIdentity = await insertDeveloperIdentity(developerUserId);
+    const developmentId = await insertDevelopment(
+      developerUserId,
+      developerIdentity.publisherId,
+    );
+
+    await expectRejectedWithoutMutation(
+      developmentId,
+      () =>
+        developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+          cataloguePublisherId: developerIdentity.publisherId,
+        }),
+      'FORBIDDEN',
+    );
+  });
+
+  it('rejects a hidden platform-reference publisher without converting its authority', async () => {
+    const superAdminId = await insertUser('super_admin');
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
+    await cataloguePublisherService.toggleVisibility(cataloguePublisherId, false);
+
+    await expectRejectedWithoutMutation(
+      developmentId,
+      () =>
+        developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+          cataloguePublisherId,
+        }),
+      'FORBIDDEN',
+    );
+
+    const publisher = await cataloguePublisherService.getPublisherById(cataloguePublisherId);
+    expect(publisher).toMatchObject({
+      authorityKind: 'platform_reference',
+      developerOrganisationId: null,
+      isVisible: 0,
     });
-    const developmentId = await insertDevelopment(developerUserId, brandProfileId);
-
-    await expectRejectedWithoutMutation(
-      developmentId,
-      () =>
-        developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-          brandProfileId,
-        }),
-      'FORBIDDEN',
-    );
   });
 
-  it('rejects a platform brand after it becomes claimed', async () => {
+  it('rejects a development that belongs to a different publisher context', async () => {
     const superAdminId = await insertUser('super_admin');
-    const claimantUserId = await insertUser('property_developer');
-    const claimantDeveloperId = await insertDeveloperProfile(claimantUserId);
-    const brandProfileId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
-    const db = await database();
-
-    await db
-      .update(developerBrandProfiles)
-      .set({ isClaimable: 0, linkedDeveloperAccountId: claimantDeveloperId })
-      .where(eq(developerBrandProfiles.id, brandProfileId));
+    const contextPublisherId = await insertPlatformPublisher(superAdminId);
+    const owningPublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, owningPublisherId);
 
     await expectRejectedWithoutMutation(
       developmentId,
       () =>
         developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-          brandProfileId,
-        }),
-      'FORBIDDEN',
-    );
-  });
-
-  it('rejects a development that belongs to a different brand context', async () => {
-    const superAdminId = await insertUser('super_admin');
-    const contextBrandId = await insertBrand(superAdminId);
-    const owningBrandId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, owningBrandId);
-
-    await expectRejectedWithoutMutation(
-      developmentId,
-      () =>
-        developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-          brandProfileId: contextBrandId,
+          cataloguePublisherId: contextPublisherId,
         }),
       'NOT_FOUND',
     );
   });
 
-  it('rejects platform publication when the brand has no source attribution', async () => {
+  it('rejects a platform-reference publisher without source attribution before publication', async () => {
     const superAdminId = await insertUser('super_admin');
-    const brandProfileId = await insertBrand(superAdminId, { sourceAttribution: null });
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId);
+    const suffix = fixtureSuffix();
 
-    await expectRejectedWithoutMutation(
-      developmentId,
-      () =>
-        developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-          brandProfileId,
-        }),
-      'PRECONDITION_FAILED',
-    );
+    await expect(
+      cataloguePublisherService.createPlatformReferencePublisher({
+        brandName: `Invalid Platform Publisher ${suffix}`,
+        slug: `invalid-platform-publisher-${suffix}`,
+        sourceAttribution: null,
+        createdBy: superAdminId,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
   it('rejects platform publication when persisted readiness fails', async () => {
     const superAdminId = await insertUser('super_admin');
-    const brandProfileId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId, {
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId, {
       description: '',
     });
 
@@ -582,7 +594,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       developmentId,
       () =>
         developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-          brandProfileId,
+          cataloguePublisherId,
         }),
       'BAD_REQUEST',
     );
@@ -590,8 +602,8 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
 
   it('rejects auction publication while preserving the private catalogue state', async () => {
     const superAdminId = await insertUser('super_admin');
-    const brandProfileId = await insertBrand(superAdminId);
-    const developmentId = await insertDevelopment(superAdminId, brandProfileId, {
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId, {
       transactionType: 'auction',
       unitTypes: [
         canonicalUnitType({
@@ -607,7 +619,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       developmentId,
       () =>
         developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
-          brandProfileId,
+          cataloguePublisherId,
         }),
       'PRECONDITION_FAILED',
     );

@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 
 import { getDb } from '../db-connection';
-import { developers, developments, unitTypes, users } from '../../drizzle/schema';
+import { developments, unitTypes, users } from '../../drizzle/schema';
 import { calculateKPIs } from '../services/kpiService';
+import {
+  createDeveloperTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../test-utils/developerTestContext';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
@@ -14,7 +19,7 @@ const describeWithDb: typeof describe = hasDb
 
 const created = {
   userIds: [] as number[],
-  developerIds: [] as number[],
+  developerContexts: [] as DeveloperTestContext[],
   developmentIds: [] as number[],
   unitTypeIds: [] as string[],
 };
@@ -40,15 +45,15 @@ describeWithDb('Developer KPI canonical unitTypes authority', () => {
     if (created.developmentIds.length) {
       await db.delete(developments).where(inArray(developments.id, created.developmentIds));
     }
-    if (created.developerIds.length) {
-      await db.delete(developers).where(inArray(developers.id, created.developerIds));
+    for (const context of created.developerContexts) {
+      await deleteDeveloperTestContext(context);
     }
     if (created.userIds.length) {
       await db.delete(users).where(inArray(users.id, created.userIds));
     }
 
     created.userIds = [];
-    created.developerIds = [];
+    created.developerContexts = [];
     created.developmentIds = [];
     created.unitTypeIds = [];
   });
@@ -69,19 +74,15 @@ describeWithDb('Developer KPI canonical unitTypes authority', () => {
     const userId = Number(userResult.insertId);
     created.userIds.push(userId);
 
-    const [developerResult] = await db.insert(developers).values({
+    const developerContext = await createDeveloperTestContext({
       userId,
       name: `KPI Developer ${suffix}`,
       email: `developer-profile-${suffix}@example.com`,
-      category: 'residential',
-      status: 'approved',
-      isVerified: 1,
     });
-    const developerId = Number(developerResult.insertId);
-    created.developerIds.push(developerId);
+    created.developerContexts.push(developerContext);
 
     const [developmentResult] = await db.insert(developments).values({
-      developerId,
+      cataloguePublisherId: developerContext.cataloguePublisherId,
       name: `KPI Development ${suffix}`,
       developmentType: 'residential',
       city: 'Johannesburg',
@@ -122,7 +123,7 @@ describeWithDb('Developer KPI canonical unitTypes authority', () => {
     ]);
     created.unitTypeIds.push(activeUnitId, inactiveUnitId);
 
-    const kpis = await calculateKPIs(developerId, '30d');
+    const kpis = await calculateKPIs(developerContext.cataloguePublisherId, '30d');
 
     // The active row contributes 4 available and 5 sold (10 - 4 - 1).
     // The inactive row would add 90 available and 10 sold if it were treated

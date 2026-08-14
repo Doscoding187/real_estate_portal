@@ -8,7 +8,7 @@ const itemFixture: ProgramTermsItem = {
   city: 'Johannesburg',
   province: 'Gauteng',
   brand: {
-    brandProfileId: 17,
+    cataloguePublisherId: 17,
     brandName: 'Cosmopolitan Projects',
   },
   program: {

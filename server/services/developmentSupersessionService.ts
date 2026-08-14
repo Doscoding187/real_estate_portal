@@ -1,8 +1,9 @@
 import { and, eq, inArray, or } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import {
-  developerBrandProfiles,
-  developers,
+  cataloguePublishers,
+  developerOrganisationMemberships,
+  developerOrganisations,
   developmentSupersessions,
   developments,
   unitTypes,
@@ -10,6 +11,7 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import {
+  publishPlatformCuratedDevelopmentInTransaction,
   publishDeveloperOwnedDevelopmentInTransaction,
   unpublishDevelopmentInTransaction,
 } from './developmentService';
@@ -108,37 +110,30 @@ async function lockAllRelationshipsForEndpoints(
 }
 
 async function assertPlatformCuratedSource(tx: any, development: any) {
-  if (development.devOwnerType !== 'platform' || development.developerId !== null) {
+  if (!development.cataloguePublisherId) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Source development must remain platform-curated with no developer owner.',
     });
   }
 
-  if (!development.developerBrandProfileId) {
-    throw new TRPCError({
-      code: 'PRECONDITION_FAILED',
-      message: 'Platform-curated source must have a platform brand profile.',
-    });
-  }
-
   const [brand] = await tx
     .select({
-      id: developerBrandProfiles.id,
-      ownerType: developerBrandProfiles.ownerType,
-      linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
-      isVisible: developerBrandProfiles.isVisible,
-      sourceAttribution: developerBrandProfiles.sourceAttribution,
+      id: cataloguePublishers.id,
+      authorityKind: cataloguePublishers.authorityKind,
+      developerOrganisationId: cataloguePublishers.developerOrganisationId,
+      isVisible: cataloguePublishers.isVisible,
+      sourceAttribution: cataloguePublishers.sourceAttribution,
     })
-    .from(developerBrandProfiles)
-    .where(eq(developerBrandProfiles.id, development.developerBrandProfileId))
+    .from(cataloguePublishers)
+    .where(eq(cataloguePublishers.id, development.cataloguePublisherId))
     .limit(1)
     .for('update');
 
   if (
     !brand ||
-    brand.ownerType !== 'platform' ||
-    brand.linkedDeveloperAccountId !== null ||
+    brand.authorityKind !== 'platform_reference' ||
+    brand.developerOrganisationId !== null ||
     Number(brand.isVisible) !== 1 ||
     !String(brand.sourceAttribution ?? '').trim()
   ) {
@@ -150,63 +145,57 @@ async function assertPlatformCuratedSource(tx: any, development: any) {
 }
 
 async function assertDeveloperOwnedReplacement(tx: any, development: any) {
-  if (development.devOwnerType !== 'developer' || development.developerId === null) {
+  if (!development.cataloguePublisherId) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Replacement development must be developer-owned.',
     });
   }
 
-  const [developer] = await tx
-    .select({ id: developers.id, userId: developers.userId, status: developers.status })
-    .from(developers)
-    .where(eq(developers.id, development.developerId))
+  const [publisher] = await tx
+    .select({
+      id: cataloguePublishers.id,
+      developerOrganisationId: cataloguePublishers.developerOrganisationId,
+    })
+    .from(cataloguePublishers)
+    .innerJoin(
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+    )
+    .where(
+      and(
+        eq(cataloguePublishers.id, development.cataloguePublisherId),
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+        eq(developerOrganisations.status, 'approved'),
+      ),
+    )
     .limit(1)
     .for('update');
-  if (!developer || developer.status !== 'approved') {
+  if (!publisher) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Replacement developer account is not approved.',
     });
   }
 
-  const [account] = await tx
+  const [membership] = await tx
     .select({ id: users.id, role: users.role })
-    .from(users)
-    .where(eq(users.id, developer.userId))
+    .from(developerOrganisationMemberships)
+    .innerJoin(users, eq(developerOrganisationMemberships.userId, users.id))
+    .where(
+      and(
+        eq(developerOrganisationMemberships.organisationId, publisher.developerOrganisationId),
+        eq(developerOrganisationMemberships.role, 'owner'),
+        eq(developerOrganisationMemberships.status, 'active'),
+      ),
+    )
     .limit(1)
     .for('update');
-  if (!account || account.role !== DEVELOPER_ROLE) {
+  if (!membership || membership.role !== DEVELOPER_ROLE) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: 'Replacement developer account authority is invalid.',
     });
-  }
-
-  if (development.developerBrandProfileId !== null) {
-    const [brand] = await tx
-      .select({
-        id: developerBrandProfiles.id,
-        ownerType: developerBrandProfiles.ownerType,
-        linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
-        isVisible: developerBrandProfiles.isVisible,
-      })
-      .from(developerBrandProfiles)
-      .where(eq(developerBrandProfiles.id, development.developerBrandProfileId))
-      .limit(1)
-      .for('update');
-
-    if (
-      !brand ||
-      brand.ownerType !== 'developer' ||
-      Number(brand.linkedDeveloperAccountId) !== Number(development.developerId) ||
-      Number(brand.isVisible) !== 1
-    ) {
-      throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: 'Replacement developer brand custody is invalid.',
-      });
-    }
   }
 }
 
@@ -251,11 +240,6 @@ async function assertCanonicalPublic(tx: any, developmentId: number, label: stri
   const [row] = await tx
     .select({ id: developments.id })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
-    .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
-    )
     .where(and(eq(developments.id, developmentId), publicDevelopmentEligibilityConditions()))
     .limit(1);
   if (!row) conflict(`${label} is not currently canonical-public.`);
@@ -265,11 +249,6 @@ async function assertFinalCutoverPublicState(tx: any, sourceId: number, replacem
   const [source] = await tx
     .select({ id: developments.id })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
-    .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
-    )
     .where(and(eq(developments.id, sourceId), publicDevelopmentEligibilityConditions()))
     .limit(1);
   if (source) conflict('Source development remained canonical-public after cutover.');
@@ -277,11 +256,6 @@ async function assertFinalCutoverPublicState(tx: any, sourceId: number, replacem
   const [replacement] = await tx
     .select({ id: developments.id })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
-    .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
-    )
     .where(and(eq(developments.id, replacementId), publicDevelopmentEligibilityConditions()))
     .limit(1);
   if (!replacement) conflict('Replacement development did not become canonical-public.');
@@ -523,7 +497,7 @@ export async function reverseDevelopmentSupersession(input: {
       .limit(1);
     if (!identity) throw new TRPCError({ code: 'NOT_FOUND', message: 'Supersession not found.' });
 
-    const { source } = await lockEndpointPair(
+    const { source, replacement } = await lockEndpointPair(
       tx,
       identity.sourceDevelopmentId,
       identity.replacementDevelopmentId,
@@ -548,10 +522,7 @@ export async function reverseDevelopmentSupersession(input: {
 
     const reversalReason = boundedNote(input.reversalReason, 'reversalReason');
 
-    if (relationship.status === 'active' && Number(source.isPublished) === 1) {
-      await unpublishDevelopmentInTransaction(tx, source.id);
-    }
-
+    const wasActive = relationship.status === 'active';
     const now = nowAsMysqlDateTime();
     const updateResult = await tx
       .update(developmentSupersessions)
@@ -570,6 +541,29 @@ export async function reverseDevelopmentSupersession(input: {
       );
     const affectedRows = Number(updateResult?.affectedRows ?? updateResult?.[0]?.affectedRows ?? 0);
     if (affectedRows !== 1) conflict('Supersession changed before reversal completed.');
+
+    if (wasActive) {
+      await assertPlatformCuratedSource(tx, source);
+      await assertDeveloperOwnedReplacement(tx, replacement);
+      await unpublishDevelopmentInTransaction(tx, replacement.id);
+      await publishPlatformCuratedDevelopmentInTransaction(tx, source.id, input.actorUserId, {
+        cataloguePublisherId: Number(source.cataloguePublisherId),
+      });
+
+      const [restoredSource] = await tx
+        .select({ id: developments.id })
+        .from(developments)
+        .where(and(eq(developments.id, source.id), publicDevelopmentEligibilityConditions()))
+        .limit(1);
+      const [withdrawnReplacement] = await tx
+        .select({ id: developments.id })
+        .from(developments)
+        .where(and(eq(developments.id, replacement.id), publicDevelopmentEligibilityConditions()))
+        .limit(1);
+      if (!restoredSource || withdrawnReplacement) {
+        conflict('Supersession reversal did not restore exactly one canonical public development.');
+      }
+    }
 
     const [reversed] = await tx
       .select()

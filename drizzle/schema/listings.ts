@@ -23,6 +23,7 @@ import { users } from './core';
 import { agents, agencies } from './agencies';
 import { locations, cities, provinces, suburbs } from './locations';
 import { developments, developerBrandProfiles } from './developments';
+import { cataloguePublishers } from './developerIdentity';
 
 export const listings = mysqlTable(
   'listings',
@@ -362,6 +363,10 @@ export const properties = mysqlTable(
     publicLocationPrecision: mysqlEnum('public_location_precision', ['approximate', 'exact'])
       .default('approximate')
       .notNull(),
+    cataloguePublisherId: int('catalogue_publisher_id').references(
+      () => cataloguePublishers.id,
+      { onDelete: 'set null' },
+    ),
   },
   table => [
     index('price_idx').on(table.price),

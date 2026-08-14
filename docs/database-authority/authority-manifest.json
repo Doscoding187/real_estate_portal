@@ -41,6 +41,8 @@
     "db:worktree:create",
     "db:migrate:plan",
     "db:migrate:apply",
+    "db:migration-recovery:plan",
+    "db:migration-recovery:apply",
     "db:readiness",
     "db:schema:congruency",
     "db:local:start",

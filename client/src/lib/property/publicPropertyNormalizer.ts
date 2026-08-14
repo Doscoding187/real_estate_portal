@@ -1727,7 +1727,7 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
   );
   const id = String(property.id ?? property.propertyId ?? '');
   const propertyId = parsePositiveNumber(property.propertyId ?? property.id);
-  const developerBrand = property.developerBrand || property.developerBrandProfile;
+  const developerBrand = property.developerBrand;
   const agent = property.agent || property.user;
   const contactRole: SearchCardIdentity['role'] = developerBrand
     ? 'developer'
@@ -1795,8 +1795,8 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
       email: developerBrand?.publicContactEmail || agent?.email || null,
       agentId: parsePositiveNumber(property.agentId ?? agent?.id),
       agencyId: parsePositiveNumber(property.agencyId ?? agent?.agencyId),
-      developerBrandProfileId: parsePositiveNumber(
-        property.developerBrandProfileId ?? developerBrand?.id,
+      cataloguePublisherId: parsePositiveNumber(
+        property.cataloguePublisherId ?? developerBrand?.id,
       ),
     },
     development: property.development

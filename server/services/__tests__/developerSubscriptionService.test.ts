@@ -46,12 +46,15 @@ describe('DeveloperSubscriptionService canonical authority contract', () => {
   it('retains usage metering without allowing the meter anchor to grant access', () => {
     const service = readRepoFile('server/services/developerSubscriptionService.ts');
 
-    expect(service).toContain('developerSubscriptionUsage');
+    expect(service).toContain('DeveloperSubscriptionUsage');
+    expect(service).toContain('organisation-owned facts');
+    expect(service).toContain('developerOrganisationMemberships');
+    expect(service).toContain('cataloguePublisherId');
     expect(service).toContain('subscription.commercial.entitled &&');
     expect(service).toContain('developmentPortfolioUnlimited');
-    expect(service).toContain('its tier/status/limits are never read as authority');
     expect(service).toContain('Legacy developer tier updates are retired');
     expect(service).not.toContain('.update(developerSubscriptions)');
+    expect(service).not.toContain('developerSubscriptionUsage');
   });
 
   it('reads trial expiry without mutating the legacy developer row', () => {

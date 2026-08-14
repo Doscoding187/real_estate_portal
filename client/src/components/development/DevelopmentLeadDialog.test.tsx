@@ -45,7 +45,7 @@ describe('DevelopmentLeadDialog', () => {
         development={{
           id: 77,
           name: 'Cosmopolitan Projects',
-          developerBrandProfileId: 13,
+          cataloguePublisherId: 13,
         }}
         unitContext={{
           unitId: 'unit-1',
@@ -84,7 +84,7 @@ describe('DevelopmentLeadDialog', () => {
     expect(mutateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         developmentId: 77,
-        developerBrandProfileId: 13,
+        cataloguePublisherId: 13,
         unitId: 'unit-1',
         unitName: 'Type A',
         unitPriceFrom: 1299000,

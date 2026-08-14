@@ -749,7 +749,6 @@ export default function DevelopmentDetail() {
   console.log('[DevelopmentDetail] dev =', dev);
   console.log('[DevelopmentDetail] dev.developer =', dev?.developer);
   console.log('[DevelopmentDetail] dev.publisher =', (dev as any)?.publisher);
-  console.log('[DevelopmentDetail] dev.brandProfile =', (dev as any)?.brandProfile);
 
   // Fetch other developments from same developer
   const { data: allDevelopments } = trpc.developer.listPublicDevelopments.useQuery(
@@ -1064,11 +1063,9 @@ export default function DevelopmentDetail() {
     : null;
   const sales = salesFromApi ?? fallbackSales;
 
-  // ✅ Prefer publisher / brand profile over legacy developer
+  // The governed Catalogue Publisher projection owns the public identity.
   const publisher =
     (dev as any).publisher ||
-    (dev as any).brandProfile ||
-    (dev as any).developerBrandProfile ||
     null;
 
   // ... (Update development object)
@@ -1267,10 +1264,10 @@ export default function DevelopmentDetail() {
   const relatedPublicDevelopments = ((allDevelopments || []) as any[]).filter((entry: any) => {
     if (!entry || Number(entry.id) === Number(dev.id)) return false;
 
-    const entryBrandId = Number(entry.developerBrandProfileId || entry.brandProfileId || 0);
+    const entryBrandId = Number(entry.cataloguePublisherId || 0);
     if (
-      (dev as any).developerBrandProfileId &&
-      entryBrandId === Number((dev as any).developerBrandProfileId)
+      (dev as any).cataloguePublisherId &&
+      entryBrandId === Number((dev as any).cataloguePublisherId)
     ) {
       return true;
     }
@@ -2127,7 +2124,7 @@ export default function DevelopmentDetail() {
         development={{
           id: development.id,
           name: development.name,
-          developerBrandProfileId: (dev as any).developerBrandProfileId ?? publisher?.id ?? null,
+          cataloguePublisherId: (dev as any).cataloguePublisherId ?? publisher?.id ?? null,
           brochureUrl,
         }}
         unitContext={

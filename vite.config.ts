@@ -2,9 +2,45 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+import {
+  probeDevelopmentSupersession,
+  publicApiOrigin,
+} from './shared/developmentSupersessionRouting';
 
-const plugins = [react(), tailwindcss()];
+function developmentSupersessionDevMiddleware(): Plugin {
+  return {
+    name: 'property-listify-development-supersession',
+    configureServer(server) {
+      server.middlewares.use(async (request, response, nextMiddleware) => {
+        if (
+          (request.method !== 'GET' && request.method !== 'HEAD') ||
+          !request.url?.startsWith('/development/')
+        ) {
+          return nextMiddleware();
+        }
+
+        const requestUrl = new URL(request.url, 'http://localhost:3009');
+        const target = await probeDevelopmentSupersession({
+          requestUrl,
+          apiOrigin: publicApiOrigin({
+            ...process.env,
+            VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:5000',
+          }),
+          signal: AbortSignal.timeout(2_000),
+        });
+        if (!target) return nextMiddleware();
+
+        response.statusCode = 307;
+        response.setHeader('Location', target);
+        response.setHeader('Cache-Control', 'no-store');
+        response.end();
+      });
+    },
+  };
+}
+
+const plugins = [developmentSupersessionDevMiddleware(), react(), tailwindcss()];
 const buildGitSha =
   process.env.VERCEL_GIT_COMMIT_SHA ||
   process.env.GITHUB_SHA ||

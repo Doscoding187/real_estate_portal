@@ -52,7 +52,7 @@ describe('distributionBrandOnboardingPresetService', () => {
     await expect(
       setBrandOnboardingPreset({
         db: db as any,
-        brandProfileId: 44,
+        cataloguePublisherId: 44,
         actorUserId: 1,
         preset: {
           commissionModel: 'flat_percentage',

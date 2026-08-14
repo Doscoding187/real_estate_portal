@@ -13,18 +13,23 @@ vi.mock('../services/propertySearchService', () => ({
 
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
-import { developmentApprovalQueue, developers, developments, users } from '../../drizzle/schema';
+import { developmentApprovalQueue, developments, users } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
+import {
+  createDeveloperTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../test-utils/developerTestContext';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL)`, fn)) as typeof describe);
 
 describeWithDb('Development Card Data Flow Integration', () => {
   let createdDevelopmentId: number | null = null;
-  let createdDeveloperId: number | null = null;
+  let developerContext: DeveloperTestContext | null = null;
   let createdUserId: number | null = null;
   let createdReviewerUserId: number | null = null;
 
@@ -52,9 +57,9 @@ describeWithDb('Development Card Data Flow Integration', () => {
       createdDevelopmentId = null;
     }
 
-    if (createdDeveloperId) {
-      await db.delete(developers).where(eq(developers.id, createdDeveloperId));
-      createdDeveloperId = null;
+    if (developerContext) {
+      await deleteDeveloperTestContext(developerContext);
+      developerContext = null;
     }
 
     if (createdReviewerUserId) {
@@ -101,15 +106,11 @@ describeWithDb('Development Card Data Flow Integration', () => {
     const reviewerUserId = Number(reviewerInsertResult[0].insertId);
     createdReviewerUserId = reviewerUserId;
 
-    const insertResult = await db!.insert(developers).values({
+    developerContext = await createDeveloperTestContext({
       userId: testUserId,
       name: builderName,
       email: `card-flow-${suffix}@example.com`,
-      category: 'residential',
-      status: 'approved',
-      isVerified: 1,
     });
-    createdDeveloperId = Number(insertResult[0].insertId);
 
     const createdDevelopment = await developmentService.createDevelopment(testUserId, {
       name: developmentName,
@@ -203,15 +204,11 @@ describeWithDb('Development Card Data Flow Integration', () => {
     const testUserId = Number(userInsertResult[0].insertId);
     createdUserId = testUserId;
 
-    const insertResult = await db!.insert(developers).values({
+    developerContext = await createDeveloperTestContext({
       userId: testUserId,
       name: `No Description Builder ${suffix}`,
       email: `no-description-${suffix}@example.com`,
-      category: 'residential',
-      status: 'approved',
-      isVerified: 1,
     });
-    createdDeveloperId = Number(insertResult[0].insertId);
 
     const createdDevelopment = await developmentService.createDevelopment(testUserId, {
       name: `No Description Development ${suffix}`,

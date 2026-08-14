@@ -3,13 +3,12 @@ import { eq } from 'drizzle-orm';
 
 import { developerRouter } from '../developerRouter';
 import { getDb } from '../db-connection';
+import { developerOrganisations, developments, unitTypes, users } from '../../drizzle/schema';
 import {
-  developerBrandProfiles,
-  developers,
-  developments,
-  unitTypes,
-  users,
-} from '../../drizzle/schema';
+  createDeveloperTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../test-utils/developerTestContext';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
@@ -18,24 +17,22 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
 
 describeWithDb('developer public profile integration', () => {
   let userId: number | null = null;
-  let developerId: number | null = null;
-  let brandProfileId: number | null = null;
+  let developerContext: DeveloperTestContext | null = null;
   const developmentIds: number[] = [];
+  const unitTypeIds: string[] = [];
 
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
 
     for (const id of developmentIds.splice(0)) {
+      await db.delete(unitTypes).where(eq(unitTypes.developmentId, id));
       await db.delete(developments).where(eq(developments.id, id));
     }
-    if (brandProfileId) {
-      await db.delete(developerBrandProfiles).where(eq(developerBrandProfiles.id, brandProfileId));
-      brandProfileId = null;
-    }
-    if (developerId) {
-      await db.delete(developers).where(eq(developers.id, developerId));
-      developerId = null;
+    unitTypeIds.length = 0;
+    if (developerContext) {
+      await deleteDeveloperTestContext(developerContext);
+      developerContext = null;
     }
     if (userId) {
       await db.delete(users).where(eq(users.id, userId));
@@ -43,7 +40,7 @@ describeWithDb('developer public profile integration', () => {
     }
   });
 
-  it('exposes only approved published developments for an approved public brand', async () => {
+  it('exposes only approved published developments for an approved public publisher', async () => {
     const db = await getDb();
     expect(db).toBeTruthy();
     const suffix = Date.now();
@@ -56,33 +53,17 @@ describeWithDb('developer public profile integration', () => {
     });
     userId = Number(userInsert.insertId);
 
-    const [developerInsert] = await db!.insert(developers).values({
+    developerContext = await createDeveloperTestContext({
       userId,
       name: `Public Brand Developer ${suffix}`,
       email: `public-brand-${suffix}@example.com`,
-      category: 'residential',
-      status: 'approved',
-      isVerified: 1,
-      isTrusted: 1,
-    });
-    developerId = Number(developerInsert.insertId);
-
-    const slug = `public-brand-${suffix}`;
-    const [brandInsert] = await db!.insert(developerBrandProfiles).values({
-      brandName: `Public Brand ${suffix}`,
-      slug,
-      isVisible: 1,
-      isClaimable: 0,
-      isContactVerified: 1,
-      ownerType: 'developer',
-      linkedDeveloperAccountId: developerId,
+      isTrusted: true,
       publicContactEmail: `sales-${suffix}@example.com`,
     });
-    brandProfileId = Number(brandInsert.insertId);
+    const slug = developerContext.publisher.slug;
 
     const [publishedInsert] = await db!.insert(developments).values({
-      developerId,
-      developerBrandProfileId: brandProfileId,
+      cataloguePublisherId: developerContext.cataloguePublisherId,
       name: `Published Development ${suffix}`,
       slug: `published-development-${suffix}`,
       developmentType: 'residential',
@@ -94,8 +75,9 @@ describeWithDb('developer public profile integration', () => {
       approvalStatus: 'approved',
     });
     developmentIds.push(Number(publishedInsert.insertId));
+    const unitTypeId = `public-unit-${suffix}`;
     await db!.insert(unitTypes).values({
-      id: `public-unit-${suffix}`,
+      id: unitTypeId,
       developmentId: Number(publishedInsert.insertId),
       name: 'Two Bedroom Apartment',
       bedrooms: 2,
@@ -105,10 +87,10 @@ describeWithDb('developer public profile integration', () => {
       availableUnits: 8,
       isActive: 1,
     });
+    unitTypeIds.push(unitTypeId);
 
     const [draftInsert] = await db!.insert(developments).values({
-      developerId,
-      developerBrandProfileId: brandProfileId,
+      cataloguePublisherId: developerContext.cataloguePublisherId,
       name: `Private Draft ${suffix}`,
       slug: `private-draft-${suffix}`,
       developmentType: 'residential',
@@ -127,19 +109,26 @@ describeWithDb('developer public profile integration', () => {
       user: null,
     } as any);
     await expect(caller.getPublicDeveloperBySlug({ slug })).resolves.toMatchObject({
-      id: brandProfileId,
-      name: `Public Brand ${suffix}`,
+      id: developerContext.cataloguePublisherId,
+      cataloguePublisherId: developerContext.cataloguePublisherId,
+      authorityKind: 'developer_first_party',
+      name: `Public Brand Developer ${suffix}`,
       isClaimable: false,
       stats: { isVerified: true, isTrusted: true },
     });
 
     await expect(
-      caller.getPublicDevelopmentsForProfile({ profileType: 'brand', profileId: brandProfileId! }),
+      caller.getPublicDevelopmentsForPublisher({
+        cataloguePublisherId: developerContext.cataloguePublisherId,
+      }),
     ).resolves.toEqual([
       expect.objectContaining({ id: developmentIds[0], slug: `published-development-${suffix}` }),
     ]);
 
-    await db!.update(developers).set({ status: 'rejected' }).where(eq(developers.id, developerId));
+    await db!
+      .update(developerOrganisations)
+      .set({ status: 'rejected', rejectionReason: 'Rejected by integration test' })
+      .where(eq(developerOrganisations.id, developerContext.organisationId));
 
     await expect(caller.getPublicDeveloperBySlug({ slug })).resolves.toBeNull();
   });

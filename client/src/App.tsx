@@ -120,7 +120,7 @@ const DeveloperRouteBoundary = lazy(() =>
 );
 // Import MyDrafts removed to prevent circular dependency with DeveloperLayout's lazy load
 const DeveloperDirectoryPage = lazy(() => import('./pages/DeveloperDirectoryPage'));
-const DeveloperBrandProfilePage = lazy(() => import('./pages/DeveloperBrandProfilePage'));
+const DeveloperPublisherPage = lazy(() => import('./pages/DeveloperPublisherPage'));
 
 // Import Comparison Page
 const CompareProperties = lazy(() => import('./pages/CompareProperties'));
@@ -226,8 +226,8 @@ function Router() {
 
           {/* Developer Brand Directory (public) */}
           <Route path="/developers" component={DeveloperDirectoryPage} />
-          {/* Developer Brand Profile Page (public) - MUST be after all /developer/* routes */}
-          <Route path="/developer/:slug" component={DeveloperBrandProfilePage} />
+          {/* Governed public publisher projection - MUST be after all /developer/* routes */}
+          <Route path="/developer/:slug" component={DeveloperPublisherPage} />
 
           {/* ============================================================== */}
           {/* 1B. PUBLIC AND LEGACY PRODUCT ROUTES                           */}

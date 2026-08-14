@@ -9,8 +9,8 @@ import '@/styles/animations.css';
 const PublisherMetrics: React.FC = () => {
   const { selectedBrandId } = useDeveloperContext();
 
-  const { data: metrics, isLoading } = trpc.superAdminPublisher.getBrandMetrics.useQuery(
-    { brandProfileId: selectedBrandId! },
+  const { data: metrics, isLoading } = trpc.superAdminPublisher.getPublisherMetrics.useQuery(
+    { cataloguePublisherId: selectedBrandId! },
     { enabled: !!selectedBrandId },
   );
 
@@ -34,7 +34,7 @@ const PublisherMetrics: React.FC = () => {
           Brand Performance
         </h3>
         <p className="text-muted-foreground">
-          Track key metrics and performance indicators for this brand profile
+          Track key metrics and performance indicators for this Catalogue Publisher
         </p>
       </div>
 

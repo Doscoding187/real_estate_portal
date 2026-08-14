@@ -1,18 +1,14 @@
 /**
- * Developer Engine operating-identity authority.
+ * Server-owned Developer Engine operating identity.
  *
- * A browser may request an operating brand, but it never supplies authority.
- * Every returned identity is resolved from the authenticated user and a
- * fresh database-backed ownership/context check.
+ * Browser supplied publisher/context IDs are selectors only. Authority comes
+ * from the authenticated user's active organisation membership or a
+ * separately verified platform-reference publisher.
  */
-
 import { TRPCError } from '@trpc/server';
-import type { EnhancedTRPCContext } from './brandContext';
+import type { EnhancedTRPCContext } from './publisherContext';
 import { getDeveloperByUserId } from '../services/developerService';
-import { brandContextService } from '../services/brandContextService';
-import { getDb } from '../db-connection';
-import { developerBrandProfiles } from '../../drizzle/schema';
-import { and, eq } from 'drizzle-orm';
+import { cataloguePublisherContextService } from '../services/cataloguePublisherContextService';
 
 export type DeveloperEngineOperatingMode = 'developer' | 'platform_curator';
 
@@ -20,76 +16,54 @@ export type ResolvedIdentity =
   | {
       mode: 'developer';
       actor: { userId: number; role: 'property_developer' };
+      /** Organisation ID. Kept under the historical name only at this boundary. */
       developerId: number;
-      /**
-       * A developer profile can exist before its public brand is linked.
-       * Developer-scoped authoring remains valid in that onboarding state;
-       * a requested brand still has to pass the ownership check below.
-       */
-      brandProfileId: number | null;
-      ownerType: 'developer';
+      organisationId: number;
+      cataloguePublisherId: number;
     }
   | {
       mode: 'platform_curator';
       actor: { userId: number; role: 'super_admin' };
-      brandProfileId: number;
-      brandName: string;
-      identityType: 'developer' | 'marketing_agency' | 'hybrid';
-      ownerType: 'platform';
+      cataloguePublisherId: number;
+      publisherName: string;
+      publisherType: 'developer' | 'marketing_agency' | 'hybrid';
     };
 
 export type OperatingIdentityOptions = {
   mode?: DeveloperEngineOperatingMode;
-  brandProfileId?: number | null;
+  cataloguePublisherId?: number | null;
 };
 
-function requestedBrandProfileId(
+function requestedPublisherId(
   ctx: EnhancedTRPCContext,
   options?: OperatingIdentityOptions,
 ): number | null {
-  const requested = options?.brandProfileId ?? null;
-  const contextual = ctx.operatingAs?.brandProfileId ?? null;
-
+  const requested = options?.cataloguePublisherId ?? null;
+  const contextual = ctx.operatingAs?.cataloguePublisherId ?? null;
   if (requested !== null && contextual !== null && requested !== contextual) {
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'The requested brand does not match the server operating identity.',
+      message: 'The requested publisher does not match the server operating identity.',
     });
   }
-
   return requested ?? contextual;
 }
 
-/**
- * Resolve one of the two supported Developer Engine operating modes.
- *
- * The platform-curator branch revalidates the brand even when the request
- * already passed tRPC middleware. This makes the service reusable at a
- * mutation boundary and closes the stale browser-context gap.
- */
 export async function resolveOperatingIdentity(
   ctx: EnhancedTRPCContext,
   options: OperatingIdentityOptions = {},
 ): Promise<ResolvedIdentity> {
-  if (!ctx.user) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
-  }
+  if (!ctx.user) throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Not authenticated' });
 
-  const requestedMode = options.mode;
-  const brandProfileId = requestedBrandProfileId(ctx, options);
-
-  if (requestedMode === 'platform_curator' || ctx.user.role === 'super_admin') {
+  const publisherId = requestedPublisherId(ctx, options);
+  if (options.mode === 'platform_curator' || ctx.user.role === 'super_admin') {
     if (ctx.user.role !== 'super_admin') {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'Only an authenticated super-admin can operate as a platform curator.',
-      });
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'A super-admin is required for platform context.' });
     }
-
-    if (!brandProfileId) {
+    if (!publisherId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'An explicit platform curator brand context is required.',
+        message: 'An explicit platform curator publisher context is required.',
       });
     }
     if (!ctx.operatingAs) {
@@ -98,118 +72,81 @@ export async function resolveOperatingIdentity(
         message: 'An active server-resolved platform curator context is required.',
       });
     }
-
-    const brand = await brandContextService.verifyBrandContext(brandProfileId);
+    const publisher = await cataloguePublisherContextService.verifyPublisherContext(publisherId);
     return {
       mode: 'platform_curator',
       actor: { userId: ctx.user.id, role: 'super_admin' },
-      brandProfileId: brand.brandProfileId,
-      brandName: brand.brandName,
-      identityType: brand.identityType,
-      ownerType: 'platform',
+      cataloguePublisherId: publisher.cataloguePublisherId,
+      publisherName: publisher.publisherName,
+      publisherType: publisher.publisherType,
     };
   }
 
-  if (requestedMode === 'developer' || ctx.user.role === 'property_developer') {
+  if (options.mode === 'developer' || ctx.user.role === 'property_developer') {
     if (ctx.user.role !== 'property_developer') {
-      throw new TRPCError({
-        code: 'FORBIDDEN',
-        message: 'A property developer actor is required for developer operations.',
-      });
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'A property developer actor is required.' });
     }
-
     const profile = await getDeveloperByUserId(ctx.user.id);
     if (!profile) {
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer organisation not found. Please complete onboarding.' });
+    }
+    if (!profile.publisherId) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'Developer profile not found. Please complete onboarding.',
+        message: 'Developer organisation has no first-party catalogue publisher.',
       });
     }
-
-    const resolvedBrandProfileId = profile.brandProfile?.id ?? null;
-    if (brandProfileId !== null && brandProfileId !== resolvedBrandProfileId) {
+    if (publisherId !== null && publisherId !== profile.publisherId) {
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'The requested brand is not owned by the authenticated developer.',
+        message: 'The requested publisher is not owned by the authenticated organisation.',
       });
     }
-
-    // Brand authority is required only when a brand is part of the requested
-    // operating identity. A newly onboarded developer can still operate at
-    // developer scope while its public brand profile is being established.
-    if (resolvedBrandProfileId !== null) {
-      const database = await getDb();
-      if (!database) throw new Error('Database not available');
-
-      const [brand] = await database
-        .select({
-          id: developerBrandProfiles.id,
-          ownerType: developerBrandProfiles.ownerType,
-          linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
-        })
-        .from(developerBrandProfiles)
-        .where(
-          and(
-            eq(developerBrandProfiles.id, resolvedBrandProfileId),
-            eq(developerBrandProfiles.ownerType, 'developer'),
-            eq(developerBrandProfiles.linkedDeveloperAccountId, profile.id),
-          ),
-        )
-        .limit(1);
-
-      if (!brand) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'The authenticated developer does not own the requested brand.',
-        });
-      }
-    }
-
     return {
       mode: 'developer',
       actor: { userId: ctx.user.id, role: 'property_developer' },
-      developerId: profile.id,
-      brandProfileId: resolvedBrandProfileId,
-      ownerType: 'developer',
+      developerId: profile.organisationId,
+      organisationId: profile.organisationId,
+      cataloguePublisherId: profile.publisherId,
     };
   }
 
-  throw new TRPCError({
-    code: 'FORBIDDEN',
-    message: 'The authenticated actor cannot operate the Developer Engine.',
-  });
+  throw new TRPCError({ code: 'FORBIDDEN', message: 'The authenticated actor cannot operate the Developer Engine.' });
 }
 
-/** Validate that exactly one supported ownership path is set. */
 export function validateOwnership(fields: {
-  brandProfileId?: number | null;
   developerId?: number | null;
+  cataloguePublisherId?: number | null;
+  organisationId?: number | null;
 }): void {
-  const paths = [fields.brandProfileId, fields.developerId].filter(
+  const publisherPaths = [fields.cataloguePublisherId].filter(
     value => value !== null && value !== undefined,
   );
-
-  if (paths.length === 0) throw new Error('At least one ownership field must be set');
-  if (paths.length > 1) throw new Error('Only one ownership path allowed');
+  const organisationPaths = [fields.developerId, fields.organisationId].filter(
+    value => value !== null && value !== undefined,
+  );
+  if (publisherPaths.length === 0 && organisationPaths.length === 0) {
+    throw new Error('At least one ownership field must be set');
+  }
+  if (new Set(publisherPaths).size > 1 || new Set(organisationPaths).size > 1) {
+    throw new Error('Conflicting ownership aliases supplied');
+  }
 }
 
-export function getOwnershipFields(identity: ResolvedIdentity): {
-  developerBrandProfileId: number | null;
-  developerId: number | null;
-  devOwnerType: 'platform' | 'developer';
-} {
+export function getOwnershipFields(identity: ResolvedIdentity) {
   if (identity.mode === 'platform_curator') {
     return {
-      developerBrandProfileId: identity.brandProfileId,
+      cataloguePublisherId: identity.cataloguePublisherId,
+      developerOrganisationId: null,
       developerId: null,
-      devOwnerType: 'platform',
+      devOwnerType: 'platform' as const,
     };
   }
-
   return {
-    developerBrandProfileId: identity.brandProfileId,
-    developerId: identity.developerId,
-    devOwnerType: 'developer',
+    cataloguePublisherId: identity.cataloguePublisherId,
+    developerOrganisationId: identity.organisationId,
+    developerId: identity.organisationId,
+    devOwnerType: 'developer' as const,
   };
 }
 

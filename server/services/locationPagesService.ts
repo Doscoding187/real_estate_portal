@@ -5,8 +5,8 @@ import {
   suburbs,
   properties,
   developments,
-  developers,
-  developerBrandProfiles,
+  cataloguePublishers,
+  developerOrganisations,
   priceAnalytics,
   suburbPriceAnalytics,
   amenities,
@@ -166,10 +166,10 @@ export const locationPagesService = {
       featuredDevelopments = await db
         .select({ ...getTableColumns(developments) })
         .from(developments)
-        .leftJoin(developers, eq(developments.developerId, developers.id))
+        .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
         .leftJoin(
-          developerBrandProfiles,
-          eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+          developerOrganisations,
+          eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
         )
         .where(
           and(
@@ -332,10 +332,10 @@ export const locationPagesService = {
       const cityDevelopments = await db
         .select({ ...getTableColumns(developments) })
         .from(developments)
-        .leftJoin(developers, eq(developments.developerId, developers.id))
+        .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
         .leftJoin(
-          developerBrandProfiles,
-          eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+          developerOrganisations,
+          eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
         )
         .where(
           and(

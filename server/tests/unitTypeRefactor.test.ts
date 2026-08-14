@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getDb } from '../db';
 import { developmentService } from '../services/developmentService';
-import { developments, developers, users } from '../../drizzle/schema';
+import { developments, users } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import {
+  createDeveloperTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../test-utils/developerTestContext';
 
 // Mock Data
 const TEST_DEV_NAME = 'Integration Test Dev Refactor';
@@ -46,7 +51,7 @@ const describeWithDb = process.env.DATABASE_URL ? describe : describe.skip;
 
 describeWithDb('Unit Type Refactoring Integration', () => {
   let testUserId: number;
-  let testDeveloperId: number;
+  let developerContext: DeveloperTestContext | null = null;
   let createdDevId: number;
 
   const getInsertId = (insertResult: unknown): number => {
@@ -61,7 +66,7 @@ describeWithDb('Unit Type Refactoring Integration', () => {
     const db = await getDb();
     if (!db) throw new Error('DB connection failed');
 
-    // Create a real user/developer pair so onboarding validation passes.
+    // Create a real user and canonical Developer identity so authorization passes.
     const userResult = await db.insert(users).values({
       email: `unit-type-refactor-${Date.now()}@example.com`,
       role: 'property_developer',
@@ -72,15 +77,11 @@ describeWithDb('Unit Type Refactoring Integration', () => {
     });
     testUserId = getInsertId(userResult);
 
-    const developerResult = await db.insert(developers).values({
+    developerContext = await createDeveloperTestContext({
       userId: testUserId,
       name: 'Unit Type Refactor Developer',
       email: `unit-type-refactor-dev-${Date.now()}@example.com`,
-      category: 'residential',
-      isVerified: 1,
-      status: 'approved',
     });
-    testDeveloperId = getInsertId(developerResult);
 
     // Cleanup any leftovers.
     const existing = await db
@@ -100,8 +101,9 @@ describeWithDb('Unit Type Refactoring Integration', () => {
       await developmentService.deleteDevelopment(createdDevId, testUserId);
     }
 
-    if (testDeveloperId) {
-      await db.delete(developers).where(eq(developers.id, testDeveloperId));
+    if (developerContext) {
+      await deleteDeveloperTestContext(developerContext);
+      developerContext = null;
     }
     if (testUserId) {
       await db.delete(users).where(eq(users.id, testUserId));

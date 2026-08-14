@@ -252,7 +252,7 @@ export const EnhancedEmptyState: React.FC<EmptyStateProps> = ({
               )}
               {type === 'brands' && (
                 <p className="text-sm text-gray-600">
-                  Complete your brand profile with logo, contact information, and service areas to
+                  Complete your Catalogue Publisher details with logo, contact information, and service areas to
                   build trust with prospects.
                 </p>
               )}

@@ -1,7 +1,7 @@
 /**
  * Developer Directory Page
  *
- * Lists all visible developer brand profiles with filters.
+ * Lists all visible developer Catalogue Publishers with filters.
  * SEO-friendly page for brand discovery.
  */
 
@@ -27,8 +27,8 @@ export default function DeveloperDirectoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState<string>('all');
 
-  // Fetch brand profiles
-  const { data: profiles, isLoading } = trpc.brandProfile.listBrandProfiles.useQuery({
+  // Fetch Catalogue Publishers
+  const { data: profiles, isLoading } = trpc.cataloguePublisher.listPublishers.useQuery({
     search: searchQuery || undefined,
     brandTier:
       tierFilter !== 'all' ? (tierFilter as 'national' | 'regional' | 'boutique') : undefined,

@@ -1,5 +1,6 @@
 {
   "include": [
+    "middleware.ts",
     "server/**/*.ts",
     "server/**/*.tsx",
     "server/types/**/*.d.ts",

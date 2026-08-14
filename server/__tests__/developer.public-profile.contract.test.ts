@@ -4,11 +4,15 @@ const {
   mockGetDb,
   mockGetBrandProfileById,
   mockGetBrandProfileBySlug,
+  mockGetPublicBrandProfileById,
+  mockGetPublicBrandProfileBySlug,
   mockListPublicDevelopments,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockGetBrandProfileById: vi.fn(),
   mockGetBrandProfileBySlug: vi.fn(),
+  mockGetPublicBrandProfileById: vi.fn(),
+  mockGetPublicBrandProfileBySlug: vi.fn(),
   mockListPublicDevelopments: vi.fn(),
 }));
 
@@ -16,10 +20,12 @@ vi.mock('../db', () => ({
   getDb: mockGetDb,
 }));
 
-vi.mock('../services/developerBrandProfileService', () => ({
-  getBrandProfileById: mockGetBrandProfileById,
-  developerBrandProfileService: {
-    getBrandProfileBySlug: mockGetBrandProfileBySlug,
+vi.mock('../services/cataloguePublisherService', () => ({
+  getPublisherById: mockGetBrandProfileById,
+  cataloguePublisherService: {
+    getPublisherBySlug: mockGetBrandProfileBySlug,
+    getPublicPublisherById: mockGetPublicBrandProfileById,
+    getPublicPublisherBySlug: mockGetPublicBrandProfileBySlug,
   },
 }));
 
@@ -43,6 +49,8 @@ const publicPlatformBrand = {
   publicContactEmail: 'sales@acme.example.com',
   isContactVerified: 1,
   isVisible: 1,
+  authorityKind: 'platform_reference',
+  developerOrganisationId: null,
   linkedDeveloperAccountId: null,
 };
 
@@ -51,6 +59,8 @@ describe('developer public profile contract', () => {
     vi.clearAllMocks();
     mockGetBrandProfileBySlug.mockResolvedValue(publicPlatformBrand);
     mockGetBrandProfileById.mockResolvedValue(publicPlatformBrand);
+    mockGetPublicBrandProfileBySlug.mockResolvedValue(publicPlatformBrand);
+    mockGetPublicBrandProfileById.mockResolvedValue(publicPlatformBrand);
     mockListPublicDevelopments.mockResolvedValue([
       {
         id: 77,
@@ -71,7 +81,7 @@ describe('developer public profile contract', () => {
 
     await expect(caller.getPublicDeveloperBySlug({ slug: 'acme-homes' })).resolves.toMatchObject({
       id: 44,
-      type: 'brand',
+      type: 'publisher',
       name: 'Acme Homes',
       emails: ['sales@acme.example.com'],
       isClaimable: false,
@@ -91,16 +101,16 @@ describe('developer public profile contract', () => {
     } as any);
 
     await expect(
-      caller.getPublicDevelopmentsForProfile({ profileType: 'brand', profileId: 44 }),
+      caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44 }),
     ).resolves.toEqual([
       expect.objectContaining({ id: 77, slug: 'acme-sandton' }),
     ]);
 
-    expect(mockListPublicDevelopments).toHaveBeenCalledWith({ developerBrandProfileId: 44 });
+    expect(mockListPublicDevelopments).toHaveBeenCalledWith({ cataloguePublisherId: 44 });
   });
 
   it('does not expose an invisible brand', async () => {
-    mockGetBrandProfileById.mockResolvedValue({ ...publicPlatformBrand, isVisible: 0 });
+    mockGetPublicBrandProfileById.mockResolvedValue({ ...publicPlatformBrand, isVisible: 0 });
     const caller = developerRouter.createCaller({
       req: { headers: {} },
       res: {},
@@ -108,7 +118,7 @@ describe('developer public profile contract', () => {
     } as any);
 
     await expect(
-      caller.getPublicDevelopmentsForProfile({ profileType: 'brand', profileId: 44 }),
+      caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44 }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

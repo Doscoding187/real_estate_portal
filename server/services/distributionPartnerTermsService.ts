@@ -1,6 +1,6 @@
 import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import {
-  developerBrandProfiles,
+  cataloguePublishers,
   developments,
   distributionDevelopmentAccess,
   distributionPrograms,
@@ -15,7 +15,7 @@ import {
 } from './runtimeSchemaCapabilities';
 
 type ListPartnerProgramTermsInput = {
-  brandProfileId?: number;
+  cataloguePublisherId?: number;
   developmentIds?: number[];
   includeDisabled?: boolean;
 };
@@ -46,7 +46,7 @@ export type PartnerProgramTermsItem = {
   imageUrl: string | null;
   brochure: BrochureConfig;
   brand: {
-    brandProfileId: number;
+    cataloguePublisherId: number;
     brandName: string;
     logoUrl: string | null;
     publicContactEmail: string | null;
@@ -305,10 +305,8 @@ export async function listPartnerProgramTerms(
   const includeDisabled = Boolean(input.includeDisabled);
   const conditions: SQL[] = [];
 
-  if (typeof input.brandProfileId === 'number') {
-    conditions.push(
-      sql`(${developments.developerBrandProfileId} = ${input.brandProfileId} OR ${developments.marketingBrandProfileId} = ${input.brandProfileId})`,
-    );
+  if (typeof input.cataloguePublisherId === 'number') {
+    conditions.push(eq(developments.cataloguePublisherId, input.cataloguePublisherId));
   }
 
   if (input.developmentIds?.length) {
@@ -341,8 +339,7 @@ export async function listPartnerProgramTerms(
       developmentPriceFrom: developments.priceFrom,
       developmentPriceTo: developments.priceTo,
       developmentImages: developments.images,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      marketingBrandProfileId: developments.marketingBrandProfileId,
+      cataloguePublisherId: developments.cataloguePublisherId,
       programId: distributionPrograms.id,
       isActive: distributionPrograms.isActive,
       isReferralEnabled: distributionPrograms.isReferralEnabled,
@@ -399,27 +396,24 @@ export async function listPartnerProgramTerms(
   const developmentIds: number[] = Array.from(
     new Set(rows.map(row => Number(row.developmentId)).filter(value => Number.isFinite(value))),
   );
-  const brandProfileIds: number[] = Array.from(
+  const cataloguePublisherIds: number[] = Array.from(
     new Set(
       rows
-        .flatMap(row => [
-          Number(row.developerBrandProfileId || 0),
-          Number(row.marketingBrandProfileId || 0),
-        ])
+        .map(row => Number(row.cataloguePublisherId || 0))
         .filter((value): value is number => Number.isFinite(value) && value > 0),
     ),
   );
 
-  const brandRows = brandProfileIds.length
+  const brandRows = cataloguePublisherIds.length
     ? await db
         .select({
-          id: developerBrandProfiles.id,
-          brandName: developerBrandProfiles.brandName,
-          logoUrl: developerBrandProfiles.logoUrl,
-          publicContactEmail: developerBrandProfiles.publicContactEmail,
+          id: cataloguePublishers.id,
+          brandName: cataloguePublishers.name,
+          logoUrl: cataloguePublishers.logoUrl,
+          publicContactEmail: cataloguePublishers.publicContactEmail,
         })
-        .from(developerBrandProfiles)
-        .where(inArray(developerBrandProfiles.id, brandProfileIds))
+        .from(cataloguePublishers)
+        .where(inArray(cataloguePublishers.id, cataloguePublisherIds))
     : [];
 
   const brandById = new Map<
@@ -591,8 +585,7 @@ export async function listPartnerProgramTerms(
     const payoutMilestoneNotes = row.payoutMilestoneNotes ? String(row.payoutMilestoneNotes) : null;
 
     const requiredDocuments = docsByDevelopmentId.get(developmentId) || [];
-    const primaryBrandId =
-      Number(row.developerBrandProfileId || 0) || Number(row.marketingBrandProfileId || 0);
+    const primaryBrandId = Number(row.cataloguePublisherId || 0);
     const brandRecord = primaryBrandId ? brandById.get(primaryBrandId) : null;
     const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
     const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
@@ -629,7 +622,7 @@ export async function listPartnerProgramTerms(
       brochure: brochureConfig,
       brand: brandRecord
         ? {
-            brandProfileId: brandRecord.id,
+            cataloguePublisherId: brandRecord.id,
             brandName: brandRecord.brandName,
             logoUrl: brandRecord.logoUrl,
             publicContactEmail: brandRecord.publicContactEmail,

@@ -12,7 +12,7 @@ describe('developer canonical commercial contract', () => {
     const service = readRepoFile('server/services/developerSubscriptionService.ts');
 
     expect(access).toContain("ownerType: 'developer'");
-    expect(access).toContain('developers.userId');
+    expect(access).toContain('developerOrganisationMemberships.userId');
     expect(service).toContain('getPlanAccessProjectionForDeveloperId');
     expect(service).toContain("ownerType: 'developer'");
     expect(service).toContain('Developer free-trial provisioning is retired');
@@ -27,8 +27,8 @@ describe('developer canonical commercial contract', () => {
 
     expect(service).toContain('getCanonicalLimits');
     expect(service).toContain('getPlanAccessProjectionForDeveloperId');
-    expect(service).toContain('developerSubscriptionUsage');
-    expect(service).toContain('its tier/status/limits are never read as authority');
+    expect(service).toContain('DeveloperSubscriptionUsage');
+    expect(service).toContain('organisation-owned facts');
     expect(service).toContain('evaluateDeveloperLimitAccess');
     expect(service).toContain('developmentPortfolioUnlimited');
     expect(router).toContain('developerSubscriptionService.checkLimit(');
@@ -36,7 +36,7 @@ describe('developer canonical commercial contract', () => {
       "developerSubscriptionService.incrementUsage(developerId, 'developments')",
     );
     expect(router).toContain(
-      "developerSubscriptionService.decrementUsage(profile.id, 'developments')",
+      "developerSubscriptionService.decrementUsage(profile.organisationId, 'developments')",
     );
   });
 

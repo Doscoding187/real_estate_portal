@@ -7,7 +7,6 @@ import {
   billingInvoices,
   billingPaymentDocuments,
   billingPayments,
-  developers,
   notifications,
   plans,
   subscriptions,
@@ -24,6 +23,11 @@ import {
   reviewManualPayment,
   submitPaidLaunchAccessPaymentProof,
 } from '../services/billingFoundationService';
+import {
+  createDeveloperTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../test-utils/developerTestContext';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
@@ -33,7 +37,7 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
 const created = {
   userIds: [] as number[],
   agencyIds: [] as number[],
-  developerIds: [] as number[],
+  developerContexts: [] as DeveloperTestContext[],
 };
 
 const originalEnvironment: Record<string, string | undefined> = {};
@@ -69,20 +73,14 @@ async function insertUser(input: {
 }
 
 async function insertDeveloper(userId: number, label: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
   const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const [result] = await db.insert(developers).values({
-    name: `${label} Developer`,
-    email: `${label}-${suffix}@example.test`,
-    isVerified: 1,
-    status: 'approved',
+  const context = await createDeveloperTestContext({
     userId,
-  } as any);
-  const developerId = insertId(result);
-  if (!developerId) throw new Error(`Could not create ${label} developer profile.`);
-  created.developerIds.push(developerId);
-  return developerId;
+    name: `${label} Developer ${suffix}`,
+    email: `${label}-${suffix}@example.test`,
+  });
+  created.developerContexts.push(context);
+  return context.organisationId;
 }
 
 async function insertAgency(label: string) {
@@ -148,7 +146,9 @@ async function cleanup() {
 
   const userIds = Array.from(new Set(created.userIds));
   const agencyIds = Array.from(new Set(created.agencyIds));
-  const developerIds = Array.from(new Set(created.developerIds));
+  const developerIds = Array.from(
+    new Set(created.developerContexts.map(context => context.organisationId)),
+  );
 
   if (userIds.length) {
     await db.delete(notifications).where(inArray(notifications.userId, userIds));
@@ -193,7 +193,9 @@ async function cleanup() {
     await db
       .delete(subscriptions)
       .where(and(eq(subscriptions.ownerType, 'developer'), inArray(subscriptions.ownerId, developerIds)));
-    await db.delete(developers).where(inArray(developers.id, developerIds));
+    for (const context of created.developerContexts) {
+      await deleteDeveloperTestContext(context);
+    }
   }
   if (userIds.length) {
     await db
@@ -217,7 +219,7 @@ async function cleanup() {
 
   created.userIds.length = 0;
   created.agencyIds.length = 0;
-  created.developerIds.length = 0;
+  created.developerContexts.length = 0;
 }
 
 describeWithDb('S4 paid Launch Access disposable runtime', () => {
@@ -298,7 +300,10 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       label: 's4-developer-primary',
       role: 'property_developer',
     });
-    const developerId = await insertDeveloper(developerUserId, 's4-developer-primary');
+    const developerOrganisationId = await insertDeveloper(
+      developerUserId,
+      's4-developer-primary',
+    );
     const otherDeveloperUserId = await insertUser({
       label: 's4-developer-other',
       role: 'property_developer',
@@ -479,7 +484,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     });
     await runOwner({
       ownerType: 'developer',
-      ownerId: developerId,
+      ownerId: developerOrganisationId,
       userId: developerUserId,
       otherUserId: otherDeveloperUserId,
       planKey: 'developer_launch_access',

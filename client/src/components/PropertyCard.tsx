@@ -42,7 +42,7 @@ interface AgentInfo {
   image?: string;
 }
 
-// Developer Brand Profile info for platform-wide brand visibility
+// Public Catalogue Publisher display information.
 interface DeveloperBrandInfo {
   id: number;
   brandName: string;
@@ -79,7 +79,7 @@ export interface PropertyCardProps {
   transactionType?: string;
   onFavoriteClick?: () => void;
   agent?: AgentInfo;
-  developerBrand?: DeveloperBrandInfo; // Developer brand profile when linked
+  developerBrand?: DeveloperBrandInfo; // Public publisher display projection when present
   development?: DevelopmentInfo;
   badges?: string[];
   imageCount?: number;

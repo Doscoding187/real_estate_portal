@@ -38,7 +38,8 @@ import {
   analyticsEvents,
   showings,
   developments,
-  developers,
+  cataloguePublishers,
+  developerOrganisations,
   developmentApprovalQueue,
 } from '../drizzle/schema';
 import { eq, desc, asc, and, or, like, sql, type SQL, gte, lte, inArray } from 'drizzle-orm';
@@ -1360,18 +1361,23 @@ export const adminRouter = router({
     const pendingDevs = await db
       .select({
         development: developments,
-        developer: developers,
+        publisher: cataloguePublishers,
+        organisation: developerOrganisations,
         queueEntry: developmentApprovalQueue,
       })
       .from(developmentApprovalQueue)
       .innerJoin(developments, eq(developmentApprovalQueue.developmentId, developments.id))
-      .innerJoin(developers, eq(developments.developerId, developers.id))
+      .innerJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+      .leftJoin(
+        developerOrganisations,
+        eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+      )
       .where(eq(developmentApprovalQueue.status, 'pending'))
       .orderBy(desc(developmentApprovalQueue.submittedAt));
 
     return pendingDevs.map(item => ({
       ...item.development,
-      developerName: item.developer.name,
+      developerName: item.publisher.name,
       submittedAt: item.queueEntry.submittedAt,
       queueId: item.queueEntry.id,
     }));

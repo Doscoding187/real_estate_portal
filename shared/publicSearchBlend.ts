@@ -10,7 +10,7 @@ export interface PublicSearchBlendItem<T = unknown> {
 export interface PublicSearchBlendFilters {
   listingSource?: 'manual' | 'development';
   developmentId?: unknown;
-  developerBrandProfileId?: unknown;
+  cataloguePublisherId?: unknown;
   developmentStatus?: unknown;
   newDevelopment?: unknown;
   isNewDevelopment?: unknown;
@@ -102,7 +102,7 @@ function interleaveByRelevance(
 function hasDevelopmentIntent(filters: PublicSearchBlendFilters): boolean {
   return [
     filters.developmentId,
-    filters.developerBrandProfileId,
+    filters.cataloguePublisherId,
     filters.developmentStatus,
     filters.newDevelopment,
     filters.isNewDevelopment,

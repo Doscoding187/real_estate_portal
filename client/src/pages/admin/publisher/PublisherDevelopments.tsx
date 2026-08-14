@@ -27,7 +27,7 @@ const PublisherDevelopments: React.FC = () => {
     isLoading,
     refetch,
   } = trpc.superAdminPublisher.getDevelopments.useQuery(
-    { brandProfileId: selectedBrandId! },
+    { cataloguePublisherId: selectedBrandId! },
     { enabled: !!selectedBrandId },
   );
 
@@ -178,7 +178,7 @@ const PublisherDevelopments: React.FC = () => {
                   }}
                   onEdit={id =>
                     setLocation(
-                      `/developer/create-development?id=${id}&brandProfileId=${selectedBrandId}`,
+                      `/developer/create-development?id=${id}&cataloguePublisherId=${selectedBrandId}`,
                     )
                   }
                   onDelete={id => handleDeleteDevelopment(id, dev.name)}

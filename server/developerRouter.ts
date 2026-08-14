@@ -6,17 +6,16 @@ import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
-import * as partnershipService from './services/partnershipService';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
-import { getBrandProfileById } from './services/developerBrandProfileService';
-import { developerBrandProfileService } from './services/developerBrandProfileService';
+import { getPublisherById } from './services/cataloguePublisherService';
+import { cataloguePublisherService } from './services/cataloguePublisherService';
+import { developerIdentityService } from './services/developerIdentityService';
 import {
   calculateAffordabilityCompanion,
   matchUnitsToAffordability,
 } from './services/affordabilityCompanion';
 import { getActivityFeed as getActivityFeedService } from './services/activityService';
 import { getKPIsWithCache } from './services/kpiService';
-import { seedCleanupService } from './services/seedCleanupService';
 import { capturePublicLead } from './services/publicLeadCaptureService';
 import {
   assignDeveloperLead,
@@ -34,8 +33,7 @@ import {
   developmentDrafts,
   developments,
   developmentApprovalQueue,
-  developers,
-  developerBrandProfiles,
+  developerOrganisations,
   users,
   unitTypes,
 } from '../drizzle/schema';
@@ -168,11 +166,11 @@ const EMPTY_DEVELOPER_KPIS = {
     marketingPerformanceScore: 0,
   },
 };
-async function resolvePublicBrandProfile(profile: any) {
+async function resolvePublicPublisherProfile(profile: any) {
   if (!profile || Number(profile.isVisible) !== 1) return null;
 
-  if (!profile.linkedDeveloperAccountId) {
-    return { brandProfile: profile, developer: null };
+  if (profile.authorityKind === 'platform_reference') {
+    return { publisherProfile: profile, developer: null };
   }
 
   const dbConn = await db.getDb();
@@ -182,59 +180,38 @@ async function resolvePublicBrandProfile(profile: any) {
 
   const [linkedDeveloper] = await dbConn
     .select()
-    .from(developers)
-    .where(eq(developers.id, profile.linkedDeveloperAccountId))
+    .from(developerOrganisations)
+    .where(eq(developerOrganisations.id, profile.developerOrganisationId))
     .limit(1);
 
   // Subscriber brands are not public until the underlying developer is approved.
   if (!linkedDeveloper || linkedDeveloper.status !== 'approved') return null;
 
-  return { brandProfile: profile, developer: linkedDeveloper };
+  return { publisherProfile: profile, developer: linkedDeveloper };
 }
 
-function toPublicBrandProfileResponse(brandProfile: any, developer: any) {
-  const publicEmail = brandProfile.publicContactEmail || developer?.email || null;
+function toPublicPublisherProfileResponse(publisherProfile: any, developer: any) {
+  const publicEmail = publisherProfile.publicContactEmail || developer?.email || null;
 
   return {
-    id: brandProfile.id,
-    type: 'brand' as const,
-    name: brandProfile.brandName,
-    slug: brandProfile.slug,
-    logo: brandProfile.logoUrl || developer?.logo || null,
-    description: brandProfile.about || developer?.description || null,
-    address: brandProfile.headOfficeLocation || developer?.address || null,
+    id: publisherProfile.id,
+    type: 'publisher' as const,
+    cataloguePublisherId: publisherProfile.id,
+    authorityKind: publisherProfile.authorityKind,
+    name: publisherProfile.brandName,
+    slug: publisherProfile.slug,
+    logo: publisherProfile.logoUrl || developer?.logo || null,
+    description: publisherProfile.about || developer?.description || null,
+    address: publisherProfile.headOfficeLocation || developer?.address || null,
     phones: developer?.phone ? [developer.phone] : [],
     emails: publicEmail ? [publicEmail] : [],
-    website: brandProfile.websiteUrl || developer?.website || null,
-    isClaimable:
-      Number(brandProfile.isClaimable || 0) === 1 && brandProfile.ownerType === 'platform',
-    stats: {
-      isVerified: Number(brandProfile.isContactVerified || developer?.isVerified || 0) === 1,
-      isTrusted: Number(developer?.isTrusted || 0) === 1,
-      establishedYear: brandProfile.foundedYear || developer?.establishedYear || null,
-      totalProjects: Number(developer?.totalProjects || 0),
-    },
-  };
-}
-
-function toPublicDeveloperResponse(developer: any) {
-  return {
-    id: developer.id,
-    type: 'subscriber' as const,
-    name: developer.name,
-    slug: developer.slug,
-    logo: developer.logo || null,
-    description: developer.description || null,
-    address: developer.address || null,
-    phones: developer.phone ? [developer.phone] : [],
-    emails: developer.email ? [developer.email] : [],
-    website: developer.website || null,
+    website: publisherProfile.websiteUrl || developer?.website || null,
     isClaimable: false,
     stats: {
-      isVerified: Number(developer.isVerified || 0) === 1,
-      isTrusted: Number(developer.isTrusted || 0) === 1,
-      establishedYear: developer.establishedYear || null,
-      totalProjects: Number(developer.totalProjects || 0),
+      isVerified: Number(publisherProfile.isContactVerified || developer?.isVerified || 0) === 1,
+      isTrusted: Number(developer?.isTrusted || 0) === 1,
+      establishedYear: publisherProfile.foundedYear || developer?.establishedYear || null,
+      totalProjects: Number(developer?.totalProjects || 0),
     },
   };
 }
@@ -350,7 +327,7 @@ export const developerRouter = router({
         count: sql<number>`count(*)`,
       })
       .from(developments)
-      .where(eq(developments.developerId, profile.id));
+      .where(eq(developments.cataloguePublisherId, profile.publisherId));
 
     const developmentsCount = Number(developmentsCountRaw || 0);
     const profileStatus = profile.status;
@@ -404,7 +381,7 @@ export const developerRouter = router({
         status: profile.status,
         city: profile.city ?? null,
         province: profile.province ?? null,
-        developerBrandProfileId: profile.developerBrandProfileId ?? null,
+        cataloguePublisherId: profile.publisherId,
       },
     };
   }),
@@ -456,62 +433,33 @@ export const developerRouter = router({
   getPublicDeveloperBySlug: publicProcedure
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
-      const brandProfile = await developerBrandProfileService.getBrandProfileBySlug(input.slug);
-      const resolvedBrand = await resolvePublicBrandProfile(brandProfile);
+      const publisherProfile = await cataloguePublisherService.getPublicPublisherBySlug(input.slug);
+      const resolvedBrand = await resolvePublicPublisherProfile(publisherProfile);
       if (resolvedBrand) {
-        return toPublicBrandProfileResponse(resolvedBrand.brandProfile, resolvedBrand.developer);
+        return toPublicPublisherProfileResponse(
+          resolvedBrand.publisherProfile,
+          resolvedBrand.developer,
+        );
       }
-
-      const dbConn = await db.getDb();
-      if (!dbConn) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-      }
-
-      const [developer] = await dbConn
-        .select()
-        .from(developers)
-        .where(and(eq(developers.slug, input.slug), eq(developers.status, 'approved')))
-        .limit(1);
-
-      return developer ? toPublicDeveloperResponse(developer) : null;
+      return null;
     }),
 
-  getPublicDevelopmentsForProfile: publicProcedure
+  getPublicDevelopmentsForPublisher: publicProcedure
     .input(
       z.object({
-        profileType: z.enum(['brand', 'subscriber']),
-        profileId: z.number().int().positive(),
+        cataloguePublisherId: z.number().int().positive(),
       }),
     )
     .query(async ({ input }) => {
-      if (input.profileType === 'brand') {
-        const resolvedBrand = await resolvePublicBrandProfile(
-          await getBrandProfileById(input.profileId),
-        );
-        if (!resolvedBrand) {
-          throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer brand not found' });
-        }
-
-        return developmentService.listPublicDevelopments({
-          developerBrandProfileId: resolvedBrand.brandProfile.id,
-        });
+      const resolvedPublisher = await resolvePublicPublisherProfile(
+        await cataloguePublisherService.getPublicPublisherById(input.cataloguePublisherId),
+      );
+      if (!resolvedPublisher) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Catalogue Publisher not found' });
       }
-
-      const dbConn = await db.getDb();
-      if (!dbConn) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-      }
-      const [developer] = await dbConn
-        .select()
-        .from(developers)
-        .where(and(eq(developers.id, input.profileId), eq(developers.status, 'approved')))
-        .limit(1);
-
-      if (!developer) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Developer not found' });
-      }
-
-      return developmentService.listPublicDevelopments({ developerId: developer.id });
+      return developmentService.listPublicDevelopments({
+        cataloguePublisherId: resolvedPublisher.publisherProfile.id,
+      });
     }),
 
   searchDevelopers: publicProcedure
@@ -522,7 +470,11 @@ export const developerRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      return await db.searchDevelopers(input.query, input.limit);
+      return await developerIdentityService.listPublicCataloguePublishers({
+        search: input.query,
+        isVisible: true,
+        limit: input.limit,
+      });
     }),
 
   searchDevelopments: publicProcedure
@@ -562,78 +514,33 @@ export const developerRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existingProfile = await getDeveloperByUserId(requireUser(ctx).id);
+      const user = requireUser(ctx);
+      if (user.role !== 'property_developer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only property developers can create a developer organisation.',
+        });
+      }
+
+      const existingProfile = await getDeveloperByUserId(user.id);
       if (existingProfile) return existingProfile;
 
-      // Generate slug for seed cleanup check (use shared generator for consistency)
-      const generatedSlug = seedCleanupService.generateSlug(input.name);
-
-      // Clean up any matching seeded brand profile BEFORE creating the real one
-      // This blocks registration if deletion fails (fail-fast)
-      const cleanupResult = await seedCleanupService.handleSeedDeletionOnRegistration(
-        requireUser(ctx).id,
-        input.name,
-        generatedSlug,
-        undefined, // seedBatchId not known at registration
-        ctx.req,
-      );
-
-      if (cleanupResult.deleted) {
-        console.log(
-          '[developerRouter.createProfile] Cleaned up seeded brand:',
-          cleanupResult.deletedCounts,
-        );
-      }
-
-      const developerId = await db.createDeveloper({
+      const profile = await developerIdentityService.createDeveloperOrganisation({
         name: input.name,
-        description: input.description || undefined,
-        logo: input.logo || undefined,
-        website: input.website || undefined,
+        description: input.description || null,
+        logo: input.logo || null,
+        website: input.website || null,
         email: input.email,
-        phone: input.phone || undefined,
-        address: input.address || undefined,
+        phone: input.phone || null,
+        address: input.address || null,
         city: input.city,
         province: input.province,
-        category: (input.category as any) || undefined,
-        specializations: input.specializations,
+        category: (input.category as any) || 'residential',
+        specializations: input.specializations || [],
         establishedYear: input.establishedYear ?? null,
-        completedProjects: input.completedProjects ?? 0,
-        currentProjects: input.currentProjects ?? 0,
-        upcomingProjects: input.upcomingProjects ?? 0,
-        userId: requireUser(ctx).id,
+        createdByUserId: user.id,
       });
-
-      const brandProfile = await developerBrandProfileService.createBrandProfile({
-        brandName: input.name,
-        logoUrl: input.logo || null,
-        about: input.description || null,
-        foundedYear: input.establishedYear ?? null,
-        headOfficeLocation:
-          input.city && input.province ? `${input.city}, ${input.province}` : null,
-        operatingProvinces: input.province ? [input.province] : [],
-        propertyFocus: input.specializations || [],
-        websiteUrl: input.website || null,
-        publicContactEmail: input.email || null,
-        identityType: 'developer',
-        // Public discovery starts only after the developer account is approved.
-        isVisible: false,
-        createdBy: requireUser(ctx).id,
-      });
-
-      await developerBrandProfileService.updateBrandProfile(brandProfile.id, {
-        isSubscriber: true,
-        isClaimable: false,
-        ownerType: 'developer',
-        linkedDeveloperAccountId: developerId,
-      });
-
-      const profile = await getDeveloperByUserId(requireUser(ctx).id);
-      if (!profile) {
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Profile creation failed.' });
-      }
-
-      await developerSubscriptionService.ensureSubscription(profile.id);
+      await developerSubscriptionService.ensureSubscription(profile.organisationId);
 
       return profile;
     }),
@@ -641,7 +548,7 @@ export const developerRouter = router({
     .input(
       z.object({
         id: z.number().int().optional(),
-        brandProfileId: z.number().int().optional(),
+        cataloguePublisherId: z.number().int().optional(),
         draftData: z.any(),
       }),
     )
@@ -660,6 +567,16 @@ export const developerRouter = router({
           return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
         }
 
+        if (
+          input.cataloguePublisherId !== undefined &&
+          Number(input.cataloguePublisherId) !== Number(profile.publisherId)
+        ) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'The draft publisher must belong to the authenticated organisation.',
+          });
+        }
+
         if (input.id) {
           const updateSet: Record<string, any> = {
             draftName,
@@ -668,9 +585,8 @@ export const developerRouter = router({
             currentStep,
             lastModified: new Date().toISOString(),
           };
-          if (input.brandProfileId !== undefined) {
-            updateSet.developerBrandProfileId = input.brandProfileId;
-          }
+          updateSet.cataloguePublisherId = profile.publisherId;
+          updateSet.developerOrganisationId = profile.organisationId;
 
           await dbConn
             .update(developmentDrafts)
@@ -678,7 +594,7 @@ export const developerRouter = router({
             .where(
               and(
                 eq(developmentDrafts.id, input.id),
-                eq(developmentDrafts.developerId, profile.id),
+                eq(developmentDrafts.developerOrganisationId, profile.organisationId),
               ),
             );
 
@@ -686,8 +602,8 @@ export const developerRouter = router({
         }
 
         const insertResult = await dbConn.insert(developmentDrafts).values({
-          developerId: profile.id,
-          developerBrandProfileId: input.brandProfileId ?? null,
+          developerOrganisationId: profile.organisationId,
+          cataloguePublisherId: profile.publisherId,
           draftName,
           draftData: sanitized,
           progress,
@@ -701,6 +617,7 @@ export const developerRouter = router({
           draftData: sanitized,
         };
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
         console.warn('[developer.saveDraft] Falling back to safe response:', error);
         return { id: input.id ?? Date.now(), success: false, draftData: sanitized };
       }
@@ -718,7 +635,10 @@ export const developerRouter = router({
           .select()
           .from(developmentDrafts)
           .where(
-            and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+            and(
+              eq(developmentDrafts.id, input.id),
+              eq(developmentDrafts.developerOrganisationId, profile.organisationId),
+            ),
           )
           .limit(1);
 
@@ -743,7 +663,7 @@ export const developerRouter = router({
       const drafts = await dbConn
         .select()
         .from(developmentDrafts)
-        .where(eq(developmentDrafts.developerId, profile.id))
+        .where(eq(developmentDrafts.developerOrganisationId, profile.organisationId))
         .orderBy(desc(developmentDrafts.lastModified));
 
       return drafts.map((draft: any) => ({
@@ -767,7 +687,10 @@ export const developerRouter = router({
         await dbConn
           .delete(developmentDrafts)
           .where(
-            and(eq(developmentDrafts.id, input.id), eq(developmentDrafts.developerId, profile.id)),
+            and(
+              eq(developmentDrafts.id, input.id),
+              eq(developmentDrafts.developerOrganisationId, profile.organisationId),
+            ),
           );
 
         return { success: true, id: input.id };
@@ -1280,7 +1203,7 @@ export const developerRouter = router({
     .input(
       z.object({
         developmentId: z.number().int().positive(),
-        developerBrandProfileId: z.number().int().positive().optional(),
+        cataloguePublisherId: z.number().int().positive().optional(),
         unitId: z.string().trim().max(36).optional(),
         unitName: z.string().trim().max(255).optional(),
         unitPriceFrom: z.number().nonnegative().optional(),
@@ -1317,7 +1240,7 @@ export const developerRouter = router({
     .mutation(async ({ ctx, input }) => {
       return await capturePublicLead({
         developmentId: input.developmentId,
-        developerBrandProfileId: input.developerBrandProfileId,
+        cataloguePublisherId: input.cataloguePublisherId,
         unitId: input.unitId,
         unitName: input.unitName,
         unitPriceFrom: input.unitPriceFrom,
@@ -1361,7 +1284,7 @@ export const developerRouter = router({
     .query(async ({ ctx, input }) => {
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await listDeveloperLeads({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         developmentId: input?.developmentId,
         stage: input?.stage,
         owner: input?.owner,
@@ -1386,7 +1309,7 @@ export const developerRouter = router({
     .mutation(async ({ ctx, input }) => {
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await assignDeveloperLead({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         leadId: input.leadId,
         ownerType: input.ownerType,
         ownerId: input.ownerId ?? null,
@@ -1407,7 +1330,7 @@ export const developerRouter = router({
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await transitionDeveloperLead({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         userId: user.id,
         leadId: input.leadId,
         toStage: input.toStage,
@@ -1428,7 +1351,7 @@ export const developerRouter = router({
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await logDeveloperLeadActivity({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         userId: user.id,
         leadId: input.leadId,
         type: input.type,
@@ -1448,7 +1371,7 @@ export const developerRouter = router({
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await setDeveloperLeadNextAction({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         userId: user.id,
         leadId: input.leadId,
         at: input.at,
@@ -1466,7 +1389,7 @@ export const developerRouter = router({
       assertDeveloperDistributionEnabled();
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await getDeveloperDistributionSettings({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         developmentId: input.developmentId,
       });
     }),
@@ -1483,7 +1406,7 @@ export const developerRouter = router({
       const user = requireUser(ctx);
       const profile = await requireDeveloperProfileByUserId(user.id);
       return await setDeveloperDistributionEnabled({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         userId: user.id,
         developmentId: input.developmentId,
         enabled: input.enabled,
@@ -1500,7 +1423,7 @@ export const developerRouter = router({
     .query(async ({ ctx, input }) => {
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await getDeveloperFunnelKpis({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         developmentId: input.developmentId,
         range: input.range ?? '30d',
       });
@@ -1520,7 +1443,7 @@ export const developerRouter = router({
     .query(async ({ ctx, input }) => {
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
       return await getDeveloperFunnelAttention({
-        developerId: profile.id,
+        developerId: profile.publisherId,
         developmentId: input?.developmentId,
         range: input?.range ?? '30d',
         sla: input?.sla,
@@ -1577,8 +1500,8 @@ export const developerRouter = router({
       for (const authorityField of [
         'developerId',
         'developerProfileId',
-        'developerBrandProfileId',
-        'brandProfileId',
+        'cataloguePublisherId',
+        'marketingBrandProfileId',
         'devOwnerType',
         'ownerType',
       ]) {
@@ -1589,7 +1512,7 @@ export const developerRouter = router({
         user.id,
         serverAuthorizedInput as any,
         {
-          brandProfileId: identity.brandProfileId ?? undefined,
+          cataloguePublisherId: identity.cataloguePublisherId ?? undefined,
           ownerType: 'developer',
         },
         null,
@@ -1604,7 +1527,7 @@ export const developerRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);
-      // Use operatingAs from applyBrandContext middleware
+      // Use operatingAs from applyPublisherContext middleware
       const operatingAs = (ctx as any).operatingAs;
 
       // Debug: Log context again to confirm router sees what middleware set
@@ -1616,8 +1539,8 @@ export const developerRouter = router({
       });
 
       // Build operating context for super admin emulation
-      const operatingContext = operatingAs?.brandProfileId
-        ? { brandProfileId: operatingAs.brandProfileId }
+      const operatingContext = operatingAs?.cataloguePublisherId
+        ? { cataloguePublisherId: operatingAs.cataloguePublisherId }
         : null;
 
       console.log('[deleteDevelopment Router] Built operatingContext:', operatingContext);
@@ -1639,7 +1562,7 @@ export const developerRouter = router({
 
       if (user.role === 'property_developer') {
         const profile = await requireDeveloperProfileByUserId(user.id);
-        await developerSubscriptionService.decrementUsage(profile.id, 'developments');
+        await developerSubscriptionService.decrementUsage(profile.organisationId, 'developments');
       }
 
       return { success: true, deletedId: input.id };
@@ -1657,7 +1580,11 @@ export const developerRouter = router({
     .query(async ({ ctx, input }) => {
       try {
         const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-        return await getKPIsWithCache(profile.id, input?.timeRange, input?.forceRefresh ?? false);
+        return await getKPIsWithCache(
+          profile.organisationId,
+          input?.timeRange,
+          input?.forceRefresh ?? false,
+        );
       } catch (error) {
         console.warn('[developer.getDashboardKPIs] Returning safe defaults due to error:', error);
         return EMPTY_DEVELOPER_KPIS;
@@ -1666,12 +1593,12 @@ export const developerRouter = router({
 
   getSubscription: protectedProcedure.query(async ({ ctx }) => {
     const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-    return developerSubscriptionService.ensureSubscription(profile.id);
+    return developerSubscriptionService.ensureSubscription(profile.organisationId);
   }),
 
   getActivityFeed: protectedProcedure.query(async ({ ctx }) => {
     const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-    return await getActivityFeedService(profile.id);
+    return await getActivityFeedService(profile.organisationId);
   }),
 
   /**
@@ -1697,7 +1624,7 @@ export const developerRouter = router({
       const identity = await resolveOperatingIdentity(ctx, { mode: 'platform_curator' });
       if (
         identity.mode !== 'platform_curator' ||
-        (identity.identityType !== 'developer' && identity.identityType !== 'hybrid')
+        (identity.publisherType !== 'developer' && identity.publisherType !== 'hybrid')
       ) {
         throw new TRPCError({
           code: 'FORBIDDEN',
@@ -1707,27 +1634,27 @@ export const developerRouter = router({
       }
 
       // Return the selected platform brand as the operating developer view.
-      const brandProfile = await getBrandProfileById(identity.brandProfileId);
-      if (!brandProfile) {
+      const publisherProfile = await getPublisherById(identity.cataloguePublisherId);
+      if (!publisherProfile) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: `Brand profile ${identity.brandProfileId} not found.`,
+          message: `Catalogue Publisher ${identity.cataloguePublisherId} not found.`,
         });
       }
 
-      // Transform brand profile to match expected developer profile format
+      // Transform Catalogue Publisher to match expected developer profile format
       return {
-        id: brandProfile.id,
+        id: publisherProfile.id,
         userId: user.id, // Use super admin's user ID for context
-        companyName: brandProfile.brandName,
-        brandProfileId: brandProfile.id,
-        logoUrl: brandProfile.logoUrl,
-        about: brandProfile.about,
-        websiteUrl: brandProfile.websiteUrl,
-        foundedYear: brandProfile.foundedYear,
-        headOfficeLocation: brandProfile.headOfficeLocation,
-        operatingProvinces: brandProfile.operatingProvinces,
-        propertyFocus: brandProfile.propertyFocus,
+        companyName: publisherProfile.brandName,
+        cataloguePublisherId: publisherProfile.id,
+        logoUrl: publisherProfile.logoUrl,
+        about: publisherProfile.about,
+        websiteUrl: publisherProfile.websiteUrl,
+        foundedYear: publisherProfile.foundedYear,
+        headOfficeLocation: publisherProfile.headOfficeLocation,
+        operatingProvinces: publisherProfile.operatingProvinces,
+        propertyFocus: publisherProfile.propertyFocus,
         // Operating-identity fields
         isPlatformCurator: true,
         operatingMode: 'platform_curator',
@@ -1785,7 +1712,7 @@ export const developerRouter = router({
         const dev = await developmentService.getDevelopmentWithPhases(input.id);
         if (!dev) return null;
 
-        if (dev.developerId !== profile.id) {
+        if (dev.cataloguePublisherId !== profile.publisherId) {
           return null;
         }
         return dev;
@@ -1834,15 +1761,21 @@ export const developerRouter = router({
           .select(selectIdentity)
           .from(developments)
           .where(
-            and(eq(developments.id, input.developmentId), eq(developments.developerId, profile.id)),
+            and(
+              eq(developments.id, input.developmentId),
+              eq(developments.cataloguePublisherId, profile.publisherId),
+            ),
           )
           .limit(1);
       } else if (user.role === 'super_admin') {
         const operatingAs = ctx.operatingAs;
-        if (!operatingAs?.brandProfileId) {
-          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'BRAND_CONTEXT_REQUIRED' });
+        if (!operatingAs?.cataloguePublisherId) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'PUBLISHER_CONTEXT_REQUIRED',
+          });
         }
-        if (operatingAs.brandType !== 'developer' && operatingAs.brandType !== 'hybrid') {
+        if (operatingAs.publisherType !== 'developer' && operatingAs.publisherType !== 'hybrid') {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Developer or hybrid brand context is required for Development Home.',
@@ -1855,7 +1788,7 @@ export const developerRouter = router({
           .where(
             and(
               eq(developments.id, input.developmentId),
-              eq(developments.developerBrandProfileId, operatingAs.brandProfileId),
+              eq(developments.cataloguePublisherId, operatingAs.cataloguePublisherId),
             ),
           )
           .limit(1);
@@ -1976,14 +1909,16 @@ export const developerRouter = router({
     console.log(
       `[developer.getDevelopments] userId=${requireUser(ctx).id} developerProfileId=${profile.id} filterDeveloperId=${profile.id}`,
     );
-    return await developmentService.getDevelopmentsByDeveloperId(profile.id);
+    return await developmentService.getDevelopmentsByDeveloperId(profile.publisherId);
   }),
 
   upgradeSubscription: protectedProcedure
     .input(z.object({ tier: z.enum(['basic', 'premium']) }))
     .mutation(async ({ ctx, input }) => {
       const profile = await requireDeveloperProfileByUserId(requireUser(ctx).id);
-      const subscription = await developerSubscriptionService.ensureSubscription(profile.id);
+      const subscription = await developerSubscriptionService.ensureSubscription(
+        profile.organisationId,
+      );
 
       return {
         success: false,

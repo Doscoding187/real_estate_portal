@@ -132,8 +132,8 @@ export function FinalisationPhase({
   const errors = validationResult?.errors || [];
   const warnings: string[] = getCardFieldRecommendations().filter(message => !errors.includes(message));
   const canPublish = errors.length === 0;
-  const publisherBrandProfileId = publisherContext?.brandProfileId ?? null;
-  const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherBrandProfileId === 'number';
+  const publisherId = publisherContext?.cataloguePublisherId ?? null;
+  const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherId === 'number';
   const finalisationCopy = shouldUseSuperAdminFlow
     ? {
         heading: 'Review & Publish',
@@ -283,7 +283,7 @@ export function FinalisationPhase({
       if (!confirm) return;
     }
 
-    if (isSuperAdmin && !publisherContext?.brandProfileId) {
+    if (isSuperAdmin && !publisherContext?.cataloguePublisherId) {
       toast.error('Select a publisher brand context before publishing.');
       return;
     }
@@ -306,12 +306,11 @@ export function FinalisationPhase({
       let developmentId: number;
       if (editingId && shouldUseSuperAdminFlow) {
         await updatePublisherDevelopment.mutateAsync({
-          brandProfileId: publisherBrandProfileId,
+          cataloguePublisherId: publisherId,
           developmentId: editingId,
           data: {
             ...payload,
-            brandProfileId: publisherBrandProfileId,
-            developerBrandProfileId: publisherBrandProfileId,
+            cataloguePublisherId: publisherId,
             devOwnerType: 'platform',
           },
         });
@@ -331,31 +330,18 @@ export function FinalisationPhase({
           // SUPER ADMIN WITH PUBLISHER CONTEXT: route through publisher endpoints
           const superAdminPayload = {
             ...payload,
-            // Ensure brandProfileId is set from publisher context
-            brandProfileId: publisherBrandProfileId,
-            developerBrandProfileId: publisherBrandProfileId,
+            // Ensure cataloguePublisherId is set from publisher context
+            cataloguePublisherId: publisherId,
             devOwnerType: 'platform',
           };
 
           const result = await createPublisherDevelopment.mutateAsync(superAdminPayload);
           developmentId = result.development.id;
         } else {
-          // REGULAR FLOW: use existing developer endpoint
-          // Identity & Branding logic
-          const isBrandDevelopment =
-            listingIdentity?.identityType === 'brand' ||
-            listingIdentity?.identityType === 'marketing_agency';
-
+          // Regular developers are bound to their server-resolved first-party
+          // Catalogue Publisher. The browser cannot nominate another publisher.
           const createPayload = {
             ...payload,
-            // Identity & Branding
-            brandProfileId: isBrandDevelopment
-              ? listingIdentity?.developerBrandProfileId
-              : undefined,
-            marketingBrandProfileId:
-              listingIdentity?.identityType === 'marketing_agency'
-                ? listingIdentity.marketingBrandProfileId
-                : undefined,
             marketingRole: listingIdentity?.marketingRole || 'exclusive',
           };
 
@@ -367,7 +353,7 @@ export function FinalisationPhase({
       // The publisher flow publishes directly; the normal developer flow submits for review.
       if (shouldUseSuperAdminFlow) {
         await publishPublisherDevelopment.mutateAsync({
-          brandProfileId: publisherBrandProfileId,
+          cataloguePublisherId: publisherId,
           developmentId,
         });
       } else {

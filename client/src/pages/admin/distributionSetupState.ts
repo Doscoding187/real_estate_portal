@@ -1,17 +1,16 @@
 export type PartnerDevelopmentRow = {
   developmentId?: number | string | null;
-  brandProfileId?: number | string | null;
-  marketingBrandProfileId?: number | string | null;
+  cataloguePublisherId?: number | string | null;
   program?: unknown;
 };
 
 export type PartnerDevelopmentSetupState =
-  | 'needs_brand_link'
+  | 'needs_publisher_link'
   | 'ready_to_add'
   | 'already_in_partner_developments';
 
-export function isDevelopmentBrandLinked(row: PartnerDevelopmentRow) {
-  return Boolean(Number(row.brandProfileId || 0) || Number(row.marketingBrandProfileId || 0));
+export function isDevelopmentPublisherLinked(row: PartnerDevelopmentRow) {
+  return Boolean(Number(row.cataloguePublisherId || 0));
 }
 
 export function isDevelopmentInPartnerProgram(
@@ -25,8 +24,8 @@ export function getPartnerDevelopmentSetupState(
   row: PartnerDevelopmentRow,
   programByDevelopmentId: Map<number, unknown>,
 ): PartnerDevelopmentSetupState {
-  if (!isDevelopmentBrandLinked(row)) {
-    return 'needs_brand_link';
+  if (!isDevelopmentPublisherLinked(row)) {
+    return 'needs_publisher_link';
   }
 
   if (isDevelopmentInPartnerProgram(row, programByDevelopmentId)) {
@@ -38,8 +37,8 @@ export function getPartnerDevelopmentSetupState(
 
 export function getPartnerDevelopmentSetupLabel(state: PartnerDevelopmentSetupState) {
   switch (state) {
-    case 'needs_brand_link':
-      return 'Needs Brand Link';
+    case 'needs_publisher_link':
+      return 'Needs Publisher Link';
     case 'ready_to_add':
       return 'Ready to Add';
     case 'already_in_partner_developments':
@@ -51,10 +50,10 @@ export function getPartnerDevelopmentSetupLabel(state: PartnerDevelopmentSetupSt
 
 export function getPartnerDevelopmentSetupDescription(state: PartnerDevelopmentSetupState) {
   switch (state) {
-    case 'needs_brand_link':
-      return 'Needs brand profile link before it can be added to Partner Developments.';
+    case 'needs_publisher_link':
+      return 'Needs a Catalogue Publisher link before it can be added to Partner Developments.';
     case 'ready_to_add':
-      return 'Brand link is complete. This development can now be added to Partner Developments.';
+      return 'Catalogue Publisher link is complete. This development can now be added to Partner Developments.';
     case 'already_in_partner_developments':
       return 'Distribution program already exists for this development.';
     default:

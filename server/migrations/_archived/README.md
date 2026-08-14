@@ -10,3 +10,8 @@ accepted launch schema, and run legacy data backfills.
 
 The active custom SQL runner executes only top-level `.sql` files directly
 inside `server/migrations`.
+
+`rejected-zero-statement/` preserves unchanged SQL and checksums for explicitly
+reviewed attempts that failed before executing a statement. Those files are
+evidence only and cannot re-enter an active plan without a new, supported
+migration identity and approval.

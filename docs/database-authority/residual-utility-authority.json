@@ -72,6 +72,7 @@
     "localTestFixtures": [
       "scripts/run-listing-performance-e2e.ts",
       "scripts/run-prospect-journey-e2e.ts",
+      "scripts/verify-developer-engine-s1.ts",
       "scripts/verify-prospect-journey-cross-agency.ts",
       "scripts/verify-prospect-journey-security.ts"
     ],
@@ -312,7 +313,7 @@
         "scripts/quick-check.ts"
       ]
     },
-    "guardedOperationalSurfaceCountAtClosure": 121,
+    "guardedOperationalSurfaceCountAtClosure": 122,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {

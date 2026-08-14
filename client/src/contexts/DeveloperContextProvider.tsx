@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { trpc } from '@/lib/trpc';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 
-interface BrandProfile {
+interface CataloguePublisherSummary {
   id: number;
   brandName: string;
   slug: string;
@@ -14,7 +14,7 @@ interface BrandProfile {
 
 interface DeveloperContextValue {
   selectedBrandId: number | null;
-  selectedBrand: BrandProfile | null;
+  selectedBrand: CataloguePublisherSummary | null;
   setSelectedBrandId: (id: number | null) => void;
   isContextSet: boolean;
   isLoading: boolean;
@@ -24,12 +24,12 @@ const DeveloperContext = createContext<DeveloperContextValue | undefined>(undefi
 
 export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
-  const [selectedBrand, setSelectedBrand] = useState<BrandProfile | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<CataloguePublisherSummary | null>(null);
   const [hasHydrated, setHasHydrated] = useState(false);
   const { setOperatingAs, clearContext } = usePublisherContext();
 
-  // Fetch real brand profile data when brand ID is selected
-  const { data: brandProfile, isLoading } = trpc.superAdminPublisher.getBrandProfileById.useQuery(
+  // Fetch real Catalogue Publisher data when brand ID is selected
+  const { data: publisherProfile, isLoading } = trpc.superAdminPublisher.getPublisherById.useQuery(
     { id: selectedBrandId! },
     {
       enabled: !!selectedBrandId,
@@ -43,7 +43,7 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
       const stored = localStorage.getItem('publisher-context');
       if (!stored) return;
       const parsed = JSON.parse(stored);
-      const storedBrandId = parsed?.state?.context?.brandProfileId;
+      const storedBrandId = parsed?.state?.context?.cataloguePublisherId;
       if (typeof storedBrandId === 'number') {
         setSelectedBrandId(storedBrandId);
       }
@@ -56,15 +56,15 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
 
   // Update selected brand and sync with global publisher context
   useEffect(() => {
-    if (selectedBrandId && brandProfile) {
-      const brand: BrandProfile = {
-        id: brandProfile.id,
-        brandName: brandProfile.brandName,
-        slug: brandProfile.slug,
-        logoUrl: brandProfile.logoUrl,
-        brandTier: brandProfile.brandTier,
-        identityType: brandProfile.identityType,
-        totalLeadsReceived: brandProfile.totalLeadsReceived,
+    if (selectedBrandId && publisherProfile) {
+      const brand: CataloguePublisherSummary = {
+        id: publisherProfile.id,
+        brandName: publisherProfile.brandName,
+        slug: publisherProfile.slug,
+        logoUrl: publisherProfile.logoUrl,
+        brandTier: publisherProfile.brandTier,
+        identityType: publisherProfile.identityType,
+        totalLeadsReceived: publisherProfile.totalLeadsReceived,
       };
       setSelectedBrand(brand);
 
@@ -72,16 +72,16 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
       // CRITICAL: Use actual identityType from database, never hardcode
       setOperatingAs({
         mode: 'platform_curator',
-        brandProfileId: brand.id,
-        brandProfileName: brand.brandName,
-        brandProfileType: brand.identityType || 'developer', // Use real identityType
+        cataloguePublisherId: brand.id,
+        publisherName: brand.brandName,
+        publisherType: brand.identityType || 'developer', // Use real identityType
         logoUrl: brand.logoUrl,
       });
     } else if (hasHydrated && !selectedBrandId) {
       setSelectedBrand(null);
       clearContext();
     }
-  }, [selectedBrandId, brandProfile, setOperatingAs, clearContext, hasHydrated]);
+  }, [selectedBrandId, publisherProfile, setOperatingAs, clearContext, hasHydrated]);
 
   const value: DeveloperContextValue = {
     selectedBrandId,

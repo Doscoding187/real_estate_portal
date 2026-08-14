@@ -29,9 +29,9 @@ describe('distribution schema readiness requirements', () => {
 
     expect(labels).toEqual(
       expect.arrayContaining([
-        'developments.developer_brand_profile_id',
-        'developments.marketing_brand_profile_id',
-        'developer_brand_profiles.brand_name',
+        'developments.catalogue_publisher_id',
+        'catalogue_publishers.name',
+        'distribution_brand_partnerships.catalogue_publisher_id',
         'distribution_programs.development_id',
         'distribution_programs.payout_milestone',
         'distribution_programs.currency_code',

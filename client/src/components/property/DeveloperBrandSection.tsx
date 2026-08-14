@@ -2,7 +2,7 @@
  * Developer Brand Section
  *
  * Displays developer brand information on property detail pages
- * when a property/development is linked to a developerBrandProfile.
+ * when a property/development is linked to a Catalogue Publisher.
  */
 
 import React from 'react';
@@ -33,8 +33,8 @@ export function DeveloperBrandSection({ brand }: DeveloperBrandSectionProps) {
   const [, setLocation] = useLocation();
 
   // Fetch other developments by this brand
-  const { data: developmentsData } = trpc.brandProfile.getBrandDevelopments.useQuery(
-    { brandProfileId: brand.id },
+  const { data: developmentsData } = trpc.cataloguePublisher.getPublisherDevelopments.useQuery(
+    { cataloguePublisherId: brand.id },
     { enabled: !!brand.id },
   );
 

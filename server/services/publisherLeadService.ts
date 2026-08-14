@@ -1,21 +1,22 @@
 /**
- * Brand Lead Service
+ * Catalogue Publisher Lead Service
  *
- * Handles lead capture and routing for developer brand profiles.
+ * Delegates public lead capture to the canonical custody service and exposes
+ * Catalogue Publisher-scoped delivery and reporting operations.
  * Implements Refinement #3: Async counter increments
  * Implements Refinement #4: Non-subscribers MUST NOT see leads in dashboard
  *
  * Lead Flow:
  * 1. User submits lead on property/development
- * 2. Lead is captured with developerBrandProfileId
+ * 2. Lead is captured with cataloguePublisherId
  * 3. Lead is routed via public email (if available)
  * 4. Counters are updated asynchronously
  */
 
 import { db } from '../db';
-import { leads, developerBrandProfiles } from '../../drizzle/schema';
+import { leads } from '../../drizzle/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { developerBrandProfileService } from './developerBrandProfileService';
+import { cataloguePublisherService } from './cataloguePublisherService';
 import { EmailService } from '../_core/emailService';
 import { ENV } from '../_core/env';
 import { capturePublicLead } from './publicLeadCaptureService';
@@ -39,8 +40,8 @@ interface AffordabilityData {
   calculatedAt?: string;
 }
 
-export interface CaptureBrandLeadInput {
-  developerBrandProfileId: number;
+export interface CapturePublisherLeadInput {
+  cataloguePublisherId: number;
   developmentId?: number;
   propertyId?: number;
   unitId?: string;
@@ -88,13 +89,13 @@ export interface LeadRoutingResult {
  * adapter avoids a second persistence authority while allowing existing
  * non-router callers to converge without fabricating customer ownership.
  */
-async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRoutingResult> {
+async function capturePublisherLead(input: CapturePublisherLeadInput): Promise<LeadRoutingResult> {
   const result = await capturePublicLead({
     ...input,
     leadType: 'inquiry',
-    source: input.sourceSurface || input.leadSource || 'brand_profile',
-    sourceSurface: input.sourceSurface || 'brand_profile',
-    leadSource: input.leadSource || 'brand_profile',
+    source: input.sourceSurface || input.leadSource || 'catalogue_publisher',
+    sourceSurface: input.sourceSurface || 'catalogue_publisher',
+    leadSource: input.leadSource || 'catalogue_publisher',
   });
 
   return {
@@ -116,17 +117,17 @@ async function captureBrandLead(input: CaptureBrandLeadInput): Promise<LeadRouti
  * Route lead to developer via email
  * Note: Email clearly states lead originated from Property Listify
  */
-async function routeLeadToEmail(
+async function routePublisherLeadToEmail(
   leadId: number,
-  brandProfile: {
+  publisher: {
     brandName: string;
     publicContactEmail: string | null;
     isContactVerified: number;
   },
-  leadData: CaptureBrandLeadInput,
+  leadData: CapturePublisherLeadInput,
 ): Promise<boolean> {
-  if (!brandProfile.publicContactEmail) {
-    console.warn(`No email for brand profile, cannot route lead ${leadId}`);
+  if (!publisher.publicContactEmail) {
+    console.warn(`Catalogue Publisher has no delivery email; lead ${leadId} remains undelivered.`);
     return false;
   }
 
@@ -140,8 +141,8 @@ async function routeLeadToEmail(
   try {
     // Send lead notification email
     await EmailService.sendBrandLeadNotification(
-      brandProfile.publicContactEmail,
-      brandProfile.brandName,
+      publisher.publicContactEmail,
+      publisher.brandName,
       {
         leadId,
         name: leadData.name,
@@ -166,26 +167,24 @@ async function routeLeadToEmail(
   }
 }
 
-async function retryBrandLeadDelivery(leadId: number) {
+async function retryPublisherLeadDelivery(leadId: number) {
   const [lead] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
-  if (!lead?.developerBrandProfileId || lead.leadDeliveryMethod !== 'email') {
+  if (!lead?.cataloguePublisherId || lead.leadDeliveryMethod !== 'email') {
     return { success: false as const, status: lead?.deliveryStatus || 'attention_required' };
   }
 
-  const profile = await developerBrandProfileService.getBrandProfileById(
-    lead.developerBrandProfileId,
-  );
+  const profile = await cataloguePublisherService.getPublisherById(lead.cataloguePublisherId);
   if (
     !profile?.publicContactEmail ||
     profile.ownerType === 'platform' ||
-    !profile.linkedDeveloperAccountId
+    !profile.developerOrganisationId
   ) {
     return { success: false as const, status: 'attention_required' as const };
   }
 
   const attempt = await appendLeadDeliveryRetryAttempt({
     leadId,
-    deliveryKey: `brand:${lead.developerBrandProfileId}`,
+    deliveryKey: `publisher:${lead.cataloguePublisherId}`,
   });
   if (!attempt) {
     return { success: false as const, status: lead.deliveryStatus };
@@ -199,21 +198,17 @@ async function retryBrandLeadDelivery(leadId: number) {
     return { success: false as const, status: lead.deliveryStatus };
   }
 
-  const delivered = await routeLeadToEmail(
-    leadId,
-    profile,
-    {
-      developerBrandProfileId: lead.developerBrandProfileId,
-      developmentId: lead.developmentId || undefined,
-      propertyId: lead.propertyId || undefined,
-      unitId: lead.unitId || undefined,
-      unitName: lead.unitName || undefined,
-      name: lead.name,
-      email: lead.email,
-      phone: lead.phone || undefined,
-      message: lead.message || undefined,
-    },
-  );
+  const delivered = await routePublisherLeadToEmail(leadId, profile, {
+    cataloguePublisherId: lead.cataloguePublisherId,
+    developmentId: lead.developmentId || undefined,
+    propertyId: lead.propertyId || undefined,
+    unitId: lead.unitId || undefined,
+    unitName: lead.unitName || undefined,
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone || undefined,
+    message: lead.message || undefined,
+  });
   const updated = await updateLeadDeliveryAttempt({
     leadId,
     attemptId: attempt.id,
@@ -236,8 +231,8 @@ async function retryBrandLeadDelivery(leadId: number) {
  * Check if a brand can view their leads in dashboard
  * Non-subscribers MUST NOT see leads in dashboard
  */
-async function canViewDashboardLeads(brandProfileId: number): Promise<boolean> {
-  const profile = await developerBrandProfileService.getBrandProfileById(brandProfileId);
+async function canViewDashboardLeads(cataloguePublisherId: number): Promise<boolean> {
+  const profile = await cataloguePublisherService.getPublisherById(cataloguePublisherId);
 
   if (!profile) {
     return false;
@@ -251,8 +246,8 @@ async function canViewDashboardLeads(brandProfileId: number): Promise<boolean> {
  * Get leads for a brand (only if subscriber)
  * Returns empty array for non-subscribers
  */
-async function getBrandLeads(
-  brandProfileId: number,
+async function getPublisherLeads(
+  cataloguePublisherId: number,
   filters: {
     status?: string;
     limit?: number;
@@ -260,7 +255,7 @@ async function getBrandLeads(
   } = {},
 ) {
   // Check subscription status first
-  const canView = await canViewDashboardLeads(brandProfileId);
+  const canView = await canViewDashboardLeads(cataloguePublisherId);
 
   if (!canView) {
     // Non-subscribers cannot see leads
@@ -272,7 +267,7 @@ async function getBrandLeads(
   }
 
   // Subscribers can view their leads
-  const conditions = [eq(leads.developerBrandProfileId, brandProfileId)];
+  const conditions = [eq(leads.cataloguePublisherId, cataloguePublisherId)];
 
   if (filters.status) {
     conditions.push(eq(leads.status, filters.status as (typeof leads.status.enumValues)[number]));
@@ -301,8 +296,8 @@ async function getBrandLeads(
  * Get sales pitch statistics for a brand
  * Used for conversion messaging
  */
-async function getSalesPitchStats(brandProfileId: number) {
-  const profile = await developerBrandProfileService.getBrandProfileById(brandProfileId);
+async function getSalesPitchStats(cataloguePublisherId: number) {
+  const profile = await cataloguePublisherService.getPublisherById(cataloguePublisherId);
 
   if (!profile) {
     return null;
@@ -324,17 +319,17 @@ async function getSalesPitchStats(brandProfileId: number) {
 // Export Service
 // ============================================================================
 
-export const brandLeadService = {
+export const publisherLeadService = {
   // Lead capture
-  captureBrandLead,
+  capturePublisherLead,
 
   // Lead routing
-  routeLeadToEmail,
-  retryBrandLeadDelivery,
+  routePublisherLeadToEmail,
+  retryPublisherLeadDelivery,
 
   // Lead visibility (Refinement #4)
   canViewDashboardLeads,
-  getBrandLeads,
+  getPublisherLeads,
 
   // Sales stats
   getSalesPitchStats,

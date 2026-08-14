@@ -149,7 +149,7 @@ function rowsFromResult(result: unknown): Array<Record<string, unknown>> {
   return [];
 }
 
-async function queryRows(
+export async function queryMigrationRows(
   connection: AuthoritySqlConnection,
   statement: string,
   values: readonly unknown[] = [],
@@ -157,11 +157,11 @@ async function queryRows(
   return rowsFromResult(await connection.execute(statement, values));
 }
 
-async function assertRunnerConnectionTarget(
+export async function assertRunnerConnectionTarget(
   connection: AuthoritySqlConnection,
   authority: ResolvedDatabaseAuthority,
 ): Promise<void> {
-  const rows = await queryRows(connection, 'SELECT DATABASE() AS database_name');
+  const rows = await queryMigrationRows(connection, 'SELECT DATABASE() AS database_name');
   const selected = String(rowValue(rows[0] ?? {}, 'database_name') ?? '');
   if (selected !== authority.context.databaseName) {
     throw new Error('Migration runner refused: supplied connection target is not the authorized target.');
@@ -195,7 +195,7 @@ async function readDatabaseMigrationState(
   connection: AuthoritySqlConnection,
   manifest: ValidatedMigrationManifest,
 ): Promise<DatabaseMigrationState> {
-  const controlRows = await queryRows(
+  const controlRows = await queryMigrationRows(
     connection,
     'SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name IN (?, ?)',
     [manifest.document.historyTable, manifest.document.attemptTable],
@@ -206,7 +206,7 @@ async function readDatabaseMigrationState(
   const historyTablePresent = controlTables.has(manifest.document.historyTable);
   const attemptTablePresent = controlTables.has(manifest.document.attemptTable);
   const applied = historyTablePresent
-    ? (await queryRows(
+    ? (await queryMigrationRows(
         connection,
         `SELECT filename, checksum FROM \`${manifest.document.historyTable}\` ORDER BY numeric_version, filename`,
       )).map(row => ({
@@ -215,7 +215,7 @@ async function readDatabaseMigrationState(
       }))
     : [];
   const incompleteAttempts = attemptTablePresent
-    ? (await queryRows(
+    ? (await queryMigrationRows(
         connection,
         `SELECT attempt_id, migration_filename, state FROM \`${manifest.document.attemptTable}\` WHERE state IN ('running', 'failed', 'blocked') ORDER BY started_at, attempt_id`,
       )).map(row => ({
@@ -224,7 +224,7 @@ async function readDatabaseMigrationState(
         state: String(rowValue(row, 'state') ?? 'blocked') as MigrationAttempt['state'],
       }))
     : [];
-  const countRows = await queryRows(
+  const countRows = await queryMigrationRows(
     connection,
     'SELECT COUNT(*) AS count_value FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name NOT IN (?, ?)',
     [manifest.document.historyTable, manifest.document.attemptTable],
@@ -390,15 +390,15 @@ export function buildMigrationPlan(input: {
   });
 }
 
-async function acquireMigrationLock(
+export async function acquireMigrationLock(
   connection: AuthoritySqlConnection,
   lockName: string,
 ): Promise<MigrationLockEvidence> {
-  const rows = await queryRows(connection, 'SELECT GET_LOCK(?, 30) AS lock_status', [lockName]);
+  const rows = await queryMigrationRows(connection, 'SELECT GET_LOCK(?, 30) AS lock_status', [lockName]);
   if (Number(rowValue(rows[0] ?? {}, 'lock_status') ?? 0) !== 1) {
     throw new Error(`Migration apply blocked: lock ${lockName} was not acquired.`);
   }
-  const ownershipRows = await queryRows(
+  const ownershipRows = await queryMigrationRows(
     connection,
     'SELECT CONNECTION_ID() AS connection_id, IS_USED_LOCK(?) AS lock_owner_connection_id',
     [lockName],
@@ -418,7 +418,7 @@ async function acquireMigrationLock(
   });
 }
 
-async function releaseMigrationLock(
+export async function releaseMigrationLock(
   connection: AuthoritySqlConnection,
   lockName: string,
 ): Promise<void> {

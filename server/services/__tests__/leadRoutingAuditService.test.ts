@@ -15,7 +15,7 @@ function makeRow(overrides: Partial<LeadRoutingAuditRow> = {}): LeadRoutingAudit
     developmentId: null,
     agentId: null,
     agencyId: null,
-    developerBrandProfileId: null,
+    cataloguePublisherId: null,
     leadSource: 'property_detail',
     source: 'property_detail',
     brandLeadStatus: null,
@@ -30,7 +30,7 @@ describe('leadRoutingAuditService', () => {
   it('classifies brand capture only leads as attention items', () => {
     const result = classifyLeadRouting(
       makeRow({
-        developerBrandProfileId: 44,
+        cataloguePublisherId: 44,
         leadDeliveryMethod: 'none',
       }),
     );
@@ -47,7 +47,7 @@ describe('leadRoutingAuditService', () => {
       [
         makeRow({
           id: 1,
-          developerBrandProfileId: 99,
+          cataloguePublisherId: 99,
           leadDeliveryMethod: 'crm_export',
           agentId: 6,
         }),
@@ -69,7 +69,7 @@ describe('leadRoutingAuditService', () => {
         }),
         makeRow({
           id: 5,
-          developerBrandProfileId: 100,
+          cataloguePublisherId: 100,
           leadDeliveryMethod: 'none',
           leadSource: 'development_detail',
         }),

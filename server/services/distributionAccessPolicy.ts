@@ -3,8 +3,8 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import {
   developmentRequiredDocuments,
-  developerBrandProfiles,
-  developers,
+  cataloguePublishers,
+  developerOrganisations,
   developmentSupersessions,
   developments,
   distributionManagerAssignments,
@@ -15,7 +15,7 @@ import {
 import { getDb } from '../db';
 import { getProgramActivationReadiness } from './distributionProgramService';
 import {
-  getBrandPartnershipByBrandProfileId,
+  getBrandPartnershipByPublisherId,
   getDevelopmentAccessByDevelopmentId,
   type DistributionBrandPartnershipRow,
   type DistributionDevelopmentAccessRow,
@@ -40,7 +40,7 @@ type ActorRole = 'admin' | 'manager' | 'referrer' | 'public';
 type DistributionAccessChannel = 'admin_catalog' | 'submission';
 
 export type DevelopmentDistributionAccessEvaluation = {
-  brandProfileId: number | null;
+  cataloguePublisherId: number | null;
   brandPartnershipId: number | null;
   brandPartnershipStatus: BrandPartnershipStatus | null;
   developmentAccessId: number | null;
@@ -83,13 +83,13 @@ function boolFromTinyInt(value: unknown) {
 }
 
 function deriveLegacyFallback(input: {
-  brandProfileId: number | null;
+  cataloguePublisherId: number | null;
   developmentVisible: boolean;
   programExists: boolean;
   programActive: boolean;
   referralEnabled: boolean;
 }) {
-  if (!input.brandProfileId) {
+  if (!input.cataloguePublisherId) {
     return {
       partnershipStatus: null,
       accessStatus: null,
@@ -128,7 +128,7 @@ function deriveLegacyFallback(input: {
   };
 }
 
-// Brand profile visibility is not partnership truth.
+// Catalogue Publisher visibility is not partnership truth.
 // Development inclusion is not readiness truth.
 // Only enabled developments may accept submissions.
 export function deriveInventoryState(input: {
@@ -137,6 +137,7 @@ export function deriveInventoryState(input: {
   developmentAccessStatus: DevelopmentAccessStatus | null;
   submissionAllowed: boolean;
   readinessReady: boolean;
+  programActive: boolean;
   referralEnabled: boolean;
   excludedByMandate: boolean;
   excludedByExclusivity: boolean;
@@ -162,7 +163,7 @@ export function deriveInventoryState(input: {
   if (
     input.developmentAccessStatus === 'included' &&
     input.readinessReady &&
-    (!input.submissionAllowed || !input.referralEnabled)
+    (!input.programActive || !input.submissionAllowed || !input.referralEnabled)
   ) {
     return 'ready';
   }
@@ -170,6 +171,7 @@ export function deriveInventoryState(input: {
   if (
     input.developmentAccessStatus === 'included' &&
     input.readinessReady &&
+    input.programActive &&
     input.submissionAllowed &&
     input.referralEnabled
   ) {
@@ -180,7 +182,7 @@ export function deriveInventoryState(input: {
 }
 
 function buildReasons(input: {
-  brandProfileId: number | null;
+  cataloguePublisherId: number | null;
   partnership: DistributionBrandPartnershipRow | null;
   access: DistributionDevelopmentAccessRow | null;
   developmentVisible: boolean;
@@ -193,7 +195,7 @@ function buildReasons(input: {
 }) {
   const reasons: string[] = [];
 
-  if (!input.brandProfileId) reasons.push('missing_brand_profile_link');
+  if (!input.cataloguePublisherId) reasons.push('missing_catalogue_publisher_link');
   if (!input.developmentVisible) reasons.push('development_not_visible');
 
   if (!input.partnership) {
@@ -234,7 +236,7 @@ function buildReasons(input: {
 export function mapDistributionReasonToOpportunityReason(reason: string) {
   const normalized = reason.trim();
   const map: Record<string, { code: string; message: string }> = {
-    missing_brand_profile_link: {
+    missing_catalogue_publisher_link: {
       code: 'DEVELOPMENT_NOT_AVAILABLE',
       message: 'This opportunity is not available for referrals yet.',
     },
@@ -401,24 +403,21 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const [development] = await input.db
     .select({
       id: developments.id,
-      developerId: developments.developerId,
-      devOwnerType: developments.devOwnerType,
+      cataloguePublisherId: developments.cataloguePublisherId,
       developmentType: developments.developmentType,
       isPublished: developments.isPublished,
       approvalStatus: developments.approvalStatus,
       transactionType: developments.transactionType,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      marketingBrandProfileId: developments.marketingBrandProfileId,
       brand: {
-        id: developerBrandProfiles.id,
-        ownerType: developerBrandProfiles.ownerType,
-        linkedDeveloperAccountId: developerBrandProfiles.linkedDeveloperAccountId,
-        isVisible: developerBrandProfiles.isVisible,
-        sourceAttribution: developerBrandProfiles.sourceAttribution,
+        id: cataloguePublishers.id,
+        authorityKind: cataloguePublishers.authorityKind,
+        developerOrganisationId: cataloguePublishers.developerOrganisationId,
+        isVisible: cataloguePublishers.isVisible,
+        sourceAttribution: cataloguePublishers.sourceAttribution,
       },
-      developer: {
-        id: developers.id,
-        status: developers.status,
+      organisation: {
+        id: developerOrganisations.id,
+        status: developerOrganisations.status,
       },
       activeUnitTypeCount: sql<number>`(
         SELECT COUNT(*)
@@ -434,10 +433,13 @@ export async function evaluateDevelopmentDistributionAccess(input: {
       )`,
     })
     .from(developments)
-    .leftJoin(developers, eq(developments.developerId, developers.id))
     .leftJoin(
-      developerBrandProfiles,
-      eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+      cataloguePublishers,
+      eq(developments.cataloguePublisherId, cataloguePublishers.id),
+    )
+    .leftJoin(
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
     )
     .where(eq(developments.id, input.developmentId))
     .limit(1);
@@ -446,23 +448,20 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
   }
 
-  const brandProfileId =
-    Number(development.developerBrandProfileId || 0) ||
-    Number(development.marketingBrandProfileId || 0) ||
+  const cataloguePublisherId =
+    Number(development.cataloguePublisherId || 0) ||
     null;
   const publicEligibility = evaluatePublicDevelopmentEligibility({
     development: {
       id: Number(development.id),
-      developerId: development.developerId,
-      developerBrandProfileId: development.developerBrandProfileId,
-      devOwnerType: development.devOwnerType,
+      cataloguePublisherId: development.cataloguePublisherId,
       developmentType: development.developmentType,
       transactionType: development.transactionType,
       isPublished: development.isPublished,
       approvalStatus: development.approvalStatus,
     },
-    brand: development.brand,
-    developer: development.developer?.id ? development.developer : null,
+    publisher: development.brand?.id ? development.brand : null,
+    organisation: development.organisation?.id ? development.organisation : null,
     unitTypes: [],
     activeUnitTypeCount: Number(development.activeUnitTypeCount || 0),
     activeSupersessionSource: Number(development.activeSupersessionSource || 0) === 1,
@@ -489,8 +488,8 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const programActive = boolFromTinyInt(program?.isActive);
   const referralEnabled = boolFromTinyInt(program?.isReferralEnabled);
 
-  const partnership = brandProfileId
-    ? await getBrandPartnershipByBrandProfileId(input.db, brandProfileId)
+  const partnership = cataloguePublisherId
+    ? await getBrandPartnershipByPublisherId(input.db, cataloguePublisherId)
     : null;
   const access = await getDevelopmentAccessByDevelopmentId(input.db, input.developmentId);
 
@@ -504,7 +503,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
           fallbackReason: null,
         }
       : deriveLegacyFallback({
-          brandProfileId,
+          cataloguePublisherId,
           developmentVisible,
           programExists,
           programActive,
@@ -590,13 +589,14 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     developmentAccessStatus,
     submissionAllowed,
     readinessReady: readiness.canEnable,
+    programActive,
     referralEnabled,
     excludedByMandate,
     excludedByExclusivity,
   });
 
   const reasons = buildReasons({
-    brandProfileId,
+    cataloguePublisherId,
     partnership,
     access,
     developmentVisible,
@@ -614,7 +614,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const opportunity = buildOpportunityReadiness({ inventoryState, reasons });
 
   return {
-    brandProfileId,
+    cataloguePublisherId,
     brandPartnershipId: partnership ? Number(partnership.id) : null,
     brandPartnershipStatus,
     developmentAccessId: access ? Number(access.id) : null,
@@ -655,7 +655,7 @@ export function summarizeDistributionBlockers(
       reason === 'excluded_by_exclusivity' ||
       reason === 'submission_not_allowed' ||
       reason === 'development_not_visible' ||
-      reason === 'missing_brand_profile_link' ||
+      reason === 'missing_catalogue_publisher_link' ||
       reason.startsWith('legacy_fallback_'),
   );
   const readinessBlockers = evaluation.reasons.filter(reason => reason.startsWith('readiness_'));

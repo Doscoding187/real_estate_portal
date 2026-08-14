@@ -1,6 +1,11 @@
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
-import { developerBrandProfiles, developers, developments, unitTypes } from '../../drizzle/schema';
+import {
+  cataloguePublishers,
+  developerOrganisations,
+  developments,
+  unitTypes,
+} from '../../drizzle/schema';
 import type {
   DevelopmentDerivedListing,
   DevelopmentDerivedListingSearchResults,
@@ -562,7 +567,7 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
     item.developerBrand?.brandName || item.development?.name || 'Developer',
   ).trim();
   const location = [item.suburb, item.city, item.province].filter(Boolean).join(', ');
-  const developerBrandProfileId = Number(item.developerBrand?.id || 0);
+  const cataloguePublisherId = Number(item.developerBrand?.id || 0);
 
   return {
     kind: 'development',
@@ -596,9 +601,9 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
       phone: item.developerBrand?.publicContactPhone || null,
       whatsapp: item.developerBrand?.publicContactPhone || null,
       email: item.developerBrand?.publicContactEmail || null,
-      developerBrandProfileId:
-        Number.isFinite(developerBrandProfileId) && developerBrandProfileId > 0
-          ? developerBrandProfileId
+      cataloguePublisherId:
+        Number.isFinite(cataloguePublisherId) && cataloguePublisherId > 0
+          ? cataloguePublisherId
           : undefined,
     },
     development: item.development,
@@ -665,15 +670,15 @@ export class DevelopmentDerivedListingService {
         constructionPhase: developments.constructionPhase,
         developmentImages: developments.images,
         developmentCreatedAt: developments.createdAt,
-        developerId: developments.developerId,
-        developerBrandProfileId: developments.developerBrandProfileId,
-        developerName: developers.name,
-        developerLogo: developers.logo,
-        developerPhone: developers.phone,
-        brandName: developerBrandProfiles.brandName,
-        brandSlug: developerBrandProfiles.slug,
-        brandLogoUrl: developerBrandProfiles.logoUrl,
-        brandPublicContactEmail: developerBrandProfiles.publicContactEmail,
+        developerId: sql<number | null>`NULL`,
+        cataloguePublisherId: developments.cataloguePublisherId,
+        developerName: developerOrganisations.name,
+        developerLogo: developerOrganisations.logo,
+        developerPhone: developerOrganisations.phone,
+        brandName: cataloguePublishers.name,
+        brandSlug: cataloguePublishers.slug,
+        brandLogoUrl: cataloguePublishers.logoUrl,
+        brandPublicContactEmail: cataloguePublishers.publicContactEmail,
         unitTypeId: unitTypes.id,
         unitName: unitTypes.name,
         unitDescription: unitTypes.description,
@@ -706,10 +711,10 @@ export class DevelopmentDerivedListingService {
       })
       .from(unitTypes)
       .innerJoin(developments, eq(unitTypes.developmentId, developments.id))
-      .leftJoin(developers, eq(developments.developerId, developers.id))
+      .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
       .leftJoin(
-        developerBrandProfiles,
-        eq(developments.developerBrandProfileId, developerBrandProfiles.id),
+        developerOrganisations,
+        eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
       )
       .where(and(...conditions))
       .orderBy(desc(developments.createdAt), asc(unitTypes.displayOrder));
@@ -878,7 +883,7 @@ export class DevelopmentDerivedListingService {
             status: row.developmentStatus || null,
           },
           developerBrand: {
-            id: row.developerBrandProfileId ? Number(row.developerBrandProfileId) : null,
+            id: row.cataloguePublisherId ? Number(row.cataloguePublisherId) : null,
             brandName: row.brandName || row.developerName || 'Developer',
             slug: row.brandSlug || null,
             logoUrl: row.brandLogoUrl || row.developerLogo || null,

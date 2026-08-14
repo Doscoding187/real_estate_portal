@@ -23,6 +23,7 @@ import { sql } from 'drizzle-orm';
 import { users } from './core';
 import { plans } from './billing';
 import { locations } from './locations';
+import { cataloguePublishers, developerOrganisations } from './developerIdentity';
 
 export const developers = mysqlTable(
   'developers',
@@ -326,9 +327,14 @@ export const developments = mysqlTable(
     auctionEndDate: datetime('auction_end_date', { mode: 'string' }),
     startingBidFrom: decimal('starting_bid_from', { precision: 15, scale: 2 }),
     reservePriceFrom: decimal('reserve_price_from', { precision: 15, scale: 2 }),
+    cataloguePublisherId: int('catalogue_publisher_id').references(
+      () => cataloguePublishers.id,
+      { onDelete: 'restrict' },
+    ),
   },
   table => [
     index('idx_developments_slug').on(table.slug),
+    index('idx_developments_catalogue_publisher').on(table.cataloguePublisherId),
     index('idx_developments_location').on(table.latitude, table.longitude),
     index('idx_developments_auction_dates').on(table.auctionStartDate, table.auctionEndDate),
   ],
@@ -538,10 +544,19 @@ export const developmentDrafts = mysqlTable(
       () => developerBrandProfiles.id,
       { onDelete: 'cascade' },
     ),
+    developerOrganisationId: int('developer_organisation_id').references(
+      () => developerOrganisations.id,
+      { onDelete: 'cascade' },
+    ),
+    cataloguePublisherId: int('catalogue_publisher_id').references(
+      () => cataloguePublishers.id,
+      { onDelete: 'restrict' },
+    ),
   },
   table => [
     index('idx_dev_drafts_developer_id').on(table.developerId),
     index('idx_dev_drafts_last_modified').on(table.lastModified),
+    index('idx_dev_drafts_organisation').on(table.developerOrganisationId),
   ],
 );
 

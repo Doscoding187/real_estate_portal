@@ -4,7 +4,7 @@ import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
   affordabilityAssessments,
   affordabilityMatchSnapshots,
-  developerBrandProfiles,
+  cataloguePublishers,
   developments,
   distributionDeals,
   distributionPrograms,
@@ -691,8 +691,7 @@ async function buildFreshMatchSnapshot(
       developmentPriceFrom: developments.priceFrom,
       developmentPriceTo: developments.priceTo,
       isFeatured: developments.isFeatured,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      marketingBrandProfileId: developments.marketingBrandProfileId,
+      cataloguePublisherId: developments.cataloguePublisherId,
       unitTypeId: unitTypes.id,
       unitTypeName: unitTypes.name,
       unitBedrooms: unitTypes.bedrooms,
@@ -753,10 +752,8 @@ async function buildFreshMatchSnapshot(
     if (!eligibilityByDevelopmentId.get(developmentId)) {
       continue;
     }
-    const developerBrandProfileId = Number(row.developerBrandProfileId || 0);
-    const marketingBrandProfileId = Number(row.marketingBrandProfileId || 0);
-    if (developerBrandProfileId > 0) brandIds.add(developerBrandProfileId);
-    if (marketingBrandProfileId > 0) brandIds.add(marketingBrandProfileId);
+    const cataloguePublisherId = Number(row.cataloguePublisherId || 0);
+    if (cataloguePublisherId > 0) brandIds.add(cataloguePublisherId);
 
     const unitPriceFrom =
       toNumberOrNull(row.unitPriceFrom) ?? toNumberOrNull(row.developmentPriceFrom) ?? null;
@@ -807,11 +804,11 @@ async function buildFreshMatchSnapshot(
     brandIds.size > 0
       ? await db
           .select({
-            id: developerBrandProfiles.id,
-            logoUrl: developerBrandProfiles.logoUrl,
+            id: cataloguePublishers.id,
+            logoUrl: cataloguePublishers.logoUrl,
           })
-          .from(developerBrandProfiles)
-          .where(inArray(developerBrandProfiles.id, Array.from(brandIds)))
+          .from(cataloguePublishers)
+          .where(inArray(cataloguePublishers.id, Array.from(brandIds)))
       : [];
   const brandLogoById = new Map<number, string | null>();
   for (const row of brandRows) {
@@ -840,11 +837,9 @@ async function buildFreshMatchSnapshot(
   // Attach logos after sorting to keep deterministic output stable.
   for (const item of matchItems) {
     const [row] = filteredRows.filter(r => Number(r.developmentId) === Number(item.developmentId));
-    const developerBrandProfileId = Number(row?.developerBrandProfileId || 0);
-    const marketingBrandProfileId = Number(row?.marketingBrandProfileId || 0);
+    const cataloguePublisherId = Number(row?.cataloguePublisherId || 0);
     item.logoUrl =
-      brandLogoById.get(developerBrandProfileId) ||
-      brandLogoById.get(marketingBrandProfileId) ||
+      brandLogoById.get(cataloguePublisherId) ||
       null;
   }
 

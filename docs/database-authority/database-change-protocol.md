@@ -10,17 +10,17 @@ Operational migration details are in `server/migrations/README.md`.
 
 ## Canonical authorities
 
-| Concern | Authority |
-| --- | --- |
-| Desired model | `drizzle/schema/` |
-| Generated desired evidence | `drizzle/schema/canonical-model-inventory.json` |
-| Immutable baseline | `server/migrations/0000_canonical_launch_baseline.sql` |
-| Active lineage | `server/migrations/manifest.json` |
-| Manifest validation | `server/migrations/migrationManifest.ts` |
-| Plan/apply and attempt state | `server/migrations/runSqlMigrations.ts` |
-| Target, operation, connection | `server/_core/databaseAuthority/` |
-| Operation matrix | `docs/database-authority/operation-policy.json` |
-| Static gate | `pnpm db:authority:check` |
+| Concern                       | Authority                                              |
+| ----------------------------- | ------------------------------------------------------ |
+| Desired model                 | `drizzle/schema/`                                      |
+| Generated desired evidence    | `drizzle/schema/canonical-model-inventory.json`        |
+| Immutable baseline            | `server/migrations/0000_canonical_launch_baseline.sql` |
+| Active lineage                | `server/migrations/manifest.json`                      |
+| Manifest validation           | `server/migrations/migrationManifest.ts`               |
+| Plan/apply and attempt state  | `server/migrations/runSqlMigrations.ts`                |
+| Target, operation, connection | `server/_core/databaseAuthority/`                      |
+| Operation matrix              | `docs/database-authority/operation-policy.json`        |
+| Static gate                   | `pnpm db:authority:check`                              |
 
 The migration ledger reports successful application; it never decides
 repository membership or order. Durable attempt evidence is separate.
@@ -55,6 +55,13 @@ A normal incremental DDL entry must:
 - include focused precondition, postcondition, and consumer evidence; and
 - preserve forward recovery if application becomes ambiguous.
 
+The active-manifest validator rejects TiDB-unsupported stored-program
+primitives (triggers, procedures, functions, events, and client `DELIMITER`
+directives). Local MySQL acceptance is not deployment-dialect proof. CHECK
+constraints are defence in depth only unless the target TiDB environment has
+separately proven `tidb_enable_check_constraint` enforcement; launch-critical
+business transitions must also be enforced by their domain command authority.
+
 Do not claim transactional rollback for MySQL/TiDB DDL. Do not combine several
 DDL transitions in one file to simulate atomicity. Database/schema lifecycle,
 cross-schema references, and ordinary destructive/shape-changing DDL fail
@@ -81,6 +88,26 @@ connection, rechecks the plan, creates durable
 control tables when needed, records a running attempt with that lock owner,
 applies each statement, records progress, then records success. A
 failed/running/blocked attempt prevents normal continuation.
+
+### Reviewed zero-statement replacement
+
+When a rejected migration has a durable failed attempt with exactly zero
+completed statements, use the bounded recovery commands rather than retrying,
+recreating the database, or editing the ledger:
+
+```text
+pnpm db:migration-recovery:plan -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor>
+pnpm db:migration-recovery:apply -- --attempt-id=<id> --approval-reference=<reference> --approval-actor=<actor> --plan-digest=<exact-plan-digest>
+```
+
+The reviewed SQL must first be removed from active lineage and retained
+unchanged under `server/migrations/_archived/rejected-zero-statement/`. The
+plan proves the archive checksum, exact failed attempt and target fingerprint,
+zero statement progress, accepted successful head, and absence of the rejected
+physical object. Apply takes the canonical migration lock, binds to the exact
+plan digest, changes only the failed attempt's review state, and records a
+separate durable replacement-evidence row. It never creates migration history
+for rejected SQL.
 
 Generic migration commands accept only local disposable or quarantined
 read-only plan targets. Protected targets use `pnpm db:release:plan` and

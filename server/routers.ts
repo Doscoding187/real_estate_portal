@@ -10,8 +10,8 @@ import * as db from './db';
 import { getDb } from './db-connection';
 import {
   developments,
-  developers,
-  developerBrandProfiles,
+  cataloguePublishers,
+  developerOrganisations,
   agents,
   agencies,
   properties,
@@ -270,7 +270,7 @@ import { locationPagesRouter } from './locationPagesRouter';
 import { propertyResultsRouter } from './propertyResultsRouter';
 import { monetizationRouter } from './monetizationRouter';
 import { partnerRouter } from './partnerRouter';
-import { brandProfileRouter } from './brandProfileRouter';
+import { cataloguePublisherRouter } from './cataloguePublisherRouter';
 import { superAdminPublisherRouter } from './superAdminPublisherRouter';
 import { favoritesRouter } from './favoritesRouter';
 import { reviewsRouter } from './reviewsRouter';
@@ -318,7 +318,7 @@ const appRouterConfig = {
   similarProperties: similarPropertiesRouter,
   cache: cacheRouter,
   locationPages: locationPagesRouter,
-  brandProfile: brandProfileRouter,
+  cataloguePublisher: cataloguePublisherRouter,
   superAdminPublisher: superAdminPublisherRouter,
   favorites: favoritesRouter,
   reviews: reviewsRouter,
@@ -529,7 +529,7 @@ const appRouterConfig = {
               builderLogoUrl: dev.builderLogoUrl ?? null,
               configurations: Array.isArray(dev.configurations) ? dev.configurations : [],
               images: Array.isArray(dev.images) ? dev.images : [],
-              developerBrandProfileId: dev.developerBrandProfileId ?? null,
+              cataloguePublisherId: dev.cataloguePublisherId ?? null,
             })),
             total: filteredDevelopments.length,
           },
@@ -640,7 +640,7 @@ const appRouterConfig = {
             priceFrom: dev.priceFrom ?? null,
             priceTo: dev.priceTo ?? null,
             images: Array.isArray(dev.images) ? dev.images : [],
-            developerBrandProfileId: dev.developerBrandProfileId ?? null,
+            cataloguePublisherId: dev.cataloguePublisherId ?? null,
           })),
           total: filteredResults.length,
           limit: safeLimit,
@@ -872,8 +872,8 @@ const appRouterConfig = {
 
         if (drizzleDb) {
           const resolvedDevelopmentId = Number((property as any).developmentId || 0);
-          const resolvedBrandProfileIdCandidate = Number(
-            (property as any).developerBrandProfileId || 0,
+          const resolvedPublisherIdCandidate = Number(
+            (property as any).cataloguePublisherId || (property as any).cataloguePublisherId || 0,
           );
           const resolvedAgentId = Number((property as any).agentId || 0);
 
@@ -888,12 +888,18 @@ const appRouterConfig = {
                 id: developments.id,
                 name: developments.name,
                 slug: developments.slug,
-                developerId: developments.developerId,
-                developerBrandProfileId: developments.developerBrandProfileId,
-                developerName: developers.name,
+                cataloguePublisherId: developments.cataloguePublisherId,
+                developerName: developerOrganisations.name,
               })
               .from(developments)
-              .leftJoin(developers, eq(developments.developerId, developers.id))
+              .leftJoin(
+                cataloguePublishers,
+                eq(developments.cataloguePublisherId, cataloguePublishers.id),
+              )
+              .leftJoin(
+                developerOrganisations,
+                eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+              )
               .where(eq(developments.id, resolvedDevelopmentId))
               .limit(1);
 
@@ -902,30 +908,30 @@ const appRouterConfig = {
                 id: Number(dev.id),
                 name: dev.name,
                 slug: dev.slug || null,
-                developerId: dev.developerId ?? null,
+                cataloguePublisherId: dev.cataloguePublisherId ?? null,
                 developerName: dev.developerName ?? null,
               };
             }
 
-            const resolvedBrandProfileId = Number(
-              resolvedBrandProfileIdCandidate || dev?.developerBrandProfileId || 0,
+            const resolvedPublisherId = Number(
+              resolvedPublisherIdCandidate || dev?.cataloguePublisherId || 0,
             );
-            if (Number.isFinite(resolvedBrandProfileId) && resolvedBrandProfileId > 0) {
+            if (Number.isFinite(resolvedPublisherId) && resolvedPublisherId > 0) {
               const [brand] = await drizzleDb
                 .select({
-                  id: developerBrandProfiles.id,
-                  brandName: developerBrandProfiles.brandName,
-                  slug: developerBrandProfiles.slug,
-                  logoUrl: developerBrandProfiles.logoUrl,
-                  about: developerBrandProfiles.about,
-                  headOfficeLocation: developerBrandProfiles.headOfficeLocation,
-                  websiteUrl: developerBrandProfiles.websiteUrl,
-                  publicContactEmail: developerBrandProfiles.publicContactEmail,
-                  brandTier: developerBrandProfiles.brandTier,
-                  propertyFocus: developerBrandProfiles.propertyFocus,
+                  id: cataloguePublishers.id,
+                  brandName: cataloguePublishers.name,
+                  slug: cataloguePublishers.slug,
+                  logoUrl: cataloguePublishers.logoUrl,
+                  about: cataloguePublishers.about,
+                  headOfficeLocation: cataloguePublishers.headOfficeLocation,
+                  websiteUrl: cataloguePublishers.websiteUrl,
+                  publicContactEmail: cataloguePublishers.publicContactEmail,
+                  brandTier: cataloguePublishers.brandTier,
+                  propertyFocus: cataloguePublishers.propertyFocus,
                 })
-                .from(developerBrandProfiles)
-                .where(eq(developerBrandProfiles.id, resolvedBrandProfileId))
+                .from(cataloguePublishers)
+                .where(eq(cataloguePublishers.id, resolvedPublisherId))
                 .limit(1);
 
               if (brand) {
@@ -933,24 +939,24 @@ const appRouterConfig = {
               }
             }
           } else if (
-            Number.isFinite(resolvedBrandProfileIdCandidate) &&
-            resolvedBrandProfileIdCandidate > 0
+            Number.isFinite(resolvedPublisherIdCandidate) &&
+            resolvedPublisherIdCandidate > 0
           ) {
-            const [brand] = await drizzleDb
-              .select({
-                id: developerBrandProfiles.id,
-                brandName: developerBrandProfiles.brandName,
-                slug: developerBrandProfiles.slug,
-                logoUrl: developerBrandProfiles.logoUrl,
-                about: developerBrandProfiles.about,
-                headOfficeLocation: developerBrandProfiles.headOfficeLocation,
-                websiteUrl: developerBrandProfiles.websiteUrl,
-                publicContactEmail: developerBrandProfiles.publicContactEmail,
-                brandTier: developerBrandProfiles.brandTier,
-                propertyFocus: developerBrandProfiles.propertyFocus,
-              })
-              .from(developerBrandProfiles)
-              .where(eq(developerBrandProfiles.id, resolvedBrandProfileIdCandidate))
+              const [brand] = await drizzleDb
+                .select({
+                  id: cataloguePublishers.id,
+                  brandName: cataloguePublishers.name,
+                  slug: cataloguePublishers.slug,
+                  logoUrl: cataloguePublishers.logoUrl,
+                  about: cataloguePublishers.about,
+                  headOfficeLocation: cataloguePublishers.headOfficeLocation,
+                  websiteUrl: cataloguePublishers.websiteUrl,
+                  publicContactEmail: cataloguePublishers.publicContactEmail,
+                  brandTier: cataloguePublishers.brandTier,
+                  propertyFocus: cataloguePublishers.propertyFocus,
+                })
+                .from(cataloguePublishers)
+                .where(eq(cataloguePublishers.id, resolvedPublisherIdCandidate))
               .limit(1);
 
             if (brand) {

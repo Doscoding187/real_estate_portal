@@ -131,7 +131,7 @@ describe('distribution admin schema guards', () => {
     });
     await expect(
       caller.admin.upsertBrandPartnership({
-        brandProfileId: 12,
+        cataloguePublisherId: 12,
         status: 'active',
       }),
     ).rejects.toMatchObject({
@@ -149,7 +149,7 @@ describe('distribution admin schema guards', () => {
     });
     await expect(
       caller.admin.getBrandPartnership({
-        brandProfileId: 12,
+        cataloguePublisherId: 12,
       }),
     ).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',

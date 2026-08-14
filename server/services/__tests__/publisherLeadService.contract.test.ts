@@ -13,11 +13,11 @@ vi.mock('../publicLeadCaptureService', () => ({
   capturePublicLead: mockCapturePublicLead,
 }));
 
-import { brandLeadService } from '../brandLeadService';
+import { publisherLeadService } from '../publisherLeadService';
 
 const consent = { accepted: true as const, version: '2026-08-02', source: 'brand-contract' };
 
-describe('brandLeadService compatibility contract', () => {
+describe('publisherLeadService canonical custody contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCapturePublicLead.mockResolvedValue({
@@ -37,9 +37,9 @@ describe('brandLeadService compatibility contract', () => {
     });
   });
 
-  it('adapts legacy brand callers to the canonical public lead authority', async () => {
-    const result = await brandLeadService.captureBrandLead({
-      developerBrandProfileId: 13,
+  it('delegates Catalogue Publisher callers to the canonical public lead authority', async () => {
+    const result = await publisherLeadService.capturePublisherLead({
+      cataloguePublisherId: 13,
       developmentId: 77,
       unitId: 'unit-1',
       unitName: 'Type A',
@@ -61,7 +61,7 @@ describe('brandLeadService compatibility contract', () => {
     });
     expect(mockCapturePublicLead).toHaveBeenCalledWith(
       expect.objectContaining({
-        developerBrandProfileId: 13,
+        cataloguePublisherId: 13,
         developmentId: 77,
         captureRequestId: 'brand-capture-001',
         consent,
@@ -90,8 +90,8 @@ describe('brandLeadService compatibility contract', () => {
       message: 'Property Listify will review the request.',
     });
 
-    const result = await brandLeadService.captureBrandLead({
-      developerBrandProfileId: 13,
+    const result = await publisherLeadService.capturePublisherLead({
+      cataloguePublisherId: 13,
       name: 'Sam Buyer',
       email: 'sam@example.com',
       captureRequestId: 'brand-capture-002',

@@ -87,8 +87,7 @@ export interface WizardData {
   unitTypes?: any[];
 
   // Brand
-  developerBrandProfileId?: number;
-  marketingBrandProfileId?: number;
+  cataloguePublisherId?: number;
   marketingRole?: string;
 
   // Location FK
@@ -175,8 +174,7 @@ export interface NormalizedDevelopmentPayload {
   readinessScore: number;
   approvalStatus: 'draft' | 'pending' | 'approved' | 'rejected';
 
-  developerBrandProfileId?: number | null;
-  marketingBrandProfileId?: number | null;
+  cataloguePublisherId?: number | null;
   marketingRole?: 'exclusive' | 'joint' | 'open' | null;
   locationId?: number | null;
 }
@@ -532,8 +530,7 @@ export function normalizeForPublish(
     completionDate: wizardData.completionDate ? String(wizardData.completionDate) : null,
 
     // Foreign keys
-    developerBrandProfileId: wizardData.developerBrandProfileId || null,
-    marketingBrandProfileId: wizardData.marketingBrandProfileId || null,
+    cataloguePublisherId: wizardData.cataloguePublisherId || null,
     locationId: wizardData.locationId || null,
   };
 }

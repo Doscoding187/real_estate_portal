@@ -158,11 +158,10 @@ interface PropertyPayload {
   propertyDetails?: string | Record<string, unknown>;
   pricingContract?: unknown;
   developerBrand?: DeveloperBrandLite;
-  developerBrandProfile?: DeveloperBrandLite;
   listerType?: string;
   development?: DevelopmentLite;
   developmentId?: number | string;
-  developerBrandProfileId?: number | string;
+  cataloguePublisherId?: number | string;
   suburbId?: number | string;
   agentId?: number | string;
   latitude?: number | string;
@@ -398,7 +397,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     ).trim() || undefined;
   const specs = resolvedSecurity ? { ...parsedSpecs, security: resolvedSecurity } : parsedSpecs;
 
-  const developerBrand = property.developerBrand || property.developerBrandProfile;
+  const developerBrand = property.developerBrand;
   const normalizedListerType = String(property.listerType || '')
     .trim()
     .toLowerCase();
@@ -1504,12 +1503,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               </Card>
             ) : null}
 
-            {/* 2.5 Developer Brand Section (when property is linked to a brand profile) */}
-            {(property.developerBrand || property.developerBrandProfile) && (
+            {/* 2.5 Developer section (when property is linked to a Catalogue Publisher) */}
+            {property.developerBrand && (
               <DeveloperBrandSection
-                brand={
-                  (property.developerBrand || property.developerBrandProfile) as DeveloperBrandData
-                }
+                brand={property.developerBrand as DeveloperBrandData}
               />
             )}
 
@@ -2012,9 +2009,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         developmentId={
           !agent && property?.developmentId ? Number(property.developmentId) : undefined
         }
-        developerBrandProfileId={
-          !agent && property?.developerBrandProfileId
-            ? Number(property.developerBrandProfileId)
+        cataloguePublisherId={
+          !agent && property?.cataloguePublisherId
+            ? Number(property.cataloguePublisherId)
             : undefined
         }
         initialMessage={contactInitialMessage}

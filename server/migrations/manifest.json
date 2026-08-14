@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0007_paid_launch_access_invoice_term.sql",
+  "expectedHead": "0018_distribution_access_publisher_authority.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -88,6 +88,118 @@
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 8,
+      "filename": "0008_developer_organisations.sql",
+      "checksum": "5981c18752fd575f5ab9cdfcab306626ff411c597e8585df3efa1211d4677e5f",
+      "parent": "0007_paid_launch_access_invoice_term.sql",
+      "parentChecksum": "84565313674a13833cf033e16a91ee8785bc722d412ae02aecb6a2a19200ab46",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 9,
+      "filename": "0009_developer_organisation_memberships.sql",
+      "checksum": "ce46bfeb92f005cf3661e877b7757cafdd27b3fee68a2251b310dd71cc9dd9ee",
+      "parent": "0008_developer_organisations.sql",
+      "parentChecksum": "5981c18752fd575f5ab9cdfcab306626ff411c597e8585df3efa1211d4677e5f",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 10,
+      "filename": "0010_catalogue_publishers.sql",
+      "checksum": "85615de8976ceda3a3099d87659ee39e9bd83016a0da8b33c2d5a9ff78cfdb90",
+      "parent": "0009_developer_organisation_memberships.sql",
+      "parentChecksum": "ce46bfeb92f005cf3661e877b7757cafdd27b3fee68a2251b310dd71cc9dd9ee",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 11,
+      "filename": "0011_catalogue_publisher_developments.sql",
+      "checksum": "3280f827ed6f445cb527ed88b68a09650c9fe1763fd65de6b93e2d436d2d647d",
+      "parent": "0010_catalogue_publishers.sql",
+      "parentChecksum": "85615de8976ceda3a3099d87659ee39e9bd83016a0da8b33c2d5a9ff78cfdb90",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 12,
+      "filename": "0012_catalogue_publisher_properties.sql",
+      "checksum": "5c3723dca45d86b2743e3b60ffe9a394da22b70c3f825a3ebc3b7bd2d2cade14",
+      "parent": "0011_catalogue_publisher_developments.sql",
+      "parentChecksum": "3280f827ed6f445cb527ed88b68a09650c9fe1763fd65de6b93e2d436d2d647d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 13,
+      "filename": "0013_catalogue_publisher_leads.sql",
+      "checksum": "d65e0656b6e3649eee24f9189362f4819294a06c1e2eef999c22dff467cfcbe3",
+      "parent": "0012_catalogue_publisher_properties.sql",
+      "parentChecksum": "5c3723dca45d86b2743e3b60ffe9a394da22b70c3f825a3ebc3b7bd2d2cade14",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 14,
+      "filename": "0014_catalogue_publisher_drafts.sql",
+      "checksum": "fc575c0fbf16a148cf912caec5bcc5f5baa3f30facfea2b5c68909219e503e48",
+      "parent": "0013_catalogue_publisher_leads.sql",
+      "parentChecksum": "d65e0656b6e3649eee24f9189362f4819294a06c1e2eef999c22dff467cfcbe3",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 15,
+      "filename": "0015_catalogue_publisher_distribution_partnerships.sql",
+      "checksum": "bdd9a8ad9d91b6828d6810fb5fdc71a01455bbe348677ea9cb15d4b9ebc264ca",
+      "parent": "0014_catalogue_publisher_drafts.sql",
+      "parentChecksum": "fc575c0fbf16a148cf912caec5bcc5f5baa3f30facfea2b5c68909219e503e48",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 16,
+      "filename": "0016_catalogue_publisher_distribution_access.sql",
+      "checksum": "7560231c39e3acbc2462d9bbe4aaf65aa16e49c1d598fa29e68d44ca9729f66f",
+      "parent": "0015_catalogue_publisher_distribution_partnerships.sql",
+      "parentChecksum": "bdd9a8ad9d91b6828d6810fb5fdc71a01455bbe348677ea9cb15d4b9ebc264ca",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 17,
+      "filename": "0017_distribution_publisher_authority.sql",
+      "checksum": "b8ffe0ccb705b7f88196b944869539be7fb9976f7536fa2c84a7e92f868daa45",
+      "parent": "0016_catalogue_publisher_distribution_access.sql",
+      "parentChecksum": "7560231c39e3acbc2462d9bbe4aaf65aa16e49c1d598fa29e68d44ca9729f66f",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "S1-identity-custody-authorized-Edward-2026-08-13"
+    },
+    {
+      "sequence": 18,
+      "filename": "0018_distribution_access_publisher_authority.sql",
+      "checksum": "efe50cf94bf0b39c34a9e1ef1ee99ed884ab4d88cc64509ce90f792d50c5d0a8",
+      "parent": "0017_distribution_publisher_authority.sql",
+      "parentChecksum": "b8ffe0ccb705b7f88196b944869539be7fb9976f7536fa2c84a7e92f868daa45",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "S1-identity-custody-authorized-Edward-2026-08-13"
     }
   ]
 }

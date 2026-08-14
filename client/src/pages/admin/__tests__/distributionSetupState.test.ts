@@ -4,33 +4,29 @@ import {
   getPartnerDevelopmentSetupDescription,
   getPartnerDevelopmentSetupLabel,
   getPartnerDevelopmentSetupState,
-  isDevelopmentBrandLinked,
+  isDevelopmentPublisherLinked,
 } from '../distributionSetupState';
 
 describe('distribution setup state helpers', () => {
-  it('marks unlinked developments as needing a brand link', () => {
+  it('marks unlinked developments as needing a publisher link', () => {
     const state = getPartnerDevelopmentSetupState(
       {
         developmentId: 11,
-        brandProfileId: null,
-        marketingBrandProfileId: null,
+        cataloguePublisherId: null,
       },
       new Map(),
     );
 
-    expect(state).toBe('needs_brand_link');
-    expect(isDevelopmentBrandLinked({ brandProfileId: null, marketingBrandProfileId: null })).toBe(
-      false,
-    );
-    expect(getPartnerDevelopmentSetupLabel(state)).toBe('Needs Brand Link');
+    expect(state).toBe('needs_publisher_link');
+    expect(isDevelopmentPublisherLinked({ cataloguePublisherId: null })).toBe(false);
+    expect(getPartnerDevelopmentSetupLabel(state)).toBe('Needs Publisher Link');
   });
 
   it('marks linked developments without a program as ready to add', () => {
     const state = getPartnerDevelopmentSetupState(
       {
         developmentId: 12,
-        brandProfileId: 8,
-        marketingBrandProfileId: null,
+        cataloguePublisherId: 8,
       },
       new Map(),
     );
@@ -44,7 +40,7 @@ describe('distribution setup state helpers', () => {
     const state = getPartnerDevelopmentSetupState(
       {
         developmentId: 13,
-        brandProfileId: 8,
+        cataloguePublisherId: 8,
       },
       programMap,
     );

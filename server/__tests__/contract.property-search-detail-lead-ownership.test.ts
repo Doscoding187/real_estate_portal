@@ -63,9 +63,9 @@ vi.mock('../db-connection', () => ({
   getDb: mockGetDetailDb,
 }));
 
-vi.mock('../services/brandLeadService', () => ({
-  brandLeadService: {
-    captureBrandLead: mockCaptureBrandLead,
+vi.mock('../services/publisherLeadService', () => ({
+  publisherLeadService: {
+    capturePublisherLead: mockCaptureBrandLead,
   },
 }));
 
@@ -155,7 +155,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       agentId: 33,
       ownerId: 100,
       developmentId: null,
-      developerBrandProfileId: null,
+      cataloguePublisherId: null,
       sourceListingId: null,
       amenities: 'Pool',
       propertySettings: '{}',
@@ -211,7 +211,7 @@ describe('single-property search-detail-lead ownership contract', () => {
             id: 501,
             status: 'available',
             developmentId: null,
-            developerBrandProfileId: null,
+            cataloguePublisherId: null,
             agentId: 33,
           },
         ]),
@@ -281,7 +281,6 @@ describe('single-property search-detail-lead ownership contract', () => {
 
     const lead = await trpc.leads.create({
       propertyId: card.propertyId,
-      developerBrandProfileId: 999,
       agentId: 999,
       agencyId: 999,
       name: 'Pat Buyer',
@@ -306,7 +305,6 @@ describe('single-property search-detail-lead ownership contract', () => {
     expect(mockCaptureBrandLead).toHaveBeenCalledWith(
       expect.objectContaining({
         propertyId: 501,
-        developerBrandProfileId: 999,
         agentId: 999,
         agencyId: 999,
         sourceSurface: 'property_detail_contact_modal',
@@ -400,7 +398,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       agentId: 33,
       ownerId: 100,
       developmentId: null,
-      developerBrandProfileId: null,
+      cataloguePublisherId: null,
       sourceListingId: null,
       amenities: 'Garden',
       propertySettings: '{}',
@@ -446,7 +444,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       agentId: 33,
       ownerId: 100,
       developmentId: null,
-      developerBrandProfileId: null,
+      cataloguePublisherId: null,
       sourceListingId: 9003,
       amenities: 'Patio',
       propertySettings: '{}',

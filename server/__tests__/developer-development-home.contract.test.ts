@@ -7,13 +7,13 @@ const {
   mockGetDb,
   mockGetBrandProfileById,
   mockRequireDeveloperProfileByUserId,
-  mockVerifyBrandContext,
+  mockVerifyPublisherContext,
 } = vi.hoisted(() => ({
   mockDb: { select: vi.fn() },
   mockGetDb: vi.fn(),
   mockGetBrandProfileById: vi.fn(),
   mockRequireDeveloperProfileByUserId: vi.fn(),
-  mockVerifyBrandContext: vi.fn(),
+  mockVerifyPublisherContext: vi.fn(),
 }));
 
 vi.mock('../db', () => ({
@@ -26,16 +26,16 @@ vi.mock('../services/developerService', () => ({
   requireDeveloperProfileByUserId: mockRequireDeveloperProfileByUserId,
 }));
 
-vi.mock('../services/developerBrandProfileService', () => ({
-  getBrandProfileById: mockGetBrandProfileById,
-  developerBrandProfileService: {
-    getBrandProfileById: mockGetBrandProfileById,
+vi.mock('../services/cataloguePublisherService', () => ({
+  getPublisherById: mockGetBrandProfileById,
+  cataloguePublisherService: {
+    getPublisherById: mockGetBrandProfileById,
   },
 }));
 
-vi.mock('../services/brandContextService', () => ({
-  brandContextService: {
-    verifyBrandContext: mockVerifyBrandContext,
+vi.mock('../services/cataloguePublisherContextService', () => ({
+  cataloguePublisherContextService: {
+    verifyPublisherContext: mockVerifyPublisherContext,
   },
 }));
 
@@ -134,11 +134,11 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
       identityType: 'developer',
       brandName: 'Harbour Developments',
     });
-    mockVerifyBrandContext.mockResolvedValue({
-      brandProfileId: 77,
-      identityType: 'developer',
-      brandName: 'Harbour Developments',
-      ownerType: 'platform',
+    mockVerifyPublisherContext.mockResolvedValue({
+      cataloguePublisherId: 77,
+      publisherType: 'developer',
+      publisherName: 'Harbour Developments',
+      authorityKind: 'platform_reference',
       brandTier: 'regional',
       isOperatingAs: false,
     });
@@ -211,7 +211,7 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
 
     expect(query).toContain('const profile = await requireDeveloperProfileByUserId(user.id);');
     expect(query).toContain('eq(developments.id, input.developmentId)');
-    expect(query).toContain('eq(developments.developerId, profile.id)');
+    expect(query).toContain('eq(developments.cataloguePublisherId, profile.publisherId)');
     expect(query.match(/code: 'NOT_FOUND'/g)).toHaveLength(1);
     expect(query).not.toContain('getPublicDevelopment');
     expect(query).toContain('eq(unitTypes.developmentId, row.id)');
@@ -488,11 +488,11 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     const query = developmentHomeQuerySource();
 
     expect(query).toContain('const operatingAs = ctx.operatingAs;');
-    expect(query).toContain("code: 'PRECONDITION_FAILED', message: 'BRAND_CONTEXT_REQUIRED'");
+    expect(query).toContain("message: 'PUBLISHER_CONTEXT_REQUIRED'");
     expect(query).toContain(
-      "operatingAs.brandType !== 'developer' && operatingAs.brandType !== 'hybrid'",
+      "operatingAs.publisherType !== 'developer' && operatingAs.publisherType !== 'hybrid'",
     );
-    expect(query).toContain('eq(developments.developerBrandProfileId, operatingAs.brandProfileId)');
+    expect(query).toContain('eq(developments.cataloguePublisherId, operatingAs.cataloguePublisherId)');
     expect(query).not.toContain('input.developerId');
     expect(query).not.toContain('input.brandId');
     expect(query).not.toContain('input.ownerId');
@@ -506,12 +506,12 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
         developmentId: 42,
         range: '30d',
       }),
-    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: 'BRAND_CONTEXT_REQUIRED' });
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: 'PUBLISHER_CONTEXT_REQUIRED' });
 
     await expect(
       callerFor(
         { id: 1, role: 'super_admin' },
-        { 'x-operating-as-brand': '77' },
+        { 'x-operating-as-publisher': '77' },
       ).getDevelopmentHome({
         developmentId: 42,
         range: '30d',
@@ -521,7 +521,7 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
 
   it('makes super-admin context mismatch and nonexistent IDs externally indistinguishable', async () => {
     configureDevelopmentQuery([]);
-    const headers = { 'x-operating-as-brand': '77' };
+    const headers = { 'x-operating-as-publisher': '77' };
     const mismatch = callerFor({ id: 1, role: 'super_admin' }, headers).getDevelopmentHome({
       developmentId: 99,
       range: '30d',

@@ -92,17 +92,17 @@ const SPECIALIZATION_OPTIONS = [
   'Industrial',
 ];
 
-interface CreateBrandProfileDialogProps {
+interface CreateCataloguePublisherDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
   onSuccess?: (newBrandId: number) => void;
 }
 
-export function CreateBrandProfileDialog({
+export function CreateCataloguePublisherDialog({
   open,
   setOpen,
   onSuccess,
-}: CreateBrandProfileDialogProps) {
+}: CreateCataloguePublisherDialogProps) {
   const { setSelectedBrandId } = useDeveloperContext();
   const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState('identity');
@@ -139,7 +139,7 @@ export function CreateBrandProfileDialog({
   // Load draft from localStorage on mount
   React.useEffect(() => {
     try {
-      const savedDraft = localStorage.getItem('brandProfileDraft');
+      const savedDraft = localStorage.getItem('cataloguePublisherDraft');
       if (savedDraft) {
         const parsed = JSON.parse(savedDraft);
         // Only restore if it looks valid
@@ -160,18 +160,18 @@ export function CreateBrandProfileDialog({
   // Save changes to localStorage
   React.useEffect(() => {
     const subscription = form.watch(value => {
-      localStorage.setItem('brandProfileDraft', JSON.stringify(value));
+      localStorage.setItem('cataloguePublisherDraft', JSON.stringify(value));
     });
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
-  const createMutation = trpc.superAdminPublisher.createBrandProfile.useMutation({
+  const createMutation = trpc.superAdminPublisher.createPlatformReferencePublisher.useMutation({
     onSuccess: data => {
-      toast.success('Developer brand profile created successfully');
-      utils.superAdminPublisher.listBrandProfiles.invalidate();
+      toast.success('Catalogue Publisher created successfully');
+      utils.superAdminPublisher.listPublishers.invalidate();
 
       // Clear draft on success
-      localStorage.removeItem('brandProfileDraft');
+      localStorage.removeItem('cataloguePublisherDraft');
 
       // Auto-select the new brand
       setSelectedBrandId(data.id);
@@ -183,7 +183,7 @@ export function CreateBrandProfileDialog({
       if (onSuccess) onSuccess(data.id);
     },
     onError: error => {
-      toast.error(error.message || 'Failed to create brand profile');
+      toast.error(error.message || 'Failed to create Catalogue Publisher');
     },
   });
 
@@ -660,7 +660,7 @@ export function CreateBrandProfileDialog({
                 Cancel
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Creating...' : 'Create Brand Profile'}
+                {createMutation.isPending ? 'Creating...' : 'Create Catalogue Publisher'}
               </Button>
             </DialogFooter>
           </form>

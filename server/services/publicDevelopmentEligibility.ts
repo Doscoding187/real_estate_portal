@@ -1,10 +1,10 @@
-import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, sql, type SQL } from 'drizzle-orm';
 
 import {
-  developerBrandProfiles,
-  developers,
+  cataloguePublishers,
   developmentSupersessions,
   developments,
+  developerOrganisations,
   unitTypes,
 } from '../../drizzle/schema';
 import {
@@ -17,11 +17,10 @@ export type PublicDevelopmentEligibilityReason =
   | 'not_published'
   | 'not_approved'
   | 'unsupported_transaction'
-  | 'missing_brand'
-  | 'brand_not_visible'
+  | 'missing_publisher'
+  | 'publisher_not_visible'
   | 'missing_source_attribution'
-  | 'invalid_platform_custody'
-  | 'invalid_developer_custody'
+  | 'invalid_publisher_custody'
   | 'missing_active_unit_types'
   | 'active_supersession_source';
 
@@ -40,20 +39,13 @@ function isSupportedPublicTransaction(value: unknown): value is SupportedPublicT
   return SUPPORTED_PUBLIC_TRANSACTION_TYPES.includes(value as SupportedPublicTransactionType);
 }
 
-/**
- * Evaluate the public marketplace contract from one canonical catalogue
- * snapshot.  This is intentionally a policy, not a second publication
- * workflow: publication establishes current state; this policy explains
- * whether that state is eligible for public projections.
- */
 export function evaluatePublicDevelopmentEligibility(
   catalogue: CanonicalDevelopmentCatalogue,
 ): PublicDevelopmentEligibilityResult {
-  const { development, brand, developer, unitTypes: catalogueUnitTypes } = catalogue;
+  const { development, publisher, organisation, unitTypes: catalogueUnitTypes } = catalogue;
   const reasons: PublicDevelopmentEligibilityReason[] = [];
 
   if (catalogue.activeSupersessionSource) reasons.push('active_supersession_source');
-
   if (!isTinyIntTrue(development.isPublished)) reasons.push('not_published');
   if (development.approvalStatus !== 'approved') reasons.push('not_approved');
 
@@ -62,39 +54,36 @@ export function evaluatePublicDevelopmentEligibility(
     : null;
   if (!supportedTransactionType) reasons.push('unsupported_transaction');
 
-  if (brand && !isTinyIntTrue(brand.isVisible)) {
-    reasons.push('brand_not_visible');
+  if (!publisher) {
+    reasons.push('missing_publisher');
+  } else if (!isTinyIntTrue(publisher.isVisible)) {
+    reasons.push('publisher_not_visible');
   }
 
   let operatingMode: PublicDevelopmentEligibilityResult['operatingMode'] = null;
-
-  if (development.devOwnerType === 'platform') {
+  if (publisher?.authorityKind === 'platform_reference') {
     operatingMode = 'platform_curator';
-    if (!brand) reasons.push('missing_brand');
-    if (!brand || brand.ownerType !== 'platform' || brand.linkedDeveloperAccountId !== null) {
-      reasons.push('invalid_platform_custody');
-    }
-    if (brand && !String(brand.sourceAttribution || '').trim()) {
-      reasons.push('missing_source_attribution');
-    }
-    if (development.developerId !== null) reasons.push('invalid_platform_custody');
-  } else if (development.devOwnerType === 'developer') {
-    operatingMode = 'developer';
-    const developerBrandIsValid =
-      development.developerBrandProfileId === null ||
-      (!!brand &&
-        brand.ownerType === 'developer' &&
-        brand.linkedDeveloperAccountId === developer?.id);
     if (
-      !developer ||
-      developer.status !== 'approved' ||
-      !developerBrandIsValid ||
-      development.developerId !== developer.id
+      publisher.developerOrganisationId !== null ||
+      !String(publisher.sourceAttribution || '').trim()
     ) {
-      reasons.push('invalid_developer_custody');
+      if (!String(publisher.sourceAttribution || '').trim()) {
+        reasons.push('missing_source_attribution');
+      }
+      reasons.push('invalid_publisher_custody');
+    }
+  } else if (publisher?.authorityKind === 'developer_first_party') {
+    operatingMode = 'developer';
+    if (
+      publisher.developerOrganisationId === null ||
+      !organisation ||
+      organisation.id !== publisher.developerOrganisationId ||
+      organisation.status !== 'approved'
+    ) {
+      reasons.push('invalid_publisher_custody');
     }
   } else {
-    reasons.push('invalid_developer_custody');
+    reasons.push('invalid_publisher_custody');
   }
 
   const activeUnitTypeCount =
@@ -113,36 +102,27 @@ export function evaluatePublicDevelopmentEligibility(
 }
 
 /**
- * SQL form of the same public policy.  Callers must join:
- *   developments -> developerBrandProfiles
- *   developments -> developers (left join is intentional for platform rows)
- *
- * The correlated unitTypes check keeps the public catalogue and DLE on the
- * same canonical inventory authority without introducing a second projection.
+ * SQL form of the same public policy. It intentionally uses correlated
+ * subqueries so callers cannot accidentally satisfy custody by joining a
+ * legacy developer or brand row.
  */
 export function publicDevelopmentEligibilityConditions(): SQL {
-  const platformCustody = and(
-    eq(developments.devOwnerType, 'platform'),
-    isNull(developments.developerId),
-    eq(developerBrandProfiles.ownerType, 'platform'),
-    eq(developerBrandProfiles.isVisible, 1),
-    isNull(developerBrandProfiles.linkedDeveloperAccountId),
-    sql`TRIM(COALESCE(${developerBrandProfiles.sourceAttribution}, '')) <> ''`,
-  );
-
-  const developerCustody = and(
-    eq(developments.devOwnerType, 'developer'),
-    eq(developments.developerId, developers.id),
-    eq(developers.status, 'approved'),
-    or(
-      isNull(developments.developerBrandProfileId),
-      and(
-        eq(developerBrandProfiles.ownerType, 'developer'),
-        eq(developerBrandProfiles.isVisible, 1),
-        eq(developerBrandProfiles.linkedDeveloperAccountId, developers.id),
-      ),
-    ),
-  );
+  const publisherExists = sql`EXISTS (
+    SELECT 1
+    FROM ${cataloguePublishers} p
+    LEFT JOIN ${developerOrganisations} o ON o.id = p.developer_organisation_id
+    WHERE p.id = ${developments.cataloguePublisherId}
+      AND p.is_visible = 1
+      AND (
+        (p.authority_kind = 'platform_reference'
+          AND p.developer_organisation_id IS NULL
+          AND CHAR_LENGTH(TRIM(COALESCE(p.source_attribution, ''))) > 0)
+        OR
+        (p.authority_kind = 'developer_first_party'
+          AND p.developer_organisation_id IS NOT NULL
+          AND o.status = 'approved')
+      )
+  )`;
 
   const activeUnitTypeExists = sql`EXISTS (
     SELECT 1
@@ -154,12 +134,9 @@ export function publicDevelopmentEligibilityConditions(): SQL {
   return and(
     eq(developments.isPublished, 1),
     eq(developments.approvalStatus, 'approved'),
-    or(
-      eq(developments.transactionType, SUPPORTED_PUBLIC_TRANSACTION_TYPES[0]),
-      eq(developments.transactionType, SUPPORTED_PUBLIC_TRANSACTION_TYPES[1]),
-    ),
-    or(platformCustody, developerCustody),
-    or(eq(developments.developmentType, 'land'), activeUnitTypeExists),
+    sql`(${developments.transactionType} IN ('for_sale', 'for_rent'))`,
+    publisherExists,
+    sql`(${developments.developmentType} = 'land' OR ${activeUnitTypeExists})`,
     sql`NOT EXISTS (
       SELECT 1
       FROM ${developmentSupersessions}

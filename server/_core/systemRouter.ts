@@ -418,7 +418,7 @@ export const systemRouter = router({
         routeType: z.enum(['agent', 'agency', 'brand', 'private', 'clear']),
         agentId: z.number().int().positive().optional(),
         agencyId: z.number().int().positive().optional(),
-        developerBrandProfileId: z.number().int().positive().optional(),
+        cataloguePublisherId: z.number().int().positive().optional(),
         note: z.string().max(500).optional(),
       }),
     )

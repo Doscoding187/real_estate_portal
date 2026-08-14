@@ -201,7 +201,7 @@ export async function getLeadRoutingConversionReport(input?: {
       developmentId: leads.developmentId,
       agentId: leads.agentId,
       agencyId: leads.agencyId,
-      developerBrandProfileId: leads.developerBrandProfileId,
+      cataloguePublisherId: leads.cataloguePublisherId,
       leadSource: leads.leadSource,
       source: leads.source,
       brandLeadStatus: leads.brandLeadStatus,

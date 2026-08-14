@@ -9,7 +9,7 @@ import {
   type DevelopmentDistributionAccessEvaluation,
 } from './distributionAccessPolicy';
 import {
-  getBrandPartnershipByBrandProfileId,
+  getBrandPartnershipByPublisherId,
   getDevelopmentAccessByDevelopmentId,
   upsertBrandPartnership,
   upsertDevelopmentAccess,
@@ -119,8 +119,7 @@ async function resolveDevelopmentBrandContext(db: DbHandle, developmentId: numbe
   const [development] = await db
     .select({
       id: developments.id,
-      developerBrandProfileId: developments.developerBrandProfileId,
-      marketingBrandProfileId: developments.marketingBrandProfileId,
+      cataloguePublisherId: developments.cataloguePublisherId,
     })
     .from(developments)
     .where(eq(developments.id, developmentId))
@@ -130,18 +129,15 @@ async function resolveDevelopmentBrandContext(db: DbHandle, developmentId: numbe
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
   }
 
-  const brandProfileId =
-    Number(development.developerBrandProfileId || 0) ||
-    Number(development.marketingBrandProfileId || 0) ||
-    null;
-  if (!brandProfileId) {
+  const cataloguePublisherId = Number(development.cataloguePublisherId || 0) || null;
+  if (!cataloguePublisherId) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Development is missing a brand profile link.',
+      message: 'Development is missing a Catalogue Publisher link.',
     });
   }
 
-  const partnership = await getBrandPartnershipByBrandProfileId(db, brandProfileId);
+  const partnership = await getBrandPartnershipByPublisherId(db, cataloguePublisherId);
   if (!partnership) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -151,7 +147,7 @@ async function resolveDevelopmentBrandContext(db: DbHandle, developmentId: numbe
 
   return {
     developmentId: Number(development.id),
-    brandProfileId,
+    cataloguePublisherId: cataloguePublisherId,
     partnership,
   };
 }
@@ -210,7 +206,7 @@ function isDevelopmentAccessNoOp(
   existing: DistributionDevelopmentAccessRow,
   input: {
     brandPartnershipId: number;
-    brandProfileId: number;
+    cataloguePublisherId: number;
     status: DistributionDevelopmentAccessRow['status'];
     submissionAllowed: boolean;
     excludedByMandate: boolean;
@@ -221,7 +217,7 @@ function isDevelopmentAccessNoOp(
 ) {
   return (
     Number(existing.brandPartnershipId) === input.brandPartnershipId &&
-    Number(existing.brandProfileId) === input.brandProfileId &&
+    Number(existing.cataloguePublisherId) === input.cataloguePublisherId &&
     existing.status === input.status &&
     Number(existing.submissionAllowed || 0) === (input.submissionAllowed ? 1 : 0) &&
     Number(existing.excludedByMandate || 0) === (input.excludedByMandate ? 1 : 0) &&
@@ -237,7 +233,7 @@ export async function upsertBrandPartnershipWithAudit(
   const db = input.db || (await getDb());
   if (!db) throw new Error('Database not available');
 
-  const existing = await getBrandPartnershipByBrandProfileId(db, input.brandProfileId);
+  const existing = await getBrandPartnershipByPublisherId(db, input.cataloguePublisherId);
   if (
     existing &&
     isBrandPartnershipNoOp(existing, {
@@ -258,7 +254,7 @@ export async function upsertBrandPartnershipWithAudit(
   }
 
   const partnership = await upsertBrandPartnership(db, {
-    brandProfileId: input.brandProfileId,
+    cataloguePublisherId: input.cataloguePublisherId,
     status: input.status,
     reasonCode: normalizeNullableText(input.reasonCode),
     notes: normalizeNullableText(input.notes),
@@ -278,7 +274,7 @@ export async function upsertBrandPartnershipWithAudit(
     targetType: 'distribution_brand_partnership',
     targetId: Number(partnership.id),
     metadata: {
-      brandProfileId: input.brandProfileId,
+      cataloguePublisherId: input.cataloguePublisherId,
       status: input.status,
       reasonCode: normalizeNullableText(input.reasonCode),
     },
@@ -313,7 +309,7 @@ export async function upsertDevelopmentAccessWithAudit(
     existing &&
     isDevelopmentAccessNoOp(existing, {
       brandPartnershipId: Number(context.partnership.id),
-      brandProfileId: context.brandProfileId,
+      cataloguePublisherId: context.cataloguePublisherId,
       status: normalized.status,
       submissionAllowed: normalized.submissionAllowed,
       excludedByMandate: normalized.excludedByMandate,
@@ -337,7 +333,7 @@ export async function upsertDevelopmentAccessWithAudit(
   const access = await upsertDevelopmentAccess(db, {
     developmentId: input.developmentId,
     brandPartnershipId: Number(context.partnership.id),
-    brandProfileId: context.brandProfileId,
+    cataloguePublisherId: context.cataloguePublisherId,
     status: normalized.status,
     submissionAllowed: normalized.submissionAllowed,
     excludedByMandate: normalized.excludedByMandate,

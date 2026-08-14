@@ -18,7 +18,7 @@ export type DeveloperOnboardingStatus = {
     status: 'pending' | 'approved' | 'rejected';
     city: string | null;
     province: string | null;
-    developerBrandProfileId: number | null;
+    cataloguePublisherId: number | null;
   } | null;
 };
 

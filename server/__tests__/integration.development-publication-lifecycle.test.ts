@@ -13,14 +13,13 @@ vi.mock('../services/propertySearchService', () => ({
 
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
-import {
-  developmentApprovalQueue,
-  developers,
-  developments,
-  unitTypes,
-  users,
-} from '../../drizzle/schema';
+import { developmentApprovalQueue, developments, unitTypes, users } from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
+import {
+  createDeveloperTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../test-utils/developerTestContext';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
@@ -30,7 +29,7 @@ const describeWithDb: typeof describe = hasDb
 
 type Fixture = {
   userId: number;
-  developerId?: number;
+  developerContext?: DeveloperTestContext;
   developmentIds: number[];
 };
 
@@ -52,15 +51,11 @@ async function createFixture(role: 'property_developer' | 'super_admin' = 'prope
   const fixture: Fixture = { userId: Number(userResult.insertId), developmentIds: [] };
 
   if (role === 'property_developer') {
-    const [developerResult] = await db.insert(developers).values({
+    fixture.developerContext = await createDeveloperTestContext({
       userId: fixture.userId,
       name: `Lifecycle Developer ${suffix}`,
       email: `development-lifecycle-developer-${suffix}@example.com`,
-      category: 'residential',
-      status: 'approved',
-      isVerified: 1,
     });
-    fixture.developerId = Number(developerResult.insertId);
   }
 
   fixtures.push(fixture);
@@ -135,8 +130,8 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         await db.delete(unitTypes).where(inArray(unitTypes.developmentId, fixture.developmentIds));
         await db.delete(developments).where(inArray(developments.id, fixture.developmentIds));
       }
-      if (fixture.developerId) {
-        await db.delete(developers).where(eq(developers.id, fixture.developerId));
+      if (fixture.developerContext) {
+        await deleteDeveloperTestContext(fixture.developerContext);
       }
       await db.delete(users).where(eq(users.id, fixture.userId));
     }
@@ -161,9 +156,11 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toBeNull();
     expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
     expect(
-      (await developmentService.listPublicDevelopments({ developerId: owner.developerId })).some(
-        item => Number(item.id) === developmentId,
-      ),
+      (
+        await developmentService.listPublicDevelopments({
+          cataloguePublisherId: owner.developerContext!.cataloguePublisherId,
+        })
+      ).some(item => Number(item.id) === developmentId),
     ).toBe(false);
 
     await expect(
@@ -192,9 +189,11 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       isPublished: 1,
     });
     expect(
-      (await developmentService.listPublicDevelopments({ developerId: owner.developerId })).some(
-        item => Number(item.id) === developmentId,
-      ),
+      (
+        await developmentService.listPublicDevelopments({
+          cataloguePublisherId: owner.developerContext!.cataloguePublisherId,
+        })
+      ).some(item => Number(item.id) === developmentId),
     ).toBe(true);
   });
 
@@ -278,9 +277,11 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toBeNull();
     expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
     expect(
-      (await developmentService.listPublicDevelopments({ developerId: owner.developerId })).some(
-        item => Number(item.id) === developmentId,
-      ),
+      (
+        await developmentService.listPublicDevelopments({
+          cataloguePublisherId: owner.developerContext!.cataloguePublisherId,
+        })
+      ).some(item => Number(item.id) === developmentId),
     ).toBe(false);
   });
 
@@ -293,9 +294,11 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toBeNull();
     expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
     expect(
-      (await developmentService.listPublicDevelopments({ developerId: owner.developerId })).some(
-        item => Number(item.id) === developmentId,
-      ),
+      (
+        await developmentService.listPublicDevelopments({
+          cataloguePublisherId: owner.developerContext!.cataloguePublisherId,
+        })
+      ).some(item => Number(item.id) === developmentId),
     ).toBe(false);
 
     await callerFor(owner.userId, 'property_developer').developer.publishDevelopment({
@@ -310,9 +313,11 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toBeNull();
     expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
     expect(
-      (await developmentService.listPublicDevelopments({ developerId: owner.developerId })).some(
-        item => Number(item.id) === developmentId,
-      ),
+      (
+        await developmentService.listPublicDevelopments({
+          cataloguePublisherId: owner.developerContext!.cataloguePublisherId,
+        })
+      ).some(item => Number(item.id) === developmentId),
     ).toBe(false);
   });
 

@@ -7,7 +7,7 @@ import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 import { Building2, MapPin, Loader2, ExternalLink, Users, Plus } from 'lucide-react';
 import { useDeveloperContext } from '@/contexts/DeveloperContextProvider';
-import { CreateBrandProfileDialog } from '@/components/admin/publisher/CreateBrandProfileDialog';
+import { CreateCataloguePublisherDialog } from '@/components/admin/publisher/CreateCataloguePublisherDialog';
 import { cn } from '@/lib/utils';
 
 // South African Provinces
@@ -23,7 +23,7 @@ const SA_PROVINCES = [
   'Northern Cape',
 ];
 
-interface BrandProfile {
+interface CataloguePublisherSummary {
   id: number;
   brandName: string;
   slug: string;
@@ -61,7 +61,7 @@ const getIdentityIcon = (type: string) => {
   }
 };
 
-const BrandProfileCard: React.FC<{ brand: BrandProfile }> = ({ brand }) => {
+const CataloguePublisherCard: React.FC<{ brand: CataloguePublisherSummary }> = ({ brand }) => {
   const { setSelectedBrandId } = useDeveloperContext();
   const [, setLocation] = useLocation();
 
@@ -131,19 +131,19 @@ export const ProvinceDevDashboard: React.FC = () => {
   const [activeProvince, setActiveProvince] = useState('Gauteng');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  // Fetch all brand profiles
-  const { data: brandProfiles, isLoading } = trpc.superAdminPublisher.listBrandProfiles.useQuery(
+  // Fetch all Catalogue Publishers
+  const { data: publisherProfiles, isLoading } = trpc.superAdminPublisher.listPublishers.useQuery(
     {},
   );
 
-  // Group brand profiles by operating provinces
+  // Group Catalogue Publishers by operating provinces
   const groupedByProvince = React.useMemo(() => {
-    if (!brandProfiles) return {};
+    if (!publisherProfiles) return {};
 
-    const grouped: Record<string, BrandProfile[]> = {};
+    const grouped: Record<string, CataloguePublisherSummary[]> = {};
     SA_PROVINCES.forEach(p => (grouped[p] = []));
 
-    brandProfiles.forEach((brand: any) => {
+    publisherProfiles.forEach((brand: any) => {
       const provinces: string[] = brand.operatingProvinces || [];
 
       if (provinces.length === 0) {
@@ -172,7 +172,7 @@ export const ProvinceDevDashboard: React.FC = () => {
     });
 
     return grouped;
-  }, [brandProfiles]);
+  }, [publisherProfiles]);
 
   // Count per province
   const provinceCounts = React.useMemo(() => {
@@ -181,7 +181,7 @@ export const ProvinceDevDashboard: React.FC = () => {
     return counts;
   }, [groupedByProvince]);
 
-  const totalBrands = brandProfiles?.length || 0;
+  const totalBrands = publisherProfiles?.length || 0;
 
   return (
     <div className="space-y-4">
@@ -192,17 +192,17 @@ export const ProvinceDevDashboard: React.FC = () => {
             Developer Brands by Province
           </h2>
           <p className="text-sm text-muted-foreground">
-            {totalBrands} brand profiles across South Africa
+            {totalBrands} Catalogue Publishers across South Africa
           </p>
         </div>
         <Button size="sm" className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">New Brand Profile</span>
+          <span className="hidden sm:inline">New Catalogue Publisher</span>
           <span className="sm:hidden">New</span>
         </Button>
       </div>
 
-      <CreateBrandProfileDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
+      <CreateCataloguePublisherDialog open={isCreateDialogOpen} setOpen={setIsCreateDialogOpen} />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -243,15 +243,15 @@ export const ProvinceDevDashboard: React.FC = () => {
               {groupedByProvince[province]?.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {groupedByProvince[province].map(brand => (
-                    <BrandProfileCard key={brand.id} brand={brand} />
+                    <CataloguePublisherCard key={brand.id} brand={brand} />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No brand profiles in {province}</p>
+                  <p>No Catalogue Publishers in {province}</p>
                   <p className="text-xs mt-1">
-                    Add operating provinces to brand profiles to see them here
+                    Add operating provinces to Catalogue Publishers to see them here
                   </p>
                 </div>
               )}

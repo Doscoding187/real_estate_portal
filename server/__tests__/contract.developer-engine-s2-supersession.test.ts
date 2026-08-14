@@ -45,20 +45,37 @@ describe('Developer Engine S2 supersession authority contracts', () => {
     expect(policy).toContain('SUPERSESSION_REVERSAL_REQUIRED');
     expect(eligibility).toContain('active_supersession_source');
     expect(eligibility).toContain("status} = 'active'");
-    expect(route).toContain('res.redirect(308');
+    expect(route).toContain('res.redirect(307');
     expect(route).toContain('normalizeDevelopmentRootPath');
     expect(service).toContain('assertUniqueRouteIdentity');
     expect(service).toContain('sourcePublicRootPath');
   });
 
   it('retires the custody-changing legacy authority and keeps leads out of the transition', () => {
-    const legacy = source('server/services/developerBrandProfileService.ts');
-    const router = source('server/brandProfileRouter.ts');
+    const legacy = source('server/services/cataloguePublisherService.ts');
+    const router = source('server/cataloguePublisherRouter.ts');
     const service = source('server/services/developmentSupersessionService.ts');
 
-    expect(legacy).toContain('SEPARATE_CATALOGUE_AND_SUPERSESSION_REQUIRED');
-    expect(router).toContain('convertToSubscriber');
+    expect(legacy).toContain('Publisher authority kind and ownership are immutable');
+    expect(legacy).not.toContain('requestClaim');
+    expect(legacy).not.toContain('convertToSubscriber');
+    expect(router).not.toContain('convertToSubscriber');
     expect(service).not.toContain('leads');
     expect(service).not.toContain('leadId');
+  });
+
+  it('routes the independently hosted Vercel frontend through the canonical backend authority', () => {
+    const vercel = source('vercel.json');
+    const middleware = source('middleware.ts');
+    const routing = source('shared/developmentSupersessionRouting.ts');
+
+    expect(vercel).toContain('"outputDirectory": "dist/public"');
+    expect(vercel).toContain('"dest": "/index.html"');
+    expect(middleware).toContain("matcher: '/development/:path*'");
+    expect(middleware).toContain('probeDevelopmentSupersession');
+    expect(middleware).toContain('status: 307');
+    expect(routing).toContain("method: 'HEAD'");
+    expect(routing).toContain("redirect: 'manual'");
+    expect(routing).not.toContain('resolveActiveDevelopmentSupersessionRedirect');
   });
 });

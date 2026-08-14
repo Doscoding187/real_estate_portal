@@ -15,7 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { CreateBrandProfileDialog } from './CreateBrandProfileDialog';
+import { CreateCataloguePublisherDialog } from './CreateCataloguePublisherDialog';
 
 export const DeveloperContextSelector: React.FC = () => {
   const { selectedBrand, setSelectedBrandId, isLoading } = useDeveloperContext();
@@ -27,7 +27,7 @@ export const DeveloperContextSelector: React.FC = () => {
   // We will use a consistent blue theme here specifically.
 
   const { data: profiles, isLoading: isLoadingProfiles } =
-    trpc.superAdminPublisher.listBrandProfiles.useQuery(
+    trpc.superAdminPublisher.listPublishers.useQuery(
       { search: searchTerm, limit: 20 },
       { staleTime: 30_000, refetchOnWindowFocus: false },
     );
@@ -112,9 +112,9 @@ export const DeveloperContextSelector: React.FC = () => {
                   className="flex items-center gap-2 cursor-pointer py-3 justify-center text-blue-600 hover:bg-blue-50 hover:text-blue-800 font-medium transition-colors"
                 >
                   <Building2 className="h-4 w-4" />
-                  <span>Create New Brand Profile</span>
+                  <span>Create Catalogue Publisher</span>
                 </CommandItem>
-                <CreateBrandProfileDialog
+                <CreateCataloguePublisherDialog
                   open={isCreateOpen}
                   setOpen={setIsCreateOpen}
                   onSuccess={() => {

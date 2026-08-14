@@ -22,6 +22,7 @@ import { sql } from 'drizzle-orm';
 import { users } from './core';
 import { properties, listings } from './listings';
 import { developments, developerBrandProfiles } from './developments';
+import { cataloguePublishers } from './developerIdentity';
 import { agencies, agents } from './agencies';
 
 /**
@@ -143,6 +144,10 @@ export const leads = mysqlTable(
     deliveryNextAttemptAt: timestamp('delivery_next_attempt_at', { mode: 'string' }),
     deliveryLastError: text('delivery_last_error'),
     deliveryProviderReference: varchar('delivery_provider_reference', { length: 255 }),
+    cataloguePublisherId: int('catalogue_publisher_id').references(
+      () => cataloguePublishers.id,
+      { onDelete: 'set null' },
+    ),
   },
   table => [unique('uq_leads_capture_request').on(table.captureRequestId)],
 );
