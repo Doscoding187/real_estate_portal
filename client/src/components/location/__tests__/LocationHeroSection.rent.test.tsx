@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LocationHeroSection } from '../LocationHeroSection';
@@ -16,7 +16,7 @@ vi.mock('@/lib/analytics', () => ({
 }));
 
 describe('LocationHeroSection Rent controls', () => {
-  it('keeps the Rent entry hidden behind the canonical journey gate', () => {
+  it('exposes truthful Rent controls through the canonical journey gate', () => {
     render(
       <LocationHeroSection
         locationName="Johannesburg"
@@ -29,8 +29,9 @@ describe('LocationHeroSection Rent controls', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Rental' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Max monthly rent')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Rental' }));
+    expect(screen.getByRole('button', { name: 'Rental' })).toBeInTheDocument();
+    expect(screen.getByText('Max monthly rent')).toBeInTheDocument();
     expect(screen.queryByText('Lease Term')).not.toBeInTheDocument();
     expect(screen.queryByText('Furnished Only')).not.toBeInTheDocument();
   });

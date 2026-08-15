@@ -87,22 +87,32 @@ describe('public navigation authority', () => {
     expect(allDestinations.map(item => item.href)).not.toContain('/saved-search/manage');
   });
 
-  it('keeps Rent hidden behind the canonical journey visibility authority', () => {
+  it('exposes Rent through the canonical journey visibility authority', () => {
     const renters = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'renters');
     expect(renters).toBeDefined();
-    expect(getPublicHeroJourney('rent').homepageEnabled).toBe(false);
-    expect(isPublicNavigationVisible(renters!.feature)).toBe(false);
+    expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
+    expect(isPublicNavigationVisible(renters!.feature)).toBe(true);
     expect(getVisiblePublicNavigationMenus('desktop').some(menu => menu.id === 'renters')).toBe(
-      false,
+      true,
+    );
+    expect(getVisiblePublicNavigationMenus('mobile').some(menu => menu.id === 'renters')).toBe(
+      true,
     );
 
     const visibleItems = getVisiblePublicNavigationGroups(renters!, 'desktop').flatMap(
       group => group.items,
     );
     expect(visibleItems.map(item => item.href)).toEqual(
-      expect.arrayContaining(['/guides/renting-property', '/favorites', '/agents']),
+      expect.arrayContaining([
+        '/property-to-rent',
+        '/property-to-rent?propertyType=apartment',
+        '/property-to-rent?propertyType=house',
+        '/property-to-rent?propertyType=townhouse',
+        '/guides/renting-property',
+        '/favorites',
+        '/agents',
+      ]),
     );
-    expect(visibleItems.some(item => item.href.startsWith('/property-to-rent'))).toBe(false);
     expect(visibleItems.some(item => item.href === '/compare')).toBe(false);
     expect(visibleItems.some(item => item.href.includes('propertyType=commercial'))).toBe(false);
     expect(visibleItems.some(item => /alert|enquir/i.test(item.label))).toBe(false);

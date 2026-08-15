@@ -128,8 +128,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Rent',
     kind: 'property-search',
     destination: '/property-to-rent',
-    homepageVisible: false,
-    homepageEnabled: false,
+    homepageVisible: true,
+    homepageEnabled: true,
     supportedFields: ['location', 'propertyType', 'minPrice', 'maxPrice'],
   },
   {

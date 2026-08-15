@@ -46,18 +46,20 @@ describe('EnhancedNavbar renter discovery menu', () => {
     mockUseLocation.mockReturnValue(['/', vi.fn()]);
   });
 
-  it('keeps the Rent entry point hidden while the canonical journey gate is off', () => {
+  it('exposes the Rent entry point through the canonical journey gate', () => {
     render(<EnhancedNavbar />);
 
-    expect(screen.queryByRole('button', { name: /for renters/i })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('region', { name: 'For Renters navigation' }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Browse all rentals' })).not.toBeInTheDocument();
+    const renterTrigger = screen.getByRole('button', { name: /for renters/i });
+    expect(renterTrigger).toBeInTheDocument();
+    fireEvent.click(renterTrigger);
+
+    expect(screen.getByRole('region', { name: 'For Renters navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Browse all rentals' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Compare rentals' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /commercial property to rent/i })).not.toBeInTheDocument();
   });
 
-  it('does not expose Rent destinations from the mobile drawer either', () => {
+  it('exposes the same truthful Rent destinations from the mobile drawer', () => {
     render(<EnhancedNavbar />);
     fireEvent.click(screen.getByRole('button', { name: 'Open navigation menu' }));
 
@@ -67,8 +69,8 @@ describe('EnhancedNavbar renter discovery menu', () => {
       within(drawer!)
         .queryAllByRole('link')
         .some(link => link.getAttribute('href')?.startsWith('/property-to-rent')),
-    ).toBe(false);
+    ).toBe(true);
     expect(within(drawer!).queryByRole('link', { name: 'Compare rentals' })).not.toBeInTheDocument();
-    expect(within(drawer!).queryByText('For Renters')).not.toBeInTheDocument();
+    expect(within(drawer!).getByText('For Renters')).toBeInTheDocument();
   });
 });
