@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { and, eq, inArray } from 'drizzle-orm';
 
 const { mockSearchProperties } = vi.hoisted(() => ({
@@ -27,6 +27,11 @@ import {
   deleteDeveloperTestContext,
   type DeveloperTestContext,
 } from '../test-utils/developerTestContext';
+import {
+  acquireDevelopmentIntegrationMutex,
+  DEVELOPMENT_INTEGRATION_MUTEX_HOOK_TIMEOUT_MS,
+  releaseDevelopmentIntegrationMutex,
+} from '../test-utils/developmentIntegrationMutex';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
@@ -130,6 +135,10 @@ function callerFor(userId: number, role: 'property_developer' | 'super_admin') {
 }
 
 describeWithDb('Developer development publication lifecycle integration', () => {
+  beforeAll(acquireDevelopmentIntegrationMutex, DEVELOPMENT_INTEGRATION_MUTEX_HOOK_TIMEOUT_MS);
+
+  afterAll(releaseDevelopmentIntegrationMutex);
+
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;

@@ -17,6 +17,9 @@
     "scripts/db-contract-verify.ts",
     "scripts/db-verify-distribution-schema.ts"
   ],
+  "testInfrastructureRawConnectionSources": [
+    "server/test-utils/developmentIntegrationMutex.ts"
+  ],
   "retiredDirectMutationSources": [
     "scripts/run-listing-performance-e2e.ts",
     "scripts/run-prospect-journey-e2e.ts",
@@ -70,6 +73,7 @@
   ],
   "classificationRules": {
     "canonical": "Only the canonical creator may import a database driver and create connections for active authority consumers.",
+    "test-infrastructure-raw": "Test-only synchronization utilities may use a bounded raw connection when they are individually inventoried and cannot be reached by runtime authority paths.",
     "retired-direct-mutation": "Package commands and direct module entrypoints fail before database resolution or connection.",
     "legacy-contained": "Not reachable from approved package commands; remains prohibited historical or diagnostic source pending deletion/adaptation.",
     "legacy-target-parser": "Not an authority and not reachable from approved database commands."

@@ -119,6 +119,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
 
   // --- Autosave (currently disabled in your code) ---
   const saveDraftMutation = trpc.developer.saveDraft.useMutation();
+  const savePublisherDraftMutation = trpc.superAdminPublisher.saveDraft.useMutation();
 
   const stateToWatch = useMemo(
     () => ({
@@ -142,11 +143,17 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     enabled: false, // TODO: re-enable when backend is stable
     onSave: async () => {
       await saveDraft(async data => {
-        const result = await saveDraftMutation.mutateAsync({
-          ...(currentDraftId ? { id: currentDraftId } : {}),
-          ...(cataloguePublisherId ? { cataloguePublisherId } : {}),
-          draftData: data,
-        });
+        const result = shouldUsePublisherApi
+          ? await savePublisherDraftMutation.mutateAsync({
+              ...(currentDraftId ? { id: currentDraftId } : {}),
+              cataloguePublisherId: publisherContext.cataloguePublisherId,
+              draftData: data,
+            })
+          : await saveDraftMutation.mutateAsync({
+              ...(currentDraftId ? { id: currentDraftId } : {}),
+              ...(cataloguePublisherId ? { cataloguePublisherId } : {}),
+              draftData: data,
+            });
         if (result?.id && !currentDraftId) setCurrentDraftId(result.id);
       });
     },
@@ -157,16 +164,38 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       setApiError(null);
       const result = await persistManualDevelopmentDraft({
         saveDraft,
-        mutateDraft: input => saveDraftMutation.mutateAsync(input),
+        mutateDraft: input =>
+          shouldUsePublisherApi
+            ? savePublisherDraftMutation.mutateAsync({
+                ...input,
+                cataloguePublisherId: publisherContext.cataloguePublisherId,
+              })
+            : saveDraftMutation.mutateAsync(input),
         currentDraftId,
-        cataloguePublisherId,
+        cataloguePublisherId: shouldUsePublisherApi
+          ? publisherContext.cataloguePublisherId
+          : cataloguePublisherId,
         setCurrentDraftId,
       });
 
-      await Promise.all([
-        utils.developer.getDrafts.invalidate(),
-        result.id ? utils.developer.getDraft.invalidate({ id: result.id }) : Promise.resolve(),
-      ]);
+      if (shouldUsePublisherApi) {
+        await Promise.all([
+          utils.superAdminPublisher.getDrafts.invalidate({
+            cataloguePublisherId: publisherContext.cataloguePublisherId,
+          }),
+          result.id
+            ? utils.superAdminPublisher.getDraft.invalidate({
+                cataloguePublisherId: publisherContext.cataloguePublisherId,
+                id: result.id,
+              })
+            : Promise.resolve(),
+        ]);
+      } else {
+        await Promise.all([
+          utils.developer.getDrafts.invalidate(),
+          result.id ? utils.developer.getDraft.invalidate({ id: result.id }) : Promise.resolve(),
+        ]);
+      }
 
       toast.success('Draft saved');
     } catch (error) {
@@ -177,7 +206,16 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       });
       throw error;
     }
-  }, [cataloguePublisherId, currentDraftId, saveDraft, saveDraftMutation, utils]);
+  }, [
+    cataloguePublisherId,
+    currentDraftId,
+    publisherContext?.cataloguePublisherId,
+    saveDraft,
+    saveDraftMutation,
+    savePublisherDraftMutation,
+    shouldUsePublisherApi,
+    utils,
+  ]);
 
   // Save on phase transition (only after hydration)
   const prevPhaseRef = useRef(currentPhase);
@@ -243,6 +281,23 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   );
 
   const {
+    data: loadedPublisherDraft,
+    error: publisherDraftError,
+  } = trpc.superAdminPublisher.getDraft.useQuery(
+    {
+      cataloguePublisherId: publisherContext?.cataloguePublisherId ?? -1,
+      id: currentDraftId ?? -1,
+    },
+    {
+      enabled: !!currentDraftId && !isEditMode && shouldUsePublisherApi,
+      retry: false,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+    },
+  );
+
+  const {
     data: developerEditData,
     isLoading: isDeveloperEditLoading,
     error: developerLoadError,
@@ -274,12 +329,14 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   const editData = shouldUsePublisherApi ? publisherEditData : developerEditData;
   const isEditLoading = shouldUsePublisherApi ? isPublisherEditLoading : isDeveloperEditLoading;
   const loadError = shouldUsePublisherApi ? publisherLoadError : developerLoadError;
+  const activeLoadedDraft = shouldUsePublisherApi ? loadedPublisherDraft : loadedDraft;
+  const activeDraftError = shouldUsePublisherApi ? publisherDraftError : draftError;
 
   // --- Error handling ---
   useEffect(() => {
-    const err = loadError || draftError || autoSaveError;
+    const err = loadError || activeDraftError || autoSaveError;
     if (err) setApiError(parseError(err));
-  }, [loadError, draftError, autoSaveError]);
+  }, [loadError, activeDraftError, autoSaveError]);
 
   // --- Edit hydration (gated by persist rehydrate) ---
   useEffect(() => {
@@ -348,12 +405,12 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   useEffect(() => {
     if (!persistReady) return;
     if (isEditMode) return;
-    if (!loadedDraft?.draftData || isHydrated) return;
+    if (!activeLoadedDraft?.draftData || isHydrated) return;
 
-    hydrateDevelopment(loadedDraft.draftData);
+    hydrateDevelopment(activeLoadedDraft.draftData);
     setIsHydrated(true);
     toast.success('Draft loaded successfully');
-  }, [persistReady, isEditMode, loadedDraft, isHydrated, hydrateDevelopment]);
+  }, [persistReady, isEditMode, activeLoadedDraft, isHydrated, hydrateDevelopment]);
 
   // --- Legacy phase skip ---
   useEffect(() => {
@@ -375,7 +432,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       if (isHydrated) await saveNow();
     } finally {
       reset();
-      setLocation(isSuperAdmin ? '/admin/overview' : '/developer');
+      setLocation(shouldUsePublisherApi ? '/admin/publisher' : isSuperAdmin ? '/admin/overview' : '/developer');
     }
   };
 
@@ -403,7 +460,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
       <WizardEngine
         onExit={() => setShowExitDialog(true)}
         onSaveDraft={handleManualSaveDraft}
-        isSavingDraft={saveDraftMutation.isPending}
+        isSavingDraft={saveDraftMutation.isPending || savePublisherDraftMutation.isPending}
         saveStatus={isSaving ? 'saving' : autoSaveError ? 'error' : 'saved'}
         lastSavedAt={lastSaved}
       />
@@ -428,7 +485,7 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
           totalSteps: 1,
           developmentName: developmentData.name || '',
           address: developmentData.location?.address || '',
-          lastModified: loadedDraft?.lastModified || undefined,
+          lastModified: activeLoadedDraft?.lastModified || undefined,
         }}
       />
 

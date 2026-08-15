@@ -272,10 +272,10 @@ export function CreateCataloguePublisherDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
-            Create Developer Brand
+            Create Curated Catalogue Publisher
           </DialogTitle>
           <DialogDescription>
-            Create a new platform-owned developer profile for publishing.
+            Create a Property Listify-custodied platform-reference publisher for marketplace curation.
           </DialogDescription>
         </DialogHeader>
 
@@ -302,7 +302,7 @@ export function CreateCataloguePublisherDialog({
                   render={({ field }) => (
                     <FormItem className="space-y-3 p-4 border border-blue-100 rounded-lg bg-blue-50/30">
                       <FormLabel className="text-base font-semibold text-blue-900">
-                        Publishing As
+                        Publisher classification
                       </FormLabel>
                       <FormControl>
                         <RadioGroup
@@ -316,10 +316,10 @@ export function CreateCataloguePublisherDialog({
                             </FormControl>
                             <div className="space-y-1">
                               <FormLabel className="font-semibold text-blue-900 cursor-pointer">
-                                Property Developer
+                                Development source
                               </FormLabel>
                               <FormDescription className="text-xs text-slate-500">
-                                Creating and listing my own developments
+                                Recording development information from an authoritative source
                               </FormDescription>
                             </div>
                           </FormItem>
@@ -444,7 +444,7 @@ export function CreateCataloguePublisherDialog({
                       <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Brief description of the developer..."
+                          placeholder="Brief description supported by the recorded source..."
                           className="resize-none"
                           {...field}
                         />
@@ -467,7 +467,7 @@ export function CreateCataloguePublisherDialog({
                         />
                       </FormControl>
                       <FormDescription>
-                        Record the source used to establish this platform-curated brand.
+                        Record the source used to establish this curated publisher.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

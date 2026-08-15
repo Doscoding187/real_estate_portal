@@ -669,6 +669,7 @@ export async function getDeveloperOperatingHome(input: {
         developmentId: development.id,
         range: input.range,
         now,
+        includePlatformCustody: input.scope.mode === 'platform_curator',
       });
       return buildDevelopmentOperatingSummary({
         development,

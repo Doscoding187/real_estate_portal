@@ -69,10 +69,10 @@ const PublisherContent: React.FC = () => {
           <Building2 className="w-16 h-16 text-muted-foreground/50" />
         </div>
         <div className="max-w-md space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight">Select a Developer Brand</h2>
+            <h2 className="text-2xl font-bold tracking-tight">Select a curated publisher</h2>
           <p className="text-muted-foreground">
-            To start emulating workflows, publishing properties, or viewing leads, please select a
-            developer Catalogue Publisher from the selector above.
+            Select a platform-reference Catalogue Publisher to create, review, publish, and manage
+            curated marketplace information.
           </p>
         </div>
         <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg max-w-lg text-sm text-orange-800">
@@ -81,8 +81,8 @@ const PublisherContent: React.FC = () => {
             <div>
               <p className="font-semibold mb-1">Super Admin Mode Active</p>
               <p>
-                Actions performed here generate platform-owned data (`ownerType='platform'`). This
-                data is isolated from real subscribers until explicitly transferred/claimed.
+                Actions here maintain Property Listify-custodied catalogue information. Registered
+                developer organisations remain a separate first-party authority.
               </p>
             </div>
           </div>
@@ -207,7 +207,9 @@ const PublisherContent: React.FC = () => {
 
 export const SuperAdminPublisher: React.FC = () => {
   // Fetch global stats for quick stats bar
-  const { data: allBrands } = trpc.superAdminPublisher.listPublishers.useQuery({});
+  const { data: allBrands } = trpc.superAdminPublisher.listPublishers.useQuery({
+    emulatorOnly: true,
+  });
   const { data: globalMetrics } = trpc.superAdminPublisher.getGlobalMetrics.useQuery(undefined, {
     enabled: true,
   });
@@ -227,22 +229,21 @@ export const SuperAdminPublisher: React.FC = () => {
               <div className="flex items-start justify-between mb-6">
                 <div className="max-w-4xl">
                   <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-3 flex items-center gap-3">
-                    Developer Publisher
+                    Curated Catalogue
                     <span className="inline-flex items-center gap-1.5 text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full font-semibold uppercase tracking-wide border border-blue-200">
                       <Sparkles className="w-3 h-3" />
                       Super Admin
                     </span>
                   </h1>
                   <p className="text-slate-600 max-w-3xl text-lg leading-relaxed">
-                    Browse and edit all developments by province, or select a Catalogue Publisher to
-                    emulate developer workflows.
+                    Operate Property Listify-curated publishers and their marketplace developments.
                   </p>
                 </div>
 
                 {/* Quick Actions */}
                 <div className="hidden lg:flex flex-col gap-2">
                   <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs text-slate-500 mb-1">Total Brands</div>
+                    <div className="text-xs text-slate-500 mb-1">Curated Publishers</div>
                     <div className="text-2xl font-bold text-slate-900">
                       {allBrands?.length || 0}
                     </div>
@@ -279,8 +280,8 @@ export const SuperAdminPublisher: React.FC = () => {
             <div>
               <h2 className="text-lg font-semibold mb-2">Catalogue Publisher Mode</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Select a Catalogue Publisher to create new developments, manage leads, and view
-                metrics.
+                Select a platform-reference publisher to create developments, manage review, and
+                view Property Listify-custodied enquiries.
               </p>
             </div>
 
