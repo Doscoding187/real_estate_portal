@@ -12,6 +12,7 @@ import {
   amenities,
 } from '../../drizzle/schema';
 import { eq, and, desc, sql, like, inArray, count, avg, getTableColumns } from 'drizzle-orm';
+import { normalizeCoordinatePair } from '../../shared/location-contract';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 /**
@@ -60,6 +61,43 @@ function safeParseImages(value: unknown): string[] {
 
 function normalizeLocationSlug(value: string): string {
   return value.trim().toLowerCase();
+}
+
+/**
+ * Location-page inventory is a public compatibility read. Keep its existing
+ * property shape, but replace legacy location fields with the approval-owned
+ * public projection and remove authoring/provider evidence.
+ */
+function projectPublicPropertyLocation(property: Record<string, any>): Record<string, any> {
+  const projection = { ...property };
+  for (const privateField of [
+    'sourceListingId',
+    'placeId',
+    'privateAddress',
+    'coordinateSource',
+    'locationConfirmationState',
+    'providerLocationPlaceId',
+    'provider',
+  ]) {
+    delete projection[privateField];
+  }
+
+  const coordinates = normalizeCoordinatePair(property.publicLatitude, property.publicLongitude);
+  const publicLocationPrecision =
+    property.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
+
+  return {
+    ...projection,
+    address: property.publicAddress ?? null,
+    zipCode: publicLocationPrecision === 'exact' ? (property.zipCode ?? null) : null,
+    latitude: coordinates?.latitude ?? null,
+    longitude: coordinates?.longitude ?? null,
+    publicAddress: property.publicAddress ?? null,
+    publicLatitude: coordinates?.latitude ?? null,
+    publicLongitude: coordinates?.longitude ?? null,
+    publicLocationPrecision,
+    placeId: null,
+  };
 }
 
 export const locationPagesService = {
@@ -381,7 +419,7 @@ export const locationPagesService = {
         city,
         suburbs: suburbList || [],
         featuredProperties: (featuredProperties || []).map((p: any) => ({
-          ...p,
+          ...projectPublicPropertyLocation(p),
           images: safeParseImages(p.images),
         })),
         developments: cityDevelopments || [],
@@ -520,7 +558,7 @@ export const locationPagesService = {
         saleCount: Number(stats?.saleCount || 0),
       },
       listings: localProperties.map((p: any) => ({
-        ...p,
+        ...projectPublicPropertyLocation(p),
         images: safeParseImages(p.images),
       })),
       analytics: analytics || null,

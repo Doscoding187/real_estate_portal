@@ -11,6 +11,7 @@ import {
 } from '../drizzle/schema';
 import { eq, and, or, like, desc, sql, count, inArray } from 'drizzle-orm';
 import { requireUser } from './_core/requireUser';
+import { normalizeCoordinatePair } from '../shared/location-contract';
 
 /**
  * Enhanced Location Router - Advanced Property Discovery & Location Intelligence
@@ -106,6 +107,15 @@ export const enhancedLocationRouter = router({
     )
     .query(async ({ input }) => {
       const db = await getDb();
+      const coordinateSearch = (() => {
+        if (input.location?.type !== 'coordinates') return null;
+        const [latitude, longitude] = input.location.value.split(',');
+        return normalizeCoordinatePair(latitude, longitude);
+      })();
+
+      if (input.location?.type === 'coordinates' && !coordinateSearch) {
+        return { properties: [], total: 0, hasMore: false };
+      }
 
       // Build WHERE conditions
       const conditions = [eq(properties.status, 'published')];
@@ -236,14 +246,14 @@ export const enhancedLocationRouter = router({
           createdAt: properties.createdAt,
           distance: sql<number>`
             CASE 
-              WHEN ${input.location?.type === 'coordinates'} THEN
+              WHEN ${coordinateSearch !== null} THEN
                 (6371 * acos(
-                  cos(radians(${input.location?.value.split(',').map(Number)[0] || 0})) *
+                  cos(radians(${coordinateSearch?.latitude ?? null})) *
                   cos(radians(${properties.publicLatitude})) *
                   cos(radians(${properties.publicLongitude}) - radians(${
-                    input.location?.value.split(',').map(Number)[1] || 0
+                    coordinateSearch?.longitude ?? null
                   })) +
-                  sin(radians(${input.location?.value.split(',').map(Number)[0] || 0})) *
+                  sin(radians(${coordinateSearch?.latitude ?? null})) *
                   sin(radians(${properties.publicLatitude}))
                 ))
               ELSE NULL
@@ -279,7 +289,12 @@ export const enhancedLocationRouter = router({
       // Enhance results with amenity data if requested
       const enhancedResults = await Promise.all(
         results.map(async property => {
-          const enhanced = { ...property };
+          const publicCoordinates = normalizeCoordinatePair(property.latitude, property.longitude);
+          const enhanced = {
+            ...property,
+            latitude: publicCoordinates?.latitude ?? null,
+            longitude: publicCoordinates?.longitude ?? null,
+          };
 
           // Add nearby amenities count if requested
           if (input.amenities) {
@@ -507,18 +522,33 @@ export const enhancedLocationRouter = router({
         throw new Error('Property not found');
       }
 
+      const referenceCoordinates = normalizeCoordinatePair(
+        referenceProperty.publicLatitude,
+        referenceProperty.publicLongitude,
+      );
+
+      // Similarity is a geospatial operation. A property without a valid
+      // public point cannot be used as its reference, and candidates without
+      // one must not be coerced into a false origin.
+      if (!referenceCoordinates) return [];
+
       // Build similarity criteria
       const conditions = [
         eq(properties.status, 'published'),
         sql`${properties.id} != ${input.propertyId}`,
+        sql`${properties.publicLatitude} IS NOT NULL
+          AND ${properties.publicLongitude} IS NOT NULL
+          AND ${properties.publicLatitude} BETWEEN -90 AND 90
+          AND ${properties.publicLongitude} BETWEEN -180 AND 180
+          AND NOT (${properties.publicLatitude} = 0 AND ${properties.publicLongitude} = 0)`,
         // Location similarity
         sql`(
           6371 * acos(
-            cos(radians(${referenceProperty.publicLatitude || 0})) *
-            cos(radians(${properties.publicLatitude || 0})) *
-            cos(radians(${properties.publicLongitude || 0}) - radians(${referenceProperty.publicLongitude || 0})) +
-            sin(radians(${referenceProperty.publicLatitude || 0})) *
-            sin(radians(${properties.publicLatitude || 0}))
+            cos(radians(${referenceCoordinates.latitude})) *
+            cos(radians(${properties.publicLatitude})) *
+            cos(radians(${properties.publicLongitude}) - radians(${referenceCoordinates.longitude})) +
+            sin(radians(${referenceCoordinates.latitude})) *
+            sin(radians(${properties.publicLatitude}))
           )
         ) <= ${input.radius}`,
       ];
@@ -553,11 +583,11 @@ export const enhancedLocationRouter = router({
           province: properties.province,
           distance: sql<number>`
             (6371 * acos(
-              cos(radians(${referenceProperty.publicLatitude || 0})) *
-              cos(radians(${properties.publicLatitude || 0})) *
-              cos(radians(${properties.publicLongitude || 0}) - radians(${referenceProperty.publicLongitude || 0})) +
-              sin(radians(${referenceProperty.publicLatitude || 0})) *
-              sin(radians(${properties.publicLatitude || 0}))
+              cos(radians(${referenceCoordinates.latitude})) *
+              cos(radians(${properties.publicLatitude})) *
+              cos(radians(${properties.publicLongitude}) - radians(${referenceCoordinates.longitude})) +
+              sin(radians(${referenceCoordinates.latitude})) *
+              sin(radians(${properties.publicLatitude}))
             ))
           `.as('distance_km'),
         })
@@ -566,7 +596,14 @@ export const enhancedLocationRouter = router({
         .orderBy(sql`distance_km ASC`)
         .limit(input.limit);
 
-      return similarProperties;
+      return similarProperties.map(property => {
+        const publicCoordinates = normalizeCoordinatePair(property.latitude, property.longitude);
+        return {
+          ...property,
+          latitude: publicCoordinates?.latitude ?? null,
+          longitude: publicCoordinates?.longitude ?? null,
+        };
+      });
     }),
 
   /**

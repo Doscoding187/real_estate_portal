@@ -49,6 +49,51 @@ function orderedQuery(rows: unknown[]) {
   return query;
 }
 
+function publicCoordinateRow(latitude: unknown, longitude: unknown) {
+  return {
+    id: 701,
+    title: 'Public coordinate contract fixture',
+    description: 'Approved projection coordinate fixture.',
+    price: 1_500_000,
+    suburb: 'Sandton',
+    address: 'Alice Lane, Sandton, Johannesburg',
+    city: 'Johannesburg',
+    province: 'Gauteng',
+    propertyType: 'house',
+    listingType: 'sale',
+    bedrooms: 3,
+    bathrooms: 2,
+    internalAreaM2: 180,
+    erfSizeM2: 420,
+    landAreaM2: null,
+    floorSize: 180,
+    erfSize: 420,
+    landSize: 420,
+    status: 'available',
+    listedDate: new Date('2026-08-10T10:00:00Z'),
+    mainImage: 'https://cdn.example.test/public-coordinate.jpg',
+    sourceListingId: 9201,
+    ownerId: 100,
+    agentId: 33,
+    latitude,
+    longitude,
+    propertySettings: '{}',
+    agentDisplayName: 'Jane Agent',
+    agentPhone: '+27110001111',
+    agentWhatsapp: '+27110001111',
+    agentEmail: 'jane@example.test',
+    agencyName: 'Approved Realty',
+    videoCount: 0,
+  };
+}
+
+function configureCoordinateSearch(latitude: unknown, longitude: unknown) {
+  mockSelect
+    .mockReturnValueOnce(terminalWhereQuery([{ count: 1 }]))
+    .mockReturnValueOnce(pagedQuery([publicCoordinateRow(latitude, longitude)]))
+    .mockReturnValueOnce(orderedQuery([]));
+}
+
 describe('manual property Search approved projection authority', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -168,6 +213,27 @@ describe('manual property Search approved projection authority', () => {
     expect(result.properties[0].mainImage).toBe('https://cdn.example.test/legacy-main.jpg');
     expect(result.cards[0].propertyId).toBe(77);
   });
+
+  it.each([
+    ['valid pair', -26.1076, 28.0567, -26.1076, 28.0567],
+    ['missing pair', null, null, null, null],
+    ['partial pair', -26.1076, null, null, null],
+    ['zero pair', 0, 0, null, null],
+    ['non-finite pair', Number.NaN, 28.0567, null, null],
+    ['out-of-range pair', -91, 28.0567, null, null],
+  ])(
+    'preserves public Search coordinate semantics for %s',
+    async (_label, latitude, longitude, expectedLatitude, expectedLongitude) => {
+      configureCoordinateSearch(latitude, longitude);
+
+      const result = await new PropertySearchService().searchProperties({}, 'date_desc', 1, 12);
+
+      expect(result.properties[0].latitude).toBe(expectedLatitude);
+      expect(result.properties[0].longitude).toBe(expectedLongitude);
+      expect(result.cards[0].latitude).toBe(expectedLatitude ?? undefined);
+      expect(result.cards[0].longitude).toBe(expectedLongitude ?? undefined);
+    },
+  );
 
   it.each([1, 2, 2.5, 3])(
     'preserves the approved %s bathroom value for listing-backed Search cards',

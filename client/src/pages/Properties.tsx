@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { normalizeCoordinatePair } from '@shared/location-contract';
 
 export default function Properties() {
   const [location, setLocation] = useLocation();
@@ -271,14 +272,16 @@ export default function Properties() {
                     .map((p: any) => {
                       const normalized = normalizePropertyForUI(p);
                       if (!normalized) return null;
+                      const publicCoordinates = normalizeCoordinatePair(p.latitude, p.longitude);
+                      if (!publicCoordinates) return null;
                       return {
                         id: parseInt(normalized.id),
                         title: normalized.title,
                         price: normalized.price,
                         propertyType: normalized.propertyType,
                         listingType: normalized.listingType,
-                        latitude: parseFloat(p.latitude || '-26.2041'),
-                        longitude: parseFloat(p.longitude || '28.0473'),
+                        latitude: publicCoordinates.latitude,
+                        longitude: publicCoordinates.longitude,
                         mainImage:
                           (normalized as any).image ??
                           (normalized as any).mainImage ??

@@ -42,7 +42,8 @@ export interface ListingResult {
   city: string;
   province: string;
   locationId: number | null;
-  placeId: string | null;
+  /** Compatibility field; provider evidence is never returned for listings. */
+  placeId: null;
   mainImage: string | null;
   relevanceScore: number;
 }
@@ -316,7 +317,6 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
       city: properties.city,
       province: properties.province,
       locationId: properties.locationId,
-      placeId: properties.placeId,
       mainImage: properties.mainImage,
     })
     .from(properties)
@@ -335,6 +335,7 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
 
   return results.map((listing: ListingRow) => ({
     ...listing,
+    placeId: null,
     price: Number(listing.price),
     relevanceScore: 50,
   }));
@@ -445,6 +446,7 @@ export async function filterListingsByPlaceId(
 
   return results.map((listing: ListingRow) => ({
     ...listing,
+    placeId: null,
     price: Number(listing.price),
     relevanceScore: 100,
   }));
@@ -488,6 +490,7 @@ async function filterListingsByPlaceIdDirect(
 
   return results.map((listing: ListingRow) => ({
     ...listing,
+    placeId: null,
     price: Number(listing.price),
     relevanceScore: 90,
   }));

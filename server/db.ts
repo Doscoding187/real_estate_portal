@@ -84,7 +84,7 @@ import {
   validatePricingContract,
 } from '../shared/pricing-contract';
 import {
-  coordinatePairSchema,
+  normalizeCoordinatePair,
   storedPrecisionToPublicLocationPolicy,
   type PrivateAddress,
 } from '../shared/location-contract';
@@ -3150,11 +3150,8 @@ async function buildPublicLocationProjection(database: any, listing: any) {
   if (precision === 'exact') {
     const latitude = finiteCoordinate(listing.latitude);
     const longitude = finiteCoordinate(listing.longitude);
-    const coordinateResult = coordinatePairSchema.safeParse({
-      latitude: latitude === null ? null : Number(latitude),
-      longitude: longitude === null ? null : Number(longitude),
-    });
-    const hasExactCoordinatePair = coordinateResult.success;
+    const hasExactCoordinatePair =
+      normalizeCoordinatePair(listing.latitude, listing.longitude) !== null;
     return {
       publicAddress: fullAddressLabel || areaLabel || null,
       publicLatitude: hasExactCoordinatePair ? latitude : null,
@@ -3190,10 +3187,12 @@ async function buildPublicLocationProjection(database: any, listing: any) {
     center = province || null;
   }
 
+  const approximateCoordinates = normalizeCoordinatePair(center?.latitude, center?.longitude);
+
   return {
     publicAddress: streetLabel || areaLabel || null,
-    publicLatitude: finiteCoordinate(center?.latitude),
-    publicLongitude: finiteCoordinate(center?.longitude),
+    publicLatitude: approximateCoordinates ? finiteCoordinate(center?.latitude) : null,
+    publicLongitude: approximateCoordinates ? finiteCoordinate(center?.longitude) : null,
     publicLocationPrecision: 'approximate' as const,
     publicLocationPolicy: policy,
   };
