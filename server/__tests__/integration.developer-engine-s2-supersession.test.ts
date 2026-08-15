@@ -4,14 +4,20 @@ import { randomUUID } from 'node:crypto';
 
 import { getDb } from '../db-connection';
 import {
-  developerBrandProfiles,
-  developers,
+  cataloguePublishers,
   developmentSupersessions,
   developments,
   leads,
   unitTypes,
   users,
 } from '../../drizzle/schema';
+import {
+  activateDeveloperTestLaunchAccess,
+  createDeveloperTestContext,
+  createPlatformPublisherTestContext,
+  deleteDeveloperTestContext,
+  type DeveloperTestContext,
+} from '../test-utils/developerTestContext';
 import { developmentService } from '../services/developmentService';
 import {
   activateDevelopmentSupersession,
@@ -31,8 +37,8 @@ const describeWithDb: typeof describe =
 
 type FixtureState = {
   userIds: number[];
-  developerIds: number[];
-  brandIds: number[];
+  developerContexts: DeveloperTestContext[];
+  platformPublisherIds: number[];
   developmentIds: number[];
   unitIds: string[];
   relationshipIds: number[];
@@ -41,8 +47,8 @@ type FixtureState = {
 
 const fixture: FixtureState = {
   userIds: [],
-  developerIds: [],
-  brandIds: [],
+  developerContexts: [],
+  platformPublisherIds: [],
   developmentIds: [],
   unitIds: [],
   relationshipIds: [],
@@ -77,48 +83,31 @@ async function insertUser(role: 'super_admin' | 'property_developer') {
 }
 
 async function insertDeveloper(userId: number) {
-  const db = await database();
   const value = suffix();
-  const [result] = await db.insert(developers).values({
+  const context = await createDeveloperTestContext({
     userId,
     name: `S2 Developer ${value}`,
     email: `s2-developer-${value}@example.com`,
-    category: 'residential',
-    isVerified: 1,
-    status: 'approved',
+    city: 'Johannesburg',
+    province: 'Gauteng',
   });
-  const id = Number(result.insertId);
-  fixture.developerIds.push(id);
-  return id;
+  fixture.developerContexts.push(context);
+  await activateDeveloperTestLaunchAccess(context);
+  return context;
 }
 
-async function insertBrand(
-  createdBy: number,
-  options: {
-    ownerType: 'platform' | 'developer';
-    linkedDeveloperAccountId?: number | null;
-  },
-) {
-  const db = await database();
+async function insertPlatformPublisher(createdBy: number) {
   const value = suffix();
-  const [result] = await db.insert(developerBrandProfiles).values({
-    brandName: `S2 Brand ${value}`,
-    slug: `s2-brand-${value}`,
-    ownerType: options.ownerType,
-    linkedDeveloperAccountId: options.linkedDeveloperAccountId ?? null,
-    sourceAttribution:
-      options.ownerType === 'platform' ? 'S2 verified public source attribution.' : null,
-    profileType: options.ownerType === 'platform' ? 'industry_reference' : 'verified_partner',
-    isVisible: 1,
-    isClaimable: options.ownerType === 'platform' ? 1 : 0,
-    createdBy,
+  const context = await createPlatformPublisherTestContext({
+    name: `S2 Platform Publisher ${value}`,
+    createdByUserId: createdBy,
+    sourceAttribution: 'S2 verified public source attribution.',
   });
-  const id = Number(result.insertId);
-  fixture.brandIds.push(id);
-  return id;
+  fixture.platformPublisherIds.push(context.cataloguePublisherId);
+  return context.cataloguePublisherId;
 }
 
-function publicationFields(slug: string, ownerType: 'platform' | 'developer') {
+function publicationFields(slug: string, publisherType: 'platform' | 'developer') {
   return {
     name: `S2 Development ${slug}`,
     description:
@@ -133,8 +122,7 @@ function publicationFields(slug: string, ownerType: 'platform' | 'developer') {
     ownershipType: 'sectional-title',
     transactionType: 'for_sale' as const,
     approvalStatus: 'approved' as const,
-    isPublished: ownerType === 'platform' ? 1 : 0,
-    devOwnerType: ownerType,
+    isPublished: publisherType === 'platform' ? 1 : 0,
     nature: 'new' as const,
     status: 'selling' as const,
     readinessScore: 100,
@@ -143,15 +131,13 @@ function publicationFields(slug: string, ownerType: 'platform' | 'developer') {
 
 async function insertDevelopment(input: {
   slug: string;
-  ownerType: 'platform' | 'developer';
-  developerId?: number | null;
-  developerBrandProfileId: number;
+  publisherType: 'platform' | 'developer';
+  cataloguePublisherId: number;
 }) {
   const db = await database();
   const [result] = await db.insert(developments).values({
-    ...publicationFields(input.slug, input.ownerType),
-    developerId: input.developerId ?? null,
-    developerBrandProfileId: input.developerBrandProfileId,
+    ...publicationFields(input.slug, input.publisherType),
+    cataloguePublisherId: input.cataloguePublisherId,
   });
   const id = Number(result.insertId);
   fixture.developmentIds.push(id);
@@ -175,29 +161,23 @@ async function insertDevelopment(input: {
 async function insertPair(label = suffix()) {
   const superAdminId = await insertUser('super_admin');
   const developerUserId = await insertUser('property_developer');
-  const developerId = await insertDeveloper(developerUserId);
-  const platformBrandId = await insertBrand(superAdminId, { ownerType: 'platform' });
-  const developerBrandId = await insertBrand(developerUserId, {
-    ownerType: 'developer',
-    linkedDeveloperAccountId: developerId,
-  });
+  const developerIdentity = await insertDeveloper(developerUserId);
+  const platformPublisherId = await insertPlatformPublisher(superAdminId);
   const sourceId = await insertDevelopment({
     slug: `s2-source-${label}`,
-    ownerType: 'platform',
-    developerBrandProfileId: platformBrandId,
+    publisherType: 'platform',
+    cataloguePublisherId: platformPublisherId,
   });
   const replacementId = await insertDevelopment({
     slug: `s2-replacement-${label}`,
-    ownerType: 'developer',
-    developerId,
-    developerBrandProfileId: developerBrandId,
+    publisherType: 'developer',
+    cataloguePublisherId: developerIdentity.cataloguePublisherId,
   });
   return {
     superAdminId,
     developerUserId,
-    developerId,
-    developerBrandId,
-    platformBrandId,
+    developerPublisherId: developerIdentity.cataloguePublisherId,
+    platformPublisherId,
     sourceId,
     replacementId,
   };
@@ -240,21 +220,21 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
     if (fixture.developmentIds.length) {
       await db.delete(developments).where(inArray(developments.id, fixture.developmentIds));
     }
-    if (fixture.brandIds.length) {
+    if (fixture.platformPublisherIds.length) {
       await db
-        .delete(developerBrandProfiles)
-        .where(inArray(developerBrandProfiles.id, fixture.brandIds));
+        .delete(cataloguePublishers)
+        .where(inArray(cataloguePublishers.id, fixture.platformPublisherIds));
     }
-    if (fixture.developerIds.length) {
-      await db.delete(developers).where(inArray(developers.id, fixture.developerIds));
+    for (const context of fixture.developerContexts) {
+      await deleteDeveloperTestContext(context);
     }
     if (fixture.userIds.length) {
       await db.delete(users).where(inArray(users.id, fixture.userIds));
     }
 
     fixture.userIds = [];
-    fixture.developerIds = [];
-    fixture.brandIds = [];
+    fixture.developerContexts = [];
+    fixture.platformPublisherIds = [];
     fixture.developmentIds = [];
     fixture.unitIds = [];
     fixture.relationshipIds = [];
@@ -409,8 +389,14 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
 
     const source = await readDevelopment(pair.sourceId);
     const replacement = await readDevelopment(pair.replacementId);
-    expect(source).toMatchObject({ isPublished: 0, devOwnerType: 'platform', developerId: null });
-    expect(replacement).toMatchObject({ isPublished: 1, devOwnerType: 'developer' });
+    expect(source).toMatchObject({
+      isPublished: 0,
+      cataloguePublisherId: pair.platformPublisherId,
+    });
+    expect(replacement).toMatchObject({
+      isPublished: 1,
+      cataloguePublisherId: pair.developerPublisherId,
+    });
 
     const publicDiscoveryIds = async () =>
       (await developmentService.listPublicDevelopments({ limit: 50 })).map(row => Number(row.id));
@@ -448,7 +434,7 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
 
     await expect(
       developmentService.publishPlatformCuratedDevelopment(pair.sourceId, pair.superAdminId, {
-        brandProfileId: Number(source.developerBrandProfileId),
+        cataloguePublisherId: pair.platformPublisherId,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT', message: 'SUPERSESSION_REVERSAL_REQUIRED' });
 
@@ -468,8 +454,7 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       pair.replacementId,
       pair.developerUserId,
     );
-    expect(submitted).toMatchObject({ approvalStatus: 'pending', isPublished: 0 });
-    await developmentService.approveDevelopment(pair.replacementId, pair.superAdminId);
+    expect(submitted).toMatchObject({ approvalStatus: 'approved', isPublished: 1 });
 
     expect(await readDevelopment(pair.replacementId)).toMatchObject({
       approvalStatus: 'approved',
@@ -545,9 +530,8 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
 
     await insertDevelopment({
       slug: 's2-replacement-redirect-v2',
-      ownerType: 'developer',
-      developerId: pair.developerId,
-      developerBrandProfileId: pair.developerBrandId,
+      publisherType: 'developer',
+      cataloguePublisherId: pair.developerPublisherId,
     });
     const ambiguousSlugRedirect =
       await resolveActiveDevelopmentSupersessionRedirect(originalSourcePath);
@@ -599,10 +583,10 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       mutate: async (db, pair) => {
         await db
           .update(developments)
-          .set({ devOwnerType: 'platform', developerId: null })
+          .set({ cataloguePublisherId: pair.platformPublisherId })
           .where(eq(developments.id, pair.replacementId));
       },
-      message: /must be developer-owned/i,
+      message: /not approved/i,
     },
     {
       name: 'a source whose root route became ambiguous',
@@ -613,8 +597,8 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
           .where(eq(developments.id, pair.sourceId));
         await insertDevelopment({
           slug: 's2-source-ambiguous',
-          ownerType: 'platform',
-          developerBrandProfileId: pair.platformBrandId,
+          publisherType: 'platform',
+          cataloguePublisherId: pair.platformPublisherId,
         });
       },
       message: /canonical root route is ambiguous/i,
@@ -658,10 +642,9 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
     const pair = await insertPair('reversal');
     const db = await database();
     const source = await readDevelopment(pair.sourceId);
-    const sourceBrandId = Number(source.developerBrandProfileId);
     const [leadResult] = await db.insert(leads).values({
       developmentId: pair.sourceId,
-      developerBrandProfileId: sourceBrandId,
+      cataloguePublisherId: pair.platformPublisherId,
       name: 'Historical S2 Lead',
       email: `historical-${suffix()}@example.com`,
       unitId: fixture.unitIds[0],

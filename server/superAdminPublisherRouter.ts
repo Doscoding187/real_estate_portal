@@ -3,11 +3,19 @@ import { router, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
-import { developments, properties, cataloguePublishers, leads } from '../drizzle/schema';
+import {
+  cataloguePublishers,
+  developmentDrafts,
+  developments,
+  leads,
+  properties,
+} from '../drizzle/schema';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
 import { developmentService } from './services/developmentService';
 import { resolveOperatingIdentity } from './_core/identityResolver';
 import type { EnhancedTRPCContext } from './_core/publisherContext';
+import { sanitizeDraftData } from './lib/sanitizeDraftData';
+import { getDeveloperOperatingHome } from './services/developerOperatingHome';
 
 async function requireActivePublisherContext(ctx: EnhancedTRPCContext, cataloguePublisherId: number) {
   const identity = await resolveOperatingIdentity(ctx, {
@@ -114,16 +122,11 @@ export const superAdminPublisherRouter = router({
 
       const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
 
-      const metadata = {
-        ownerType: 'platform' as const,
-        cataloguePublisherId: input.cataloguePublisherId,
-      };
-
       // Call service with operating context for identity resolution
       const development = await developmentService.createDevelopment(
         ctx.user.id,
         input as any,
-        metadata,
+        { cataloguePublisherId: input.cataloguePublisherId },
         operatingContext,
       );
 
@@ -179,7 +182,7 @@ export const superAdminPublisherRouter = router({
 
         // Company Info
         description: z.string().optional(),
-        sourceAttribution: z.string().min(3).optional(),
+        sourceAttribution: z.string().trim().min(3),
         category: z.string().optional(),
         establishedYear: z.number().nullable().optional(),
         website: z.string().optional(),
@@ -329,6 +332,174 @@ export const superAdminPublisherRouter = router({
   /**
    * List developments for the selected publisher context
    */
+  getOperatingHome: superAdminProcedure
+    .input(
+      z.object({
+        cataloguePublisherId: z.number().int(),
+        range: z.enum(['7d', '30d', '90d']).default('30d'),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      const home = await getDeveloperOperatingHome({
+        scope: {
+          mode: 'platform_curator',
+          cataloguePublisherId: operatingContext.cataloguePublisherId,
+        },
+        range: input.range,
+      });
+      const publisher = await cataloguePublisherService.getPublisherById(
+        operatingContext.cataloguePublisherId,
+      );
+      if (!publisher) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Catalogue Publisher not found in the active platform context.',
+        });
+      }
+
+      const reviewedAt =
+        home.developments
+          .map(development => development.lifecycle.latestReview?.reviewedAt)
+          .filter((value): value is string => Boolean(value))
+          .sort();
+      const lastVerifiedAt = reviewedAt[reviewedAt.length - 1] ?? null;
+
+      return {
+        ...home,
+        publisher: {
+          id: publisher.id,
+          name: publisher.brandName,
+          slug: publisher.slug,
+          authorityKind: publisher.authorityKind,
+          developerOrganisationId: publisher.developerOrganisationId,
+          sourceAttribution: publisher.sourceAttribution,
+          websiteUrl: publisher.websiteUrl,
+          isVisible: Number(publisher.isVisible) === 1,
+        },
+        publication: {
+          launchAccessRequired: false,
+          lastVerifiedAt,
+        },
+      };
+    }),
+
+  saveDraft: superAdminProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive().optional(),
+        cataloguePublisherId: z.number().int(),
+        draftData: z.any(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      const sanitized = sanitizeDraftData(input.draftData ?? {});
+      const currentStep = Math.max(0, Number((sanitized as any).currentPhase ?? 0));
+      const progress = Math.min(100, Math.max(0, Math.round((currentStep / 11) * 100)));
+      const draftName =
+        String((sanitized as any).developmentData?.name ?? (sanitized as any).name ?? '').trim() ||
+        'Untitled Curated Draft';
+      const database = await db.getDb();
+      if (!database) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+
+      const scope = and(
+        eq(developmentDrafts.cataloguePublisherId, operatingContext.cataloguePublisherId),
+        isNull(developmentDrafts.developerOrganisationId),
+      );
+
+      if (input.id) {
+        const [existing] = await database
+          .select({ id: developmentDrafts.id })
+          .from(developmentDrafts)
+          .where(and(eq(developmentDrafts.id, input.id), scope))
+          .limit(1);
+        if (!existing) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Curated draft not found' });
+        }
+
+        await database
+          .update(developmentDrafts)
+          .set({
+            draftName,
+            draftData: sanitized,
+            progress,
+            currentStep,
+            cataloguePublisherId: operatingContext.cataloguePublisherId,
+            developerOrganisationId: null,
+          })
+          .where(and(eq(developmentDrafts.id, input.id), scope));
+
+        return { id: input.id, success: true, draftData: sanitized };
+      }
+
+      const insertResult = await database.insert(developmentDrafts).values({
+        developerOrganisationId: null,
+        cataloguePublisherId: operatingContext.cataloguePublisherId,
+        draftName,
+        draftData: sanitized,
+        progress,
+        currentStep,
+      });
+      const inserted = Array.isArray(insertResult) ? insertResult[0] : insertResult;
+      return {
+        id: Number((inserted as any)?.insertId ?? 0),
+        success: true,
+        draftData: sanitized,
+      };
+    }),
+
+  getDraft: superAdminProcedure
+    .input(z.object({ cataloguePublisherId: z.number().int(), id: z.number().int().positive() }))
+    .query(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      const database = await db.getDb();
+      if (!database) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+
+      const [draft] = await database
+        .select()
+        .from(developmentDrafts)
+        .where(
+          and(
+            eq(developmentDrafts.id, input.id),
+            eq(developmentDrafts.cataloguePublisherId, operatingContext.cataloguePublisherId),
+            isNull(developmentDrafts.developerOrganisationId),
+          ),
+        )
+        .limit(1);
+      if (!draft) return null;
+      return { ...draft, draftData: sanitizeDraftData((draft as any).draftData ?? {}) };
+    }),
+
+  getDrafts: superAdminProcedure
+    .input(z.object({ cataloguePublisherId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      const database = await db.getDb();
+      if (!database) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
+
+      const drafts = await database
+        .select()
+        .from(developmentDrafts)
+        .where(
+          and(
+            eq(developmentDrafts.cataloguePublisherId, operatingContext.cataloguePublisherId),
+            isNull(developmentDrafts.developerOrganisationId),
+          ),
+        )
+        .orderBy(desc(developmentDrafts.lastModified));
+      return drafts.map((draft: any) => ({
+        ...draft,
+        draftData: sanitizeDraftData(draft.draftData ?? {}),
+      }));
+    }),
+
   getDevelopments: superAdminProcedure
     .input(
       z.object({
@@ -339,16 +510,7 @@ export const superAdminPublisherRouter = router({
     )
     .query(async ({ input, ctx }) => {
       await requireActivePublisherContext(ctx, input.cataloguePublisherId);
-      try {
-        // Use service to get developments specifically linked to this Catalogue Publisher
-        return await cataloguePublisherService.getPublisherDevelopments(input.cataloguePublisherId);
-      } catch (error) {
-        console.warn(
-          '[superAdminPublisher.getDevelopments] Returning empty list due to error:',
-          error,
-        );
-        return [];
-      }
+      return cataloguePublisherService.getPublisherDevelopments(input.cataloguePublisherId);
     }),
 
   /**
@@ -418,6 +580,70 @@ export const superAdminPublisherRouter = router({
       return { success: true, development };
     }),
 
+  submitDevelopment: superAdminProcedure
+    .input(
+      z.object({
+        cataloguePublisherId: z.number().int(),
+        developmentId: z.number().int(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      const development = await developmentService.submitPlatformCuratedDevelopment(
+        input.developmentId,
+        ctx.user.id,
+        operatingContext,
+      );
+      return { success: true, development };
+    }),
+
+  reviewDevelopment: superAdminProcedure
+    .input(
+      z.object({
+        cataloguePublisherId: z.number().int(),
+        developmentId: z.number().int(),
+        decision: z.enum(['approved', 'rejected', 'changes_requested']),
+        feedback: z.string().trim().max(2000).optional(),
+        complianceChecks: z.record(z.boolean()).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      if (input.decision === 'rejected' && !input.feedback?.trim()) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Rejection feedback is required when a curated development is rejected.',
+        });
+      }
+      const development = await developmentService.reviewPlatformCuratedDevelopment(
+        input.developmentId,
+        ctx.user.id,
+        operatingContext,
+        input.decision,
+        input.decision === 'rejected'
+          ? { rejectionReason: input.feedback, complianceChecks: input.complianceChecks }
+          : { reviewNotes: input.feedback, complianceChecks: input.complianceChecks },
+      );
+      return { success: true, development };
+    }),
+
+  unpublishDevelopment: superAdminProcedure
+    .input(
+      z.object({
+        cataloguePublisherId: z.number().int(),
+        developmentId: z.number().int(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const operatingContext = await requireActivePublisherContext(ctx, input.cataloguePublisherId);
+      const development = await developmentService.unpublishPlatformCuratedDevelopment(
+        input.developmentId,
+        ctx.user.id,
+        operatingContext,
+      );
+      return { success: true, development };
+    }),
+
   // ==========================================================================
   // Leads & Metrics (Context-Aware)
   // ==========================================================================
@@ -429,32 +655,43 @@ export const superAdminPublisherRouter = router({
     .input(
       z.object({
         cataloguePublisherId: z.number().int(),
-        limit: z.number().default(50),
-        offset: z.number().default(0),
+        developmentId: z.number().int().positive().optional(),
+        limit: z.number().int().min(1).max(200).default(50),
+        offset: z.number().int().min(0).default(0),
       }),
     )
     .query(async ({ input, ctx }) => {
       await requireActivePublisherContext(ctx, input.cataloguePublisherId);
-      try {
-        const dbConn = await db.getDb();
-        if (!dbConn) return [];
-
-        const publisherLeads = await dbConn
-          .select()
-          .from(leads)
-          .where(eq(leads.cataloguePublisherId, input.cataloguePublisherId))
-          .orderBy(desc(leads.createdAt))
-          .limit(input.limit)
-          .offset(input.offset);
-
-        return publisherLeads;
-      } catch (error) {
-        console.warn(
-          '[superAdminPublisher.getPublisherLeads] Returning empty list due to error:',
-          error,
-        );
-        return [];
+      const dbConn = await db.getDb();
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
       }
+
+      const publisherLeads = await dbConn
+        .select({
+          lead: leads,
+          development: {
+            id: developments.id,
+            name: developments.name,
+            slug: developments.slug,
+          },
+        })
+        .from(leads)
+        .leftJoin(developments, eq(leads.developmentId, developments.id))
+        .where(
+          and(
+            eq(leads.cataloguePublisherId, input.cataloguePublisherId),
+            input.developmentId ? eq(leads.developmentId, input.developmentId) : undefined,
+          ),
+        )
+        .orderBy(desc(leads.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return publisherLeads.map(row => ({
+        ...row.lead,
+        development: row.development,
+      }));
     }),
 
   /**
@@ -471,7 +708,9 @@ export const superAdminPublisherRouter = router({
     )
     .query(async ({ input }) => {
       const dbConn = await db.getDb();
-      if (!dbConn) return [];
+      if (!dbConn) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
+      }
 
       const rows = await dbConn
         .select({
@@ -489,6 +728,8 @@ export const superAdminPublisherRouter = router({
             eq(leads.deliveryStatus, 'attention_required'),
             isNull(leads.agentId),
             isNull(leads.agencyId),
+            eq(cataloguePublishers.authorityKind, 'platform_reference'),
+            isNull(cataloguePublishers.developerOrganisationId),
           ),
         )
         .orderBy(desc(leads.createdAt))

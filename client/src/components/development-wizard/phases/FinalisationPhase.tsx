@@ -128,7 +128,7 @@ export function FinalisationPhase({
   const publishDevelopment = trpc.developer.publishDevelopment.useMutation();
   const createPublisherDevelopment = trpc.superAdminPublisher.createDevelopment.useMutation();
   const updatePublisherDevelopment = trpc.superAdminPublisher.updateDevelopment.useMutation();
-  const publishPublisherDevelopment = trpc.superAdminPublisher.publishDevelopment.useMutation();
+  const submitPublisherDevelopment = trpc.superAdminPublisher.submitDevelopment.useMutation();
 
   // Run validation
   const validationResult = validateForPublish();
@@ -141,24 +141,24 @@ export function FinalisationPhase({
   const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherId === 'number';
   const finalisationCopy = shouldUseSuperAdminFlow
     ? {
-        heading: 'Review & Publish',
-        description: 'Finalize your listing details before publishing it publicly.',
-        readinessTitle: 'Ready to Publish',
+        heading: 'Review & Submit',
+        description: 'Finalize the curated catalogue details before submitting for review.',
+        readinessTitle: 'Ready to Submit for Review',
         readinessDescription:
-          'All required fields are complete. You can publish this development publicly.',
-        controlTitle: 'Publishing Controls',
-        action: 'Publish Development',
-        disabledHelper: 'Resolve validation errors to publish.',
-        terms: 'By publishing, you agree to our listing terms.',
-        confirmTitle: 'Confirm Publication',
+          'All required fields are complete. An authorised Property Listify operator can review and publish this development.',
+        controlTitle: 'Curated Publication Controls',
+        action: 'Submit for Review',
+        disabledHelper: 'Resolve validation errors to submit.',
+        terms: 'By submitting, you confirm the curated information is supported by the recorded source.',
+        confirmTitle: 'Confirm Submission for Review',
         confirmDescription:
-          'You are about to make this development public according to the publisher flow.',
-        validationDescription: 'Your listing is ready to be published.',
-        progress: 'Publishing...',
-        confirmAction: 'Confirm & Publish',
-        success: 'Development published successfully!',
-        fallbackError: 'Failed to publish development',
-        validationErrorTitle: 'Cannot publish development:',
+          'You are about to submit this curated development for review. It will remain private until an authorised reviewer approves it.',
+        validationDescription: 'Your curated listing is ready for review.',
+        progress: 'Submitting...',
+        confirmAction: 'Confirm & Submit',
+        success: 'Curated development submitted for review!',
+        fallbackError: 'Failed to submit curated development for review',
+        validationErrorTitle: 'Cannot submit curated development:',
       }
     : {
         heading: 'Review & Submit',
@@ -316,7 +316,6 @@ export function FinalisationPhase({
           data: {
             ...payload,
             cataloguePublisherId: publisherId,
-            devOwnerType: 'platform',
           },
         });
         developmentId = editingId;
@@ -337,7 +336,6 @@ export function FinalisationPhase({
             ...payload,
             // Ensure cataloguePublisherId is set from publisher context
             cataloguePublisherId: publisherId,
-            devOwnerType: 'platform',
           };
 
           const result = await createPublisherDevelopment.mutateAsync(superAdminPayload);
@@ -355,9 +353,10 @@ export function FinalisationPhase({
         }
       }
 
-      // The publisher flow publishes directly; the normal developer flow submits for review.
+      // Curated records enter the governed review queue; first-party records
+      // retain the existing developer submission flow.
       if (shouldUseSuperAdminFlow) {
-        await publishPublisherDevelopment.mutateAsync({
+        await submitPublisherDevelopment.mutateAsync({
           cataloguePublisherId: publisherId,
           developmentId,
         });
@@ -371,6 +370,15 @@ export function FinalisationPhase({
       await invalidateDeveloperOperatingHomeRanges(input =>
         utils.developer.getOperatingHome.invalidate(input),
       );
+      if (shouldUseSuperAdminFlow) {
+        await utils.superAdminPublisher.getOperatingHome.invalidate({
+          cataloguePublisherId: publisherId,
+          range: '30d',
+        });
+        await utils.superAdminPublisher.getDevelopments.invalidate({
+          cataloguePublisherId: publisherId,
+        });
+      }
 
       setShowConfirmPublish(false);
       confetti({
@@ -381,7 +389,7 @@ export function FinalisationPhase({
       toast.success(finalisationCopy.success);
 
       reset();
-      navigate(isSuperAdmin ? '/admin/overview' : '/developer/developments');
+      navigate(isSuperAdmin ? '/admin/publisher' : '/developer/developments');
     } catch (error: any) {
       console.error('[FinalisationPhase] Publish failed:', error);
 

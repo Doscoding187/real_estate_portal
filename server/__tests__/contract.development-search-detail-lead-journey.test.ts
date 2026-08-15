@@ -77,6 +77,13 @@ const approvedDevelopmentDetail = {
   slug: 'cosmopolitan-projects',
   isPublished: 1,
   approvalStatus: 'approved',
+  publisher: {
+    id: 13,
+    name: 'Cosmopolitan Projects',
+    authorityKind: 'platform_reference',
+    sourceAttribution: 'Official Cosmopolitan Projects website',
+    lastVerifiedAt: '2026-08-15T00:00:00.000Z',
+  },
   unitTypes: [
     {
       id: 'unit-a',
@@ -253,6 +260,11 @@ describe('development search-detail-lead public journey contract', () => {
       cataloguePublisherId: 13,
       isPublished: 1,
       approvalStatus: 'approved',
+      publisher: {
+        authorityKind: 'platform_reference',
+        sourceAttribution: 'Official Cosmopolitan Projects website',
+        lastVerifiedAt: '2026-08-15T00:00:00.000Z',
+      },
     });
     expect(unit).toMatchObject({
       id: 'unit-a',

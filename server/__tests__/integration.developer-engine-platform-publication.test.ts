@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { asc, eq, inArray } from 'drizzle-orm';
 
 import { getDb } from '../db-connection';
@@ -8,12 +8,19 @@ import {
   developerOrganisations,
   developmentApprovalQueue,
   developments,
+  leads,
   unitTypes,
   users,
 } from '../../drizzle/schema';
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
 import { developerIdentityService } from '../services/developerIdentityService';
 import { developmentService } from '../services/developmentService';
+import { capturePublicLead } from '../services/publicLeadCaptureService';
+import {
+  acquireDevelopmentIntegrationMutex,
+  DEVELOPMENT_INTEGRATION_MUTEX_HOOK_TIMEOUT_MS,
+  releaseDevelopmentIntegrationMutex,
+} from '../test-utils/developmentIntegrationMutex';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
@@ -30,6 +37,7 @@ type CreatedState = {
   cataloguePublisherIds: number[];
   developmentIds: number[];
   unitTypeIds: string[];
+  leadIds: number[];
 };
 
 type PlatformPublisherOptions = {
@@ -61,6 +69,7 @@ const createdState: CreatedState = {
   cataloguePublisherIds: [],
   developmentIds: [],
   unitTypeIds: [],
+  leadIds: [],
 };
 
 function uniqueNumbers(values: number[]) {
@@ -247,9 +256,18 @@ async function expectRejectedWithoutMutation(
 }
 
 describeWithDb('Developer Engine platform-curated publication authority integration', () => {
+  beforeAll(acquireDevelopmentIntegrationMutex, DEVELOPMENT_INTEGRATION_MUTEX_HOOK_TIMEOUT_MS);
+
+  afterAll(releaseDevelopmentIntegrationMutex);
+
   afterEach(async () => {
     const db = await getDb();
     if (!db) return;
+
+    const leadIds = uniqueNumbers(createdState.leadIds);
+    if (leadIds.length) {
+      await db.delete(leads).where(inArray(leads.id, leadIds));
+    }
 
     const unitTypeIds = uniqueStrings(createdState.unitTypeIds);
     if (unitTypeIds.length) {
@@ -258,6 +276,9 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
 
     const developmentIds = uniqueNumbers(createdState.developmentIds);
     if (developmentIds.length) {
+      await db
+        .delete(developmentApprovalQueue)
+        .where(inArray(developmentApprovalQueue.developmentId, developmentIds));
       await db.delete(developments).where(inArray(developments.id, developmentIds));
     }
 
@@ -293,6 +314,150 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     createdState.cataloguePublisherIds = [];
     createdState.developmentIds = [];
     createdState.unitTypeIds = [];
+    createdState.leadIds = [];
+  });
+
+  it('converges curated submit, review, public discovery, enquiry custody, and unpublish', async () => {
+    const submitterId = await insertUser('super_admin');
+    const reviewerId = await insertUser('super_admin');
+    const cataloguePublisherId = await insertPlatformPublisher(submitterId);
+
+    const incompleteDevelopmentId = await insertDevelopment(
+      submitterId,
+      cataloguePublisherId,
+      { description: '' },
+    );
+    await expect(
+      developmentService.submitPlatformCuratedDevelopment(
+        incompleteDevelopmentId,
+        submitterId,
+        { cataloguePublisherId },
+      ),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(await readPublicationState(incompleteDevelopmentId)).toMatchObject({
+      isPublished: 0,
+      approvalStatus: 'draft',
+    });
+
+    const developmentId = await insertDevelopment(submitterId, cataloguePublisherId);
+    const submitted = await developmentService.submitPlatformCuratedDevelopment(
+      developmentId,
+      submitterId,
+      { cataloguePublisherId },
+    );
+    expect(submitted).toMatchObject({
+      id: developmentId,
+      approvalStatus: 'pending',
+      isPublished: 0,
+      cataloguePublisherId,
+    });
+
+    const changesRequested = await developmentService.reviewPlatformCuratedDevelopment(
+      developmentId,
+      reviewerId,
+      { cataloguePublisherId },
+      'changes_requested',
+      { reviewNotes: 'Please confirm the current public unit-type pricing source.' },
+    );
+    expect(changesRequested).toMatchObject({
+      approvalStatus: 'draft',
+      isPublished: 0,
+      rejectionNote: 'Please confirm the current public unit-type pricing source.',
+    });
+
+    const resubmitted = await developmentService.submitPlatformCuratedDevelopment(
+      developmentId,
+      submitterId,
+      { cataloguePublisherId },
+    );
+    expect(resubmitted).toMatchObject({ approvalStatus: 'pending', isPublished: 0 });
+
+    const approved = await developmentService.reviewPlatformCuratedDevelopment(
+      developmentId,
+      reviewerId,
+      { cataloguePublisherId },
+      'approved',
+    );
+    expect(approved).toMatchObject({
+      approvalStatus: 'approved',
+      isPublished: 1,
+      cataloguePublisherId,
+    });
+
+    const approvalHistory = await readApprovalHistory(developmentId);
+    expect(approvalHistory.map(row => [row.submissionType, row.status])).toEqual([
+      ['initial', 'changes_requested'],
+      ['update', 'approved'],
+    ]);
+
+    const publicRows = await developmentService.listPublicDevelopments({ limit: 100 });
+    expect(publicRows.map(row => Number(row.id))).toContain(developmentId);
+    expect(await developmentService.getPublicDevelopment(developmentId)).toMatchObject({
+      id: developmentId,
+      cataloguePublisherId,
+      isPublished: 1,
+      approvalStatus: 'approved',
+    });
+    expect(
+      (await developmentService.searchPublicDevelopments({
+        query: 'Platform Publication Development',
+        limit: 100,
+      })).map(row => Number(row.id)),
+    ).toContain(developmentId);
+
+    const captured = await capturePublicLead({
+      developmentId,
+      cataloguePublisherId,
+      name: 'Curated Catalogue Prospect',
+      email: `curated-prospect-${fixtureSuffix()}@example.com`,
+      message: 'Please send the current unit-type information.',
+      source: 'curated_detail',
+      sourceSurface: 'curated_detail',
+      leadSource: 'curated_detail',
+      captureRequestId: `curated-capture-${fixtureSuffix()}`,
+      consent: { accepted: true, version: 'slice3-test', source: 'curated_detail' },
+    });
+    expect(captured).toMatchObject({
+      delivered: false,
+      deliveryStatus: 'attention_required',
+      supplyOrigin: 'platform_curated',
+      leadCustody: 'platform_managed',
+      recipientId: null,
+    });
+    createdState.leadIds.push(captured.leadId);
+
+    const [capturedLead] = await (await database())
+      .select({
+        cataloguePublisherId: leads.cataloguePublisherId,
+        developmentId: leads.developmentId,
+        deliveryStatus: leads.deliveryStatus,
+        consentVersion: leads.consentVersion,
+      })
+      .from(leads)
+      .where(eq(leads.id, captured.leadId));
+    expect(capturedLead).toMatchObject({
+      cataloguePublisherId,
+      developmentId,
+      deliveryStatus: 'attention_required',
+      consentVersion: 'slice3-test',
+    });
+
+    const unpublished = await developmentService.unpublishPlatformCuratedDevelopment(
+      developmentId,
+      reviewerId,
+      { cataloguePublisherId },
+    );
+    expect(unpublished).toMatchObject({
+      id: developmentId,
+      isPublished: 0,
+      approvalStatus: 'approved',
+      name: expect.any(String),
+    });
+    expect(await developmentService.getPublicDevelopment(developmentId)).toBeNull();
+    expect(await readPublicationState(developmentId)).toMatchObject({
+      isPublished: 0,
+      approvalStatus: 'approved',
+    });
   });
 
   it('publishes a valid platform-curated sale development with canonical attribution and state', async () => {

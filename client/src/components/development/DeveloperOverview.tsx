@@ -8,6 +8,9 @@ interface DeveloperOverviewProps {
   developerDescription?: string | null;
   developerWebsite?: string | null;
   developerSlug?: string | null;
+  authorityKind?: 'platform_reference' | 'developer_first_party' | null;
+  sourceAttribution?: string | null;
+  lastVerifiedAt?: string | Date | null;
   headOfficeLocation?: string | null;
   projectCount?: number | null;
   foundedYear?: number | null;
@@ -19,21 +22,34 @@ export function DeveloperOverview({
   developerLogo,
   developerDescription,
   developerSlug,
+  authorityKind,
+  sourceAttribution,
+  lastVerifiedAt,
   headOfficeLocation,
   projectCount,
   foundedYear,
   isVerified = false,
 }: DeveloperOverviewProps) {
+  const isPlatformReference = authorityKind === 'platform_reference';
   const currentYear = new Date().getFullYear();
   const yearsExperience =
     foundedYear && foundedYear > 1900 && foundedYear <= currentYear
       ? currentYear - foundedYear
       : null;
+  const formattedLastVerifiedAt = (() => {
+    if (!lastVerifiedAt) return null;
+    const date = new Date(lastVerifiedAt);
+    return Number.isNaN(date.getTime())
+      ? null
+      : date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  })();
 
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
       <div className="mb-6 border-b border-slate-200 pb-4">
-        <h3 className="text-xl font-bold text-slate-900">Developer Overview</h3>
+        <h3 className="text-xl font-bold text-slate-900">
+          {isPlatformReference ? 'About this development' : 'Developer Overview'}
+        </h3>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
@@ -54,7 +70,7 @@ export function DeveloperOverview({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-lg font-bold text-slate-900">{developerName}</h4>
-                {isVerified && (
+                {!isPlatformReference && isVerified && (
                   <Badge className="border-none bg-orange-500 px-3 py-0.5 text-xs font-medium text-white hover:bg-orange-600">
                     VERIFIED DEVELOPER
                   </Badge>
@@ -77,8 +93,23 @@ export function DeveloperOverview({
           <p className="mt-5 line-clamp-3 text-sm leading-relaxed text-slate-600">
             {developerDescription?.trim()
               ? developerDescription
-              : 'Professional property developer focused on delivering quality developments.'}
+              : isPlatformReference
+                ? 'Factual information about this development and its available homes.'
+                : 'Professional property developer focused on delivering quality developments.'}
           </p>
+
+          {isPlatformReference && (sourceAttribution || formattedLastVerifiedAt) && (
+            <div
+              className="mt-5 space-y-1 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600"
+              data-testid="curated-provenance"
+            >
+              <p className="font-semibold text-slate-800">
+                Marketplace information maintained by Property Listify
+              </p>
+              {sourceAttribution && <p>Source: {sourceAttribution}</p>}
+              {formattedLastVerifiedAt && <p>Last reviewed: {formattedLastVerifiedAt}</p>}
+            </div>
+          )}
         </div>
 
         <div className="flex h-full flex-col justify-between rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -102,7 +133,7 @@ export function DeveloperOverview({
             )}
           </div>
 
-          {developerSlug ? (
+          {!isPlatformReference && developerSlug ? (
             <Button
               asChild
               variant="outline"

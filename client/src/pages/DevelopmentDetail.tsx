@@ -1067,6 +1067,7 @@ export default function DevelopmentDetail() {
   const publisher =
     (dev as any).publisher ||
     null;
+  const isPlatformReference = publisher?.authorityKind === 'platform_reference';
 
   // ... (Update development object)
   const unifiedMediaRaw = [
@@ -1115,7 +1116,9 @@ export default function DevelopmentDetail() {
     developerDescription:
       publisher?.description ||
       dev.developer?.description ||
-      'Professional property developer committed to quality and excellence.',
+      (isPlatformReference
+        ? 'Factual information about this development and its available homes.'
+        : 'Professional property developer committed to quality and excellence.'),
     developerWebsite: publisher?.websiteUrl || publisher?.website || dev.developer?.website || null,
     developerSlug: publisher?.slug || dev.developer?.slug || null,
 
@@ -1556,7 +1559,7 @@ export default function DevelopmentDetail() {
                         <p className="font-bold text-sm text-slate-900 truncate">
                           {development.developer}
                         </p>
-                        {development.isVerified && (
+                        {!isPlatformReference && development.isVerified && (
                           <div className="flex items-center gap-1 mt-0.5">
                             <Award className="w-3 h-3 text-orange-500 flex-shrink-0" />
                             <span className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">
@@ -1585,7 +1588,7 @@ export default function DevelopmentDetail() {
 
                     <Separator className="bg-slate-100 my-2" />
 
-                    {(() => {
+                    {!isPlatformReference && (() => {
                       const otherProjects = relatedPublicDevelopments.slice(0, 3);
 
                       if (otherProjects.length === 0) return null;
@@ -1611,12 +1614,14 @@ export default function DevelopmentDetail() {
                       );
                     })()}
 
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-blue-600 mt-auto pt-2 text-xs font-medium"
-                    >
-                      View Developer Profile →
-                    </Button>
+                    {!isPlatformReference && (
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-blue-600 mt-auto pt-2 text-xs font-medium"
+                      >
+                        View Developer Profile →
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -2005,6 +2010,9 @@ export default function DevelopmentDetail() {
                     developerDescription={development.developerDescription}
                     developerWebsite={development.developerWebsite}
                     developerSlug={development.developerSlug}
+                    authorityKind={publisher?.authorityKind ?? null}
+                    sourceAttribution={publisher?.sourceAttribution ?? null}
+                    lastVerifiedAt={publisher?.lastVerifiedAt ?? null}
                     headOfficeLocation={(publisher as any)?.headOfficeLocation || null}
                     projectCount={developerProjectCount}
                     foundedYear={(publisher as any)?.foundedYear || null}

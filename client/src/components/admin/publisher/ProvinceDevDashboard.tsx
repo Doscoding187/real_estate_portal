@@ -133,7 +133,7 @@ export const ProvinceDevDashboard: React.FC = () => {
 
   // Fetch all Catalogue Publishers
   const { data: publisherProfiles, isLoading } = trpc.superAdminPublisher.listPublishers.useQuery(
-    {},
+    { emulatorOnly: true },
   );
 
   // Group Catalogue Publishers by operating provinces
@@ -189,10 +189,10 @@ export const ProvinceDevDashboard: React.FC = () => {
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Building2 className="w-5 h-5 text-primary" />
-            Developer Brands by Province
+            Curated Publishers by Province
           </h2>
           <p className="text-sm text-muted-foreground">
-            {totalBrands} Catalogue Publishers across South Africa
+            {totalBrands} platform-reference publishers across South Africa
           </p>
         </div>
         <Button size="sm" className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
