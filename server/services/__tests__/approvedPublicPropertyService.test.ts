@@ -218,6 +218,100 @@ describe('ApprovedPublicProperty authority', () => {
     expect(result?.property.placeId).toBeNull();
   });
 
+  it('exposes exact approved address and coordinates only from the public projection', async () => {
+    const fixture = canonicalFixture();
+    Object.assign(fixture.property, {
+      address: 'PRIVATE LEGACY ADDRESS',
+      publicAddress: '12 Katherine Street, Sandton, Johannesburg',
+      publicLatitude: '-26.1076000',
+      publicLongitude: '28.0567000',
+      publicLocationPrecision: 'exact',
+      zipCode: '2196',
+      privateAddress: {
+        streetNumber: '12',
+        streetName: 'Katherine Street',
+        unitNumber: 'Unit 4',
+      },
+      coordinateSource: 'map',
+      locationConfirmationState: 'confirmed',
+    });
+
+    const result = await resolveApprovedPublicProperty(501, dataSource(fixture));
+
+    expect(result?.property).toMatchObject({
+      address: '12 Katherine Street, Sandton, Johannesburg',
+      publicAddress: '12 Katherine Street, Sandton, Johannesburg',
+      latitude: -26.1076,
+      longitude: 28.0567,
+      publicLatitude: -26.1076,
+      publicLongitude: 28.0567,
+      publicLocationPrecision: 'exact',
+      zipCode: '2196',
+      placeId: null,
+    });
+    expect(result?.property).not.toHaveProperty('privateAddress');
+    expect(result?.property).not.toHaveProperty('coordinateSource');
+    expect(JSON.stringify(result?.property)).not.toContain('Unit 4');
+    expect(JSON.stringify(result?.property)).not.toContain('PRIVATE LEGACY ADDRESS');
+  });
+
+  it('uses approximate public location without exposing exact address evidence', async () => {
+    const fixture = canonicalFixture();
+    Object.assign(fixture.property, {
+      address: 'PRIVATE LEGACY ADDRESS',
+      publicAddress: 'Katherine Street, Sandton, Johannesburg',
+      latitude: '-26.1076000',
+      longitude: '28.0567000',
+      publicLatitude: '-26.1100000',
+      publicLongitude: '28.0500000',
+      publicLocationPrecision: 'approximate',
+      zipCode: '2196',
+      privateAddress: {
+        streetNumber: '12',
+        streetName: 'Katherine Street',
+        unitNumber: 'Unit 4',
+      },
+      placeId: 'private-provider-identity',
+    });
+
+    const result = await resolveApprovedPublicProperty(501, dataSource(fixture));
+
+    expect(result?.property).toMatchObject({
+      address: 'Katherine Street, Sandton, Johannesburg',
+      publicAddress: 'Katherine Street, Sandton, Johannesburg',
+      latitude: -26.11,
+      longitude: 28.05,
+      publicLocationPrecision: 'approximate',
+      placeId: null,
+    });
+    expect(result?.property.zipCode).toBeUndefined();
+    expect(result?.property).not.toHaveProperty('privateAddress');
+    expect(JSON.stringify(result?.property)).not.toContain('Unit 4');
+    expect(JSON.stringify(result?.property)).not.toContain('private-provider-identity');
+    expect(JSON.stringify(result?.property)).not.toContain('PRIVATE LEGACY ADDRESS');
+  });
+
+  it.each([
+    ['missing', null, null],
+    ['partial', '-26.1076000', null],
+    ['zero', 0, 0],
+  ])('does not publish an invalid %s coordinate pair', async (_label, latitude, longitude) => {
+    const fixture = canonicalFixture();
+    Object.assign(fixture.property, {
+      publicAddress: 'Katherine Street, Sandton, Johannesburg',
+      publicLatitude: latitude,
+      publicLongitude: longitude,
+      publicLocationPrecision: 'exact',
+    });
+
+    const result = await resolveApprovedPublicProperty(501, dataSource(fixture));
+
+    expect(result?.property.latitude).toBeNull();
+    expect(result?.property.longitude).toBeNull();
+    expect(result?.property.publicLatitude).toBeNull();
+    expect(result?.property.publicLongitude).toBeNull();
+  });
+
   it('accepts the exact source-details projection shape written by revision approval', async () => {
     const fixture = canonicalFixture();
     const canonicalSettings = JSON.parse(String(fixture.property.propertySettings));
@@ -317,7 +411,10 @@ describe('ApprovedPublicProperty authority', () => {
       listingType: 'sale',
       price: 900_000,
       area: 90,
-      address: 'Public legacy address',
+      address: 'PRIVATE LEGACY ADDRESS',
+      placeId: 'legacy-provider-identity',
+      privateAddress: { streetNumber: '99', unitNumber: 'Private Unit' },
+      zipCode: '0001',
       city: 'Pretoria',
       province: 'Gauteng',
       propertySettings: '{}',
@@ -337,6 +434,11 @@ describe('ApprovedPublicProperty authority', () => {
       virtualTour: null,
     });
     expect(result?.property).not.toHaveProperty('sourceListingId');
+    expect(result?.property.address).toBeUndefined();
+    expect(result?.property).not.toHaveProperty('placeId');
+    expect(result?.property).not.toHaveProperty('privateAddress');
+    expect(result?.property.zipCode).toBeUndefined();
+    expect(JSON.stringify(result?.property)).not.toContain('PRIVATE LEGACY ADDRESS');
     expect(source.getListingById).not.toHaveBeenCalled();
     expect(source.getListingMedia).not.toHaveBeenCalled();
   });

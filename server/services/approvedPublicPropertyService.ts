@@ -19,6 +19,7 @@ import {
 } from '../../shared/property-presentation';
 import { buildPricingContract, getPrimaryPrice } from '../../shared/pricing-contract';
 import { toPublicPropertyType } from '../../shared/property-taxonomy';
+import { normalizeCoordinatePair } from '../../shared/location-contract';
 
 export interface ApprovedPublicPropertyDataSource {
   getPropertyById(propertyId: number): Promise<any>;
@@ -108,7 +109,17 @@ function uniqueStrings(values: unknown[]): string[] {
 
 function publicProjectionFields(property: Record<string, any>): Record<string, any> {
   const projection = { ...property };
-  delete projection.sourceListingId;
+  for (const privateField of [
+    'sourceListingId',
+    'placeId',
+    'privateAddress',
+    'coordinateSource',
+    'locationConfirmationState',
+    'providerLocationPlaceId',
+    'provider',
+  ]) {
+    delete projection[privateField];
+  }
   return projection;
 }
 
@@ -349,7 +360,20 @@ function mapLegacyProjectionOnly(
   }));
   const primaryImage = images.find(image => Number(image.isPrimary) === 1) || images[0];
   const mainImage = primaryImage?.imageUrl || resolveMediaDeliveryUrl(property.mainImage) || '';
-  const publicAddress = property.publicAddress || property.address || null;
+  const publicCoordinates = normalizeCoordinatePair(
+    property.publicLatitude,
+    property.publicLongitude,
+  );
+  const publicLocationPrecision =
+    property.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
+  // A legacy compatibility address is only safe to use when that legacy row
+  // explicitly opted into exact disclosure. Approximate rows must not recover
+  // a private-looking compatibility address simply because publicAddress is
+  // absent.
+  const publicAddress =
+    property.publicAddress ||
+    (publicLocationPrecision === 'exact' ? property.address : null) ||
+    null;
   const amenities = parseProjectionAmenities(property.amenities);
   const virtualTour = getSafePropertyPresentationVirtualTour(propertySettings.propertyPresentation);
   const publicProjection = publicProjectionFields(property);
@@ -374,12 +398,13 @@ function mapLegacyProjectionOnly(
       erfSizeM2: property.erfSizeM2,
       landAreaM2: property.landAreaM2,
       address: publicAddress || undefined,
+      zipCode: publicLocationPrecision === 'exact' ? property.zipCode || undefined : undefined,
       publicAddress,
-      latitude: property.publicLatitude ?? null,
-      longitude: property.publicLongitude ?? null,
-      publicLatitude: property.publicLatitude ?? null,
-      publicLongitude: property.publicLongitude ?? null,
-      publicLocationPrecision: property.publicLocationPrecision || 'approximate',
+      latitude: publicCoordinates?.latitude ?? null,
+      longitude: publicCoordinates?.longitude ?? null,
+      publicLatitude: publicCoordinates?.latitude ?? null,
+      publicLongitude: publicCoordinates?.longitude ?? null,
+      publicLocationPrecision,
       amenities,
       features: amenities,
       propertySettings,
@@ -487,6 +512,12 @@ function mapApprovedListingProperty(
   const virtualTour = getSafePropertyPresentationVirtualTour(propertyDetails.propertyPresentation);
   const sourceListingId = Number(property.sourceListingId);
   const publicProjection = publicProjectionFields(property);
+  const publicCoordinates = normalizeCoordinatePair(
+    property.publicLatitude,
+    property.publicLongitude,
+  );
+  const publicLocationPrecision =
+    property.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
 
   return {
     authority: 'approved_listing',
@@ -514,13 +545,13 @@ function mapApprovedListingProperty(
       city: property.city,
       province: property.province,
       address: property.publicAddress || undefined,
-      zipCode: property.zipCode || undefined,
-      latitude: property.publicLatitude ?? null,
-      longitude: property.publicLongitude ?? null,
+      zipCode: publicLocationPrecision === 'exact' ? property.zipCode || undefined : undefined,
+      latitude: publicCoordinates?.latitude ?? null,
+      longitude: publicCoordinates?.longitude ?? null,
       publicAddress: property.publicAddress ?? null,
-      publicLatitude: property.publicLatitude ?? null,
-      publicLongitude: property.publicLongitude ?? null,
-      publicLocationPrecision: property.publicLocationPrecision || 'approximate',
+      publicLatitude: publicCoordinates?.latitude ?? null,
+      publicLongitude: publicCoordinates?.longitude ?? null,
+      publicLocationPrecision,
       // Provider/location authoring evidence is never part of the public
       // listing-backed contract.
       placeId: null,

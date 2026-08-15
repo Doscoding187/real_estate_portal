@@ -3,6 +3,7 @@ import {
   buildListingLocationAuthoringPayload,
   listingLocationSchema,
   locationProviderMappingSchema,
+  normalizeCoordinatePair,
   privateAddressSchema,
   validateManualLocationEvidence,
 } from '../../shared/location-contract';
@@ -121,6 +122,18 @@ describe('PLE-6B location contract', () => {
 
     expect(payload?.latitude).toBeNull();
     expect(payload?.longitude).toBeNull();
+  });
+
+  it('normalizes only complete valid public coordinate pairs', () => {
+    expect(normalizeCoordinatePair('-26.1076000', '28.0567000')).toEqual({
+      latitude: -26.1076,
+      longitude: 28.0567,
+    });
+    expect(normalizeCoordinatePair(null, null)).toBeNull();
+    expect(normalizeCoordinatePair(-26.1076, null)).toBeNull();
+    expect(normalizeCoordinatePair(0, 0)).toBeNull();
+    expect(normalizeCoordinatePair(Number.NaN, 28.0567)).toBeNull();
+    expect(normalizeCoordinatePair(-91, 28.0567)).toBeNull();
   });
 
   it('requires canonical hierarchy and street evidence for urban manual authoring', () => {

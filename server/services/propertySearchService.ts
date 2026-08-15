@@ -30,13 +30,15 @@ import { buildCorePropertyInformation } from '../../shared/core-property-informa
 import type { ListingPropertyType } from '../../shared/listing-types';
 import { normalizeFeaturesContext } from '../../shared/features-context';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
+import { normalizeCoordinatePair } from '../../shared/location-contract';
 
 // Cache key prefix for property searches
-// Authority version: v5 preserves fractional approved bathroom projections in
-// addition to routing approved image-mirror storage keys through the configured
-// media adapter. Advancing the namespace prevents a cached v4 payload with a
-// lossy integer bathroom value surviving this correction.
-const CACHE_PREFIX = 'property:search:v5:';
+// Authority version: v6 preserves fractional approved bathroom projections,
+// routes approved image-mirror storage keys through the configured media
+// adapter, and keeps missing/invalid public coordinates nullable. Advancing the
+// namespace prevents a cached v5 payload with numeric-zero missing coordinates
+// surviving this correction.
+const CACHE_PREFIX = 'property:search:v6:';
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 
@@ -204,6 +206,7 @@ function resolveMediaUrl(value: unknown): string | undefined {
 }
 
 function buildPropertySearchCardResult(property: any): SearchCardResult {
+  const publicCoordinates = normalizeCoordinatePair(property.latitude, property.longitude);
   const development = property.development
     ? {
         id: property.development.id ?? null,
@@ -284,8 +287,8 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
       property.listedDate instanceof Date
         ? property.listedDate
         : new Date(property.listedDate || 0),
-    latitude: Number.isFinite(Number(property.latitude)) ? Number(property.latitude) : undefined,
-    longitude: Number.isFinite(Number(property.longitude)) ? Number(property.longitude) : undefined,
+    latitude: publicCoordinates?.latitude,
+    longitude: publicCoordinates?.longitude,
     propertyId: Number.isFinite(propertyId) && propertyId > 0 ? propertyId : undefined,
     developmentId:
       Number.isFinite(Number(property.developmentId)) && Number(property.developmentId) > 0
@@ -494,8 +497,8 @@ export class PropertySearchService {
         videoCount: sql<number>`CASE WHEN ${properties.videoUrl} IS NOT NULL THEN 1 ELSE 0 END`,
         status: properties.status,
         listedDate: properties.createdAt,
-        latitude: sql<number>`CAST(${properties.publicLatitude} AS DECIMAL(10,8))`,
-        longitude: sql<number>`CAST(${properties.publicLongitude} AS DECIMAL(11,8))`,
+        latitude: sql<number | null>`CAST(${properties.publicLatitude} AS DECIMAL(10,8))`,
+        longitude: sql<number | null>`CAST(${properties.publicLongitude} AS DECIMAL(11,8))`,
         highlights: properties.amenities,
         amenities: properties.amenities,
         mainImage: properties.mainImage,
@@ -673,6 +676,7 @@ export class PropertySearchService {
 
       const hasAgentIdentity = !!agentName;
       const storedBadges = Array.isArray(details.badges) ? details.badges : [];
+      const publicCoordinates = normalizeCoordinatePair(prop.latitude, prop.longitude);
 
       const developmentId = Number(prop.developmentId || 0);
       const developmentName =
@@ -762,8 +766,8 @@ export class PropertySearchService {
           ...storedBadges.map((badge: any) => String(badge ?? '').trim()),
           development?.name ? `Part of ${development.name}` : '',
         ]),
-        latitude: prop.latitude || 0,
-        longitude: prop.longitude || 0,
+        latitude: publicCoordinates?.latitude ?? null,
+        longitude: publicCoordinates?.longitude ?? null,
         highlights,
         area: floorSize || undefined,
         yardSize: erfSize || landSize || undefined,

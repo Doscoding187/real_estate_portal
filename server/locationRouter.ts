@@ -22,6 +22,7 @@ import {
   LOCATION_COORDINATE_SOURCES,
   PUBLIC_LOCATION_PRECISIONS,
   privateAddressSchema,
+  normalizeCoordinatePair,
 } from '../shared/location-contract';
 
 /**
@@ -533,7 +534,14 @@ export const locationRouter = router({
         .where(and(...conditions))
         .limit(input.limit);
 
-      return propertiesList;
+      return propertiesList.map(property => {
+        const publicCoordinates = normalizeCoordinatePair(property.latitude, property.longitude);
+        return {
+          ...property,
+          latitude: publicCoordinates?.latitude ?? null,
+          longitude: publicCoordinates?.longitude ?? null,
+        };
+      });
     }),
 
   /**
