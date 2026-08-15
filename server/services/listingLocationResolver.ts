@@ -10,6 +10,7 @@ import {
   coordinatePairSchema,
   LOCATION_CONTRACT_VERSION,
   listingLocationSchema,
+  privateAddressSchema,
   validateManualLocationEvidence,
   type CoordinatePair,
   type PrivateAddress,
@@ -77,12 +78,32 @@ export type ResolvedListingLocation = {
   province?: string | null;
   city?: string | null;
   suburb?: string | null;
+  /** Compatibility address derived from privateAddress; never an independent input authority. */
+  address: string | null;
+  postalCode: string | null;
   privateAddress: PrivateAddress | null;
   coordinatePair: CoordinatePair | null;
   coordinateSource: LocationCoordinateSource | null;
   locationConfirmationState: LocationConfirmationState;
   publicLocationPrecision: PublicLocationPrecision;
   providerLocationPlaceId: string | null;
+};
+
+export type PersistedListingLocation = {
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  city: string;
+  suburb: string | null;
+  province: string;
+  postalCode: string | null;
+  provinceId: number | null;
+  cityId: number | null;
+  suburbId: number | null;
+  privateAddress: PrivateAddress | null;
+  coordinateSource: LocationCoordinateSource | null;
+  locationConfirmationState: LocationConfirmationState;
+  publicLocationPrecision: PublicLocationPrecision;
 };
 
 export class ListingLocationResolutionError extends Error {
@@ -131,6 +152,35 @@ function componentValue(components: AddressComponent[] | undefined, types: strin
   return clean(component?.long_name);
 }
 
+function optionalText(value: unknown): string | null {
+  const result = clean(value);
+  return result || null;
+}
+
+/**
+ * Keep the legacy address field derived from the structured private address.
+ * Unit and postal data remain in their structured fields and are intentionally
+ * not folded into this compatibility string.
+ */
+export function formatCompatibilityAddress(privateAddress: PrivateAddress | null): string | null {
+  if (!privateAddress) return null;
+
+  const streetLine = [privateAddress.streetNumber, privateAddress.streetName]
+    .map(clean)
+    .filter(Boolean)
+    .join(' ');
+  const localityLine = [
+    privateAddress.farmOrHoldingName,
+    privateAddress.complexOrEstateName || privateAddress.buildingName,
+    privateAddress.portionReference,
+  ]
+    .map(clean)
+    .filter(Boolean)
+    .join(', ');
+
+  return optionalText([streetLine, localityLine].filter(Boolean).join(', '));
+}
+
 export function hasGeographicLocalityEvidence(components: AddressComponent[] | undefined): boolean {
   return Boolean(
     components?.some(component =>
@@ -142,7 +192,22 @@ export function hasGeographicLocalityEvidence(components: AddressComponent[] | u
 }
 
 function derivePrivateAddress(input: ListingLocationResolverInput): PrivateAddress | null {
-  if (input.privateAddress) return input.privateAddress;
+  if (input.privateAddress) {
+    const parsed = privateAddressSchema.safeParse({
+      ...input.privateAddress,
+      // Postal code historically travelled in both locations. Structured
+      // state wins when present; the compatibility value only fills a gap.
+      ...(!input.privateAddress.postalCode && clean(input.postalCode)
+        ? { postalCode: clean(input.postalCode) }
+        : {}),
+    });
+    if (!parsed.success) {
+      throw new ListingLocationResolutionError(
+        parsed.error.issues[0]?.message || 'Enter a valid private property address.',
+      );
+    }
+    return parsed.data;
+  }
 
   const streetNumber = componentValue(input.addressComponents, ['street_number']);
   const streetName = componentValue(input.addressComponents, ['route']) || clean(input.address);
@@ -158,6 +223,22 @@ function derivePrivateAddress(input: ListingLocationResolverInput): PrivateAddre
   };
 
   return Object.keys(address).length > 0 ? address : null;
+}
+
+function deriveCoordinateSource(
+  input: ListingLocationResolverInput,
+  coordinatePair: CoordinatePair | null,
+  confirmationState: LocationConfirmationState,
+): LocationCoordinateSource | null {
+  if (coordinatePair) {
+    return (
+      input.coordinateSource ||
+      (clean(input.providerLocationPlaceId) || clean(input.placeId)
+        ? 'autocomplete'
+        : 'manual_confirmed')
+    );
+  }
+  return confirmationState === 'confirmed' ? 'manual_confirmed' : null;
 }
 
 export function parseOptionalCoordinatePair(
@@ -180,6 +261,195 @@ export function parseOptionalCoordinatePair(
     );
   }
   return result.data;
+}
+
+/**
+ * Convert the resolver result into the fields the listings table still needs.
+ * Every compatibility value is derived here so callers cannot persist a
+ * second, raw location alongside the normalized authority.
+ */
+export function buildListingLocationPersistence(
+  location: ResolvedListingLocation,
+): PersistedListingLocation {
+  const coordinatePair = location.coordinatePair;
+  const privateAddress = location.privateAddress;
+
+  return {
+    address: formatCompatibilityAddress(privateAddress),
+    latitude: coordinatePair?.latitude ?? null,
+    longitude: coordinatePair?.longitude ?? null,
+    city: clean(location.city),
+    suburb: optionalText(location.suburb),
+    province: clean(location.province),
+    postalCode: optionalText(privateAddress?.postalCode ?? location.postalCode),
+    provinceId: location.provinceId,
+    cityId: location.cityId,
+    suburbId: location.suburbId,
+    privateAddress,
+    coordinateSource: location.coordinateSource,
+    locationConfirmationState: location.locationConfirmationState,
+    publicLocationPrecision: location.publicLocationPrecision,
+  };
+}
+
+/**
+ * Drafts may be saved while canonical resolution is temporarily unavailable.
+ * Keep that existing capability, but use the same normalized shape and never
+ * preserve raw coordinates/address as a competing authority.
+ */
+export function buildUnresolvedDraftLocation(
+  input: ListingLocationResolverInput,
+): ResolvedListingLocation {
+  const coordinatePair = parseOptionalCoordinatePair(input.latitude, input.longitude);
+  const locationConfirmationState = input.locationConfirmationState || 'needs_confirmation';
+  const privateAddress = derivePrivateAddress(input);
+
+  return {
+    provinceId: null,
+    cityId: null,
+    suburbId: null,
+    province: optionalText(input.province),
+    city: optionalText(input.city),
+    suburb: optionalText(input.suburb),
+    address: formatCompatibilityAddress(privateAddress),
+    postalCode: optionalText(privateAddress?.postalCode ?? input.postalCode),
+    privateAddress,
+    coordinatePair,
+    coordinateSource: deriveCoordinateSource(input, coordinatePair, locationConfirmationState),
+    locationConfirmationState,
+    publicLocationPrecision: input.publicLocationPrecision || 'approximate',
+    providerLocationPlaceId: optionalText(input.providerLocationPlaceId),
+  };
+}
+
+function parsePrivateAddressValue(value: unknown): PrivateAddress | null {
+  let candidate = value;
+  if (typeof value === 'string') {
+    try {
+      candidate = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  const parsed = privateAddressSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
+}
+
+function stablePrivateAddress(value: PrivateAddress | null): string {
+  if (!value) return '';
+  const ordered = Object.fromEntries(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, clean(entry)]),
+  );
+  return JSON.stringify(ordered);
+}
+
+function positiveId(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function sameGeographyPart(
+  currentIdValue: unknown,
+  currentTextValue: unknown,
+  nextId: number | null,
+  nextText: string | null | undefined,
+): boolean {
+  const currentId = positiveId(currentIdValue);
+  if (currentId !== null && nextId !== null) return currentId === nextId;
+  return normalized(currentTextValue) === normalized(nextText);
+}
+
+function sameCoordinatePair(
+  current: Record<string, unknown>,
+  next: PersistedListingLocation,
+): boolean {
+  const currentLatitude = current.latitude;
+  const currentLongitude = current.longitude;
+  const currentHasLatitude =
+    currentLatitude !== null && currentLatitude !== undefined && currentLatitude !== '';
+  const currentHasLongitude =
+    currentLongitude !== null && currentLongitude !== undefined && currentLongitude !== '';
+
+  if (!currentHasLatitude && !currentHasLongitude) {
+    return next.latitude === null && next.longitude === null;
+  }
+  if (currentHasLatitude !== currentHasLongitude) return false;
+
+  const latitude = Number(currentLatitude);
+  const longitude = Number(currentLongitude);
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    next.latitude !== null &&
+    next.longitude !== null &&
+    latitude === next.latitude &&
+    longitude === next.longitude
+  );
+}
+
+/**
+ * Compare physical location evidence, not raw compatibility formatting. A
+ * stale legacy text value is overwritten without forcing reconfirmation when
+ * the structured/canonical location is unchanged.
+ */
+export function hasMaterialListingLocationChange(
+  current: Record<string, unknown>,
+  next: PersistedListingLocation,
+): boolean {
+  const currentPrivateAddress = parsePrivateAddressValue(current.privateAddress);
+  const privateAddressChanged =
+    stablePrivateAddress(currentPrivateAddress) !== stablePrivateAddress(next.privateAddress);
+  const legacyAddressChanged =
+    !currentPrivateAddress && normalized(current.address) !== normalized(next.address);
+  const currentPostalCode = currentPrivateAddress?.postalCode || optionalText(current.postalCode);
+  const postalCodeChanged = normalized(currentPostalCode) !== normalized(next.postalCode);
+
+  return (
+    privateAddressChanged ||
+    legacyAddressChanged ||
+    postalCodeChanged ||
+    !sameGeographyPart(current.provinceId, current.province, next.provinceId, next.province) ||
+    !sameGeographyPart(current.cityId, current.city, next.cityId, next.city) ||
+    !sameGeographyPart(current.suburbId, current.suburb, next.suburbId, next.suburb) ||
+    !sameCoordinatePair(current, next)
+  );
+}
+
+export type PreparedListingLocationUpdate = {
+  location: PersistedListingLocation;
+  requiresReconfirmation: boolean;
+};
+
+/**
+ * Apply the server-side confirmation rule to an update. A previously
+ * confirmed listing cannot retain old coordinate evidence after a material
+ * location change unless the caller explicitly reconfirms the new location.
+ */
+export function prepareListingLocationUpdate(
+  current: Record<string, unknown>,
+  resolved: ResolvedListingLocation,
+  explicitlyReconfirmed: boolean,
+): PreparedListingLocationUpdate {
+  const normalizedLocation = buildListingLocationPersistence(resolved);
+  const requiresReconfirmation =
+    current.locationConfirmationState === 'confirmed' &&
+    hasMaterialListingLocationChange(current, normalizedLocation) &&
+    !explicitlyReconfirmed;
+
+  return {
+    location: requiresReconfirmation
+      ? {
+          ...normalizedLocation,
+          latitude: null,
+          longitude: null,
+          coordinateSource: null,
+          locationConfirmationState: 'needs_confirmation',
+        }
+      : normalizedLocation,
+    requiresReconfirmation,
+  };
 }
 
 async function one<T>(query: Promise<T[]>, label: string): Promise<T | null> {
@@ -530,26 +800,23 @@ export async function resolveCanonicalListingLocation(
     }
   }
 
-  const coordinateSource = coordinatePair
-    ? input.coordinateSource ||
-      (providerPlaceId || clean(input.placeId) ? 'autocomplete' : 'manual_confirmed')
-    : confirmationState === 'confirmed'
-      ? 'manual_confirmed'
-      : null;
+  const coordinateSource = deriveCoordinateSource(input, coordinatePair, confirmationState);
 
   return {
     provinceId,
     cityId,
     suburbId,
-    province: province?.name || input.province || null,
-    city: city?.name || input.city || null,
-    suburb: suburb?.name || input.suburb || null,
+    province: province?.name || optionalText(input.province),
+    city: city?.name || optionalText(input.city),
+    suburb: suburb?.name || optionalText(input.suburb),
+    address: formatCompatibilityAddress(privateAddress),
+    postalCode: optionalText(privateAddress?.postalCode ?? input.postalCode),
     privateAddress,
     coordinatePair,
     coordinateSource,
     locationConfirmationState: confirmationState,
     publicLocationPrecision: input.publicLocationPrecision || 'approximate',
-    providerLocationPlaceId: providerPlaceId || null,
+    providerLocationPlaceId: optionalText(providerPlaceId),
   };
 }
 
