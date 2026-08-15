@@ -92,6 +92,14 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     setListingIdentity,
   } = store;
 
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
+  const { context: publisherContext } = usePublisherContext();
+  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.cataloguePublisherId;
+  const persistStorageKey = shouldUsePublisherApi
+    ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
+    : DEVELOPMENT_WIZARD_STORAGE_KEY;
+
   // Local guard: prevent double-hydration (edit/draft/create)
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -226,13 +234,6 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     prevPhaseRef.current = currentPhase;
   }, [currentPhase, saveNow, isHydrated]);
 
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
-  const { context: publisherContext } = usePublisherContext();
-  const shouldUsePublisherApi = isSuperAdmin && !!publisherContext?.cataloguePublisherId;
-  const persistStorageKey = shouldUsePublisherApi
-    ? PUBLISHER_DEVELOPMENT_WIZARD_STORAGE_KEY
-    : DEVELOPMENT_WIZARD_STORAGE_KEY;
   const persistKeyRef = useRef<string | null>(null);
 
   useEffect(() => {

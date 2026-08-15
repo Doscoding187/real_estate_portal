@@ -81,4 +81,19 @@ describe('Developer Engine S3 curated catalogue contracts', () => {
     expect(finalisation).toContain('remain private until an authorised reviewer approves it');
     expect(finalisation).not.toContain('publishPublisherDevelopment');
   });
+
+  it('projects canonical publisher authority and review provenance into public detail', () => {
+    const developmentService = source('server/services/developmentService.ts');
+    const detail = source('client/src/pages/DevelopmentDetail.tsx');
+
+    expect(developmentService).toContain('authorityKind: cataloguePublishers.authorityKind');
+    expect(developmentService).toContain(
+      'sourceAttribution: cataloguePublishers.sourceAttribution',
+    );
+    expect(developmentService).toContain('reviewedAt: developmentApprovalQueue.reviewedAt');
+    expect(developmentService).toContain('lastVerifiedAt: latestReview?.reviewedAt ?? null');
+    expect(detail).toContain('authorityKind={publisher?.authorityKind ?? null}');
+    expect(detail).toContain('sourceAttribution={publisher?.sourceAttribution ?? null}');
+    expect(detail).toContain('lastVerifiedAt={publisher?.lastVerifiedAt ?? null}');
+  });
 });

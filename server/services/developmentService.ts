@@ -1,4 +1,4 @@
-import { sql, eq, desc, and, inArray, isNull } from 'drizzle-orm';
+import { sql, eq, desc, and, inArray, isNull, isNotNull } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { randomUUID } from 'crypto';
@@ -429,6 +429,7 @@ function buildDeveloperDisplay(dev: any) {
     return {
       type: 'catalogue_publisher' as const,
       name: brand.name,
+      authorityKind: brand.authorityKind ?? null,
       logoUrl: brand.logoUrl ?? null,
       websiteUrl: brand.websiteUrl ?? null,
       description: brand.description ?? null,
@@ -538,14 +539,28 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
   // Attach the governed public Catalogue Publisher projection.
   try {
     if (dev?.cataloguePublisherId) {
+      const [latestReview] = await db
+        .select({ reviewedAt: developmentApprovalQueue.reviewedAt })
+        .from(developmentApprovalQueue)
+        .where(
+          and(
+            eq(developmentApprovalQueue.developmentId, dev.id),
+            isNotNull(developmentApprovalQueue.reviewedAt),
+          ),
+        )
+        .orderBy(desc(developmentApprovalQueue.reviewedAt), desc(developmentApprovalQueue.id))
+        .limit(1);
+
       const brand = await db
         .select({
           id: cataloguePublishers.id,
           brandName: cataloguePublishers.name,
           slug: cataloguePublishers.slug,
+          authorityKind: cataloguePublishers.authorityKind,
           logoUrl: cataloguePublishers.logoUrl,
           websiteUrl: cataloguePublishers.websiteUrl,
           about: cataloguePublishers.about,
+          sourceAttribution: cataloguePublishers.sourceAttribution,
           foundedYear: cataloguePublishers.foundedYear,
           headOfficeLocation: cataloguePublishers.headOfficeLocation,
         })
@@ -559,9 +574,12 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
           id: bp.id,
           name: bp.brandName,
           slug: bp.slug,
+          authorityKind: bp.authorityKind,
           logoUrl: bp.logoUrl ?? null,
           websiteUrl: bp.websiteUrl ?? null,
           description: bp.about ?? null,
+          sourceAttribution: bp.sourceAttribution ?? null,
+          lastVerifiedAt: latestReview?.reviewedAt ?? null,
           foundedYear: bp.foundedYear ?? null,
           headOfficeLocation: bp.headOfficeLocation ?? null,
         };
