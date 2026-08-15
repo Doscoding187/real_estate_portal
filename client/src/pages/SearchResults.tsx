@@ -66,7 +66,12 @@ import {
   SearchFilters,
   unslugify,
 } from '@/lib/urlUtils';
-import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
+import {
+  buildCanonicalSavedSearchCriteria,
+  resolveSearchIntent,
+  generateIntentUrl,
+  SearchIntent,
+} from '@/lib/searchIntent';
 import {
   buildParentRecoveryIntent,
   buildZeroResultDescription,
@@ -662,7 +667,7 @@ export default function SearchResults({
     if (!resolvedSearchName) return;
     saveSearchMutation.mutate({
       name: resolvedSearchName,
-      criteria: filters,
+      criteria: buildCanonicalSavedSearchCriteria(searchIntent),
       notificationFrequency: saveSearchNotificationFrequency,
       emailEnabled: saveSearchEmailEnabled,
       inAppEnabled: saveSearchInAppEnabled,

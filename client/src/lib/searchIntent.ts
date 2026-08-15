@@ -83,6 +83,92 @@ export interface SearchIntent {
   routeMode?: SearchRouteMode;
 }
 
+/**
+ * Serializes the public search intent into the criteria contract used by
+ * saved searches. Geography is kept in its canonical scope representation;
+ * it is not reconstructed from display labels or legacy `locations` values.
+ */
+export function buildCanonicalSavedSearchCriteria(intent: SearchIntent): Record<string, unknown> {
+  const criteria: Record<string, unknown> = { ...intent.filters };
+
+  delete criteria.province;
+  delete criteria.city;
+  delete criteria.suburb;
+  delete criteria.locationId;
+  delete criteria.locationIds;
+  delete criteria.searchAreaId;
+  delete criteria.searchAreaIds;
+  delete criteria.locations;
+  delete criteria['locations[]'];
+
+  if (intent.transactionType === 'for-sale') {
+    criteria.listingType = 'sale';
+  } else if (intent.transactionType === 'to-rent') {
+    criteria.listingType = 'rent';
+  }
+
+  const { geography } = intent;
+
+  if (geography.level === 'multi_location') {
+    const rawLocationIds = geography.locationIds || [];
+    const normalizedLocationIds = Array.from(
+      new Set(
+        rawLocationIds
+          .map(value => parseCanonicalLocationId(value))
+          .filter((value): value is NonNullable<typeof value> => Boolean(value))
+          .map(value => encodeCanonicalLocationId(value.level, value.id)),
+      ),
+    ).sort();
+    const rawSearchAreaIds = geography.searchAreaIds || [];
+    const normalizedSearchAreaIds = Array.from(
+      new Set(rawSearchAreaIds.map(value => String(value).trim()).filter(isSearchAreaId)),
+    ).sort();
+
+    if (
+      normalizedLocationIds.length === rawLocationIds.length &&
+      normalizedLocationIds.length > 0
+    ) {
+      criteria.locationIds = normalizedLocationIds;
+    } else if (
+      normalizedSearchAreaIds.length === rawSearchAreaIds.length &&
+      normalizedSearchAreaIds.length > 0
+    ) {
+      criteria.searchAreaIds = normalizedSearchAreaIds;
+    } else if (rawLocationIds.length > 0) {
+      // Preserve malformed state for the server boundary to reject rather
+      // than silently widening a saved search to the whole country.
+      criteria.locationIds = rawLocationIds;
+    } else if (rawSearchAreaIds.length > 0) {
+      criteria.searchAreaIds = rawSearchAreaIds;
+    }
+
+    return criteria;
+  }
+
+  if (geography.searchAreaId && isSearchAreaId(geography.searchAreaId)) {
+    criteria.searchAreaId = geography.searchAreaId;
+    const parsedLocationId = geography.locationId
+      ? parseCanonicalLocationId(geography.locationId)
+      : undefined;
+    if (parsedLocationId) {
+      criteria.locationId = encodeCanonicalLocationId(parsedLocationId.level, parsedLocationId.id);
+    }
+    return criteria;
+  }
+
+  if (geography.province) criteria.province = geography.province;
+  if (geography.city) criteria.city = geography.city;
+  if (geography.suburb) criteria.suburb = geography.suburb;
+  const parsedLocationId = geography.locationId
+    ? parseCanonicalLocationId(geography.locationId)
+    : undefined;
+  if (parsedLocationId) {
+    criteria.locationId = encodeCanonicalLocationId(parsedLocationId.level, parsedLocationId.id);
+  }
+
+  return criteria;
+}
+
 const SEARCH_VALIDATION_MESSAGES: Record<SearchIntentValidationCode, string> = {
   'canonical-location-required':
     'Choose a canonical province, city, or suburb suggestion before searching.',

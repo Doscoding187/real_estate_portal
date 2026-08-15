@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { generateIntentUrl, resolveSearchIntent, type SearchIntent } from '@/lib/searchIntent';
+import {
+  buildCanonicalSavedSearchCriteria,
+  generateIntentUrl,
+  resolveSearchIntent,
+  type SearchIntent,
+} from '@/lib/searchIntent';
 
 describe('search intent location serialization', () => {
   it('serializes object-based location filters as slug query params', () => {
@@ -66,6 +71,55 @@ describe('search intent location serialization', () => {
       propertyType: 'apartment',
     });
     expect(result.resultState).toEqual({ sort: 'price_asc', page: 2 });
+  });
+
+  it('saves Rent multi-location scope using canonical location identities', () => {
+    const intent = resolveSearchIntent(
+      '/property-to-rent',
+      {},
+      new URLSearchParams(
+        'locationIds=suburb%3A35&locationIds=suburb%3A34&propertyType=apartment&minPrice=5000',
+      ),
+    );
+
+    expect(buildCanonicalSavedSearchCriteria(intent)).toEqual({
+      listingType: 'rent',
+      propertyType: 'apartment',
+      minPrice: 5000,
+      locationIds: ['suburb:34', 'suburb:35'],
+    });
+  });
+
+  it('saves a Rent Search Area and optional canonical locality refinement without broad labels', () => {
+    const intent = resolveSearchIntent(
+      '/property-to-rent',
+      {},
+      new URLSearchParams(
+        'searchAreaId=johannesburg-sandton&locationId=suburb%3A34&maxPrice=15000',
+      ),
+    );
+
+    expect(buildCanonicalSavedSearchCriteria(intent)).toEqual({
+      listingType: 'rent',
+      maxPrice: 15000,
+      searchAreaId: 'johannesburg-sandton',
+      locationId: 'suburb:34',
+    });
+  });
+
+  it('keeps Buy saved-search transaction semantics explicit', () => {
+    const intent = resolveSearchIntent(
+      '/property-for-sale',
+      {},
+      new URLSearchParams('locationId=city%3A1&propertyType=house&maxPrice=2000000'),
+    );
+
+    expect(buildCanonicalSavedSearchCriteria(intent)).toEqual({
+      listingType: 'sale',
+      propertyType: 'house',
+      maxPrice: 2000000,
+      locationId: 'city:1',
+    });
   });
 
   it('does not infer Buy for an unknown path without explicit transaction context', () => {
