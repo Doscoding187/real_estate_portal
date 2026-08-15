@@ -11,17 +11,27 @@ export default function CompareProperties() {
   const { comparedProperties, removeFromComparison, clearComparison } = useComparison();
   const [, setLocation] = useLocation();
 
-  // Fetch properties by IDs
-  const { data: properties, isLoading } = trpc.properties.search.useQuery(
-    {
-      status: 'available',
-      // We'll filter on the client side by IDs
-      limit: 100,
-    },
-    {
-      enabled: comparedProperties.length > 0,
-    },
+  // Fetch only the selected properties through the approved public projection.
+  // The comparison page must not widen into legacy or rental inventory.
+  const {
+    data: publicProperties,
+    isLoading,
+    error,
+  } = trpc.properties.getPublicByIds.useQuery(
+    { ids: comparedProperties },
+    { enabled: comparedProperties.length > 0 },
   );
+  const comparisonReturnPath =
+    typeof window !== 'undefined'
+      ? window.sessionStorage.getItem('property-comparison-return')
+      : null;
+  const handleBackToResults = () => {
+    setLocation(
+      comparisonReturnPath?.startsWith('/property-for-sale')
+        ? comparisonReturnPath
+        : '/property-for-sale',
+    );
+  };
 
   if (comparedProperties.length === 0) {
     return (
@@ -34,7 +44,7 @@ export default function CompareProperties() {
               You haven't selected any properties to compare yet. Add properties from the listings
               page to get started.
             </p>
-            <Button onClick={() => setLocation('/')} variant="default">
+            <Button onClick={handleBackToResults} variant="default">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Browse Properties
             </Button>
@@ -44,13 +54,15 @@ export default function CompareProperties() {
     );
   }
 
-  // Filter properties by selected IDs
-  const propertyItems = Array.isArray(properties)
-    ? properties
-    : ((properties as any)?.items ?? (properties as any)?.results ?? []);
-  const selectedProperties =
-    propertyItems.filter((p: any) => comparedProperties.includes(p.id)) || [];
-  const normalized = selectedProperties.map(normalizePropertyForUI).filter(p => p !== null);
+  const normalized = (Array.isArray(publicProperties) ? publicProperties : [])
+    .map((item: any) =>
+      normalizePropertyForUI({
+        ...item.property,
+        images: item.images,
+        media: item.media,
+      }),
+    )
+    .filter(p => p !== null);
 
   if (isLoading) {
     return (
@@ -65,16 +77,49 @@ export default function CompareProperties() {
     );
   }
 
+  if (error || normalized.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <ListingNavbar />
+        <div className="container mx-auto px-4 py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h1 className="mb-4 text-3xl font-bold text-slate-900">Comparison unavailable</h1>
+            <p className="mb-8 text-slate-600">
+              One or more selected properties are no longer available for Buy comparison.
+            </p>
+            <Button onClick={handleBackToResults}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Buy results
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Comparison attributes
   const comparisonRows = [
-    { label: 'Price', key: 'price', format: (val: any) => `R ${val?.toLocaleString()}` },
+    {
+      label: 'Price',
+      key: 'price',
+      format: (val: any) => (val ? `R ${Number(val).toLocaleString()}` : 'N/A'),
+    },
     { label: 'Property Type', key: 'propertyType' },
     { label: 'Listing Type', key: 'listingType' },
     { label: 'Bedrooms', key: 'bedrooms' },
     { label: 'Bathrooms', key: 'bathrooms' },
-    { label: 'Area (sqm)', key: 'area', format: (val: any) => `${val} sqm` },
-    { label: 'City', key: 'city' },
-    { label: 'Address', key: 'address' },
+    {
+      label: 'Floor / building size (sqm)',
+      key: 'area',
+      format: (val: any) => (val ? `${val} sqm` : 'N/A'),
+    },
+    {
+      label: 'Erf / land size (sqm)',
+      key: 'yardSize',
+      format: (val: any) => (val ? `${val} sqm` : 'N/A'),
+    },
+    { label: 'Location', key: 'location' },
+    { label: 'Listing source', key: 'listingSource' },
   ];
 
   return (
@@ -86,7 +131,7 @@ export default function CompareProperties() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Compare Properties</h1>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setLocation('/')}>
+            <Button variant="outline" onClick={handleBackToResults}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Properties
             </Button>
@@ -110,7 +155,13 @@ export default function CompareProperties() {
                       <div className="space-y-3">
                         <div className="relative h-48 rounded-lg overflow-hidden">
                           <img
-                            src={property.images[0] || '/placeholder-property.jpg'}
+                            src={
+                              typeof property.image === 'string'
+                                ? property.image
+                                : property.image?.medium ||
+                                  property.image?.small ||
+                                  '/placeholder-property.jpg'
+                            }
                             alt={property.title}
                             className="w-full h-full object-cover"
                           />

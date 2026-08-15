@@ -115,6 +115,40 @@ describe('PropertyCard - Property-Based Tests', () => {
     expect(screen.getByText(/R\s*12[\s,]000(?! \/ month)/)).toBeInTheDocument();
   });
 
+  it('renders and dispatches the Buy save and compare actions', () => {
+    const onFavoriteClick = vi.fn();
+    const onCompareClick = vi.fn();
+
+    render(
+      <PropertyCard
+        id="buy-card"
+        propertyId={42}
+        title="Buyable family home"
+        price={2500000}
+        location="Sandton, Johannesburg"
+        image="https://example.com/buy.jpg"
+        listingType="sale"
+        isSaved
+        isCompared
+        onFavoriteClick={onFavoriteClick}
+        onCompareClick={onCompareClick}
+        contactButtonLabel="View details"
+      />,
+    );
+
+    const saveButton = screen.getByRole('button', { name: 'Remove property from saved homes' });
+    const compareButton = screen.getByRole('button', {
+      name: 'Remove property from comparison',
+    });
+
+    saveButton.click();
+    compareButton.click();
+
+    expect(onFavoriteClick).toHaveBeenCalledOnce();
+    expect(onCompareClick).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'View details' })).toBeInTheDocument();
+  });
+
   /**
    * Property Test 10: Required field display
    *

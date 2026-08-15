@@ -8,6 +8,7 @@ import {
   PlayCircle,
   Home,
   Ruler,
+  GitCompareArrows,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { OptimizedImageCard } from './OptimizedImage';
@@ -77,7 +78,14 @@ export interface PropertyCardProps {
   status?: string;
   floor?: string;
   transactionType?: string;
+  propertyId?: number;
   onFavoriteClick?: () => void;
+  isSaved?: boolean;
+  onCompareClick?: () => void;
+  isCompared?: boolean;
+  compareDisabled?: boolean;
+  contactButtonLabel?: string;
+  onOpen?: () => void;
   agent?: AgentInfo;
   developerBrand?: DeveloperBrandInfo; // Public publisher display projection when present
   development?: DevelopmentInfo;
@@ -110,7 +118,14 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   status = 'Ready to Move',
   floor,
   transactionType = 'New Booking',
+  propertyId,
   onFavoriteClick,
+  isSaved = false,
+  onCompareClick,
+  isCompared = false,
+  compareDisabled = false,
+  contactButtonLabel,
+  onOpen,
   agent,
   developerBrand,
   development,
@@ -166,11 +181,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         ? withRentalPeriod(`From ${formatCurrency(price)}`, listingType)
         : withRentalPeriod(formatCurrency(price), listingType)
       : 'Price on request';
-  const contactButtonLabel = isDevelopmentListing
-    ? 'Contact Developer'
-    : isPrivateListing
-      ? privateContactCopy.action
-      : 'Contact Agent';
+  const resolvedContactButtonLabel =
+    contactButtonLabel ||
+    (isDevelopmentListing
+      ? 'Contact Developer'
+      : isPrivateListing
+        ? privateContactCopy.action
+        : 'Contact Agent');
   const displayBadges = Array.isArray(badges)
     ? badges.filter(
         badge =>
@@ -198,7 +215,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   return (
     <div
       className="group relative w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col cursor-pointer"
-      onClick={() => setLocation(listingHref)}
+      onClick={() => {
+        onOpen?.();
+        setLocation(listingHref);
+      }}
     >
       {/* Image  Section */}
       <div className="relative w-full h-56 overflow-hidden">
@@ -266,19 +286,48 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
         )}
 
-        {/* Favorite Button */}
-        {onFavoriteClick && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-3 right-3 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm h-8 w-8 transition-colors z-10"
-            onClick={e => {
-              e.stopPropagation();
-              onFavoriteClick();
-            }}
-          >
-            <Heart className="h-5 w-5 drop-shadow-md" />
-          </Button>
+        {/* Buyer decision actions */}
+        {(onFavoriteClick || onCompareClick) && (
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
+            {onFavoriteClick && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm h-8 w-8 transition-colors ${
+                  isSaved ? 'text-red-300' : ''
+                }`}
+                onClick={e => {
+                  e.stopPropagation();
+                  onFavoriteClick();
+                }}
+                aria-label={isSaved ? 'Remove property from saved homes' : 'Save property'}
+                aria-pressed={isSaved}
+              >
+                <Heart
+                  className="h-5 w-5 drop-shadow-md"
+                  fill={isSaved ? 'currentColor' : 'none'}
+                />
+              </Button>
+            )}
+            {onCompareClick && propertyId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={compareDisabled}
+                className={`rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm h-8 w-8 transition-colors ${
+                  isCompared ? 'text-blue-300' : ''
+                }`}
+                onClick={e => {
+                  e.stopPropagation();
+                  onCompareClick();
+                }}
+                aria-label={isCompared ? 'Remove property from comparison' : 'Compare property'}
+                aria-pressed={isCompared}
+              >
+                <GitCompareArrows className="h-4 w-4 drop-shadow-md" />
+              </Button>
+            )}
+          </div>
         )}
 
         {/* Media Count Overlay - Bottom Right */}
@@ -334,6 +383,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               className="text-lg font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer mb-2 line-clamp-2"
               onClick={e => {
                 e.stopPropagation();
+                onOpen?.();
                 setLocation(listingHref);
               }}
             >
@@ -501,10 +551,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
               className="h-9 px-4 text-sm font-medium transition-all"
               onClick={e => {
                 e.stopPropagation();
-                // Contact logic
+                if (contactButtonLabel === 'View details') {
+                  onOpen?.();
+                  setLocation(listingHref);
+                }
               }}
             >
-              {contactButtonLabel}
+              {resolvedContactButtonLabel}
             </Button>
           </div>
         </div>
