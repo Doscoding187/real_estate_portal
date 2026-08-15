@@ -25,6 +25,12 @@ describe('public navigation authority', () => {
     expect(normalizePublicHeroJourney('rent')).toBe('rent');
   });
 
+  it('keeps Buy bedroom and bathroom filters in the shared journey contract', () => {
+    expect(getPublicHeroJourney('buy').supportedFields).toEqual(
+      expect.arrayContaining(['minBedrooms', 'minBathrooms']),
+    );
+  });
+
   it('exposes only supported search query values', () => {
     const hrefs = PUBLIC_NAVIGATION_MENUS.flatMap(menu =>
       menu.groups.flatMap(group => group.items.map(item => item.href)),

@@ -9,6 +9,7 @@ interface MobileFilterDrawerProps {
   onClose: () => void;
   filters: SearchFilters;
   onFilterChange: (filters: SearchFilters) => void;
+  onSaveSearch?: () => void;
   allowedPropertyTypes?: readonly string[];
   showAmenities?: boolean;
   showLocationRefinement?: boolean;
@@ -19,6 +20,7 @@ export function MobileFilterDrawer({
   onClose,
   filters,
   onFilterChange,
+  onSaveSearch,
   allowedPropertyTypes,
   showAmenities = true,
   showLocationRefinement = true,
@@ -80,7 +82,7 @@ export function MobileFilterDrawer({
             <SidebarFilters
               filters={localFilters as any}
               onFilterChange={f => setLocalFilters(f as SearchFilters)}
-              onSaveSearch={() => {}}
+              onSaveSearch={onSaveSearch}
               allowedPropertyTypes={allowedPropertyTypes}
               showAmenities={showAmenities}
               showLocationRefinement={showLocationRefinement}

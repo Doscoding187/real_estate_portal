@@ -2,7 +2,18 @@ import { useState } from 'react';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MapPin, Bed, Bath, House, LandPlot, Mail, Building2, MessageCircle } from 'lucide-react';
+import {
+  MapPin,
+  Bed,
+  Bath,
+  House,
+  LandPlot,
+  Mail,
+  Building2,
+  MessageCircle,
+  Heart,
+  GitCompareArrows,
+} from 'lucide-react';
 import { useLocation } from 'wouter';
 import { PROPERTY_IMAGE_FALLBACK, withApiBase } from '@/lib/mediaUtils';
 import {
@@ -43,6 +54,12 @@ export interface ListingResultCardData {
   contactPhone?: string;
   contactWhatsapp?: string;
   contactEmail?: string;
+  isSaved?: boolean;
+  onSave?: () => void;
+  isCompared?: boolean;
+  onCompare?: () => void;
+  compareDisabled?: boolean;
+  onOpen?: () => void;
 }
 
 function formatPrice(
@@ -132,7 +149,10 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     <>
       <div
         className="group w-full max-w-[780px] cursor-pointer overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-[840px] lg:rounded-[26px]"
-        onClick={() => setLocation(listingHref)}
+        onClick={() => {
+          data.onOpen?.();
+          setLocation(listingHref);
+        }}
       >
         <div className="flex flex-col sm:flex-row">
           <div className="relative h-[192px] flex-shrink-0 overflow-hidden sm:h-auto sm:w-[300px] sm:self-stretch lg:w-[340px]">
@@ -146,6 +166,47 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 target.src = PROPERTY_IMAGE_FALLBACK;
               }}
             />
+            {(data.onSave || data.onCompare) && (
+              <div className="absolute right-3 top-3 z-10 flex gap-2">
+                {data.onSave && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-9 w-9 rounded-full bg-black/35 text-white backdrop-blur-sm hover:bg-black/55 ${
+                      data.isSaved ? 'text-red-300' : ''
+                    }`}
+                    onClick={event => {
+                      event.stopPropagation();
+                      data.onSave?.();
+                    }}
+                    aria-label={data.isSaved ? 'Remove property from saved homes' : 'Save property'}
+                    aria-pressed={data.isSaved}
+                  >
+                    <Heart className="h-4 w-4" fill={data.isSaved ? 'currentColor' : 'none'} />
+                  </Button>
+                )}
+                {data.onCompare && data.propertyId && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={data.compareDisabled}
+                    className={`h-9 w-9 rounded-full bg-black/35 text-white backdrop-blur-sm hover:bg-black/55 ${
+                      data.isCompared ? 'text-blue-300' : ''
+                    }`}
+                    onClick={event => {
+                      event.stopPropagation();
+                      data.onCompare?.();
+                    }}
+                    aria-label={
+                      data.isCompared ? 'Remove property from comparison' : 'Compare property'
+                    }
+                    aria-pressed={data.isCompared}
+                  >
+                    <GitCompareArrows className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="min-w-0 flex-1 overflow-hidden px-4 py-3 sm:flex sm:min-h-[300px] sm:flex-col sm:px-5 sm:py-3 lg:px-6 lg:py-3">

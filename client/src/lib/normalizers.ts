@@ -329,6 +329,7 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
 
   return {
     id: normalized.id,
+    propertyId: card.propertyId,
     href: normalized.href,
     title: normalized.title,
     price: normalized.price,

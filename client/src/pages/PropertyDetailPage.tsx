@@ -17,8 +17,10 @@ import {
   MapPin,
   Bed,
   Bath,
+  ArrowLeft,
   Heart,
   Share2,
+  GitCompareArrows,
   CheckCircle2,
   Home,
   ChevronRight,
@@ -75,6 +77,7 @@ import {
   getPropertyRunningCostFacts,
 } from '@/lib/property';
 import { buildPricingContract, getMoneyFactAmount } from '@/../../shared/pricing-contract';
+import { useComparison } from '@/contexts/ComparisonContext';
 
 interface PropertyDetailProps {
   propertyId?: number;
@@ -209,6 +212,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { addViewedProperty } = useGuestActivity();
+  const { isInComparison, addToComparison, removeFromComparison, canAddMore } = useComparison();
 
   // Use prop if provided, otherwise try to get from route
   const rawId = propPropertyId?.toString() || params?.id || '0';
@@ -405,6 +409,65 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     .trim()
     .toLowerCase();
   const isRentalListing = isExplicitRentListing(normalizedListingType);
+  const isCompared = isInComparison(propertyId);
+  const handleToggleComparison = () => {
+    if (isRentalListing) return;
+    if (isCompared) {
+      removeFromComparison(propertyId);
+      toast.success('Property removed from comparison.');
+      return;
+    }
+    if (!canAddMore) {
+      toast.info('You can compare up to 4 properties at a time.');
+      return;
+    }
+    if (typeof window !== 'undefined' && document.referrer) {
+      try {
+        const referrer = new URL(document.referrer);
+        if (
+          referrer.origin === window.location.origin &&
+          referrer.pathname === '/property-for-sale'
+        ) {
+          window.sessionStorage.setItem(
+            'property-comparison-return',
+            `${referrer.pathname}${referrer.search}`,
+          );
+        }
+      } catch {
+        // Keep comparison usable even when the browser omits a parseable referrer.
+      }
+    }
+    addToComparison(propertyId);
+    toast.success('Property added to comparison.');
+  };
+  const handleReturnToResults = () => {
+    const fallback = isRentalListing ? '/property-to-rent' : '/property-for-sale';
+    if (typeof window !== 'undefined') {
+      const rememberedSearch = window.sessionStorage.getItem('buy-search-return');
+      if (!isRentalListing && rememberedSearch?.startsWith('/property-for-sale')) {
+        setLocation(rememberedSearch);
+        return;
+      }
+    }
+    if (typeof window === 'undefined' || !document.referrer) {
+      setLocation(fallback);
+      return;
+    }
+
+    try {
+      const referrer = new URL(document.referrer);
+      if (
+        referrer.origin === window.location.origin &&
+        /^\/property-(for-sale|to-rent)$/.test(referrer.pathname)
+      ) {
+        window.history.back();
+        return;
+      }
+    } catch {
+      // Use the explicit transaction root when no same-origin search referrer exists.
+    }
+    setLocation(fallback);
+  };
   const privateContactCopy = getPrivateListingContactCopy(normalizedListingType);
   const hasAgentIdentity = Boolean(agent?.id || agent?.name || property.agentId);
   const hasDeveloperIdentity = Boolean(developerBrand?.id || developerBrand?.brandName);
@@ -830,6 +893,15 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         <div className="container py-6">
           {/* Breadcrumbs */}
           <div className="mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mb-2 -ml-2 text-slate-600 hover:text-blue-600"
+              onClick={handleReturnToResults}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to {isRentalListing ? 'rentals' : 'Buy results'}
+            </Button>
             <Breadcrumbs items={breadcrumbItems} />
           </div>
 
@@ -904,12 +976,18 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               >
                 <Share2 className="h-3.5 w-3.5" />
               </Button>
-              <Button
-                variant="outline"
-                className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
-              >
-                Shortlist
-              </Button>
+              {!isRentalListing && (
+                <Button
+                  variant="outline"
+                  className="border-slate-200 text-slate-700 hover:bg-slate-50 h-10 px-6"
+                  onClick={handleToggleComparison}
+                  aria-label={isCompared ? 'Remove property from comparison' : 'Compare property'}
+                  aria-pressed={isCompared}
+                >
+                  <GitCompareArrows className="mr-2 h-3.5 w-3.5" />
+                  {isCompared ? 'Remove compare' : 'Compare'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1505,9 +1583,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
 
             {/* 2.5 Developer section (when property is linked to a Catalogue Publisher) */}
             {property.developerBrand && (
-              <DeveloperBrandSection
-                brand={property.developerBrand as DeveloperBrandData}
-              />
+              <DeveloperBrandSection brand={property.developerBrand as DeveloperBrandData} />
             )}
 
             {/* 2.6 Location Decision Support */}

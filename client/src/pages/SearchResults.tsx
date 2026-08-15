@@ -81,6 +81,7 @@ import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/loc
 import type { SearchCardResult } from '@/../../shared/types';
 import type { PublicPropertyType } from '@shared/property-taxonomy';
 import { PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import { useComparison } from '@/contexts/ComparisonContext';
 import {
   BUY_PROPERTY_TYPES,
   sanitizeBuySearchFilters,
@@ -99,6 +100,10 @@ export default function SearchResults({
   locationId: propLocationId,
 }: { province?: string; city?: string; locationId?: string } = {}) {
   const { isAuthenticated } = useAuth();
+  const { data: favorites = [] } = trpc.properties.getFavorites.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const { isInComparison, addToComparison, removeFromComparison, canAddMore } = useComparison();
   const [location, setLocation] = useLocation();
   const search = useSearch();
   const isLegacyPropertiesRoute = location.split('?')[0] === '/properties';
@@ -454,6 +459,23 @@ export default function SearchResults({
     },
     onError: error => toast.error(error.message),
   });
+  const utils = trpc.useUtils();
+  const toggleFavoriteMutation = trpc.properties.toggleFavorite.useMutation({
+    onSuccess: result => {
+      void utils.properties.getFavorites.invalidate();
+      toast.success(
+        result.favorited ? 'Property saved to your homes.' : 'Property removed from saved homes.',
+      );
+    },
+    onError: () => toast.error('Unable to update saved homes. Please try again.'),
+  });
+  const savedPropertyIds = useMemo(
+    () =>
+      new Set(
+        (Array.isArray(favorites) ? favorites : []).map(favorite => Number(favorite.propertyId)),
+      ),
+    [favorites],
+  );
 
   // Handlers
   const handleFilterChange = (newFilters: SearchFilters) => {
@@ -576,6 +598,47 @@ export default function SearchResults({
     setIsSaveSearchOpen(true);
   };
 
+  const handleSaveProperty = (propertyId: number) => {
+    if (!isAuthenticated) {
+      toast.info('Sign in to save this property to your account.');
+      setLocation(
+        `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+      );
+      return;
+    }
+    if (toggleFavoriteMutation.isPending) return;
+    toggleFavoriteMutation.mutate({ propertyId });
+  };
+
+  const handleCompareProperty = (propertyId: number) => {
+    if (!Number.isSafeInteger(propertyId) || propertyId <= 0) return;
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        'property-comparison-return',
+        `${window.location.pathname}${window.location.search}`,
+      );
+    }
+    if (isInComparison(propertyId)) {
+      removeFromComparison(propertyId);
+      toast.success('Property removed from comparison.');
+      return;
+    }
+    if (!canAddMore) {
+      toast.info('You can compare up to 4 properties at a time.');
+      return;
+    }
+    addToComparison(propertyId);
+    toast.success('Property added to comparison.');
+  };
+
+  const rememberSearchReturn = () => {
+    if (searchIntent.transactionType !== 'for-sale' || typeof window === 'undefined') return;
+    window.sessionStorage.setItem(
+      'buy-search-return',
+      `${window.location.pathname}${window.location.search}`,
+    );
+  };
+
   const confirmSaveSearch = () => {
     const resolvedSearchName = saveSearchName.trim() || suggestedSaveSearchName;
     if (!resolvedSearchName) return;
@@ -690,6 +753,11 @@ export default function SearchResults({
     hasRenderableResults,
     pageNeedsNormalization,
   });
+  const mapLocationDisclosureUnavailable =
+    displayState === 'integrity' &&
+    viewMode === 'map' &&
+    renderedResults.length > 0 &&
+    mapResults.length === 0;
 
   const resolveCardImage = (card: SearchCardResult) => {
     const direct = typeof card.image === 'string' ? card.image.trim() : '';
@@ -822,6 +890,11 @@ export default function SearchResults({
                     }
                     onStartOver={handleStartOver}
                   />
+                ) : mapLocationDisclosureUnavailable ? (
+                  <SearchResultsUnavailableState
+                    title="No public map location available"
+                    description="These results do not have publicly disclosed coordinates, so no map markers can be shown. Switch to List or Grid view to continue browsing."
+                  />
                 ) : displayState === 'integrity' ? (
                   <SearchResultsUnavailableState
                     title="Results temporarily unavailable"
@@ -867,6 +940,21 @@ export default function SearchResults({
                                 contactPhone: card.identity?.phone ?? undefined,
                                 contactWhatsapp: card.identity?.whatsapp ?? undefined,
                                 contactEmail: card.identity?.email ?? undefined,
+                                isSaved: savedPropertyIds.has(card.propertyId || 0),
+                                onSave: card.propertyId
+                                  ? () => handleSaveProperty(card.propertyId as number)
+                                  : undefined,
+                                isCompared: card.propertyId
+                                  ? isInComparison(card.propertyId)
+                                  : false,
+                                onCompare: card.propertyId
+                                  ? () => handleCompareProperty(card.propertyId as number)
+                                  : undefined,
+                                compareDisabled:
+                                  Boolean(card.propertyId) &&
+                                  !isInComparison(card.propertyId as number) &&
+                                  !canAddMore,
+                                onOpen: rememberSearchReturn,
                               }}
                             />
                           );
@@ -878,7 +966,31 @@ export default function SearchResults({
                       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 2xl:grid-cols-3 2xl:gap-7">
                         {renderedResults.map(card => {
                           const cardProps = searchCardResultToPropertyCardProps(card);
-                          return <PropertyCard key={`${card.kind}-${card.id}`} {...cardProps} />;
+                          return (
+                            <PropertyCard
+                              key={`${card.kind}-${card.id}`}
+                              {...cardProps}
+                              contactButtonLabel="View details"
+                              onOpen={rememberSearchReturn}
+                              isSaved={savedPropertyIds.has(card.propertyId || 0)}
+                              onFavoriteClick={
+                                card.propertyId
+                                  ? () => handleSaveProperty(card.propertyId as number)
+                                  : undefined
+                              }
+                              isCompared={card.propertyId ? isInComparison(card.propertyId) : false}
+                              onCompareClick={
+                                card.propertyId
+                                  ? () => handleCompareProperty(card.propertyId as number)
+                                  : undefined
+                              }
+                              compareDisabled={
+                                Boolean(card.propertyId) &&
+                                !isInComparison(card.propertyId as number) &&
+                                !canAddMore
+                              }
+                            />
+                          );
                         })}
                       </div>
                     )}
@@ -889,6 +1001,7 @@ export default function SearchResults({
                         onPropertySelect={id => {
                           const target = mapResults.find(item => item.markerId === id);
                           if (target) {
+                            rememberSearchReturn();
                             window.location.href = target.href;
                           }
                         }}
@@ -963,6 +1076,7 @@ export default function SearchResults({
         onClose={() => setIsMobileFilterOpen(false)}
         filters={filters}
         onFilterChange={handleFilterChange}
+        onSaveSearch={handleSaveSearch}
         allowedPropertyTypes={
           searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
         }
