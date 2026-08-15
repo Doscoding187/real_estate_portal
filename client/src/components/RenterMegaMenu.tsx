@@ -71,9 +71,15 @@ function RenterNavigationLink({
       aria-current={active ? 'page' : undefined}
       className="public-navbar__renter-nav-link public-navbar__journey-nav-link"
     >
-      <Icon className="public-navbar__renter-nav-icon public-navbar__journey-nav-icon" aria-hidden="true" />
+      <Icon
+        className="public-navbar__renter-nav-icon public-navbar__journey-nav-icon"
+        aria-hidden="true"
+      />
       <span>{item.label}</span>
-      <ChevronRight className="public-navbar__renter-nav-chevron public-navbar__journey-nav-chevron" aria-hidden="true" />
+      <ChevronRight
+        className="public-navbar__renter-nav-chevron public-navbar__journey-nav-chevron"
+        aria-hidden="true"
+      />
     </Link>
   );
 }
@@ -98,8 +104,12 @@ export function RenterMegaMenu({ menu, pathname, onNavigate, user }: RenterMegaM
           className="public-navbar__renter-column public-navbar__journey-column public-navbar__journey-proposition-column public-navbar__renter-column--rental-options"
         >
           <div className="public-navbar__journey-proposition-card public-navbar__journey-proposition-card--renters">
-            <p className="public-navbar__renter-kicker public-navbar__journey-kicker">{rentalOptions.label}</p>
-            <h2 className="public-navbar__renter-title public-navbar__journey-title">Find a rental that fits your life and budget</h2>
+            <p className="public-navbar__renter-kicker public-navbar__journey-kicker">
+              {rentalOptions.label}
+            </p>
+            <h2 className="public-navbar__renter-title public-navbar__journey-title">
+              Find a rental that fits your life and budget
+            </h2>
             <p className="public-navbar__renter-description public-navbar__journey-description">
               Set your budget, explore suitable areas and find rentals that match your lifestyle and
               needs.
@@ -113,7 +123,10 @@ export function RenterMegaMenu({ menu, pathname, onNavigate, user }: RenterMegaM
               <ChevronRight className="size-4" aria-hidden="true" />
             </Link>
 
-            <div className="public-navbar__renter-outcomes public-navbar__journey-outcomes" aria-label="What rental planning includes">
+            <div
+              className="public-navbar__renter-outcomes public-navbar__journey-outcomes"
+              aria-label="What rental planning includes"
+            >
               <div className="public-navbar__renter-outcome-row public-navbar__journey-outcome-row">
                 <CircleDollarSign aria-hidden="true" />
                 <span>Monthly rental budget</span>
@@ -145,7 +158,9 @@ export function RenterMegaMenu({ menu, pathname, onNavigate, user }: RenterMegaM
           aria-label={rentalSearch.label}
           className="public-navbar__renter-column public-navbar__journey-column public-navbar__renter-column--property"
         >
-          <h2 className="public-navbar__renter-kicker public-navbar__journey-kicker">{rentalSearch.label}</h2>
+          <h2 className="public-navbar__renter-kicker public-navbar__journey-kicker">
+            {rentalSearch.label}
+          </h2>
           <div className="public-navbar__renter-link-list public-navbar__journey-link-list">
             {rentalSearch.items.map(item => (
               <RenterNavigationLink
@@ -162,7 +177,9 @@ export function RenterMegaMenu({ menu, pathname, onNavigate, user }: RenterMegaM
           aria-label={manageAndConnect.label}
           className="public-navbar__renter-column public-navbar__journey-column public-navbar__renter-column--manage"
         >
-          <h2 className="public-navbar__renter-kicker public-navbar__journey-kicker">{manageAndConnect.label}</h2>
+          <h2 className="public-navbar__renter-kicker public-navbar__journey-kicker">
+            {manageAndConnect.label}
+          </h2>
           <div className="public-navbar__renter-link-list public-navbar__journey-link-list">
             {manageAndConnect.items.map(item => (
               <RenterNavigationLink
@@ -176,11 +193,17 @@ export function RenterMegaMenu({ menu, pathname, onNavigate, user }: RenterMegaM
 
           {!user ? (
             <>
-              <div className="public-navbar__renter-manage-divider public-navbar__journey-account-divider" aria-hidden="true" />
-              <aside className="public-navbar__renter-signin public-navbar__journey-account-callout" aria-label="Account access">
+              <div
+                className="public-navbar__renter-manage-divider public-navbar__journey-account-divider"
+                aria-hidden="true"
+              />
+              <aside
+                className="public-navbar__renter-signin public-navbar__journey-account-callout"
+                aria-label="Account access"
+              >
                 <LockKeyhole aria-hidden="true" />
                 <div>
-                  <p>Save, compare and manage your rental journey in one place.</p>
+                  <p>Save and manage your rental journey in one place.</p>
                   <Link href="/login?mode=signin&next=/favorites" onClick={onNavigate}>
                     Sign in to continue
                     <ChevronRight className="size-3.5" aria-hidden="true" />

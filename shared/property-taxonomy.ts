@@ -221,6 +221,16 @@ export const BUY_PUBLIC_PROPERTY_TYPES = [
 
 export type BuyPublicPropertyType = (typeof BUY_PUBLIC_PROPERTY_TYPES)[number];
 
+export const RENT_PUBLIC_PROPERTY_TYPES = [
+  'apartment',
+  'house',
+  'townhouse',
+  'cluster_home',
+  'farm',
+] as const satisfies readonly PublicPropertyType[];
+
+export type RentPublicPropertyType = (typeof RENT_PUBLIC_PROPERTY_TYPES)[number];
+
 export function getPropertyTypeDefinition(value: unknown): PropertyTypeDefinition | undefined {
   if (typeof value !== 'string') return undefined;
   return Object.prototype.hasOwnProperty.call(PROPERTY_TYPE_DEFINITIONS, value)

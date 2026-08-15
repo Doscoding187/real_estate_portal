@@ -11,6 +11,7 @@ interface MobileFilterDrawerProps {
   onFilterChange: (filters: SearchFilters) => void;
   onSaveSearch?: () => void;
   allowedPropertyTypes?: readonly string[];
+  listingType?: 'sale' | 'rent';
   showAmenities?: boolean;
   showLocationRefinement?: boolean;
 }
@@ -22,6 +23,7 @@ export function MobileFilterDrawer({
   onFilterChange,
   onSaveSearch,
   allowedPropertyTypes,
+  listingType,
   showAmenities = true,
   showLocationRefinement = true,
 }: MobileFilterDrawerProps) {
@@ -84,6 +86,7 @@ export function MobileFilterDrawer({
               onFilterChange={f => setLocalFilters(f as SearchFilters)}
               onSaveSearch={onSaveSearch}
               allowedPropertyTypes={allowedPropertyTypes}
+              listingType={listingType}
               showAmenities={showAmenities}
               showLocationRefinement={showLocationRefinement}
             />

@@ -11,6 +11,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 export type FeedTab =
   | 'buy'
@@ -99,7 +100,13 @@ export function LocationTrendingFeedSection({
   neutralMode = false,
 }: LocationTrendingFeedSectionProps) {
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
-  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
+  const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
+  const requestedActiveTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
+  const activeTab =
+    requestedActiveTab === 'rent' && !rentJourneyEnabled ? null : requestedActiveTab;
+  const visibleFeedTabs = FEED_TABS.filter(
+    tab => tab.value !== 'rent' || rentJourneyEnabled,
+  );
 
   const { data: feedData } = trpc.developer.getHomeTrendingFeed.useQuery(
     {
@@ -131,7 +138,7 @@ export function LocationTrendingFeedSection({
 
       <div className="flex justify-start mb-7 overflow-x-auto pb-2 scrollbar-hide">
         <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
-          {FEED_TABS.map(tab => (
+          {visibleFeedTabs.map(tab => (
             <button
               key={tab.value}
               type="button"
@@ -190,7 +197,8 @@ export function LocationTrendingFeedSection({
                         area={item.area}
                         yardSize={item.yardSize}
                         propertyType={item.propertyType}
-                        badgeLabel="Resale"
+                        listingType={item.listingType}
+                        badgeLabel={item.listingType === 'rent' ? 'Property listing' : 'Resale'}
                       />
                     ) : item.kind === 'unit' ? (
                       <SimpleDevelopmentUnitCard
@@ -203,6 +211,7 @@ export function LocationTrendingFeedSection({
                         href={item.href}
                         priceFrom={item.priceFrom}
                         priceTo={item.priceTo}
+                        listingType={item.listingType}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
                         unitSize={item.unitSize}

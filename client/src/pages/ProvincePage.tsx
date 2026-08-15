@@ -17,6 +17,7 @@ import { ProvincialBillboard } from '@/components/provincial/ProvincialBillboard
 import { ProvincialComposer } from '@/components/provincial/ProvincialComposer';
 import { trpc } from '@/lib/trpc';
 import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 import { getProvincialConfig } from '@shared/provincialDiscovery';
 import '@/styles/provincial-discovery.css';
@@ -154,8 +155,12 @@ export default function ProvincePage({ params }: ProvincePageProps) {
         journey: 'rent',
         scope: provinceScope,
         context: { province: data.province.slug },
-      })
+    })
     : undefined;
+  const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
+  const visibleInventoryItems = data.inventoryPreview.items.filter(
+    item => rentJourneyEnabled || item.listingType !== 'rent',
+  );
 
   return (
     <div className="provincial-page pt-16">
@@ -371,7 +376,10 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                 const journey = config.supportedJourneys.find(
                   candidate => candidate.id === need.journey,
                 );
-                const active = need.state === 'active' && journey?.state === 'active';
+                const active =
+                  need.state === 'active' &&
+                  journey?.state === 'active' &&
+                  (need.journey !== 'rent' || rentJourneyEnabled);
                 return (
                   <button
                     key={need.id}
@@ -422,15 +430,17 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                   Public Buy inventory · same search authority used by results.
                 </p>
               </article>
-              <article className="provincial-snapshot__card">
-                <p className="provincial-snapshot__label">For rent</p>
-                <p className="provincial-snapshot__value">
-                  {journeyCountLabel(data.journeyCounts.rent)}
-                </p>
-                <p className="provincial-snapshot__meta">
-                  Public Rent inventory · availability can change between visits.
-                </p>
-              </article>
+              {rentJourneyEnabled ? (
+                <article className="provincial-snapshot__card">
+                  <p className="provincial-snapshot__label">For rent</p>
+                  <p className="provincial-snapshot__value">
+                    {journeyCountLabel(data.journeyCounts.rent)}
+                  </p>
+                  <p className="provincial-snapshot__meta">
+                    Public Rent inventory · availability can change between visits.
+                  </p>
+                </article>
+              ) : null}
               <article className="provincial-snapshot__card">
                 <p className="provincial-snapshot__label">Developments</p>
                 <p className="provincial-snapshot__value">
@@ -478,7 +488,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                     Open Buy search <ArrowRight size={15} aria-hidden="true" />
                   </Link>
                 ) : null}
-                {rentProvinceHref ? (
+                {rentJourneyEnabled && rentProvinceHref ? (
                   <Link href={rentProvinceHref} className="provincial-section__link">
                     Open Rent search <ArrowRight size={15} aria-hidden="true" />
                   </Link>
@@ -487,9 +497,9 @@ export default function ProvincePage({ params }: ProvincePageProps) {
             </div>
             <div className="provincial-inventory">
               <div>
-                {data.inventoryPreview.items.length > 0 ? (
+                {visibleInventoryItems.length > 0 ? (
                   <div className="provincial-inventory__grid">
-                    {data.inventoryPreview.items.slice(0, 6).map(item => (
+                    {visibleInventoryItems.slice(0, 6).map(item => (
                       <Link
                         key={`${item.listingSource}-${item.id}`}
                         href={item.href}
@@ -556,7 +566,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                       Browse Buy listings <ArrowRight size={15} aria-hidden="true" />
                     </Link>
                   ) : null}
-                  {rentProvinceHref ? (
+                  {rentJourneyEnabled && rentProvinceHref ? (
                     <Link href={rentProvinceHref}>
                       Browse Rent listings <ArrowRight size={15} aria-hidden="true" />
                     </Link>

@@ -80,7 +80,8 @@ import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { SearchCardResult } from '@/../../shared/types';
 import type { PublicPropertyType } from '@shared/property-taxonomy';
-import { PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import { PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import { rememberPropertySearchReturn } from '@/lib/searchReturnState';
 import { useComparison } from '@/contexts/ComparisonContext';
 import {
   BUY_PROPERTY_TYPES,
@@ -261,6 +262,8 @@ export default function SearchResults({
   // presentation-local for this slice and is not part of the public query.
   const sortBy = searchIntent.resultState.sort as SortOption;
   const page = searchIntent.resultState.page;
+  const isBuySearch = searchIntent.transactionType === 'for-sale';
+  const isRentSearch = searchIntent.transactionType === 'to-rent';
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
@@ -291,11 +294,13 @@ export default function SearchResults({
   // pagination and location resolution. The browser receives only the page it
   // is allowed to render.
   const publicSearchQueryInput = useMemo(() => {
-    const isBuySearch = searchIntent.transactionType === 'for-sale';
-    const isRentSearch = searchIntent.transactionType === 'to-rent';
     const publicPropertyTypes: ReadonlySet<string> = new Set(PUBLIC_PROPERTY_TYPES);
     const propertyType =
       typeof filters.propertyType === 'string' && publicPropertyTypes.has(filters.propertyType)
+        ? (filters.propertyType as PublicPropertyType)
+        : undefined;
+    const rentPropertyType =
+      typeof filters.propertyType === 'string'
         ? (filters.propertyType as PublicPropertyType)
         : undefined;
     const numericFilter = (value: unknown) =>
@@ -316,7 +321,13 @@ export default function SearchResults({
       locationIds: searchIntent.geography.locationIds,
       searchAreaId: searchIntent.geography.searchAreaId,
       searchAreaIds: searchIntent.geography.searchAreaIds,
-      propertyType: isBuySearch ? buyFilters?.propertyType : propertyType,
+      // Keep an unsupported direct Rent URL visible to the server validation
+      // boundary rather than silently widening it to all rental inventory.
+      propertyType: isBuySearch
+        ? buyFilters?.propertyType
+        : isRentSearch
+          ? rentPropertyType
+          : propertyType,
       listingType: isBuySearch
         ? buyFilters?.listingType
         : isRentSearch
@@ -611,6 +622,7 @@ export default function SearchResults({
   };
 
   const handleCompareProperty = (propertyId: number) => {
+    if (!isBuySearch) return;
     if (!Number.isSafeInteger(propertyId) || propertyId <= 0) return;
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem(
@@ -632,10 +644,16 @@ export default function SearchResults({
   };
 
   const rememberSearchReturn = () => {
-    if (searchIntent.transactionType !== 'for-sale' || typeof window === 'undefined') return;
-    window.sessionStorage.setItem(
-      'buy-search-return',
+    if (
+      (searchIntent.transactionType !== 'for-sale' && searchIntent.transactionType !== 'to-rent') ||
+      typeof window === 'undefined'
+    ) {
+      return;
+    }
+    rememberPropertySearchReturn(
+      window.sessionStorage,
       `${window.location.pathname}${window.location.search}`,
+      searchIntent.transactionType,
     );
   };
 
@@ -828,8 +846,13 @@ export default function SearchResults({
                   onFilterChange={handleFilterChange}
                   onSaveSearch={handleSaveSearch}
                   allowedPropertyTypes={
-                    searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
+                    isBuySearch
+                      ? BUY_PROPERTY_TYPES
+                      : isRentSearch
+                        ? RENT_PUBLIC_PROPERTY_TYPES
+                        : undefined
                   }
+                  listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
                   // Public Buy/Rent inventory does not yet expose an
                   // authoritative amenities predicate. Do not render a
                   // Rent control that would be accepted by the URL but
@@ -944,13 +967,16 @@ export default function SearchResults({
                                 onSave: card.propertyId
                                   ? () => handleSaveProperty(card.propertyId as number)
                                   : undefined,
-                                isCompared: card.propertyId
-                                  ? isInComparison(card.propertyId)
-                                  : false,
-                                onCompare: card.propertyId
-                                  ? () => handleCompareProperty(card.propertyId as number)
-                                  : undefined,
+                                isCompared:
+                                  isBuySearch && card.propertyId
+                                    ? isInComparison(card.propertyId)
+                                    : false,
+                                onCompare:
+                                  isBuySearch && card.propertyId
+                                    ? () => handleCompareProperty(card.propertyId as number)
+                                    : undefined,
                                 compareDisabled:
+                                  isBuySearch &&
                                   Boolean(card.propertyId) &&
                                   !isInComparison(card.propertyId as number) &&
                                   !canAddMore,
@@ -978,13 +1004,18 @@ export default function SearchResults({
                                   ? () => handleSaveProperty(card.propertyId as number)
                                   : undefined
                               }
-                              isCompared={card.propertyId ? isInComparison(card.propertyId) : false}
+                              isCompared={
+                                isBuySearch && card.propertyId
+                                  ? isInComparison(card.propertyId)
+                                  : false
+                              }
                               onCompareClick={
-                                card.propertyId
+                                isBuySearch && card.propertyId
                                   ? () => handleCompareProperty(card.propertyId as number)
                                   : undefined
                               }
                               compareDisabled={
+                                isBuySearch &&
                                 Boolean(card.propertyId) &&
                                 !isInComparison(card.propertyId as number) &&
                                 !canAddMore
@@ -1078,8 +1109,9 @@ export default function SearchResults({
         onFilterChange={handleFilterChange}
         onSaveSearch={handleSaveSearch}
         allowedPropertyTypes={
-          searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
+          isBuySearch ? BUY_PROPERTY_TYPES : isRentSearch ? RENT_PUBLIC_PROPERTY_TYPES : undefined
         }
+        listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
         // Keep unsupported amenities out of the public Rent contract until
         // the same predicate can feed both result and count queries.
         showAmenities={false}

@@ -39,6 +39,7 @@ export type PublicNavigationDestination = {
   desktopVisible?: boolean;
   mobileVisible?: boolean;
   activeHref?: string;
+  journey?: PublicHeroJourneyKey;
 };
 
 export type PublicNavigationGroup = {
@@ -429,6 +430,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
       owner: 'rental-search',
       capability: 'LAUNCH_READY',
       activeHref: '/property-to-rent',
+      journey: 'rent',
     }),
     groups: [
       {
@@ -441,6 +443,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'rental-search',
             capability: 'LAUNCH_READY',
             activeHref: '/property-to-rent',
+            journey: 'rent',
           }),
           destination({
             id: 'renters-guidance',
@@ -462,6 +465,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'rental-search',
             capability: 'LAUNCH_READY',
             activeHref: '/property-to-rent',
+            journey: 'rent',
           }),
           destination({
             id: 'renters-houses',
@@ -470,6 +474,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'rental-search',
             capability: 'LAUNCH_READY',
             activeHref: '/property-to-rent',
+            journey: 'rent',
           }),
           destination({
             id: 'renters-townhouses',
@@ -478,6 +483,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'rental-search',
             capability: 'LAUNCH_READY',
             activeHref: '/property-to-rent',
+            journey: 'rent',
           }),
           destination({
             id: 'renters-shared-living',
@@ -492,8 +498,9 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             label: 'Commercial property to rent',
             href: '/property-to-rent?propertyType=commercial',
             owner: 'rental-search',
-            capability: 'LIMITED_BUT_VALID',
+            capability: 'DEFERRED',
             activeHref: '/property-to-rent',
+            journey: 'rent',
           }),
         ],
       },
@@ -514,7 +521,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             label: 'Compare rentals',
             href: '/compare',
             owner: 'property-search',
-            capability: 'LAUNCH_READY',
+            capability: 'DEFERRED',
             activeHref: '/compare',
           }),
           destination({
@@ -949,8 +956,15 @@ export function isPublicNavigationVisible(
 ) {
   return (
     VISIBLE_CAPABILITIES.has(item.capability) &&
+    (!item.journey || isHomepageHeroJourneyEnabled(item.journey)) &&
     (surface === 'desktop' ? item.desktopVisible !== false : item.mobileVisible !== false)
   );
+}
+
+export function getVisiblePublicNavigationMenus(
+  surface: 'desktop' | 'mobile' = 'desktop',
+): PublicNavigationMenu[] {
+  return PUBLIC_NAVIGATION_MENUS.filter(menu => isPublicNavigationVisible(menu.feature, surface));
 }
 
 export function getVisiblePublicNavigationGroups(

@@ -1201,6 +1201,7 @@ export const developerRouter = router({
         unitPriceFrom: z.number().nonnegative().optional(),
         unitBedrooms: z.number().int().nonnegative().optional(),
         unitBathrooms: z.number().nonnegative().optional(),
+        leadType: z.enum(['inquiry', 'viewing_request']).default('inquiry'),
         name: z.string().min(1),
         email: z.string().email(),
         phone: z.string().optional(),
@@ -1242,7 +1243,7 @@ export const developerRouter = router({
         email: input.email,
         phone: input.phone,
         message: input.message,
-        leadType: 'inquiry',
+        leadType: input.leadType,
         source: input.sourceSurface || 'development_detail',
         sourceSurface: input.sourceSurface || 'development_detail',
         leadSource: input.leadSource || 'development_detail',
@@ -1859,8 +1860,7 @@ export const developerRouter = router({
         blockers,
         inventory,
         funnel: leadSummary.funnel,
-        commercialAccessRequired:
-          row.approvalStatus === 'approved' && !commercialEligible,
+        commercialAccessRequired: row.approvalStatus === 'approved' && !commercialEligible,
       });
       const distribution = await getDevelopmentHomeDistribution({
         db: dbConn,

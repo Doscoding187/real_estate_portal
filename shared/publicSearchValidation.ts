@@ -1,4 +1,5 @@
 import { parseCanonicalLocationId } from './locationAuthority';
+import { RENT_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
 import { isSearchAreaId, MULTI_LOCATION_MAX, MULTI_LOCATION_MIN } from './searchScope';
 
 export interface PublicSearchInputValidationIssue {
@@ -16,6 +17,7 @@ interface PublicSearchInputLike {
   searchAreaId?: string;
   searchAreaIds?: string[];
   listingType?: 'sale' | 'rent';
+  propertyType?: string;
   minPrice?: number;
   maxPrice?: number;
   minArea?: number;
@@ -45,6 +47,17 @@ export function validatePublicSearchInput(
     return {
       path: 'listingType',
       message: 'The public search journey must be Buy or Rent.',
+    };
+  }
+
+  if (
+    listingType === 'rent' &&
+    input.propertyType !== undefined &&
+    !(RENT_PUBLIC_PROPERTY_TYPES as readonly string[]).includes(input.propertyType)
+  ) {
+    return {
+      path: 'propertyType',
+      message: 'This rental property type is not available in the Rent journey.',
     };
   }
 

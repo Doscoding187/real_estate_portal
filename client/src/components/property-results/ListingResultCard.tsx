@@ -96,6 +96,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
   const isRentalListing = isExplicitRentListing(data.listingType);
+  const compareHandler = isRentalListing ? undefined : data.onCompare;
   const privateContactCopy = getPrivateListingContactCopy(data.listingType);
   const identityDisplayName =
     isPrivateListing && isRentalListing
@@ -166,7 +167,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 target.src = PROPERTY_IMAGE_FALLBACK;
               }}
             />
-            {(data.onSave || data.onCompare) && (
+            {(data.onSave || compareHandler) && (
               <div className="absolute right-3 top-3 z-10 flex gap-2">
                 {data.onSave && (
                   <Button
@@ -185,7 +186,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                     <Heart className="h-4 w-4" fill={data.isSaved ? 'currentColor' : 'none'} />
                   </Button>
                 )}
-                {data.onCompare && data.propertyId && (
+                {compareHandler && data.propertyId && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -195,7 +196,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                     }`}
                     onClick={event => {
                       event.stopPropagation();
-                      data.onCompare?.();
+                      compareHandler();
                     }}
                     aria-label={
                       data.isCompared ? 'Remove property from comparison' : 'Compare property'

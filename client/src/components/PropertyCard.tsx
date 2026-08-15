@@ -154,6 +154,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
   const isRentalListing = isExplicitRentListing(listingType);
+  const compareHandler = isRentalListing ? undefined : onCompareClick;
   const privateContactCopy = getPrivateListingContactCopy(listingType);
   const developmentHref = development?.slug
     ? `/development/${development.slug}`
@@ -287,7 +288,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         )}
 
         {/* Buyer decision actions */}
-        {(onFavoriteClick || onCompareClick) && (
+        {(onFavoriteClick || compareHandler) && (
           <div className="absolute top-3 right-3 z-10 flex gap-2">
             {onFavoriteClick && (
               <Button
@@ -309,7 +310,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 />
               </Button>
             )}
-            {onCompareClick && propertyId && (
+            {compareHandler && propertyId && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -319,7 +320,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 }`}
                 onClick={e => {
                   e.stopPropagation();
-                  onCompareClick();
+                  compareHandler();
                 }}
                 aria-label={isCompared ? 'Remove property from comparison' : 'Compare property'}
                 aria-pressed={isCompared}

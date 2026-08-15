@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LocationHeroSection } from '../LocationHeroSection';
@@ -16,7 +16,7 @@ vi.mock('@/lib/analytics', () => ({
 }));
 
 describe('LocationHeroSection Rent controls', () => {
-  it('does not expose unsupported lease-term or furnished controls', () => {
+  it('keeps the Rent entry hidden behind the canonical journey gate', () => {
     render(
       <LocationHeroSection
         locationName="Johannesburg"
@@ -25,13 +25,12 @@ describe('LocationHeroSection Rent controls', () => {
         locationId={12}
         backgroundImage="/johannesburg.jpg"
         listingCount={0}
-        activeTab="rental"
+        neutralMode
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rental' }));
-
-    expect(screen.getByText('Max Budget')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Rental' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Max monthly rent')).not.toBeInTheDocument();
     expect(screen.queryByText('Lease Term')).not.toBeInTheDocument();
     expect(screen.queryByText('Furnished Only')).not.toBeInTheDocument();
   });

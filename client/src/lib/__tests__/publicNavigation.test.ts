@@ -7,7 +7,9 @@ import {
   getLoginRedirectPath,
   getPublicNavigationActiveOwner,
   getSafeNextPath,
+  getVisiblePublicNavigationMenus,
   getVisiblePublicNavigationGroups,
+  isPublicNavigationVisible,
   normalizePublicHeroJourney,
   PUBLIC_CITY_ENTRY,
   PUBLIC_NAVIGATION_MENUS,
@@ -85,28 +87,24 @@ describe('public navigation authority', () => {
     expect(allDestinations.map(item => item.href)).not.toContain('/saved-search/manage');
   });
 
-  it('keeps renter discovery limited to the filters and journeys the search supports', () => {
+  it('keeps Rent hidden behind the canonical journey visibility authority', () => {
     const renters = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'renters');
     expect(renters).toBeDefined();
+    expect(getPublicHeroJourney('rent').homepageEnabled).toBe(false);
+    expect(isPublicNavigationVisible(renters!.feature)).toBe(false);
+    expect(getVisiblePublicNavigationMenus('desktop').some(menu => menu.id === 'renters')).toBe(
+      false,
+    );
 
     const visibleItems = getVisiblePublicNavigationGroups(renters!, 'desktop').flatMap(
       group => group.items,
     );
     expect(visibleItems.map(item => item.href)).toEqual(
-      expect.arrayContaining([
-        '/property-to-rent?propertyType=apartment',
-        '/property-to-rent?propertyType=house',
-        '/property-to-rent?propertyType=townhouse',
-        '/property-to-rent?propertyType=commercial',
-        '/favorites',
-        '/compare',
-        '/agents',
-      ]),
+      expect.arrayContaining(['/guides/renting-property', '/favorites', '/agents']),
     );
-    expect(visibleItems.some(item => item.href.includes('propertyType=student'))).toBe(false);
-    expect(visibleItems.some(item => item.href.includes('short-term'))).toBe(false);
-    expect(visibleItems.some(item => item.href.includes('shared_living'))).toBe(false);
-    expect(visibleItems.some(item => item.href === '/property-to-rent')).toBe(true);
+    expect(visibleItems.some(item => item.href.startsWith('/property-to-rent'))).toBe(false);
+    expect(visibleItems.some(item => item.href === '/compare')).toBe(false);
+    expect(visibleItems.some(item => item.href.includes('propertyType=commercial'))).toBe(false);
     expect(visibleItems.some(item => /alert|enquir/i.test(item.label))).toBe(false);
   });
 
