@@ -25,16 +25,17 @@ const PublisherLeads: React.FC = () => {
   );
 
   const filteredLeads =
-    leads?.filter(
-      lead =>
-        lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.email.toLowerCase().includes(searchTerm.toLowerCase()),
-    ) || [];
+    leads?.filter(lead => {
+      const query = searchTerm.toLowerCase();
+      return [lead.name, lead.email, lead.development?.name, lead.unitName]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(query));
+    }) || [];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Leads Dashboard</h3>
+        <h3 className="text-xl font-semibold">Curated enquiries</h3>
         <Badge variant="outline" className="text-xs">
           Read Only View
         </Badge>
@@ -43,7 +44,7 @@ const PublisherLeads: React.FC = () => {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-md font-medium">Inquiries & Leads</CardTitle>
+            <CardTitle className="text-md font-medium">Property Listify-custodied enquiries</CardTitle>
             <div className="relative w-64">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -102,7 +103,7 @@ const PublisherLeads: React.FC = () => {
                         {lead.developmentId ? (
                           <div className="flex flex-col items-start gap-1">
                             <Badge variant="secondary" className="font-normal">
-                              Development Inquiry
+                              {lead.development?.name || 'Development enquiry'}
                             </Badge>
                             {lead.unitName ? (
                               <span className="text-xs font-medium text-slate-600">
@@ -122,12 +123,14 @@ const PublisherLeads: React.FC = () => {
                         className={
                           lead.brandLeadStatus === 'captured'
                             ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200'
-                            : lead.brandLeadStatus === 'claimed'
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200'
+                            : lead.deliveryStatus === 'attention_required'
+                              ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }
                       >
-                        {lead.brandLeadStatus}
+                        {lead.deliveryStatus === 'attention_required'
+                          ? 'Needs platform action'
+                          : lead.brandLeadStatus || 'Captured'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">
@@ -138,7 +141,7 @@ const PublisherLeads: React.FC = () => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                    No leads found for this brand yet.
+                    No curated enquiries found for this publisher yet.
                   </TableCell>
                 </TableRow>
               )}

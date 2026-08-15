@@ -28,14 +28,14 @@ export const DeveloperContextSelector: React.FC = () => {
 
   const { data: profiles, isLoading: isLoadingProfiles } =
     trpc.superAdminPublisher.listPublishers.useQuery(
-      { search: searchTerm, limit: 20 },
+      { search: searchTerm, limit: 20, emulatorOnly: true },
       { staleTime: 30_000, refetchOnWindowFocus: false },
     );
 
   return (
     <div className="flex flex-col gap-2">
       <label className="text-xs font-bold text-blue-700 uppercase tracking-wider">
-        Operating As Developer
+        Operating as Curated Publisher
       </label>
 
       <Popover open={open} onOpenChange={setOpen}>
@@ -82,7 +82,7 @@ export const DeveloperContextSelector: React.FC = () => {
                 <div className="h-8 w-8 rounded-md border border-dashed border-blue-200 flex items-center justify-center bg-blue-50">
                   <Building2 className="h-4 w-4 text-blue-400" />
                 </div>
-                <span className="text-sm font-medium">Select a developer brand...</span>
+                <span className="text-sm font-medium">Select a curated publisher...</span>
               </div>
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-blue-400" />
@@ -97,13 +97,13 @@ export const DeveloperContextSelector: React.FC = () => {
               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-blue-400" />
               <input
                 className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-blue-300 text-blue-900 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Search developer brands..."
+                placeholder="Search curated publishers..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
             <CommandEmpty className="py-6 text-center text-sm text-blue-400">
-              No brand found.
+              No curated publisher found.
             </CommandEmpty>
             <CommandList>
               <div className="p-1 border-b border-blue-50">
@@ -124,7 +124,7 @@ export const DeveloperContextSelector: React.FC = () => {
                 />
               </div>
 
-              <CommandGroup heading="Available Brands" className="text-blue-400">
+              <CommandGroup heading="Platform-reference publishers" className="text-blue-400">
                 {profiles?.map((brand: any) => (
                   <CommandItem
                     key={brand.id}
@@ -147,7 +147,7 @@ export const DeveloperContextSelector: React.FC = () => {
                         {brand.brandName}
                       </span>
                       <span className="text-xs text-blue-500 capitalize truncate group-aria-selected:text-blue-100">
-                        {brand.brandTier} • {brand.slug}
+                        {brand.brandTier} · {brand.slug}
                       </span>
                     </div>
 

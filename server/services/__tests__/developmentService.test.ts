@@ -3,7 +3,7 @@
  * Feature: developer-lead-management
  */
 
-import { describe, expect } from 'vitest';
+import { afterAll, beforeAll, describe, expect } from 'vitest';
 import { it, fc } from '@fast-check/vitest';
 import { developmentService } from '../developmentService';
 import { db } from '../../db';
@@ -14,8 +14,16 @@ import {
   deleteDeveloperTestContext,
   type DeveloperTestContext,
 } from '../../test-utils/developerTestContext';
+import {
+  acquireDevelopmentIntegrationMutex,
+  DEVELOPMENT_INTEGRATION_MUTEX_HOOK_TIMEOUT_MS,
+  releaseDevelopmentIntegrationMutex,
+} from '../../test-utils/developmentIntegrationMutex';
 
 describe('Development Service - Property Tests', { timeout: 30000 }, () => {
+  beforeAll(acquireDevelopmentIntegrationMutex, DEVELOPMENT_INTEGRATION_MUTEX_HOOK_TIMEOUT_MS);
+  afterAll(releaseDevelopmentIntegrationMutex);
+
   const skipTests = !process.env.DATABASE_URL;
 
   const getInsertId = (insertResult: unknown): number => {

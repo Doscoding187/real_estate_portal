@@ -6,6 +6,7 @@ const ROOT = process.cwd();
 
 type Inventory = {
   canonicalRawConnectionCreator: string;
+  testInfrastructureRawConnectionSources: string[];
   activeBoundedConsumers: string[];
   retiredDirectMutationSources: string[];
   legacyContainedDirectSources: string[];
@@ -38,6 +39,7 @@ describe('bounded connection-path authority', () => {
     ) as Inventory;
     const inventoried = [
       inventory.canonicalRawConnectionCreator,
+      ...inventory.testInfrastructureRawConnectionSources,
       ...inventory.retiredDirectMutationSources,
       ...inventory.legacyContainedDirectSources,
     ].sort();

@@ -426,11 +426,12 @@ export async function getOwnedDevelopmentHomeLeadSummary(params: {
   developmentId: number;
   range: DevelopmentHomeRange;
   now: Date;
+  includePlatformCustody?: boolean;
 }) {
   const boundary = getDevelopmentHomeRangeBoundary(params.range, params.now);
   const periodCondition = and(
     eq(leads.developmentId, params.developmentId),
-    ne(leads.deliveryStatus, 'attention_required'),
+    params.includePlatformCustody ? undefined : ne(leads.deliveryStatus, 'attention_required'),
     gte(leads.createdAt, boundary.from),
     lte(leads.createdAt, boundary.to),
   );

@@ -1,4 +1,4 @@
-import { sql, eq, desc, and, inArray, isNull } from 'drizzle-orm';
+import { sql, eq, desc, and, inArray, isNull, isNotNull } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { randomUUID } from 'crypto';
@@ -429,6 +429,7 @@ function buildDeveloperDisplay(dev: any) {
     return {
       type: 'catalogue_publisher' as const,
       name: brand.name,
+      authorityKind: brand.authorityKind ?? null,
       logoUrl: brand.logoUrl ?? null,
       websiteUrl: brand.websiteUrl ?? null,
       description: brand.description ?? null,
@@ -538,14 +539,28 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
   // Attach the governed public Catalogue Publisher projection.
   try {
     if (dev?.cataloguePublisherId) {
+      const [latestReview] = await db
+        .select({ reviewedAt: developmentApprovalQueue.reviewedAt })
+        .from(developmentApprovalQueue)
+        .where(
+          and(
+            eq(developmentApprovalQueue.developmentId, dev.id),
+            isNotNull(developmentApprovalQueue.reviewedAt),
+          ),
+        )
+        .orderBy(desc(developmentApprovalQueue.reviewedAt), desc(developmentApprovalQueue.id))
+        .limit(1);
+
       const brand = await db
         .select({
           id: cataloguePublishers.id,
           brandName: cataloguePublishers.name,
           slug: cataloguePublishers.slug,
+          authorityKind: cataloguePublishers.authorityKind,
           logoUrl: cataloguePublishers.logoUrl,
           websiteUrl: cataloguePublishers.websiteUrl,
           about: cataloguePublishers.about,
+          sourceAttribution: cataloguePublishers.sourceAttribution,
           foundedYear: cataloguePublishers.foundedYear,
           headOfficeLocation: cataloguePublishers.headOfficeLocation,
         })
@@ -559,9 +574,12 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
           id: bp.id,
           name: bp.brandName,
           slug: bp.slug,
+          authorityKind: bp.authorityKind,
           logoUrl: bp.logoUrl ?? null,
           websiteUrl: bp.websiteUrl ?? null,
           description: bp.about ?? null,
+          sourceAttribution: bp.sourceAttribution ?? null,
+          lastVerifiedAt: latestReview?.reviewedAt ?? null,
           foundedYear: bp.foundedYear ?? null,
           headOfficeLocation: bp.headOfficeLocation ?? null,
         };
@@ -2617,11 +2635,311 @@ async function publishDevelopment(
   return updated;
 }
 
+export async function submitPlatformCuratedDevelopment(
+  id: number,
+  userId: number,
+  operatingContext?: { cataloguePublisherId: number } | null,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  return db.transaction(async (tx: any) => {
+    if (!operatingContext?.cataloguePublisherId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'An explicit platform curator publisher context is required to submit a development.',
+      });
+    }
+
+    const [actor] = await tx
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.role, 'super_admin')))
+      .limit(1)
+      .for('update');
+    if (!actor) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only an authenticated super-admin can submit a platform-curated development.',
+      });
+    }
+
+    const [publisher] = await tx
+      .select({
+        id: cataloguePublishers.id,
+        sourceAttribution: cataloguePublishers.sourceAttribution,
+      })
+      .from(cataloguePublishers)
+      .where(
+        and(
+          eq(cataloguePublishers.id, operatingContext.cataloguePublisherId),
+          eq(cataloguePublishers.authorityKind, 'platform_reference'),
+          eq(cataloguePublishers.isVisible, 1),
+          isNull(cataloguePublishers.developerOrganisationId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (!publisher) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'The selected publisher is not an available platform curator context.',
+      });
+    }
+    if (!String(publisher.sourceAttribution ?? '').trim()) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Platform-curated submission requires source attribution on the Catalogue Publisher.',
+      });
+    }
+
+    const [development] = await tx
+      .select()
+      .from(developments)
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.cataloguePublisherId, operatingContext.cataloguePublisherId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (!development) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not found in the selected platform curator context.',
+      });
+    }
+
+    await assertDevelopmentPublicTransitionAllowed(tx, id);
+    if (development.transactionType === 'auction') throwAuctionPublicationDisabled();
+
+    const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
+    const blockers = validatePersistedSubmissionReadiness(development, persistedUnits);
+    if (blockers.length > 0) throw submissionValidationError(blockers);
+
+    const openRows = await tx
+      .select({ id: developmentApprovalQueue.id })
+      .from(developmentApprovalQueue)
+      .where(
+        and(
+          eq(developmentApprovalQueue.developmentId, id),
+          inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (openRows.length > 0) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Development already has an unresolved review submission.',
+      });
+    }
+
+    const priorRows = await tx
+      .select({ id: developmentApprovalQueue.id })
+      .from(developmentApprovalQueue)
+      .where(eq(developmentApprovalQueue.developmentId, id))
+      .limit(1)
+      .for('update');
+    const now = mysqlDateTime();
+    await tx
+      .update(developments)
+      .set({
+        approvalStatus: 'pending',
+        isPublished: 0,
+        publishedAt: null,
+        rejectionNote: null,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.cataloguePublisherId, operatingContext.cataloguePublisherId),
+        ),
+      );
+    await tx.insert(developmentApprovalQueue).values({
+      developmentId: id,
+      submittedBy: actor.id,
+      submittedAt: now,
+      status: 'pending',
+      submissionType: priorRows.length > 0 ? 'update' : 'initial',
+      reviewNotes: null,
+      rejectionReason: null,
+      reviewedAt: null,
+      reviewedBy: null,
+      complianceChecks: null,
+    });
+
+    const [submitted] = await tx
+      .select()
+      .from(developments)
+      .where(eq(developments.id, id))
+      .limit(1);
+    return submitted;
+  });
+}
+
+export async function reviewPlatformCuratedDevelopment(
+  id: number,
+  reviewerId: number,
+  operatingContext: { cataloguePublisherId: number },
+  decision: 'approved' | 'rejected' | 'changes_requested',
+  details: {
+    reviewNotes?: string;
+    rejectionReason?: string;
+    complianceChecks?: Record<string, boolean>;
+  } = {},
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  return db.transaction(async (tx: any) => {
+    const [actor] = await tx
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(and(eq(users.id, reviewerId), eq(users.role, 'super_admin')))
+      .limit(1)
+      .for('update');
+    if (!actor) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only an authenticated super-admin can review a platform-curated development.',
+      });
+    }
+
+    const [publisher] = await tx
+      .select({
+        id: cataloguePublishers.id,
+        sourceAttribution: cataloguePublishers.sourceAttribution,
+      })
+      .from(cataloguePublishers)
+      .where(
+        and(
+          eq(cataloguePublishers.id, operatingContext.cataloguePublisherId),
+          eq(cataloguePublishers.authorityKind, 'platform_reference'),
+          eq(cataloguePublishers.isVisible, 1),
+          isNull(cataloguePublishers.developerOrganisationId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (!publisher) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'The selected publisher is not a platform-reference publisher.',
+      });
+    }
+    if (!String(publisher.sourceAttribution ?? '').trim()) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Platform-curated review requires source attribution on the Catalogue Publisher.',
+      });
+    }
+
+    const [development] = await tx
+      .select({ id: developments.id })
+      .from(developments)
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.cataloguePublisherId, operatingContext.cataloguePublisherId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (!development) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not found in the selected platform curator context.',
+      });
+    }
+
+    await completeReviewInTransaction(tx, id, reviewerId, decision, details);
+    const [reviewed] = await tx
+      .select()
+      .from(developments)
+      .where(eq(developments.id, id))
+      .limit(1);
+    return reviewed;
+  });
+}
+
+export async function unpublishPlatformCuratedDevelopment(
+  id: number,
+  userId: number,
+  operatingContext?: { cataloguePublisherId: number } | null,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  return db.transaction(async (tx: any) => {
+    if (!operatingContext?.cataloguePublisherId) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'An explicit platform curator publisher context is required to unpublish a development.',
+      });
+    }
+
+    const [actor] = await tx
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(and(eq(users.id, userId), eq(users.role, 'super_admin')))
+      .limit(1)
+      .for('update');
+    if (!actor) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Only an authenticated super-admin can unpublish a platform-curated development.',
+      });
+    }
+
+    const [publisher] = await tx
+      .select({ id: cataloguePublishers.id })
+      .from(cataloguePublishers)
+      .where(
+        and(
+          eq(cataloguePublishers.id, operatingContext.cataloguePublisherId),
+          eq(cataloguePublishers.authorityKind, 'platform_reference'),
+          isNull(cataloguePublishers.developerOrganisationId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (!publisher) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'The selected publisher is not a platform-reference publisher.',
+      });
+    }
+
+    const [development] = await tx
+      .select({ id: developments.id })
+      .from(developments)
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.cataloguePublisherId, operatingContext.cataloguePublisherId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+    if (!development) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not found in the selected platform curator context.',
+      });
+    }
+
+    return unpublishDevelopmentInTransaction(tx, id);
+  });
+}
+
 /**
- * The only supported privileged publication transition for platform-curated
- * developments in S0. Human review may be bypassed by the curator, but the
- * canonical persisted readiness, brand, inventory, transaction, and actor
- * checks remain mandatory.
+ * The privileged publication transition for platform-curated developments.
+ * It remains readiness-gated and records the operator's approval in the
+ * canonical review history; the separate submit/review route is preferred by
+ * the curated operator workflow.
  */
 async function publishPlatformCuratedDevelopment(
   id: number,
@@ -3300,11 +3618,14 @@ export const developmentService = {
   updatePhase,
   deleteDevelopment,
   publishDevelopment,
+  submitPlatformCuratedDevelopment,
+  reviewPlatformCuratedDevelopment,
   publishPlatformCuratedDevelopment,
   publishPlatformCuratedDevelopmentInTransaction,
   publishDeveloperOwnedDevelopmentInTransaction,
   completeReviewInTransaction,
   unpublishDevelopment,
+  unpublishPlatformCuratedDevelopment,
   unpublishDevelopmentInTransaction,
   saveDraft,
 };

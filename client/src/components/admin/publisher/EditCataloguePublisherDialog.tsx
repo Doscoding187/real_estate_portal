@@ -44,6 +44,7 @@ const formSchema = z.object({
 
   // Company Info
   description: z.string().optional(),
+  sourceAttribution: z.string().min(3, 'Source attribution is required for curated publishing'),
   category: z.string().optional(),
   establishedYear: z.string().optional(),
   website: z.string().url('Invalid URL').optional().or(z.literal('')),
@@ -100,6 +101,7 @@ export function EditCataloguePublisherDialog({
       brandTier: brandData?.brandTier || 'regional',
       logoUrl: brandData?.logoUrl || '',
       description: brandData?.about || '',
+      sourceAttribution: brandData?.sourceAttribution || '',
       category: brandData?.propertyFocus?.[0] || '', // Simple map back
       establishedYear: brandData?.foundedYear?.toString() || '',
       website: brandData?.websiteUrl || '',
@@ -140,6 +142,7 @@ export function EditCataloguePublisherDialog({
         brandTier: brandData.brandTier || 'regional',
         logoUrl: brandData.logoUrl || '',
         description: brandData.about || '',
+        sourceAttribution: brandData.sourceAttribution || '',
         category: brandData.propertyFocus?.[0] || '',
         establishedYear: brandData.foundedYear?.toString() || '',
         website: brandData.websiteUrl || '',
@@ -217,6 +220,7 @@ export function EditCataloguePublisherDialog({
       brandTier: values.brandTier,
       logoUrl: values.logoUrl || undefined,
       description: values.description || undefined,
+      sourceAttribution: values.sourceAttribution,
       category: values.category || undefined,
       establishedYear: values.establishedYear ? parseInt(values.establishedYear) : undefined,
       website: values.website || undefined,
@@ -238,7 +242,7 @@ export function EditCataloguePublisherDialog({
             Edit Catalogue Publisher
           </DialogTitle>
           <DialogDescription>
-            Update details for platform-owned developer profile.
+            Update the curated publisher identity and its authoritative source.
           </DialogDescription>
         </DialogHeader>
 
@@ -360,8 +364,25 @@ export function EditCataloguePublisherDialog({
                       <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Brief description of the developer..."
+                          placeholder="Brief description supported by the recorded source..."
                           className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                    )}
+                  />
+
+                <FormField
+                  control={form.control}
+                  name="sourceAttribution"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Source attribution *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. Official publisher website, accessed 2026-08-14"
                           {...field}
                         />
                       </FormControl>

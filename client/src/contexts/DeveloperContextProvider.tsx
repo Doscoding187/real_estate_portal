@@ -10,6 +10,13 @@ interface CataloguePublisherSummary {
   brandTier?: 'national' | 'regional' | 'boutique';
   identityType?: 'developer' | 'marketing_agency' | 'hybrid';
   totalLeadsReceived?: number;
+  sourceAttribution?: string | null;
+  about?: string | null;
+  propertyFocus?: string[] | null;
+  foundedYear?: number | null;
+  websiteUrl?: string | null;
+  publicContactEmail?: string | null;
+  headOfficeLocation?: string | null;
 }
 
 interface DeveloperContextValue {
@@ -65,6 +72,13 @@ export const DeveloperContextProvider: React.FC<{ children: ReactNode }> = ({ ch
         brandTier: publisherProfile.brandTier,
         identityType: publisherProfile.identityType,
         totalLeadsReceived: publisherProfile.totalLeadsReceived,
+        sourceAttribution: publisherProfile.sourceAttribution,
+        about: publisherProfile.about,
+        propertyFocus: publisherProfile.propertyFocus,
+        foundedYear: publisherProfile.foundedYear,
+        websiteUrl: publisherProfile.websiteUrl,
+        publicContactEmail: publisherProfile.publicContactEmail,
+        headOfficeLocation: publisherProfile.headOfficeLocation,
       };
       setSelectedBrand(brand);
 
