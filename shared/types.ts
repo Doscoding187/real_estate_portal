@@ -771,8 +771,8 @@ export interface Property {
   };
 
   // Location
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
 
   // Highlights
   highlights: string[];

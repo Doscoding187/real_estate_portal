@@ -168,6 +168,34 @@ export const coordinatePairSchema = z
 
 export type CoordinatePair = z.infer<typeof coordinatePairSchema>;
 
+/**
+ * Normalize a stored/public coordinate pair without turning missing values
+ * into zero. Public readers use this at their boundary so a partial, invalid,
+ * or legacy zero pair cannot become a map marker.
+ */
+export function normalizeCoordinatePair(
+  latitude: unknown,
+  longitude: unknown,
+): CoordinatePair | null {
+  const toNumber = (value: unknown): number | null => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'string' && value.trim() === '') return null;
+
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+
+  const normalizedLatitude = toNumber(latitude);
+  const normalizedLongitude = toNumber(longitude);
+  if (normalizedLatitude === null || normalizedLongitude === null) return null;
+
+  const result = coordinatePairSchema.safeParse({
+    latitude: normalizedLatitude,
+    longitude: normalizedLongitude,
+  });
+  return result.success ? result.data : null;
+}
+
 export type ManualLocationEvidence = {
   propertyType?: string | null;
   discovery:

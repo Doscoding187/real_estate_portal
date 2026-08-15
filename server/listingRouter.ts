@@ -12,8 +12,10 @@ import { agents, leads, locations, properties } from '../drizzle/schema';
 import * as db from './db';
 import { ENV } from './_core/env';
 import {
+  buildListingLocationPersistence,
+  buildUnresolvedDraftLocation,
   ListingLocationResolutionError,
-  parseOptionalCoordinatePair,
+  prepareListingLocationUpdate,
   resolveCanonicalListingLocation,
   validateListingRecordLocation,
 } from './services/listingLocationResolver';
@@ -114,17 +116,6 @@ async function normalizeLocationInput(inputLocation: { placeId?: string; locatio
   }
 
   return { sanitizedPlaceId, resolvedLocationId };
-}
-
-function parseDraftCoordinates(location: { latitude?: number | null; longitude?: number | null }) {
-  try {
-    return parseOptionalCoordinatePair(location.latitude, location.longitude);
-  } catch (error) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: error instanceof Error ? error.message : 'Enter a valid property map location.',
-    });
-  }
 }
 
 const LISTING_LIFECYCLE_ERROR_PATTERNS = [
@@ -593,38 +584,20 @@ export const listingRouter = router({
       } catch (error) {
         if (error instanceof ListingLocationResolutionError) {
           if (input.status !== 'pending_review') {
-            const coordinatePair = parseDraftCoordinates(input.location);
             console.warn('[ListingRouter] Draft location remains unresolved:', error.message);
-            resolvedLocation = {
-              provinceId: null,
-              cityId: null,
-              suburbId: null,
-              privateAddress: input.location.privateAddress || null,
-              coordinatePair,
-              coordinateSource: input.location.coordinateSource || null,
-              locationConfirmationState:
-                input.location.locationConfirmationState || 'needs_confirmation',
-              publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
-              providerLocationPlaceId: input.location.providerLocationPlaceId || null,
-            };
+            resolvedLocation = buildUnresolvedDraftLocation({
+              ...input.location,
+              propertyType: input.propertyType,
+            });
           } else {
             throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
           }
         } else if (input.status !== 'pending_review') {
-          const coordinatePair = parseDraftCoordinates(input.location);
           console.warn('[ListingRouter] Draft location resolver unavailable:', error);
-          resolvedLocation = {
-            provinceId: null,
-            cityId: null,
-            suburbId: null,
-            privateAddress: input.location.privateAddress || null,
-            coordinatePair,
-            coordinateSource: input.location.coordinateSource || null,
-            locationConfirmationState:
-              input.location.locationConfirmationState || 'needs_confirmation',
-            publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
-            providerLocationPlaceId: input.location.providerLocationPlaceId || null,
-          };
+          resolvedLocation = buildUnresolvedDraftLocation({
+            ...input.location,
+            propertyType: input.propertyType,
+          });
         } else {
           throw error;
         }
@@ -632,6 +605,7 @@ export const listingRouter = router({
 
       // GUARD: Normalize placeId and validate location_id
       const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(input.location);
+      const persistedLocation = buildListingLocationPersistence(resolvedLocation);
       const propertyDetails = normalizePropertyDetailsForPublicContract(
         input.propertyDetails,
         input.pricing,
@@ -649,22 +623,22 @@ export const listingRouter = router({
         description: input.description,
         pricing: input.pricing,
         propertyDetails,
-        address: input.location.address,
-        latitude: input.location.latitude,
-        longitude: input.location.longitude,
-        city: input.location.city,
-        suburb: input.location.suburb,
-        province: input.location.province,
-        postalCode: input.location.postalCode,
+        address: persistedLocation.address,
+        latitude: persistedLocation.latitude,
+        longitude: persistedLocation.longitude,
+        city: persistedLocation.city,
+        suburb: persistedLocation.suburb,
+        province: persistedLocation.province,
+        postalCode: persistedLocation.postalCode,
         placeId: sanitizedPlaceId,
         locationId: resolvedLocationId, // New: Direct location_id if from numeric placeId
-        provinceId: resolvedLocation.provinceId,
-        cityId: resolvedLocation.cityId,
-        suburbId: resolvedLocation.suburbId,
-        privateAddress: resolvedLocation.privateAddress,
-        coordinateSource: resolvedLocation.coordinateSource,
-        locationConfirmationState: resolvedLocation.locationConfirmationState,
-        publicLocationPrecision: resolvedLocation.publicLocationPrecision,
+        provinceId: persistedLocation.provinceId,
+        cityId: persistedLocation.cityId,
+        suburbId: persistedLocation.suburbId,
+        privateAddress: persistedLocation.privateAddress,
+        coordinateSource: persistedLocation.coordinateSource,
+        locationConfirmationState: persistedLocation.locationConfirmationState,
+        publicLocationPrecision: persistedLocation.publicLocationPrecision,
         slug,
         media,
         sellerProspectConversion,
@@ -863,96 +837,57 @@ export const listingRouter = router({
               if (listing.status !== 'draft') {
                 throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
               }
-              const coordinatePair = parseDraftCoordinates(input.location);
               console.warn(
                 '[ListingRouter] Draft location remains unresolved during update:',
                 error.message,
               );
-              resolvedLocation = {
-                provinceId: null,
-                cityId: null,
-                suburbId: null,
-                privateAddress: input.location.privateAddress || null,
-                coordinatePair,
-                coordinateSource: input.location.coordinateSource || null,
-                locationConfirmationState:
-                  input.location.locationConfirmationState || 'needs_confirmation',
-                publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
-                providerLocationPlaceId: input.location.providerLocationPlaceId || null,
-              };
+              resolvedLocation = buildUnresolvedDraftLocation({
+                ...input.location,
+                propertyType: nextPropertyType,
+              });
             } else if (listing.status !== 'draft') {
               throw error;
             } else {
-              const coordinatePair = parseDraftCoordinates(input.location);
               console.warn(
                 '[ListingRouter] Draft location resolver unavailable during update:',
                 error,
               );
-              resolvedLocation = {
-                provinceId: null,
-                cityId: null,
-                suburbId: null,
-                privateAddress: input.location.privateAddress || null,
-                coordinatePair,
-                coordinateSource: input.location.coordinateSource || null,
-                locationConfirmationState:
-                  input.location.locationConfirmationState || 'needs_confirmation',
-                publicLocationPrecision: input.location.publicLocationPrecision || 'approximate',
-                providerLocationPlaceId: input.location.providerLocationPlaceId || null,
-              };
+              resolvedLocation = buildUnresolvedDraftLocation({
+                ...input.location,
+                propertyType: nextPropertyType,
+              });
             }
           }
 
           const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(
             input.location,
           );
-          const materialLocationChange = [
-            ['address', input.location.address, listing.address],
-            ['city', input.location.city, listing.city],
-            ['suburb', input.location.suburb, listing.suburb],
-            ['province', input.location.province, listing.province],
-            ['postalCode', input.location.postalCode, listing.postalCode],
-            ['latitude', input.location.latitude, listing.latitude],
-            ['longitude', input.location.longitude, listing.longitude],
-            ['provinceId', input.location.provinceId, listing.provinceId],
-            ['cityId', input.location.cityId, listing.cityId],
-            ['suburbId', input.location.suburbId, listing.suburbId],
-            [
-              'privateAddress',
-              JSON.stringify(input.location.privateAddress || null),
-              JSON.stringify(listing.privateAddress || null),
-            ],
-          ].some(([, next, previous]) => String(next ?? '') !== String(previous ?? ''));
-          const explicitlyReconfirmed =
+          const preparedLocationUpdate = prepareListingLocationUpdate(
+            listing as Record<string, unknown>,
+            resolvedLocation,
             input.location.locationConfirmationState === 'confirmed' &&
-            Boolean(input.location.coordinateSource);
-          const requiresReconfirmation =
-            listing.locationConfirmationState === 'confirmed' &&
-            materialLocationChange &&
-            !explicitlyReconfirmed;
+              Boolean(resolvedLocation.coordinateSource),
+          );
+          const locationToPersist = preparedLocationUpdate.location;
 
-          updatePayload.address = input.location.address || null;
+          updatePayload.address = locationToPersist.address;
           updatePayload.latitude =
-            input.location.latitude == null ? null : Number(input.location.latitude).toFixed(7);
+            locationToPersist.latitude === null ? null : locationToPersist.latitude.toFixed(7);
           updatePayload.longitude =
-            input.location.longitude == null ? null : Number(input.location.longitude).toFixed(7);
-          updatePayload.city = input.location.city;
-          updatePayload.suburb = input.location.suburb || null;
-          updatePayload.province = input.location.province;
-          updatePayload.postalCode = input.location.postalCode || null;
+            locationToPersist.longitude === null ? null : locationToPersist.longitude.toFixed(7);
+          updatePayload.city = locationToPersist.city;
+          updatePayload.suburb = locationToPersist.suburb;
+          updatePayload.province = locationToPersist.province;
+          updatePayload.postalCode = locationToPersist.postalCode;
           updatePayload.placeId = sanitizedPlaceId;
           updatePayload.locationId = resolvedLocationId;
-          updatePayload.provinceId = resolvedLocation.provinceId;
-          updatePayload.cityId = resolvedLocation.cityId;
-          updatePayload.suburbId = resolvedLocation.suburbId;
-          updatePayload.privateAddress = resolvedLocation.privateAddress;
-          updatePayload.coordinateSource = requiresReconfirmation
-            ? null
-            : resolvedLocation.coordinateSource;
-          updatePayload.locationConfirmationState = requiresReconfirmation
-            ? 'needs_confirmation'
-            : resolvedLocation.locationConfirmationState;
-          updatePayload.publicLocationPrecision = resolvedLocation.publicLocationPrecision;
+          updatePayload.provinceId = locationToPersist.provinceId;
+          updatePayload.cityId = locationToPersist.cityId;
+          updatePayload.suburbId = locationToPersist.suburbId;
+          updatePayload.privateAddress = locationToPersist.privateAddress;
+          updatePayload.coordinateSource = locationToPersist.coordinateSource;
+          updatePayload.locationConfirmationState = locationToPersist.locationConfirmationState;
+          updatePayload.publicLocationPrecision = locationToPersist.publicLocationPrecision;
 
           // Remove nested location object strictly to avoid Drizzle schema errors.
           delete updatePayload.location;

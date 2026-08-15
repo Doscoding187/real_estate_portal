@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 import { buildPropertySearchUrl } from '@/lib/heroJourneySearch';
+import { normalizeCoordinatePair } from '@shared/location-contract';
 
 export default function SuburbPage({
   params,
@@ -296,13 +297,25 @@ export default function SuburbPage({
                         }
                       : undefined
                   }
-                  properties={listings.map((listing: any) => ({
-                    id: listing.id,
-                    latitude: Number(listing.latitude),
-                    longitude: Number(listing.longitude),
-                    title: listing.title,
-                    price: listing.price,
-                  }))}
+                  properties={listings
+                    .map((listing: any) => {
+                      const publicCoordinates = normalizeCoordinatePair(
+                        listing.latitude,
+                        listing.longitude,
+                      );
+                      if (!publicCoordinates) return null;
+
+                      return {
+                        id: listing.id,
+                        latitude: publicCoordinates.latitude,
+                        longitude: publicCoordinates.longitude,
+                        title: listing.title,
+                        price: listing.price,
+                      };
+                    })
+                    .filter(
+                      (property): property is NonNullable<typeof property> => property !== null,
+                    )}
                 />
               </div>
             )}

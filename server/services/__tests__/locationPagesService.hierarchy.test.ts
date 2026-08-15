@@ -150,4 +150,66 @@ describe('locationPagesService canonical hierarchy', () => {
       propertiesForRent: 0,
     });
   });
+
+  it('projects location-page inventory from public fields only', async () => {
+    const db = makeDb([
+      [
+        {
+          id: 12,
+          name: 'Johannesburg',
+          slug: 'johannesburg',
+          provinceId: 1,
+          provinceName: 'Gauteng',
+          provinceSlug: 'gauteng',
+          isMetro: 1,
+          latitude: null,
+          longitude: null,
+        },
+      ],
+      [],
+      [
+        {
+          id: 501,
+          sourceListingId: 9001,
+          address: 'PRIVATE LEGACY ADDRESS',
+          publicAddress: 'Katherine Street, Sandton, Johannesburg',
+          latitude: '-26.1076',
+          longitude: '28.0567',
+          publicLatitude: null,
+          publicLongitude: null,
+          publicLocationPrecision: 'approximate',
+          zipCode: '2196',
+          placeId: 'private-provider-identity',
+          privateAddress: { streetNumber: '12', unitNumber: 'Unit 4' },
+          images: [],
+        },
+      ],
+      [],
+      [{ totalListings: 1, avgPrice: 2_500_000 }],
+      [],
+    ]);
+    getDb.mockResolvedValue(db);
+
+    const result = await locationPagesService.getCityData('gauteng', 'johannesburg', {
+      includeInventoryPreview: true,
+    });
+
+    expect(result?.featuredProperties[0]).toMatchObject({
+      address: 'Katherine Street, Sandton, Johannesburg',
+      latitude: null,
+      longitude: null,
+      publicLatitude: null,
+      publicLongitude: null,
+      publicLocationPrecision: 'approximate',
+      placeId: null,
+      zipCode: null,
+    });
+    expect(result?.featuredProperties[0]).not.toHaveProperty('privateAddress');
+    expect(result?.featuredProperties[0]).not.toHaveProperty('sourceListingId');
+    expect(JSON.stringify(result?.featuredProperties[0])).not.toContain('PRIVATE LEGACY ADDRESS');
+    expect(JSON.stringify(result?.featuredProperties[0])).not.toContain('Unit 4');
+    expect(JSON.stringify(result?.featuredProperties[0])).not.toContain(
+      'private-provider-identity',
+    );
+  });
 });

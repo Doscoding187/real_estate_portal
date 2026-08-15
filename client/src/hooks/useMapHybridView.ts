@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
+import { normalizeCoordinatePair } from '@shared/location-contract';
 
 export interface PropertyMapItem {
   id: number;
@@ -59,21 +60,30 @@ export function useMapHybridView(options: UseMapHybridViewOptions = {}) {
   const propertiesData = feedItems
     ? feedItems
         .filter((item: any) => item.property?.location)
-        .map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          price: item.property?.price || 0,
-          priceMax: item.property?.priceMax,
-          latitude: item.property?.location?.latitude || 0,
-          longitude: item.property?.location?.longitude || 0,
-          imageUrl: item.media?.[0]?.thumbnailUrl || item.media?.[0]?.url || '',
-          propertyType: item.property?.type || 'Property',
-          beds: item.property?.specs?.bedrooms,
-          baths: item.property?.specs?.bathrooms,
-          size: item.property?.specs?.size,
-          location: `${item.property?.location?.suburb || ''}, ${item.property?.location?.city || ''}`,
-          isSponsored: item.isFeatured,
-        }))
+        .map((item: any): PropertyMapItem | null => {
+          const publicCoordinates = normalizeCoordinatePair(
+            item.property?.location?.latitude,
+            item.property?.location?.longitude,
+          );
+          if (!publicCoordinates) return null;
+
+          return {
+            id: item.id,
+            title: item.title,
+            price: item.property?.price || 0,
+            priceMax: item.property?.priceMax,
+            latitude: publicCoordinates.latitude,
+            longitude: publicCoordinates.longitude,
+            imageUrl: item.media?.[0]?.thumbnailUrl || item.media?.[0]?.url || '',
+            propertyType: item.property?.type || 'Property',
+            beds: item.property?.specs?.bedrooms,
+            baths: item.property?.specs?.bathrooms,
+            size: item.property?.specs?.size,
+            location: `${item.property?.location?.suburb || ''}, ${item.property?.location?.city || ''}`,
+            isSponsored: item.isFeatured,
+          };
+        })
+        .filter((item): item is PropertyMapItem => item !== null)
     : [];
 
   const isLoading = propertiesQuery.isLoading;
