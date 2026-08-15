@@ -19,6 +19,7 @@ interface SidebarFiltersProps {
   filterCounts?: {
     byType?: Record<string, number>;
     byBedrooms?: Record<string, number>;
+    byBathrooms?: Record<string, number>;
     byLocation?: Array<{ name: string; slug: string; count: number }>;
   };
   locationContext?: SearchResults['locationContext'];
@@ -177,6 +178,15 @@ export function SidebarFilters({
     }
   };
 
+  const handleBathroomChange = (bathrooms: number) => {
+    if (filters.minBathrooms === bathrooms) {
+      const { minBathrooms, ...rest } = filters;
+      onFilterChange(rest);
+    } else {
+      onFilterChange({ ...filters, minBathrooms: bathrooms });
+    }
+  };
+
   const handleListingSourceChange = (source: SearchFilters['listingSource'] | undefined) => {
     if (!source || filters.listingSource === source) {
       const { listingSource, ...rest } = filters;
@@ -297,6 +307,15 @@ export function SidebarFilters({
       .filter(v => Number.isFinite(v) && v > 0)
       .sort((a, b) => a - b)
       .slice(0, 5);
+  })();
+  const bathroomOptions = (() => {
+    const byBathrooms = filterCounts?.byBathrooms ?? {};
+    if (Object.keys(byBathrooms).length === 0) return [1, 2, 3, 4];
+    return Object.keys(byBathrooms)
+      .map(v => Number(v))
+      .filter(v => Number.isFinite(v) && v > 0)
+      .sort((a, b) => a - b)
+      .slice(0, 4);
   })();
 
   return (
@@ -559,6 +578,32 @@ export function SidebarFilters({
                 >
                   {num}
                   {num === 5 ? '+' : ''}
+                </Button>
+              ))}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* No. of Bathrooms */}
+        <AccordionItem value="bathrooms">
+          <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
+            No. of Bathrooms
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {bathroomOptions.map(num => (
+                <Button
+                  key={num}
+                  variant={filters.minBathrooms === num ? 'default' : 'outline'}
+                  size="sm"
+                  className={`rounded-full w-10 h-10 p-0 ${
+                    filters.minBathrooms === num
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
+                      : 'text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600'
+                  }`}
+                  onClick={() => handleBathroomChange(num)}
+                >
+                  {num}+
                 </Button>
               ))}
             </div>

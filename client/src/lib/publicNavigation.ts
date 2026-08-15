@@ -112,7 +112,14 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     destination: '/property-for-sale',
     homepageVisible: true,
     homepageEnabled: true,
-    supportedFields: ['location', 'propertyType', 'minPrice', 'maxPrice'],
+    supportedFields: [
+      'location',
+      'propertyType',
+      'minPrice',
+      'maxPrice',
+      'minBedrooms',
+      'minBathrooms',
+    ],
   },
   {
     key: 'rent',

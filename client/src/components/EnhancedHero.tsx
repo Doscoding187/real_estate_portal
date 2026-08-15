@@ -170,6 +170,8 @@ export function EnhancedHero({
     propertyTypes: [] as string[],
     priceMin: '',
     priceMax: '',
+    minBedrooms: '',
+    minBathrooms: '',
 
     // Rental filters
     budgetMin: '',
@@ -289,6 +291,8 @@ export function EnhancedHero({
         propertyType: filters.propertyTypes[0],
         minPrice: filters.priceMin,
         maxPrice: filters.priceMax,
+        minBedrooms: filters.minBedrooms,
+        minBathrooms: filters.minBathrooms,
       }),
     );
   };
@@ -755,6 +759,56 @@ export function EnhancedHero({
                                 <SelectItem value="5000000">R 5,000,000</SelectItem>
                                 <SelectItem value="10000000">R 10,000,000</SelectItem>
                                 <SelectItem value="50000000">R 50,000,000+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Bedrooms
+                            </Label>
+                            <Select
+                              value={filters.minBedrooms || 'any'}
+                              onValueChange={val =>
+                                handleFilterChange('minBedrooms', val === 'any' ? '' : val)
+                              }
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Bedrooms" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="any">Any Bedrooms</SelectItem>
+                                {[1, 2, 3, 4, 5].map(value => (
+                                  <SelectItem key={value} value={String(value)}>
+                                    {value === 5
+                                      ? '5+ Bedrooms'
+                                      : `${value} Bedroom${value === 1 ? '' : 's'}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              Bathrooms
+                            </Label>
+                            <Select
+                              value={filters.minBathrooms || 'any'}
+                              onValueChange={val =>
+                                handleFilterChange('minBathrooms', val === 'any' ? '' : val)
+                              }
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Any Bathrooms" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="any">Any Bathrooms</SelectItem>
+                                {[1, 2, 3, 4].map(value => (
+                                  <SelectItem key={value} value={String(value)}>
+                                    {value} Bathroom{value === 1 ? '' : 's'}+
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>

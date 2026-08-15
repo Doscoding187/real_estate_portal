@@ -199,6 +199,17 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).toHaveBeenCalledWith(expect.stringContaining('locationId=city%3A12'));
   });
 
+  it('exposes the governed bedroom and bathroom filters for Buy', () => {
+    render(<EnhancedHero />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Buy' })[0]);
+
+    expect(screen.getByText('Bedrooms')).toBeInTheDocument();
+    expect(screen.getByText('Bathrooms')).toBeInTheDocument();
+    expect(screen.getByText('Any Bedrooms')).toBeInTheDocument();
+    expect(screen.getByText('Any Bathrooms')).toBeInTheDocument();
+  });
+
   it('retains a location when Buy is selected after location-first input', () => {
     const onTabChange = vi.fn();
     render(<EnhancedHero onTabChange={onTabChange} />);

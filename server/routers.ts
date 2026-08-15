@@ -942,21 +942,21 @@ const appRouterConfig = {
             Number.isFinite(resolvedPublisherIdCandidate) &&
             resolvedPublisherIdCandidate > 0
           ) {
-              const [brand] = await drizzleDb
-                .select({
-                  id: cataloguePublishers.id,
-                  brandName: cataloguePublishers.name,
-                  slug: cataloguePublishers.slug,
-                  logoUrl: cataloguePublishers.logoUrl,
-                  about: cataloguePublishers.about,
-                  headOfficeLocation: cataloguePublishers.headOfficeLocation,
-                  websiteUrl: cataloguePublishers.websiteUrl,
-                  publicContactEmail: cataloguePublishers.publicContactEmail,
-                  brandTier: cataloguePublishers.brandTier,
-                  propertyFocus: cataloguePublishers.propertyFocus,
-                })
-                .from(cataloguePublishers)
-                .where(eq(cataloguePublishers.id, resolvedPublisherIdCandidate))
+            const [brand] = await drizzleDb
+              .select({
+                id: cataloguePublishers.id,
+                brandName: cataloguePublishers.name,
+                slug: cataloguePublishers.slug,
+                logoUrl: cataloguePublishers.logoUrl,
+                about: cataloguePublishers.about,
+                headOfficeLocation: cataloguePublishers.headOfficeLocation,
+                websiteUrl: cataloguePublishers.websiteUrl,
+                publicContactEmail: cataloguePublishers.publicContactEmail,
+                brandTier: cataloguePublishers.brandTier,
+                propertyFocus: cataloguePublishers.propertyFocus,
+              })
+              .from(cataloguePublishers)
+              .where(eq(cataloguePublishers.id, resolvedPublisherIdCandidate))
               .limit(1);
 
             if (brand) {
@@ -978,6 +978,23 @@ const appRouterConfig = {
           images: approvedPublicProperty.images,
           media: approvedPublicProperty.media,
         };
+      }),
+
+    getPublicByIds: publicProcedure
+      .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(4) }))
+      .query(async ({ input }) => {
+        const uniqueIds = Array.from(new Set(input.ids));
+        const resolutions = await Promise.all(
+          uniqueIds.map(propertyId => resolveApprovedPublicProperty(propertyId)),
+        );
+
+        // Comparison is a Buy decision surface. Keep it on the same approved
+        // public projection and explicit sale universe as the public search
+        // and detail routes; never fall back to legacy inventory search.
+        return resolutions.filter(
+          (resolution): resolution is NonNullable<typeof resolution> =>
+            resolution !== null && String(resolution.property.listingType).toLowerCase() === 'sale',
+        );
       }),
 
     getImages: publicProcedure
