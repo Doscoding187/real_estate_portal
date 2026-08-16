@@ -53,6 +53,7 @@ import {
   isExplicitRentListing,
   withRentalPeriod,
 } from '@/lib/rentPresentation';
+import { getPropertySearchReturn } from '@/lib/searchReturnState';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
 import { BondCalculator } from '@/components/BondCalculator';
@@ -443,8 +444,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const handleReturnToResults = () => {
     const fallback = isRentalListing ? '/property-to-rent' : '/property-for-sale';
     if (typeof window !== 'undefined') {
-      const rememberedSearch = window.sessionStorage.getItem('buy-search-return');
-      if (!isRentalListing && rememberedSearch?.startsWith('/property-for-sale')) {
+      const rememberedSearch = getPropertySearchReturn(
+        window.sessionStorage,
+        isRentalListing ? 'to-rent' : 'for-sale',
+      );
+      if (rememberedSearch) {
         setLocation(rememberedSearch);
         return;
       }
@@ -458,7 +462,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       const referrer = new URL(document.referrer);
       if (
         referrer.origin === window.location.origin &&
-        /^\/property-(for-sale|to-rent)$/.test(referrer.pathname)
+        referrer.pathname === (isRentalListing ? '/property-to-rent' : '/property-for-sale')
       ) {
         window.history.back();
         return;
@@ -1951,11 +1955,14 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                   Keep Browsing
                 </p>
                 <h3 className="mt-1 text-2xl font-bold text-slate-900">
-                  Still comparing? Explore more in {property.suburb || property.city}
+                  {isRentalListing
+                    ? `Explore more rentals in ${property.suburb || property.city}`
+                    : `Still comparing? Explore more in ${property.suburb || property.city}`}
                 </h3>
                 <p className="mt-2 text-sm text-slate-600">
-                  These listings match the same area or property type, so you can compare options
-                  without leaving the marketplace.
+                  {isRentalListing
+                    ? 'These rentals match the same area or property type, so you can keep exploring without leaving the marketplace.'
+                    : 'These listings match the same area or property type, so you can compare options without leaving the marketplace.'}
                 </p>
               </div>
               <Button
@@ -2013,9 +2020,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                             </p>
                           )}
                         </div>
-                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
-                          Compare
-                        </span>
+                        {!isRentalListing && (
+                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-blue-700">
+                            Compare
+                          </span>
+                        )}
                       </div>
 
                       {/* Title */}

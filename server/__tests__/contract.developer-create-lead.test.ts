@@ -117,4 +117,44 @@ describe('developer.createLead contract', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     expect(mockCapturePublicLead).not.toHaveBeenCalled();
   });
+
+  it('passes a rental viewing request through the existing lead custody path', async () => {
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    await caller.developer.createLead({
+      developmentId: 88,
+      cataloguePublisherId: 21,
+      unitId: 'rent-unit-2',
+      unitName: 'Two Bedroom Garden Apartment',
+      unitPriceFrom: 12000,
+      unitBedrooms: 2,
+      unitBathrooms: 1,
+      name: 'Ava Renter',
+      email: 'ava@example.com',
+      phone: '0821111111',
+      message: 'I would like to request a viewing.',
+      leadType: 'viewing_request',
+      leadSource: 'development_detail_viewing',
+      sourceSurface: 'development_rent_detail_viewing',
+      captureRequestId: 'rent-viewing-contract',
+      consent: {
+        accepted: true,
+        version: '2026-08-02',
+        source: 'developer_contract_test',
+      },
+    });
+
+    expect(mockCapturePublicLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developmentId: 88,
+        unitId: 'rent-unit-2',
+        leadType: 'viewing_request',
+        leadSource: 'development_detail_viewing',
+      }),
+    );
+  });
 });

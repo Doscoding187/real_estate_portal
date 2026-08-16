@@ -59,6 +59,18 @@ describe('public Search Area request validation', () => {
     ).toBeUndefined();
   });
 
+  it('accepts only canonical residential rental property types', () => {
+    for (const propertyType of ['apartment', 'house', 'townhouse', 'cluster_home', 'farm']) {
+      expect(validatePublicSearchInput({ listingType: 'rent', propertyType })).toBeUndefined();
+    }
+
+    for (const propertyType of ['villa', 'plot', 'commercial', 'shared_living']) {
+      expect(validatePublicSearchInput({ listingType: 'rent', propertyType })).toMatchObject({
+        path: 'propertyType',
+      });
+    }
+  });
+
   it('rejects mixed authority, mixed level, invalid and excessive selections', () => {
     expect(
       validatePublicSearchInput({

@@ -27,6 +27,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import {
   getHomepageHeroJourneys,
+  isHomepageHeroJourneyEnabled,
   normalizePublicHeroJourney,
   type PublicHeroJourneyKey,
 } from '@/lib/publicNavigation';
@@ -36,6 +37,7 @@ import {
   BUY_PROPERTY_TYPE_OPTIONS,
   getPriceRangeError,
 } from '@/lib/heroJourneySearch';
+import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import { LocationNode } from '@/types/location';
 import { VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED } from '@/const';
@@ -122,7 +124,9 @@ export function EnhancedHero({
   // the explicit intent URL.
   const activeTab = controlledTab || internalTab;
   const hasExplicitJourney = String(activeTab || '').trim().length > 0;
-  const normalizedActiveTab = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) || '' : '';
+  const requestedJourney = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) || '' : '';
+  const normalizedActiveTab =
+    requestedJourney === 'rent' && !isHomepageHeroJourneyEnabled('rent') ? '' : requestedJourney;
   const hasSelectedJourney = normalizedActiveTab.length > 0;
   const locationInputRef = useRef<HTMLInputElement>(null);
   const previousJourneyRef = useRef(normalizedActiveTab);
@@ -216,17 +220,14 @@ export function EnhancedHero({
       },
     },
     rent: {
-      intents: ['Residential', 'Commercial', 'Shared Living'],
-      propertyTypes: {
-        Residential: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Room', 'Studio'],
-        Commercial: ['Office', 'Retail', 'Industrial', 'Warehouse'],
-        'Shared Living': [
-          'Room in Apartment',
-          'Room in House',
-          'Co-Living Space',
-          'Student Accommodation',
-        ],
-      },
+      intents: ['Residential'],
+      propertyTypes: [
+        { value: 'house', label: 'House' },
+        { value: 'apartment', label: 'Apartment' },
+        { value: 'townhouse', label: 'Townhouse' },
+        { value: 'cluster_home', label: 'Cluster home' },
+        { value: 'farm', label: 'Farm / smallholding' },
+      ].filter(option => (RENT_PUBLIC_PROPERTY_TYPES as readonly string[]).includes(option.value)),
     },
     developments: {
       types: [
@@ -675,7 +676,7 @@ export function EnhancedHero({
                   <div className="mt-5 border-t border-slate-100 pt-5 animate-in slide-in-from-top-2 duration-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       {/* BUY FILTERS */}
-                      {activeTab === 'buy' && (
+                      {normalizedActiveTab === 'buy' && (
                         <>
                           {priceRangeError && (
                             <p
@@ -816,7 +817,7 @@ export function EnhancedHero({
                       )}
 
                       {/* RENTAL FILTERS */}
-                      {activeTab === 'rent' && (
+                      {normalizedActiveTab === 'rent' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -831,33 +832,31 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {Object.values(filterConfig.rent.propertyTypes)
-                                  .flat()
-                                  .map((type: string) => (
-                                    <SelectItem key={type} value={type}>
-                                      {type}
-                                    </SelectItem>
-                                  ))}
+                                {filterConfig.rent.propertyTypes.map((option: any) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
 
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Max Budget
+                              Max monthly rent
                             </Label>
                             <Select
                               value={filters.budgetMax}
                               onValueChange={val => handleFilterChange('budgetMax', val)}
                             >
                               <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                                <SelectValue placeholder="Any Budget" />
+                                <SelectValue placeholder="Any monthly rent" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="5000">R 5,000</SelectItem>
-                                <SelectItem value="10000">R 10,000</SelectItem>
-                                <SelectItem value="20000">R 20,000</SelectItem>
-                                <SelectItem value="50000">R 50,000+</SelectItem>
+                                <SelectItem value="5000">R 5,000 / month</SelectItem>
+                                <SelectItem value="10000">R 10,000 / month</SelectItem>
+                                <SelectItem value="20000">R 20,000 / month</SelectItem>
+                                <SelectItem value="50000">R 50,000+ / month</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -865,7 +864,7 @@ export function EnhancedHero({
                       )}
 
                       {/* DEVELOPMENTS FILTERS */}
-                      {activeTab === 'developments' && (
+                      {normalizedActiveTab === 'developments' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -940,7 +939,7 @@ export function EnhancedHero({
                       )}
 
                       {/* PLOT & LAND FILTERS */}
-                      {activeTab === 'plot_land' && (
+                      {normalizedActiveTab === 'plot_land' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1000,7 +999,7 @@ export function EnhancedHero({
                       )}
 
                       {/* COMMERCIAL FILTERS */}
-                      {activeTab === 'commercial' && (
+                      {normalizedActiveTab === 'commercial' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1060,7 +1059,7 @@ export function EnhancedHero({
                       )}
 
                       {/* SHARED LIVING FILTERS */}
-                      {activeTab === 'shared_living' && (
+                      {normalizedActiveTab === 'shared_living' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

@@ -16,7 +16,7 @@ vi.mock('@/lib/analytics', () => ({
 }));
 
 describe('LocationHeroSection Rent controls', () => {
-  it('does not expose unsupported lease-term or furnished controls', () => {
+  it('exposes truthful Rent controls through the canonical journey gate', () => {
     render(
       <LocationHeroSection
         locationName="Johannesburg"
@@ -25,13 +25,13 @@ describe('LocationHeroSection Rent controls', () => {
         locationId={12}
         backgroundImage="/johannesburg.jpg"
         listingCount={0}
-        activeTab="rental"
+        neutralMode
       />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Rental' }));
-
-    expect(screen.getByText('Max Budget')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rental' })).toBeInTheDocument();
+    expect(screen.getByText('Max monthly rent')).toBeInTheDocument();
     expect(screen.queryByText('Lease Term')).not.toBeInTheDocument();
     expect(screen.queryByText('Furnished Only')).not.toBeInTheDocument();
   });

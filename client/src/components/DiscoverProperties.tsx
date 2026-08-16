@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { buildDiscoverBrowseHref, buildDiscoverCardHref } from '@/lib/publicDiscoveryRoutes';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { Button } from '@/components/ui/button';
 
 interface PropertyType {
@@ -58,11 +59,6 @@ const propertyTypes: PropertyType[] = [
     image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
     listingType: 'rent',
   },
-  {
-    type: 'Studios',
-    image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&h=600&fit=crop',
-    listingType: 'rent',
-  },
   // New Developments
   {
     type: 'Ready to Move',
@@ -113,8 +109,11 @@ export function DiscoverProperties({
   subtitle,
   locationName = 'South Africa',
 }: DiscoverPropertiesProps = {}) {
+  const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const defaultTitle = `Browse by city, category, and property journey`;
-  const defaultSubtitle = `Not sure what to search yet? Explore homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
+  const defaultSubtitle = rentJourneyEnabled
+    ? `Not sure what to search yet? Explore homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`
+    : `Not sure what to search yet? Explore homes and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
 
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
@@ -176,6 +175,7 @@ export function DiscoverProperties({
   };
 
   const handleRentClick = () => {
+    if (!rentJourneyEnabled) return;
     setRentExpanded(!rentExpanded);
     if (!rentExpanded) {
       setListingType('rent');
@@ -237,7 +237,9 @@ export function DiscoverProperties({
                 { id: 'rent', label: 'Rent' },
                 { id: 'developments', label: 'Developments' },
               ] as const
-            ).map(tab => {
+            )
+              .filter(tab => tab.id !== 'rent' || rentJourneyEnabled)
+              .map(tab => {
               const isActive = listingType === tab.id;
               return (
                 <button
@@ -315,8 +317,8 @@ export function DiscoverProperties({
                 </div>
               </div>
 
-              {/* Properties for Rent */}
-              <div className="border-b border-slate-100">
+              {rentJourneyEnabled ? (
+                <div className="border-b border-slate-100">
                 <button
                   onClick={handleRentClick}
                   className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
@@ -353,7 +355,8 @@ export function DiscoverProperties({
                     </a>
                   </div>
                 </div>
-              </div>
+                </div>
+              ) : null}
 
               {/* New Developments */}
               <div>

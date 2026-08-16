@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_MANUAL_PROPERTY_TYPES,
   BUY_PUBLIC_PROPERTY_TYPES,
+  RENT_PUBLIC_PROPERTY_TYPES,
   getAuthorablePropertyTypes,
   getListingAuthoringValidationMessage,
   PROPERTY_TYPE_DEFINITIONS,
@@ -28,6 +29,13 @@ describe('canonical manual property taxonomy', () => {
       'apartment',
       'house',
       'villa',
+      'townhouse',
+      'cluster_home',
+      'farm',
+    ]);
+    expect(RENT_PUBLIC_PROPERTY_TYPES).toEqual([
+      'apartment',
+      'house',
       'townhouse',
       'cluster_home',
       'farm',

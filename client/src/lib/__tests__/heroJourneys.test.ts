@@ -23,9 +23,13 @@ describe('hero journey authority', () => {
       kind: 'direct-navigation',
     });
     expect(getPublicHeroJourney('buy').homepageEnabled).toBe(true);
-    expect(getPublicHeroJourney('rent').homepageEnabled).toBe(false);
+    expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('find_agent').homepageEnabled).toBe(false);
-    expect(getHomepageHeroJourneys().map(journey => journey.key)).toEqual(['buy', 'find_agent']);
+    expect(getHomepageHeroJourneys().map(journey => journey.key)).toEqual([
+      'buy',
+      'rent',
+      'find_agent',
+    ]);
   });
 
   it('normalizes legacy aliases without using display labels as internal keys', () => {

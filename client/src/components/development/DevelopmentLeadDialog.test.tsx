@@ -103,4 +103,62 @@ describe('DevelopmentLeadDialog', () => {
       }),
     );
   });
+
+  it('submits rental viewing requests with monthly-rent context', () => {
+    render(
+      <DevelopmentLeadDialog
+        open
+        onOpenChange={() => {}}
+        mode="viewing"
+        listingType="rent"
+        ctaLocation="development_rent_detail_viewing"
+        development={{
+          id: 88,
+          name: 'Maple Grove Rentals',
+          cataloguePublisherId: 21,
+        }}
+        unitContext={{
+          unitId: 'rent-unit-2',
+          unitName: 'Two Bedroom Garden Apartment',
+          unitPriceFrom: 12000,
+          unitBedrooms: 2,
+          unitBathrooms: 1,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Monthly rent from')).toBeInTheDocument();
+    expect(screen.getByText(/R12k\s*\/ month/i)).toBeInTheDocument();
+    expect(screen.queryByText('Price From')).not.toBeInTheDocument();
+    expect(screen.queryByText(/sales team/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /request a viewing/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText(/full name/i), {
+      target: { value: 'Ava Renter' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/email address/i), {
+      target: { value: 'ava@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/phone number/i), {
+      target: { value: '0821111111' },
+    });
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: /i agree to be contacted about this enquiry/i,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /request a viewing/i }));
+
+    expect(mutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developmentId: 88,
+        cataloguePublisherId: 21,
+        unitId: 'rent-unit-2',
+        unitPriceFrom: 12000,
+        leadType: 'viewing_request',
+        leadSource: 'development_detail_viewing',
+        sourceSurface: 'development_rent_detail_viewing',
+      }),
+    );
+  });
 });

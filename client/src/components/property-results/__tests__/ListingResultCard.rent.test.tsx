@@ -56,4 +56,23 @@ describe('ListingResultCard rental semantics', () => {
     expect(screen.queryByText('R 12,000 / month')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Contact Seller' })).toBeInTheDocument();
   });
+
+  it('does not expose Compare even when a caller supplies a comparison handler', () => {
+    render(
+      <ListingResultCard
+        data={{
+          id: 'rent-compare-1',
+          propertyId: 41,
+          title: 'Rental home',
+          location: 'Rosebank, Johannesburg',
+          price: 15000,
+          image: '/rent-compare.jpg',
+          listingType: 'rent',
+          onCompare: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /Compare property/i })).not.toBeInTheDocument();
+  });
 });

@@ -19,7 +19,7 @@ function formatPrice(price: number): string {
 }
 
 // Get display label for a filter
-function getFilterLabel(key: string, value: any): string | null {
+function getFilterLabel(key: string, value: any, isRentalJourney: boolean): string | null {
   switch (key) {
     case 'listingType':
       return value === 'sale' ? 'For Sale' : value === 'rent' ? 'To Rent' : null;
@@ -38,9 +38,9 @@ function getFilterLabel(key: string, value: any): string | null {
     case 'suburb':
       return value;
     case 'minPrice':
-      return `Min: ${formatPrice(value)}`;
+      return `${isRentalJourney ? 'Min monthly rent' : 'Min'}: ${formatPrice(value)}`;
     case 'maxPrice':
-      return `Max: ${formatPrice(value)}`;
+      return `${isRentalJourney ? 'Max monthly rent' : 'Max'}: ${formatPrice(value)}`;
     case 'minBedrooms':
       return `${value}+ Beds`;
     case 'maxBedrooms':
@@ -86,7 +86,7 @@ export function ActiveFilterChips({ filters, onRemoveFilter, onClearAll }: Activ
       <span className="text-sm text-muted-foreground">Active filters:</span>
 
       {removableFilters.map(([key, value]) => {
-        const label = getFilterLabel(key, value);
+        const label = getFilterLabel(key, value, filters.listingType === 'rent');
         if (!label) return null;
 
         return (

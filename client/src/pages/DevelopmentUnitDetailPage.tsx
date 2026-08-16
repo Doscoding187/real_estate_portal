@@ -19,13 +19,11 @@ import { MetaControl } from '@/components/seo/MetaControl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  calculateMonthlyRepayment,
-  formatSARandShort,
-  SA_PRIME_RATE,
-} from '@/lib/bond-calculator';
+import { calculateMonthlyRepayment, formatSARandShort, SA_PRIME_RATE } from '@/lib/bond-calculator';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
+import { normalizeDevelopmentTransactionType } from '@/lib/developmentTransactionPayload';
 import { resolveMediaUrl } from '@/lib/mediaUtils';
+import { getPropertySearchReturn } from '@/lib/searchReturnState';
 import { trpc } from '@/lib/trpc';
 
 const DEFAULT_BOND_TERM_YEARS = 20;
@@ -271,7 +269,9 @@ export default function DevelopmentUnitDetailPage() {
   const [, setLocation] = useLocation();
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
-  const [leadDialogMode, setLeadDialogMode] = useState<'brochure' | 'contact' | 'qualification' | 'info'>('info');
+  const [leadDialogMode, setLeadDialogMode] = useState<
+    'brochure' | 'contact' | 'qualification' | 'info' | 'viewing'
+  >('info');
   const [leadDialogLocation, setLeadDialogLocation] = useState('unit_detail_page');
 
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
@@ -282,9 +282,7 @@ export default function DevelopmentUnitDetailPage() {
   const development = useMemo(() => {
     if (!dev) return null;
 
-    const publisher =
-      (dev as any).publisher ||
-      null;
+    const publisher = (dev as any).publisher || null;
 
     let parsedImages: any[] = [];
     if (Array.isArray((dev as any).images)) parsedImages = (dev as any).images;
@@ -326,6 +324,7 @@ export default function DevelopmentUnitDetailPage() {
       id: dev.id,
       name: dev.name,
       slug: dev.slug || slug,
+      transactionType: normalizeDevelopmentTransactionType((dev as any).transactionType),
       suburb: dev.suburb,
       city: dev.city,
       heroImage,
@@ -336,7 +335,9 @@ export default function DevelopmentUnitDetailPage() {
         ...unit,
         normalizedType: formatLabel(unit.structuralType || unit.type || 'Unit'),
         normalizedOwnership: formatLabel(
-          unit.ownershipType || (estateSpecs as any)?.ownershipType || inferOwnership(unit.structuralType || unit.type),
+          unit.ownershipType ||
+            (estateSpecs as any)?.ownershipType ||
+            inferOwnership(unit.structuralType || unit.type),
         ),
         normalizedImage: getPrimaryUnitImage(unit, heroImage || undefined),
         floorSize: unit.unitSize,
@@ -354,9 +355,13 @@ export default function DevelopmentUnitDetailPage() {
     );
   }, [development, unitId]);
 
+  const isRentalDevelopment = development?.transactionType === 'for_rent';
+
   const currentUnitIndex = useMemo(() => {
     if (!development || !selectedUnit) return -1;
-    return development.units.findIndex((unit: any) => toUnitRouteKey(unit) === toUnitRouteKey(selectedUnit));
+    return development.units.findIndex(
+      (unit: any) => toUnitRouteKey(unit) === toUnitRouteKey(selectedUnit),
+    );
   }, [development, selectedUnit]);
 
   const previousUnit =
@@ -366,25 +371,46 @@ export default function DevelopmentUnitDetailPage() {
       ? development.units[currentUnitIndex + 1]
       : null;
 
-  const galleryUrls = useMemo(() => (selectedUnit ? getGalleryUrls(selectedUnit) : []), [selectedUnit]);
-  const amenityChips = useMemo(() => (selectedUnit ? getAmenityChips(selectedUnit) : []), [selectedUnit]);
+  const galleryUrls = useMemo(
+    () => (selectedUnit ? getGalleryUrls(selectedUnit) : []),
+    [selectedUnit],
+  );
+  const amenityChips = useMemo(
+    () => (selectedUnit ? getAmenityChips(selectedUnit) : []),
+    [selectedUnit],
+  );
   const specificationGroups = useMemo(
     () => (selectedUnit ? getUnitSpecificationGroups(selectedUnit) : []),
     [selectedUnit],
   );
 
   const floorPlanUrl = selectedUnit ? getFloorPlanUrl(selectedUnit) : null;
-  const priceFrom = parseNumber(selectedUnit?.basePriceFrom) || 0;
-  const priceTo = parseNumber(selectedUnit?.basePriceTo);
-  const priceLabel =
+  const priceFrom =
+    parseNumber(
+      isRentalDevelopment
+        ? (selectedUnit?.monthlyRentFrom ?? selectedUnit?.monthlyRent)
+        : selectedUnit?.basePriceFrom,
+    ) || 0;
+  const priceTo = parseNumber(
+    isRentalDevelopment ? selectedUnit?.monthlyRentTo : selectedUnit?.basePriceTo,
+  );
+  const priceRangeLabel =
     priceFrom > 0
       ? priceTo && priceTo > priceFrom
         ? `${formatExactRand(priceFrom)} - ${formatExactRand(priceTo)}`
         : formatExactRand(priceFrom)
-      : 'Price on request';
+      : null;
+  const priceLabel = isRentalDevelopment
+    ? priceRangeLabel
+      ? `${priceRangeLabel} / month`
+      : 'Monthly rent on request'
+    : priceRangeLabel || 'Price on request';
   const repayment =
-    priceFrom > 0 ? calculateMonthlyRepayment(priceFrom, SA_PRIME_RATE, DEFAULT_BOND_TERM_YEARS) : 0;
-  const qualifyingIncome = repayment > 0 ? Math.round(repayment * QUICK_QUALIFICATION_PAYMENT_RATIO) : 0;
+    !isRentalDevelopment && priceFrom > 0
+      ? calculateMonthlyRepayment(priceFrom, SA_PRIME_RATE, DEFAULT_BOND_TERM_YEARS)
+      : 0;
+  const qualifyingIncome =
+    repayment > 0 ? Math.round(repayment * QUICK_QUALIFICATION_PAYMENT_RATIO) : 0;
   const heroAsset =
     floorPlanUrl ||
     galleryUrls[Math.min(activeGalleryIndex, Math.max(galleryUrls.length - 1, 0))] ||
@@ -399,16 +425,26 @@ export default function DevelopmentUnitDetailPage() {
     : [];
   const availabilityCount = Math.max(Number(selectedUnit?.availableUnits || 0), 0);
   const totalCount = Math.max(Number(selectedUnit?.totalUnits || 0), 0);
-  const availabilityLabel =
-    availabilityCount > 0
+  const availabilityLabel = isRentalDevelopment
+    ? availabilityCount > 0
+      ? `${availabilityCount} available to rent`
+      : totalCount > 0
+        ? 'Currently unavailable'
+        : 'Availability on request'
+    : availabilityCount > 0
       ? availabilityCount <= 3
         ? `Only ${availabilityCount} left`
         : `${availabilityCount} available`
       : totalCount > 0
         ? 'Currently sold out'
         : 'Availability on request';
-  const positioningLine =
-    Number(selectedUnit?.bedrooms || 0) >= 3
+  const positioningLine = isRentalDevelopment
+    ? Number(selectedUnit?.bedrooms || 0) >= 3
+      ? 'A flexible rental layout for households who need more room to settle in.'
+      : Number(selectedUnit?.bedrooms || 0) >= 2
+        ? 'A balanced rental layout for couples or small families.'
+        : 'A compact rental option for an easier move into this development.'
+    : Number(selectedUnit?.bedrooms || 0) >= 3
       ? 'Well suited to growing families who need more layout flexibility.'
       : Number(selectedUnit?.bedrooms || 0) >= 2
         ? 'A balanced layout for first-time buyers, couples, or small families.'
@@ -417,7 +453,10 @@ export default function DevelopmentUnitDetailPage() {
     ? `/development/${development.slug}#available-units`
     : `/development/${slug || ''}#available-units`;
 
-  const openLeadDialog = (mode: 'brochure' | 'contact' | 'qualification' | 'info', ctaLocation: string) => {
+  const openLeadDialog = (
+    mode: 'brochure' | 'contact' | 'qualification' | 'info' | 'viewing',
+    ctaLocation: string,
+  ) => {
     setLeadDialogMode(mode);
     setLeadDialogLocation(ctaLocation);
     setLeadDialogOpen(true);
@@ -429,10 +468,37 @@ export default function DevelopmentUnitDetailPage() {
             ? 'Request Callback'
             : mode === 'qualification'
               ? 'Start Qualification'
-              : 'Request Information',
+              : mode === 'viewing'
+                ? 'Request a Viewing'
+                : 'Request Information',
       ctaLocation,
       ctaHref: typeof window !== 'undefined' ? window.location.href : '',
     });
+  };
+
+  const handleReturnToRentSearch = () => {
+    if (typeof window !== 'undefined') {
+      const rememberedSearch = getPropertySearchReturn(window.sessionStorage, 'to-rent');
+      if (rememberedSearch) {
+        setLocation(rememberedSearch);
+        return;
+      }
+
+      try {
+        const referrer = new URL(document.referrer);
+        if (
+          referrer.origin === window.location.origin &&
+          referrer.pathname === '/property-to-rent'
+        ) {
+          window.history.back();
+          return;
+        }
+      } catch {
+        // Use the explicit Rent root when no same-origin search referrer exists.
+      }
+    }
+
+    setLocation('/property-to-rent');
   };
 
   const goToQualification = () => {
@@ -480,7 +546,11 @@ export default function DevelopmentUnitDetailPage() {
       <div className="min-h-screen bg-slate-50">
         <div className="border-b border-slate-200 bg-white">
           <div className="mx-auto max-w-6xl px-4 py-4">
-            <Button variant="ghost" className="gap-2 px-0" onClick={() => setLocation(`/development/${slug || ''}`)}>
+            <Button
+              variant="ghost"
+              className="gap-2 px-0"
+              onClick={() => setLocation(`/development/${slug || ''}`)}
+            >
               <ArrowLeft className="h-4 w-4" />
               Back to development
             </Button>
@@ -515,16 +585,24 @@ export default function DevelopmentUnitDetailPage() {
   return (
     <>
       <MetaControl
-        title={`${selectedUnit.name} at ${development.name}`}
-        description={`View the floor plan, pricing, and unit details for ${selectedUnit.name} at ${development.name}.`}
+        title={`${selectedUnit.name} ${isRentalDevelopment ? 'to rent' : 'at'} ${development.name}`}
+        description={`${isRentalDevelopment ? 'View monthly rent, availability, and' : 'View the floor plan, pricing, and'} unit details for ${selectedUnit.name} at ${development.name}.`}
       />
 
       <div className="min-h-screen bg-slate-50 pb-24 lg:pb-0">
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-            <Button variant="ghost" className="gap-2 px-0 text-slate-700" onClick={() => setLocation(backToDevelopmentHref)}>
+            <Button
+              variant="ghost"
+              className="gap-2 px-0 text-slate-700"
+              onClick={
+                isRentalDevelopment
+                  ? handleReturnToRentSearch
+                  : () => setLocation(backToDevelopmentHref)
+              }
+            >
               <ArrowLeft className="h-4 w-4" />
-              Back to {development.name}
+              {isRentalDevelopment ? 'Back to rentals' : `Back to ${development.name}`}
             </Button>
             <div className="hidden items-center gap-3 md:flex">
               <div className="min-w-0 text-right">
@@ -554,7 +632,9 @@ export default function DevelopmentUnitDetailPage() {
                   className="h-9 border-slate-200"
                   disabled={!nextUnit}
                   onClick={() =>
-                    nextUnit ? navigateToSiblingUnit(nextUnit, 'unit_detail_header_next') : undefined
+                    nextUnit
+                      ? navigateToSiblingUnit(nextUnit, 'unit_detail_header_next')
+                      : undefined
                   }
                 >
                   Next
@@ -574,9 +654,11 @@ export default function DevelopmentUnitDetailPage() {
                     <Badge className="border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-50">
                       {selectedUnit.normalizedType}
                     </Badge>
-                    <Badge className="border border-slate-200 bg-white text-slate-600 hover:bg-white">
-                      {selectedUnit.normalizedOwnership}
-                    </Badge>
+                    {!isRentalDevelopment ? (
+                      <Badge className="border border-slate-200 bg-white text-slate-600 hover:bg-white">
+                        {selectedUnit.normalizedOwnership}
+                      </Badge>
+                    ) : null}
                     <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
                       {availabilityLabel}
                     </Badge>
@@ -609,11 +691,17 @@ export default function DevelopmentUnitDetailPage() {
                           {floorPlanUrl ? 'Floor plan' : 'Unit preview'}
                         </p>
                         <p className="mt-1 text-sm text-slate-600">
-                          {floorPlanUrl ? `Primary layout for ${selectedUnit.name}` : `Gallery preview for ${selectedUnit.name}`}
+                          {floorPlanUrl
+                            ? `Primary layout for ${selectedUnit.name}`
+                            : `Gallery preview for ${selectedUnit.name}`}
                         </p>
                       </div>
                       {floorPlanUrl ? (
-                        <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => window.open(floorPlanUrl, '_blank', 'noopener,noreferrer')}>
+                        <Button
+                          variant="outline"
+                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                          onClick={() => window.open(floorPlanUrl, '_blank', 'noopener,noreferrer')}
+                        >
                           <Download className="mr-2 h-4 w-4" />
                           Download plan
                         </Button>
@@ -622,16 +710,26 @@ export default function DevelopmentUnitDetailPage() {
                     <div className="aspect-[16/10] bg-white">
                       {typeof heroAsset === 'string' && heroAsset ? (
                         isImageAsset(heroAsset) ? (
-                          <img src={heroAsset} alt={selectedUnit.name} className="h-full w-full object-contain bg-white" />
+                          <img
+                            src={heroAsset}
+                            alt={selectedUnit.name}
+                            className="h-full w-full object-contain bg-white"
+                          />
                         ) : (
-                          <iframe src={heroAsset} title={`${selectedUnit.name} floor plan`} className="h-full w-full bg-white" />
+                          <iframe
+                            src={heroAsset}
+                            title={`${selectedUnit.name} floor plan`}
+                            className="h-full w-full bg-white"
+                          />
                         )
                       ) : (
                         <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-slate-500">
                           <ImageIcon className="h-8 w-8 text-slate-300" />
                           <div>
                             <p className="font-medium text-slate-700">Preview unavailable</p>
-                            <p className="text-sm text-slate-500">Request information for the latest layout and media pack.</p>
+                            <p className="text-sm text-slate-500">
+                              Request information for the latest layout and media pack.
+                            </p>
                           </div>
                         </div>
                       )}
@@ -643,10 +741,30 @@ export default function DevelopmentUnitDetailPage() {
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-semibold text-slate-900">Unit gallery</p>
                         <div className="flex items-center gap-2">
-                          <Button type="button" size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setActiveGalleryIndex(current => (current <= 0 ? galleryUrls.length - 1 : current - 1))}>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-9 w-9 rounded-full"
+                            onClick={() =>
+                              setActiveGalleryIndex(current =>
+                                current <= 0 ? galleryUrls.length - 1 : current - 1,
+                              )
+                            }
+                          >
                             <ChevronLeft className="h-4 w-4" />
                           </Button>
-                          <Button type="button" size="icon" variant="outline" className="h-9 w-9 rounded-full" onClick={() => setActiveGalleryIndex(current => (current >= galleryUrls.length - 1 ? 0 : current + 1))}>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-9 w-9 rounded-full"
+                            onClick={() =>
+                              setActiveGalleryIndex(current =>
+                                current >= galleryUrls.length - 1 ? 0 : current + 1,
+                              )
+                            }
+                          >
                             <ChevronRight className="h-4 w-4" />
                           </Button>
                         </div>
@@ -659,7 +777,11 @@ export default function DevelopmentUnitDetailPage() {
                             className={`overflow-hidden rounded-2xl border ${index === activeGalleryIndex ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-slate-200'}`}
                             onClick={() => setActiveGalleryIndex(index)}
                           >
-                            <img src={url} alt={`${selectedUnit.name} gallery ${index + 1}`} className="aspect-[4/3] h-full w-full object-cover" />
+                            <img
+                              src={url}
+                              alt={`${selectedUnit.name} gallery ${index + 1}`}
+                              className="aspect-[4/3] h-full w-full object-cover"
+                            />
                           </button>
                         ))}
                       </div>
@@ -670,11 +792,14 @@ export default function DevelopmentUnitDetailPage() {
 
               <section className="grid gap-3 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 xl:grid-cols-6 sm:p-6">
                 {[
-                  { label: 'Price from', value: formatExactRand(priceFrom) || 'On request' },
+                  { label: isRentalDevelopment ? 'Monthly rent' : 'Price from', value: priceLabel },
                   { label: 'Bedrooms', value: bedroomLabel },
                   { label: 'Bathrooms', value: formatBathValue(selectedUnit.bathrooms) || '-' },
                   { label: 'Size', value: floorSizeLabel ? `${floorSizeLabel} m2` : '-' },
-                  { label: yardSizeLabel ? 'Yard size' : 'Parking', value: yardSizeLabel ? `${yardSizeLabel} m2` : parkingLabel || '-' },
+                  {
+                    label: yardSizeLabel ? 'Yard size' : 'Parking',
+                    value: yardSizeLabel ? `${yardSizeLabel} m2` : parkingLabel || '-',
+                  },
                   { label: 'Availability', value: availabilityLabel },
                 ].map(item => (
                   <div key={item.label} className="rounded-2xl bg-slate-50 px-4 py-3">
@@ -698,7 +823,11 @@ export default function DevelopmentUnitDetailPage() {
                     <p className="text-sm font-semibold text-slate-900">Included features</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {amenityChips.map(chip => (
-                        <Badge key={chip} variant="secondary" className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 hover:bg-slate-100">
+                        <Badge
+                          key={chip}
+                          variant="secondary"
+                          className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 hover:bg-slate-100"
+                        >
                           {chip}
                         </Badge>
                       ))}
@@ -763,7 +892,9 @@ export default function DevelopmentUnitDetailPage() {
 
                   <div className="mt-6 grid gap-3 md:grid-cols-2">
                     {optionalExtras.map((extra: any, index: number) => {
-                      const extraLabel = String(extra.label || extra.name || `Option ${index + 1}`).trim();
+                      const extraLabel = String(
+                        extra.label || extra.name || `Option ${index + 1}`,
+                      ).trim();
                       const extraDescription = asNonEmptyString(extra.description);
                       const extraPrice = formatExactRand(extra.price);
 
@@ -802,7 +933,8 @@ export default function DevelopmentUnitDetailPage() {
                   </h2>
                   <p className="mt-3 text-sm text-slate-600">
                     Every enquiry from this page is tied directly to {selectedUnit.name}, so the
-                    sales team can respond with the right layout, pricing, and next steps.
+                    {isRentalDevelopment ? 'rental team' : 'sales team'} can respond with the right
+                    layout, pricing, and next steps.
                   </p>
                 </div>
 
@@ -821,11 +953,23 @@ export default function DevelopmentUnitDetailPage() {
                       label: 'Send me the plan',
                     },
                     {
-                      title: 'Talk to sales',
-                      body: 'Request a callback to discuss stock, timelines, and the best fit within the development.',
+                      title: isRentalDevelopment ? 'Talk to the rental team' : 'Talk to sales',
+                      body: isRentalDevelopment
+                        ? 'Request a callback to discuss availability, monthly rent, and the best fit within the development.'
+                        : 'Request a callback to discuss stock, timelines, and the best fit within the development.',
                       action: () => openLeadDialog('contact', 'unit_detail_intent_contact'),
                       label: 'Request callback',
                     },
+                    ...(isRentalDevelopment
+                      ? [
+                          {
+                            title: 'Request a viewing',
+                            body: 'Ask the rental team to follow up about viewing this unit type.',
+                            action: () => openLeadDialog('viewing', 'unit_detail_intent_viewing'),
+                            label: 'Request a viewing',
+                          },
+                        ]
+                      : []),
                     {
                       title: 'Check affordability',
                       body: 'Start the qualification flow using this unit as your target reference point.',
@@ -833,7 +977,11 @@ export default function DevelopmentUnitDetailPage() {
                       label: 'Check affordability',
                     },
                   ]
-                    .filter(item => item.title !== 'Have the floor plan emailed' || development.brochureUrl)
+                    .filter(
+                      item =>
+                        (item.title !== 'Have the floor plan emailed' || development.brochureUrl) &&
+                        (isRentalDevelopment || item.title !== 'Check affordability'),
+                    )
                     .map(item => (
                       <div
                         key={item.title}
@@ -860,11 +1008,14 @@ export default function DevelopmentUnitDetailPage() {
                       Development context
                     </p>
                     <h2 className="mt-2 text-2xl font-bold text-slate-950">
-                      Keep comparing within {development.name}
+                      {isRentalDevelopment
+                        ? `Keep exploring ${development.name}`
+                        : `Keep comparing within ${development.name}`}
                     </h2>
                     <p className="mt-2 text-sm text-slate-600">
-                      Move back to all unit types or step through the adjacent layouts without
-                      leaving the buying journey.
+                      {isRentalDevelopment
+                        ? 'Move back to all rental unit types or step through adjacent layouts without leaving the rental journey.'
+                        : 'Move back to all unit types or step through the adjacent layouts without leaving the buying journey.'}
                     </p>
                   </div>
                   <Button
@@ -872,7 +1023,9 @@ export default function DevelopmentUnitDetailPage() {
                     className="border-slate-300 text-slate-700 hover:bg-slate-100"
                     onClick={() => setLocation(backToDevelopmentHref)}
                   >
-                    Back to all unit types
+                    {isRentalDevelopment
+                      ? 'Back to all rental unit types'
+                      : 'Back to all unit types'}
                   </Button>
                 </div>
                 <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -901,7 +1054,9 @@ export default function DevelopmentUnitDetailPage() {
                     className="h-auto justify-between border-slate-200 px-4 py-4 text-left"
                     disabled={!nextUnit}
                     onClick={() =>
-                      nextUnit ? navigateToSiblingUnit(nextUnit, 'unit_detail_footer_next') : undefined
+                      nextUnit
+                        ? navigateToSiblingUnit(nextUnit, 'unit_detail_footer_next')
+                        : undefined
                     }
                   >
                     <div className="min-w-0">
@@ -922,10 +1077,14 @@ export default function DevelopmentUnitDetailPage() {
               <Card className="overflow-hidden border-slate-200 shadow-sm">
                 <CardContent className="p-0">
                   <div className="bg-slate-950 px-5 py-6 text-white">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-200">Unit pricing</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-200">
+                      Unit pricing
+                    </p>
                     <h2 className="mt-3 text-3xl font-bold tracking-tight">{priceLabel}</h2>
                     <p className="mt-3 text-sm text-slate-300">
-                      Review the layout, compare the monthly picture, and move into enquiry.
+                      {isRentalDevelopment
+                        ? 'Review the monthly rent, layout, and availability before enquiring.'
+                        : 'Review the layout, compare the monthly picture, and move into enquiry.'}
                     </p>
                     <p className="mt-3 text-sm font-medium text-orange-100">{availabilityLabel}</p>
                   </div>
@@ -947,45 +1106,84 @@ export default function DevelopmentUnitDetailPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        Ownership snapshot
-                      </p>
-                      <div className="mt-4 grid gap-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Calculator className="mt-0.5 h-4 w-4" />
-                            <span className="text-sm">Estimated repayment</span>
+                    {!isRentalDevelopment ? (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                          Ownership snapshot
+                        </p>
+                        <div className="mt-4 grid gap-3">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <Calculator className="mt-0.5 h-4 w-4" />
+                              <span className="text-sm">Estimated repayment</span>
+                            </div>
+                            <span className="text-right text-sm font-semibold text-slate-950">
+                              {repayment > 0
+                                ? `${formatSARandShort(repayment)} / month`
+                                : 'On request'}
+                            </span>
                           </div>
-                          <span className="text-right text-sm font-semibold text-slate-950">
-                            {repayment > 0 ? `${formatSARandShort(repayment)} / month` : 'On request'}
-                          </span>
-                        </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <CheckCircle2 className="mt-0.5 h-4 w-4" />
-                            <span className="text-sm">Qualifying income</span>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <CheckCircle2 className="mt-0.5 h-4 w-4" />
+                              <span className="text-sm">Qualifying income</span>
+                            </div>
+                            <span className="text-right text-sm font-semibold text-slate-950">
+                              {qualifyingIncome > 0
+                                ? `${formatSARandShort(qualifyingIncome)} / month`
+                                : 'On request'}
+                            </span>
                           </div>
-                          <span className="text-right text-sm font-semibold text-slate-950">
-                            {qualifyingIncome > 0 ? `${formatSARandShort(qualifyingIncome)} / month` : 'On request'}
-                          </span>
                         </div>
                       </div>
-                    </div>
+                    ) : null}
 
                     <div className="space-y-2.5">
-                      <Button className="h-11 w-full bg-orange-500 text-white hover:bg-orange-600" onClick={() => openLeadDialog('info', 'unit_detail_action_panel_info')}>
-                        Enquire about this unit
+                      <Button
+                        className="h-11 w-full bg-orange-500 text-white hover:bg-orange-600"
+                        onClick={() => openLeadDialog('info', 'unit_detail_action_panel_info')}
+                      >
+                        {isRentalDevelopment
+                          ? 'Enquire about this rental'
+                          : 'Enquire about this unit'}
                       </Button>
-                      <Button variant="outline" className="h-11 w-full border-blue-200 text-blue-700 hover:bg-blue-50" onClick={goToQualification}>
-                        Check affordability
-                      </Button>
-                      <Button variant="outline" className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50" onClick={() => openLeadDialog('contact', 'unit_detail_action_panel_contact')}>
+                      {!isRentalDevelopment ? (
+                        <Button
+                          variant="outline"
+                          className="h-11 w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                          onClick={goToQualification}
+                        >
+                          Check affordability
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="h-11 w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                          onClick={() =>
+                            openLeadDialog('viewing', 'unit_detail_action_panel_viewing')
+                          }
+                        >
+                          Request a viewing
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                        onClick={() =>
+                          openLeadDialog('contact', 'unit_detail_action_panel_contact')
+                        }
+                      >
                         <Phone className="mr-2 h-4 w-4" />
                         Request callback
                       </Button>
                       {development.brochureUrl ? (
-                        <Button variant="ghost" className="h-10 w-full text-slate-600 hover:text-slate-900" onClick={() => openLeadDialog('brochure', 'unit_detail_action_panel_brochure')}>
+                        <Button
+                          variant="ghost"
+                          className="h-10 w-full text-slate-600 hover:text-slate-900"
+                          onClick={() =>
+                            openLeadDialog('brochure', 'unit_detail_action_panel_brochure')
+                          }
+                        >
                           <Download className="mr-2 h-4 w-4" />
                           Download floor plan or brochure
                         </Button>
@@ -1001,7 +1199,9 @@ export default function DevelopmentUnitDetailPage() {
                         </li>
                         <li className="flex gap-2">
                           <Phone className="mt-0.5 h-4 w-4 shrink-0" />
-                          Sales callback for availability and next steps
+                          {isRentalDevelopment
+                            ? 'Rental team callback for availability and next steps'
+                            : 'Sales callback for availability and next steps'}
                         </li>
                       </ul>
                     </div>
@@ -1020,12 +1220,18 @@ export default function DevelopmentUnitDetailPage() {
               </p>
               <p className="truncate text-sm font-bold text-slate-950">{priceLabel}</p>
             </div>
-            <Button size="sm" className="h-10 bg-orange-500 px-3 hover:bg-orange-600" onClick={() => openLeadDialog('info', 'unit_detail_mobile_info')}>
+            <Button
+              size="sm"
+              className="h-10 bg-orange-500 px-3 hover:bg-orange-600"
+              onClick={() => openLeadDialog('info', 'unit_detail_mobile_info')}
+            >
               Enquire
             </Button>
-            <Button size="sm" variant="outline" className="h-10 px-3" onClick={goToQualification}>
-              Afford
-            </Button>
+            {!isRentalDevelopment ? (
+              <Button size="sm" variant="outline" className="h-10 px-3" onClick={goToQualification}>
+                Afford
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -1036,8 +1242,15 @@ export default function DevelopmentUnitDetailPage() {
         open={leadDialogOpen}
         onOpenChange={setLeadDialogOpen}
         mode={leadDialogMode}
+        listingType={isRentalDevelopment ? 'rent' : 'sale'}
         ctaLocation={leadDialogLocation}
-        unitContext={{ id: selectedUnit.id ?? null, name: selectedUnit.name ?? null }}
+        unitContext={{
+          id: selectedUnit.id ?? null,
+          name: selectedUnit.name ?? null,
+          unitPriceFrom: priceFrom,
+          unitBedrooms: parseNumber(selectedUnit.bedrooms) ?? undefined,
+          unitBathrooms: parseNumber(selectedUnit.bathrooms) ?? undefined,
+        }}
         development={{
           id: development.id,
           name: development.name,

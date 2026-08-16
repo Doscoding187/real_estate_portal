@@ -44,10 +44,10 @@ import {
   getAccountWorkspaceLabel,
   getCanonicalAccountDestination,
   getPublicNavigationActiveOwner,
+  getVisiblePublicNavigationMenus,
   getVisiblePublicNavigationGroups,
   PUBLIC_CITY_ENTRY,
   PUBLIC_NAVIGATION_ACTIONS,
-  PUBLIC_NAVIGATION_MENUS,
   type PublicNavigationDestination,
   type PublicNavigationMenu,
   type PublicNavigationUser,
@@ -68,16 +68,19 @@ export function getMainPlatformAccountHref(user: NavigationUser) {
   return getCanonicalAccountDestination(user) ?? '/login?mode=signin';
 }
 
-const menuPresentation: Partial<Record<
-  PublicNavigationMenu['id'],
-  { icon: LucideIcon; title: string; description: string; cta: string; actionCopy: string }
->> = {
+const menuPresentation: Partial<
+  Record<
+    PublicNavigationMenu['id'],
+    { icon: LucideIcon; title: string; description: string; cta: string; actionCopy: string }
+  >
+> = {
   buyers: {
     icon: Home,
     title: 'Find your next home',
     description: 'Browse properties for sale across South Africa.',
     cta: 'Browse properties for sale',
-    actionCopy: 'Start with a focused property search, then save or compare the homes that stand out.',
+    actionCopy:
+      'Start with a focused property search, then save or compare the homes that stand out.',
   },
   renters: {
     icon: Key,
@@ -159,12 +162,7 @@ function MenuSection({
       <h3 className="public-navbar__section-heading">{group.label}</h3>
       <div className="public-navbar__menu-section-list">
         {group.items.map(item => (
-          <MenuLink
-            key={item.id}
-            item={item}
-            pathname={pathname}
-            onNavigate={onNavigate}
-          />
+          <MenuLink key={item.id} item={item} pathname={pathname} onNavigate={onNavigate} />
         ))}
       </div>
     </section>
@@ -234,9 +232,7 @@ function MegaMenu({
           <div className="public-navbar__menu-action-content">
             <p className="public-navbar__menu-kicker">Start here</p>
             <h2 className="public-navbar__menu-action-title">{menu.feature.label}</h2>
-            <p className="public-navbar__menu-action-copy">
-              {presentation.actionCopy}
-            </p>
+            <p className="public-navbar__menu-action-copy">{presentation.actionCopy}</p>
           </div>
           <Link
             href={menu.feature.href}
@@ -547,19 +543,14 @@ function MobileAudienceSection({
       aria-labelledby={`mobile-${menu.id}-heading`}
       className="public-navbar__mobile-section"
     >
-      <h2
-        id={`mobile-${menu.id}-heading`}
-        className="public-navbar__mobile-section-heading"
-      >
+      <h2 id={`mobile-${menu.id}-heading`} className="public-navbar__mobile-section-heading">
         {menu.label}
       </h2>
       <div className="public-navbar__mobile-section-content">
         <MobileDestinationLink item={menu.feature} pathname={pathname} onNavigate={onNavigate} />
         {groups.map(group => (
           <div key={group.label}>
-            <h3 className="public-navbar__mobile-subsection-heading">
-              {group.label}
-            </h3>
+            <h3 className="public-navbar__mobile-subsection-heading">{group.label}</h3>
             {group.items.map(item => (
               <MobileDestinationLink
                 key={item.id}
@@ -720,8 +711,10 @@ export function EnhancedNavbar() {
   };
   const currentPath = pathname.split('?')[0];
   const activeNavigationOwner = getPublicNavigationActiveOwner(currentPath);
-  const activeDesktopMenu = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === desktopMenuValue);
-  const advertiseMenu = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'advertise');
+  const visibleDesktopMenus = getVisiblePublicNavigationMenus('desktop');
+  const visibleMobileMenus = getVisiblePublicNavigationMenus('mobile');
+  const activeDesktopMenu = visibleDesktopMenus.find(menu => menu.id === desktopMenuValue);
+  const advertiseMenu = visibleDesktopMenus.find(menu => menu.id === 'advertise');
   const hasDesktopMenu = desktopMenuValue === 'city' || Boolean(activeDesktopMenu);
   const desktopPanelLabel =
     desktopMenuValue === 'city' ? PUBLIC_CITY_ENTRY.label : (activeDesktopMenu?.label ?? 'Public');
@@ -764,45 +757,47 @@ export function EnhancedNavbar() {
               </button>
             </li>
 
-            {PUBLIC_NAVIGATION_MENUS.filter(menu => menu.id !== 'advertise').map(menu => (
-              <li key={menu.id} className="public-navbar__desktop-nav-item">
-                {menu.navbarPresentation === 'direct-link' ? (
-                  <Link
-                    href={menu.feature.href}
-                    className="public-navbar__desktop-trigger public-navbar__desktop-direct-link"
-                    data-active={activeNavigationOwner === menu.id}
-                    aria-current={activeNavigationOwner === menu.id ? 'page' : undefined}
-                    onMouseEnter={handleDirectNavigation}
-                    onClick={handleDirectNavigation}
-                  >
-                    {menu.label}
-                    {menu.id === 'explore' ? (
-                      <span className="public-navbar__new-badge" aria-hidden="true">
-                        NEW
-                      </span>
-                    ) : null}
-                  </Link>
-                ) : (
-                  <button
-                    id={`public-navbar-trigger-${menu.id}`}
-                    type="button"
-                    className="public-navbar__desktop-trigger"
-                    data-open={desktopMenuValue === menu.id}
-                    data-active={activeNavigationOwner === menu.id}
-                    aria-expanded={desktopMenuValue === menu.id}
-                    aria-controls="public-navbar-mega-panel"
-                    onMouseEnter={() => handleDesktopMenuMouseEnter(menu.id)}
-                    onClick={() => toggleDesktopMenu(menu.id)}
-                  >
-                    {menu.label}
-                    <ChevronDown
-                      className="public-navbar__desktop-trigger-chevron"
-                      aria-hidden="true"
-                    />
-                  </button>
-                )}
-              </li>
-            ))}
+            {visibleDesktopMenus
+              .filter(menu => menu.id !== 'advertise')
+              .map(menu => (
+                <li key={menu.id} className="public-navbar__desktop-nav-item">
+                  {menu.navbarPresentation === 'direct-link' ? (
+                    <Link
+                      href={menu.feature.href}
+                      className="public-navbar__desktop-trigger public-navbar__desktop-direct-link"
+                      data-active={activeNavigationOwner === menu.id}
+                      aria-current={activeNavigationOwner === menu.id ? 'page' : undefined}
+                      onMouseEnter={handleDirectNavigation}
+                      onClick={handleDirectNavigation}
+                    >
+                      {menu.label}
+                      {menu.id === 'explore' ? (
+                        <span className="public-navbar__new-badge" aria-hidden="true">
+                          NEW
+                        </span>
+                      ) : null}
+                    </Link>
+                  ) : (
+                    <button
+                      id={`public-navbar-trigger-${menu.id}`}
+                      type="button"
+                      className="public-navbar__desktop-trigger"
+                      data-open={desktopMenuValue === menu.id}
+                      data-active={activeNavigationOwner === menu.id}
+                      aria-expanded={desktopMenuValue === menu.id}
+                      aria-controls="public-navbar-mega-panel"
+                      onMouseEnter={() => handleDesktopMenuMouseEnter(menu.id)}
+                      onClick={() => toggleDesktopMenu(menu.id)}
+                    >
+                      {menu.label}
+                      <ChevronDown
+                        className="public-navbar__desktop-trigger-chevron"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  )}
+                </li>
+              ))}
           </ul>
         </div>
 
@@ -1000,7 +995,7 @@ export function EnhancedNavbar() {
               </div>
             </section>
 
-            {PUBLIC_NAVIGATION_MENUS.map(menu =>
+            {visibleMobileMenus.map(menu =>
               menu.navbarPresentation === 'direct-link' ? (
                 <MobileDestinationLink
                   key={menu.id}
@@ -1022,10 +1017,7 @@ export function EnhancedNavbar() {
               className="public-navbar__mobile-section"
               aria-labelledby="mobile-partners-heading"
             >
-              <h2
-                id="mobile-partners-heading"
-                className="public-navbar__mobile-section-heading"
-              >
+              <h2 id="mobile-partners-heading" className="public-navbar__mobile-section-heading">
                 Partners
               </h2>
               <div className="public-navbar__mobile-section-content">
@@ -1038,15 +1030,15 @@ export function EnhancedNavbar() {
             </section>
 
             <section className="public-navbar__mobile-section" aria-label="Account access">
-                <AccountMenu
-                  user={user}
-                  logout={logout}
-                  onNavigate={closeMobileMenu}
-                  onOpenChange={open => handleAccountOpenChange(open)}
-                  closeSignal={accountCloseSignal}
-                  returnPath={pathname}
-                  mobile
-                />
+              <AccountMenu
+                user={user}
+                logout={logout}
+                onNavigate={closeMobileMenu}
+                onOpenChange={open => handleAccountOpenChange(open)}
+                closeSignal={accountCloseSignal}
+                returnPath={pathname}
+                mobile
+              />
             </section>
           </div>
         </div>
