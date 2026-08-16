@@ -20,7 +20,7 @@ import {
   type SlaStatus,
   isLeadTransitionAllowed,
 } from '../../shared/developerFunnel';
-import { parseDeliveryAttempts } from './leadDeliveryService';
+import { parseDeliveryAttempts, toMySqlDateTime } from './leadDeliveryService';
 
 type LeadRow = typeof leads.$inferSelect;
 type LeadStageRow = Pick<LeadRow, 'status' | 'funnelStage' | 'lostReason'>;
@@ -267,7 +267,7 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
       return {
         status: 'contacted',
         funnelStage: 'affordability',
-        lastContactedAt: new Date().toISOString(),
+        lastContactedAt: toMySqlDateTime(),
         lostReason: null,
       };
     case 'qualified':
@@ -282,14 +282,14 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
       return {
         status: 'converted',
         funnelStage: 'bond',
-        convertedAt: new Date().toISOString(),
+        convertedAt: toMySqlDateTime(),
         lostReason: null,
       };
     case 'closed_won':
       return {
         status: 'closed',
         funnelStage: 'sale',
-        convertedAt: new Date().toISOString(),
+        convertedAt: toMySqlDateTime(),
         lostReason: null,
       };
     case 'closed_lost':
@@ -822,7 +822,7 @@ export async function assignDeveloperLead(params: AssignParams) {
     });
   }
 
-  const now = new Date().toISOString();
+  const now = toMySqlDateTime();
   const updateSet: Partial<typeof leads.$inferInsert> = {
     updatedAt: now,
   };
@@ -871,7 +871,7 @@ export async function transitionDeveloperLead(params: TransitionParams) {
 
   const updateSet: any = {
     ...canonicalStageToUpdate(toStage),
-    updatedAt: new Date().toISOString(),
+    updatedAt: toMySqlDateTime(),
   };
 
   if (params.notes) {
@@ -918,16 +918,17 @@ export async function logDeveloperLeadActivity(params: ActivityParams) {
     description,
   });
 
+  const now = toMySqlDateTime();
+  const updateSet: Partial<typeof leads.$inferInsert> = {
+    notes: appendNote(row.lead.notes, `${params.type}: ${description || 'Activity logged'}`),
+    updatedAt: now,
+  };
+
   if (['call', 'email', 'meeting', 'whatsapp'].includes(params.type)) {
-    const now = new Date().toISOString();
-    await db
-      .update(leads)
-      .set({
-        lastContactedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(leads.id, params.leadId));
+    updateSet.lastContactedAt = now;
   }
+
+  await db.update(leads).set(updateSet).where(eq(leads.id, params.leadId));
 
   const updated = await getDeveloperLeadRow(params.developerId, params.leadId);
   const distributionEnabledMap = await getDistributionEnabledMapForDevelopments([
@@ -945,13 +946,13 @@ export async function logDeveloperLeadActivity(params: ActivityParams) {
 
 export async function setDeveloperLeadNextAction(params: NextActionParams) {
   const row = await getDeveloperLeadRow(params.developerId, params.leadId);
-  const now = new Date().toISOString();
+  const now = toMySqlDateTime();
   const notes = appendNote(row.lead.notes, `next_action:${params.type} at ${params.at}`);
 
   await db
     .update(leads)
     .set({
-      nextFollowUp: params.at,
+      nextFollowUp: toMySqlDateTime(params.at),
       notes,
       updatedAt: now,
     })

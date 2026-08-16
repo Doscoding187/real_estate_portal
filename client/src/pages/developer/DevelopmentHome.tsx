@@ -4,7 +4,17 @@ import { ArrowLeft, ExternalLink, Pencil, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
 
 const lifecycleLabels = {
   live: 'Live',
@@ -151,6 +161,18 @@ export default function DevelopmentHome() {
     { developmentId, range },
     { enabled: hasValidDevelopmentId, retry: false, refetchOnWindowFocus: false },
   );
+  const [editingInventoryUnitId, setEditingInventoryUnitId] = useState<string | null>(null);
+  const [availableUnitsDraft, setAvailableUnitsDraft] = useState('');
+
+  const updateUnitAvailability = trpc.developer.updateUnitAvailability.useMutation({
+    onSuccess: async result => {
+      toast.success(`${result.unitType.name} availability updated.`);
+      setEditingInventoryUnitId(null);
+      setAvailableUnitsDraft('');
+      await homeQuery.refetch();
+    },
+    onError: error => toast.error(error.message || 'Could not update availability.'),
+  });
 
   if (!hasValidDevelopmentId) return <PrivateNotFound />;
   if (homeQuery.isLoading) return <DevelopmentHomeLoading />;
@@ -169,11 +191,36 @@ export default function DevelopmentHome() {
     .join(', ');
   const lifecycleState = development.lifecycleState;
   const { readiness } = homeQuery.data;
+  const editingInventoryUnit = inventory.unitTypes?.find(
+    unit => unit.id === editingInventoryUnitId,
+  );
   const latestSubmittedAt = formatTimestamp(readiness.latestReview?.submittedAt);
   const latestReviewedAt = formatTimestamp(readiness.latestReview?.reviewedAt);
   const publishedAt = formatTimestamp(development.publishedAt);
   const distributionManageHref = distribution.manageHref;
   const openEditor = () => setLocation(`/developer/create-development?id=${development.id}`);
+  const openInventoryEditor = (unit: (typeof inventory.unitTypes)[number]) => {
+    setEditingInventoryUnitId(unit.id);
+    setAvailableUnitsDraft(String(unit.availableUnits));
+  };
+  const saveUnitAvailability = () => {
+    if (!editingInventoryUnit) return;
+    const availableUnits = Number(availableUnitsDraft);
+    const maximumAvailable = editingInventoryUnit.totalUnits - editingInventoryUnit.reservedUnits;
+    if (!Number.isInteger(availableUnits) || availableUnits < 0) {
+      toast.error('Available units must be a non-negative whole number.');
+      return;
+    }
+    if (availableUnits > maximumAvailable) {
+      toast.error(`Available units cannot exceed ${maximumAvailable} for this unit type.`);
+      return;
+    }
+    updateUnitAvailability.mutate({
+      developmentId: development.id,
+      unitTypeId: editingInventoryUnit.id,
+      availableUnits,
+    });
+  };
   const openLeads = (params: Record<string, string | number | undefined> = {}) => {
     const search = new URLSearchParams({
       developmentId: String(development.id),
@@ -471,6 +518,43 @@ export default function DevelopmentHome() {
                   </p>
                 </div>
               )}
+              {inventory.unitTypes?.length > 0 && (
+                <div className="space-y-3 border-t border-slate-100 pt-4">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">
+                      Live availability by unit type
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      Update stock here without sending the full development back through review.
+                    </p>
+                  </div>
+                  <div className="space-y-2" aria-label="Live availability by unit type">
+                    {inventory.unitTypes.map(unit => (
+                      <div
+                        key={unit.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3"
+                      >
+                        <div>
+                          <p className="font-medium text-slate-900">{unit.name}</p>
+                          <p className="text-sm text-slate-600">
+                            {unit.availableUnits} available of {unit.totalUnits} ·{' '}
+                            {unit.reservedUnits} reserved · {unit.derivedSoldUnits} sold
+                          </p>
+                        </div>
+                        {lifecycleState === 'live' && unit.id ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openInventoryEditor(unit)}
+                          >
+                            Update availability
+                          </Button>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
           {inventory.warnings.length > 0 && (
@@ -487,6 +571,73 @@ export default function DevelopmentHome() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={editingInventoryUnitId !== null}
+        onOpenChange={open => {
+          if (!open && !updateUnitAvailability.isPending) {
+            setEditingInventoryUnitId(null);
+            setAvailableUnitsDraft('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update availability</DialogTitle>
+            <DialogDescription>
+              {editingInventoryUnit
+                ? `Change the live availability for ${editingInventoryUnit.name}. Other development details remain unchanged.`
+                : 'Choose a unit type to update.'}
+            </DialogDescription>
+          </DialogHeader>
+          {editingInventoryUnit ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-md border p-3">
+                  <p className="text-slate-500">Total units</p>
+                  <p className="font-semibold text-slate-900">{editingInventoryUnit.totalUnits}</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-slate-500">Reserved</p>
+                  <p className="font-semibold text-slate-900">
+                    {editingInventoryUnit.reservedUnits}
+                  </p>
+                </div>
+              </div>
+              <label className="space-y-2 text-sm font-medium text-slate-900">
+                Available units
+                <Input
+                  type="number"
+                  min={0}
+                  max={editingInventoryUnit.totalUnits - editingInventoryUnit.reservedUnits}
+                  value={availableUnitsDraft}
+                  onChange={event => setAvailableUnitsDraft(event.target.value)}
+                />
+              </label>
+              {updateUnitAvailability.error ? (
+                <p role="alert" className="text-sm text-rose-700">
+                  {updateUnitAvailability.error.message}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditingInventoryUnitId(null)}
+              disabled={updateUnitAvailability.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveUnitAvailability}
+              disabled={!editingInventoryUnit || updateUnitAvailability.isPending}
+            >
+              {updateUnitAvailability.isPending ? 'Saving…' : 'Save availability'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card className="order-5">
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">

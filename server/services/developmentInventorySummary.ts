@@ -29,7 +29,17 @@ type PersistedInventoryUnitType = Pick<
   | 'reservePrice'
   | 'auctionStartDate'
   | 'auctionEndDate'
->;
+> &
+  Partial<Pick<typeof unitTypes.$inferSelect, 'id' | 'name' | 'label'>>;
+
+export type DevelopmentHomeInventoryUnitType = {
+  id: string;
+  name: string;
+  totalUnits: number;
+  availableUnits: number;
+  reservedUnits: number;
+  derivedSoldUnits: number;
+};
 
 export type DevelopmentHomeInventoryWarning = {
   code:
@@ -46,6 +56,7 @@ export type DevelopmentHomeInventoryWarning = {
 
 export type DevelopmentHomeInventory = {
   catalogueState: 'configured' | 'not_configured' | 'land_not_required';
+  unitTypes: DevelopmentHomeInventoryUnitType[];
   activeUnitTypeCount: number;
   totalUnits: number | null;
   availableUnits: number | null;
@@ -241,6 +252,19 @@ export function buildDevelopmentHomeInventory(
       : active.length === 0
         ? 'not_configured'
         : 'configured',
+    unitTypes: active.map(unit => {
+      const totalUnits = numberOrNull(unit.totalUnits) ?? 0;
+      const availableUnits = numberOrNull(unit.availableUnits) ?? 0;
+      const reservedUnits = numberOrNull(unit.reservedUnits) ?? 0;
+      return {
+        id: String(unit.id ?? ''),
+        name: String(unit.name ?? unit.label ?? 'Unnamed unit type'),
+        totalUnits,
+        availableUnits,
+        reservedUnits,
+        derivedSoldUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
+      };
+    }),
     activeUnitTypeCount: active.length,
     totalUnits: quantities?.total ?? null,
     availableUnits: quantities?.available ?? null,

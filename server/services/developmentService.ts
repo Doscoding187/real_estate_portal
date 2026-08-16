@@ -1782,7 +1782,7 @@ export async function updateDevelopment(
   const persistUpdate = async (writeDb: any, current?: DevelopmentRow) => {
     const persistedPayload = { ...updatePayload };
 
-    // A live platform-curated record cannot be edited in place. Until S1 adds
+    // A live catalogue record cannot be edited in place. Until S1 adds
     // versioned pending revisions, the safe MVP contract is to take the
     // current public record private before the edited catalogue can be
     // republished through the canonical readiness/publication transition.
@@ -1887,11 +1887,137 @@ export async function updateDevelopment(
       return persistUpdate(tx, current);
     });
   } else {
-    await persistUpdate(db);
+    await db.transaction(async (tx: any) => {
+      const ownershipPredicate = and(
+        eq(developments.id, id),
+        eq(developments.cataloguePublisherId, developerPublisherId!),
+      );
+      const [current] = await tx
+        .select()
+        .from(developments)
+        .where(ownershipPredicate)
+        .limit(1)
+        .for('update');
+
+      if (!current) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Update failed or you do not own this development',
+        });
+      }
+
+      await persistUpdate(tx, current);
+    });
   }
 
   console.log('[updateDevelopment] Update completed successfully');
   return { success: true };
+}
+
+/**
+ * Persist a routine live-catalogue availability change without entering the
+ * full editorial update/review flow. The ownership and live-publication
+ * predicates are resolved on the server, and only the canonical unit-type
+ * availability field is mutable through this operation.
+ */
+export async function updateDeveloperUnitAvailability(
+  developmentId: number,
+  unitTypeId: string,
+  userId: number,
+  availableUnits: number,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  if (!Number.isInteger(availableUnits) || availableUnits < 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Available units must be a non-negative whole number.',
+    });
+  }
+
+  const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
+  if (!devProfile) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
+  }
+
+  return db.transaction(async (tx: any) => {
+    const [development] = await tx
+      .select({
+        id: developments.id,
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+      })
+      .from(developments)
+      .where(
+        and(
+          eq(developments.id, developmentId),
+          eq(developments.cataloguePublisherId, devProfile.publisherId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+
+    if (!development) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+    }
+    if (development.approvalStatus !== 'approved' || Number(development.isPublished) !== 1) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Routine availability updates are available for live developments only.',
+      });
+    }
+
+    const [unit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        totalUnits: unitTypes.totalUnits,
+        reservedUnits: unitTypes.reservedUnits,
+        availableUnits: unitTypes.availableUnits,
+      })
+      .from(unitTypes)
+      .where(
+        and(
+          eq(unitTypes.id, unitTypeId),
+          eq(unitTypes.developmentId, developmentId),
+          eq(unitTypes.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .for('update');
+
+    if (!unit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Unit type not found' });
+    }
+
+    const totalUnits = Math.max(0, Number(unit.totalUnits || 0));
+    const reservedUnits = Math.max(0, Number(unit.reservedUnits || 0));
+    if (availableUnits + reservedUnits > totalUnits) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Available units cannot exceed ${Math.max(totalUnits - reservedUnits, 0)} for this unit type.`,
+      });
+    }
+
+    await tx
+      .update(unitTypes)
+      .set({ availableUnits, updatedAt: mysqlDateTime() })
+      .where(and(eq(unitTypes.id, unitTypeId), eq(unitTypes.developmentId, developmentId)));
+
+    return {
+      success: true as const,
+      developmentId,
+      unitType: {
+        id: unit.id,
+        name: unit.name,
+        totalUnits,
+        availableUnits,
+        reservedUnits,
+        derivedSoldUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
+      },
+    };
+  });
 }
 
 // ===========================================================================
@@ -3660,6 +3786,7 @@ export const developmentService = {
 
   createDevelopment,
   updateDevelopment,
+  updateDeveloperUnitAvailability,
   getDevelopmentWithPhases,
   getDevelopmentById,
   getDevelopmentsByDeveloperId,

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 
 const { mockSearchProperties } = vi.hoisted(() => ({
   mockSearchProperties: vi.fn(),
@@ -16,6 +16,7 @@ import { getDb } from '../db-connection';
 import {
   developmentApprovalQueue,
   developments,
+  leads,
   subscriptions,
   unitTypes,
   users,
@@ -149,6 +150,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         await db
           .delete(developmentApprovalQueue)
           .where(inArray(developmentApprovalQueue.developmentId, fixture.developmentIds));
+        await db.delete(leads).where(inArray(leads.developmentId, fixture.developmentIds));
         await db.delete(unitTypes).where(inArray(unitTypes.developmentId, fixture.developmentIds));
         await db.delete(developments).where(inArray(developments.id, fixture.developmentIds));
       }
@@ -217,6 +219,215 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         })
       ).some(item => Number(item.id) === developmentId),
     ).toBe(true);
+  });
+
+  it('keeps live external availability updates public and owner-scoped', async () => {
+    const owner = await createFixture();
+    const otherDeveloper = await createFixture();
+    const reviewer = await createFixture('super_admin');
+    const development = await createDevelopmentFor(owner, {
+      unitTypes: [
+        {
+          name: 'Two Bedroom Apartment',
+          bedrooms: 2,
+          bathrooms: 2,
+          unitSize: 70,
+          priceFrom: 1200000,
+          totalUnits: 10,
+          availableUnits: 8,
+          reservedUnits: 1,
+          parkingType: 'none',
+          parkingBays: 0,
+        },
+      ],
+    });
+    const developmentId = Number(development.id);
+    const ownerCaller = callerFor(owner.userId, 'property_developer');
+
+    await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    await callerFor(reviewer.userId, 'super_admin').admin.adminApproveDevelopment({
+      developmentId,
+    });
+
+    const db = await getDb();
+    const [unit] = await db!
+      .select({ id: unitTypes.id })
+      .from(unitTypes)
+      .where(eq(unitTypes.developmentId, developmentId))
+      .limit(1);
+    const result = await ownerCaller.developer.updateUnitAvailability({
+      developmentId,
+      unitTypeId: unit.id,
+      availableUnits: 7,
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      unitType: {
+        id: unit.id,
+        availableUnits: 7,
+        reservedUnits: 1,
+        derivedSoldUnits: 2,
+      },
+    });
+
+    const [projection] = await db!
+      .select({
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+      })
+      .from(developments)
+      .where(eq(developments.id, developmentId))
+      .limit(1);
+    expect(projection).toMatchObject({ approvalStatus: 'approved', isPublished: 1 });
+
+    expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toMatchObject({
+      salesMetrics: {
+        totalUnits: 10,
+        availableUnits: 7,
+        reservedUnits: 1,
+        soldUnits: 2,
+      },
+    });
+
+    await expect(
+      callerFor(otherDeveloper.userId, 'property_developer').developer.updateUnitAvailability({
+        developmentId,
+        unitTypeId: unit.id,
+        availableUnits: 6,
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    const [unchanged] = await db!
+      .select({ availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(eq(unitTypes.id, unit.id))
+      .limit(1);
+    expect(unchanged.availableUnits).toBe(7);
+  });
+
+  it('routes a full external catalogue edit back through independent review', async () => {
+    const owner = await createFixture();
+    const reviewer = await createFixture('super_admin');
+    const development = await createDevelopmentFor(owner);
+    const developmentId = Number(development.id);
+    const ownerCaller = callerFor(owner.userId, 'property_developer');
+
+    await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    await callerFor(reviewer.userId, 'super_admin').admin.adminApproveDevelopment({
+      developmentId,
+    });
+
+    await ownerCaller.developer.updateDevelopment({
+      id: developmentId,
+      data: { name: 'Lifecycle Development — edited' },
+    });
+
+    const db = await getDb();
+    const [privateRevision] = await db!
+      .select({
+        name: developments.name,
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+      })
+      .from(developments)
+      .where(eq(developments.id, developmentId))
+      .limit(1);
+    expect(privateRevision).toMatchObject({
+      name: 'Lifecycle Development — edited',
+      approvalStatus: 'draft',
+      isPublished: 0,
+    });
+    expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toBeNull();
+
+    const submission = await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    expect(submission).toMatchObject({ approvalStatus: 'pending', isPublished: 0 });
+    const [latestReview] = await db!
+      .select({
+        status: developmentApprovalQueue.status,
+        submissionType: developmentApprovalQueue.submissionType,
+      })
+      .from(developmentApprovalQueue)
+      .where(eq(developmentApprovalQueue.developmentId, developmentId))
+      .orderBy(desc(developmentApprovalQueue.id))
+      .limit(1);
+    expect(latestReview).toMatchObject({ status: 'pending', submissionType: 'update' });
+  });
+
+  it('persists developer lead actions with MySQL-safe timestamps and ownership isolation', async () => {
+    const owner = await createFixture();
+    const otherDeveloper = await createFixture();
+    const reviewer = await createFixture('super_admin');
+    const development = await createDevelopmentFor(owner);
+    const developmentId = Number(development.id);
+    const ownerCaller = callerFor(owner.userId, 'property_developer');
+
+    await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    await callerFor(reviewer.userId, 'super_admin').admin.adminApproveDevelopment({
+      developmentId,
+    });
+
+    const db = await getDb();
+    const [leadResult] = await db!.insert(leads).values({
+      developmentId,
+      cataloguePublisherId: owner.developerContext!.cataloguePublisherId,
+      name: 'Lifecycle Prospect',
+      email: `lifecycle-prospect-${Date.now()}@example.com`,
+      source: 'development_detail_contact',
+      leadSource: 'development_detail_contact',
+      status: 'new',
+      funnelStage: 'interest',
+    });
+    const leadId = Number(leadResult.insertId);
+
+    await ownerCaller.developer.assignLead({
+      leadId,
+      ownerType: 'developer_sales',
+      ownerId: owner.userId,
+      assignmentMode: 'manual',
+    });
+    await ownerCaller.developer.transitionLead({ leadId, toStage: 'contacted' });
+    await ownerCaller.developer.logLeadActivity({
+      leadId,
+      type: 'call',
+      description: 'Discussed availability and next steps.',
+    });
+    await ownerCaller.developer.setLeadNextAction({
+      leadId,
+      type: 'call',
+      at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+
+    const [lead] = await db!
+      .select({
+        status: leads.status,
+        assignedTo: leads.assignedTo,
+        assignedAt: leads.assignedAt,
+        lastContactedAt: leads.lastContactedAt,
+        nextFollowUp: leads.nextFollowUp,
+        updatedAt: leads.updatedAt,
+        notes: leads.notes,
+      })
+      .from(leads)
+      .where(eq(leads.id, leadId))
+      .limit(1);
+    expect(lead).toMatchObject({ status: 'contacted', assignedTo: owner.userId });
+    expect(lead.notes).toContain('call: Discussed availability and next steps.');
+    for (const timestamp of [
+      lead.assignedAt,
+      lead.lastContactedAt,
+      lead.nextFollowUp,
+      lead.updatedAt,
+    ]) {
+      expect(String(timestamp)).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/);
+    }
+
+    await expect(
+      callerFor(otherDeveloper.userId, 'property_developer').developer.transitionLead({
+        leadId,
+        toStage: 'qualified',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('keeps approval private without Launch Access and restores publication after activation', async () => {
