@@ -1842,6 +1842,10 @@ const createActions = (
               id: u.id,
               label: u.label || u.name || 'Unnamed Unit',
               name: u.name || u.label || 'Unnamed Unit',
+              // Keep the canonical unit description available to the editor.
+              // Older wizard state used configDescription, so mirror both fields
+              // when hydrating persisted unit types instead of losing copy on edit.
+              description: u.description || u.configDescription || '',
               configDescription: u.configDescription || u.description || '',
 
               // Layout - Numbers, not null

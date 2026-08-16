@@ -380,5 +380,34 @@ describe('useDevelopmentWizard Validation Logic', () => {
       });
       expect((result.current.unitTypes[0] as any).priceFrom).not.toBe(1050000);
     });
+
+    it('preserves the canonical unit description when hydrating an editable development', () => {
+      const { result } = renderHook(() => useDevelopmentWizard());
+
+      act(() => {
+        result.current.hydrateDevelopment({
+          id: 125,
+          name: 'Description Preservation Development',
+          description: 'A persisted development with editable unit copy.',
+          developmentType: 'residential',
+          transactionType: 'for_sale',
+          status: 'selling',
+          unitTypes: [
+            {
+              id: 'db-unit-description',
+              name: 'Two Bedroom Apartment',
+              description: 'The saved two-bedroom unit description remains editable.',
+              bedrooms: 2,
+              bathrooms: 2,
+            },
+          ],
+        });
+      });
+
+      expect(result.current.unitTypes[0]).toMatchObject({
+        description: 'The saved two-bedroom unit description remains editable.',
+        configDescription: 'The saved two-bedroom unit description remains editable.',
+      });
+    });
   });
 });
