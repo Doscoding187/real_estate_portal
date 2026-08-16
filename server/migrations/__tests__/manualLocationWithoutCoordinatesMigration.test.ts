@@ -24,7 +24,7 @@ describe('PLE-6C manual location without coordinates migration', () => {
       approvalReference: 'PLE-6C-2026-08-10-Edward',
     });
     expect(manifest.expectedHead.filename).toBe(
-      '0018_distribution_access_publisher_authority.sql',
+      '0019_development_launch_date.sql',
     );
   });
 

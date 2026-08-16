@@ -175,14 +175,31 @@ function sanitizeDecimal(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function sanitizeDate(value: unknown): string | null {
+export function sanitizeDate(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString().slice(0, 19).replace('T', ' ');
   }
   if (typeof value === 'string') {
     const s = value.trim();
-    return s.length > 0 ? s : null;
+    if (!s) return null;
+
+    // Browser date inputs arrive as ISO timestamps. MySQL timestamp columns
+    // use the connection's date-time format, so normalize timezone-bearing
+    // values before Drizzle binds them.
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s) || /(?:Z|[+-]\d{2}:?\d{2})$/.test(s)) {
+      const parsed = new Date(s);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().slice(0, 19).replace('T', ' ');
+      }
+    }
+
+    // Date-only values are valid user input and represent local midnight in
+    // the persisted development timeline.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 00:00:00`;
+
+    // Preserve already-normalized database values for existing callers.
+    return s;
   }
   return null;
 }
@@ -510,6 +527,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       ownershipType: developments.ownershipType,
       transactionType: developments.transactionType,
       marketingRole: developments.marketingRole,
+      launchDate: developments.launchDate,
       completionDate: developments.completionDate,
       totalUnits: developments.totalUnits,
       availableUnits: developments.availableUnits,
@@ -1182,6 +1200,7 @@ export async function createDevelopment(
     customClassification: sanitizeString((developmentData as any).customClassification),
 
     estateSpecs: (developmentData as any).estateSpecs || null,
+    launchDate: sanitizeDate((developmentData as any).launchDate),
     completionDate: sanitizeDate((developmentData as any).completionDate),
 
     ownershipType: sanitizeEnum(
@@ -1467,6 +1486,8 @@ export async function updateDevelopment(
   // ---------------------------------------------------------------------------
   // Status / dates
   // ---------------------------------------------------------------------------
+  if (developmentData.launchDate !== undefined)
+    updatePayload.launchDate = sanitizeDate(developmentData.launchDate);
   if (developmentData.completionDate !== undefined)
     updatePayload.completionDate = sanitizeDate(developmentData.completionDate);
   if (developmentData.marketingRole !== undefined) {

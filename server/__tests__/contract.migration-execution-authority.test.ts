@@ -367,9 +367,10 @@ describe('migration execution authority', () => {
       '0016_catalogue_publisher_distribution_access.sql',
       '0017_distribution_publisher_authority.sql',
       '0018_distribution_access_publisher_authority.sql',
+      '0019_development_launch_date.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0018_distribution_access_publisher_authority.sql',
+      '0019_development_launch_date.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

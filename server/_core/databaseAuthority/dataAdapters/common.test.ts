@@ -90,9 +90,9 @@ describe('durable Database Authority migration guard', () => {
     });
 
     expect(result.document.expectedHead).toBe(
-      '0018_distribution_access_publisher_authority.sql',
+      '0019_development_launch_date.sql',
     );
-    expect(result.orderedMigrations).toHaveLength(19);
+    expect(result.orderedMigrations).toHaveLength(20);
   });
 
   it('rejects an otherwise valid prefix when the database is behind the manifest head', async () => {

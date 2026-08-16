@@ -66,6 +66,7 @@ describe('developmentService public development contract', () => {
       expect.arrayContaining(['slug', 'isPublished', 'approval_status']),
     );
     expect(parts.params).toEqual(expect.arrayContaining(['demo-development', 1, 'approved']));
+    expect(mockSelect.mock.calls[0]?.[0]).toHaveProperty('launchDate');
   });
 
   it('requires id lookups to be published and approved before public exposure', async () => {

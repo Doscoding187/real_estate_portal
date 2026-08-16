@@ -235,6 +235,7 @@ export const developments = mysqlTable(
     images: text(),
     videos: text(),
     completionDate: timestamp({ mode: 'string' }),
+    launchDate: timestamp({ mode: 'string' }),
     isFeatured: int().default(0).notNull(),
     views: int().default(0).notNull(),
     createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),

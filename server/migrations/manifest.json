@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0018_distribution_access_publisher_authority.sql",
+  "expectedHead": "0019_development_launch_date.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -200,6 +200,16 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "S1-identity-custody-authorized-Edward-2026-08-13"
+    },
+    {
+      "sequence": 19,
+      "filename": "0019_development_launch_date.sql",
+      "checksum": "95b176ddb52a0b11d141c4b7d503d4f9afc8f6452d0786bc7b8468ea7f707433",
+      "parent": "0018_distribution_access_publisher_authority.sql",
+      "parentChecksum": "efe50cf94bf0b39c34a9e1ef1ee99ed884ab4d88cc64509ce90f792d50c5d0a8",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
     }
   ]
 }
