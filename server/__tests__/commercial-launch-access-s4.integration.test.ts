@@ -19,6 +19,7 @@ import {
   isSubscriptionEntitled,
 } from '../services/planAccessService';
 import {
+  getAdminFinanceQueue,
   requestPaidLaunchAccessInvoice,
   reviewManualPayment,
   submitPaidLaunchAccessPaymentProof,
@@ -387,6 +388,16 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
         user: ownerUser,
         ...proofFor(requested.invoice),
       });
+      if (input.ownerType === 'developer') {
+        const financeQueue = await getAdminFinanceQueue({ status: 'under_review' });
+        const queuedDeveloperPayment = financeQueue.payments.find(
+          (row: any) => Number(row.payment.id) === proof.paymentId,
+        );
+        expect(queuedDeveloperPayment?.developerOrganisation).toMatchObject({
+          id: input.ownerId,
+          name: expect.stringContaining('s4-developer-primary'),
+        });
+      }
       const secondProof = await submitPaidLaunchAccessPaymentProof({
         user: ownerUser,
         ...proofFor(requested.invoice),

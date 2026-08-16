@@ -1985,6 +1985,7 @@ export async function getAdminFinanceQueue(input: {
       payment: billingPayments,
       invoice: billingInvoices,
       agency: agencies,
+      developerOrganisation: developerOrganisations,
       documentId: billingPaymentDocuments.id,
       documentFileName: billingPaymentDocuments.originalFileName,
       documentMimeType: billingPaymentDocuments.mimeType,
@@ -2002,6 +2003,13 @@ export async function getAdminFinanceQueue(input: {
     .leftJoin(
       agencies,
       and(eq(billingInvoices.ownerType, 'agency'), eq(agencies.id, billingInvoices.ownerId)),
+    )
+    .leftJoin(
+      developerOrganisations,
+      and(
+        eq(billingInvoices.ownerType, 'developer'),
+        eq(developerOrganisations.id, billingInvoices.ownerId),
+      ),
     )
     .where(conditions)
     .orderBy(desc(billingPayments.createdAt))

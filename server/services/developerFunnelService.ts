@@ -411,10 +411,15 @@ export function getCanonicalLeadSource(lead: LeadSourceRow): string {
  * is derived from this one server-side timestamp and boundary.
  */
 export function getDevelopmentHomeRangeBoundary(range: DevelopmentHomeRange, now: Date) {
-  const from = new Date(now);
+  const to = new Date(now);
+  const from = new Date(to);
   const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
   from.setDate(from.getDate() - days);
-  return { from: from.toISOString(), to: now.toISOString() };
+
+  // Keep the boundaries as Date values so mysql2 serializes them using the
+  // connection/session timezone. Passing ISO UTC strings to MySQL TIMESTAMP
+  // columns can exclude fresh rows when the database session uses local time.
+  return { from, to };
 }
 
 /**
@@ -432,8 +437,8 @@ export async function getOwnedDevelopmentHomeLeadSummary(params: {
   const periodCondition = and(
     eq(leads.developmentId, params.developmentId),
     params.includePlatformCustody ? undefined : ne(leads.deliveryStatus, 'attention_required'),
-    gte(leads.createdAt, boundary.from),
-    lte(leads.createdAt, boundary.to),
+    gte(leads.createdAt, sql`${boundary.from}`),
+    lte(leads.createdAt, sql`${boundary.to}`),
   );
   const sourceChannel = sql<string>`COALESCE(NULLIF(TRIM(${leads.leadSource}), ''), NULLIF(TRIM(${leads.source}), ''), 'Unknown source')`;
   const sum = (condition: ReturnType<typeof sql>) =>
