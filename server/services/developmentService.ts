@@ -2958,9 +2958,10 @@ export async function unpublishPlatformCuratedDevelopment(
 
 /**
  * The privileged publication transition for platform-curated developments.
- * It remains readiness-gated and records the operator's approval in the
- * canonical review history; the separate submit/review route is preferred by
- * the curated operator workflow.
+ * It is readiness-gated and records the operator's publication decision in
+ * the canonical approval history. A legacy pending curated submission may be
+ * completed by this same privileged operator; external developer submissions
+ * continue to use the independent review boundary.
  */
 async function publishPlatformCuratedDevelopment(
   id: number,
@@ -3073,14 +3074,16 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
           inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
         ),
       )
-      .limit(1)
+      .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id))
+      .limit(2)
       .for('update');
-    if (openRows.length > 0) {
+    if (openRows.length > 1) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'Development already has an unresolved review submission.',
+        message: 'Development has multiple unresolved curated publication submissions.',
       });
     }
+    const openRow = openRows[0];
 
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
     const blockers = validatePersistedSubmissionReadiness(existingDev, persistedUnits);
@@ -3110,18 +3113,44 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
         ),
       );
 
-    await tx.insert(developmentApprovalQueue).values({
-      developmentId: id,
-      submittedBy: actor.id,
-      submittedAt: now,
-      status: 'approved',
-      submissionType: priorRows.length > 0 ? 'update' : 'initial',
-      reviewNotes: null,
-      rejectionReason: null,
-      reviewedAt: now,
-      reviewedBy: actor.id,
-      complianceChecks: null,
-    });
+    if (openRow) {
+      const result = await tx
+        .update(developmentApprovalQueue)
+        .set({
+          status: 'approved',
+          reviewedAt: now,
+          reviewedBy: actor.id,
+          reviewNotes: null,
+          rejectionReason: null,
+          complianceChecks: null,
+        })
+        .where(
+          and(
+            eq(developmentApprovalQueue.id, openRow.id),
+            inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+          ),
+        );
+      const affectedRows = Number(result?.affectedRows ?? result?.[0]?.affectedRows ?? 0);
+      if (affectedRows !== 1) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Curated publication record changed before completion.',
+        });
+      }
+    } else {
+      await tx.insert(developmentApprovalQueue).values({
+        developmentId: id,
+        submittedBy: actor.id,
+        submittedAt: now,
+        status: 'approved',
+        submissionType: priorRows.length > 0 ? 'update' : 'initial',
+        reviewNotes: null,
+        rejectionReason: null,
+        reviewedAt: now,
+        reviewedBy: actor.id,
+        complianceChecks: null,
+      });
+    }
 
     const [published] = await tx
       .select()

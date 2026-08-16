@@ -11,10 +11,11 @@ const testState = vi.hoisted(() => {
   const publishDevelopmentMock = vi.fn();
   const createPublisherDevelopmentMock = vi.fn();
   const updatePublisherDevelopmentMock = vi.fn();
-  const submitPublisherDevelopmentMock = vi.fn();
+  const publishPublisherDevelopmentMock = vi.fn();
   const invalidateDevelopmentHomeMock = vi.fn().mockResolvedValue(undefined);
   const invalidateOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
   const invalidatePublisherOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
+  const fetchPublisherOperatingHomeMock = vi.fn().mockResolvedValue(undefined);
   const invalidatePublisherDevelopmentsMock = vi.fn().mockResolvedValue(undefined);
   const resetMock = vi.fn();
   const setPhaseMock = vi.fn();
@@ -116,10 +117,11 @@ const testState = vi.hoisted(() => {
     createPublisherDevelopmentMock,
     navigateMock,
     publishDevelopmentMock,
-    submitPublisherDevelopmentMock,
+    publishPublisherDevelopmentMock,
     invalidateDevelopmentHomeMock,
     invalidateOperatingHomeMock,
     invalidatePublisherOperatingHomeMock,
+    fetchPublisherOperatingHomeMock,
     invalidatePublisherDevelopmentsMock,
     resetMock,
     toastErrorMock,
@@ -155,7 +157,10 @@ vi.mock('@/lib/trpc', () => ({
         getOperatingHome: { invalidate: testState.invalidateOperatingHomeMock },
       },
       superAdminPublisher: {
-        getOperatingHome: { invalidate: testState.invalidatePublisherOperatingHomeMock },
+        getOperatingHome: {
+          invalidate: testState.invalidatePublisherOperatingHomeMock,
+          fetch: testState.fetchPublisherOperatingHomeMock,
+        },
         getDevelopments: { invalidate: testState.invalidatePublisherDevelopmentsMock },
       },
     }),
@@ -173,8 +178,8 @@ vi.mock('@/lib/trpc', () => ({
       updateDevelopment: {
         useMutation: () => ({ mutateAsync: testState.updatePublisherDevelopmentMock }),
       },
-      submitDevelopment: {
-        useMutation: () => ({ mutateAsync: testState.submitPublisherDevelopmentMock }),
+      publishDevelopment: {
+        useMutation: () => ({ mutateAsync: testState.publishPublisherDevelopmentMock }),
       },
     },
   },
@@ -216,7 +221,7 @@ describe('FinalisationPhase', () => {
     testState.publishDevelopmentMock.mockResolvedValue({ success: true });
     testState.createPublisherDevelopmentMock.mockResolvedValue({ development: { id: 456 } });
     testState.updatePublisherDevelopmentMock.mockResolvedValue({ success: true });
-    testState.submitPublisherDevelopmentMock.mockResolvedValue({ success: true });
+    testState.publishPublisherDevelopmentMock.mockResolvedValue({ success: true });
     testState.invalidateDevelopmentHomeMock.mockResolvedValue(undefined);
     testState.invalidateOperatingHomeMock.mockResolvedValue(undefined);
   });
@@ -316,31 +321,35 @@ describe('FinalisationPhase', () => {
     expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();
   });
 
-  it('uses governed review submission and publisher mutations for a super-admin publisher context', async () => {
+  it('uses privileged curated publication for a super-admin publisher context', async () => {
     testState.setActor({ id: 2, role: 'super_admin' }, { cataloguePublisherId: 44 });
 
     render(<FinalisationPhase />);
 
-    expect(screen.getByRole('heading', { name: 'Review & Submit' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Review & Publish' })).toBeInTheDocument();
     expect(screen.getByText('Curated Publication Controls')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Submit for Review' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Submit for Review' }));
-    expect(screen.getByRole('heading', { name: 'Confirm Submission for Review' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publish Development' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
+    expect(screen.getByRole('heading', { name: 'Confirm Publication' })).toBeInTheDocument();
     expect(
-      screen.getByText(/remain private until an authorised reviewer approves it/i),
+      screen.getByText(/publish this curated development to the Property Listify marketplace/i),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm & Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publish Development' }));
 
     await waitFor(() => expect(testState.createPublisherDevelopmentMock).toHaveBeenCalledTimes(1));
 
-    expect(testState.submitPublisherDevelopmentMock).toHaveBeenCalledWith({
+    expect(testState.publishPublisherDevelopmentMock).toHaveBeenCalledWith({
       cataloguePublisherId: 44,
       developmentId: 456,
     });
     expect(testState.publishDevelopmentMock).not.toHaveBeenCalled();
-    expect(testState.toastSuccessMock).toHaveBeenCalledWith('Curated development submitted for review!');
+    expect(testState.toastSuccessMock).toHaveBeenCalledWith('Curated development published!');
     expect(testState.navigateMock).toHaveBeenCalledWith('/admin/publisher');
     expect(testState.invalidatePublisherOperatingHomeMock).toHaveBeenCalledWith({
+      cataloguePublisherId: 44,
+      range: '30d',
+    });
+    expect(testState.fetchPublisherOperatingHomeMock).toHaveBeenCalledWith({
       cataloguePublisherId: 44,
       range: '30d',
     });

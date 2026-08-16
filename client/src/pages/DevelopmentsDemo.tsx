@@ -112,7 +112,7 @@ export default function DevelopmentsDemo() {
                       unitTypes={dev.unitTypes || dev.configurations || []}
                       highlights={(dev.highlights as string[]) || []}
                       developer={{
-                        name: dev.developerName || 'Unknown Developer',
+                        name: dev.builderName || dev.developerName || 'Unknown Developer',
                         isFeatured: !!dev.developerIsFeatured,
                       }}
                       imageCount={images.length}
