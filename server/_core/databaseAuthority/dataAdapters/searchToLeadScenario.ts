@@ -1585,7 +1585,7 @@ export async function verifySearchToLeadScenarioData(
       `Search-to-Lead scenario expected ${eligiblePropertyIds.length} source-backed sale properties but found ${propertyRows.length}.`,
     );
   }
-  const expectedPropertySet = new Set(eligiblePropertyIds);
+  const expectedPropertySet = new Set<number>(eligiblePropertyIds);
   for (const row of propertyRows) {
     const propertyId = Number(rowValue(row, 'id'));
     if (!expectedPropertySet.has(propertyId)) {
@@ -2050,7 +2050,7 @@ async function runContainedApplicationVerification(
       ids: [SCENARIO_IDS.agentProperty, SCENARIO_IDS.rentalProperty],
     });
     const comparisonIds = comparison.map(result => {
-      const record = result as Record<string, unknown>;
+      const record = result as unknown as Record<string, unknown>;
       const property = record.property as Record<string, unknown> | undefined;
       return Number(property?.id ?? record.propertyId ?? record.id);
     });
