@@ -29,18 +29,18 @@ const propertyTypes: PropertyType[] = [
     listingType: 'sale',
   },
   {
-    type: 'Office Spaces',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Shops',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=600&fit=crop',
-    listingType: 'sale',
-  },
-  {
-    type: 'Penthouses',
+    type: 'Villas',
     image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop',
+    listingType: 'sale',
+  },
+  {
+    type: 'Cluster Homes',
+    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop',
+    listingType: 'sale',
+  },
+  {
+    type: 'Farms',
+    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=800&h=600&fit=crop',
     listingType: 'sale',
   },
   // Rent Properties
@@ -240,27 +240,27 @@ export function DiscoverProperties({
             )
               .filter(tab => tab.id !== 'rent' || rentJourneyEnabled)
               .map(tab => {
-              const isActive = listingType === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setListingType(tab.id);
-                    setSaleExpanded(tab.id === 'sale');
-                    setRentExpanded(tab.id === 'rent');
-                    setDevelopmentsExpanded(tab.id === 'developments');
-                  }}
-                  className={`relative pb-3 text-sm font-semibold transition-colors ${
-                    isActive ? 'text-slate-900' : 'text-slate-500'
-                  }`}
-                >
-                  {tab.label}
-                  {isActive ? (
-                    <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-900" />
-                  ) : null}
-                </button>
-              );
-            })}
+                const isActive = listingType === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setListingType(tab.id);
+                      setSaleExpanded(tab.id === 'sale');
+                      setRentExpanded(tab.id === 'rent');
+                      setDevelopmentsExpanded(tab.id === 'developments');
+                    }}
+                    className={`relative pb-3 text-sm font-semibold transition-colors ${
+                      isActive ? 'text-slate-900' : 'text-slate-500'
+                    }`}
+                  >
+                    {tab.label}
+                    {isActive ? (
+                      <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-900" />
+                    ) : null}
+                  </button>
+                );
+              })}
           </div>
           <div className="pt-4">
             <p className="text-sm text-slate-600 leading-relaxed">{mobileActiveCopy.description}</p>
@@ -319,42 +319,42 @@ export function DiscoverProperties({
 
               {rentJourneyEnabled ? (
                 <div className="border-b border-slate-100">
-                <button
-                  onClick={handleRentClick}
-                  className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
-                    rentExpanded
-                      ? 'bg-blue-50/80 text-blue-700'
-                      : 'hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <span className="font-bold text-base">Properties for Rent</span>
-                  <div
-                    className={`rounded-full p-1 transition-colors ${rentExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
+                  <button
+                    onClick={handleRentClick}
+                    className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
+                      rentExpanded
+                        ? 'bg-blue-50/80 text-blue-700'
+                        : 'hover:bg-slate-50 text-slate-700'
+                    }`}
                   >
-                    <ChevronRightIcon
-                      className={`h-4 w-4 transition-transform duration-300 ${rentExpanded ? 'rotate-90' : ''}`}
-                    />
-                  </div>
-                </button>
-                <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                  }`}
-                >
-                  <div className="px-5 pb-5 pt-2 bg-blue-50/30">
-                    <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Browse apartments, cottages, and flexible rentals now available in{' '}
-                      {selectedCity}.
-                    </p>
-                    <a
-                      href={buildDiscoverBrowseHref('rent', selectedCity)}
-                      className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
+                    <span className="font-bold text-base">Properties for Rent</span>
+                    <div
+                      className={`rounded-full p-1 transition-colors ${rentExpanded ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}`}
                     >
-                      View Rental Listings
-                      <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </a>
+                      <ChevronRightIcon
+                        className={`h-4 w-4 transition-transform duration-300 ${rentExpanded ? 'rotate-90' : ''}`}
+                      />
+                    </div>
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <div className="px-5 pb-5 pt-2 bg-blue-50/30">
+                      <p className="text-sm text-slate-600 leading-relaxed mb-5">
+                        Browse apartments, cottages, and flexible rentals now available in{' '}
+                        {selectedCity}.
+                      </p>
+                      <a
+                        href={buildDiscoverBrowseHref('rent', selectedCity)}
+                        className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors group"
+                      >
+                        View Rental Listings
+                        <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </a>
+                    </div>
                   </div>
-                </div>
                 </div>
               ) : null}
 

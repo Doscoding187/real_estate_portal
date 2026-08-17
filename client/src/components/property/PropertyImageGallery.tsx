@@ -1,7 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Box, Camera, ChevronLeft, ChevronRight, Images, Maximize2, Play, Ruler, X, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+  Box,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  ImageOff,
+  Images,
+  Maximize2,
+  Play,
+  Ruler,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 
 interface PropertyImage {
   id: number;
@@ -127,6 +140,7 @@ export function PropertyImageGallery({
       },
     },
   ];
+  const visibleMediaTabs = mediaTabs.filter(tab => tab.id === 'photos' || tab.enabled);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -148,8 +162,15 @@ export function PropertyImageGallery({
 
   if (sortedImages.length === 0) {
     return (
-      <div className="w-full h-[500px] bg-muted rounded-lg flex items-center justify-center">
-        <span className="text-muted-foreground">No images available</span>
+      <div className="flex min-h-[280px] w-full flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 px-6 text-center md:min-h-[500px]">
+        <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+          <ImageOff className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <p className="font-semibold text-slate-700">Photos have not been added yet</p>
+        <p className="mt-1 max-w-sm text-sm text-slate-500">
+          You can still review the property details and send an enquiry to the listing
+          representative.
+        </p>
       </div>
     );
   }
@@ -157,11 +178,11 @@ export function PropertyImageGallery({
   return (
     <div className="flex h-full flex-col gap-3">
       {/* Main Image */}
-      <div className="relative group min-h-[520px] flex-1 overflow-hidden rounded-2xl bg-slate-100">
+      <div className="group relative aspect-[4/3] min-h-[260px] flex-1 overflow-hidden rounded-2xl bg-slate-100 md:aspect-auto md:min-h-[520px]">
         <img
           src={sortedImages[selectedImageIndex].imageUrl}
           alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
-          className="h-full min-h-[520px] w-full object-cover cursor-pointer transition-transform hover:scale-[1.02]"
+          className="h-full min-h-[260px] w-full cursor-pointer object-cover transition-transform hover:scale-[1.02] md:min-h-[520px]"
           onClick={() => setIsLightboxOpen(true)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -182,6 +203,7 @@ export function PropertyImageGallery({
               size="icon"
               className="absolute left-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity md:flex md:group-hover:opacity-100"
               onClick={handlePrevious}
+              aria-label="Previous photo"
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -190,6 +212,7 @@ export function PropertyImageGallery({
               size="icon"
               className="absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-full opacity-0 transition-opacity md:flex md:group-hover:opacity-100"
               onClick={handleNext}
+              aria-label="Next photo"
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
@@ -212,12 +235,13 @@ export function PropertyImageGallery({
 
       {/* Media Tabs - Mobile */}
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden">
-        {mediaTabs.map(tab => {
+        {visibleMediaTabs.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               type="button"
+              aria-label={`${tab.label}, ${tab.meta}`}
               disabled={!tab.enabled}
               onClick={tab.action}
               className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -238,8 +262,11 @@ export function PropertyImageGallery({
 
       {/* Desktop Media Rail */}
       <div className="hidden md:block">
-        <div className="grid grid-cols-4 gap-2">
-          {mediaTabs.map(tab => {
+        <div
+          className="grid gap-2"
+          style={{ gridTemplateColumns: `repeat(${visibleMediaTabs.length}, minmax(0, 1fr))` }}
+        >
+          {visibleMediaTabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeMediaTab === tab.id;
 
@@ -247,6 +274,7 @@ export function PropertyImageGallery({
               <button
                 key={tab.id}
                 type="button"
+                aria-label={`${tab.label}, ${tab.meta}`}
                 disabled={!tab.enabled}
                 onClick={tab.action}
                 aria-pressed={isActive}
@@ -298,6 +326,7 @@ export function PropertyImageGallery({
                   size="icon"
                   className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full z-50"
                   onClick={handlePrevious}
+                  aria-label="Previous photo"
                 >
                   <ChevronLeft className="h-6 w-6" />
                 </Button>
@@ -306,6 +335,7 @@ export function PropertyImageGallery({
                   size="icon"
                   className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full z-50"
                   onClick={handleNext}
+                  aria-label="Next photo"
                 >
                   <ChevronRight className="h-6 w-6" />
                 </Button>
@@ -352,7 +382,8 @@ export function PropertyImageGallery({
             <div className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-4xl overflow-x-auto">
               <div className="flex gap-2 px-4">
                 {sortedImages.map((image, index) => (
-                  <div
+                  <button
+                    type="button"
                     key={image.id}
                     className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer transition-all ${
                       selectedImageIndex === index
@@ -363,13 +394,14 @@ export function PropertyImageGallery({
                       setSelectedImageIndex(index);
                       setZoomLevel(1);
                     }}
+                    aria-label={`View photo ${index + 1}`}
                   >
                     <img
                       src={image.imageUrl}
                       alt={`Thumbnail ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>

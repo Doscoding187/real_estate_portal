@@ -608,6 +608,7 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
     contactRole: 'developer',
     identity: {
       role: 'developer',
+      provenance: 'developer',
       name: identityName,
       avatarUrl: item.developerBrand?.logoUrl || null,
       phone: item.developerBrand?.publicContactPhone || null,

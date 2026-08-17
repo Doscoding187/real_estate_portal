@@ -14,7 +14,7 @@ describe('PXF-S1 property prospect contract', () => {
   it('uses one responsive property-detail authority and canonical persisted saves', () => {
     const route = readRepoFile('client/src/pages/PropertyDetail.tsx');
     const page = readRepoFile('client/src/pages/PropertyDetailPage.tsx');
-    const properties = readRepoFile('client/src/pages/Properties.tsx');
+    const searchResults = readRepoFile('client/src/pages/SearchResults.tsx');
 
     expect(route).toContain("import PropertyDetailPage from './PropertyDetailPage'");
     expect(route).not.toContain('matchMedia');
@@ -25,9 +25,9 @@ describe('PXF-S1 property prospect contract', () => {
     expect(page).toContain('const isFavorite = favorites.some');
     expect(page).toContain('disabled={toggleFavoriteMutation.isPending}');
     expect(page).not.toContain(retiredFavoriteMutation);
-    expect(properties).toContain('trpc.properties.toggleFavorite.useMutation');
-    expect(properties).toContain('utils.properties.getFavorites.invalidate()');
-    expect(properties).not.toContain(retiredFavoriteMutation);
+    expect(searchResults).toContain('trpc.properties.toggleFavorite.useMutation');
+    expect(searchResults).toContain('utils.properties.getFavorites.invalidate()');
+    expect(searchResults).not.toContain(retiredFavoriteMutation);
   });
 
   it('hands off anonymous saves to sign-in without a second save authority', () => {
@@ -48,10 +48,10 @@ describe('PXF-S1 property prospect contract', () => {
     const leadsRouter = readRepoFile('server/leadsRouter.ts');
 
     expect(modal).toContain(
-      "leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry'",
+      "leadType: formData.enquiryType === 'viewing' ? 'viewing_request' : 'inquiry'",
     );
     expect(modal).toContain('trpc.leads.create.useMutation');
-    expect(modal).toContain('Request a Viewing');
+    expect(modal).toContain('Request a viewing');
     expect(modal).not.toContain(retiredScheduleLabel);
     expect(page).toContain("requestType: 'viewing_request'");
     expect(page).toContain('Submit viewing request');
@@ -59,12 +59,16 @@ describe('PXF-S1 property prospect contract', () => {
     expect(leadsRouter).toContain("'viewing_request'");
   });
 
-  it('states that a listing contact must confirm the appointment after the request', () => {
+  it('states that delivery is not a booked appointment without promising a follow-up', () => {
     const modal = readRepoFile('client/src/components/property/PropertyContactModal.tsx');
     const page = readRepoFile('client/src/pages/PropertyDetailPage.tsx');
 
-    expect(modal).toContain('will follow up to confirm a suitable date and time');
-    expect(page).toContain('will follow up to confirm a suitable date and time');
+    expect(modal).toContain('This does not confirm an appointment');
+    expect(modal).toContain('they can contact you to arrange a suitable date and time');
+    expect(page).toContain('This is not a confirmed appointment');
+    expect(page).toContain('the representative can contact you to arrange a suitable time');
+    expect(modal).not.toContain('will follow up to confirm a suitable date and time');
+    expect(page).not.toContain('will follow up to confirm a suitable date and time');
   });
 
   it('keeps ordinary enquiries, loading, and not-found states in the shared page', () => {
@@ -73,11 +77,49 @@ describe('PXF-S1 property prospect contract', () => {
 
     expect(modal).toContain("intent = 'enquiry'");
     expect(modal).toContain(
-      "leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry'",
+      "leadType: formData.enquiryType === 'viewing' ? 'viewing_request' : 'inquiry'",
     );
-    expect(modal).toContain("'We could not save your enquiry. Please try again.'");
+    expect(modal).toContain(
+      "'We could not save your enquiry. Your details are still here, so you can try again.'",
+    );
     expect(page).toContain('if (isLoading)');
-    expect(page).toContain('Property Not Found');
+    expect(page).toContain('Property temporarily unavailable');
+    expect(page).toContain('onClick={() => void refetch()}');
+    expect(page).toContain('Property no longer available');
+    expect(page).toContain('getPropertySearchReturn(window.sessionStorage');
     expect(page).toContain('trpc.properties.getById.useQuery');
+    expect(page).toContain('trpc.properties.getRelatedPublicInventory.useQuery');
+    expect(page).not.toContain('trpc.properties.getAll.useQuery');
+  });
+
+  it('uses canonical public identity and removes invented trust and finance claims', () => {
+    const page = readRepoFile('client/src/pages/PropertyDetailPage.tsx');
+
+    expect(page).toContain('const publicIdentity = property.publicIdentity');
+    expect(page).toContain("contactMode === 'agency'");
+    expect(page).not.toContain("normalizedListerType === 'private'");
+    expect(page).not.toContain("'Verified Agent'");
+    expect(page).not.toContain("'Registered Agent'");
+    expect(page).not.toContain('displayRepayment');
+    expect(page).not.toContain('<PropertyQualificationDrawer');
+    expect(page).not.toContain('<BondCalculator');
+    expect(page).not.toContain('<SuburbInsights');
+    expect(page).not.toContain('<LocalityGuide');
+    expect(page).not.toContain('<PropertyServiceActions');
+  });
+
+  it('keeps one responsive action hierarchy and semantic related-property navigation', () => {
+    const page = readRepoFile('client/src/pages/PropertyDetailPage.tsx');
+
+    expect(page.match(/onClick={handleOpenStandardEnquiry}/g)).toHaveLength(2);
+    expect(page).toContain('className="hidden overflow-hidden');
+    expect(page).toContain('lg:block"');
+    expect(page).toContain('aria-label="Property enquiry actions"');
+    expect(page).toContain('pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden');
+    expect(page).toContain('aria-label="Request a viewing"');
+    expect(page).toContain('href={prop.href}');
+    expect(page).toContain('aria-label={`Open ${prop.title}`}');
+    expect(page).toContain('<Link href={similarListingsHref}>View All Matching Listings</Link>');
+    expect(page).not.toContain('onClick={() => setLocation(prop.href)}');
   });
 });

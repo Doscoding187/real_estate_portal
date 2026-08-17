@@ -1,4 +1,11 @@
 import * as listingDb from '../db';
+import { inArray } from 'drizzle-orm';
+import {
+  listingMedia,
+  listings,
+  properties,
+  propertyImages,
+} from '../../drizzle/schema';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import {
   buildCanonicalCorePropertyDetails,
@@ -28,6 +35,16 @@ export interface ApprovedPublicPropertyDataSource {
   getListingMedia(listingId: number): Promise<any[]>;
 }
 
+export interface ApprovedPublicPropertyBatchDataSource {
+  getPropertiesByIds(propertyIds: readonly number[]): Promise<any[]>;
+  getPropertyImagesByPropertyIds(propertyIds: readonly number[]): Promise<any[]>;
+  getListingsByIds(listingIds: readonly number[]): Promise<any[]>;
+  getListingMediaByListingIds(listingIds: readonly number[]): Promise<any[]>;
+}
+
+/** Keeps every public-eligibility IN query below a predictable parameter bound. */
+export const PUBLIC_PROPERTY_QUERY_BATCH_SIZE = 250;
+
 export interface ApprovedPublicPropertyResolution {
   property: Record<string, any>;
   images: Array<Record<string, any>>;
@@ -44,6 +61,47 @@ const defaultDataSource: ApprovedPublicPropertyDataSource = {
   getListingMedia: listingId => listingDb.getListingMedia(listingId),
 };
 
+const defaultBatchDataSource: ApprovedPublicPropertyBatchDataSource = {
+  async getPropertiesByIds(propertyIds) {
+    const database = await listingDb.getDb();
+    if (!database) throw new Error('Database not available');
+    return database.select().from(properties).where(inArray(properties.id, [...propertyIds]));
+  },
+  async getPropertyImagesByPropertyIds(propertyIds) {
+    const database = await listingDb.getDb();
+    if (!database) throw new Error('Database not available');
+    return database
+      .select()
+      .from(propertyImages)
+      .where(inArray(propertyImages.propertyId, [...propertyIds]));
+  },
+  async getListingsByIds(listingIds) {
+    const database = await listingDb.getDb();
+    if (!database) throw new Error('Database not available');
+    return database.select().from(listings).where(inArray(listings.id, [...listingIds]));
+  },
+  async getListingMediaByListingIds(listingIds) {
+    const database = await listingDb.getDb();
+    if (!database) throw new Error('Database not available');
+    return database
+      .select()
+      .from(listingMedia)
+      .where(inArray(listingMedia.listingId, [...listingIds]));
+  },
+};
+
+async function loadRowsInBoundedBatches<T>(
+  ids: readonly number[],
+  loader: (batchIds: readonly number[]) => Promise<T[]>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let offset = 0; offset < ids.length; offset += PUBLIC_PROPERTY_QUERY_BATCH_SIZE) {
+    const batchIds = ids.slice(offset, offset + PUBLIC_PROPERTY_QUERY_BATCH_SIZE);
+    rows.push(...(await loader(batchIds)));
+  }
+  return rows;
+}
+
 function isPublicPropertyStatus(status: unknown): boolean {
   return status === 'available' || status === 'published';
 }
@@ -53,7 +111,10 @@ function isApprovedSourceListing(listing: any, expectedListingId: number): boole
     listing &&
     Number(listing.id) === expectedListingId &&
     listing.revisionOfListingId == null &&
-    (listing.status === 'published' || listing.status === 'approved') &&
+    // `approved` is a historical review state, not a future publication
+    // authority. Current approval writes `published`; legacy rows must be
+    // reconciled rather than silently treated as live inventory.
+    listing.status === 'published' &&
     listing.approvalStatus === 'approved',
   );
 }
@@ -506,31 +567,123 @@ export async function resolveApprovedPublicProperty(
 }
 
 /**
+ * Resolve approved public properties in bounded bulk queries.
+ *
+ * The batch path deliberately delegates the final decision to the same
+ * source/projection/media coherence mapper as the single-property Detail
+ * resolver. Loading changes; public semantics do not.
+ */
+export async function resolveApprovedPublicProperties(
+  propertyIds: readonly number[],
+  dataSource: ApprovedPublicPropertyBatchDataSource = defaultBatchDataSource,
+): Promise<Map<number, ApprovedPublicPropertyResolution>> {
+  const uniqueIds = Array.from(
+    new Set(propertyIds.filter(id => Number.isSafeInteger(id) && id > 0)),
+  );
+  if (uniqueIds.length === 0) return new Map();
+
+  const propertyRows = await loadRowsInBoundedBatches(uniqueIds, ids =>
+    dataSource.getPropertiesByIds(ids),
+  );
+  const requestedPropertyIds = new Set(uniqueIds);
+  const propertyById = new Map<number, Record<string, any>>();
+  propertyRows.forEach(property => {
+    const propertyId = Number(property?.id);
+    if (
+      requestedPropertyIds.has(propertyId) &&
+      !propertyById.has(propertyId) &&
+      isPublicPropertyStatus(property?.status)
+    ) {
+      propertyById.set(propertyId, property);
+    }
+  });
+
+  const candidatePropertyIds = uniqueIds.filter(propertyId => {
+    const sourceListingId = Number(propertyById.get(propertyId)?.sourceListingId);
+    return Number.isSafeInteger(sourceListingId) && sourceListingId > 0;
+  });
+  const sourceListingIds = Array.from(
+    new Set(candidatePropertyIds.map(id => Number(propertyById.get(id)!.sourceListingId))),
+  );
+  if (sourceListingIds.length === 0) return new Map();
+
+  const sourceRows = await loadRowsInBoundedBatches(sourceListingIds, ids =>
+    dataSource.getListingsByIds(ids),
+  );
+  const requestedListingIds = new Set(sourceListingIds);
+  const sourceById = new Map<number, Record<string, any>>();
+  sourceRows.forEach(sourceListing => {
+    const sourceListingId = Number(sourceListing?.id);
+    if (
+      requestedListingIds.has(sourceListingId) &&
+      !sourceById.has(sourceListingId) &&
+      isApprovedSourceListing(sourceListing, sourceListingId)
+    ) {
+      sourceById.set(sourceListingId, sourceListing);
+    }
+  });
+
+  const coherentPropertyIds = candidatePropertyIds.filter(propertyId =>
+    sourceById.has(Number(propertyById.get(propertyId)!.sourceListingId)),
+  );
+  if (coherentPropertyIds.length === 0) return new Map();
+
+  const coherentListingIds = Array.from(
+    new Set(coherentPropertyIds.map(id => Number(propertyById.get(id)!.sourceListingId))),
+  );
+  const [projectionImageRows, listingMediaRows] = await Promise.all([
+    loadRowsInBoundedBatches(coherentPropertyIds, ids =>
+      dataSource.getPropertyImagesByPropertyIds(ids),
+    ),
+    loadRowsInBoundedBatches(coherentListingIds, ids =>
+      dataSource.getListingMediaByListingIds(ids),
+    ),
+  ]);
+
+  const projectionImagesByPropertyId = new Map<number, any[]>();
+  projectionImageRows.forEach(image => {
+    const propertyId = Number(image?.propertyId);
+    if (!projectionImagesByPropertyId.has(propertyId)) {
+      projectionImagesByPropertyId.set(propertyId, []);
+    }
+    projectionImagesByPropertyId.get(propertyId)!.push(image);
+  });
+
+  const mediaByListingId = new Map<number, any[]>();
+  listingMediaRows.forEach(media => {
+    const listingId = Number(media?.listingId);
+    if (!mediaByListingId.has(listingId)) mediaByListingId.set(listingId, []);
+    mediaByListingId.get(listingId)!.push(media);
+  });
+
+  const resolutions = new Map<number, ApprovedPublicPropertyResolution>();
+  coherentPropertyIds.forEach(propertyId => {
+    const property = propertyById.get(propertyId)!;
+    const sourceListingId = Number(property.sourceListingId);
+    const resolution = mapApprovedListingProperty(
+      property,
+      sourceById.get(sourceListingId)!,
+      normalizeProjectionImages(projectionImagesByPropertyId.get(propertyId) || []),
+      mediaByListingId.get(sourceListingId) || [],
+    );
+    if (resolution) resolutions.set(propertyId, resolution);
+  });
+
+  return resolutions;
+}
+
+/**
  * Resolve the canonical public eligibility set for a collection of property
  * projection IDs. This deliberately uses the same full source/projection/media
  * contract as detail rather than introducing a weaker search-only predicate.
  */
 export async function resolveApprovedPublicPropertyIds(
   propertyIds: readonly number[],
-  dataSource: ApprovedPublicPropertyDataSource = defaultDataSource,
+  dataSource: ApprovedPublicPropertyBatchDataSource = defaultBatchDataSource,
 ): Promise<number[]> {
   const uniqueIds = Array.from(
-    new Set(
-      propertyIds.filter(id => Number.isSafeInteger(id) && id > 0),
-    ),
+    new Set(propertyIds.filter(id => Number.isSafeInteger(id) && id > 0)),
   );
-  const eligibleIds: number[] = [];
-  const concurrency = 8;
-
-  for (let offset = 0; offset < uniqueIds.length; offset += concurrency) {
-    const batch = uniqueIds.slice(offset, offset + concurrency);
-    const resolutions = await Promise.all(
-      batch.map(propertyId => resolveApprovedPublicProperty(propertyId, dataSource)),
-    );
-    resolutions.forEach((resolution, index) => {
-      if (resolution?.authority === 'approved_listing') eligibleIds.push(batch[index]);
-    });
-  }
-
-  return eligibleIds;
+  const resolutions = await resolveApprovedPublicProperties(uniqueIds, dataSource);
+  return uniqueIds.filter(propertyId => resolutions.has(propertyId));
 }

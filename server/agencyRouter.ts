@@ -1745,7 +1745,7 @@ function mapAgencyListingRow(row: any, agencyId: number) {
     : hasListingAnalytics
       ? 'listing_analytics'
       : listingLeadCount > 0
-        ? 'listing_leads'
+        ? 'canonical_leads'
         : 'unavailable';
   const publicViews =
     row.publicViews === null || row.publicViews === undefined ? null : Number(row.publicViews);
@@ -1942,11 +1942,10 @@ function agencyListingSelectFields() {
     )`,
     publicEnquiries: sql<number | null>`COALESCE(
       (
-        SELECT p.enquiries
-        FROM properties p
-        WHERE p.sourceListingId = ${listings.id}
-        ORDER BY p.updatedAt DESC
-        LIMIT 1
+        SELECT NULLIF(COUNT(*), 0)
+        FROM leads canonical_lead
+        INNER JOIN properties lead_property ON lead_property.id = canonical_lead.propertyId
+        WHERE lead_property.sourceListingId = ${listings.id}
       ),
       (
         SELECT la.totalLeads
@@ -1958,8 +1957,9 @@ function agencyListingSelectFields() {
     )`,
     listingLeadCount: sql<number>`(
       SELECT COUNT(*)
-      FROM listing_leads ll
-      WHERE ll.listingId = ${listings.id}
+      FROM leads canonical_lead
+      INNER JOIN properties lead_property ON lead_property.id = canonical_lead.propertyId
+      WHERE lead_property.sourceListingId = ${listings.id}
     )`,
     analyticsUpdatedAt: sql<string | null>`(
       SELECT la.lastUpdated
@@ -2173,15 +2173,24 @@ async function requirePerformanceListingAccess(
 
 async function createListingPerformanceSnapshot(db: AgencyDb, agencyId: number, listingId: number) {
   const listing = await requireAgencyListing(db, agencyId, listingId);
-  const [[analytics], [leadCounts], [showingCounts], [offerCounts], [mediaCounts]] = await Promise.all([
+  const [[analytics], [canonicalLeadCounts], [legacyLeadCounts], [showingCounts], [offerCounts], [mediaCounts]] = await Promise.all([
     db.select().from(listingAnalytics).where(eq(listingAnalytics.listingId, listingId)).orderBy(desc(listingAnalytics.lastUpdated), desc(listingAnalytics.id)).limit(1),
+    db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${leads.status} IN ('contacted','qualified','viewing_scheduled','offer_sent','converted','closed') THEN 1 ELSE 0 END)` }).from(leads).innerJoin(properties, eq(leads.propertyId, properties.id)).where(eq(properties.sourceListingId, listingId)),
     db.select({ enquiries: sql<number>`COUNT(*)`, progressing: sql<number>`SUM(CASE WHEN ${listingLeads.status} IN ('contacted','qualified','viewing_scheduled','offer_made','converted') THEN 1 ELSE 0 END)` }).from(listingLeads).where(eq(listingLeads.listingId, listingId)),
     db.select({ requested: sql<number>`SUM(CASE WHEN ${showings.status} = 'requested' THEN 1 ELSE 0 END)`, confirmed: sql<number>`SUM(CASE WHEN ${showings.status} = 'confirmed' THEN 1 ELSE 0 END)`, completed: sql<number>`SUM(CASE WHEN ${showings.status} = 'completed' THEN 1 ELSE 0 END)`, cancelled: sql<number>`SUM(CASE WHEN ${showings.status} IN ('cancelled', 'no_show') THEN 1 ELSE 0 END)` }).from(showings).where(eq(showings.listingId, listingId)),
     db.select({ offers: sql<number>`COUNT(*)` }).from(agencyDeals).innerJoin(agencyDealOfferVersions, eq(agencyDealOfferVersions.dealId, agencyDeals.id)).where(and(eq(agencyDeals.agencyId, agencyId), eq(agencyDeals.listingId, listingId))),
     db.select({ media: sql<number>`COUNT(*)` }).from(listingMedia).where(eq(listingMedia.listingId, listingId)),
   ]);
   const views = Number(analytics?.totalViews || 0);
-  const enquiries = Math.max(Number(analytics?.totalLeads || 0), Number(leadCounts?.enquiries || 0));
+  // Canonical public capture writes `leads`. Historical listing_leads and
+  // listing_analytics remain a non-additive baseline until a governed data
+  // reconciliation can prove overlap and retire them without double-counting.
+  const canonicalEnquiries = Number(canonicalLeadCounts?.enquiries || 0);
+  const legacyBaseline = Math.max(
+    Number(analytics?.totalLeads || 0),
+    Number(legacyLeadCounts?.enquiries || 0),
+  );
+  const enquiries = Math.max(canonicalEnquiries, legacyBaseline);
   const daysLive = daysBetweenNow((listing as any).publishedAt) || 0;
   const flags = [
     ...(daysLive >= 14 && views === 0 ? ['no_engagement'] : []),
@@ -2190,7 +2199,7 @@ async function createListingPerformanceSnapshot(db: AgencyDb, agencyId: number, 
     ...(Number(showingCounts?.completed || 0) > 0 && Number(offerCounts?.offers || 0) === 0 ? ['viewings_without_offers'] : []),
     ...(Number(mediaCounts?.media || 0) === 0 ? ['missing_media'] : []),
   ];
-  return { metrics: { capturedAt: nowAsDbTimestamp(), reviewPeriodStart: (listing as any).publishedAt || null, reviewPeriodEnd: nowAsDbTimestamp(), daysLive, views, uniqueViews: Number(analytics?.uniqueVisitors || 0), enquiries, progressingLeads: Number(leadCounts?.progressing || 0), viewingRequests: Number(showingCounts?.requested || 0), confirmedViewings: Number(showingCounts?.confirmed || 0), completedViewings: Number(showingCounts?.completed || 0), cancelledOrNoShowViewings: Number(showingCounts?.cancelled || 0), offers: Number(offerCounts?.offers || 0), currentPrice: priceForListing(listing as any) }, flags };
+  return { metrics: { capturedAt: nowAsDbTimestamp(), reviewPeriodStart: (listing as any).publishedAt || null, reviewPeriodEnd: nowAsDbTimestamp(), daysLive, views, uniqueViews: Number(analytics?.uniqueVisitors || 0), enquiries, progressingLeads: canonicalEnquiries > 0 ? Number(canonicalLeadCounts?.progressing || 0) : Number(legacyLeadCounts?.progressing || 0), viewingRequests: Number(showingCounts?.requested || 0), confirmedViewings: Number(showingCounts?.confirmed || 0), completedViewings: Number(showingCounts?.completed || 0), cancelledOrNoShowViewings: Number(showingCounts?.cancelled || 0), offers: Number(offerCounts?.offers || 0), currentPrice: priceForListing(listing as any) }, flags };
 }
 
 function insertResultId(result: any) {
@@ -7228,7 +7237,7 @@ export const agencyRouter = router({
         contract: {
           sourceOfTruth: 'listings',
           publicationMirror: 'properties.sourceListingId',
-          performanceSource: 'properties_mirror_then_listing_analytics_then_listing_leads',
+          performanceSource: 'canonical_leads_with_historical_non_additive_baseline',
         },
       };
     }),

@@ -6,10 +6,9 @@ export const DISCOVER_PROPERTY_TYPE_BY_LABEL = {
   Houses: 'house',
   Apartments: 'apartment',
   Townhouses: 'townhouse',
-  'Office Spaces': 'commercial',
-  Shops: 'commercial',
-  Penthouses: 'apartment',
-  Studios: 'apartment',
+  Villas: 'villa',
+  'Cluster Homes': 'cluster_home',
+  Farms: 'farm',
 } as const;
 
 function appendLocationContext(params: URLSearchParams, selectedCity: string) {

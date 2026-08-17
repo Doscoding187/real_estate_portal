@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useLocation, useSearch } from 'wouter';
 import {
+  focusListingNavbarLocationInput,
   ListingNavbar,
   reconstructCanonicalLocations,
   type ListingNavbarLocation,
@@ -563,11 +564,7 @@ export default function SearchResults({
   };
 
   const handleChangeLocations = () => {
-    const input = document.getElementById('listing-navbar-location-input');
-    if (input instanceof HTMLInputElement) {
-      input.focus();
-      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    focusListingNavbarLocationInput();
   };
 
   const handleClearSearchArea = () => {
@@ -763,7 +760,7 @@ export default function SearchResults({
               propertyType: card.propertyType ?? 'unknown',
               listingType: card.listingType ?? 'sale',
               listingSource: card.listingSource,
-              listerType: card.listerType,
+              identity: card.identity,
               primaryBadge: getPrimaryListingBadge(card.badges),
               latitude,
               longitude,
@@ -834,9 +831,10 @@ export default function SearchResults({
         defaultLocations={navbarLocations}
         defaultSearchArea={searchAreaContext}
         onClearSearchArea={searchAreaContext ? handleClearSearchArea : undefined}
+        showMobileLocationSearch
       />
 
-      <div className="container pb-32 pt-24 lg:pb-12">
+      <div className="container pb-32 pt-44 md:pt-24 lg:pb-12">
         <div className="mx-auto w-full max-w-[1280px]">
           {/* Header Section */}
           <div className="mb-3">
@@ -867,8 +865,9 @@ export default function SearchResults({
 
             <div className="border-b border-gray-200 pb-3">
               <ResultsHeader
-                resultCount={resultCount}
+                resultCount={publicSearchResults ? resultCount : undefined}
                 isLoading={isLoading}
+                hasError={hasSearchError}
                 viewMode={viewMode}
                 sortBy={sortBy}
                 onViewModeChange={setViewMode}
@@ -1004,6 +1003,7 @@ export default function SearchResults({
                                 listingSource: card.listingSource,
                                 listerType: card.listerType,
                                 contactRole: card.contactRole,
+                                identity: card.identity,
                                 propertyId: card.propertyId,
                                 agentId: card.identity?.agentId,
                                 agencyId: card.identity?.agencyId,
@@ -1088,6 +1088,7 @@ export default function SearchResults({
                           }
                         }}
                         onBoundsChange={handleBoundsChange}
+                        onRecoveryViewChange={setViewMode}
                       />
                     )}
 
@@ -1143,14 +1144,16 @@ export default function SearchResults({
       </div>
 
       {/* Mobile Sticky Controls (Persistent Bottom Bar) */}
-      <MobileStickyControls
-        onOpenFilters={() => setIsMobileFilterOpen(true)}
-        currentView={viewMode}
-        onViewChange={setViewMode}
-        onSortChange={handleSortChange}
-        currentSort={sortBy}
-        resultCount={resultCount}
-      />
+      {(displayState === 'results' || displayState === 'zero') && (
+        <MobileStickyControls
+          onOpenFilters={() => setIsMobileFilterOpen(true)}
+          currentView={viewMode}
+          onViewChange={setViewMode}
+          onSortChange={handleSortChange}
+          currentSort={sortBy}
+          resultCount={publicSearchResults ? resultCount : undefined}
+        />
+      )}
 
       {/* Mobile Filter Drawer */}
       <MobileFilterDrawer

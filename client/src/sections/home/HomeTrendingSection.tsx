@@ -10,6 +10,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { HeroTab } from '@/types/hero';
 
 type HomeTrendingSectionProps = {
@@ -53,16 +55,16 @@ const PROVINCES = [
 
 const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
   buy: {
-    titleBase: 'Trending homes for sale',
-    subtitleBase: 'See live sale opportunities that match the intent you selected above.',
+    titleBase: 'Homes for sale',
+    subtitleBase: 'Explore published sale properties for the province you selected.',
   },
   rent: {
-    titleBase: 'Trending rentals',
-    subtitleBase: 'Browse in-demand rental homes and apartments by province.',
+    titleBase: 'Rental properties',
+    subtitleBase: 'Browse published rental homes and apartments by province.',
   },
   developments: {
-    titleBase: 'Trending new developments',
-    subtitleBase: 'Explore development stock, new launches, and project opportunities by province.',
+    titleBase: 'New developments',
+    subtitleBase: 'Explore published development inventory and project opportunities by province.',
   },
   shared_living: {
     titleBase: 'Shared living opportunities',
@@ -82,8 +84,8 @@ const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
 
 const MOBILE_FRIENDLY_SUBTITLES: Record<HeroTab, string> = {
   buy: 'Discover standout homes for sale across South Africa.',
-  rent: 'Browse in-demand rental homes and apartments available now.',
-  developments: 'Explore new residential and mixed-use developments across South Africa.',
+  rent: 'Browse published rental homes and apartments across South Africa.',
+  developments: 'Explore published residential and mixed-use developments across South Africa.',
   shared_living: 'Find student accommodation and shared living in prime urban hubs.',
   plot_land: 'View land opportunities suited to building or long-term investment.',
   commercial: 'Discover office, retail, and industrial projects in growth corridors.',
@@ -100,7 +102,13 @@ export function HomeTrendingSection({
     subtitle: MOBILE_FRIENDLY_SUBTITLES[activeHeroTab] || TAB_COPY[activeHeroTab].subtitleBase,
   };
 
-  const { data: trendingData } = trpc.developer.getHomeTrendingFeed.useQuery({
+  const {
+    data: trendingData,
+    isError,
+    isFetching,
+    isLoading,
+    refetch,
+  } = trpc.developer.getHomeTrendingFeed.useQuery({
     tab: activeHeroTab,
     province: selectedProvince,
     limit: railLimit,
@@ -112,8 +120,7 @@ export function HomeTrendingSection({
     <section className="home-section">
       <div className="home-section-header">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1">
-          <span className="text-lg">🔥</span>
-          <span className="text-sm font-semibold text-orange-600">Trending Now</span>
+          <span className="text-sm font-semibold text-orange-600">Explore property</span>
         </div>
         <h2 className="home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
           {heroContent.title}
@@ -141,19 +148,73 @@ export function HomeTrendingSection({
         </div>
       </div>
 
-      {trendingItems.length > 0 ? (
+      {isLoading ? (
+        <div
+          className="-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0"
+          data-testid="home-property-feed-loading"
+          role="status"
+          aria-label="Loading published property"
+        >
+          <div className="flex gap-2">
+            {[0, 1, 2].map(index => (
+              <div
+                key={index}
+                className="min-w-0 flex-[0_0_77%] rounded-xl border border-slate-200 bg-white p-3 sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
+                data-testid="home-property-skeleton"
+              >
+                <Skeleton className="h-32 w-full rounded-lg sm:h-44" />
+                <Skeleton className="mt-3 h-4 w-2/3" />
+                <Skeleton className="mt-2 h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
+          <span className="sr-only">Loading published property</span>
+        </div>
+      ) : isError ? (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-8 text-center"
+          role="alert"
+        >
+          <h3 className="text-sm font-bold text-slate-900">Property could not be loaded</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+            We could not check the published property available in {selectedProvince}. Try again, or
+            continue with the full search.
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-amber-300 bg-white"
+              disabled={isFetching}
+              onClick={() => void refetch()}
+            >
+              {isFetching ? 'Trying again…' : 'Try again'}
+            </Button>
+            <Button asChild>
+              <a
+                href={
+                  activeHeroTab === 'rent'
+                    ? '/property-to-rent'
+                    : activeHeroTab === 'developments'
+                      ? '/new-developments'
+                      : '/property-for-sale'
+                }
+              >
+                Open property search
+              </a>
+            </Button>
+          </div>
+        </div>
+      ) : trendingItems.length > 0 ? (
         <div className="group/carousel relative w-full">
           <Carousel opts={{ align: 'start', loop: trendingItems.length > 4 }} className="w-full">
             <CarouselContent className="-ml-2 pb-2 justify-start">
-              {trendingItems.map((item, index) => (
+              {trendingItems.map(item => (
                 <CarouselItem
                   key={item.id}
                   className="basis-[77%] pl-2 sm:basis-[64%] md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
                 >
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
-                      #{index + 1}
-                    </span>
                     {item.kind === 'listing' ? (
                       <SimpleHomeListingCard
                         id={item.id}
@@ -202,7 +263,6 @@ export function HomeTrendingSection({
                         image={getPrimaryDevelopmentImageUrl(item.image) || ''}
                         slug={item.kind === 'development' ? item.id : undefined}
                         href={item.href}
-                        isHotSelling
                       />
                     )}
                   </div>
@@ -216,7 +276,7 @@ export function HomeTrendingSection({
       ) : (
         <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
           <h3 className="text-sm font-bold text-slate-900">
-            No live matches in {selectedProvince} yet
+            No published matches in {selectedProvince} yet
           </h3>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
             We are not showing placeholder inventory here. Try another province or start a broader

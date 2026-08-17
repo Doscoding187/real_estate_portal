@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
@@ -71,10 +71,14 @@ function formatAgo(value?: string | null) {
 }
 
 const EcosystemOverviewPage: React.FC = () => {
+  const platformQueuePageSize = 10;
   const [leadAuditDays, setLeadAuditDays] = useState<7 | 30 | 90>(30);
+  const [platformQueuePage, setPlatformQueuePage] = useState(0);
+  const [activePlatformLeadId, setActivePlatformLeadId] = useState<number | null>(null);
+  const [platformActionNote, setPlatformActionNote] = useState('');
   const [activeCorrectionLeadId, setActiveCorrectionLeadId] = useState<number | null>(null);
   const [correctionRouteType, setCorrectionRouteType] = useState<
-    'agent' | 'agency' | 'brand' | 'private' | 'clear'
+    'agent' | 'agency' | 'developer' | 'platform'
   >('agent');
   const [correctionTargetId, setCorrectionTargetId] = useState('');
   const [correctionNote, setCorrectionNote] = useState('');
@@ -82,6 +86,27 @@ const EcosystemOverviewPage: React.FC = () => {
     'all' | 'attention' | 'pending_retry' | 'abandoned' | 'recovered'
   >('all');
   const { data: stats, isLoading } = trpc.admin.getEcosystemStats.useQuery();
+  const {
+    data: platformQueue,
+    isLoading: platformQueueLoading,
+    error: platformQueueError,
+    refetch: refetchPlatformQueue,
+  } = trpc.superAdminPublisher.getPlatformManagedLeads.useQuery(
+    {
+      limit: platformQueuePageSize,
+      offset: platformQueuePage * platformQueuePageSize,
+    },
+    { refetchInterval: 60_000 },
+  );
+  useEffect(() => {
+    const lastAvailablePage = Math.max(
+      0,
+      Math.ceil((platformQueue?.total ?? 0) / platformQueuePageSize) - 1,
+    );
+    if (platformQueuePage > lastAvailablePage) {
+      setPlatformQueuePage(lastAvailablePage);
+    }
+  }, [platformQueue?.total, platformQueuePage, platformQueuePageSize]);
   const {
     data: schedulerStatus,
     isLoading: schedulerLoading,
@@ -183,12 +208,36 @@ const EcosystemOverviewPage: React.FC = () => {
       setCorrectionTargetId('');
       setCorrectionNote('');
       setCorrectionRouteType('agent');
-      await Promise.all([refetchLeadRoutingAudit(), refetchLeadRoutingConversionReport()]);
+      await Promise.all([
+        refetchPlatformQueue(),
+        refetchLeadRoutingAudit(),
+        refetchLeadRoutingConversionReport(),
+      ]);
     },
     onError: error => {
       toast.error(error.message || 'Unable to update lead routing');
     },
   });
+  const completePlatformLeadActionMutation =
+    trpc.system.completePlatformLeadAction.useMutation({
+      onSuccess: async (_, variables) => {
+        toast.success(
+          variables.action === 'contacted'
+            ? 'Lead marked as contacted'
+            : 'Lead marked as resolved',
+        );
+        setActivePlatformLeadId(null);
+        setPlatformActionNote('');
+        await Promise.all([
+          refetchPlatformQueue(),
+          refetchLeadRoutingAudit(),
+          refetchLeadRoutingConversionReport(),
+        ]);
+      },
+      onError: error => {
+        toast.error(error.message || 'Unable to complete platform lead action');
+      },
+    });
 
   const StatCard = ({
     title,
@@ -266,12 +315,12 @@ const EcosystemOverviewPage: React.FC = () => {
   const requiresTargetId =
     correctionRouteType === 'agent' ||
     correctionRouteType === 'agency' ||
-    correctionRouteType === 'brand';
+    correctionRouteType === 'developer';
 
   const getCorrectionInputLabel = () => {
     if (correctionRouteType === 'agent') return 'Agent ID';
     if (correctionRouteType === 'agency') return 'Agency ID';
-    if (correctionRouteType === 'brand') return 'Developer Brand ID';
+    if (correctionRouteType === 'developer') return 'Developer Publisher ID';
     return 'Target ID';
   };
 
@@ -289,7 +338,7 @@ const EcosystemOverviewPage: React.FC = () => {
       routeType: correctionRouteType,
       agentId: correctionRouteType === 'agent' ? numericTargetId : undefined,
       agencyId: correctionRouteType === 'agency' ? numericTargetId : undefined,
-      cataloguePublisherId: correctionRouteType === 'brand' ? numericTargetId : undefined,
+      cataloguePublisherId: correctionRouteType === 'developer' ? numericTargetId : undefined,
       note: trimmedNote || undefined,
     });
   };
@@ -356,6 +405,185 @@ const EcosystemOverviewPage: React.FC = () => {
           color="bg-emerald-100 text-emerald-600"
         />
       </div>
+
+      <GlassCard className="border-amber-200/70 shadow-[0_8px_30px_rgba(217,_119,_6,_0.08)]">
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-slate-800">
+              <BellRing className="h-5 w-5 text-amber-600" />
+              Property Listify operations queue
+            </CardTitle>
+            <p className="mt-2 max-w-3xl text-sm text-slate-500">
+              Buyer enquiries in explicit platform custody. Each item remains here until an
+              authorized operator records a real contact or resolution.
+            </p>
+          </div>
+          <Badge className="w-fit border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100">
+            {platformQueue?.total ?? 0} awaiting action
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {platformQueueLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(item => (
+                <Skeleton key={item} className="h-28 rounded-xl" />
+              ))}
+            </div>
+          ) : platformQueueError ? (
+            <div className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 sm:flex-row sm:items-center sm:justify-between">
+              <span>Unable to load the operations queue: {platformQueueError.message}</span>
+              <Button type="button" size="sm" variant="outline" onClick={() => refetchPlatformQueue()}>
+                Retry
+              </Button>
+            </div>
+          ) : (platformQueue?.items.length ?? 0) === 0 && platformQueuePage > 0 ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-6 text-sm text-amber-800">
+              This queue page has just been cleared. Returning to the latest outstanding enquiries.
+            </div>
+          ) : (platformQueue?.items.length ?? 0) === 0 ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-6 text-sm text-emerald-800">
+              No platform-custodied buyer enquiries are waiting for action.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {platformQueue?.items.map(lead => {
+                const contextTitle =
+                  lead.propertyTitle || lead.developmentName || lead.publisherName || 'Legacy lead context';
+                const location = [lead.propertyCity, lead.propertyProvince].filter(Boolean).join(', ');
+                const isActive = activePlatformLeadId === lead.id;
+                return (
+                  <div key={lead.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto]">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                          {formatDateTime(lead.createdAt)} · {formatAgo(lead.createdAt)}
+                        </p>
+                        <p className="mt-1 font-semibold text-slate-900">{lead.name}</p>
+                        <a className="block text-sm text-sky-700 hover:underline" href={`mailto:${lead.email}`}>
+                          {lead.email}
+                        </a>
+                        {lead.phone ? (
+                          <a className="block text-sm text-sky-700 hover:underline" href={`tel:${lead.phone}`}>
+                            {lead.phone}
+                          </a>
+                        ) : null}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-slate-800">{contextTitle}</p>
+                          <Badge variant="outline">{lead.leadType.replace(/_/g, ' ')}</Badge>
+                        </div>
+                        {location ? <p className="text-sm text-slate-500">{location}</p> : null}
+                        {lead.propertyId ? (
+                          <a
+                            className="mt-1 inline-block text-sm font-medium text-sky-700 hover:underline"
+                            href={`/property/${lead.propertyId}`}
+                          >
+                            Review property #{lead.propertyId}
+                          </a>
+                        ) : lead.developmentId ? (
+                          <p className="mt-1 text-sm text-slate-500">
+                            Development #{lead.developmentId}
+                          </p>
+                        ) : null}
+                        <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                          {lead.message || 'No message supplied.'}
+                        </p>
+                      </div>
+                      <div className="flex items-start justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isActive ? 'default' : 'outline'}
+                          onClick={() => {
+                            setActivePlatformLeadId(isActive ? null : lead.id);
+                            setPlatformActionNote('');
+                          }}
+                        >
+                          {isActive ? 'Close actions' : 'Record action'}
+                        </Button>
+                      </div>
+                    </div>
+                    {isActive ? (
+                      <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 lg:flex-row lg:items-center">
+                        <Input
+                          value={platformActionNote}
+                          onChange={event => setPlatformActionNote(event.target.value)}
+                          placeholder="Optional operational note"
+                          maxLength={500}
+                        />
+                        <div className="flex shrink-0 gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={completePlatformLeadActionMutation.isPending}
+                            onClick={() =>
+                              completePlatformLeadActionMutation.mutate({
+                                leadId: lead.id,
+                                action: 'contacted',
+                                note: platformActionNote.trim() || undefined,
+                              })
+                            }
+                          >
+                            Mark contacted
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={completePlatformLeadActionMutation.isPending}
+                            onClick={() =>
+                              completePlatformLeadActionMutation.mutate({
+                                leadId: lead.id,
+                                action: 'resolved',
+                                note: platformActionNote.trim() || undefined,
+                              })
+                            }
+                          >
+                            Mark resolved
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {(platformQueue?.total ?? 0) > platformQueuePageSize || platformQueuePage > 0 ? (
+            <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-sm text-slate-500">
+              <span>
+                Page {platformQueuePage + 1} of{' '}
+                {Math.max(1, Math.ceil((platformQueue?.total ?? 0) / platformQueuePageSize))}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={platformQueuePage === 0}
+                  onClick={() => setPlatformQueuePage(page => Math.max(0, page - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    (platformQueuePage + 1) * platformQueuePageSize >=
+                    (platformQueue?.total ?? 0)
+                  }
+                  onClick={() => setPlatformQueuePage(page => page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </GlassCard>
 
       <GlassCard className="border-white/40 shadow-[0_8px_30px_rgba(8,_112,_184,_0.06)]">
         <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -835,7 +1063,7 @@ const EcosystemOverviewPage: React.FC = () => {
               Lead Routing Audit
             </CardTitle>
             <p className="mt-2 text-sm text-slate-500">
-              Audit current lead destinations across manual, private, and brand-routed enquiries.
+              Audit canonical customer recipients and Property Listify operations custody.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -887,8 +1115,8 @@ const EcosystemOverviewPage: React.FC = () => {
                   subtext={`Agency ${leadRoutingAudit?.summary.directToAgency ?? 0}`}
                 />
                 <SchedulerMetric
-                  label="Direct to Private"
-                  value={String(leadRoutingAudit?.summary.directToPrivate ?? 0)}
+                  label="Platform Custody"
+                  value={String(leadRoutingAudit?.summary.platformCustody ?? 0)}
                   subtext={`Context only ${leadRoutingAudit?.summary.directContextOnly ?? 0}`}
                 />
                 <SchedulerMetric
@@ -998,7 +1226,7 @@ const EcosystemOverviewPage: React.FC = () => {
                                   setCorrectionTargetId('');
                                   setCorrectionNote('');
                                   setCorrectionRouteType(
-                                    entry.issue === 'brand_capture_only' ? 'brand' : 'agent',
+                                    entry.issue === 'brand_capture_only' ? 'developer' : 'platform',
                                   );
                                 }}
                               >
@@ -1011,9 +1239,8 @@ const EcosystemOverviewPage: React.FC = () => {
                                   {[
                                     ['agent', 'Agent'],
                                     ['agency', 'Agency'],
-                                    ['brand', 'Brand'],
-                                    ['private', 'Private'],
-                                    ['clear', 'Clear'],
+                                    ['developer', 'Developer'],
+                                    ['platform', 'Platform operations'],
                                   ].map(([value, label]) => (
                                     <Button
                                       key={value}
@@ -1023,7 +1250,7 @@ const EcosystemOverviewPage: React.FC = () => {
                                       className="h-8"
                                       onClick={() =>
                                         setCorrectionRouteType(
-                                          value as 'agent' | 'agency' | 'brand' | 'private' | 'clear',
+                                          value as 'agent' | 'agency' | 'developer' | 'platform',
                                         )
                                       }
                                     >

@@ -18,10 +18,9 @@ describe('public discovery route authority', () => {
       Houses: 'house',
       Apartments: 'apartment',
       Townhouses: 'townhouse',
-      'Office Spaces': 'commercial',
-      Shops: 'commercial',
-      Penthouses: 'apartment',
-      Studios: 'apartment',
+      Villas: 'villa',
+      'Cluster Homes': 'cluster_home',
+      Farms: 'farm',
     });
   });
 
@@ -39,21 +38,25 @@ describe('public discovery route authority', () => {
   });
 
   it('uses supported property types rather than display-label slugification', () => {
-    const office = parseRelativeUrl(buildDiscoverCardHref('Office Spaces', 'sale', 'Cape Town'));
-    const penthouse = parseRelativeUrl(buildDiscoverCardHref('Penthouses', 'sale', 'Cape Town'));
-    const studio = parseRelativeUrl(buildDiscoverCardHref('Studios', 'rent', 'Cape Town'));
+    const villa = parseRelativeUrl(buildDiscoverCardHref('Villas', 'sale', 'Cape Town'));
+    const cluster = parseRelativeUrl(buildDiscoverCardHref('Cluster Homes', 'sale', 'Cape Town'));
+    const farm = parseRelativeUrl(buildDiscoverCardHref('Farms', 'sale', 'Cape Town'));
 
-    expect(office.pathname).toBe('/property-for-sale');
-    expect(office.searchParams.get('propertyType')).toBe('commercial');
+    expect(villa.pathname).toBe('/property-for-sale');
+    expect(villa.searchParams.get('propertyType')).toBe('villa');
 
-    expect(penthouse.searchParams.get('propertyType')).toBe('apartment');
+    expect(cluster.searchParams.get('propertyType')).toBe('cluster_home');
+    expect(farm.searchParams.get('propertyType')).toBe('farm');
 
-    expect(studio.pathname).toBe('/property-to-rent');
-    expect(studio.searchParams.get('propertyType')).toBe('apartment');
+    expect(villa.href).not.toContain('villas');
+    expect(cluster.href).not.toContain('cluster-homes');
+    expect(farm.href).not.toContain('farms');
+  });
 
-    expect(office.href).not.toContain('office-spaces');
-    expect(penthouse.href).not.toContain('penthouses');
-    expect(studio.href).not.toContain('studios');
+  it('does not present narrower categories than the canonical search can distinguish', () => {
+    expect(DISCOVER_PROPERTY_TYPE_BY_LABEL).not.toHaveProperty('Office Spaces');
+    expect(DISCOVER_PROPERTY_TYPE_BY_LABEL).not.toHaveProperty('Shops');
+    expect(DISCOVER_PROPERTY_TYPE_BY_LABEL).not.toHaveProperty('Penthouses');
   });
 
   it('keeps development cards on the canonical root without invented filters', () => {
@@ -87,5 +90,11 @@ describe('public discovery route authority', () => {
     expect(source).not.toContain('href="/developments"');
     expect(source).not.toContain('window.location.assign(`/developments');
     expect(source).not.toContain("propertyType.toLowerCase().replace(/\\s+/g, '-')");
+    expect(source).toContain("type: 'Villas'");
+    expect(source).toContain("type: 'Cluster Homes'");
+    expect(source).toContain("type: 'Farms'");
+    expect(source).not.toContain("type: 'Office Spaces'");
+    expect(source).not.toContain("type: 'Shops'");
+    expect(source).not.toContain("type: 'Penthouses'");
   });
 });

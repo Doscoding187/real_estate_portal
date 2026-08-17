@@ -73,19 +73,28 @@ function BuyerNavigationLink({
       aria-current={active ? 'page' : undefined}
       className="public-navbar__buyer-nav-link public-navbar__journey-nav-link"
     >
-      <Icon className="public-navbar__buyer-nav-icon public-navbar__journey-nav-icon" aria-hidden="true" />
+      <Icon
+        className="public-navbar__buyer-nav-icon public-navbar__journey-nav-icon"
+        aria-hidden="true"
+      />
       <span>{item.label}</span>
-      <ChevronRight className="public-navbar__buyer-nav-chevron public-navbar__journey-nav-chevron" aria-hidden="true" />
+      <ChevronRight
+        className="public-navbar__buyer-nav-chevron public-navbar__journey-nav-chevron"
+        aria-hidden="true"
+      />
     </Link>
   );
 }
 
 export function BuyerMegaMenu({ menu, pathname, onNavigate, user }: BuyerMegaMenuProps) {
-  const [buyingPower, propertySearch, shortlist] = getVisiblePublicNavigationGroups(menu, 'desktop');
-  const [buyingPowerAction, buyingGuide] = buyingPower?.items ?? [];
+  const [buyingPower, propertySearch, shortlist] = getVisiblePublicNavigationGroups(
+    menu,
+    'desktop',
+  );
+  const [buyingBudgetGuide] = buyingPower?.items ?? [];
   const footerItems = findDestinations(menu, menu.actionItemIds ?? []);
 
-  if (!buyingPower || !propertySearch || !shortlist || !buyingPowerAction || !buyingGuide) {
+  if (!buyingPower || !propertySearch || !shortlist || !buyingBudgetGuide) {
     return null;
   }
 
@@ -97,44 +106,42 @@ export function BuyerMegaMenu({ menu, pathname, onNavigate, user }: BuyerMegaMen
           className="public-navbar__buyer-column public-navbar__journey-column public-navbar__journey-proposition-column public-navbar__buyer-column--buying-power"
         >
           <div className="public-navbar__journey-proposition-card public-navbar__journey-proposition-card--buyers">
-            <p className="public-navbar__buyer-kicker public-navbar__journey-kicker">{buyingPower.label}</p>
-            <h2 className="public-navbar__buyer-title public-navbar__journey-title">Know what you can buy</h2>
+            <p className="public-navbar__buyer-kicker public-navbar__journey-kicker">
+              {buyingPower.label}
+            </p>
+            <h2 className="public-navbar__buyer-title public-navbar__journey-title">
+              Plan before you shortlist
+            </h2>
             <p className="public-navbar__buyer-description public-navbar__journey-description">
-              Estimate the property price range that may fit your income, expenses, deposit and
-              monthly budget.
+              Read practical guidance on affordability, deposits and ownership costs before you
+              decide which homes fit your plans.
             </p>
             <Link
-              href={buyingPowerAction.href}
+              href={buyingBudgetGuide.href}
               onClick={onNavigate}
               className="public-navbar__buyer-primary-action public-navbar__journey-primary-action"
             >
-              {buyingPowerAction.label}
+              {buyingBudgetGuide.label}
               <ChevronRight className="size-4" aria-hidden="true" />
             </Link>
 
-            <div className="public-navbar__buyer-outcomes public-navbar__journey-outcomes" aria-label="What buying power includes">
+            <div
+              className="public-navbar__buyer-outcomes public-navbar__journey-outcomes"
+              aria-label="What the buying guide covers"
+            >
               <div className="public-navbar__buyer-outcome-row public-navbar__journey-outcome-row">
                 <WalletCards aria-hidden="true" />
-                <span>Possible price range</span>
+                <span>Income, expenses and deposit factors</span>
               </div>
               <div className="public-navbar__buyer-outcome-row public-navbar__journey-outcome-row">
                 <Calculator aria-hidden="true" />
-                <span>Estimated monthly repayment</span>
+                <span>Bond, transfer and ownership costs</span>
               </div>
               <div className="public-navbar__buyer-outcome-row public-navbar__journey-outcome-row">
                 <House aria-hidden="true" />
-                <span>Matching 2-, 3- and 4-bedroom homes</span>
+                <span>Questions to ask before you enquire</span>
               </div>
             </div>
-
-            <Link
-              href={buyingGuide.href}
-              onClick={onNavigate}
-              className="public-navbar__buyer-guide-link public-navbar__journey-guide-link"
-            >
-              {buyingGuide.label}
-              <ChevronRight className="size-3.5" aria-hidden="true" />
-            </Link>
           </div>
         </section>
 
@@ -142,7 +149,9 @@ export function BuyerMegaMenu({ menu, pathname, onNavigate, user }: BuyerMegaMen
           aria-label={propertySearch.label}
           className="public-navbar__buyer-column public-navbar__journey-column public-navbar__buyer-column--property"
         >
-          <h2 className="public-navbar__buyer-kicker public-navbar__journey-kicker">{propertySearch.label}</h2>
+          <h2 className="public-navbar__buyer-kicker public-navbar__journey-kicker">
+            {propertySearch.label}
+          </h2>
           <div className="public-navbar__buyer-link-list public-navbar__journey-link-list">
             {propertySearch.items.map(item => (
               <BuyerNavigationLink
@@ -159,7 +168,9 @@ export function BuyerMegaMenu({ menu, pathname, onNavigate, user }: BuyerMegaMen
           aria-label={shortlist.label}
           className="public-navbar__buyer-column public-navbar__journey-column public-navbar__buyer-column--shortlist"
         >
-          <h2 className="public-navbar__buyer-kicker public-navbar__journey-kicker">{shortlist.label}</h2>
+          <h2 className="public-navbar__buyer-kicker public-navbar__journey-kicker">
+            {shortlist.label}
+          </h2>
           <div className="public-navbar__buyer-link-list public-navbar__journey-link-list">
             {shortlist.items.map(item => (
               <BuyerNavigationLink
@@ -173,8 +184,14 @@ export function BuyerMegaMenu({ menu, pathname, onNavigate, user }: BuyerMegaMen
 
           {!user ? (
             <>
-              <div className="public-navbar__buyer-shortlist-divider public-navbar__journey-account-divider" aria-hidden="true" />
-              <aside className="public-navbar__buyer-signin public-navbar__journey-account-callout" aria-label="Account access">
+              <div
+                className="public-navbar__buyer-shortlist-divider public-navbar__journey-account-divider"
+                aria-hidden="true"
+              />
+              <aside
+                className="public-navbar__buyer-signin public-navbar__journey-account-callout"
+                aria-label="Account access"
+              >
                 <LockKeyhole aria-hidden="true" />
                 <div>
                   <p>Save, compare and manage your property journey in one place.</p>

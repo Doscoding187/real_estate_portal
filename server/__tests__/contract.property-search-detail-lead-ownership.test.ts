@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   mockSearchProperties,
-  mockSearchFeaturedProperties,
+  mockSearchPublicInventory,
   mockSearchListings,
   mockIncrementPropertyViews,
   mockGetPropertyById,
@@ -20,10 +20,10 @@ const {
   mockLeadUpdateWhere,
   mockCaptureBrandLead,
   mockRecordAgentOsEventForAgentId,
-  mockResolveApprovedPublicProperty,
+  mockResolvePublicPropertyEligibility,
 } = vi.hoisted(() => ({
   mockSearchProperties: vi.fn(),
-  mockSearchFeaturedProperties: vi.fn(),
+  mockSearchPublicInventory: vi.fn(),
   mockSearchListings: vi.fn(),
   mockIncrementPropertyViews: vi.fn(),
   mockGetPropertyById: vi.fn(),
@@ -41,13 +41,18 @@ const {
   mockLeadUpdateWhere: vi.fn(),
   mockCaptureBrandLead: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
-  mockResolveApprovedPublicProperty: vi.fn(),
+  mockResolvePublicPropertyEligibility: vi.fn(),
 }));
 
 vi.mock('../services/propertySearchService', () => ({
   propertySearchService: {
     searchProperties: mockSearchProperties,
-    searchFeaturedProperties: mockSearchFeaturedProperties,
+  },
+}));
+
+vi.mock('../services/publicSearchService', () => ({
+  publicSearchService: {
+    searchInventory: mockSearchPublicInventory,
   },
 }));
 
@@ -79,8 +84,17 @@ vi.mock('../services/agentOsEventService', () => ({
   recordAgentOsEventForAgentId: mockRecordAgentOsEventForAgentId,
 }));
 
-vi.mock('../services/approvedPublicPropertyService', () => ({
-  resolveApprovedPublicProperty: mockResolveApprovedPublicProperty,
+vi.mock('../services/publicPropertyEligibilityService', () => ({
+  resolvePublicPropertyEligibility: mockResolvePublicPropertyEligibility,
+  resolvePublicPropertyEligibilities: vi.fn(async (propertyIds: number[]) => {
+    const entries = await Promise.all(
+      propertyIds.map(
+        async propertyId =>
+          [propertyId, await mockResolvePublicPropertyEligibility(propertyId)] as const,
+      ),
+    );
+    return new Map(entries.filter((entry): entry is [number, any] => Boolean(entry[1])));
+  }),
 }));
 
 import { appRouter } from '../routers';
@@ -137,7 +151,31 @@ describe('single-property search-detail-lead ownership contract', () => {
       pageSize: 20,
       hasMore: false,
     });
-    mockSearchFeaturedProperties.mockResolvedValue([]);
+    mockSearchPublicInventory.mockResolvedValue({
+      cards: [
+        {
+          kind: 'property',
+          id: '501',
+          propertyId: 501,
+          href: '/property/501',
+          title: 'Canonical Agent Home',
+          listingSource: 'manual',
+          contactRole: 'agent',
+          identity: {
+            role: 'agent',
+            name: 'Jane Agent',
+            agentId: 33,
+            agencyId: 44,
+          },
+        },
+      ],
+      total: 1,
+      page: 0,
+      pageSize: 20,
+      hasMore: false,
+      locationState: 'resolved',
+      sourceCounts: { manual: 1, development: 0 },
+    });
 
     mockIncrementPropertyViews.mockResolvedValue(undefined);
     mockGetPropertyById.mockResolvedValue({
@@ -209,7 +247,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       select: mockDetailSelect,
     });
 
-    mockResolveApprovedPublicProperty.mockImplementation(async (propertyId: number) => {
+    mockResolvePublicPropertyEligibility.mockImplementation(async (propertyId: number) => {
       const property = await mockGetPropertyById(propertyId);
       if (!property || !['available', 'published'].includes(String(property.status))) return null;
       if (!property.sourceListingId) return null;
@@ -217,7 +255,32 @@ describe('single-property search-detail-lead ownership contract', () => {
       if (listing?.approvalStatus === 'pending') return null;
       return {
         authority: 'approved_listing',
+        publicAuthority: 'public_property_eligibility',
         sourceListingId: Number(property.sourceListingId),
+        publicIdentity: {
+          role: 'agent',
+          provenance: 'agent',
+          name: 'Jane Agent',
+          organizationName: 'Canonical Realty',
+          avatarUrl: 'https://cdn.example.com/jane.jpg',
+          phone: '+27110001111',
+          whatsapp: '+27110001111',
+          email: 'jane@example.com',
+          agentId: 33,
+          agencyId: 44,
+        },
+        custody: {
+          supplyOrigin: 'customer_managed',
+          leadCustody: 'verified_customer_recipient',
+          recipientType: 'agent',
+          recipientId: 33,
+          agentId: 33,
+          agencyId: 44,
+          developerId: null,
+          leadDeliveryMethod: 'crm_export',
+          brandLeadStatus: null,
+          reason: null,
+        },
         property: { ...property },
         images: await mockGetPropertyImages(propertyId),
         media: [],
@@ -291,14 +354,19 @@ describe('single-property search-detail-lead ownership contract', () => {
 
     expect(detail.property).toMatchObject({
       id: 501,
-      status: 'available',
-      agent: {
-        id: '33',
+      publicIdentity: {
+        role: 'agent',
         name: 'Jane Agent',
-        agency: 'Canonical Realty',
+        organizationName: 'Canonical Realty',
+        agentId: 33,
         agencyId: 44,
       },
     });
+    expect(detail.property).not.toHaveProperty('status');
+    expect(detail.property).not.toHaveProperty('agent');
+    expect(detail.property).not.toHaveProperty('ownerId');
+    expect(detail).not.toHaveProperty('custody');
+    expect(detail).not.toHaveProperty('sourceListingId');
 
     const lead = await trpc.leads.create({
       propertyId: card.propertyId,
@@ -431,14 +499,16 @@ describe('single-property search-detail-lead ownership contract', () => {
 
     expect(detail.property).toMatchObject({
       id: 502,
-      status: 'published',
-      agent: {
-        id: '33',
+      publicIdentity: {
+        role: 'agent',
         name: 'Jane Agent',
-        agency: 'Canonical Realty',
+        organizationName: 'Canonical Realty',
+        agentId: 33,
         agencyId: 44,
       },
     });
+    expect(detail.property).not.toHaveProperty('status');
+    expect(detail.property).not.toHaveProperty('ownerId');
     expect(mockIncrementPropertyViews).toHaveBeenCalledWith(502);
   });
 
@@ -490,11 +560,14 @@ describe('single-property search-detail-lead ownership contract', () => {
     expect(mockIncrementPropertyViews).not.toHaveBeenCalled();
   });
 
-  it('uses projection search results and public property IDs for the Detail continuation feed', async () => {
-    mockSearchProperties.mockResolvedValueOnce({
-      properties: [
+  it('uses canonical public-search cards for the Detail continuation feed', async () => {
+    mockSearchPublicInventory.mockResolvedValueOnce({
+      cards: [
         {
-          id: '501',
+          kind: 'property',
+          id: '502',
+          propertyId: 502,
+          href: '/property/502',
           title: 'Approved projection result',
           price: 2_500_000,
           city: 'Johannesburg',
@@ -502,54 +575,80 @@ describe('single-property search-detail-lead ownership contract', () => {
           listingType: 'sale',
         },
       ],
-      cards: [],
       total: 1,
-      page: 1,
-      pageSize: 10,
+      page: 0,
+      pageSize: 12,
       hasMore: false,
+      locationState: 'resolved',
+      sourceCounts: { manual: 1, development: 0 },
     });
 
-    const result = await caller().properties.getAll({
-      city: 'Johannesburg',
-      propertyType: 'house',
-      limit: 10,
-      offset: 0,
-    });
+    const result = await caller().properties.getRelatedPublicInventory({ propertyId: 501 });
 
     expect(result).toEqual([
-      expect.objectContaining({ id: '501', title: 'Approved projection result' }),
+      expect.objectContaining({ id: '502', title: 'Approved projection result' }),
     ]);
-    expect(mockSearchProperties).toHaveBeenCalledWith(
-      { city: 'Johannesburg', propertyType: ['house'] },
-      'date_desc',
-      1,
-      10,
-      undefined,
-      { publicOnly: true },
-    );
+    expect(mockSearchPublicInventory).toHaveBeenCalledWith({
+      province: 'Gauteng',
+      city: 'Johannesburg',
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+      sortOption: 'relevance',
+      page: 0,
+      pageSize: 12,
+    });
+    expect(mockSearchProperties).not.toHaveBeenCalled();
     expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
-  it('uses the projection-only service for featured public inventory', async () => {
-    mockSearchFeaturedProperties.mockResolvedValueOnce([
-      { id: '502', title: 'Featured approved projection' },
-    ]);
+  it('uses canonical Buy search cards for location inventory previews', async () => {
+    const card = {
+      kind: 'property',
+      id: '503',
+      title: 'Location inventory preview',
+      identity: { role: 'agency', provenance: 'agency', name: 'Canonical Realty' },
+    };
+    mockSearchPublicInventory.mockResolvedValueOnce({
+      cards: [card],
+      total: 1,
+      page: 0,
+      pageSize: 4,
+      hasMore: false,
+      locationState: 'resolved',
+      sourceCounts: { manual: 1, development: 0 },
+    });
 
-    const result = await caller().properties.featured({ limit: 6 });
+    const result = await caller().location.getFeaturedListings({
+      locationId: 'city:12',
+      limit: 4,
+    });
 
-    expect(result).toEqual([{ id: '502', title: 'Featured approved projection' }]);
-    expect(mockSearchFeaturedProperties).toHaveBeenCalledWith(6);
+    expect(result).toEqual([card]);
+    expect(mockSearchPublicInventory).toHaveBeenCalledWith({
+      locationId: 'city:12',
+      listingType: 'sale',
+      sortOption: 'date_desc',
+      page: 0,
+      pageSize: 4,
+    });
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
-  it('keeps location featured inventory on public property identities too', async () => {
-    mockSearchFeaturedProperties.mockResolvedValueOnce([
-      { id: '503', title: 'Location featured projection' },
-    ]);
+  it('rejects a non-canonical location preview instead of widening the search', async () => {
+    await expect(
+      caller().location.getFeaturedListings({ locationId: '12', limit: 4 }),
+    ).rejects.toThrow('canonical province, city, or suburb ID');
 
-    const result = await caller().location.getFeaturedListings({ limit: 4 });
+    expect(mockSearchPublicInventory).not.toHaveBeenCalled();
+  });
 
-    expect(result).toEqual([{ id: '503', title: 'Location featured projection' }]);
-    expect(mockSearchFeaturedProperties).toHaveBeenCalledWith(4);
-    expect(mockSearchListings).not.toHaveBeenCalled();
+  it('does not disguise a canonical location search failure as an empty preview', async () => {
+    mockSearchPublicInventory.mockRejectedValueOnce(new Error('Search service unavailable'));
+
+    await expect(
+      caller().location.getFeaturedListings({ locationId: 'city:12', limit: 4 }),
+    ).rejects.toThrow('Search service unavailable');
   });
 });

@@ -1729,14 +1729,20 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
   const propertyId = parsePositiveNumber(property.propertyId ?? property.id);
   const developerBrand = property.developerBrand;
   const agent = property.agent || property.user;
-  const contactRole: SearchCardIdentity['role'] = developerBrand
-    ? 'developer'
-    : property.listerType === 'private'
-      ? 'private'
-      : property.listerType === 'platform'
-        ? 'platform'
-      : 'agent';
+  const explicitIdentity = property.publicIdentity as SearchCardIdentity | undefined;
+  const contactRole: SearchCardIdentity['role'] =
+    explicitIdentity?.role ||
+    (developerBrand
+      ? 'developer'
+      : property.listerType === 'private'
+        ? 'private'
+        : property.listerType === 'platform'
+          ? 'platform'
+          : property.listerType === 'agency'
+            ? 'agency'
+            : 'agent');
   const identityName =
+    explicitIdentity?.name ||
     developerBrand?.brandName ||
     developerBrand?.name ||
     agent?.displayName ||
@@ -1791,20 +1797,26 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
     listingSource: property.listingSource === 'development' ? 'development' : 'manual',
     listerType: property.listerType,
     contactRole,
-    identity: {
-      role: contactRole,
-      name: String(identityName || '-'),
-      avatarUrl:
-        developerBrand?.logoUrl || agent?.profileImage || agent?.image || agent?.avatar || null,
-      phone: developerBrand?.publicContactPhone || agent?.phone || null,
-      whatsapp: agent?.whatsapp || agent?.phone || null,
-      email: developerBrand?.publicContactEmail || agent?.email || null,
-      agentId: parsePositiveNumber(property.agentId ?? agent?.id),
-      agencyId: parsePositiveNumber(property.agencyId ?? agent?.agencyId),
-      cataloguePublisherId: parsePositiveNumber(
-        property.cataloguePublisherId ?? developerBrand?.id,
-      ),
-    },
+    identity:
+      explicitIdentity ||
+      ({
+        role: contactRole,
+        provenance:
+          contactRole === 'platform'
+            ? 'platform_curated'
+            : contactRole,
+        name: String(identityName || '-'),
+        avatarUrl:
+          developerBrand?.logoUrl || agent?.profileImage || agent?.image || agent?.avatar || null,
+        phone: developerBrand?.publicContactPhone || agent?.phone || null,
+        whatsapp: agent?.whatsapp || agent?.phone || null,
+        email: developerBrand?.publicContactEmail || agent?.email || null,
+        agentId: parsePositiveNumber(property.agentId ?? agent?.id),
+        agencyId: parsePositiveNumber(property.agencyId ?? agent?.agencyId),
+        cataloguePublisherId: parsePositiveNumber(
+          property.cataloguePublisherId ?? developerBrand?.id,
+        ),
+      } as SearchCardIdentity),
     development: property.development
       ? {
           id: property.development.id ?? property.developmentId,

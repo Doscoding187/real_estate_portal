@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useRoute, useLocation } from 'wouter';
+import { Link, useRoute, useLocation } from 'wouter';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,8 +34,8 @@ import {
   Zap,
   Droplets,
   Square,
-  Mail,
   MessageCircle,
+  CalendarDays,
   type LucideIcon,
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
@@ -44,26 +44,14 @@ import {
   PropertyMediaTypeSection,
   type PublicPropertyMedia,
 } from '@/components/property/PropertyMediaTypeSection';
-import { PropertyServiceActions } from '@/components/property/PropertyServiceActions';
 import { Breadcrumbs } from '@/components/search/Breadcrumbs';
 import { buildPropertyUrl, generateBreadcrumbs, type SearchFilters } from '@/lib/urlUtils';
 import { buildCanonicalSearchUrl } from '@/lib/searchNavigation';
-import {
-  getPrivateListingContactCopy,
-  isExplicitRentListing,
-  withRentalPeriod,
-} from '@/lib/rentPresentation';
+import { isExplicitRentListing, withRentalPeriod } from '@/lib/rentPresentation';
 import { getPropertySearchReturn } from '@/lib/searchReturnState';
 import { PropertyContactModal } from '@/components/property/PropertyContactModal';
 import { PropertyShareModal } from '@/components/property/PropertyShareModal';
-import { BondCalculator } from '@/components/BondCalculator';
 import { NearbyLandmarks } from '@/components/property/NearbyLandmarks';
-import { SuburbInsights } from '@/components/property/SuburbInsights';
-import { LocalityGuide } from '@/components/property/LocalityGuide';
-import {
-  PropertyQualificationDrawer,
-  PropertyQualificationSnapshot,
-} from '@/components/property/PropertyQualificationDrawer';
 import {
   DeveloperBrandSection,
   DeveloperBrandData,
@@ -79,6 +67,7 @@ import {
 } from '@/lib/property';
 import { buildPricingContract, getMoneyFactAmount } from '@/../../shared/pricing-contract';
 import { useComparison } from '@/contexts/ComparisonContext';
+import type { PublicPropertySupplyIdentity } from '@/../../shared/types';
 
 interface PropertyDetailProps {
   propertyId?: number;
@@ -108,6 +97,18 @@ interface PropertySpecs {
   badges?: string[];
 }
 
+interface CanonicalAreaFact {
+  status?: string;
+  valueM2?: unknown;
+  normalizedM2?: unknown;
+}
+
+interface CorePropertyInformation {
+  internalArea?: CanonicalAreaFact;
+  erfArea?: CanonicalAreaFact;
+  farmLandArea?: CanonicalAreaFact;
+}
+
 interface DeveloperBrandLite {
   id?: number | string;
   brandName?: string;
@@ -131,13 +132,6 @@ interface ContactIdentityLite {
   whatsapp?: string;
   email?: string;
   agency?: string;
-  slug?: string;
-  areasServed?: string[];
-  yearsExperience?: number;
-  rating?: number;
-  reviewCount?: number;
-  activeListingsCount?: number;
-  isVerified?: boolean;
 }
 
 interface PropertyPayload {
@@ -158,16 +152,10 @@ interface PropertyPayload {
   featured?: number;
   amenities?: string | string[];
   features?: string | string[];
-  propertySettings?: string | PropertySpecs;
   propertyDetails?: string | Record<string, unknown>;
   pricingContract?: unknown;
   developerBrand?: DeveloperBrandLite;
-  listerType?: string;
   development?: DevelopmentLite;
-  developmentId?: number | string;
-  cataloguePublisherId?: number | string;
-  suburbId?: number | string;
-  agentId?: number | string;
   latitude?: number | string;
   longitude?: number | string;
   area?: number;
@@ -182,14 +170,13 @@ interface PropertyPayload {
     displayLabel?: string;
     status: 'active';
   } | null;
-  agent?: ContactIdentityLite;
+  publicIdentity?: PublicPropertySupplyIdentity;
 }
 
 interface PropertyDetailResponse {
   property: PropertyPayload;
   images?: PropertyImageLike[];
   media?: PublicPropertyMedia[];
-  agent?: ContactIdentityLite;
 }
 
 const amenityIcons: Record<string, LucideIcon> = {
@@ -222,17 +209,14 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
 
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isQualificationOpen, setIsQualificationOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [qualificationSnapshot, setQualificationSnapshot] =
-    useState<PropertyQualificationSnapshot | null>(null);
   const [contactInitialMessage, setContactInitialMessage] = useState('');
   const [contactIntent, setContactIntent] = useState<'enquiry' | 'whatsapp'>('enquiry');
   const [contactRequestType, setContactRequestType] = useState<'enquiry' | 'viewing_request'>(
     'enquiry',
   );
 
-  const { data, error, isLoading } = trpc.properties.getById.useQuery(
+  const { data, error, isLoading, isFetching, refetch } = trpc.properties.getById.useQuery(
     { id: propertyId },
     { enabled: propertyId > 0 },
   );
@@ -240,16 +224,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     enabled: isAuthenticated,
   });
 
-  // Fetch similar properties
-  const { data: similarPropertiesData } = trpc.properties.getAll.useQuery(
-    {
-      limit: 10,
-      city: data?.property?.city,
-      propertyType: data?.property?.propertyType,
-    },
-    {
-      enabled: !!data?.property,
-    },
+  const { data: similarPropertiesData } = trpc.properties.getRelatedPublicInventory.useQuery(
+    { propertyId },
+    { enabled: propertyId > 0 && Boolean(data?.property) },
   );
 
   const utils = trpc.useUtils();
@@ -288,6 +265,19 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     setIsShareModalOpen(true);
   };
 
+  const handleUnavailableReturn = () => {
+    if (typeof window !== 'undefined') {
+      const rememberedSearch =
+        getPropertySearchReturn(window.sessionStorage, 'for-sale') ||
+        getPropertySearchReturn(window.sessionStorage, 'to-rent');
+      if (rememberedSearch) {
+        setLocation(rememberedSearch);
+        return;
+      }
+    }
+    setLocation('/property-for-sale');
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -312,7 +302,14 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           <p className="mb-6 text-slate-500">
             We could not load this property right now. Your search is still available.
           </p>
-          <Button onClick={() => setLocation('/property-for-sale')}>Return to Buy search</Button>
+          <div className="flex flex-col justify-center gap-3 sm:flex-row">
+            <Button onClick={() => void refetch()} disabled={isFetching}>
+              {isFetching ? 'Trying again…' : 'Try again'}
+            </Button>
+            <Button variant="outline" onClick={handleUnavailableReturn}>
+              Return to results
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -324,11 +321,12 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       <div className="min-h-screen bg-background">
         <ListingNavbar />
         <div className="container py-fluid-xl text-center">
-          <h2 className="text-2xl font-semibold mb-4">Property Not Found</h2>
-          <p className="text-slate-500 mb-6">
-            The property you're looking for doesn't exist or has been removed.
+          <h2 className="mb-4 text-2xl font-semibold">Property no longer available</h2>
+          <p className="mb-6 text-slate-500">
+            This listing may have been removed, unpublished or replaced. Return to your results to
+            keep browsing legitimate public inventory.
           </p>
-          <Button onClick={() => setLocation('/property-for-sale')}>Return to Buy search</Button>
+          <Button onClick={handleUnavailableReturn}>Return to results</Button>
         </div>
       </div>
     );
@@ -336,7 +334,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
 
   const { property, images, media } = data as PropertyDetailResponse;
   const isFavorite = favorites.some(favorite => Number(favorite.propertyId) === propertyId);
-  const agent = property.agent || (data as PropertyDetailResponse).agent;
 
   // Safely parse amenities with error handling
   let amenitiesList: string[] = [];
@@ -390,18 +387,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       )
       .join(', ');
 
-  let parsedSpecs: PropertySpecs = {};
-  try {
-    if (property.propertySettings) {
-      parsedSpecs =
-        typeof property.propertySettings === 'string'
-          ? JSON.parse(property.propertySettings)
-          : property.propertySettings;
-    }
-  } catch (e) {
-    console.error('Failed to parse property settings', e);
-  }
-
   let rawPropertyDetails: Record<string, unknown> = {};
   try {
     if (property.propertyDetails) {
@@ -414,16 +399,17 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     console.error('Failed to parse property details', error);
   }
 
+  // Public detail has one canonical facts object. The older projection
+  // `propertySettings` snapshot remains server-side coherence evidence and is
+  // deliberately not serialized to buyers.
+  const parsedSpecs = rawPropertyDetails as PropertySpecs;
+
   const resolvedSecurity =
     String(
       parsedSpecs.security ?? rawPropertyDetails.security ?? rawPropertyDetails.securityLevel ?? '',
     ).trim() || undefined;
   const specs = resolvedSecurity ? { ...parsedSpecs, security: resolvedSecurity } : parsedSpecs;
 
-  const developerBrand = property.developerBrand;
-  const normalizedListerType = String(property.listerType || '')
-    .trim()
-    .toLowerCase();
   const normalizedListingType = String(property.listingType || property.transactionType || '')
     .trim()
     .toLowerCase();
@@ -490,67 +476,32 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     }
     setLocation(fallback);
   };
-  const privateContactCopy = getPrivateListingContactCopy(normalizedListingType);
-  const hasAgentIdentity = Boolean(agent?.id || agent?.name || property.agentId);
-  const hasDeveloperIdentity = Boolean(developerBrand?.id || developerBrand?.brandName);
-  const contactMode = hasAgentIdentity
-    ? 'agent'
-    : hasDeveloperIdentity
-      ? 'developer'
-      : normalizedListerType === 'private'
-        ? 'private'
-        : normalizedListerType === 'platform'
-          ? 'platform'
-          : 'unknown';
+  const publicIdentity = property.publicIdentity;
+  const contactMode: PublicPropertySupplyIdentity['role'] | 'unknown' =
+    publicIdentity?.role || 'unknown';
   const contactRoleLabel =
-    contactMode === 'private'
-      ? privateContactCopy.role
-      : contactMode === 'developer'
-        ? 'Developer'
-        : contactMode === 'agent'
-          ? 'Agent'
+    contactMode === 'developer'
+      ? 'Developer'
+      : contactMode === 'agent'
+        ? 'Agent'
+        : contactMode === 'agency'
+          ? 'Agency'
           : contactMode === 'platform'
             ? 'Property Listify'
             : null;
-  const contactIdentity =
-    contactMode === 'agent'
-      ? agent
-      : contactMode === 'developer'
-        ? {
-            id: developerBrand?.id,
-            agencyId: undefined,
-            name: String(developerBrand?.brandName || '').trim(),
-            image: developerBrand?.logoUrl,
-            phone: undefined,
-            whatsapp: undefined,
-            email: developerBrand?.publicContactEmail,
-            agency: undefined,
-          }
-        : contactMode === 'private'
-          ? {
-              id: undefined,
-              agencyId: undefined,
-              name: privateContactCopy.identity,
-              image: undefined,
-              phone: undefined,
-              whatsapp: undefined,
-              email: undefined,
-              agency: undefined,
-              areasServed: [],
-            }
-          : contactMode === 'platform'
-            ? {
-                id: undefined,
-                agencyId: undefined,
-                name: 'Property Listify',
-                image: undefined,
-                phone: undefined,
-                whatsapp: undefined,
-                email: undefined,
-                agency: undefined,
-                areasServed: [],
-              }
-          : undefined;
+  const contactIdentity: ContactIdentityLite | undefined = publicIdentity
+    ? {
+        id:
+          publicIdentity.agentId || publicIdentity.agencyId || publicIdentity.cataloguePublisherId,
+        agencyId: publicIdentity.agencyId,
+        name: publicIdentity.name,
+        image: publicIdentity.avatarUrl || publicIdentity.organizationLogoUrl || undefined,
+        phone: publicIdentity.phone || undefined,
+        whatsapp: publicIdentity.whatsapp || undefined,
+        email: publicIdentity.email || undefined,
+        agency: publicIdentity.organizationName || undefined,
+      }
+    : undefined;
   const propertyBadges = Array.isArray(specs.badges)
     ? specs.badges
         .map(
@@ -568,23 +519,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         : null
     : null;
 
-  const similarProperties = (similarPropertiesData ?? []).filter(p => {
-    if (Number(p.id) === propertyId) return false;
-
-    // The continuation feed contains public property projections. Keep it in
-    // the same explicit transaction universe as the opened property; do not
-    // let a rental detail silently recommend sale inventory.
-    if (normalizedListingType !== 'rent' && normalizedListingType !== 'sale') return true;
-
-    const candidateListingType = String(
-      (p as { listingType?: unknown; transactionType?: unknown }).listingType ||
-        (p as { listingType?: unknown; transactionType?: unknown }).transactionType ||
-        '',
-    )
-      .trim()
-      .toLowerCase();
-    return candidateListingType === normalizedListingType;
-  });
+  const similarProperties = similarPropertiesData ?? [];
   const similarListingsQuery = new URLSearchParams();
   if (property.city) {
     similarListingsQuery.set('city', String(property.city));
@@ -653,7 +588,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   const coreDetails =
     rawPropertyDetails.corePropertyInformation &&
     typeof rawPropertyDetails.corePropertyInformation === 'object'
-      ? (rawPropertyDetails.corePropertyInformation as Record<string, any>)
+      ? (rawPropertyDetails.corePropertyInformation as CorePropertyInformation)
       : {};
   const canonicalInternalArea =
     coreDetails.internalArea?.status === 'known'
@@ -684,133 +619,57 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     city: property.city,
     province: property.province,
   });
-  const displayRepayment = displayPrice > 0 ? Math.round(displayPrice * 0.0095) : 0;
-  const directPhone = '';
   const whatsappNumber = String(contactIdentity?.whatsapp || contactIdentity?.phone || '').trim();
-  const directEmail = '';
   const hasPrimaryContactAction = Boolean(whatsappNumber || contactMode !== 'unknown');
-  const qualificationStatusLabel = qualificationSnapshot
-    ? qualificationSnapshot.resultTone === 'success'
-      ? 'Likely qualifies'
-      : qualificationSnapshot.resultTone === 'warning'
-        ? 'Close fit'
-        : 'Budget gap'
-    : null;
-  const affordabilityPayload = qualificationSnapshot
-    ? {
-        monthlyIncome:
-          qualificationSnapshot.monthlyIncome + qualificationSnapshot.coApplicantIncome,
-        monthlyExpenses: qualificationSnapshot.monthlyExpenses,
-        monthlyDebts: qualificationSnapshot.monthlyDebts,
-        availableDeposit: qualificationSnapshot.availableDeposit,
-        maxAffordable: qualificationSnapshot.maxAffordable,
-        calculatedAt: new Date().toISOString(),
-      }
-    : undefined;
   const contactBadgeLabel =
     contactMode === 'developer'
-      ? 'New Development'
+      ? 'Developer'
       : contactMode === 'agent'
-        ? contactIdentity?.isVerified
-          ? 'Verified Agent'
-          : 'Registered Agent'
-        : contactMode === 'private'
-          ? privateContactCopy.badge
+        ? 'Agent'
+        : contactMode === 'agency'
+          ? 'Agency'
           : contactMode === 'platform'
             ? 'Property Listify managed'
-          : null;
+            : null;
   const contactIntro =
     contactMode === 'developer'
-      ? 'Reach the development contact for pricing, availability, and next steps.'
-      : contactMode === 'private'
-        ? privateContactCopy.intro
+      ? 'Your enquiry goes to the authorized team representing this development.'
+      : contactMode === 'agency'
+        ? 'This property is represented by the agency, even though no individual agent is assigned.'
         : contactMode === 'platform'
-          ? 'Your enquiry is recorded and reviewed through Property Listify operations.'
-        : 'Connect directly with the agent handling this listing.';
+          ? 'Property Listify has explicit operational custody of enquiries for this property.'
+          : contactMode === 'agent'
+            ? 'Your enquiry goes to the authorized agent representing this property.'
+            : '';
   const agentAgencyLabel =
-    contactMode === 'agent' ? String(contactIdentity?.agency || '').trim() || 'Independent' : '';
-  const agentPrimaryArea =
-    contactMode === 'agent' && Array.isArray(contactIdentity?.areasServed)
-      ? String(contactIdentity?.areasServed?.[0] || '').trim()
+    contactMode === 'agent'
+      ? String(contactIdentity?.agency || '').trim() || 'Independent agent'
       : '';
   const contactSubline =
     contactMode === 'developer'
       ? developmentName || 'New development listing'
       : contactMode === 'agent'
-        ? [agentAgencyLabel, agentPrimaryArea].filter(Boolean).join(' · ') || 'Independent'
-        : contactMode === 'platform'
-          ? 'Actionable follow-up through Property Listify operations'
-          : '';
-  const contactAvailabilityItems = [
-    whatsappNumber ? 'WhatsApp available' : null,
-    directPhone ? 'Call available' : null,
-    directEmail ? 'Email available' : null,
-  ].filter(Boolean) as string[];
-  const agentStats =
-    contactMode === 'agent'
-      ? ([
-          typeof contactIdentity?.activeListingsCount === 'number'
-            ? {
-                key: 'listings',
-                label: 'Listings',
-                value: String(contactIdentity.activeListingsCount),
-              }
-            : null,
-          typeof contactIdentity?.rating === 'number'
-            ? {
-                key: 'rating',
-                label: 'Rating',
-                value: `${contactIdentity.rating.toFixed(1)}`,
-              }
-            : null,
-          typeof contactIdentity?.yearsExperience === 'number'
-            ? {
-                key: 'experience',
-                label: 'Experience',
-                value: `${contactIdentity.yearsExperience}yr`,
-              }
-            : null,
-        ].filter(Boolean) as Array<{ key: string; label: string; value: string }>)
-      : [];
-  const agentOperatingAreas =
-    contactMode === 'agent'
-      ? Array.from(
-          new Set(
-            (Array.isArray(contactIdentity?.areasServed) ? contactIdentity.areasServed : [])
-              .map(area => String(area || '').trim())
-              .filter(Boolean),
-          ),
-        )
-      : [];
-  const agentOverviewPills =
-    contactMode === 'agent'
-      ? agentOperatingAreas.length > 0
-        ? agentOperatingAreas.map(area => `Operates in ${area}`)
-        : agentPrimaryArea
-          ? [`Operates in ${agentPrimaryArea}`]
-          : []
-      : [];
+        ? agentAgencyLabel
+        : contactMode === 'agency'
+          ? 'Agency-managed listing'
+          : contactMode === 'platform'
+            ? 'Managed through Property Listify operations'
+            : '';
   const propertyDetailItems = getCompactPropertyFacts(property, 4);
   const featureSpecItems = getPropertyBuyerChecklist(property);
   const propertyFeatureChecklistItems = getPropertyFeatureChecklistItems(property).slice(0, 18);
   const propertyFeatureGroups = getPropertyFeaturesContextGroups(property);
   const runningCostItems = getPropertyRunningCostFacts(property);
-  const openQualification = () => {
-    setIsQualificationOpen(true);
-  };
   const openContactModal = ({
     initialMessage = '',
-    snapshot = null,
     intent = 'enquiry',
     requestType = 'enquiry',
   }: {
     initialMessage?: string;
-    snapshot?: PropertyQualificationSnapshot | null;
     intent?: 'enquiry' | 'whatsapp';
     requestType?: 'enquiry' | 'viewing_request';
   } = {}) => {
     setContactInitialMessage(initialMessage);
-    setQualificationSnapshot(snapshot);
     setContactIntent(intent);
     setContactRequestType(requestType);
     setIsContactModalOpen(true);
@@ -824,25 +683,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       requestType: 'viewing_request',
     });
   };
-  const handleWhatsAppContact = (message?: string) => {
+  const handleWhatsAppContact = () => {
     openContactModal({
-      initialMessage:
-        message || `Hi, I'm interested in ${property.title}. Please share more information.`,
+      initialMessage: `Hi, I'm interested in ${property.title}. Please share more information.`,
       intent: 'whatsapp',
     });
-  };
-  const handleQualificationToEnquiry = (snapshot: PropertyQualificationSnapshot) => {
-    setIsQualificationOpen(false);
-    openContactModal({
-      initialMessage: snapshot.summaryMessage,
-      snapshot,
-      intent: 'enquiry',
-    });
-  };
-  const handleQualificationToWhatsApp = (snapshot: PropertyQualificationSnapshot) => {
-    setQualificationSnapshot(snapshot);
-    setIsQualificationOpen(false);
-    handleWhatsAppContact(snapshot.summaryMessage);
   };
   const propertyStructuredData = [
     buildBreadcrumbStructuredData([
@@ -902,8 +747,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     },
     { id: 'contact', label: 'Contact', enabled: contactMode !== 'unknown' },
     { id: 'location', label: 'Location' },
-    { id: 'reviews', label: 'Reviews' },
-    ...(!isRentalListing ? [{ id: 'buyability-calculator', label: 'Calculator' }] : []),
   ].filter(item => item.enabled !== false);
   const scrollToSection = (sectionId: string) => {
     document.getElementById(sectionId)?.scrollIntoView({
@@ -913,15 +756,13 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
   };
   const agentProfileHref =
     contactMode === 'agent'
-      ? contactIdentity?.slug
-        ? `/agents/${contactIdentity.slug}`
-        : contactIdentity?.id && /^\d+$/.test(String(contactIdentity.id))
-          ? `/agent/profile/${contactIdentity.id}`
-          : null
+      ? publicIdentity?.agentId
+        ? `/agent/profile/${publicIdentity.agentId}`
+        : null
       : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={cn('min-h-screen bg-slate-50', hasPrimaryContactAction && 'pb-24 lg:pb-0')}>
       <MetaControl
         canonicalUrl={canonicalUrl}
         title={seoTitle}
@@ -1052,7 +893,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
             aria-label={
               isRentalListing
                 ? 'Rental price and property details'
-                : 'Property price, qualification and buyer checks'
+                : 'Property price and buyer checks'
             }
           >
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)]">
@@ -1089,35 +930,12 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                       </p>
                     )}
                   </div>
-                  <Badge className="shrink-0 border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50">
-                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                    {contactBadgeLabel || 'Verified'}
-                  </Badge>
+                  {contactBadgeLabel && (
+                    <Badge className="shrink-0 border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-50">
+                      {contactBadgeLabel}
+                    </Badge>
+                  )}
                 </div>
-
-                {!isRentalListing && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">Est. monthly repayment</p>
-                        <p className="mt-1 text-xs text-slate-500">Est. over 20 years at 10.5%</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-extrabold leading-none text-slate-950">
-                          {formatCurrency(displayRepayment, { compact: false })}
-                          <span className="text-xs font-semibold text-slate-500">/mo</span>
-                        </p>
-                        <button
-                          type="button"
-                          className="mt-2 text-xs font-bold text-blue-700 transition hover:text-blue-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
-                          onClick={openQualification}
-                        >
-                          Get pre-qualified
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {propertyDetailItems.length > 0 && (
                   <div className="grid grid-cols-4 gap-2.5">
@@ -1185,53 +1003,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                   </div>
                 )}
               </div>
-
-              {hasPrimaryContactAction && (
-                <div className="border-t border-slate-200 bg-white px-5 pb-5 lg:px-6 lg:pb-6">
-                  {!isRentalListing && qualificationStatusLabel && (
-                    <Badge className="mb-3 mt-5 border border-blue-200 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-50">
-                      {qualificationStatusLabel}
-                    </Badge>
-                  )}
-                  {!isRentalListing && (
-                    <Button
-                      className="mt-2 h-12 w-full bg-orange-500 text-base font-bold text-white hover:bg-orange-600 focus-visible:ring-orange-500/30"
-                      onClick={openQualification}
-                    >
-                      <Shield className="mr-2 h-4 w-4" />
-                      Check if you qualify
-                    </Button>
-                  )}
-
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <Button
-                      variant="default"
-                      className="h-11 border-slate-200 text-slate-800 hover:bg-slate-50 focus-visible:ring-blue-500/30"
-                      onClick={handleOpenStandardEnquiry}
-                    >
-                      Send enquiry
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="h-11 border-slate-200 text-slate-800 hover:bg-slate-50 focus-visible:ring-blue-500/30"
-                      onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      WhatsApp
-                    </Button>
-                  </div>
-
-                  <p className="mt-4 pb-1 text-center text-xs text-slate-500">
-                    {contactMode === 'private'
-                      ? 'Private seller · Listed directly by the owner'
-                      : contactMode === 'developer'
-                        ? 'Developer listing · Enquiries routed through Property Listify'
-                        : contactMode === 'platform'
-                          ? 'Property Listify managed · Operations follow-up required'
-                          : 'Listing agent · Enquiries routed through Property Listify'}
-                  </p>
-                </div>
-              )}
             </div>
           </aside>
         </div>
@@ -1348,7 +1119,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-5">
-                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_320px]">
+                  <div className="grid gap-6">
                     <div className="space-y-5">
                       <div className="flex items-start gap-4">
                         <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
@@ -1383,121 +1154,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                           <p className="mt-2 text-sm leading-relaxed text-slate-500">
                             {contactIntro}
                           </p>
-                        </div>
-                      </div>
-
-                      {agentOverviewPills.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {agentOverviewPills.map(item => (
-                            <span
-                              key={item}
-                              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                            >
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {agentStats.length > 0 && (
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          {agentStats.map(stat => (
-                            <div
-                              key={stat.key}
-                              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
-                            >
-                              <p className="text-base font-bold text-slate-900">{stat.value}</p>
-                              <p className="mt-1 text-[11px] font-medium text-slate-500">
-                                {stat.label}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm text-slate-700">
-                            <span>Active listings</span>
-                            <span className="font-semibold">
-                              {typeof contactIdentity.activeListingsCount === 'number'
-                                ? contactIdentity.activeListingsCount
-                                : agentStats.find(stat => stat.key === 'listings')?.value || '0'}
-                            </span>
-                          </div>
-                          {directPhone && (
-                            <div className="flex items-center justify-between text-sm text-slate-700">
-                              <span>Phone</span>
-                              <span className="font-semibold">{directPhone}</span>
-                            </div>
-                          )}
-                          {directEmail && (
-                            <div className="flex items-center justify-between gap-3 text-sm text-slate-700">
-                              <span>Email</span>
-                              <span className="truncate font-semibold">{directEmail}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">Contact Agent</p>
-                          <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                            Use the fastest route to connect with the agent handling this listing.
-                          </p>
-                        </div>
-
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                          <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-                            Contact Name
-                          </p>
-                          <p className="mt-1 font-semibold text-slate-900">
-                            {contactIdentity.name || 'Listing Agent'}
-                          </p>
-                        </div>
-
-                        {directEmail && (
-                          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                            <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-                              Email
-                            </p>
-                            <p className="mt-1 truncate font-semibold text-slate-900">
-                              {directEmail}
-                            </p>
-                          </div>
-                        )}
-
-                        <Button
-                          className="h-12 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
-                          onClick={handleRequestViewing}
-                        >
-                          Request a Viewing
-                        </Button>
-
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                          {whatsappNumber && (
-                            <Button
-                              className="h-11 w-full bg-green-500 text-white hover:bg-green-600 focus-visible:ring-green-500/30"
-                              onClick={() =>
-                                handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                              }
-                            >
-                              <MessageCircle className="mr-2 h-4 w-4" />
-                              WhatsApp Agent
-                            </Button>
-                          )}
-                          {agentProfileHref && (
-                            <Button
-                              variant="outline"
-                              className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                              onClick={() => setLocation(agentProfileHref)}
-                            >
-                              View Agent Profile
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -1627,7 +1283,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
             ) : null}
 
             {/* 2.5 Developer section (when property is linked to a Catalogue Publisher) */}
-            {property.developerBrand && (
+            {contactMode === 'developer' && property.developerBrand && (
               <DeveloperBrandSection brand={property.developerBrand as DeveloperBrandData} />
             )}
 
@@ -1642,87 +1298,59 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 }}
               />
             </section>
-
-            {/* 2.7 Suburb Reviews & Insights */}
-            <Card id="reviews" className="border-slate-200 shadow-sm">
-              <CardContent className="p-6">
-                <SuburbInsights
-                  suburbId={Number(property.suburbId ?? 0)}
-                  suburbName={property.suburb || property.city || 'Selected area'}
-                  isDevelopment={!!property.developmentId}
-                />
-              </CardContent>
-            </Card>
-
-            {/* 2.8 Locality Guide */}
-            <LocalityGuide
-              suburb={property.suburb || property.city || 'Selected area'}
-              city={property.city || property.suburb || 'Selected area'}
-              province={property.province}
-            />
           </div>
 
           {/* RIGHT COLUMN (4 columns) */}
           <div className="col-span-12 lg:col-span-4">
-            <div className="sticky top-24 space-y-4">
-              <div
-                id="contact"
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-              >
-                <div className="bg-slate-950 px-5 py-5 text-white">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
-                    Ready to take the next step?
-                  </p>
-                  <div className="mt-2 text-2xl font-bold">
-                    {withRentalPeriod(
-                      formatCurrency(displayPrice, { compact: false }),
-                      normalizedListingType,
-                    )}
-                  </div>
-                  {!isRentalListing && (
-                    <p className="mt-1 text-sm text-slate-300">
-                      Est. {formatCurrency(displayRepayment, { compact: false })}/mo
+            <div className="space-y-4 lg:sticky lg:top-24">
+              {hasPrimaryContactAction && (
+                <div
+                  id="contact"
+                  className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:block"
+                >
+                  <div className="bg-slate-950 px-5 py-5 text-white">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                      Ready to take the next step?
                     </p>
-                  )}
-                  {!isRentalListing && qualificationStatusLabel && (
-                    <Badge className="mt-3 border border-blue-300 bg-blue-50 text-[11px] text-blue-700 hover:bg-blue-50">
-                      {qualificationStatusLabel}
-                    </Badge>
-                  )}
-                </div>
+                    <div className="mt-2 text-2xl font-bold">
+                      {withRentalPeriod(
+                        formatCurrency(displayPrice, { compact: false }),
+                        normalizedListingType,
+                      )}
+                    </div>
+                  </div>
 
-                <div className="space-y-3 px-5 py-5">
-                  {!isRentalListing && (
+                  <div className="space-y-3 px-5 py-5">
                     <Button
-                      className="h-11 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600"
-                      onClick={openQualification}
+                      className="h-12 w-full bg-orange-500 text-base font-semibold text-white hover:bg-orange-600"
+                      onClick={handleOpenStandardEnquiry}
                     >
-                      Check If You Qualify
+                      Send enquiry
                     </Button>
-                  )}
-                  {whatsappNumber && (
                     <Button
                       variant="outline"
-                      className="h-11 w-full border-green-200 text-green-700 hover:bg-green-50 focus-visible:ring-green-500/30"
-                      onClick={() => handleWhatsAppContact(qualificationSnapshot?.summaryMessage)}
+                      className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                      onClick={handleRequestViewing}
                     >
-                      WhatsApp {contactRoleLabel || 'Contact'}
+                      Request a viewing
                     </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                    onClick={handleOpenStandardEnquiry}
-                  >
-                    Send Enquiry
-                  </Button>
-                  <p className="text-center text-xs leading-relaxed text-slate-500">
-                    {isRentalListing
-                      ? 'Contact the listing representative about availability, viewings, and rental terms.'
-                      : 'Start with qualification, then enquire with your affordability context if you want a faster response.'}
-                  </p>
+                    {whatsappNumber && (
+                      <Button
+                        variant="outline"
+                        className="h-11 w-full border-green-200 text-green-700 hover:bg-green-50 focus-visible:ring-green-500/30"
+                        onClick={handleWhatsAppContact}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        WhatsApp {contactRoleLabel || 'representative'}
+                      </Button>
+                    )}
+                    <p className="text-center text-xs leading-relaxed text-slate-500">
+                      Property Listify saves the enquiry and confirms its authorized custody before
+                      showing success.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {contactMode !== 'unknown' && (
                 <Card className="border-slate-200 shadow-sm">
@@ -1766,84 +1394,27 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                           </div>
                         </div>
 
-                        {agentOverviewPills.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {agentOverviewPills.map(item => (
-                              <span
-                                key={item}
-                                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                              >
-                                {item}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {agentStats.length > 0 && (
-                          <div className="grid grid-cols-3 gap-2">
-                            {agentStats.map(stat => (
-                              <div
-                                key={stat.key}
-                                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center"
-                              >
-                                <p className="text-base font-bold text-slate-900">{stat.value}</p>
-                                <p className="mt-1 text-[11px] font-medium text-slate-500">
-                                  {stat.label}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="space-y-3">
-                          <div
-                            className={`grid gap-3 ${whatsappNumber ? 'grid-cols-[56px_minmax(0,1fr)]' : 'grid-cols-1'}`}
+                        {agentProfileHref && (
+                          <Button
+                            variant="outline"
+                            className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
+                            onClick={() => setLocation(agentProfileHref)}
                           >
-                            {whatsappNumber && (
-                              <Button
-                                className="h-12 w-full bg-green-500 px-0 text-white hover:bg-green-600 focus-visible:ring-green-500/30"
-                                onClick={() =>
-                                  handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                                }
-                                aria-label="WhatsApp Agent"
-                              >
-                                <MessageCircle className="h-5 w-5" />
-                              </Button>
-                            )}
-                            <Button
-                              className="h-12 w-full bg-orange-500 text-sm font-semibold text-white hover:bg-orange-600 focus-visible:ring-orange-500/30"
-                              onClick={handleRequestViewing}
-                            >
-                              Request a Viewing
-                            </Button>
-                          </div>
-
-                          {agentProfileHref && (
-                            <div className="grid gap-3">
-                              {agentProfileHref && (
-                                <Button
-                                  variant="outline"
-                                  className="h-11 w-full border-slate-200 text-slate-700 hover:bg-slate-50"
-                                  onClick={() => setLocation(agentProfileHref)}
-                                >
-                                  View Agent Profile
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                            View agent profile
+                          </Button>
+                        )}
                       </>
                     ) : (
                       <>
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                             {contactMode === 'developer'
-                              ? 'Developer Contact'
-                              : contactMode === 'private'
-                                ? privateContactCopy.section
+                              ? 'Developer representative'
+                              : contactMode === 'agency'
+                                ? 'Listing agency'
                                 : contactMode === 'platform'
-                                  ? 'Property Listify Operations'
-                                  : 'Listing Contact'}
+                                  ? 'Property Listify operations'
+                                  : 'Listing representative'}
                           </p>
                         </div>
                         <div className="flex items-start gap-4">
@@ -1882,112 +1453,24 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                           </div>
                         </div>
 
-                        {contactAvailabilityItems.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {contactAvailabilityItems.map(item => (
-                              <span
-                                key={item}
-                                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600"
-                              >
-                                {item}
-                              </span>
-                            ))}
-                          </div>
+                        {developmentHref && contactMode === 'developer' && (
+                          <Button
+                            variant="outline"
+                            className="h-12 w-full justify-between rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900"
+                            onClick={() => setLocation(developmentHref)}
+                          >
+                            <span className="font-medium text-slate-700">View development</span>
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          </Button>
                         )}
-
-                        <div className="space-y-3">
-                          {whatsappNumber && (
-                            <button
-                              type="button"
-                              className="flex w-full items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-left text-sm text-green-800 transition hover:bg-green-100"
-                              onClick={() =>
-                                handleWhatsAppContact(qualificationSnapshot?.summaryMessage)
-                              }
-                            >
-                              <span className="flex items-center gap-2 font-medium">
-                                <MessageCircle className="h-4 w-4" />
-                                WhatsApp {contactRoleLabel || 'Contact'}
-                              </span>
-                            </button>
-                          )}
-                          {directEmail && (
-                            <a
-                              href={`mailto:${directEmail}`}
-                              className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hover:bg-slate-100"
-                            >
-                              <span className="flex items-center gap-2 font-medium">
-                                <Mail className="h-4 w-4" />
-                                Email
-                              </span>
-                              <span className="ml-4 truncate font-medium">{directEmail}</span>
-                            </a>
-                          )}
-                          {developmentHref && contactMode === 'developer' && (
-                            <Button
-                              variant="outline"
-                              className="h-12 w-full justify-between rounded-lg border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-                              onClick={() => setLocation(developmentHref)}
-                            >
-                              <span className="font-medium text-slate-700">View Development</span>
-                              <ChevronRight className="h-4 w-4 text-slate-400" />
-                            </Button>
-                          )}
-                        </div>
                       </>
-                    )}
-
-                    {!isRentalListing && qualificationSnapshot && (
-                      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-blue-700">
-                          Qualification Status
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {qualificationSnapshot.resultTitle}
-                        </p>
-                        <p className="mt-1 text-sm text-slate-600">
-                          Your affordability summary can be carried into your enquiry or WhatsApp
-                          message.
-                        </p>
-                      </div>
                     )}
                   </CardContent>
                 </Card>
               )}
-
-              {!isRentalListing && (
-                <>
-                  <div id="buyability-calculator">
-                    <BondCalculator
-                      propertyPrice={displayPrice}
-                      showTransferCosts={true}
-                      compact={true}
-                      ctaLabel="Check If You Qualify"
-                      onCtaClick={openQualification}
-                    />
-                  </div>
-
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                    <p className="text-[11px] leading-relaxed text-amber-900">
-                      <strong>Disclaimer:</strong> These calculations are estimates only. Actual
-                      bond approval, interest rates, and transfer costs may vary based on individual
-                      circumstances and bank policies.
-                    </p>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
-
-        <PropertyServiceActions
-          propertyId={property.id}
-          listingType={property.listingType}
-          propertyType={property.propertyType}
-          suburb={property.suburb}
-          city={property.city}
-          province={property.province}
-          developmentId={property.developmentId}
-        />
 
         {/* SECTION 3 - FULL WIDTH FOOTER - Similar Properties Carousel */}
         {similarProperties.length > 0 && (
@@ -2009,11 +1492,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 </p>
               </div>
               <Button
+                asChild
                 variant="outline"
                 className="w-full border-slate-300 text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus-visible:ring-blue-500/30 md:w-auto"
-                onClick={() => setLocation(similarListingsHref)}
               >
-                View All Matching Listings
+                <Link href={similarListingsHref}>View All Matching Listings</Link>
               </Button>
             </div>
 
@@ -2021,15 +1504,16 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
             <div className="relative -mx-4 px-4 md:mx-0 md:px-0">
               <div className="flex overflow-x-auto gap-4 pb-8 snap-x snap-mandatory scrollbar-hide">
                 {similarProperties.map(prop => (
-                  <div
+                  <Link
                     key={prop.id}
-                    onClick={() => setLocation(buildPropertyUrl(prop.id, prop.title))}
-                    className="group min-w-[280px] cursor-pointer snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg md:min-w-[320px]"
+                    href={prop.href}
+                    aria-label={`Open ${prop.title}`}
+                    className="group min-w-[280px] snap-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/30 md:min-w-[320px]"
                   >
                     {/* Image */}
                     <div className="relative h-44 overflow-hidden bg-slate-100">
                       <img
-                        src={prop.images[0]?.url || '/placeholder-property.jpg'}
+                        src={prop.image || prop.images[0]?.url || '/placeholder-property.jpg'}
                         alt={prop.title}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
@@ -2089,10 +1573,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                             <span>{prop.bathrooms}</span>
                           </div>
                         )}
-                        {(prop.floorSize || prop.internalAreaM2) && (
+                        {(prop.area || prop.internalAreaM2) && (
                           <div className="flex items-center gap-1">
                             <Square className="h-3.5 w-3.5" />
-                            <span>{prop.floorSize || prop.internalAreaM2} m²</span>
+                            <span>{prop.area || prop.internalAreaM2} m²</span>
                           </div>
                         )}
                       </div>
@@ -2101,7 +1585,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                         Open listing
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -2109,16 +1593,42 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         )}
       </div>
 
-      {/* Modals */}
-      {!isRentalListing && (
-        <PropertyQualificationDrawer
-          open={isQualificationOpen}
-          onOpenChange={setIsQualificationOpen}
-          propertyTitle={property.title}
-          propertyPrice={displayPrice}
-          onProceedToEnquiry={handleQualificationToEnquiry}
-          onProceedToWhatsApp={handleQualificationToWhatsApp}
-        />
+      {hasPrimaryContactAction && (
+        <aside
+          aria-label="Property enquiry actions"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 pt-3 shadow-[0_-12px_32px_rgba(15,23,42,0.12)] backdrop-blur-md pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden"
+        >
+          <div className="mx-auto flex max-w-lg items-center gap-2">
+            <Button
+              className="h-12 min-w-0 flex-1 bg-orange-500 text-sm font-bold text-white hover:bg-orange-600 focus-visible:ring-orange-500/30"
+              onClick={handleOpenStandardEnquiry}
+            >
+              Send enquiry
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 shrink-0 border-slate-200 px-3 text-xs text-slate-700 hover:bg-slate-50 focus-visible:ring-blue-500/30"
+              onClick={handleRequestViewing}
+              aria-label="Request a viewing"
+              title="Request a viewing"
+            >
+              <CalendarDays className="h-4 w-4" />
+              Viewing
+            </Button>
+            {whatsappNumber && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 shrink-0 border-green-200 text-green-700 hover:bg-green-50 focus-visible:ring-green-500/30"
+                onClick={handleWhatsAppContact}
+                aria-label={`WhatsApp ${contactRoleLabel || 'listing representative'}`}
+                title={`WhatsApp ${contactRoleLabel || 'listing representative'}`}
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
+        </aside>
       )}
 
       <PropertyContactModal
@@ -2131,17 +1641,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         }}
         propertyId={propertyId}
         propertyTitle={property.title}
-        agentName={contactIdentity?.name || 'Listing Contact'}
-        agentPhone={undefined}
-        agentEmail={undefined}
-        developmentId={
-          !agent && property?.developmentId ? Number(property.developmentId) : undefined
-        }
-        cataloguePublisherId={
-          !agent && property?.cataloguePublisherId
-            ? Number(property.cataloguePublisherId)
-            : undefined
-        }
+        agentName={contactIdentity?.name || 'the listing representative'}
         initialMessage={contactInitialMessage}
         source={contactIntent === 'whatsapp' ? 'property_detail_whatsapp' : 'property_detail'}
         intent={contactRequestType}
@@ -2154,10 +1654,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         }
         successMessage={
           contactIntent === 'whatsapp'
-            ? 'Your WhatsApp lead has been captured.'
+            ? `Your enquiry has been saved and delivered to ${contactIdentity?.name || 'the listing representative'}. WhatsApp will open only after authorized custody is confirmed.`
             : contactRequestType === 'viewing_request'
-              ? 'Your viewing request has been sent. The listing contact will follow up to confirm a suitable date and time.'
-              : 'Your enquiry has been sent successfully.'
+              ? `Your viewing request has been saved and delivered to ${contactIdentity?.name || 'the listing representative'}. This is not a confirmed appointment; the representative can contact you to arrange a suitable time.`
+              : `Your enquiry has been saved and delivered to ${contactIdentity?.name || 'the listing representative'}.`
         }
         successAction={
           contactIntent === 'whatsapp' && whatsappNumber
@@ -2168,7 +1668,6 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               }
             : undefined
         }
-        affordabilityData={affordabilityPayload}
       />
 
       <PropertyShareModal
@@ -2178,9 +1677,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         propertyUrl={window.location.href}
       />
 
-      <footer className="bg-slate-900 text-slate-300 py-12 mt-20">
+      <footer className="mt-20 bg-slate-900 py-12 text-slate-300">
         <div className="container text-center">
-          <p>&copy; 2025 Real Estate Portal. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Property Listify. All rights reserved.</p>
         </div>
       </footer>
     </div>

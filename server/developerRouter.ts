@@ -17,6 +17,7 @@ import {
 import { getActivityFeed as getActivityFeedService } from './services/activityService';
 import { getKPIsWithCache } from './services/kpiService';
 import { capturePublicLead } from './services/publicLeadCaptureService';
+import { PUBLIC_LEAD_INPUT_LIMITS } from './services/publicLeadInputContract';
 import {
   assignDeveloperLead,
   getDeveloperDistributionSettings,
@@ -68,6 +69,10 @@ import {
 } from './services/developerOperatingHome';
 import { getDeveloperPublicationAccess } from './services/developerPublicationAccess';
 import type { DeveloperPublicationAccess } from './services/developerPublicationAccess';
+import {
+  checkPublicLeadRateLimit,
+  getPublicLeadClientIp,
+} from './services/publicLeadRateLimitService';
 
 console.log('[DEV ROUTER LOADED] build stamp', new Date().toISOString());
 
@@ -986,6 +991,8 @@ export const developerRouter = router({
             'date_desc',
             1,
             poolLimit,
+            undefined,
+            { publicOnly: true },
           ),
           developmentDerivedListingService.searchListings(
             {
@@ -1072,6 +1079,8 @@ export const developerRouter = router({
               'date_desc',
               1,
               limit,
+              undefined,
+              { publicOnly: true },
             ),
           ),
         );
@@ -1196,16 +1205,17 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         cataloguePublisherId: z.number().int().positive().optional(),
-        unitId: z.string().trim().max(36).optional(),
-        unitName: z.string().trim().max(255).optional(),
+        unitId: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitId).trim().optional(),
+        unitName: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitName).trim().optional(),
         unitPriceFrom: z.number().nonnegative().optional(),
         unitBedrooms: z.number().int().nonnegative().optional(),
         unitBathrooms: z.number().nonnegative().optional(),
         leadType: z.enum(['inquiry', 'viewing_request']).default('inquiry'),
-        name: z.string().min(1),
-        email: z.string().email(),
-        phone: z.string().optional(),
-        message: z.string().optional(),
+        name: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.name).trim().min(1),
+        email: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.email).trim().email(),
+        phone: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.phone).trim().optional(),
+        message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
+        website: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.honeypot).optional(),
         affordabilityData: z
           .object({
             monthlyIncome: z.number().optional(),
@@ -1213,24 +1223,47 @@ export const developerRouter = router({
             monthlyDebts: z.number().optional(),
             availableDeposit: z.number().optional(),
             maxAffordable: z.number().optional(),
-            calculatedAt: z.string().optional(),
+            calculatedAt: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.calculatedAt).optional(),
           })
           .optional(),
-        referrerUrl: z.string().optional(),
-        utmSource: z.string().optional(),
-        utmMedium: z.string().optional(),
-        utmCampaign: z.string().optional(),
-        sourceSurface: z.string().optional(),
-        leadSource: z.string().optional(),
-        captureRequestId: z.string().trim().min(8).max(128),
+        referrerUrl: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.referrerUrl).trim().optional(),
+        utmSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+        utmMedium: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+        utmCampaign: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+        sourceSurface: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+        leadSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+        captureRequestId: z
+          .string()
+          .max(PUBLIC_LEAD_INPUT_LIMITS.captureRequestId)
+          .trim()
+          .min(PUBLIC_LEAD_INPUT_LIMITS.captureRequestIdMin),
         consent: z.object({
           accepted: z.literal(true),
-          version: z.string().trim().min(1).max(64),
-          source: z.string().trim().max(100).optional(),
+          version: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentVersion).trim().min(1),
+          source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentSource).trim().optional(),
         }),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      // Silently accept obvious bot submissions so the honeypot does not teach
+      // automated clients how to bypass the public capture boundary.
+      if (input.website && input.website.trim().length > 0) {
+        return {
+          success: true as const,
+          ignored: true as const,
+          leadId: 0,
+          route: 'brand' as const,
+          message: 'Request received',
+        };
+      }
+
+      if (!checkPublicLeadRateLimit(getPublicLeadClientIp(ctx))) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: 'Too many lead submissions. Please try again in a minute.',
+        });
+      }
+
       return await capturePublicLead({
         developmentId: input.developmentId,
         cataloguePublisherId: input.cataloguePublisherId,

@@ -14,13 +14,14 @@ import {
   Heart,
   GitCompareArrows,
 } from 'lucide-react';
-import { useLocation } from 'wouter';
+import { Link } from 'wouter';
 import { PROPERTY_IMAGE_FALLBACK, withApiBase } from '@/lib/mediaUtils';
 import {
   getPrivateListingContactCopy,
   isExplicitRentListing,
   withRentalPeriod,
 } from '@/lib/rentPresentation';
+import type { SearchCardIdentity } from '@shared/types';
 
 export interface ListingResultCardData {
   id: string;
@@ -43,7 +44,8 @@ export interface ListingResultCardData {
   listingType?: 'sale' | 'rent' | string;
   listingSource?: 'manual' | 'development';
   listerType?: 'agent' | 'agency' | 'private' | 'platform';
-  contactRole?: 'agent' | 'developer' | 'private' | 'platform';
+  contactRole?: 'agent' | 'agency' | 'developer' | 'private' | 'platform';
+  identity?: SearchCardIdentity;
   postedBy?: string;
   agentAvatarUrl?: string;
   propertyId?: number;
@@ -76,33 +78,42 @@ function formatPrice(
 }
 
 export function ListingResultCard({ data }: { data: ListingResultCardData }) {
-  const [, setLocation] = useLocation();
   const [contactIntent, setContactIntent] = useState<'contact' | 'whatsapp' | null>(null);
+  const canonicalIdentity = data.identity;
+  const contactRole = canonicalIdentity?.role ?? data.contactRole;
   const resolvedListingSource =
     data.listingSource === 'development'
       ? 'development'
       : data.listingSource === 'manual'
         ? 'manual'
-        : data.contactRole === 'developer'
+        : contactRole === 'developer'
           ? 'development'
           : 'manual';
-  const resolvedListerType =
-    data.listerType ||
-    (resolvedListingSource === 'manual'
-      ? data.contactRole === 'private'
+  const identityListerType =
+    resolvedListingSource === 'manual'
+      ? contactRole === 'private'
         ? 'private'
-        : data.contactRole === 'platform'
+        : contactRole === 'platform'
           ? 'platform'
-          : 'agent'
-      : undefined);
+          : contactRole === 'agency'
+            ? 'agency'
+            : contactRole === 'agent'
+              ? 'agent'
+              : undefined
+      : undefined;
+  const resolvedListerType = canonicalIdentity
+    ? identityListerType
+    : data.listerType || identityListerType;
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
   const isPlatformListing = resolvedListingSource === 'manual' && resolvedListerType === 'platform';
+  const isAgencyListing = resolvedListingSource === 'manual' && resolvedListerType === 'agency';
   const isRentalListing = isExplicitRentListing(data.listingType);
   const compareHandler = isRentalListing ? undefined : data.onCompare;
   const privateContactCopy = getPrivateListingContactCopy(data.listingType);
   const identityDisplayName =
-    isPrivateListing && isRentalListing
+    canonicalIdentity?.name?.trim() ||
+    (isPrivateListing && isRentalListing
       ? privateContactCopy.identity
       : data.postedBy?.trim()
         ? data.postedBy.trim()
@@ -112,7 +123,11 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             ? 'Private Seller'
             : isPlatformListing
               ? 'Property Listify'
-              : 'Listing Agent';
+              : isAgencyListing
+                ? 'Listing Agency'
+                : resolvedListerType === 'agent'
+                  ? 'Listing Agent'
+                  : 'Listing contact unavailable');
   const hasAgentName = identityDisplayName !== '-';
   const agentInitials = hasAgentName
     ? identityDisplayName
@@ -121,7 +136,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
         .map(part => part.charAt(0))
         .join('')
         .toUpperCase()
-    : 'AG';
+    : '?';
   const developmentName = String(data.development?.name || '').trim();
   const developmentHref = developmentName
     ? data.development?.slug
@@ -139,30 +154,57 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
       ? privateContactCopy.action
       : isPlatformListing
         ? 'Enquire via Property Listify'
-        : 'Contact Agent';
-  const whatsappTarget = String(data.contactWhatsapp || data.contactPhone || '').trim();
-  const emailTarget = String(data.contactEmail || '').trim();
+        : isAgencyListing
+          ? 'Contact Agency'
+          : resolvedListerType === 'agent'
+            ? 'Contact Agent'
+            : 'View details';
+  const whatsappTarget = String(
+    canonicalIdentity?.whatsapp ||
+      canonicalIdentity?.phone ||
+      data.contactWhatsapp ||
+      data.contactPhone ||
+      '',
+  ).trim();
+  const emailTarget = String(canonicalIdentity?.email || data.contactEmail || '').trim();
   const resolvedImage = withApiBase(data.image) || PROPERTY_IMAGE_FALLBACK;
-  const resolvedAvatar = withApiBase(data.agentAvatarUrl);
+  const resolvedAvatar = withApiBase(
+    canonicalIdentity?.organizationLogoUrl || canonicalIdentity?.avatarUrl || data.agentAvatarUrl,
+  );
   const modalTitle = isDevelopmentListing ? developmentName || data.title : data.title;
   const whatsappPrefill = `Hi, I'm interested in ${modalTitle}. Please share more details.`;
-  const canOpenContact = !!(
-    data.agentId ||
-    data.cataloguePublisherId ||
-    isPlatformListing ||
-    emailTarget ||
-    whatsappTarget
-  );
+  const hasActionableIdentity =
+    contactRole === 'agent' ||
+    contactRole === 'agency' ||
+    contactRole === 'developer' ||
+    contactRole === 'platform' ||
+    contactRole === 'private';
+  const canOpenContact =
+    hasActionableIdentity &&
+    !!(
+      canonicalIdentity?.agentId ||
+      canonicalIdentity?.agencyId ||
+      canonicalIdentity?.cataloguePublisherId ||
+      data.agentId ||
+      data.agencyId ||
+      data.cataloguePublisherId ||
+      data.propertyId ||
+      isPlatformListing ||
+      emailTarget ||
+      whatsappTarget
+    );
 
   return (
     <>
-      <div
-        className="group w-full max-w-[780px] cursor-pointer overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-[840px] lg:rounded-[26px]"
-        onClick={() => {
-          data.onOpen?.();
-          setLocation(listingHref);
-        }}
-      >
+      <article className="group relative w-full max-w-[780px] overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_16px_40px_-30px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-24px_rgba(15,23,42,0.35)] sm:min-h-[300px] lg:max-w-[840px] lg:rounded-[26px]">
+        <Link
+          href={listingHref}
+          onClick={data.onOpen}
+          aria-label={`View ${data.title}`}
+          className="absolute inset-0 z-10 rounded-[24px] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/35 lg:rounded-[26px]"
+        >
+          <span className="sr-only">View {data.title}</span>
+        </Link>
         <div className="flex flex-col sm:flex-row">
           <div className="relative h-[192px] flex-shrink-0 overflow-hidden sm:h-auto sm:w-[300px] sm:self-stretch lg:w-[340px]">
             <img
@@ -176,7 +218,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               }}
             />
             {(data.onSave || compareHandler) && (
-              <div className="absolute right-3 top-3 z-10 flex gap-2">
+              <div className="absolute right-3 top-3 z-20 flex gap-2">
                 {data.onSave && (
                   <Button
                     variant="ghost"
@@ -223,17 +265,13 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                 <Building2 className="h-3.5 w-3.5" />
                 {developmentHref ? (
-                  <button
-                    type="button"
-                    className="truncate transition-colors hover:text-primary"
-                    onClick={event => {
-                      event.stopPropagation();
-                      setLocation(developmentHref);
-                    }}
+                  <Link
+                    href={developmentHref}
+                    className="relative z-20 truncate rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     title={developmentName}
                   >
                     {developmentName}
-                  </button>
+                  </Link>
                 ) : (
                   <span className="truncate" title={developmentName}>
                     {developmentName}
@@ -252,17 +290,13 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
               <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 <House className="h-3.5 w-3.5" />
                 {developmentHref ? (
-                  <button
-                    type="button"
-                    className="truncate transition-colors hover:text-primary"
-                    onClick={event => {
-                      event.stopPropagation();
-                      setLocation(developmentHref);
-                    }}
+                  <Link
+                    href={developmentHref}
+                    className="relative z-20 truncate rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     title={developmentName}
                   >
                     {developmentName}
-                  </button>
+                  </Link>
                 ) : (
                   <span className="truncate" title={developmentName}>
                     {developmentName}
@@ -340,7 +374,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                   </p>
                 </div>
               </div>
-              <div className="flex shrink-0 gap-1 sm:justify-end">
+              <div className="relative z-20 flex shrink-0 gap-1 sm:justify-end">
                 {whatsappTarget && (
                   <Button
                     variant="outline"
@@ -355,39 +389,51 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                     WhatsApp
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  className="h-10 w-full gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:text-[10px]"
-                  disabled={!canOpenContact}
-                  onClick={event => {
-                    event.stopPropagation();
-                    setContactIntent('contact');
-                  }}
-                >
-                  <Mail className="h-3 w-3" />
-                  {contactCtaLabel}
-                </Button>
+                {contactCtaLabel === 'View details' ? (
+                  <Button
+                    asChild
+                    size="sm"
+                    className="h-10 w-full gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:text-[10px]"
+                  >
+                    <Link href={listingHref} onClick={data.onOpen}>
+                      <Mail className="h-3 w-3" />
+                      View details
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="h-10 w-full gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:text-[10px]"
+                    disabled={!canOpenContact}
+                    onClick={() => setContactIntent('contact')}
+                  >
+                    <Mail className="h-3 w-3" />
+                    {contactCtaLabel}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </article>
       <PropertyContactModal
         isOpen={contactIntent !== null}
         onClose={() => setContactIntent(null)}
         propertyId={data.propertyId}
         propertyTitle={modalTitle}
         agentName={identityDisplayName}
-        agentPhone={data.contactPhone}
-        agentEmail={data.contactEmail}
-        cataloguePublisherId={data.cataloguePublisherId}
-        developmentId={data.developmentId}
+        cataloguePublisherId={
+          data.propertyId
+            ? undefined
+            : (canonicalIdentity?.cataloguePublisherId ?? data.cataloguePublisherId)
+        }
+        developmentId={data.propertyId ? undefined : data.developmentId}
         source={contactIntent === 'whatsapp' ? 'property_search_whatsapp' : 'property_search'}
-        submitLabel={contactIntent === 'whatsapp' ? 'Continue to WhatsApp' : contactCtaLabel}
+        submitLabel={contactIntent === 'whatsapp' ? 'Continue to WhatsApp' : 'Send enquiry'}
         successMessage={
           contactIntent === 'whatsapp'
-            ? 'Details captured. Opening WhatsApp...'
-            : 'Your inquiry has been sent successfully!'
+            ? 'Your enquiry has been saved. WhatsApp will open after authorized custody is confirmed.'
+            : 'Your enquiry has been saved and delivered to the authorized listing recipient.'
         }
         successAction={
           contactIntent === 'whatsapp' && whatsappTarget

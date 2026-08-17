@@ -64,28 +64,28 @@ const FEED_TABS: Array<{ label: string; value: FeedTab }> = [
 
 const TAB_COPY: Record<FeedTab, { title: string; subtitle: string }> = {
   buy: {
-    title: 'Trending Residential Properties for Sale',
-    subtitle: 'Discover in-demand homes and residential opportunities in this area.',
+    title: 'Residential Properties for Sale',
+    subtitle: 'Explore published homes and residential opportunities in this area.',
   },
   rent: {
-    title: 'Trending Residential Properties for Rent',
-    subtitle: 'Browse the latest rental stock and high-demand rental properties.',
+    title: 'Residential Properties for Rent',
+    subtitle: 'Browse published rental stock in this area.',
   },
   developments: {
-    title: 'Trending Developments',
+    title: 'New Developments',
     subtitle: 'Explore current development activity and newly published projects.',
   },
   shared_living: {
-    title: 'Trending Shared Living',
+    title: 'Shared Living',
     subtitle: 'Find student accommodation and shared-living opportunities.',
   },
   plot_land: {
-    title: 'Trending Plot & Land',
-    subtitle: 'View popular plots and land-focused developments in this market.',
+    title: 'Plot & Land',
+    subtitle: 'View published plots and land-focused developments in this market.',
   },
   commercial: {
-    title: 'Trending Commercial Listings',
-    subtitle: 'See active commercial opportunities for rent and sale.',
+    title: 'Commercial Listings',
+    subtitle: 'See published commercial opportunities for rent and sale.',
   },
 };
 
@@ -168,21 +168,18 @@ export function LocationTrendingFeedSection({
 
       {!activeTab ? (
         <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
-          Choose a supported journey to view live opportunities in this area.
+          Choose a supported journey to view published opportunities in this area.
         </div>
       ) : items.length > 0 ? (
         <div className="group/carousel relative w-full max-w-[1240px]">
           <Carousel opts={{ align: 'start', loop: items.length > 4 }} className="w-full">
             <CarouselContent className="-ml-3 pb-2 justify-start">
-              {items.map((item, index) => (
+              {items.map(item => (
                 <CarouselItem
                   key={item.id}
                   className="pl-3 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
                 >
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3 top-2 z-10 rounded-full bg-white/90 px-2 py-1 text-xs font-bold text-slate-700 shadow-sm">
-                      #{index + 1}
-                    </span>
                     {item.kind === 'listing' ? (
                       <SimpleHomeListingCard
                         id={item.id}
@@ -228,7 +225,6 @@ export function LocationTrendingFeedSection({
                         image={getPrimaryDevelopmentImageUrl(item.image) || ''}
                         slug={item.kind === 'development' ? item.id : undefined}
                         href={item.href}
-                        isHotSelling
                       />
                     )}
                   </div>
@@ -241,7 +237,7 @@ export function LocationTrendingFeedSection({
         </div>
       ) : (
         <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
-          No live inventory found for this location yet.
+          No published inventory found for this location yet.
         </div>
       )}
     </section>

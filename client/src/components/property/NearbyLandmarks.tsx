@@ -55,7 +55,13 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
   const activeTabConfig = TABS.find(t => t.id === activeTab);
   const activeTabLabel = activeTabConfig?.label || 'Nearby';
 
-  const { data: connectedPOIs, isLoading } = trpc.location.getNearbyAmenities.useQuery(
+  const {
+    data: connectedPOIs,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = trpc.location.getNearbyAmenities.useQuery(
     {
       latitude: latitude || 0,
       longitude: longitude || 0,
@@ -139,7 +145,9 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 text-slate-500">
               <MapPin className="mb-2 h-8 w-8 text-slate-300" />
               <p className="text-sm font-medium">Location not provided</p>
-              <p className="text-xs text-slate-400">Request the exact pin from the developer.</p>
+              <p className="text-xs text-slate-400">
+                Request the exact pin from the listing representative.
+              </p>
             </div>
           )}
         </div>
@@ -160,7 +168,9 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
                       : 'border-blue-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50/60'
                   }`}
                 >
-                  <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                  <Icon
+                    className={`h-3.5 w-3.5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
+                  />
                   {tab.label}
                 </button>
               );
@@ -182,9 +192,28 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
           </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-slate-500">
+            <MapPin className="h-8 w-8 text-slate-300" />
+            <div>
+              <p className="text-sm font-medium text-slate-700">
+                Nearby information is temporarily unavailable
+              </p>
+              <p className="mt-1 text-xs text-slate-400">The property details are unaffected.</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              {isFetching ? 'Trying again…' : 'Try again'}
+            </Button>
+          </div>
         ) : connectedPOIs && connectedPOIs.length > 0 ? (
           <div className="space-y-0">
-            {connectedPOIs.map((poi: any, index: number) => (
+            {connectedPOIs.map((poi, index) => (
               <div
                 key={poi.id || index}
                 className={`flex items-center justify-between py-4 ${

@@ -1,17 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
 
 const {
   mockSelect,
   mockRedisGet,
   mockRedisSet,
   mockResolveLocation,
-  mockResolveApprovedPropertyIds,
+  mockResolvePublicPropertyEligibilities,
+  mockResolvePublicPropertyEligibilityIds,
 } = vi.hoisted(() => ({
   mockSelect: vi.fn(),
   mockRedisGet: vi.fn(),
   mockRedisSet: vi.fn(),
   mockResolveLocation: vi.fn(),
-  mockResolveApprovedPropertyIds: vi.fn(),
+  mockResolvePublicPropertyEligibilities: vi.fn(),
+  mockResolvePublicPropertyEligibilityIds: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({
@@ -27,11 +30,15 @@ vi.mock('../locationResolverService', () => ({
   locationResolver: { resolveLocation: mockResolveLocation },
 }));
 
-vi.mock('../approvedPublicPropertyService', () => ({
-  resolveApprovedPublicPropertyIds: mockResolveApprovedPropertyIds,
+vi.mock('../publicPropertyEligibilityService', () => ({
+  resolvePublicPropertyEligibilities: mockResolvePublicPropertyEligibilities,
+  resolvePublicPropertyEligibilityIds: mockResolvePublicPropertyEligibilityIds,
 }));
 
-import { PropertySearchService } from '../propertySearchService';
+import {
+  buildManualPropertySortOrder,
+  PropertySearchService,
+} from '../propertySearchService';
 
 function terminalWhereQuery(rows: unknown[]) {
   const query: any = {};
@@ -120,7 +127,25 @@ describe('manual property Search approved projection authority', () => {
     mockRedisGet.mockResolvedValue(null);
     mockRedisSet.mockResolvedValue(undefined);
     mockResolveLocation.mockResolvedValue(null);
-    mockResolveApprovedPropertyIds.mockReset();
+    mockResolvePublicPropertyEligibilities.mockReset();
+    mockResolvePublicPropertyEligibilityIds.mockReset();
+  });
+
+  it.each([
+    'price_asc',
+    'price_desc',
+    'date_desc',
+    'date_asc',
+    'suburb_asc',
+    'suburb_desc',
+  ] as const)('adds a stable ascending property-ID tie-breaker for %s', sortOption => {
+    const dialect = new MySqlDialect();
+    const order = buildManualPropertySortOrder(sortOption).map(value =>
+      dialect.sqlToQuery(value).sql,
+    );
+
+    expect(order).toHaveLength(2);
+    expect(order[1]).toBe('`properties`.`id` asc');
   });
 
   it('builds a canonical card from properties + propertyImages without reading listing state', async () => {
@@ -351,7 +376,24 @@ describe('manual property Search approved projection authority', () => {
         },
       ]))
       .mockReturnValueOnce(orderedQuery([]));
-    mockResolveApprovedPropertyIds.mockResolvedValue([501]);
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(
+      new Map([
+        [
+          501,
+          {
+            property: { id: 501 },
+            images: [],
+            publicIdentity: {
+              role: 'agent',
+              provenance: 'agent',
+              name: 'Jane Agent',
+              organizationName: 'Approved Realty',
+              agentId: 33,
+            },
+          },
+        ],
+      ]),
+    );
 
     const result = await new PropertySearchService().searchProperties(
       {},
@@ -362,7 +404,7 @@ describe('manual property Search approved projection authority', () => {
       { publicOnly: true },
     );
 
-    expect(mockResolveApprovedPropertyIds).toHaveBeenCalledWith([501, 502]);
+    expect(mockResolvePublicPropertyEligibilities).toHaveBeenCalledWith([501, 502]);
     expect(result).toMatchObject({ total: 1, hasMore: false });
     expect(result.properties).toHaveLength(1);
     expect(result.properties[0].id).toBe('501');

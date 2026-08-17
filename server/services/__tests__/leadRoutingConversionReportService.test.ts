@@ -16,6 +16,8 @@ function makeRow(overrides: Record<string, unknown> = {}) {
     source: 'property_detail',
     brandLeadStatus: null,
     leadDeliveryMethod: null,
+    deliveryStatus: null,
+    deliveryAttempts: [],
     propertyOwnerId: null,
     propertyOwnerRole: null,
     status: 'new',
@@ -24,17 +26,60 @@ function makeRow(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+function deliveryEvidence(
+  recipientType: 'agent' | 'developer' | 'manual',
+  recipientId: number | null,
+  leadCustody: 'verified_customer_recipient' | 'platform_managed',
+) {
+  return [
+    {
+      id: `attempt-${recipientType}`,
+      deliveryKey: `test:${recipientType}:${recipientId ?? 'manual'}`,
+      recipientType,
+      recipientId,
+      channel: recipientType === 'manual' ? 'manual' : 'crm_export',
+      status: 'delivered',
+      attemptCount: 1,
+      maxAttempts: 3,
+      createdAt: '2026-03-25 08:00:00',
+      updatedAt: '2026-03-25 08:00:00',
+      supplyOrigin: leadCustody === 'platform_managed' ? 'platform_curated' : 'customer_managed',
+      leadCustody,
+    },
+  ];
+}
+
 describe('leadRoutingConversionReportService', () => {
   it('builds conversion metrics by route and source', () => {
     const report = buildLeadRoutingConversionReport(
       [
-        makeRow({ id: 1, agentId: 11, status: 'qualified' }),
-        makeRow({ id: 2, agentId: 11, status: 'converted' }),
-        makeRow({ id: 3, developerBrandProfileId: 8, leadDeliveryMethod: 'email', status: 'lost' }),
+        makeRow({
+          id: 1,
+          agentId: 11,
+          status: 'qualified',
+          deliveryStatus: 'delivered',
+          deliveryAttempts: deliveryEvidence('agent', 11, 'verified_customer_recipient'),
+        }),
+        makeRow({
+          id: 2,
+          agentId: 11,
+          status: 'converted',
+          deliveryStatus: 'delivered',
+          deliveryAttempts: deliveryEvidence('agent', 11, 'verified_customer_recipient'),
+        }),
+        makeRow({
+          id: 3,
+          cataloguePublisherId: 8,
+          leadDeliveryMethod: 'crm_export',
+          deliveryStatus: 'delivered',
+          deliveryAttempts: deliveryEvidence('developer', 4, 'verified_customer_recipient'),
+          status: 'lost',
+        }),
         makeRow({
           id: 4,
           propertyId: 22,
-          propertyOwnerRole: 'visitor',
+          deliveryStatus: 'delivered',
+          deliveryAttempts: deliveryEvidence('manual', null, 'platform_managed'),
           status: 'closed',
           corrected: true,
         }),
@@ -72,7 +117,7 @@ describe('leadRoutingConversionReportService', () => {
         }),
         expect.objectContaining({
           routeType: 'direct',
-          recipientType: 'private',
+          recipientType: 'platform',
           correctedLeads: 1,
           convertedLeads: 1,
           conversionRate: 100,

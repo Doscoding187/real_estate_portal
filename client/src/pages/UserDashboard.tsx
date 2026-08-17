@@ -430,9 +430,9 @@ export default function UserDashboard() {
     { limit: 12 },
     { enabled: isAuthenticated },
   );
-  const { data: allProperties } = trpc.properties.search.useQuery(
-    { status: 'available', limit: 120 },
-    { enabled: isAuthenticated },
+  const { data: comparisonProperties } = trpc.properties.getPublicByIds.useQuery(
+    { ids: comparedProperties.slice(0, 4) },
+    { enabled: isAuthenticated && comparedProperties.length > 0 },
   );
   const { data: marketHeatmap, isLoading: marketHeatmapLoading } =
     trpc.priceInsights.getSuburbPriceHeatmap.useQuery(
@@ -497,14 +497,9 @@ export default function UserDashboard() {
     [favoritesRaw],
   );
 
-  const allPropertyItems = Array.isArray(allProperties)
-    ? allProperties
-    : ((allProperties as { items?: Array<{ id: number }>; results?: Array<{ id: number }> })
-        ?.items ??
-      (allProperties as { results?: Array<{ id: number }> })?.results ??
-      []);
-
-  const comparisonItems = allPropertyItems.filter(item => comparedProperties.includes(item.id));
+  const comparisonItems = (comparisonProperties || [])
+    .map(resolution => resolution.property)
+    .filter(property => comparedProperties.includes(Number(property.id)));
 
   const watchAreas = useMemo(() => {
     const areas = new Map<string, WatchArea>();

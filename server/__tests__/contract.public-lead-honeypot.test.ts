@@ -62,4 +62,43 @@ describe('public lead honeypot contract', () => {
     expect(mockCheckRateLimit).not.toHaveBeenCalled();
     expect(mockGetDb).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['name', { name: 'n'.repeat(201) }],
+    ['email', { email: `${'e'.repeat(309)}@example.test` }],
+    ['phone', { phone: '1'.repeat(51) }],
+    ['message', { message: 'm'.repeat(5001) }],
+    ['source', { source: 's'.repeat(101) }],
+    ['lead source', { leadSource: 's'.repeat(101) }],
+    ['source surface', { sourceSurface: 's'.repeat(101) }],
+    ['referrer URL', { referrerUrl: 'r'.repeat(2049) }],
+    ['UTM source', { utmSource: 'u'.repeat(101) }],
+    ['UTM medium', { utmMedium: 'u'.repeat(101) }],
+    ['UTM campaign', { utmCampaign: 'u'.repeat(101) }],
+    ['honeypot', { website: 'w'.repeat(201) }],
+    ['affordability timestamp', { affordabilityData: { calculatedAt: 't'.repeat(65) } }],
+  ])('rejects an oversized %s before rate limiting or capture', async (_field, override) => {
+    const caller = leadsRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+      requestId: 'lead-boundary-contract-request',
+    } as any);
+
+    await expect(
+      caller.create({
+        name: 'Buyer Prospect',
+        email: 'buyer@example.test',
+        propertyId: 501,
+        captureRequestId: 'lead-boundary-request-001',
+        consent: { accepted: true, version: '2026-08-02', source: 'lead-boundary-test' },
+        ...override,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+
+    expect(mockGetClientIp).not.toHaveBeenCalled();
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
 });

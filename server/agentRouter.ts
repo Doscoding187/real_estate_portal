@@ -448,23 +448,6 @@ export const agentRouter = router({
     }));
   }),
 
-  getById: publicProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
-    const db = await getDb();
-
-    const [record] = await db
-      .select()
-      .from(agents)
-      .where(and(eq(agents.id, input.id), eq(agents.status, 'approved')))
-      .limit(1);
-
-    if (!record) return null;
-
-    return {
-      ...record,
-      slug: buildAgentPublicSlug(record),
-    };
-  }),
-
   getPublicProfileBySlug: publicProcedure
     .input(z.object({ slug: z.string().min(3) }))
     .query(async ({ input }) => {
@@ -504,7 +487,7 @@ export const agentRouter = router({
     }),
 
   getPublicProfileRouteById: publicProcedure
-    .input(z.object({ agentId: z.number() }))
+    .input(z.object({ agentId: z.number().int().positive() }))
     .query(async ({ input }) => {
       const db = await getDb();
 

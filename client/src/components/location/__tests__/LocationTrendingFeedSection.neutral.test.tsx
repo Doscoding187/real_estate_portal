@@ -26,7 +26,7 @@ describe('LocationTrendingFeedSection neutral mode', () => {
     expect(screen.getByRole('heading', { name: 'Explore Pretoria' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Buy' })).toHaveAttribute('aria-pressed', 'false');
     expect(
-      screen.getByText(/Choose a supported journey to view live opportunities/),
+      screen.getByText(/Choose a supported journey to view published opportunities/),
     ).toBeInTheDocument();
 
     screen

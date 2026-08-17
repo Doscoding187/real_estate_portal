@@ -5,7 +5,6 @@ import {
   cities,
   developments,
   cataloguePublishers,
-  listings,
   properties,
   provinces,
   suburbs,
@@ -13,6 +12,7 @@ import {
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
 import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
+import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
 
 const router = Router();
 
@@ -96,15 +96,6 @@ function slugify(value: string): string {
 function buildPropertyPath(id: number, title: string | null | undefined): string {
   const slug = slugify(String(title || ''));
   return slug ? `/property/${id}-${slug}` : `/property/${id}`;
-}
-
-function buildPublishedListingPath(
-  id: number,
-  title: string | null | undefined,
-  storedSlug?: string | null,
-): string {
-  const slug = slugify(String(storedSlug || ''));
-  return slug ? `/property/${id}-${slug}` : buildPropertyPath(id, title);
 }
 
 function toAbsoluteUrl(pathname: string, baseUrl: string): string {
@@ -203,7 +194,7 @@ router.get('/sitemap-listings.xml', async (_req, res, next) => {
       throw new Error('Database not available');
     }
 
-    const rows = await db
+    const candidates = await db
       .select({
         id: properties.id,
         title: properties.title,
@@ -213,39 +204,22 @@ router.get('/sitemap-listings.xml', async (_req, res, next) => {
       .where(
         and(
           inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
+          sql`${properties.sourceListingId} IS NOT NULL`,
           sql`COALESCE(${properties.title}, '') <> ''`,
         ),
       );
 
-    const listingRows =
-      rows.length > 0
-        ? rows.map(row => ({
-            loc: toAbsoluteUrl(buildPropertyPath(Number(row.id), row.title), baseUrl),
-            lastmod: row.updatedAt,
-            changefreq: 'daily',
-            priority: 0.9,
-          }))
-        : (
-            await db
-              .select({
-                id: listings.id,
-                title: listings.title,
-                slug: listings.slug,
-                updatedAt: listings.updatedAt,
-              })
-              .from(listings)
-              .where(
-                and(eq(listings.status, 'published'), sql`COALESCE(${listings.title}, '') <> ''`),
-              )
-          ).map(row => ({
-            loc: toAbsoluteUrl(
-              buildPublishedListingPath(Number(row.id), row.title, row.slug),
-              baseUrl,
-            ),
-            lastmod: row.updatedAt,
-            changefreq: 'daily',
-            priority: 0.9,
-          }));
+    const eligibleIds = new Set(
+      await resolvePublicPropertyEligibilityIds(candidates.map(row => Number(row.id))),
+    );
+    const listingRows = candidates
+      .filter(row => eligibleIds.has(Number(row.id)))
+      .map(row => ({
+        loc: toAbsoluteUrl(buildPropertyPath(Number(row.id), row.title), baseUrl),
+        lastmod: row.updatedAt,
+        changefreq: 'daily',
+        priority: 0.9,
+      }));
 
     const xml = buildUrlSet(listingRows);
 
@@ -300,6 +274,24 @@ router.get('/sitemap-areas.xml', async (_req, res, next) => {
       throw new Error('Database not available');
     }
 
+    const candidateIds = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(
+        and(
+          inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
+          inArray(properties.listingType, [...AREA_LISTING_TYPES]),
+          sql`${properties.sourceListingId} IS NOT NULL`,
+        ),
+      );
+    const eligiblePropertyIds = await resolvePublicPropertyEligibilityIds(
+      candidateIds.map(row => Number(row.id)),
+    );
+    if (eligiblePropertyIds.length === 0) {
+      sendXml(res, buildUrlSet([]));
+      return;
+    }
+
     const provinceRows = await db
       .select({
         listingType: properties.listingType,
@@ -311,6 +303,7 @@ router.get('/sitemap-areas.xml', async (_req, res, next) => {
       .where(
         and(
           inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
+          inArray(properties.id, eligiblePropertyIds),
           inArray(properties.listingType, [...AREA_LISTING_TYPES]),
           sql`COALESCE(${provinces.slug}, '') <> ''`,
         ),
@@ -330,6 +323,7 @@ router.get('/sitemap-areas.xml', async (_req, res, next) => {
       .where(
         and(
           inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
+          inArray(properties.id, eligiblePropertyIds),
           inArray(properties.listingType, [...AREA_LISTING_TYPES]),
           sql`COALESCE(${provinces.slug}, '') <> ''`,
           sql`COALESCE(${cities.slug}, '') <> ''`,
@@ -352,6 +346,7 @@ router.get('/sitemap-areas.xml', async (_req, res, next) => {
       .where(
         and(
           inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
+          inArray(properties.id, eligiblePropertyIds),
           inArray(properties.listingType, [...AREA_LISTING_TYPES]),
           sql`COALESCE(${provinces.slug}, '') <> ''`,
           sql`COALESCE(${cities.slug}, '') <> ''`,
@@ -410,127 +405,7 @@ router.get('/sitemap-areas.xml', async (_req, res, next) => {
         .filter((entry): entry is SitemapUrlEntry => entry !== null),
     ];
 
-    const fallbackEntries: SitemapUrlEntry[] =
-      entries.length > 0
-        ? []
-        : [
-            ...(
-              await db
-                .select({
-                  action: listings.action,
-                  province: listings.province,
-                  updatedAt: sql<string>`MAX(${listings.updatedAt})`,
-                })
-                .from(listings)
-                .where(
-                  and(
-                    eq(listings.status, 'published'),
-                    inArray(listings.action, ['sell', 'rent']),
-                    sql`COALESCE(${listings.province}, '') <> ''`,
-                  ),
-                )
-                .groupBy(listings.action, listings.province)
-            )
-              .map(row => {
-                const prefix =
-                  row.action === 'sell'
-                    ? '/property-for-sale'
-                    : row.action === 'rent'
-                      ? '/property-to-rent'
-                      : null;
-                const provinceSlug = slugify(String(row.province || ''));
-                if (!prefix || !provinceSlug) return null;
-                return {
-                  loc: toAbsoluteUrl(`${prefix}/${provinceSlug}`, baseUrl),
-                  lastmod: row.updatedAt,
-                  changefreq: 'daily',
-                  priority: 0.8,
-                } satisfies SitemapUrlEntry;
-              })
-              .filter((entry): entry is SitemapUrlEntry => entry !== null),
-            ...(
-              await db
-                .select({
-                  action: listings.action,
-                  province: listings.province,
-                  city: listings.city,
-                  updatedAt: sql<string>`MAX(${listings.updatedAt})`,
-                })
-                .from(listings)
-                .where(
-                  and(
-                    eq(listings.status, 'published'),
-                    inArray(listings.action, ['sell', 'rent']),
-                    sql`COALESCE(${listings.province}, '') <> ''`,
-                    sql`COALESCE(${listings.city}, '') <> ''`,
-                  ),
-                )
-                .groupBy(listings.action, listings.province, listings.city)
-            )
-              .map(row => {
-                const prefix =
-                  row.action === 'sell'
-                    ? '/property-for-sale'
-                    : row.action === 'rent'
-                      ? '/property-to-rent'
-                      : null;
-                const provinceSlug = slugify(String(row.province || ''));
-                const citySlug = slugify(String(row.city || ''));
-                if (!prefix || !provinceSlug || !citySlug) return null;
-                return {
-                  loc: toAbsoluteUrl(`${prefix}/${provinceSlug}/${citySlug}`, baseUrl),
-                  lastmod: row.updatedAt,
-                  changefreq: 'daily',
-                  priority: 0.8,
-                } satisfies SitemapUrlEntry;
-              })
-              .filter((entry): entry is SitemapUrlEntry => entry !== null),
-            ...(
-              await db
-                .select({
-                  action: listings.action,
-                  province: listings.province,
-                  city: listings.city,
-                  suburb: listings.suburb,
-                  updatedAt: sql<string>`MAX(${listings.updatedAt})`,
-                })
-                .from(listings)
-                .where(
-                  and(
-                    eq(listings.status, 'published'),
-                    inArray(listings.action, ['sell', 'rent']),
-                    sql`COALESCE(${listings.province}, '') <> ''`,
-                    sql`COALESCE(${listings.city}, '') <> ''`,
-                    sql`COALESCE(${listings.suburb}, '') <> ''`,
-                  ),
-                )
-                .groupBy(listings.action, listings.province, listings.city, listings.suburb)
-            )
-              .map(row => {
-                const prefix =
-                  row.action === 'sell'
-                    ? '/property-for-sale'
-                    : row.action === 'rent'
-                      ? '/property-to-rent'
-                      : null;
-                const provinceSlug = slugify(String(row.province || ''));
-                const citySlug = slugify(String(row.city || ''));
-                const suburbSlug = slugify(String(row.suburb || ''));
-                if (!prefix || !provinceSlug || !citySlug || !suburbSlug) return null;
-                return {
-                  loc: toAbsoluteUrl(
-                    `${prefix}/${provinceSlug}/${citySlug}/${suburbSlug}`,
-                    baseUrl,
-                  ),
-                  lastmod: row.updatedAt,
-                  changefreq: 'daily',
-                  priority: 0.7,
-                } satisfies SitemapUrlEntry;
-              })
-              .filter((entry): entry is SitemapUrlEntry => entry !== null),
-          ];
-
-    sendXml(res, buildUrlSet(entries.length > 0 ? entries : fallbackEntries));
+    sendXml(res, buildUrlSet(entries));
   } catch (error) {
     next(error);
   }

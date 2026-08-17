@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import { and, desc, eq, gt, inArray, or } from 'drizzle-orm';
 import { notifyOwner } from './notification';
-import { adminProcedure, publicProcedure, router } from './trpc';
+import { publicProcedure, router, superAdminProcedure } from './trpc';
 import { TRPCError } from '@trpc/server';
 import { getDb } from '../db';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import { getLeadRoutingAudit } from '../services/leadRoutingAuditService';
-import { correctLeadRouting } from '../services/leadRoutingCorrectionService';
+import {
+  completePlatformLeadAction,
+  correctLeadRouting,
+} from '../services/leadRoutingCorrectionService';
 import { getLeadRoutingConversionReport } from '../services/leadRoutingConversionReportService';
 import { savedSearchDeliveryHistory } from '../../drizzle/schema';
 import { assessRuntimeDatabaseReadiness } from './databaseAuthority/readiness';
@@ -168,7 +171,7 @@ export const systemRouter = router({
       };
     }),
 
-  notifyOwner: adminProcedure
+  notifyOwner: superAdminProcedure
     .input(
       z.object({
         title: z.string().min(1, 'title is required'),
@@ -182,16 +185,16 @@ export const systemRouter = router({
       } as const;
     }),
 
-  savedSearchSchedulerStatus: adminProcedure.query(() => {
+  savedSearchSchedulerStatus: superAdminProcedure.query(() => {
     return savedSearchDeliveryScheduler.getStatus();
   }),
 
-  runSavedSearchScheduler: adminProcedure.mutation(async () => {
+  runSavedSearchScheduler: superAdminProcedure.mutation(async () => {
     await savedSearchDeliveryScheduler.runDueNotifications('manual');
     return savedSearchDeliveryScheduler.getStatus();
   }),
 
-  updateSavedSearchDeliveryRetryState: adminProcedure
+  updateSavedSearchDeliveryRetryState: superAdminProcedure
     .input(
       z.object({
         deliveryHistoryId: z.number().int().positive(),
@@ -282,7 +285,7 @@ export const systemRouter = router({
       };
     }),
 
-  savedSearchDeliveryHistory: adminProcedure
+  savedSearchDeliveryHistory: superAdminProcedure
     .input(
       z
         .object({
@@ -308,7 +311,7 @@ export const systemRouter = router({
       return rows.map(normalizeDeliveryHistoryRow);
     }),
 
-  exportSavedSearchDeliveryHistory: adminProcedure
+  exportSavedSearchDeliveryHistory: superAdminProcedure
     .input(
       z
         .object({
@@ -398,7 +401,7 @@ export const systemRouter = router({
       };
     }),
 
-  leadRoutingAudit: adminProcedure
+  leadRoutingAudit: superAdminProcedure
     .input(
       z
         .object({
@@ -411,11 +414,11 @@ export const systemRouter = router({
       return getLeadRoutingAudit(input);
     }),
 
-  correctLeadRouting: adminProcedure
+  correctLeadRouting: superAdminProcedure
     .input(
       z.object({
         leadId: z.number().int().positive(),
-        routeType: z.enum(['agent', 'agency', 'brand', 'private', 'clear']),
+        routeType: z.enum(['agent', 'agency', 'developer', 'platform']),
         agentId: z.number().int().positive().optional(),
         agencyId: z.number().int().positive().optional(),
         cataloguePublisherId: z.number().int().positive().optional(),
@@ -426,7 +429,19 @@ export const systemRouter = router({
       return correctLeadRouting(input, Number(ctx.user.id));
     }),
 
-  leadRoutingConversionReport: adminProcedure
+  completePlatformLeadAction: superAdminProcedure
+    .input(
+      z.object({
+        leadId: z.number().int().positive(),
+        action: z.enum(['contacted', 'resolved']),
+        note: z.string().trim().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return completePlatformLeadAction(input, Number(ctx.user.id));
+    }),
+
+  leadRoutingConversionReport: superAdminProcedure
     .input(
       z
         .object({

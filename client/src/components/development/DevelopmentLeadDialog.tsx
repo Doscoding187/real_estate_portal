@@ -229,6 +229,7 @@ export function DevelopmentLeadDialog({
 
   const createLead = trpc.developer.createLead.useMutation({
     onSuccess: result => {
+      if ('ignored' in result) return;
       trackFunnelStep({
         funnel: 'development_detail',
         step: mode,

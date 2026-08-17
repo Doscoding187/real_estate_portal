@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, like } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, like, or } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leadActivities, leads, properties, users } from '../../drizzle/schema';
 import {
@@ -25,7 +25,7 @@ interface LeadRoutingConversionRow extends LeadRoutingAuditRow {
 export interface LeadRoutingConversionBucket {
   key: string;
   routeType: 'brand' | 'direct' | 'unknown';
-  recipientType: 'brand' | 'agent' | 'agency' | 'private' | 'context_only' | 'unknown';
+  recipientType: 'brand' | 'agent' | 'agency' | 'developer' | 'platform' | 'context_only' | 'unknown';
   totalLeads: number;
   correctedLeads: number;
   qualifiedLeads: number;
@@ -207,6 +207,7 @@ export async function getLeadRoutingConversionReport(input?: {
       brandLeadStatus: leads.brandLeadStatus,
       leadDeliveryMethod: leads.leadDeliveryMethod,
       deliveryStatus: leads.deliveryStatus,
+      deliveryAttempts: leads.deliveryAttempts,
       propertyOwnerId: properties.ownerId,
       propertyOwnerRole: users.role,
       status: leads.status,
@@ -230,7 +231,10 @@ export async function getLeadRoutingConversionReport(input?: {
         and(
           inArray(leadActivities.leadId, leadIds),
           eq(leadActivities.type, 'note'),
-          like(leadActivities.description, 'Lead routing corrected%'),
+          or(
+            like(leadActivities.description, 'Lead routing corrected%'),
+            like(leadActivities.description, 'Lead custody corrected%'),
+          ),
         ),
       );
 

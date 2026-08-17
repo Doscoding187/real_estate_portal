@@ -10,6 +10,7 @@ const activeAgent = {
   userId: 70,
   agencyId: null,
   status: 'approved',
+  isVerified: 1,
   userRole: 'agent',
 };
 
@@ -135,6 +136,7 @@ describe('publicLeadCustodyService contract', () => {
       linkedDeveloperAccountId: null,
       isVisible: 1,
       isSubscriber: 0,
+      sourceAttribution: 'Curated by Property Listify operations',
     };
 
     expect(
@@ -159,6 +161,7 @@ describe('publicLeadCustodyService contract', () => {
       ownerType: 'platform',
       linkedDeveloperAccountId: null,
       isVisible: 1,
+      sourceAttribution: 'Curated by Property Listify operations',
     };
 
     expect(

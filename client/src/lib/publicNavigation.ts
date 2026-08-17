@@ -315,19 +315,11 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
     actionItemIds: ['buyers-developments'],
     groups: [
       {
-        label: 'Know your buying power',
+        label: 'Plan your purchase',
         items: [
           destination({
             id: 'buyers-affordability',
-            label: 'Check my buying power',
-            href: '/tools/affordability-calculator',
-            owner: 'content-engine',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/tools',
-          }),
-          destination({
-            id: 'buyers-guidance',
-            label: 'Read the buying guide',
+            label: 'Plan my buying budget',
             href: '/guides/buying-property',
             owner: 'content-engine',
             capability: 'LIMITED_BUT_VALID',

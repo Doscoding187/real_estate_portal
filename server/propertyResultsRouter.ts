@@ -14,7 +14,7 @@ import { getDb } from './db';
 import { savedSearches } from '../drizzle/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { propertySearchService } from './services/propertySearchService';
-import type { PropertyFilters, SortOption } from '../shared/types';
+import type { PropertyFilters } from '../shared/types';
 import { requireUser } from './_core/requireUser';
 import {
   normalizeSavedSearch,
@@ -87,72 +87,6 @@ const propertyResultsSavedSearchCreateSchema = z
 
 export const propertyResultsRouter = router({
   /**
-   * Search properties with filters and pagination
-   * Requirement 4.1: Search endpoint with filter and pagination params
-   */
-  search: publicProcedure
-    .input(
-      z.object({
-        filters: propertyFiltersSchema,
-        sortOption: sortOptionSchema.default('date_desc'),
-        page: z.number().int().positive().default(1),
-        pageSize: z.number().int().positive().max(100).default(12),
-      }),
-    )
-    .query(async ({ input }) => {
-      try {
-        const results = await propertySearchService.searchProperties(
-          input.filters as PropertyFilters,
-          input.sortOption as SortOption,
-          input.page,
-          input.pageSize,
-          undefined,
-          { publicOnly: true },
-        );
-
-        return {
-          success: true,
-          data: results,
-        };
-      } catch (error) {
-        console.error('[PropertyResults] Search error:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to search properties',
-        });
-      }
-    }),
-
-  /**
-   * Get filter counts for preview
-   * Requirement 7.3: Show count before applying filter
-   */
-  getFilterCounts: publicProcedure
-    .input(
-      z.object({
-        filters: propertyFiltersSchema,
-      }),
-    )
-    .query(async ({ input }) => {
-      try {
-        const counts = await propertySearchService.getFilterCounts(
-          input.filters as PropertyFilters,
-        );
-
-        return {
-          success: true,
-          data: counts,
-        };
-      } catch (error) {
-        console.error('[PropertyResults] Filter counts error:', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to get filter counts',
-        });
-      }
-    }),
-
-  /**
    * Saved Searches
    */
   savedSearches: router({
@@ -221,7 +155,9 @@ export const propertyResultsRouter = router({
             try {
               const savedSearch = normalizeSavedSearch(search);
               const criteria = savedSearch.criteria as PropertyFilters;
-              const counts = await propertySearchService.getFilterCounts(criteria);
+              const counts = await propertySearchService.getFilterCounts(criteria, {
+                publicOnly: true,
+              });
 
               // Extract location info from criteria
               const location = [criteria.suburb?.join(', '), criteria.city, criteria.province]

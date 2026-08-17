@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Phone, Mail, Send, Loader2 } from 'lucide-react';
+import { CheckCircle2, Loader2, Send } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import {
@@ -58,13 +58,13 @@ interface PropertyContactModalProps {
   };
 }
 
-type InquiryType = 'general' | 'viewing' | 'offer' | 'financing';
+type EnquiryType = 'general' | 'viewing';
 
 interface ContactFormState {
   name: string;
   email: string;
   phone: string;
-  inquiryType: InquiryType;
+  enquiryType: EnquiryType;
   message: string;
   consentAccepted: boolean;
   website: string;
@@ -75,16 +75,14 @@ export function PropertyContactModal({
   onClose,
   propertyId,
   propertyTitle,
-  agentName = 'Listing Contact',
-  agentPhone,
-  agentEmail,
+  agentName = 'the listing representative',
   cataloguePublisherId,
   developmentId,
   initialMessage,
   source = 'property_search',
   intent = 'enquiry',
-  submitLabel = 'Send Inquiry',
-  successMessage = 'Your inquiry has been sent successfully!',
+  submitLabel = 'Send enquiry',
+  successMessage = 'Your enquiry has been saved and sent to the listing representative.',
   successAction,
   affordabilityData,
 }: PropertyContactModalProps) {
@@ -92,12 +90,15 @@ export function PropertyContactModal({
     name: '',
     email: '',
     phone: '',
-    inquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
+    enquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
     message: initialMessage || '',
     consentAccepted: false,
     website: '',
   });
   const [captureRequestId, setCaptureRequestId] = useState(() => createLeadCaptureRequestId());
+  const [successAcknowledgement, setSuccessAcknowledgement] = useState<string | null>(null);
+  const [successWhatsAppUrl, setSuccessWhatsAppUrl] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const buildWhatsAppUrl = (phone: string, message?: string) => {
     const digits = phone.replace(/[^\d+]/g, '');
@@ -117,48 +118,46 @@ export function PropertyContactModal({
 
     setFormData(prev => ({
       ...prev,
-      inquiryType: intent === 'viewing_request' ? 'viewing' : prev.inquiryType,
+      enquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
       message: initialMessage || '',
       consentAccepted: false,
       website: '',
     }));
     setCaptureRequestId(createLeadCaptureRequestId());
+    setSuccessAcknowledgement(null);
+    setSuccessWhatsAppUrl(null);
+    setSubmissionError(null);
   }, [initialMessage, intent, isOpen]);
 
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: result => {
-      toast.success(publicLeadCaptureAcknowledgement(result, successMessage));
+      const acknowledgement = publicLeadCaptureAcknowledgement(result, successMessage);
+      setSuccessAcknowledgement(acknowledgement);
+      setSubmissionError(null);
+      toast.success(acknowledgement);
 
       if (successAction?.type === 'whatsapp' && hasVerifiedPublicLeadRecipient(result)) {
         const whatsappUrl = buildWhatsAppUrl(successAction.phone, successAction.message);
         if (whatsappUrl) {
+          setSuccessWhatsAppUrl(whatsappUrl);
           window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
         }
       }
-
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        inquiryType: 'general',
-        message: '',
-        consentAccepted: false,
-        website: '',
-      });
-      setCaptureRequestId(createLeadCaptureRequestId());
-      onClose();
     },
     onError: error => {
       const code = String(error.data?.code || '');
-      toast.error(
+      const message =
         code === 'TOO_MANY_REQUESTS'
-          ? 'Too many enquiries from this connection. Please try again in a minute.'
+          ? 'Too many enquiries were submitted from this connection. Please wait a minute and try again.'
           : code === 'NOT_FOUND'
-            ? 'This property is no longer available for enquiries.'
-            : intent === 'viewing_request'
-              ? 'Unable to submit your viewing request. Please try again.'
-              : 'We could not save your enquiry. Please try again.',
-      );
+            ? 'This property is no longer accepting enquiries. Return to the search results to keep browsing.'
+            : code === 'BAD_REQUEST'
+              ? 'Please check your details and try again.'
+              : intent === 'viewing_request'
+                ? 'We could not save your viewing request. Your details are still here, so you can try again.'
+                : 'We could not save your enquiry. Your details are still here, so you can try again.';
+      setSubmissionError(message);
+      toast.error(message);
       console.error('Lead creation error:', error);
     },
   });
@@ -166,25 +165,31 @@ export function PropertyContactModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.message) {
-      toast.error('Please fill in all required fields');
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+      const message = 'Please complete your name, email address and message.';
+      setSubmissionError(message);
+      toast.error(message);
       return;
     }
     if (!formData.consentAccepted) {
-      toast.error('Please agree to be contacted about this enquiry.');
+      const message = 'Please agree to be contacted about this enquiry.';
+      setSubmissionError(message);
+      toast.error(message);
       return;
     }
+
+    setSubmissionError(null);
 
     // Public property custody is derived server-side from propertyId. Do not
     // submit display identities or client-selected agent/agency destinations.
     createLeadMutation.mutate({
       propertyId,
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      message: `[${formData.enquiryType === 'viewing' ? 'VIEWING REQUEST' : 'GENERAL ENQUIRY'}] ${formData.message.trim()}`,
       website: formData.website,
-      leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry',
+      leadType: formData.enquiryType === 'viewing' ? 'viewing_request' : 'inquiry',
       source,
       cataloguePublisherId,
       developmentId,
@@ -200,175 +205,198 @@ export function PropertyContactModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {intent === 'viewing_request' ? 'Request a Viewing' : `Contact ${agentName}`}
-          </DialogTitle>
-          <DialogDescription>
-            {intent === 'viewing_request'
-              ? `Request a viewing for ${propertyTitle}. The listing contact will follow up to confirm a suitable date and time.`
-              : `Interested in ${propertyTitle}? Send a message and we'll get back to you.`}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {intent !== 'viewing_request' && (
-            <div className="space-y-2">
-              <Label htmlFor="inquiryType">Inquiry Type</Label>
-              <Select
-                value={formData.inquiryType}
-                onValueChange={value => handleChange('inquiryType', value as InquiryType)}
-              >
-                <SelectTrigger id="inquiryType">
-                  <SelectValue placeholder="Select inquiry type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="general">General Inquiry</SelectItem>
-                  <SelectItem value="viewing">Request a Viewing</SelectItem>
-                  <SelectItem value="offer">Make an Offer</SelectItem>
-                  <SelectItem value="financing">Financing Options</SelectItem>
-                </SelectContent>
-              </Select>
+      <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-w-[500px] sm:p-6">
+        {successAcknowledgement ? (
+          <div className="space-y-5 py-2" role="status" aria-live="polite">
+            <DialogHeader>
+              <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <DialogTitle>Enquiry received</DialogTitle>
+              <DialogDescription className="text-sm leading-6 text-slate-600">
+                {successAcknowledgement}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              This confirmation is tied to the property you enquired about. Keep this window open
+              until you have read the custody update above.
             </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              Your Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="name"
-              placeholder="John Doe"
-              value={formData.name}
-              onChange={e => handleChange('name', e.target.value)}
-              maxLength={200}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              Email Address <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="john@example.com"
-              value={formData.email}
-              onChange={e => handleChange('email', e.target.value)}
-              maxLength={320}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="+27 12 345 6789"
-              value={formData.phone}
-              onChange={e => handleChange('phone', e.target.value)}
-              maxLength={50}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message">
-              Message <span className="text-destructive">*</span>
-            </Label>
-            <Textarea
-              id="message"
-              placeholder="I'm interested in this property and would like to know more..."
-              value={formData.message}
-              onChange={e => handleChange('message', e.target.value)}
-              maxLength={5000}
-              rows={4}
-              required
-            />
-          </div>
-
-          <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-            <Label htmlFor="property-enquiry-website">Website</Label>
-            <Input
-              id="property-enquiry-website"
-              tabIndex={-1}
-              autoComplete="off"
-              value={formData.website}
-              onChange={e => handleChange('website', e.target.value)}
-            />
-          </div>
-
-          {(agentPhone || agentEmail) && (
-            <div className="space-y-2 rounded-lg bg-muted p-4">
-              <p className="text-sm font-medium">Direct Contact</p>
-              {agentPhone && (
-                <a
-                  href={`tel:${agentPhone}`}
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <Phone className="h-4 w-4" />
-                  {agentPhone}
-                </a>
+            <div className="grid gap-2">
+              {successWhatsAppUrl && (
+                <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
+                  <a href={successWhatsAppUrl} target="_blank" rel="noreferrer">
+                    Open WhatsApp
+                  </a>
+                </Button>
               )}
-              {agentEmail && (
-                <a
-                  href={`mailto:${agentEmail}`}
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <Mail className="h-4 w-4" />
-                  {agentEmail}
-                </a>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <Checkbox
-              id="property-enquiry-consent"
-              checked={formData.consentAccepted}
-              onCheckedChange={checked => handleChange('consentAccepted', checked === true)}
-            />
-            <Label htmlFor="property-enquiry-consent" className="text-xs leading-5 text-slate-600">
-              I agree to be contacted about this enquiry. See our{' '}
-              <a
-                className="text-primary underline"
-                href="/legal/privacy"
-                target="_blank"
-                rel="noreferrer"
+              <Button
+                type="button"
+                variant={successWhatsAppUrl ? 'outline' : 'default'}
+                className="w-full"
+                onClick={onClose}
               >
-                Privacy Policy
-              </a>
-              .
-            </Label>
+                Done
+              </Button>
+            </div>
           </div>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>
+                {intent === 'viewing_request' ? 'Request a viewing' : 'Send an enquiry'}
+              </DialogTitle>
+              <DialogDescription>
+                {intent === 'viewing_request'
+                  ? `Send a viewing request for ${propertyTitle} to ${agentName}. This does not confirm an appointment; if they can accommodate it, they can contact you to arrange a suitable date and time.`
+                  : `Ask ${agentName} about ${propertyTitle}. Property Listify saves your enquiry before confirming success.`}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="flex gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1"
-              disabled={createLeadMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" disabled={createLeadMutation.isPending}>
-              {createLeadMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  {submitLabel}
-                </>
+            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+              {intent !== 'viewing_request' && (
+                <div className="space-y-2">
+                  <Label htmlFor="enquiryType">Enquiry type</Label>
+                  <Select
+                    value={formData.enquiryType}
+                    onValueChange={value => handleChange('enquiryType', value as EnquiryType)}
+                  >
+                    <SelectTrigger id="enquiryType">
+                      <SelectValue placeholder="Select enquiry type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General enquiry</SelectItem>
+                      <SelectItem value="viewing">Request a viewing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
-            </Button>
-          </div>
-        </form>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Your Name <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Your full name"
+                  value={formData.name}
+                  onChange={e => handleChange('name', e.target.value)}
+                  maxLength={200}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  Email Address <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={formData.email}
+                  onChange={e => handleChange('email', e.target.value)}
+                  maxLength={320}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+27 12 345 6789"
+                  value={formData.phone}
+                  onChange={e => handleChange('phone', e.target.value)}
+                  maxLength={50}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="message">
+                  Message <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="message"
+                  placeholder="I’m interested in this property and would like to know more…"
+                  value={formData.message}
+                  onChange={e => handleChange('message', e.target.value)}
+                  maxLength={5000}
+                  rows={4}
+                  required
+                />
+              </div>
+
+              <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                <Label htmlFor="property-enquiry-website">Website</Label>
+                <Input
+                  id="property-enquiry-website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={formData.website}
+                  onChange={e => handleChange('website', e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <Checkbox
+                  id="property-enquiry-consent"
+                  checked={formData.consentAccepted}
+                  onCheckedChange={checked => handleChange('consentAccepted', checked === true)}
+                />
+                <Label
+                  htmlFor="property-enquiry-consent"
+                  className="text-xs leading-5 text-slate-600"
+                >
+                  I agree to be contacted about this enquiry. See our{' '}
+                  <a
+                    className="text-primary underline"
+                    href="/legal/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Privacy Policy
+                  </a>
+                  .
+                </Label>
+              </div>
+
+              {submissionError && (
+                <div
+                  role="alert"
+                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-800"
+                >
+                  {submissionError}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1"
+                  disabled={createLeadMutation.isPending}
+                >
+                  Not now
+                </Button>
+                <Button type="submit" className="flex-1" disabled={createLeadMutation.isPending}>
+                  {createLeadMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      {submitLabel}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -58,12 +58,14 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
                         <User className="h-20 w-20 text-slate-300" />
                       </div>
                     )}
-                    <div className="absolute top-3 left-3">
-                      <Badge className="bg-white/90 text-slate-900 hover:bg-white shadow-sm flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        {agent.rating ? (agent.rating / 20).toFixed(1) : '5.0'}
-                      </Badge>
-                    </div>
+                    {agent.rating ? (
+                      <div className="absolute top-3 left-3">
+                        <Badge className="bg-white/90 text-slate-900 hover:bg-white shadow-sm flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          {(agent.rating / 20).toFixed(1)}
+                        </Badge>
+                      </div>
+                    ) : null}
                     {agent.agency?.logo && (
                       <div className="absolute bottom-3 right-3 bg-white p-1 rounded shadow-sm opacity-90">
                         <img

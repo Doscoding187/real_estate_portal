@@ -51,6 +51,32 @@ interface ListingNavbarProps {
   defaultLocations?: ListingNavbarLocation[];
   defaultSearchArea?: Pick<SearchAreaSummary, 'searchAreaId' | 'label' | 'availability'>;
   onClearSearchArea?: () => void;
+  showMobileLocationSearch?: boolean;
+}
+
+export const LISTING_NAVBAR_LOCATION_INPUT_IDS = {
+  desktop: 'listing-navbar-location-input',
+  mobile: 'listing-navbar-location-input-mobile',
+} as const;
+
+export function focusListingNavbarLocationInput(preferMobile?: boolean) {
+  if (typeof document === 'undefined') return false;
+
+  const shouldPreferMobile =
+    preferMobile ??
+    (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+  const inputIds = shouldPreferMobile
+    ? [LISTING_NAVBAR_LOCATION_INPUT_IDS.mobile, LISTING_NAVBAR_LOCATION_INPUT_IDS.desktop]
+    : [LISTING_NAVBAR_LOCATION_INPUT_IDS.desktop, LISTING_NAVBAR_LOCATION_INPUT_IDS.mobile];
+  const input = inputIds
+    .map(inputId => document.getElementById(inputId))
+    .find(element => element instanceof HTMLInputElement);
+
+  if (!(input instanceof HTMLInputElement)) return false;
+
+  input.focus();
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  return true;
 }
 
 /**
@@ -102,6 +128,7 @@ export function ListingNavbar({
   defaultLocations = EMPTY_LISTING_NAVBAR_LOCATIONS,
   defaultSearchArea,
   onClearSearchArea,
+  showMobileLocationSearch = false,
 }: ListingNavbarProps) {
   const [currentPath, setLocation] = useLocation();
   const search = useSearch();
@@ -312,7 +339,7 @@ export function ListingNavbar({
               <LocationAutosuggest
                 selectedLocations={selectedLocations as LocationNode[]}
                 onRemove={removeLocationAtIndex}
-                inputId="listing-navbar-location-input"
+                inputId={LISTING_NAVBAR_LOCATION_INPUT_IDS.desktop}
                 placeholder={selectedLocations.length > 0 ? 'Add more...' : 'City, Suburb, or Area'}
                 inputClassName="w-full py-2 text-sm outline-none text-gray-700 placeholder:text-gray-400 bg-transparent border-none h-full focus-visible:ring-0 shadow-none px-1"
                 className="w-full h-full"
@@ -372,6 +399,64 @@ export function ListingNavbar({
           {listingType ? 'Search' : 'Choose journey'}
         </Button>
       </div>
+
+      {showMobileLocationSearch && (
+        <div
+          className="absolute left-0 right-0 top-16 border-t border-white/15 bg-[#005ca8] px-4 pb-3 md:hidden"
+          data-testid="listing-navbar-mobile-location-search"
+        >
+          {selectedLocations.length > 0 && (
+            <div
+              className="scrollbar-hide flex gap-1.5 overflow-x-auto py-2"
+              aria-label="Selected search locations"
+            >
+              {selectedLocations.map(location => (
+                <span
+                  key={location.canonicalLocationId || location.id || location.slug}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-white"
+                >
+                  <span className="max-w-[180px] truncate">{location.name}</span>
+                  <button
+                    type="button"
+                    className="rounded-full p-0.5 hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/70"
+                    aria-label={`Remove ${location.name}`}
+                    onClick={() =>
+                      removeLocation(location.canonicalLocationId || location.id || location.slug)
+                    }
+                  >
+                    <X className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className={`flex items-center gap-2 ${selectedLocations.length > 0 ? '' : 'pt-2'}`}>
+            <LocationAutosuggest
+              selectedLocations={selectedLocations as LocationNode[]}
+              onRemove={removeLocationAtIndex}
+              inputId={LISTING_NAVBAR_LOCATION_INPUT_IDS.mobile}
+              placeholder="City, suburb, or area"
+              inputClassName="!min-h-10 !rounded-xl !border-0 !bg-white !px-2 !py-0"
+              className="min-w-0 flex-1"
+              showIcon
+              maxLocations={10}
+              renderSelectedLocations={false}
+              onSelect={handleLocationSelect}
+            />
+            <Button
+              type="button"
+              size="icon"
+              aria-label={listingType ? 'Update property search' : 'Choose Buy or Rent first'}
+              disabled={!listingType}
+              className="h-10 w-10 shrink-0 rounded-xl bg-white text-[#005ca8] hover:bg-blue-50 disabled:bg-white/70 disabled:text-slate-400"
+              onClick={handleSearch}
+            >
+              <Search className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
