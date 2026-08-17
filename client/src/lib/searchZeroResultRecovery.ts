@@ -61,7 +61,7 @@ export interface RecoveryLocationContext {
 }
 
 export interface RecoverySearchAreaContext {
-  parentCanonicalLocationId: string;
+  parentCanonicalLocationId?: string;
   parentLabel?: string;
 }
 
@@ -106,7 +106,7 @@ export function getExplicitParentRecoveryTarget(
     }
   }
 
-  if (!locationContext && searchAreaContext) {
+  if (!locationContext && searchAreaContext?.parentCanonicalLocationId) {
     const parsed = parseCanonicalLocationId(searchAreaContext.parentCanonicalLocationId);
     if (parsed?.level === 'city') {
       return {

@@ -9,6 +9,7 @@ import { getListingTypeForPath } from '@/lib/searchNavigation';
 import { createCanonicalSearchLocation } from '@/lib/geographySearchHandoff';
 import type { LocationNode } from '@/types/location';
 import { useAuth } from '@/_core/hooks/useAuth';
+import type { SearchAreaSummary } from '../../../shared/searchScope';
 
 export interface ListingNavbarLocation {
   name: string;
@@ -48,6 +49,8 @@ export function reconstructCanonicalLocations(
 interface ListingNavbarProps {
   neutralSearch?: boolean;
   defaultLocations?: ListingNavbarLocation[];
+  defaultSearchArea?: Pick<SearchAreaSummary, 'searchAreaId' | 'label' | 'availability'>;
+  onClearSearchArea?: () => void;
 }
 
 /**
@@ -97,6 +100,8 @@ export function canAddCanonicalLocation(
 export function ListingNavbar({
   neutralSearch = false,
   defaultLocations = EMPTY_LISTING_NAVBAR_LOCATIONS,
+  defaultSearchArea,
+  onClearSearchArea,
 }: ListingNavbarProps) {
   const [currentPath, setLocation] = useLocation();
   const search = useSearch();
@@ -151,9 +156,14 @@ export function ListingNavbar({
   const handleSearch = () => {
     if (!listingType) return;
 
+    const preserveSearchArea = defaultSearchArea && selectedLocations.length === 0;
     const url = buildPropertySearchUrl({
       transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
       selectedLocations: selectedLocations as LocationNode[],
+      searchScope: preserveSearchArea
+        ? { kind: 'search_area', searchAreaId: defaultSearchArea.searchAreaId }
+        : undefined,
+      searchAreaAvailability: preserveSearchArea ? defaultSearchArea.availability : undefined,
     });
     setLocation(url);
   };
@@ -261,6 +271,29 @@ export function ListingNavbar({
           {/* Chips & Input Container */}
           <div className="flex-1 flex items-center px-2 min-w-0 gap-2">
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-[50%] flex-shrink-0">
+              {defaultSearchArea && selectedLocations.length === 0 ? (
+                <div
+                  className="flex-shrink-0 flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full border border-blue-100 whitespace-nowrap"
+                  aria-label={`${defaultSearchArea.label}, Property market area`}
+                >
+                  <span className="flex flex-col leading-tight">
+                    <span>{defaultSearchArea.label}</span>
+                    <span className="text-[10px] text-blue-500">Property market area</span>
+                  </span>
+                  {onClearSearchArea ? (
+                    <button
+                      type="button"
+                      aria-label={`Clear ${defaultSearchArea.label} Search Area`}
+                      onClick={event => {
+                        event.stopPropagation();
+                        onClearSearchArea();
+                      }}
+                    >
+                      <X className="h-3 w-3 hover:text-blue-900" />
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               {selectedLocations.map(loc => (
                 <div
                   key={loc.canonicalLocationId || loc.id || loc.slug}

@@ -83,8 +83,16 @@ export interface SearchAreaSummary {
   label: string;
   description?: string;
   publicSlug?: string;
-  parentCanonicalLocationId: string;
+  /** Optional context retained for legacy compatibility; never membership authority. */
+  parentCanonicalLocationId?: string;
   parentLabel?: string;
+  canonicalContext?: {
+    contextType?: string;
+    contextNames: readonly string[];
+    primaryContextName?: string;
+    isMembershipParent: false;
+  };
+  anchorFactualLocationId?: string;
   lifecycle: SearchAreaLifecycle;
   availability: 'available' | 'preview';
   supportedJourneys: readonly SearchJourneyId[];

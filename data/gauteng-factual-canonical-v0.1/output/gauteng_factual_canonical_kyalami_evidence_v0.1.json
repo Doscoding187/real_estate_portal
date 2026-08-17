@@ -1,0 +1,63 @@
+{
+  "canonical_location_id": null,
+  "existing_candidate_interpretations": [
+    {
+      "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+      "candidate_type": "neighbourhood",
+      "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+      "preferred_name": "Kyalami",
+      "promotion_class": "candidate_only",
+      "sources": [
+        "geonames"
+      ]
+    }
+  ],
+  "identity_relationship": "official spelling correction; one factual identity",
+  "licence_gate": {
+    "reason": "Official identity evidence is strong, but a reusable commercial persistence/derivative-use right for the official web/GIS/database material was not established.",
+    "required_next_step": "Obtain written permission or an explicit commercial-compatible licence from the relevant rights holder, then attach the official evidence to the existing Kyalami candidate without changing unrelated canonical IDs.",
+    "status": "blocked"
+  },
+  "machine_canonical_decision": "candidate_only_until_commercial_reuse_gate",
+  "official_corrected_name": "Khayalami",
+  "preferred_common_consumer_name": "Kyalami",
+  "related_names_must_remain_separate": [
+    "Kyalami Estate / Khayalami Estate",
+    "Kyalami Hills / Khayalami Hills",
+    "Kyalami AH / Khayalami AH",
+    "Kyalami Gardens / Khayalami Gardens",
+    "Kyalami Ridge / Khayalami Ridge",
+    "other Kyalami-family places"
+  ],
+  "research_status": "official_identity_evidence_found_licence_gate_unresolved",
+  "sources": [
+    {
+      "commercial_reuse_status": "not_cleared",
+      "finding": "Khayalami is recorded as a correction of spelling from Kyalami for a township in the City of Joburg Municipality area in Gauteng.",
+      "published_or_reference_date": "2016-06-17",
+      "source": "South African Government Gazette 40081, GoN 730",
+      "url": "https://www.gov.za/sites/default/files/gcis_document/201606/40081gon730.pdf"
+    },
+    {
+      "commercial_reuse_status": "no_explicit_commercial_derivative_licence_found",
+      "finding": "The official GIS lookup maps KYALAMI proper and the named Kyalami-family places to KHAYALAMI spellings.",
+      "published_or_reference_date": null,
+      "source": "City of Johannesburg Corporate Geo-Informatics Online Maps",
+      "url": "https://joburg.itntnetworks.co.za/online-maps/"
+    },
+    {
+      "commercial_reuse_status": "no_explicit_commercial_derivative_licence_verified",
+      "finding": "The Department identifies the South African Geographical Names Council process and publishes an approved-names database resource.",
+      "published_or_reference_date": null,
+      "source": "Department of Sport, Arts and Culture geographical-names process",
+      "url": "https://www.dsac.gov.za/South%20African%20Geographical%20Names%20process"
+    },
+    {
+      "commercial_reuse_status": "permission_required_for_commercial_use",
+      "finding": "The accessible terms limit ordinary copying to non-commercial informational/reference purposes and require prior written permission for commercial use.",
+      "published_or_reference_date": null,
+      "source": "South African Government website terms",
+      "url": "https://www.gov.za/terms-and-conditions-use-0"
+    }
+  ]
+}

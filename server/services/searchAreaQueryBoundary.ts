@@ -1,7 +1,11 @@
 import { parseCanonicalLocationId } from '../../shared/locationAuthority';
 import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
+import type { RuntimeSearchScopeKind } from '../../shared/factualRuntimeGeographyBridge';
 import type { ResolvedLocation } from './locationResolverService';
-import type { SearchAreaResolution } from './searchAreaAuthority';
+import type {
+  ResolvedSearchAreaMember,
+  SearchAreaResolution,
+} from './searchAreaAuthority';
 
 /**
  * Server-only query boundary derived from a validated Search Area definition.
@@ -13,12 +17,37 @@ import type { SearchAreaResolution } from './searchAreaAuthority';
 export interface SearchAreaQueryBoundary {
   readonly kind: 'canonical_members';
   readonly authorityKey: string;
-  readonly parentCanonicalLocationId: string;
-  readonly parentCityId: number;
-  readonly parentCityName: string;
+  readonly parentCanonicalLocationId?: string;
+  readonly parentCityId?: number;
+  readonly parentCityName?: string;
   readonly memberCanonicalLocationIds: readonly string[];
+  readonly memberScopeKinds?: readonly RuntimeSearchScopeKind[];
+  readonly memberRuntimeNaturalKeys?: readonly (string | undefined)[];
+  readonly memberFactualLocationIds?: readonly (string | undefined)[];
+  readonly memberNames?: readonly string[];
+  readonly memberProvinceIds?: readonly (number | undefined)[];
+  readonly memberProvinceNames?: readonly (string | undefined)[];
+  readonly members?: readonly SearchAreaQueryMember[];
+  /** Legacy locality-only arrays retained for existing query consumers. */
   readonly memberSuburbIds: readonly number[];
   readonly memberSuburbNames: readonly string[];
+  readonly memberCityIds?: readonly (number | undefined)[];
+  readonly memberCityNames?: readonly (string | undefined)[];
+}
+
+export interface SearchAreaQueryMember {
+  readonly canonicalLocationId: string;
+  readonly scopeKind: RuntimeSearchScopeKind;
+  readonly runtimeNaturalKey?: string;
+  readonly factualLocationId?: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly provinceId?: number;
+  readonly provinceName?: string;
+  readonly cityId?: number;
+  readonly cityName?: string;
+  readonly suburbId?: number;
+  readonly suburbName?: string;
 }
 
 export interface CanonicalLocationQueryMember {
@@ -51,57 +80,229 @@ export type PublicSearchQueryBoundary = SearchAreaQueryBoundary | CanonicalLocat
 
 type ResolvedSearchArea = Extract<SearchAreaResolution, { status: 'available' | 'preview' }>;
 
+function scopeKindForLevel(level: 'province' | 'city' | 'suburb'): RuntimeSearchScopeKind {
+  if (level === 'province') return 'province';
+  if (level === 'city') return 'metro_city';
+  return 'locality';
+}
+
+function slugForName(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function toSearchAreaQueryMember(member: ResolvedSearchAreaMember): SearchAreaQueryMember | null {
+  const parsed = parseCanonicalLocationId(member.canonicalLocationId);
+  if (!parsed || !Number.isSafeInteger(parsed.id)) return null;
+
+  const scopeKind = member.scopeKind ?? scopeKindForLevel(parsed.level);
+  if (
+    (scopeKind === 'province' && parsed.level !== 'province') ||
+    (scopeKind === 'metro_city' && parsed.level !== 'city') ||
+    (scopeKind === 'locality' && parsed.level !== 'suburb')
+  ) {
+    return null;
+  }
+
+  const parent = member.parentCanonicalLocationId
+    ? parseCanonicalLocationId(member.parentCanonicalLocationId)
+    : null;
+  if (scopeKind === 'locality' && parent?.level !== 'city') return null;
+  if (scopeKind === 'metro_city' && parent && parent.level !== 'province') return null;
+
+  return {
+    canonicalLocationId: member.canonicalLocationId,
+    scopeKind,
+    ...(member.runtimeNaturalKey ? { runtimeNaturalKey: member.runtimeNaturalKey } : {}),
+    ...(member.factualLocationId ? { factualLocationId: member.factualLocationId } : {}),
+    name: member.name,
+    slug: member.slug || slugForName(member.name),
+    ...(scopeKind === 'province'
+      ? { provinceId: parsed.id, provinceName: member.name }
+      : scopeKind === 'metro_city'
+        ? {
+            cityId: parsed.id,
+            cityName: member.name,
+            ...(parent
+              ? {
+                  provinceId: parent.id,
+                  ...(member.parentName ? { provinceName: member.parentName } : {}),
+                }
+              : {}),
+          }
+        : {
+            suburbId: parsed.id,
+            suburbName: member.name,
+            ...(parent
+              ? {
+                  cityId: parent.id,
+                  ...(member.parentName ? { cityName: member.parentName } : {}),
+                }
+              : {}),
+          }),
+  };
+}
+
+export function getSearchAreaQueryMembers(
+  boundary: SearchAreaQueryBoundary,
+): SearchAreaQueryMember[] {
+  if (boundary.members) return [...boundary.members];
+
+  let localityNameIndex = 0;
+  return boundary.memberCanonicalLocationIds.flatMap<SearchAreaQueryMember>(
+    (canonicalLocationId, index) => {
+      const parsed = parseCanonicalLocationId(canonicalLocationId);
+      if (!parsed) return [];
+      const scopeKind = boundary.memberScopeKinds?.[index] ?? scopeKindForLevel(parsed.level);
+      const localityFallbackName =
+        scopeKind === 'locality' ? boundary.memberSuburbNames[localityNameIndex++] : undefined;
+      const name =
+        boundary.memberNames?.[index] ||
+        localityFallbackName ||
+        (scopeKind === 'metro_city' ? boundary.memberCityNames?.[index] : undefined) ||
+        canonicalLocationId;
+
+      if (scopeKind === 'province') {
+        return [
+          {
+            canonicalLocationId,
+            scopeKind,
+            ...(boundary.memberRuntimeNaturalKeys?.[index]
+              ? { runtimeNaturalKey: boundary.memberRuntimeNaturalKeys[index] }
+              : {}),
+            ...(boundary.memberFactualLocationIds?.[index]
+              ? { factualLocationId: boundary.memberFactualLocationIds[index] }
+              : {}),
+            name,
+            slug: slugForName(name),
+            provinceId: boundary.memberProvinceIds?.[index] ?? parsed.id,
+            provinceName: boundary.memberProvinceNames?.[index] || name,
+          },
+        ];
+      }
+      if (scopeKind === 'metro_city') {
+        return [
+          {
+            canonicalLocationId,
+            scopeKind,
+            ...(boundary.memberRuntimeNaturalKeys?.[index]
+              ? { runtimeNaturalKey: boundary.memberRuntimeNaturalKeys[index] }
+              : {}),
+            ...(boundary.memberFactualLocationIds?.[index]
+              ? { factualLocationId: boundary.memberFactualLocationIds[index] }
+              : {}),
+            name,
+            slug: slugForName(name),
+            cityId: boundary.memberCityIds?.[index] ?? parsed.id,
+            cityName: boundary.memberCityNames?.[index] || name,
+            provinceId: boundary.memberProvinceIds?.[index] ?? boundary.parentCityId,
+            provinceName: boundary.memberProvinceNames?.[index],
+          },
+        ];
+      }
+      return [
+        {
+          canonicalLocationId,
+          scopeKind,
+          ...(boundary.memberRuntimeNaturalKeys?.[index]
+            ? { runtimeNaturalKey: boundary.memberRuntimeNaturalKeys[index] }
+            : {}),
+          ...(boundary.memberFactualLocationIds?.[index]
+            ? { factualLocationId: boundary.memberFactualLocationIds[index] }
+            : {}),
+          name,
+          slug: slugForName(name),
+          cityId: boundary.memberCityIds?.[index] ?? boundary.parentCityId,
+          cityName: boundary.memberCityNames?.[index] || boundary.parentCityName,
+          suburbId: parsed.id,
+          suburbName: boundary.memberSuburbNames[index] || name,
+          provinceId: boundary.memberProvinceIds?.[index],
+          provinceName: boundary.memberProvinceNames?.[index],
+        },
+      ];
+    },
+  );
+}
+
+function buildBoundaryFromMembers(
+  base: SearchAreaQueryBoundary,
+  members: readonly SearchAreaQueryMember[],
+): SearchAreaQueryBoundary {
+  const localities = members.filter(member => member.scopeKind === 'locality');
+  const { members: _members, ...baseWithoutMembers } = base;
+  return {
+    ...baseWithoutMembers,
+    memberCanonicalLocationIds: members.map(member => member.canonicalLocationId),
+    memberScopeKinds: members.map(member => member.scopeKind),
+    memberRuntimeNaturalKeys: members.map(member => member.runtimeNaturalKey),
+    memberFactualLocationIds: members.map(member => member.factualLocationId),
+    memberNames: members.map(member => member.name),
+    memberProvinceIds: members.map(member => member.provinceId),
+    memberProvinceNames: members.map(member => member.provinceName),
+    memberSuburbIds: localities
+      .map(member => member.suburbId)
+      .filter((value): value is number => Number.isSafeInteger(value)),
+    memberSuburbNames: localities.map(member => member.suburbName || member.name),
+    memberCityIds: members.map(member => member.cityId),
+    memberCityNames: members.map(member => member.cityName),
+  };
+}
+
 export function buildSearchAreaQueryBoundary(
   resolution: ResolvedSearchArea,
 ): SearchAreaQueryBoundary | null {
-  const parent = parseCanonicalLocationId(resolution.definition.parent.canonicalLocationId);
-  if (parent?.level !== 'city' || !Number.isSafeInteger(parent.id)) return null;
+  const parent = resolution.definition.parent
+    ? parseCanonicalLocationId(resolution.definition.parent.canonicalLocationId)
+    : null;
+  if (parent && (parent.level !== 'city' || !Number.isSafeInteger(parent.id))) return null;
 
-  const members = resolution.definition.members.map(member => {
-    const parsed = parseCanonicalLocationId(member.canonicalLocationId);
-    if (parsed?.level !== 'suburb' || !Number.isSafeInteger(parsed.id)) return null;
+  const members = resolution.definition.members
+    .map(toSearchAreaQueryMember)
+    .map(member =>
+      member &&
+      member.scopeKind === 'locality' &&
+      !member.cityName &&
+      resolution.definition.parent
+        ? {
+            ...member,
+            cityId: parent?.id,
+            cityName: resolution.definition.parent.name,
+          }
+        : member,
+    )
+    .filter((member): member is SearchAreaQueryMember => Boolean(member));
+  if (members.length !== resolution.definition.members.length || members.length === 0) return null;
 
-    return {
-      canonicalLocationId: member.canonicalLocationId,
-      suburbId: parsed.id,
-      name: member.name,
-    };
-  });
-
-  if (members.some(member => member === null) || members.length === 0) return null;
-
-  const resolvedMembers = members as Array<{
-    canonicalLocationId: string;
-    suburbId: number;
-    name: string;
-  }>;
-
-  return {
+  return buildBoundaryFromMembers({
     kind: 'canonical_members',
     authorityKey: resolution.definition.authorityKey,
-    parentCanonicalLocationId: resolution.definition.parent.canonicalLocationId,
-    parentCityId: parent.id,
-    parentCityName: resolution.definition.parent.name,
-    memberCanonicalLocationIds: resolvedMembers.map(member => member.canonicalLocationId),
-    memberSuburbIds: resolvedMembers.map(member => member.suburbId),
-    memberSuburbNames: resolvedMembers.map(member => member.name),
-  };
+    ...(resolution.definition.parent && parent
+      ? {
+          parentCanonicalLocationId: resolution.definition.parent.canonicalLocationId,
+          parentCityId: parent.id,
+          parentCityName: resolution.definition.parent.name,
+        }
+      : {}),
+    memberCanonicalLocationIds: [],
+    memberSuburbIds: [],
+    memberSuburbNames: [],
+  }, members);
 }
 
 export function narrowSearchAreaQueryBoundary(
   boundary: SearchAreaQueryBoundary,
   canonicalLocationId: string,
 ): SearchAreaQueryBoundary | null {
-  const memberIndex = boundary.memberCanonicalLocationIds.indexOf(canonicalLocationId);
-  if (memberIndex < 0) return null;
+  const members = getSearchAreaQueryMembers(boundary);
+  const member = members.find(item => item.canonicalLocationId === canonicalLocationId);
+  if (!member) return null;
 
-  return {
-    ...boundary,
-    authorityKey: `${boundary.authorityKey}:locality:${canonicalLocationId}`,
-    memberCanonicalLocationIds: [boundary.memberCanonicalLocationIds[memberIndex]],
-    memberSuburbIds: [boundary.memberSuburbIds[memberIndex]],
-    memberSuburbNames: [boundary.memberSuburbNames[memberIndex]],
-  };
+  return buildBoundaryFromMembers(
+    {
+      ...boundary,
+      authorityKey: `${boundary.authorityKey}:locality:${canonicalLocationId}`,
+    },
+    [member],
+  );
 }
 
 export function combineSearchAreaQueryBoundaries(
@@ -110,28 +311,10 @@ export function combineSearchAreaQueryBoundaries(
   if (boundaries.length === 0) return null;
 
   const [first] = boundaries;
-  if (
-    boundaries.some(
-      boundary => boundary.parentCanonicalLocationId !== first.parentCanonicalLocationId,
-    )
-  ) {
-    return null;
-  }
-
-  const members = new Map<
-    string,
-    { canonicalLocationId: string; suburbId: number; name: string }
-  >();
-  boundaries.forEach(boundary => {
-    boundary.memberCanonicalLocationIds.forEach((canonicalLocationId, index) => {
-      if (!members.has(canonicalLocationId)) {
-        members.set(canonicalLocationId, {
-          canonicalLocationId,
-          suburbId: boundary.memberSuburbIds[index],
-          name: boundary.memberSuburbNames[index],
-        });
-      }
-    });
+  const members = new Map<string, SearchAreaQueryMember>();
+  boundaries.flatMap(getSearchAreaQueryMembers).forEach(member => {
+    const identity = `${member.scopeKind}:${member.canonicalLocationId}`;
+    if (!members.has(identity)) members.set(identity, member);
   });
 
   const sortedMembers = Array.from(members.values()).sort((a, b) =>
@@ -139,18 +322,39 @@ export function combineSearchAreaQueryBoundaries(
   );
   if (sortedMembers.length === 0) return null;
 
+  const parentCanonicalLocationIds = new Set(
+    boundaries.map(boundary => boundary.parentCanonicalLocationId).filter(Boolean),
+  );
+  const parentCityIds = new Set(
+    boundaries
+      .map(boundary => boundary.parentCityId)
+      .filter((value): value is number => Number.isSafeInteger(value)),
+  );
+  const parentCityNames = new Set(
+    boundaries.map(boundary => boundary.parentCityName).filter(Boolean),
+  );
+
   const authorityKey = `search-area-union:v1:${boundaries
     .map(boundary => boundary.authorityKey)
     .sort()
     .join('|')}`;
 
-  return {
-    ...first,
-    authorityKey,
-    memberCanonicalLocationIds: sortedMembers.map(member => member.canonicalLocationId),
-    memberSuburbIds: sortedMembers.map(member => member.suburbId),
-    memberSuburbNames: sortedMembers.map(member => member.name),
-  };
+  return buildBoundaryFromMembers(
+    {
+      ...first,
+      authorityKey,
+      ...(parentCanonicalLocationIds.size === 1
+        ? { parentCanonicalLocationId: [...parentCanonicalLocationIds][0] }
+        : { parentCanonicalLocationId: undefined }),
+      ...(parentCityIds.size === 1
+        ? { parentCityId: [...parentCityIds][0] }
+        : { parentCityId: undefined }),
+      ...(parentCityNames.size === 1
+        ? { parentCityName: [...parentCityNames][0] }
+        : { parentCityName: undefined }),
+    },
+    sortedMembers,
+  );
 }
 
 function canonicalIdForResolvedLocation(location: ResolvedLocation): string | null {

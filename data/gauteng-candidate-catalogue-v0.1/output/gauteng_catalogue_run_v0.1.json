@@ -1,0 +1,67 @@
+{
+  "catalogue_version": "v0.1",
+  "command": "build",
+  "country": "ZA",
+  "extraction_counts": {
+    "by_source": {
+      "geoboundaries": 34,
+      "geonames": 2863,
+      "nga_gns": 2130,
+      "osm": 2393,
+      "wikidata": 221
+    },
+    "source_assertions": 65073,
+    "source_records": 7641,
+    "wikidata": {
+      "after_gauteng": 221,
+      "before_bindings": 481,
+      "by_artifact": {
+        "wikidata:sparql:001": {
+          "after": 80,
+          "before": 143
+        },
+        "wikidata:sparql:002": {
+          "after": 80,
+          "before": 241
+        },
+        "wikidata:sparql:003": {
+          "after": 61,
+          "before": 97
+        }
+      },
+      "unique_items": 221
+    }
+  },
+  "outputs": {
+    "candidates": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_candidate_catalogue_v0.1.jsonl",
+    "coverage_json": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_coverage_conflict_report_v0.1.json",
+    "coverage_markdown": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_coverage_conflict_report_v0.1.md",
+    "matches": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_candidate_matches_v0.1.jsonl",
+    "source_assertions": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_source_assertions_v0.1.jsonl",
+    "source_records": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_source_records_v0.1.jsonl"
+  },
+  "pipeline_version": "0.1.0",
+  "province": "Gauteng",
+  "repository_head": "a6cd7545a5d710dc0b1f19829f396a119f4f2f9d",
+  "repository_root": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue",
+  "reproducibility": {
+    "candidate_identity_does_not_use_external_primary_ids": true,
+    "database_operations_performed": false,
+    "raw_artifacts_are_immutable_inputs": true,
+    "search_areas_created": false,
+    "search_engine_changes_performed": false
+  },
+  "run_started_at": "2026-08-14T18:11:13Z",
+  "scope": "candidate research catalogue; not production geography",
+  "source_manifest": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_source_manifest_v0.1.json",
+  "summary": {
+    "ambiguous_candidates": 824,
+    "candidates": 4321,
+    "conflicting_matches": 152,
+    "multi_source_candidates": 1863,
+    "osm_only_candidates": 1819,
+    "proposed_fuzzy_matches": 1632,
+    "single_source_candidates": 2458,
+    "source_records_eligible": 7426
+  }
+}

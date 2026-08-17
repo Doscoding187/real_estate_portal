@@ -288,6 +288,56 @@ describe('Search Area public query integration', () => {
     expect(mockSearchListings).not.toHaveBeenCalled();
   });
 
+  it('executes a preview Search Area only through the server-controlled acceptance mode', async () => {
+    mockResolveSearchArea.mockResolvedValueOnce({
+      ...resolvedSearchArea,
+      status: 'preview' as const,
+      summary: {
+        ...resolvedSearchArea.summary,
+        lifecycle: 'preview' as const,
+        availability: 'preview' as const,
+      },
+      definition: {
+        ...resolvedSearchArea.definition,
+        lifecycle: 'preview' as const,
+      },
+    });
+
+    const result = await new PublicSearchService(
+      { resolveSearchArea: mockResolveSearchArea },
+      undefined,
+      { executionMode: 'controlled_acceptance' },
+    ).searchInventory({
+      searchAreaId: 'johannesburg-sandton',
+      listingType: 'sale',
+      page: 0,
+      pageSize: 2,
+    });
+
+    expect(mockResolveSearchArea).toHaveBeenCalledWith('johannesburg-sandton', {
+      journey: 'buy',
+      includePreview: true,
+    });
+    expect(mockSearchProperties).toHaveBeenCalledWith(
+      expect.anything(),
+      'date_desc',
+      1,
+      2,
+      expect.objectContaining({
+        authorityKey: 'search-area:johannesburg-sandton:v1',
+        memberSuburbIds: [34, 35],
+      }),
+    );
+    expect(result).toMatchObject({
+      total: 2,
+      locationState: 'resolved',
+      searchAreaContext: {
+        lifecycle: 'preview',
+        availability: 'preview',
+      },
+    });
+  });
+
   it('does not widen when a locality is not an explicit Search Area member', async () => {
     mockResolvePublicLocation.mockResolvedValueOnce({
       ...resolvedSuburb,

@@ -13,7 +13,10 @@ import type {
   SearchCardResult,
   SortOption,
 } from '../../shared/types';
-import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
+import {
+  getSearchAreaQueryMembers,
+  type PublicSearchQueryBoundary,
+} from './searchAreaQueryBoundary';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 
 interface DevelopmentDerivedListingFilters {
@@ -232,10 +235,19 @@ function matchesQueryBoundary(
   boundary: PublicSearchQueryBoundary,
 ): boolean {
   if (boundary.kind === 'canonical_members') {
-    return (
-      matchesNormalizedField(row.city, boundary.parentCityName) &&
-      matchesNormalizedFieldSet(row.suburb, [...boundary.memberSuburbNames])
-    );
+    return getSearchAreaQueryMembers(boundary).some(member => {
+      if (member.scopeKind === 'province') {
+        return Boolean(member.provinceName) && matchesNormalizedField(row.province, member.provinceName);
+      }
+      if (member.scopeKind === 'metro_city') {
+        return Boolean(member.cityName) && matchesNormalizedField(row.city, member.cityName);
+      }
+      return (
+        Boolean(member.cityName && member.suburbName) &&
+        matchesNormalizedField(row.city, member.cityName) &&
+        matchesNormalizedField(row.suburb, member.suburbName)
+      );
+    });
   }
 
   if (boundary.level === 'province') {

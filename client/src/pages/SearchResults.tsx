@@ -323,6 +323,7 @@ export default function SearchResults({
             ? undefined
             : normalizedLocationSlugs,
       locationId: filters.locationId,
+      factualLocationId: searchIntent.geography.factualLocationId,
       locationIds: searchIntent.geography.locationIds,
       searchAreaId: searchIntent.geography.searchAreaId,
       searchAreaIds: searchIntent.geography.searchAreaIds,
@@ -362,6 +363,7 @@ export default function SearchResults({
     page,
     searchIntent.geography.level,
     searchIntent.geography.locationIds,
+    searchIntent.geography.factualLocationId,
     searchIntent.geography.searchAreaIds,
     searchIntent.geography.searchAreaId,
     searchIntent.transactionType,
@@ -399,6 +401,17 @@ export default function SearchResults({
   const searchAreaContext = publicSearchResults?.searchAreaContext;
   const searchAreaContexts = publicSearchResults?.searchAreaContexts;
   const multiLocationContext = publicSearchResults?.multiLocationContext;
+  const scopedBreadcrumbs = useMemo(() => {
+    if (!searchAreaContext) return breadcrumbs;
+
+    return [
+      ...breadcrumbs,
+      {
+        label: `${searchAreaContext.label} · Property market area`,
+        href: generateIntentUrl(searchIntent),
+      },
+    ];
+  }, [breadcrumbs, searchAreaContext, searchIntent]);
   const pageNeedsNormalization = Boolean(publicSearchResults && effectivePage !== page);
   const navbarLocations = useMemo(() => {
     const multiContext = publicSearchResults?.multiLocationContext;
@@ -555,6 +568,16 @@ export default function SearchResults({
       input.focus();
       input.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+  };
+
+  const handleClearSearchArea = () => {
+    setLocation(
+      generateIntentUrl({
+        ...searchIntent,
+        geography: { level: 'country' },
+        resultState: { ...searchIntent.resultState, page: 0 },
+      }),
+    );
   };
 
   const handleStartOver = () => {
@@ -807,15 +830,38 @@ export default function SearchResults({
   return (
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} title={pageTitle} description={pageDescription} />
-      <ListingNavbar defaultLocations={navbarLocations} />
+      <ListingNavbar
+        defaultLocations={navbarLocations}
+        defaultSearchArea={searchAreaContext}
+        onClearSearchArea={searchAreaContext ? handleClearSearchArea : undefined}
+      />
 
       <div className="container pb-32 pt-24 lg:pb-12">
         <div className="mx-auto w-full max-w-[1280px]">
           {/* Header Section */}
           <div className="mb-3">
             <div className="mb-2">
-              <Breadcrumbs items={breadcrumbs} />
+              <Breadcrumbs items={scopedBreadcrumbs} />
             </div>
+
+            {searchAreaContext ? (
+              <div
+                role="status"
+                aria-label={`${searchAreaContext.label}, Property market area`}
+                className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3"
+              >
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                  Property market area
+                </div>
+                <div className="mt-1 text-lg font-semibold text-slate-950">
+                  {searchAreaContext.label}
+                </div>
+                <div className="mt-1 text-sm text-slate-600">
+                  Results are limited to this governed market area. Filters refine the results
+                  without widening its geography.
+                </div>
+              </div>
+            ) : null}
 
             <SearchFallbackNotice locationContext={locationContext} />
 

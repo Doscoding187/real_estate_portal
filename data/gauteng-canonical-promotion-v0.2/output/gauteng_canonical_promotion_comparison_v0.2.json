@@ -1,0 +1,713 @@
+{
+  "available": true,
+  "baseline_output_root": "/home/edwardspc/Desktop/Dev/listify-gauteng-canonical-promotion/data/gauteng-canonical-promotion-v0.1/output",
+  "class_transitions": {
+    "founder_review_required -> candidate_only": 9,
+    "founder_review_required -> promotable_with_provisional_attributes": 38,
+    "founder_review_required -> rejected_non_independent": 7
+  },
+  "current_formal_review_class_count": 0,
+  "current_priority_probe_count": 3,
+  "current_review_set_count": 3,
+  "disappeared_by_disposition": {
+    "administrative_assignment_is_attribute_only_technical_verification": 18,
+    "deterministic_osm_source_representation_deduplicated": 7,
+    "deterministic_osm_source_representation_kept_under_primary": 19,
+    "farm_or_non_development_source_removed_estate_interpretation": 2,
+    "identity_promoted_type_remains_provisional": 1,
+    "low_evidence_same_name_collision_deferred_to_source_verification": 7
+  },
+  "disappeared_rows": [
+    {
+      "candidate_location_id": "pl-gp-v01-014177e3d60af18c4457",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Hermanstad",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-02baee7bfa3a586c6803",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Klippan",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-09e504bc0badd1ae411a",
+      "current_assessed_candidate_type": "neighbourhood",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Eagle Canyon Golf Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-195a06a3086c61ce3c09",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Claudius",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-1f8f40faa0497e5240fc",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Kruisfontein",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-22bf93f3592f8a9c9c4b",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+      ],
+      "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+      "preferred_name": "Meadowlands East",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-28a23a6ce0b62338bcdb",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Leachville",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-291cc8f92a238f80f336",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Boekenhoutfontein",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-2ccf257a9ea9ba452f24",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Mimosa Park Inn",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-2fad4c8097c15027f8ec",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Midstream Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-30ed69a810928e5d467e",
+      "current_assessed_candidate_type": "village",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Golden Fields Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-31341ee9ee5eff570d5f",
+      "current_assessed_candidate_type": "estate/residential_development_candidate",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "development identity is independently supported; estate/development type remains provisional"
+      ],
+      "disposition": "identity_promoted_type_remains_provisional",
+      "preferred_name": "Equestria Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "estate_or_development_promotion"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-3e17179752450e0674ab",
+      "current_assessed_candidate_type": "other",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "non-OSM evidence classifies the same name as a farm rather than a residential development"
+      ],
+      "disposition": "farm_or_non_development_source_removed_estate_interpretation",
+      "preferred_name": "Tweefontein",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "estate_or_development_promotion"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-3f1f181735005aab64a6",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "rejected_non_independent",
+      "current_reason": [
+        "source object is a deterministic OSM point/area representation of pl-gp-v01-e7972062766a0f7edf50; evidence remains attached to that candidate"
+      ],
+      "disposition": "deterministic_osm_source_representation_deduplicated",
+      "preferred_name": "Richmond",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-4214791a88181e144669",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Medunsa",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-4b69303d842a194b3650",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Mooikloof",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-53ecd2695afa97eeb6aa",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Finetown",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-57153e3343c77aaa8792",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Morula Sun",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-575322ceb163d82c5e32",
+      "current_assessed_candidate_type": "neighbourhood",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Soshanguve South",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-5d26ec75e34ac3e2b46a",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Marl Bank River",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-5edf7c8af629d8f9fcfa",
+      "current_assessed_candidate_type": "estate/residential_development_candidate",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "development identity is independently supported; estate/development type remains provisional"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Waverley",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-683329ab6bd03d66f91f",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+      ],
+      "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+      "preferred_name": "Valeriedene",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-746355e341e2d43d707b",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Centurion Golf Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-7473d736705abefcd26c",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Eastvale",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-757a83f567419c726108",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Midlands Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-75c241258cf389e6b1cf",
+      "current_assessed_candidate_type": "locality",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Lion Park",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-7cf2b6364a87b87e60e3",
+      "current_assessed_candidate_type": "other",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "non-OSM evidence classifies the same name as a farm rather than a residential development"
+      ],
+      "disposition": "farm_or_non_development_source_removed_estate_interpretation",
+      "preferred_name": "Poortjie",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "estate_or_development_promotion"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-7d833344055a6cee3083",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Klipdrif",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-860ba4550eae5450996b",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Midfield Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-8774db231c83b05009d0",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "rejected_non_independent",
+      "current_reason": [
+        "source object is a deterministic OSM point/area representation of pl-gp-v01-7473d736705abefcd26c; evidence remains attached to that candidate"
+      ],
+      "disposition": "deterministic_osm_source_representation_deduplicated",
+      "preferred_name": "Eastvale",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-8b14eb4fa7538536e075",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "rejected_non_independent",
+      "current_reason": [
+        "source object is a deterministic OSM point/area representation of pl-gp-v01-757a83f567419c726108; evidence remains attached to that candidate"
+      ],
+      "disposition": "deterministic_osm_source_representation_deduplicated",
+      "preferred_name": "Midlands Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-8c187bbff01695eb3fd1",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Petersfield",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-8f4aa345c75a08ea6cc2",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "The Rocks",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-96453da361a2a4ff6bd9",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+      ],
+      "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+      "preferred_name": "Valeriedene",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-9fe8c1b3140564ce01bb",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Dalview",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-a288430cad17b85bb3b2",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Rosherville",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-ad70875e6050d4d23a11",
+      "current_assessed_candidate_type": "locality",
+      "current_promotion_class": "rejected_non_independent",
+      "current_reason": [
+        "source object is a deterministic OSM point/area representation of pl-gp-v01-5edf7c8af629d8f9fcfa; evidence remains attached to that candidate"
+      ],
+      "disposition": "deterministic_osm_source_representation_deduplicated",
+      "preferred_name": "Waverley",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-b3fb736d5dc294515832",
+      "current_assessed_candidate_type": "neighbourhood",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+      ],
+      "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+      "preferred_name": "Featherbrooke Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-b960b1e4421627018b2d",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Babelegi",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-bb3c51d1199b51b8d155",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+      ],
+      "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+      "preferred_name": "Meadowlands East",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-c1b972891e5ee3d8ab04",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Derdepoortpark",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-c4636dc929ca15585b41",
+      "current_assessed_candidate_type": "locality",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Melville Koppies",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-caf5c06237858b5da2ba",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Theoville",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-d8fc64524fc78270f0f2",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Lebaleng",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-df959cb5446d21c9b97c",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "rejected_non_independent",
+      "current_reason": [
+        "source object is a deterministic OSM point/area representation of pl-gp-v01-28a23a6ce0b62338bcdb; evidence remains attached to that candidate"
+      ],
+      "disposition": "deterministic_osm_source_representation_deduplicated",
+      "preferred_name": "Leachville",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-e2332980a9db768081c5",
+      "current_assessed_candidate_type": "neighbourhood",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+      ],
+      "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+      "preferred_name": "Country View",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-e7972062766a0f7edf50",
+      "current_assessed_candidate_type": "neighbourhood",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Richmond",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-ebc58f0311d83f8648cb",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "rejected_non_independent",
+      "current_reason": [
+        "source object is a deterministic OSM point/area representation of pl-gp-v01-2fad4c8097c15027f8ec; evidence remains attached to that candidate"
+      ],
+      "disposition": "deterministic_osm_source_representation_deduplicated",
+      "preferred_name": "Midstream Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-ef9db80b7a695b04071b",
+      "current_assessed_candidate_type": "locality",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Sandton Convention Centre",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-f4149dbaa40c31ab7bb9",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "factual identity is retained; source administrative assignment requires technical/source verification"
+      ],
+      "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+      "preferred_name": "Kophou",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "boundary_admin_identity"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-f4b65f67d2fbaf4f4e93",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "rejected_non_independent",
+      "current_reason": [
+        "source object is a deterministic OSM point/area representation of pl-gp-v01-860ba4550eae5450996b; evidence remains attached to that candidate"
+      ],
+      "disposition": "deterministic_osm_source_representation_deduplicated",
+      "preferred_name": "Midfield Estate",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-f9166465fa080f4c2d95",
+      "current_assessed_candidate_type": "neighbourhood",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+      ],
+      "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+      "preferred_name": "Dainfern Ridge",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-fe8b00a1ad21ea9b1ec9",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Woodmead East",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-ffa5ad909f6f398c5699",
+      "current_assessed_candidate_type": "suburb",
+      "current_promotion_class": "promotable_with_provisional_attributes",
+      "current_reason": [
+        "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+      ],
+      "disposition": "deterministic_osm_source_representation_kept_under_primary",
+      "preferred_name": "Mooikloof Hillls",
+      "previous_promotion_class": "founder_review_required",
+      "previous_review_category": "ambiguous_identity_or_duplicate"
+    }
+  ],
+  "genuinely_remaining_review_rows": 0,
+  "new_review_rows": [],
+  "previous_formal_review_class_count": 54,
+  "previous_review_count": 57,
+  "previous_review_rows_disappeared": 54,
+  "remaining_previous_rows": [
+    {
+      "candidate_location_id": "pl-gp-v01-43d109a4091bf9c2044c",
+      "current_assessed_candidate_type": "town",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "evidence does not meet the independent identity threshold for factual canonical promotion"
+      ],
+      "disposition": "priority_probe_reassessed_without_formal_founder_class",
+      "preferred_name": "Sandton",
+      "previous_promotion_class": "candidate_only",
+      "previous_review_category": "important_probe_weak_evidence"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-ab35c1a038a865ba3e52",
+      "current_assessed_candidate_type": "estate/residential_development_candidate",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "OSM-only residential-development evidence is retained but requires independent corroboration before promotion"
+      ],
+      "disposition": "priority_probe_reassessed_without_formal_founder_class",
+      "preferred_name": "Mamelodi",
+      "previous_promotion_class": "candidate_only",
+      "previous_review_category": "important_probe_weak_evidence"
+    },
+    {
+      "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+      "current_assessed_candidate_type": "neighbourhood",
+      "current_promotion_class": "candidate_only",
+      "current_reason": [
+        "evidence does not meet the independent identity threshold for factual canonical promotion"
+      ],
+      "disposition": "priority_probe_reassessed_without_formal_founder_class",
+      "preferred_name": "Kyalami",
+      "previous_promotion_class": "candidate_only",
+      "previous_review_category": "important_probe_weak_evidence"
+    }
+  ]
+}
