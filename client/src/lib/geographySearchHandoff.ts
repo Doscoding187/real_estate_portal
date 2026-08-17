@@ -4,6 +4,7 @@ import {
   encodeCanonicalLocationId,
   parseCanonicalLocationId,
 } from '../../../shared/locationAuthority';
+import { isFactualGeographyId } from '../../../shared/factualRuntimeGeographyBridge';
 import {
   normalizeTransactionalResultState,
   type TransactionalResultState,
@@ -28,6 +29,7 @@ export interface GeographySearchContext {
 export interface CanonicalSearchLocation {
   scope: SearchScopeMember;
   context: GeographySearchContext;
+  factualLocationId?: string;
 }
 
 export interface TransactionalGeographyHandoff {
@@ -43,6 +45,8 @@ export interface TransactionalGeographyHandoff {
   localityRefinementId?: string;
   /** Slugs are display context only; canonical IDs remain the scope authority. */
   context?: GeographySearchContext;
+  /** Durable factual identity retained alongside the runtime compatibility scope. */
+  factualLocationId?: string;
   filters?: Record<string, unknown>;
   resultState?: Partial<TransactionalResultState>;
   validation?: SearchIntentValidation;
@@ -75,6 +79,7 @@ function stripGeographyFilters(filters: Record<string, unknown> | undefined) {
     'city',
     'suburb',
     'locationId',
+    'factualLocationId',
     'locationIds',
     'locations',
     'locations[]',
@@ -112,7 +117,13 @@ export function journeyForTransactionType(
 export function createCanonicalSearchLocation(
   location: Pick<
     LocationNode,
-    'id' | 'canonicalLocationId' | 'type' | 'provinceSlug' | 'citySlug' | 'slug'
+    | 'id'
+    | 'canonicalLocationId'
+    | 'factualLocationId'
+    | 'type'
+    | 'provinceSlug'
+    | 'citySlug'
+    | 'slug'
   >,
 ): CanonicalSearchLocation | undefined {
   const parsed = parseCanonicalLocationId(location.canonicalLocationId || location.id);
@@ -127,6 +138,7 @@ export function createCanonicalSearchLocation(
     return {
       scope: { kind: 'province', canonicalLocationId },
       context: { province: location.provinceSlug || location.slug },
+      ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
     };
   }
 
@@ -137,6 +149,7 @@ export function createCanonicalSearchLocation(
         province: location.provinceSlug,
         city: location.citySlug || location.slug,
       },
+      ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
     };
   }
 
@@ -147,6 +160,7 @@ export function createCanonicalSearchLocation(
       city: location.citySlug,
       suburb: location.slug,
     },
+    ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
   };
 }
 
@@ -179,6 +193,12 @@ export function buildTransactionalGeographyHref(
   if (parsedScope && !parsedScope.ok) return undefined;
 
   const scope = parsedScope?.scope;
+  if (input.factualLocationId && !isFactualGeographyId(input.factualLocationId)) {
+    return undefined;
+  }
+  if (input.factualLocationId && (!scope || scope.kind === 'search_area' || scope.kind === 'multi_location')) {
+    return undefined;
+  }
   if (scope?.kind === 'search_area' && input.searchAreaAvailability !== 'available') {
     return undefined;
   }
@@ -216,14 +236,17 @@ export function buildTransactionalGeographyHref(
     geography.level = 'province';
     geography.locationId = scope.canonicalLocationId;
     Object.assign(geography, contextForScope(scope, input.context));
+    if (input.factualLocationId) geography.factualLocationId = input.factualLocationId;
   } else if (scope?.kind === 'metro_city') {
     geography.level = 'city';
     geography.locationId = scope.canonicalLocationId;
     Object.assign(geography, contextForScope(scope, input.context));
+    if (input.factualLocationId) geography.factualLocationId = input.factualLocationId;
   } else if (scope?.kind === 'locality') {
     geography.level = 'suburb';
     geography.locationId = scope.canonicalLocationId;
     Object.assign(geography, contextForScope(scope, input.context));
+    if (input.factualLocationId) geography.factualLocationId = input.factualLocationId;
   } else if (scope?.kind === 'search_area') {
     geography.level = localityRefinementId ? 'suburb' : 'search_area';
     geography.searchAreaId = scope.searchAreaId;

@@ -66,7 +66,12 @@ import {
   SearchFilters,
   unslugify,
 } from '@/lib/urlUtils';
-import { resolveSearchIntent, generateIntentUrl, SearchIntent } from '@/lib/searchIntent';
+import {
+  buildCanonicalSavedSearchCriteria,
+  resolveSearchIntent,
+  generateIntentUrl,
+  SearchIntent,
+} from '@/lib/searchIntent';
 import {
   buildParentRecoveryIntent,
   buildZeroResultDescription,
@@ -80,7 +85,8 @@ import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { encodeCanonicalLocationId, parseCanonicalLocationId } from '@shared/locationAuthority';
 import type { SearchCardResult } from '@/../../shared/types';
 import type { PublicPropertyType } from '@shared/property-taxonomy';
-import { PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import { PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import { rememberPropertySearchReturn } from '@/lib/searchReturnState';
 import { useComparison } from '@/contexts/ComparisonContext';
 import {
   BUY_PROPERTY_TYPES,
@@ -261,6 +267,8 @@ export default function SearchResults({
   // presentation-local for this slice and is not part of the public query.
   const sortBy = searchIntent.resultState.sort as SortOption;
   const page = searchIntent.resultState.page;
+  const isBuySearch = searchIntent.transactionType === 'for-sale';
+  const isRentSearch = searchIntent.transactionType === 'to-rent';
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isSaveSearchOpen, setIsSaveSearchOpen] = useState(false);
   const [saveSearchName, setSaveSearchName] = useState('');
@@ -291,11 +299,13 @@ export default function SearchResults({
   // pagination and location resolution. The browser receives only the page it
   // is allowed to render.
   const publicSearchQueryInput = useMemo(() => {
-    const isBuySearch = searchIntent.transactionType === 'for-sale';
-    const isRentSearch = searchIntent.transactionType === 'to-rent';
     const publicPropertyTypes: ReadonlySet<string> = new Set(PUBLIC_PROPERTY_TYPES);
     const propertyType =
       typeof filters.propertyType === 'string' && publicPropertyTypes.has(filters.propertyType)
+        ? (filters.propertyType as PublicPropertyType)
+        : undefined;
+    const rentPropertyType =
+      typeof filters.propertyType === 'string'
         ? (filters.propertyType as PublicPropertyType)
         : undefined;
     const numericFilter = (value: unknown) =>
@@ -313,10 +323,17 @@ export default function SearchResults({
             ? undefined
             : normalizedLocationSlugs,
       locationId: filters.locationId,
+      factualLocationId: searchIntent.geography.factualLocationId,
       locationIds: searchIntent.geography.locationIds,
       searchAreaId: searchIntent.geography.searchAreaId,
       searchAreaIds: searchIntent.geography.searchAreaIds,
-      propertyType: isBuySearch ? buyFilters?.propertyType : propertyType,
+      // Keep an unsupported direct Rent URL visible to the server validation
+      // boundary rather than silently widening it to all rental inventory.
+      propertyType: isBuySearch
+        ? buyFilters?.propertyType
+        : isRentSearch
+          ? rentPropertyType
+          : propertyType,
       listingType: isBuySearch
         ? buyFilters?.listingType
         : isRentSearch
@@ -346,6 +363,7 @@ export default function SearchResults({
     page,
     searchIntent.geography.level,
     searchIntent.geography.locationIds,
+    searchIntent.geography.factualLocationId,
     searchIntent.geography.searchAreaIds,
     searchIntent.geography.searchAreaId,
     searchIntent.transactionType,
@@ -383,6 +401,17 @@ export default function SearchResults({
   const searchAreaContext = publicSearchResults?.searchAreaContext;
   const searchAreaContexts = publicSearchResults?.searchAreaContexts;
   const multiLocationContext = publicSearchResults?.multiLocationContext;
+  const scopedBreadcrumbs = useMemo(() => {
+    if (!searchAreaContext) return breadcrumbs;
+
+    return [
+      ...breadcrumbs,
+      {
+        label: `${searchAreaContext.label} · Property market area`,
+        href: generateIntentUrl(searchIntent),
+      },
+    ];
+  }, [breadcrumbs, searchAreaContext, searchIntent]);
   const pageNeedsNormalization = Boolean(publicSearchResults && effectivePage !== page);
   const navbarLocations = useMemo(() => {
     const multiContext = publicSearchResults?.multiLocationContext;
@@ -541,6 +570,16 @@ export default function SearchResults({
     }
   };
 
+  const handleClearSearchArea = () => {
+    setLocation(
+      generateIntentUrl({
+        ...searchIntent,
+        geography: { level: 'country' },
+        resultState: { ...searchIntent.resultState, page: 0 },
+      }),
+    );
+  };
+
   const handleStartOver = () => {
     setLocation('/');
   };
@@ -611,6 +650,7 @@ export default function SearchResults({
   };
 
   const handleCompareProperty = (propertyId: number) => {
+    if (!isBuySearch) return;
     if (!Number.isSafeInteger(propertyId) || propertyId <= 0) return;
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem(
@@ -632,10 +672,16 @@ export default function SearchResults({
   };
 
   const rememberSearchReturn = () => {
-    if (searchIntent.transactionType !== 'for-sale' || typeof window === 'undefined') return;
-    window.sessionStorage.setItem(
-      'buy-search-return',
+    if (
+      (searchIntent.transactionType !== 'for-sale' && searchIntent.transactionType !== 'to-rent') ||
+      typeof window === 'undefined'
+    ) {
+      return;
+    }
+    rememberPropertySearchReturn(
+      window.sessionStorage,
       `${window.location.pathname}${window.location.search}`,
+      searchIntent.transactionType,
     );
   };
 
@@ -644,7 +690,7 @@ export default function SearchResults({
     if (!resolvedSearchName) return;
     saveSearchMutation.mutate({
       name: resolvedSearchName,
-      criteria: filters,
+      criteria: buildCanonicalSavedSearchCriteria(searchIntent),
       notificationFrequency: saveSearchNotificationFrequency,
       emailEnabled: saveSearchEmailEnabled,
       inAppEnabled: saveSearchInAppEnabled,
@@ -784,15 +830,38 @@ export default function SearchResults({
   return (
     <div className="min-h-screen bg-slate-50">
       <MetaControl canonicalUrl={canonicalUrl} title={pageTitle} description={pageDescription} />
-      <ListingNavbar defaultLocations={navbarLocations} />
+      <ListingNavbar
+        defaultLocations={navbarLocations}
+        defaultSearchArea={searchAreaContext}
+        onClearSearchArea={searchAreaContext ? handleClearSearchArea : undefined}
+      />
 
       <div className="container pb-32 pt-24 lg:pb-12">
         <div className="mx-auto w-full max-w-[1280px]">
           {/* Header Section */}
           <div className="mb-3">
             <div className="mb-2">
-              <Breadcrumbs items={breadcrumbs} />
+              <Breadcrumbs items={scopedBreadcrumbs} />
             </div>
+
+            {searchAreaContext ? (
+              <div
+                role="status"
+                aria-label={`${searchAreaContext.label}, Property market area`}
+                className="mb-3 rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3"
+              >
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                  Property market area
+                </div>
+                <div className="mt-1 text-lg font-semibold text-slate-950">
+                  {searchAreaContext.label}
+                </div>
+                <div className="mt-1 text-sm text-slate-600">
+                  Results are limited to this governed market area. Filters refine the results
+                  without widening its geography.
+                </div>
+              </div>
+            ) : null}
 
             <SearchFallbackNotice locationContext={locationContext} />
 
@@ -828,8 +897,13 @@ export default function SearchResults({
                   onFilterChange={handleFilterChange}
                   onSaveSearch={handleSaveSearch}
                   allowedPropertyTypes={
-                    searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
+                    isBuySearch
+                      ? BUY_PROPERTY_TYPES
+                      : isRentSearch
+                        ? RENT_PUBLIC_PROPERTY_TYPES
+                        : undefined
                   }
+                  listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
                   // Public Buy/Rent inventory does not yet expose an
                   // authoritative amenities predicate. Do not render a
                   // Rent control that would be accepted by the URL but
@@ -944,13 +1018,16 @@ export default function SearchResults({
                                 onSave: card.propertyId
                                   ? () => handleSaveProperty(card.propertyId as number)
                                   : undefined,
-                                isCompared: card.propertyId
-                                  ? isInComparison(card.propertyId)
-                                  : false,
-                                onCompare: card.propertyId
-                                  ? () => handleCompareProperty(card.propertyId as number)
-                                  : undefined,
+                                isCompared:
+                                  isBuySearch && card.propertyId
+                                    ? isInComparison(card.propertyId)
+                                    : false,
+                                onCompare:
+                                  isBuySearch && card.propertyId
+                                    ? () => handleCompareProperty(card.propertyId as number)
+                                    : undefined,
                                 compareDisabled:
+                                  isBuySearch &&
                                   Boolean(card.propertyId) &&
                                   !isInComparison(card.propertyId as number) &&
                                   !canAddMore,
@@ -978,13 +1055,18 @@ export default function SearchResults({
                                   ? () => handleSaveProperty(card.propertyId as number)
                                   : undefined
                               }
-                              isCompared={card.propertyId ? isInComparison(card.propertyId) : false}
+                              isCompared={
+                                isBuySearch && card.propertyId
+                                  ? isInComparison(card.propertyId)
+                                  : false
+                              }
                               onCompareClick={
-                                card.propertyId
+                                isBuySearch && card.propertyId
                                   ? () => handleCompareProperty(card.propertyId as number)
                                   : undefined
                               }
                               compareDisabled={
+                                isBuySearch &&
                                 Boolean(card.propertyId) &&
                                 !isInComparison(card.propertyId as number) &&
                                 !canAddMore
@@ -1078,8 +1160,9 @@ export default function SearchResults({
         onFilterChange={handleFilterChange}
         onSaveSearch={handleSaveSearch}
         allowedPropertyTypes={
-          searchIntent.transactionType === 'for-sale' ? BUY_PROPERTY_TYPES : undefined
+          isBuySearch ? BUY_PROPERTY_TYPES : isRentSearch ? RENT_PUBLIC_PROPERTY_TYPES : undefined
         }
+        listingType={isBuySearch ? 'sale' : isRentSearch ? 'rent' : undefined}
         // Keep unsupported amenities out of the public Rent contract until
         // the same predicate can feed both result and count queries.
         showAmenities={false}

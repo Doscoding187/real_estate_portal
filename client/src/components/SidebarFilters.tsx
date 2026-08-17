@@ -26,6 +26,7 @@ interface SidebarFiltersProps {
   onFilterChange: (newFilters: SearchFilters) => void;
   onSaveSearch?: () => void;
   allowedPropertyTypes?: readonly string[];
+  listingType?: 'sale' | 'rent';
   showAmenities?: boolean;
   showLocationRefinement?: boolean;
 }
@@ -50,7 +51,7 @@ const LISTING_SOURCE_OPTIONS = [
   },
   {
     value: 'manual',
-    label: 'Resale',
+    label: 'Property listings',
   },
   {
     value: 'development',
@@ -109,9 +110,14 @@ export function SidebarFilters({
   onFilterChange,
   onSaveSearch,
   allowedPropertyTypes,
+  listingType,
   showAmenities = true,
   showLocationRefinement = true,
 }: SidebarFiltersProps) {
+  const isRentalJourney = listingType === 'rent';
+  const listingSourceOptions = LISTING_SOURCE_OPTIONS.map(option =>
+    option.value === 'manual' && !isRentalJourney ? { ...option, label: 'Resale' } : option,
+  );
   const isAllowedPropertyType = (value: string) =>
     !allowedPropertyTypes || allowedPropertyTypes.includes(value);
 
@@ -350,7 +356,7 @@ export function SidebarFilters({
           </AccordionTrigger>
           <AccordionContent>
             <div className="flex flex-wrap gap-0.5 pt-1">
-              {LISTING_SOURCE_OPTIONS.map(option => (
+              {listingSourceOptions.map(option => (
                 <Button
                   key={option.label}
                   size="sm"
@@ -381,7 +387,7 @@ export function SidebarFilters({
         {/* Budget Filter */}
         <AccordionItem value="budget">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
-            Budget
+            {isRentalJourney ? 'Monthly rent' : 'Budget'}
           </AccordionTrigger>
           <AccordionContent>
             <div className="px-1 pt-1 pb-4">
@@ -415,7 +421,7 @@ export function SidebarFilters({
                   }}
                   onBlur={() => handlePriceCommit(priceRange)}
                   className="h-8 text-xs"
-                  placeholder="Min Budget"
+                  placeholder={isRentalJourney ? 'Min monthly rent' : 'Min Budget'}
                 />
                 <Input
                   type="number"
@@ -428,7 +434,7 @@ export function SidebarFilters({
                   }}
                   onBlur={() => handlePriceCommit(priceRange)}
                   className="h-8 text-xs"
-                  placeholder="Max Budget"
+                  placeholder={isRentalJourney ? 'Max monthly rent' : 'Max Budget'}
                 />
               </div>
             </div>

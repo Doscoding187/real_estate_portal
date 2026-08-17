@@ -6,6 +6,7 @@ import {
   getPropertyCardLocation,
   getPropertyCardPrice,
 } from '@/lib/property';
+import { withRentalPeriod } from '@/lib/rentPresentation';
 import { FallbackImage } from './FallbackImage';
 
 export interface SimpleHomeListingCardProps {
@@ -21,6 +22,7 @@ export interface SimpleHomeListingCardProps {
   area?: number | null;
   yardSize?: number | null;
   propertyType?: string | null;
+  listingType?: 'sale' | 'rent';
   badgeLabel?: string;
 }
 
@@ -37,6 +39,7 @@ export function SimpleHomeListingCard({
   area,
   yardSize,
   propertyType,
+  listingType,
   badgeLabel = 'Resale',
 }: SimpleHomeListingCardProps) {
   const normalizedProperty = {
@@ -87,7 +90,7 @@ export function SimpleHomeListingCard({
 
       <div className="p-4">
         <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">
-          {priceLabel}
+          {withRentalPeriod(priceLabel, listingType)}
         </div>
 
         <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">

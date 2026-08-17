@@ -1,0 +1,298 @@
+{
+  "schema_version": "0.1",
+  "artifact": "gauteng-runtime-geography-inventory-v0.1",
+  "identity_owner": "Property Listify",
+  "checkpoint": {
+    "factualCanonical": "bd39aa38e4f7158164f3572b62db827fbf01c1a7",
+    "searchAreaResearch": "5c8c04858c27339255f9648737da084097e2ec3c",
+    "searchAreaCandidates": "ccd613d2b199504e90a74d7c5a0f6728c8ca98df"
+  },
+  "runtime_identity_contract": {
+    "levels": [
+      "province",
+      "city",
+      "suburb"
+    ],
+    "emitted_format": "province:<positive integer> | city:<positive integer> | suburb:<positive integer>",
+    "read_compatible_format": "colon and hyphen separators are accepted; new output uses colon",
+    "origin": {
+      "tables": [
+        "provinces",
+        "cities",
+        "suburbs"
+      ],
+      "primary_key": "auto-increment database row id",
+      "hierarchy": "cities.provinceId and suburbs.cityId foreign keys",
+      "durability": "database-row compatibility handle, not a durable product geography identity",
+      "cross_environment_mapping": "forbidden; resolve from stable runtime natural key per target environment"
+    },
+    "public_role": [
+      "Search locationId/locationIds query parameters",
+      "canonical location read models and Search Area preview contracts",
+      "listing and public-property foreign-key fields"
+    ],
+    "non_roles": [
+      "not a factual catalogue identity",
+      "not a source/provider place ID",
+      "not safe to regenerate from visible names"
+    ]
+  },
+  "authority_surfaces": [
+    {
+      "path": "shared/locationAuthority.ts",
+      "role": "parse/encode runtime canonical identity; no database lookup"
+    },
+    {
+      "path": "drizzle/schema/locations.ts",
+      "role": "province/city/suburb row definitions and provider FK targets"
+    },
+    {
+      "path": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+      "role": "current small acceptance/reference fixture preparation by stable slugs and hierarchy"
+    },
+    {
+      "path": "data/gauteng-search-area-candidates-v0.1/output/gauteng_search_area_membership_evidence_v0.1.jsonl",
+      "role": "accepted factual administrative context and membership evidence used by semantic projection"
+    },
+    {
+      "path": "server/services/locationResolverService.ts",
+      "role": "database-backed ID/slug resolution and hierarchy validation"
+    },
+    {
+      "path": "server/services/searchAreaAuthority.ts",
+      "role": "server-owned Search Area registry and runtime resolution"
+    },
+    {
+      "path": "server/services/searchAreaDefinitions.ts",
+      "role": "non-active Sandton preview definition using existing numeric handles"
+    },
+    {
+      "path": "data/gauteng-search-area-candidates-v0.1/output/gauteng_search_area_identity_collisions_v0.1.json",
+      "role": "accepted factual/Search Area same-name collision evidence; identities remain separate"
+    },
+    {
+      "path": "server/services/searchAreaQueryBoundary.ts",
+      "role": "converts resolved canonical suburb IDs into executable Search predicates"
+    },
+    {
+      "path": "shared/publicSearchValidation.ts",
+      "role": "fails closed on malformed canonical IDs and mixed levels"
+    },
+    {
+      "path": "client/src/lib/geographySearchHandoff.ts",
+      "role": "serializes canonical runtime IDs into Buy/Rent search intent URLs"
+    },
+    {
+      "path": "server/services/listingLocationResolver.ts",
+      "role": "resolves/persists provinceId/cityId/suburbId for listing location evidence"
+    },
+    {
+      "path": "drizzle/schema/listings.ts",
+      "role": "listing and public properties persist numeric geography foreign keys alongside display text"
+    }
+  ],
+  "current_reference_data": {
+    "authority": "canonical-geography-v2",
+    "approved_reference_rows": {
+      "provinces": 9,
+      "cities": 10,
+      "suburbs": 10
+    },
+    "gauteng_rows_reviewed": [
+      {
+        "level": "province",
+        "reference_key": "gauteng",
+        "name": "Gauteng",
+        "code": "GP"
+      },
+      {
+        "level": "city",
+        "reference_key": "gauteng/johannesburg",
+        "name": "Johannesburg",
+        "parent_reference_key": "gauteng"
+      },
+      {
+        "level": "city",
+        "reference_key": "gauteng/pretoria",
+        "name": "Pretoria",
+        "parent_reference_key": "gauteng"
+      },
+      {
+        "level": "suburb",
+        "reference_key": "gauteng/johannesburg/sandton",
+        "name": "Sandton",
+        "parent_reference_key": "gauteng/johannesburg",
+        "latitude": -26.1076,
+        "longitude": 28.0567,
+        "postal_code": "2196"
+      },
+      {
+        "level": "suburb",
+        "reference_key": "gauteng/pretoria/hatfield",
+        "name": "Hatfield",
+        "parent_reference_key": "gauteng/pretoria",
+        "latitude": -25.7461,
+        "longitude": 28.2353,
+        "postal_code": "0083"
+      }
+    ],
+    "numeric_ids": "not available from static authority files; database verification was not run",
+    "legacy_seed_note": "migrations/create-location-hierarchy.sql contains historical sample rows and implicit insertion order; it is not the current reference-data authority and is not used for automatic mapping"
+  },
+  "observed_compatibility_handles": [
+    {
+      "canonical_location_id": "province:1",
+      "level": "province",
+      "label": "Gauteng",
+      "authority_class": "contract_fixture_or_preview",
+      "production_row_verified": false,
+      "evidence": [
+        "server/services/__tests__/searchAreaAuthority.test.ts",
+        "server/services/searchAreaDefinitions.ts",
+        "client/src/lib/__tests__/geographySearchHandoff.test.ts"
+      ]
+    },
+    {
+      "canonical_location_id": "city:12",
+      "level": "city",
+      "label": "Johannesburg",
+      "authority_class": "contract_fixture_or_preview",
+      "production_row_verified": false,
+      "evidence": [
+        "server/services/__tests__/searchAreaAuthority.test.ts",
+        "server/services/searchAreaDefinitions.ts"
+      ]
+    },
+    {
+      "canonical_location_id": "city:13",
+      "level": "city",
+      "label": "Pretoria",
+      "authority_class": "contract_fixture",
+      "production_row_verified": false,
+      "evidence": [
+        "server/services/__tests__/searchAreaAuthority.test.ts"
+      ]
+    },
+    {
+      "canonical_location_id": "suburb:34",
+      "level": "suburb",
+      "label": "Sandton",
+      "authority_class": "contract_fixture_or_preview",
+      "production_row_verified": false,
+      "evidence": [
+        "server/services/searchAreaDefinitions.ts",
+        "server/services/__tests__/searchAreaAuthority.test.ts",
+        "server/services/__tests__/searchAreaQueryIntegration.test.ts"
+      ]
+    }
+  ],
+  "known_factual_context_mappings": [
+    {
+      "factual_location_id": "pl-gp-v01-482952abc84b2eccf7d2",
+      "factual_name": "Johannesburg",
+      "factual_type": "city",
+      "runtime_scope_kind": "metro_city",
+      "runtime_natural_key": "gauteng/johannesburg",
+      "environment_runtime_compatibility_id": "city:12",
+      "status": "semantic_projection_ready_environment_handle_observed",
+      "database_row_verified": false,
+      "evidence": [
+        "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_summary_v0.1.json#required_property_search_probes[0]",
+        "server/services/__tests__/searchAreaAuthority.test.ts#canonicalLocations.city:12"
+      ]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-d55f7cb52192bba95e88",
+      "factual_name": "Pretoria",
+      "factual_type": "city",
+      "runtime_scope_kind": "metro_city",
+      "runtime_natural_key": "gauteng/pretoria",
+      "environment_runtime_compatibility_id": "city:13",
+      "status": "semantic_projection_ready_environment_handle_observed",
+      "database_row_verified": false,
+      "evidence": [
+        "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_summary_v0.1.json#required_property_search_probes[1]",
+        "server/services/__tests__/searchAreaAuthority.test.ts#canonicalLocations.city:13"
+      ]
+    },
+    {
+      "factual_location_id": "pl-gp-v01-418038409a1c0a00d9bc",
+      "factual_name": "Sandton",
+      "factual_type": "locality",
+      "runtime_scope_kind": "locality",
+      "runtime_natural_key": "gauteng/johannesburg/sandton",
+      "environment_runtime_compatibility_id": "suburb:34",
+      "status": "semantic_projection_ready_environment_handle_observed",
+      "database_row_verified": false,
+      "evidence": [
+        "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_summary_v0.1.json#required_property_search_probes[2]",
+        "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts#SUBURBS.Sandton",
+        "server/services/searchAreaDefinitions.ts#SANDTON_SEARCH_AREA_PREVIEW",
+        "server/services/__tests__/searchAreaAuthority.test.ts#canonicalLocations.suburb:34"
+      ]
+    }
+  ],
+  "factual_catalogue_context": {
+    "canonical_status": "factual_canonical",
+    "identity_owner": "Property Listify",
+    "total_factual_canonical_identities": 1480,
+    "accepted_search_areas": [
+      {
+        "search_area_id": "pl-sa-gp-3b36a49ecb943c88402b07fd",
+        "name": "Johannesburg North",
+        "lifecycle_state": "candidate",
+        "production_activation": false
+      },
+      {
+        "search_area_id": "pl-sa-gp-9314684a28ff63402832b8df",
+        "name": "Johannesburg South",
+        "lifecycle_state": "candidate",
+        "production_activation": false
+      },
+      {
+        "search_area_id": "pl-sa-gp-20f043e9ba8ece627365f5ad",
+        "name": "East Rand",
+        "lifecycle_state": "candidate",
+        "production_activation": false
+      },
+      {
+        "search_area_id": "pl-sa-gp-3aa01dbdcd93c28e0aef9119",
+        "name": "Pretoria East",
+        "lifecycle_state": "candidate",
+        "production_activation": false
+      },
+      {
+        "search_area_id": "pl-sa-gp-01da060bb6c5807438a654e9",
+        "name": "Midrand",
+        "lifecycle_state": "candidate",
+        "production_activation": false
+      },
+      {
+        "search_area_id": "pl-sa-gp-35163d1b6013797932cd94c1",
+        "name": "Centurion",
+        "lifecycle_state": "candidate",
+        "production_activation": false
+      }
+    ]
+  },
+  "conclusion": "Numeric runtime IDs remain compatibility handles. The durable bridge is factual-ID-first, explicit, evidence-backed and resolved through stable natural keys per environment.",
+  "runtime_projection_contract": {
+    "scope_kinds": [
+      "province",
+      "metro_city",
+      "locality"
+    ],
+    "factual_type_is_preserved": true,
+    "natural_key_examples": [
+      "gauteng",
+      "gauteng/benoni",
+      "gauteng/johannesburg/bryanston",
+      "gauteng/pretoria/centurion"
+    ],
+    "environment_numeric_ids_optional": true,
+    "environment_numeric_ids_are_durable_authority": false,
+    "municipality_to_city_coercion": false,
+    "locality_requires_executable_parent_hierarchy": true,
+    "current_fixture_role": "acceptance/reference subset only; governed expansion required for accepted Search Area membership coverage"
+  }
+}

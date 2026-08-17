@@ -23,6 +23,7 @@ import {
 import { trpc } from '@/lib/trpc';
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -89,7 +90,7 @@ export function Navbar() {
   }> = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/property-for-sale', label: 'Buy' },
-    { href: '/property-to-rent', label: 'Rent' },
+    ...(isHomepageHeroJourneyEnabled('rent') ? [{ href: '/property-to-rent', label: 'Rent' }] : []),
     { href: '/new-developments', label: 'Developments' },
     { href: '/agents', label: 'Agents' },
     { href: '/developers', label: 'Developers' },

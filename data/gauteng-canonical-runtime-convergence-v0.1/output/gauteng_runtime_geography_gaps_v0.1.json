@@ -1,0 +1,42 @@
+{
+  "schema_version": "0.1",
+  "checkpoint": {
+    "factualCanonical": "bd39aa38e4f7158164f3572b62db827fbf01c1a7",
+    "searchAreaResearch": "5c8c04858c27339255f9648737da084097e2ec3c",
+    "searchAreaCandidates": "ccd613d2b199504e90a74d7c5a0f6728c8ca98df"
+  },
+  "authority_rule": "A runtime row absent from the accepted factual projection is a runtime_factual_geography_gap; it is not promoted by label matching.",
+  "comparison_scope": {
+    "runtime_authority": "canonical-geography-v2 Gauteng reference rows",
+    "factual_artifacts_available": "accepted factual summary/probes and accepted Search Area membership records; full canonical geography JSONL is not present in the accepted candidate patch",
+    "database_verification": "not run; no shared/disposable database was created or mutated"
+  },
+  "counts": {
+    "runtime_reference_rows_reviewed": 5,
+    "runtime_factual_geography_gaps": 1,
+    "confirmed_from_full_projection": 0,
+    "provisional_checkpoint_artifact_gaps": 1
+  },
+  "gaps": [
+    {
+      "gap_type": "runtime_factual_geography_gap",
+      "status": "not_observable_from_accepted_artifacts",
+      "runtime_reference_key": "gauteng/pretoria/hatfield",
+      "runtime_level": "suburb",
+      "runtime_label": "Hatfield",
+      "runtime_parent_reference_key": "gauteng/pretoria",
+      "runtime_source": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts#SUBURBS.Hatfield",
+      "factual_location_id": null,
+      "factual_projection_presence": "not_found_in_accepted_summary_probe_or_active_memberships",
+      "candidate_only_status": "not_determined_without_full_factual_canonical_jsonl",
+      "reason": "Hatfield is an approved current runtime reference row but no accepted factual Hatfield identity appears in the summary/probe or Search Area artifacts available to this worktree. The full factual canonical JSONL was not included in the accepted candidate patch, so this remains a reconciliation queue item rather than a confirmed factual absence or candidate-only decision.",
+      "action": "feed back to factual enrichment/reconciliation; do not promote or map by name"
+    }
+  ],
+  "excluded_non_authorities": [
+    {
+      "source": "migrations/create-location-hierarchy.sql",
+      "reason": "historical/non-canonical sample rows are not treated as current runtime authority or factual gaps"
+    }
+  ]
+}

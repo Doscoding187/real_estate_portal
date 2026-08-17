@@ -1,0 +1,300 @@
+[
+  {
+    "schema_version": "0.1",
+    "query": "Johannesburg",
+    "normalized_query": "johannesburg",
+    "classification": "canonical_factual_location",
+    "search_area_candidate_ids": [],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-482952abc84b2eccf7d2"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Direct factual city intent; do not replace with a supra-suburb market.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Johannesburg North",
+    "normalized_query": "johannesburg north",
+    "classification": "both_disambiguation",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-8035b7d4ebaabfe6a114"
+    ],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-c1d935cbc90ea639eb87"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Offer factual Johannesburg North and separate market Search Area identities.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Johannesburg South",
+    "normalized_query": "johannesburg south",
+    "classification": "search_area",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-56fe83b57e4335196bb3"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "Primarily a broad residential market term in the evidence; no same-name accepted factual identity is used as a substitute.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Johannesburg East",
+    "normalized_query": "johannesburg east",
+    "classification": "unsupported_defer",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-58915dbee491bf082d9f"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "Narrow inner-east and broad East Rand meanings conflict materially.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Johannesburg West",
+    "normalized_query": "johannesburg west",
+    "classification": "unsupported_defer",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-800555da4c3fba6e287f"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "Recognised in agency usage but boundaries overlap Roodepoort/West Rand and lack launch-level consensus.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Sandton",
+    "normalized_query": "sandton",
+    "classification": "both_disambiguation",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-ec703b421498d9cf4830",
+      "sa-gp-v01-8035b7d4ebaabfe6a114"
+    ],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-418038409a1c0a00d9bc"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Factual Sandton intent is strong; a broader market interpretation can be offered only as a distinct identity.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Randburg",
+    "normalized_query": "randburg",
+    "classification": "canonical_factual_location",
+    "search_area_candidate_ids": [],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-3462bd075a8d155a3b22"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Randburg is a factual city/suburb market anchor; broad northern membership does not replace it.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Fourways",
+    "normalized_query": "fourways",
+    "classification": "both_disambiguation",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-180429c73b1339d39946",
+      "sa-gp-v01-8035b7d4ebaabfe6a114"
+    ],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-5c4c657aecad01c64729"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Factual Fourways and a narrower Fourways market grouping are both legitimate interpretations.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Bryanston",
+    "normalized_query": "bryanston",
+    "classification": "canonical_factual_location",
+    "search_area_candidate_ids": [],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-e44e12b3b4fdcc03e7c3"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Direct factual suburb intent is primary; market memberships are secondary context.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Rosebank",
+    "normalized_query": "rosebank",
+    "classification": "canonical_factual_location",
+    "search_area_candidate_ids": [],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-c53c43d358a6be20e785"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Strong independent urban-node intent; do not create a Search Area merely because it appears in broad premium-market guides.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Midrand",
+    "normalized_query": "midrand",
+    "classification": "both_disambiguation",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-46c0321e37fb5ca45bad"
+    ],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-0d7688adb9c7af392007",
+      "pl-gp-v01-455d2715587edce120f0"
+    ],
+    "factual_resolution_state": "ambiguous_factual_name",
+    "supporting_source_ids": [],
+    "notes": "Midrand is both a factual identity and a multi-suburb property market.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Pretoria",
+    "normalized_query": "pretoria",
+    "classification": "canonical_factual_location",
+    "search_area_candidate_ids": [],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-d55f7cb52192bba95e88"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Direct factual city intent.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Pretoria East",
+    "normalized_query": "pretoria east",
+    "classification": "search_area",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-b88900563cf89711224b"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "Primarily a governed consumer property-market grouping rather than a single factual suburb.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Pretoria North",
+    "normalized_query": "pretoria north",
+    "classification": "both_disambiguation",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-1a6e17db053a30764b50",
+      "sa-gp-v01-7132766aa303d6f49ba5"
+    ],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-4ee44948eb69374ce925"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "A factual suburb and a broader post-launch market concept are both evidenced.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Pretoria West",
+    "normalized_query": "pretoria west",
+    "classification": "unsupported_defer",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-04bd34fe3a085c45f853"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "No accepted factual Pretoria West row is present and current market evidence does not justify a separate Search Area; retain the term for geography follow-up.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Centurion",
+    "normalized_query": "centurion",
+    "classification": "both_disambiguation",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-eb8f5ccf388a2e9890cb"
+    ],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-029159849439c2ea8783"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Factual town and established multi-suburb property market both matter.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "East Rand",
+    "normalized_query": "east rand",
+    "classification": "both_disambiguation",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-96f24b34bcb944332a42"
+    ],
+    "factual_canonical_location_ids": [
+      "pl-gp-v01-85224ee50069c93dae3e"
+    ],
+    "factual_resolution_state": "resolved_exact_preferred_name",
+    "supporting_source_ids": [],
+    "notes": "Strongly recognised cross-town property-market term, while the accepted factual projection also contains an East Rand locality identity.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "West Rand",
+    "normalized_query": "west rand",
+    "classification": "search_area",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-d5273c821ff574560e3a"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "Established broader region, but useful post-launch rather than launch-critical.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Vaal",
+    "normalized_query": "vaal",
+    "classification": "search_area",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-e6e71e6ebc5b7dc6b8b3"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "Meaningful Gauteng property-market shorthand; scope should be Gauteng-only in this workstream.",
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "query": "Vaal Triangle",
+    "normalized_query": "vaal triangle",
+    "classification": "alias",
+    "search_area_candidate_ids": [
+      "sa-gp-v01-e6e71e6ebc5b7dc6b8b3"
+    ],
+    "factual_canonical_location_ids": [],
+    "factual_resolution_state": "missing_from_accepted_factual_projection",
+    "supporting_source_ids": [],
+    "notes": "Resolve as an alias to the governed Vaal candidate; do not create duplicate identities.",
+    "researched_at": "2026-08-15"
+  }
+]

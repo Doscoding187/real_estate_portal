@@ -1,0 +1,1205 @@
+[
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-8035b7d4ebaabfe6a114",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Johannesburg North",
+    "normalized_name": "johannesburg north",
+    "aliases": [
+      "northern Johannesburg",
+      "Johannesburg northern suburbs",
+      "North Johannesburg"
+    ],
+    "market_concept_type": "supra_suburb_market",
+    "proposed_status": "proposed",
+    "launch_priority": "launch-critical",
+    "evidence_strength": "strong",
+    "source_count": 5,
+    "independent_source_count": 5,
+    "independent_publishers": [
+      "Century 21",
+      "Joburg Tourism",
+      "Pam Golding Properties",
+      "Private Property",
+      "Property24"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "local_established_agency_guide",
+      "official_cultural_context",
+      "portal_market_taxonomy"
+    ],
+    "description": "A broad northern Johannesburg property market, separate from the factual suburb also called Johannesburg North.",
+    "geographic_scope_narrative": "Consensus is strongest around North Riding, Douglasdale, Olivedale, Northgate, Fourways-related suburbs, Bryanston, Sandton/Randburg access and northern lifestyle nodes. Inner-northern concepts such as The Parks and Greater Sandton may overlap without being identical.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "greater_sandton",
+      "fourways",
+      "johannesburg_west"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-ec703b421498d9cf4830",
+      "sa-gp-v01-180429c73b1339d39946",
+      "sa-gp-v01-800555da4c3fba6e287f"
+    ],
+    "same_name_factual_collision": true,
+    "same_name_factual_collision_ids": [
+      "pl-gp-v01-c1d935cbc90ea639eb87"
+    ],
+    "nesting_recommendation": "Do not require a strict parent/child hierarchy for MVP; retain optional overlap with narrower Greater Sandton and Fourways candidates.",
+    "consumer_search_usefulness": "High: the term is recognisable in property discovery and spans multiple factual locations.",
+    "recommendation": "Carry the bounded consensus core into candidate definition; do not copy any portal's full northern list.",
+    "source_disagreements": "Century 21 uses the label very broadly; exact portal pages are narrower; The Parks and Greater Sandton evidence indicates overlapping submarkets.",
+    "overlap_notes": "Sandton, Fourways and some northwest/inner-north locations can legitimately belong to narrower market candidates as well.",
+    "consumer_query_notes": "The literal query must offer a factual Johannesburg North result and a broader Search Area result with distinct identity types.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-9b8cda0dfe7b780f5f4a",
+      "src-gp-sa-v01-a4182aa78236a50ab97c",
+      "src-gp-sa-v01-b2812f441ef922730f87",
+      "src-gp-sa-v01-c7e08cbe5d574bd4db69",
+      "src-gp-sa-v01-de95d0b5d1416c9f4a6f"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 21,
+    "membership_state_counts": {
+      "core": 7,
+      "strongly_supported": 5,
+      "supported": 6,
+      "unresolved": 3
+    },
+    "resolved_membership_count": 18,
+    "unresolved_membership_count": 3
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-56fe83b57e4335196bb3",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Johannesburg South",
+    "normalized_name": "johannesburg south",
+    "aliases": [
+      "southern Johannesburg",
+      "Johannesburg southern suburbs"
+    ],
+    "market_concept_type": "supra_suburb_market",
+    "proposed_status": "proposed",
+    "launch_priority": "launch-critical",
+    "evidence_strength": "strong",
+    "source_count": 6,
+    "independent_source_count": 6,
+    "independent_publishers": [
+      "Chas Everitt",
+      "Joburg Tourism",
+      "Pam Golding Properties",
+      "Private Property",
+      "Property24",
+      "The Citizen / Pam Golding network content"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "official_cultural_context",
+      "portal_market_taxonomy",
+      "property_publication_market_evidence"
+    ],
+    "description": "A consumer-facing southern Johannesburg residential market spanning multiple factual suburbs and Alberton-related demand.",
+    "geographic_scope_narrative": "Core evidence centres on Glenvista, Winchester Hills, Mondeor, Mulbarton, Oakdene, Bassonia, Rosettenville, Kibler Park and nearby southern nodes. Alberton is a supported overlap with East Rand.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "east_rand",
+      "vaal"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-96f24b34bcb944332a42",
+      "sa-gp-v01-e6e71e6ebc5b7dc6b8b3"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "No hierarchy required; model as a broad market grouping with overlap at Alberton and southern corridor edges.",
+    "consumer_search_usefulness": "High: a direct market phrase with substantial cross-suburb discovery value.",
+    "recommendation": "Launch with the consensus southern suburb core and explicitly permit Alberton overlap.",
+    "source_disagreements": "Portal scope is wider than agency editorial examples and reaches Alberton, Eikenhof and Walkerville; retain those as supported/fringe rather than core.",
+    "overlap_notes": "Alberton is intentionally not exclusive to Johannesburg South; East Rand evidence independently supports it.",
+    "consumer_query_notes": "Literal Johannesburg South should resolve to the Search Area while factual suburb queries remain direct.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-2281e47483d4468b5c05",
+      "src-gp-sa-v01-75d1ba0ffd2a7c8c39e0",
+      "src-gp-sa-v01-9c9e27783819f2e15743",
+      "src-gp-sa-v01-9fecb58fae546e1bd14f",
+      "src-gp-sa-v01-b2812f441ef922730f87",
+      "src-gp-sa-v01-c16c27d73278fb75e356"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 19,
+    "membership_state_counts": {
+      "core": 8,
+      "strongly_supported": 4,
+      "supported": 3,
+      "unresolved": 4
+    },
+    "resolved_membership_count": 15,
+    "unresolved_membership_count": 4
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-96f24b34bcb944332a42",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "East Rand",
+    "normalized_name": "east rand",
+    "aliases": [
+      "Ekurhuleni property market",
+      "eastern Johannesburg property market"
+    ],
+    "market_concept_type": "regional_property_market",
+    "proposed_status": "proposed",
+    "launch_priority": "launch-critical",
+    "evidence_strength": "strong",
+    "source_count": 4,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Jawitz Properties",
+      "Private Property",
+      "Property24"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "portal_market_taxonomy",
+      "property_publication_market_evidence"
+    ],
+    "description": "A major cross-town Gauteng property-search market east of Johannesburg, distinct from the administrative municipality even where they overlap.",
+    "geographic_scope_narrative": "Consensus/core is Boksburg, Benoni, Brakpan, Germiston, Kempton Park and Springs. Edenvale and Bedfordview are strongly supported; Alberton, Katlehong, Nigel, Modderfontein, Linksfield and Tembisa are supported or outer members.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "johannesburg_south",
+      "johannesburg_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-56fe83b57e4335196bb3",
+      "sa-gp-v01-58915dbee491bf082d9f"
+    ],
+    "same_name_factual_collision": true,
+    "same_name_factual_collision_ids": [
+      "pl-gp-v01-85224ee50069c93dae3e"
+    ],
+    "nesting_recommendation": "Do not model Ekurhuleni East/West as children in MVP; retain East Rand as a market label with factual municipality context as metadata only.",
+    "consumer_search_usefulness": "High: the term is used by multiple property portals and agencies for cross-town discovery.",
+    "recommendation": "Carry the six-town consensus core and a cautious supported ring into candidate definition.",
+    "source_disagreements": "Portal area lists differ at the edges, especially Alberton, Tembisa, Katlehong and Modderfontein; these remain supported/fringe.",
+    "overlap_notes": "Alberton overlaps Johannesburg South; Bedfordview/Edenvale overlap ambiguous Johannesburg East usage.",
+    "consumer_query_notes": "East Rand should be a market result; Ekurhuleni is an alias/context term, not a second launch taxonomy.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-6d78ce7ea2717338a9ab",
+      "src-gp-sa-v01-755bab7ef24769b439fc",
+      "src-gp-sa-v01-f188ea5705bef80a3e57",
+      "src-gp-sa-v01-fa025045fe4625999565"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 16,
+    "membership_state_counts": {
+      "core": 6,
+      "strongly_supported": 3,
+      "supported": 4,
+      "unresolved": 3
+    },
+    "resolved_membership_count": 13,
+    "unresolved_membership_count": 3
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-b88900563cf89711224b",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria East",
+    "normalized_name": "pretoria east",
+    "aliases": [
+      "eastern Pretoria",
+      "Pretoria eastern suburbs"
+    ],
+    "market_concept_type": "supra_suburb_market",
+    "proposed_status": "proposed",
+    "launch_priority": "launch-critical",
+    "evidence_strength": "very_strong",
+    "source_count": 10,
+    "independent_source_count": 8,
+    "independent_publishers": [
+      "Chas Everitt",
+      "Elsja Properties",
+      "Fine & Country South Africa",
+      "MyPR",
+      "Private Property",
+      "Property24",
+      "Property24 / Seeff and RE/MAX market commentary",
+      "Seeff"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "local_established_agency_guide",
+      "portal_market_taxonomy",
+      "property_market_report",
+      "property_publication_market_evidence"
+    ],
+    "description": "A high-recognition Pretoria property market combining Old East and newer eastern residential/estate nodes.",
+    "geographic_scope_narrative": "Consensus/core spans Waterkloof, Brooklyn, Muckleneuk, Lynnwood, Moreleta Park, Menlyn, Newlands, Garsfontein, Faerie Glen, Wapadrand, Mooikloof and The Hills. Equestria, Six Fountains, Silver Lakes and Woodhill are strongly supported but several remain factual-gap candidates.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "pretoria_old_east",
+      "pretoria_far_east",
+      "pretoria_north_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-7e0b5fdaf69d264f6536",
+      "sa-gp-v01-2a98f7c12d28e8f472e0",
+      "sa-gp-v01-8521f641f7beae02b4e5"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Optional relationship: Pretoria Old East can be a narrower overlapping submarket, but do not require strict containment for MVP.",
+    "consumer_search_usefulness": "Very high: current listings, agency segmentation and market reporting all treat Pretoria East as a distinct property concept.",
+    "recommendation": "Launch with a consensus/core and strongly supported membership set; hold outer-east gaps for controlled follow-up.",
+    "source_disagreements": "Property24's broad alias includes some North/West or development labels; agency consensus is narrower and should govern the launch core.",
+    "overlap_notes": "Old East and Far East are legitimate narrower/outer concepts; avoid forcing a single binary boundary.",
+    "consumer_query_notes": "Pretoria East should be a Search Area result, not a fabricated factual suburb.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-3ee773cb08189094ceba",
+      "src-gp-sa-v01-4a17509b80866f5aa302",
+      "src-gp-sa-v01-6ff8fe18d62b7308465a",
+      "src-gp-sa-v01-77186320e5a3c487c54b",
+      "src-gp-sa-v01-8f62c8801e57b6ada2df",
+      "src-gp-sa-v01-a18cf4027583820a92ef",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2",
+      "src-gp-sa-v01-b468839410a961ca3366",
+      "src-gp-sa-v01-c310ad6847bc703778f9",
+      "src-gp-sa-v01-cec858b0af43abdf17a1"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 25,
+    "membership_state_counts": {
+      "core": 9,
+      "fringe": 1,
+      "strongly_supported": 2,
+      "supported": 6,
+      "unresolved": 7
+    },
+    "resolved_membership_count": 18,
+    "unresolved_membership_count": 7
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-46c0321e37fb5ca45bad",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Midrand",
+    "normalized_name": "midrand",
+    "aliases": [
+      "Midrand area",
+      "greater Midrand"
+    ],
+    "market_concept_type": "town_market",
+    "proposed_status": "proposed",
+    "launch_priority": "launch-critical",
+    "evidence_strength": "strong",
+    "source_count": 4,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Chas Everitt",
+      "Private Property",
+      "Property24"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "portal_market_taxonomy",
+      "property_publication_market_evidence"
+    ],
+    "description": "Midrand functions both as accepted factual location identity/identities and as a broad consumer property market.",
+    "geographic_scope_narrative": "Market evidence converges on Midrand, Carlswald, Noordwyk, Halfway House, Vorna Valley, Blue Hills, Glen Austin, Barbeque Downs and nearby development nodes. Waterfall and Kyalami are important observed terms but require separate factual governance.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "johannesburg_north",
+      "centurion",
+      "pretoria_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-8035b7d4ebaabfe6a114",
+      "sa-gp-v01-eb8f5ccf388a2e9890cb",
+      "sa-gp-v01-b88900563cf89711224b"
+    ],
+    "same_name_factual_collision": true,
+    "same_name_factual_collision_ids": [
+      "pl-gp-v01-0d7688adb9c7af392007",
+      "pl-gp-v01-455d2715587edce120f0"
+    ],
+    "nesting_recommendation": "Do not make Midrand a child of Johannesburg or Centurion; use overlap and administrative context.",
+    "consumer_search_usefulness": "Very high: the literal query is a major property-market entry point between Johannesburg and Pretoria.",
+    "recommendation": "Carry as a launch-critical Search Area with explicit same-name disambiguation and factual-gap blocking.",
+    "source_disagreements": "Portal and agency lists include estates/developments and Kyalami/Waterfall; those names must not be silently promoted or collapsed.",
+    "overlap_notes": "Midrand/Centurion and Midrand/Johannesburg North edges are market overlaps, not one canonical identity.",
+    "consumer_query_notes": "The literal Midrand query requires both factual and market interpretations, with canonical IDs kept distinct.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-6e88a52561abe0a3d99a",
+      "src-gp-sa-v01-6ee29145ce8d565420fe",
+      "src-gp-sa-v01-d75373f5aa700b71b4d4",
+      "src-gp-sa-v01-f9b5b620a39af5ec0719"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 11,
+    "membership_state_counts": {
+      "core": 6,
+      "strongly_supported": 3,
+      "unresolved": 2
+    },
+    "resolved_membership_count": 9,
+    "unresolved_membership_count": 2
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-eb8f5ccf388a2e9890cb",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Centurion",
+    "normalized_name": "centurion",
+    "aliases": [
+      "Centurion area",
+      "greater Centurion"
+    ],
+    "market_concept_type": "town_market",
+    "proposed_status": "proposed",
+    "launch_priority": "launch-critical",
+    "evidence_strength": "strong",
+    "source_count": 3,
+    "independent_source_count": 2,
+    "independent_publishers": [
+      "Chas Everitt",
+      "Private Property"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "portal_market_taxonomy",
+      "property_publication_market_evidence"
+    ],
+    "description": "Centurion is an accepted factual location and an independently recognised multi-suburb/estate property market.",
+    "geographic_scope_narrative": "Core market evidence includes Rooihuiskraal, Wierdapark, Eldoraigne, The Reeds, Highveld, Zwartkop, Doringkloof, Irene, Midstream Estate, Amberfield, Thatchfield and Clubview, with supported southern/western extensions.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "midrand",
+      "pretoria_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-46c0321e37fb5ca45bad",
+      "sa-gp-v01-b88900563cf89711224b"
+    ],
+    "same_name_factual_collision": true,
+    "same_name_factual_collision_ids": [
+      "pl-gp-v01-029159849439c2ea8783"
+    ],
+    "nesting_recommendation": "No strict hierarchy; Centurion East can be considered later as a narrower candidate if demand justifies it.",
+    "consumer_search_usefulness": "Very high: the term is a well-established property market with many factual member locations.",
+    "recommendation": "Carry as launch-critical, with explicit type disambiguation and no new factual parent geography.",
+    "source_disagreements": "Agency and portal scopes differ at the southern edge and around estates; use the consensus town/estate core.",
+    "overlap_notes": "Centurion and Midrand are adjacent/overlapping consumer markets but must never share a factual ID by label alone.",
+    "consumer_query_notes": "Literal Centurion needs factual and market result types; market interpretation must not alias away the factual city/town identity.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-50bc8effe9bdbd7df05f",
+      "src-gp-sa-v01-859ec34de6713e9fccd4",
+      "src-gp-sa-v01-d75373f5aa700b71b4d4"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 13,
+    "membership_state_counts": {
+      "core": 5,
+      "strongly_supported": 4,
+      "supported": 3,
+      "unresolved": 1
+    },
+    "resolved_membership_count": 12,
+    "unresolved_membership_count": 1
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-d5273c821ff574560e3a",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "West Rand",
+    "normalized_name": "west rand",
+    "aliases": [
+      "western Johannesburg property market"
+    ],
+    "market_concept_type": "regional_property_market",
+    "proposed_status": "proposed",
+    "launch_priority": "useful-post-launch",
+    "evidence_strength": "strong_but_scope_conflicted",
+    "source_count": 5,
+    "independent_source_count": 5,
+    "independent_publishers": [
+      "CCH Property Specialists",
+      "Harcourts Rhino",
+      "Private Property",
+      "Property24",
+      "West Rand District Municipality"
+    ],
+    "source_categories": [
+      "local_established_agency_guide",
+      "official_administrative_context",
+      "portal_market_taxonomy",
+      "property_market_report"
+    ],
+    "description": "A meaningful western Gauteng property market, but portal, agency and official district scopes differ.",
+    "geographic_scope_narrative": "Consensus/core is Krugersdorp, Randfontein and Westonaria; Roodepoort is strongly supported in property usage but not identical to the official district; Carletonville and Fochville are supported outer members.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "johannesburg_west"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-800555da4c3fba6e287f"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Avoid a strict administrative parent; use a market grouping with an explicit official-boundary conflict note.",
+    "consumer_search_usefulness": "Medium-high: valuable for broad property discovery, but factual towns already cover much of the intent.",
+    "recommendation": "Defer until the product decides whether its value exceeds direct town search and how to govern Johannesburg West overlap.",
+    "source_disagreements": "Property24 is narrower; Private Property and agencies include Roodepoort and northwest suburbs; official WRDM geography differs.",
+    "overlap_notes": "Roodepoort and outer northwest nodes may also appear under Johannesburg West; retain overlap only after launch governance.",
+    "consumer_query_notes": "West Rand can be a later Search Area result; direct Krugersdorp/Randfontein/Roodepoort queries remain factual first.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-09d2aca15b4a534e6bfb",
+      "src-gp-sa-v01-1446c7c27b4fbbb33e7f",
+      "src-gp-sa-v01-74692994b0aae6b9d2f6",
+      "src-gp-sa-v01-c136e6dd9ec72ba612d4",
+      "src-gp-sa-v01-d19ccdc0297f83659dd2"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 6,
+    "membership_state_counts": {
+      "core": 3,
+      "strongly_supported": 1,
+      "supported": 2
+    },
+    "resolved_membership_count": 6,
+    "unresolved_membership_count": 0
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-ec703b421498d9cf4830",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Greater Sandton",
+    "normalized_name": "greater sandton",
+    "aliases": [
+      "Sandton area",
+      "Sandton property market",
+      "Sandton and surrounds"
+    ],
+    "market_concept_type": "branded_submarket",
+    "proposed_status": "proposed",
+    "launch_priority": "useful-post-launch",
+    "evidence_strength": "strong",
+    "source_count": 4,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Century 21",
+      "Joburg Tourism",
+      "Pam Golding Properties"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "local_established_agency_guide",
+      "official_cultural_context",
+      "property_market_report"
+    ],
+    "description": "A narrower northern Johannesburg premium/investment market around Sandton and its established residential surrounds.",
+    "geographic_scope_narrative": "Core is Sandton, Bryanston, Morningside, Sandown and Rivonia; supported nodes include Hyde Park, Illovo, Melrose, Rosebank and selected Fourways edges.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "johannesburg_north",
+      "fourways"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-8035b7d4ebaabfe6a114",
+      "sa-gp-v01-180429c73b1339d39946"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Treat as an optional narrower overlap, not a required child of Johannesburg North.",
+    "consumer_search_usefulness": "High for premium/rental discovery, but launch duplication with Johannesburg North needs product evidence.",
+    "recommendation": "Keep as a post-launch candidate; do not add to launch until overlap and SEO/query-result policy is settled.",
+    "source_disagreements": "Greater Sandton is editorially fluid and varies between premium suburbs and a larger northern commuter market.",
+    "overlap_notes": "Sandton is both a factual location and the primary alias/anchor for this market candidate.",
+    "consumer_query_notes": "Sandton must offer factual Sandton and Greater Sandton market interpretations.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-83a6a1f356f355ca469c",
+      "src-gp-sa-v01-9681eb2a06641a55303a",
+      "src-gp-sa-v01-a4182aa78236a50ab97c",
+      "src-gp-sa-v01-b2812f441ef922730f87"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 9,
+    "membership_state_counts": {
+      "core": 5,
+      "supported": 4
+    },
+    "resolved_membership_count": 9,
+    "unresolved_membership_count": 0
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-180429c73b1339d39946",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Fourways",
+    "normalized_name": "fourways",
+    "aliases": [
+      "greater Fourways",
+      "Fourways area"
+    ],
+    "market_concept_type": "branded_submarket",
+    "proposed_status": "proposed",
+    "launch_priority": "useful-post-launch",
+    "evidence_strength": "strong",
+    "source_count": 4,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Harcourts",
+      "Pam Golding Properties",
+      "Shalan Property"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "local_established_agency_guide",
+      "property_market_report"
+    ],
+    "description": "Fourways is both a factual town identity and a widely used collection of northern Sandton residential suburbs and estates.",
+    "geographic_scope_narrative": "Core is Fourways, Broadacres, Craigavon and Magaliessig, with Beverley, Lonehill, Norscot, Dainfern and related estates as supported or gap members.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "johannesburg_north",
+      "greater_sandton"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-8035b7d4ebaabfe6a114",
+      "sa-gp-v01-ec703b421498d9cf4830"
+    ],
+    "same_name_factual_collision": true,
+    "same_name_factual_collision_ids": [
+      "pl-gp-v01-5c4c657aecad01c64729"
+    ],
+    "nesting_recommendation": "No strict nesting; keep a separate market identity if consumer demand warrants its own discovery.",
+    "consumer_search_usefulness": "High: users often mean the broader Fourways market rather than only the factual Fourways identity.",
+    "recommendation": "Defer as a separate Search Area until launch query volume justifies a narrower overlapping market.",
+    "source_disagreements": "Agency collections differ on estates and outer suburbs; missing factual names are retained as gaps.",
+    "overlap_notes": "Fourways is a narrower northern-market overlap with Johannesburg North and Greater Sandton.",
+    "consumer_query_notes": "The literal query is Both/disambiguation, not a simple alias to the factual town.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-83a6a1f356f355ca469c",
+      "src-gp-sa-v01-c0a29c4dcdd8e7b5aac6",
+      "src-gp-sa-v01-c7e08cbe5d574bd4db69",
+      "src-gp-sa-v01-e4650f65dc00816de033"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 8,
+    "membership_state_counts": {
+      "core": 4,
+      "unresolved": 4
+    },
+    "resolved_membership_count": 4,
+    "unresolved_membership_count": 4
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-7e0b5fdaf69d264f6536",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria Old East",
+    "normalized_name": "pretoria old east",
+    "aliases": [
+      "Old Pretoria East",
+      "Old East"
+    ],
+    "market_concept_type": "branded_submarket",
+    "proposed_status": "proposed",
+    "launch_priority": "useful-post-launch",
+    "evidence_strength": "strong",
+    "source_count": 4,
+    "independent_source_count": 4,
+    "independent_publishers": [
+      "Chas Everitt",
+      "Fine & Country",
+      "Private Property",
+      "Realty 1"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "local_established_agency_guide",
+      "property_publication_market_evidence"
+    ],
+    "description": "A stable narrower eastern Pretoria market centred on mature, established suburbs.",
+    "geographic_scope_narrative": "Core is Brooklyn, Groenkloof, Lynnwood, Menlo Park, Waterkloof, Hazelwood and Muckleneuk; supported adjacent premium suburbs include Alphen Park, Ashlea Gardens, Waterkloof Ridge and Erasmusrand.",
+    "broader_search_area_candidate_id": "sa-gp-v01-b88900563cf89711224b",
+    "relationship_type": "narrower_market_overlap",
+    "overlapping_search_area_keys": [
+      "pretoria_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-b88900563cf89711224b"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "An optional parent/child relationship is useful for discovery, but membership must remain graph-capable and overlap-safe.",
+    "consumer_search_usefulness": "Medium-high for premium and established-suburb searches; not essential to first broad MVP release.",
+    "recommendation": "Useful post-launch as a governed narrower overlap, not a separate factual geography.",
+    "source_disagreements": "Outer members vary between agencies; core mature suburbs are consistent.",
+    "overlap_notes": "Every core member is also part of the broader Pretoria East market concept.",
+    "consumer_query_notes": "Old East should be a market result where supported; individual suburbs remain factual results.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-20f2a491dbac436d52bf",
+      "src-gp-sa-v01-74288f52f507e13dbaf4",
+      "src-gp-sa-v01-c3c148d98d6722b6a351",
+      "src-gp-sa-v01-cec858b0af43abdf17a1"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 10,
+    "membership_state_counts": {
+      "core": 4,
+      "strongly_supported": 1,
+      "supported": 4,
+      "unresolved": 1
+    },
+    "resolved_membership_count": 9,
+    "unresolved_membership_count": 1
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-7132766aa303d6f49ba5",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria Moot",
+    "normalized_name": "pretoria moot",
+    "aliases": [
+      "Moot",
+      "Pretoria northern-central suburbs"
+    ],
+    "market_concept_type": "local_market_grouping",
+    "proposed_status": "proposed",
+    "launch_priority": "useful-post-launch",
+    "evidence_strength": "moderate_to_strong",
+    "source_count": 3,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Chas Everitt",
+      "ERA Pretoria Moot",
+      "Property24"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "local_established_agency_guide",
+      "portal_market_taxonomy"
+    ],
+    "description": "A locally recognised Pretoria market grouping centred on the northern-central suburbs and the Apies River corridor.",
+    "geographic_scope_narrative": "Core evidence includes Waverley, Kilner Park, Queenswood, Villieria, Rietfontein, Rietondale, Riviera, Gezina and Wonderboom-related nodes; supported members extend toward Montana and Doornpoort depending source.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "pretoria_north",
+      "pretoria_north_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-1a6e17db053a30764b50",
+      "sa-gp-v01-8521f641f7beae02b4e5"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Do not force Moot below Pretoria North; the concepts overlap but are not identical.",
+    "consumer_search_usefulness": "Medium: credible local usage, but less necessary than Pretoria East, Midrand or Centurion for first release.",
+    "recommendation": "Useful post-launch after northern Pretoria membership review.",
+    "source_disagreements": "Moot edges vary materially, especially around Wonderboom, Montana, Doornpoort and Pretoria North.",
+    "overlap_notes": "Overlap with Pretoria North and North East is expected and should be explicit.",
+    "consumer_query_notes": "Treat Moot as an alias/search-area candidate, not as a factual location.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-5207dec0b99e8e84ac02",
+      "src-gp-sa-v01-cec858b0af43abdf17a1",
+      "src-gp-sa-v01-e23fa6d8c06e7b5288bb"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 14,
+    "membership_state_counts": {
+      "core": 5,
+      "strongly_supported": 1,
+      "supported": 5,
+      "unresolved": 3
+    },
+    "resolved_membership_count": 11,
+    "unresolved_membership_count": 3
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-1a6e17db053a30764b50",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria North",
+    "normalized_name": "pretoria north",
+    "aliases": [
+      "northern Pretoria",
+      "Pretoria North area"
+    ],
+    "market_concept_type": "suburb_market",
+    "proposed_status": "proposed",
+    "launch_priority": "useful-post-launch",
+    "evidence_strength": "moderate",
+    "source_count": 3,
+    "independent_source_count": 2,
+    "independent_publishers": [
+      "Chas Everitt",
+      "Property24"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "portal_market_taxonomy"
+    ],
+    "description": "A factual Pretoria North identity and a wider consumer area concept, with a same-name collision requiring disambiguation.",
+    "geographic_scope_narrative": "Core is the factual Pretoria North, Wonderboom, Annlin and Theresapark; supported northern nodes include Florauna, Mountain View, Sinoville, Doornpoort and Magalieskruin. Wider Pretoria North East lists are not adopted wholesale.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "pretoria_moot",
+      "pretoria_north_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-7132766aa303d6f49ba5",
+      "sa-gp-v01-8521f641f7beae02b4e5"
+    ],
+    "same_name_factual_collision": true,
+    "same_name_factual_collision_ids": [
+      "pl-gp-v01-4ee44948eb69374ce925"
+    ],
+    "nesting_recommendation": "No strict nesting; retain overlap with Moot and possible North East candidate.",
+    "consumer_search_usefulness": "Medium-high because the literal query has both factual and area meanings.",
+    "recommendation": "Useful post-launch once the northern Pretoria result UX and membership boundary are defined.",
+    "source_disagreements": "The exact factual page is narrower than agency descriptions of a northern Pretoria service area.",
+    "overlap_notes": "The factual Pretoria North is one member of the market identity, not the identity itself.",
+    "consumer_query_notes": "Both/disambiguation is mandatory.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-5d64a15c3190609af2db",
+      "src-gp-sa-v01-cec858b0af43abdf17a1",
+      "src-gp-sa-v01-e23fa6d8c06e7b5288bb"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 9,
+    "membership_state_counts": {
+      "core": 3,
+      "strongly_supported": 2,
+      "supported": 4
+    },
+    "resolved_membership_count": 9,
+    "unresolved_membership_count": 0
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-e6e71e6ebc5b7dc6b8b3",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Vaal",
+    "normalized_name": "vaal",
+    "aliases": [
+      "Vaal Triangle",
+      "Vaal region",
+      "Vaal property market"
+    ],
+    "market_concept_type": "cross_town_property_market",
+    "proposed_status": "proposed",
+    "launch_priority": "useful-post-launch",
+    "evidence_strength": "strong_but_scope_conflicted",
+    "source_count": 3,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Fezile Dabi District Municipality",
+      "Private Property",
+      "Property24"
+    ],
+    "source_categories": [
+      "official_administrative_context",
+      "portal_market_taxonomy",
+      "property_market_report"
+    ],
+    "description": "A meaningful southern Gauteng property market whose common Vaal Triangle label crosses provincial boundaries in some sources.",
+    "geographic_scope_narrative": "Gauteng-scoped core is Meyerton, Vereeniging and Vanderbijlpark, with Evaton, Sebokeng, Sharpeville and Three Rivers strongly supported. Sasolburg is a market-context member outside Gauteng and is not added to the Gauteng factual membership set.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "johannesburg_south"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-56fe83b57e4335196bb3"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "No strict hierarchy; the alias Vaal Triangle should map to the same governed Gauteng-scoped candidate unless a later cross-province product decision creates a separate scope.",
+    "consumer_search_usefulness": "Medium-high in southern Gauteng, but lower MVP priority than the core metro markets.",
+    "recommendation": "Useful post-launch with a Gauteng-only membership policy and explicit cross-province limitation.",
+    "source_disagreements": "Vaal, Vaal Triangle and Gauteng South have different edges; official spatial context includes Sasolburg outside Gauteng.",
+    "overlap_notes": "Southern Johannesburg and Vaal edges may overlap through Walkerville/Eikenhof/Heidelberg evidence, but no forced overlap is launched here.",
+    "consumer_query_notes": "Vaal and Vaal Triangle should not become duplicate Search Area identities; treat Vaal Triangle as an alias pending scope review.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-4032185d5416ec2038e0",
+      "src-gp-sa-v01-507c69431065172d55f5",
+      "src-gp-sa-v01-c589e5a9ff42669ce0a1"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 8,
+    "membership_state_counts": {
+      "core": 3,
+      "excluded": 1,
+      "strongly_supported": 2,
+      "supported": 2
+    },
+    "resolved_membership_count": 7,
+    "unresolved_membership_count": 1
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-58915dbee491bf082d9f",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Johannesburg East",
+    "normalized_name": "johannesburg east",
+    "aliases": [
+      "eastern Johannesburg",
+      "Joburg East"
+    ],
+    "market_concept_type": "ambiguous_market_label",
+    "proposed_status": "research_further",
+    "launch_priority": "research-further",
+    "evidence_strength": "conflicted",
+    "source_count": 3,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Intro Real Estate",
+      "Lightstone Property",
+      "Private Property"
+    ],
+    "source_categories": [
+      "local_established_agency_guide",
+      "market_analytics",
+      "property_publication_market_evidence"
+    ],
+    "description": "A real property-market phrase with two materially different observed meanings.",
+    "geographic_scope_narrative": "One market-analytics source uses a narrow inner-east basket; other property sources and agencies use the phrase for an East Rand-wide basket. No single membership graph is safe for MVP.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "east_rand",
+      "greater_sandton"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-96f24b34bcb944332a42",
+      "sa-gp-v01-ec703b421498d9cf4830"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Do not create a parent/child hierarchy until the label is product-defined; it may need two separate aliases or deliberate deferment.",
+    "consumer_search_usefulness": "Potentially high but unsafe without explicit disambiguation because users may mean inner-east or East Rand.",
+    "recommendation": "Do not launch. Ask one bounded founder decision only if product demand later justifies choosing a meaning.",
+    "source_disagreements": "The disagreements change the entire region, not just fringe suburbs.",
+    "overlap_notes": "Broad interpretation overlaps East Rand; narrow interpretation overlaps neither East Rand nor Greater Sandton cleanly.",
+    "consumer_query_notes": "Classify as unsupported/defer for automatic Search Area mapping; preserve as a future disambiguation candidate.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-4fde6d54153b8a0596a8",
+      "src-gp-sa-v01-633554a5d1d726a6b830",
+      "src-gp-sa-v01-d4c3cbe498b79c77e093"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 6,
+    "membership_state_counts": {
+      "disputed": 6
+    },
+    "resolved_membership_count": 6,
+    "unresolved_membership_count": 0
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-800555da4c3fba6e287f",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Johannesburg West",
+    "normalized_name": "johannesburg west",
+    "aliases": [
+      "western Johannesburg",
+      "Joburg West"
+    ],
+    "market_concept_type": "ambiguous_market_label",
+    "proposed_status": "research_further",
+    "launch_priority": "research-further",
+    "evidence_strength": "moderate_but_overlapping",
+    "source_count": 5,
+    "independent_source_count": 5,
+    "independent_publishers": [
+      "CCH Property Specialists",
+      "Harcourts Rhino",
+      "Joburg Tourism",
+      "Pam Golding Properties",
+      "Sibk Property Brokers"
+    ],
+    "source_categories": [
+      "local_established_agency_guide",
+      "official_cultural_context",
+      "portal_market_taxonomy",
+      "property_market_report"
+    ],
+    "description": "A current property/agency phrase, but its scope overlaps West Rand and Roodepoort markets without a stable independent core.",
+    "geographic_scope_narrative": "Roodepoort and its 40-plus suburb market are the strongest evidence; Krugersdorp/Randfontein are more often West Rand. The label should not be launched as a second broad western region yet.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "west_rand"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-d5273c821ff574560e3a"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "No hierarchy until West Rand and Johannesburg West are deliberately separated or merged at product level.",
+    "consumer_search_usefulness": "Potentially useful, but duplicative and confusing against factual Roodepoort and West Rand.",
+    "recommendation": "Research further; do not launch separately from West Rand.",
+    "source_disagreements": "Agency, tourism and district/property usage do not produce a stable boundary.",
+    "overlap_notes": "Strong overlap with West Rand; do not create two competing broad western Search Areas in MVP.",
+    "consumer_query_notes": "Classify as unsupported/defer, with direct Roodepoort/West Rand factual or market options where supported.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-09d2aca15b4a534e6bfb",
+      "src-gp-sa-v01-390a8fa27739925f58bd",
+      "src-gp-sa-v01-87f4050cbb635b274943",
+      "src-gp-sa-v01-b2812f441ef922730f87",
+      "src-gp-sa-v01-c136e6dd9ec72ba612d4"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 6,
+    "membership_state_counts": {
+      "core": 1,
+      "strongly_supported": 1,
+      "supported": 4
+    },
+    "resolved_membership_count": 6,
+    "unresolved_membership_count": 0
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-2a98f7c12d28e8f472e0",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria Far East",
+    "normalized_name": "pretoria far east",
+    "aliases": [
+      "Pretoria outer east",
+      "far eastern Pretoria"
+    ],
+    "market_concept_type": "outer_market_grouping",
+    "proposed_status": "research_further",
+    "launch_priority": "research-further",
+    "evidence_strength": "moderate",
+    "source_count": 3,
+    "independent_source_count": 3,
+    "independent_publishers": [
+      "Private Property",
+      "Property24",
+      "RealProp"
+    ],
+    "source_categories": [
+      "local_established_agency_guide",
+      "portal_market_taxonomy"
+    ],
+    "description": "A current portal/agency term for outer-east lifestyle and farm property, but factual membership is underrepresented in the accepted catalogue.",
+    "geographic_scope_narrative": "Observed terms include Boschkop AH, Bashewa AH and Grootfontein Country Estates; these are recorded as factual-geography gaps rather than invented Search Area members.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "pretoria_east",
+      "pretoria_north_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-b88900563cf89711224b",
+      "sa-gp-v01-8521f641f7beae02b4e5"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Possible outer-east relationship later, but no parent/child authority until factual gaps are reviewed.",
+    "consumer_search_usefulness": "Niche but potentially useful for farms and estates; not MVP-critical.",
+    "recommendation": "Research further after candidate-catalogue follow-up.",
+    "source_disagreements": "Evidence confirms term usage but not a consensus factual core.",
+    "overlap_notes": "Outer-east concepts overlap Pretoria East in portal discovery but should not be silently included.",
+    "consumer_query_notes": "Defer and route factual names through the geography-gap process.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-6dfaa46a8ff671fc8062",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2",
+      "src-gp-sa-v01-d3f947ffb26b86db13b2"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 3,
+    "membership_state_counts": {
+      "supported": 1,
+      "unresolved": 2
+    },
+    "resolved_membership_count": 1,
+    "unresolved_membership_count": 2
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-8521f641f7beae02b4e5",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria North East",
+    "normalized_name": "pretoria north east",
+    "aliases": [
+      "Pretoria north-east",
+      "northern east Pretoria"
+    ],
+    "market_concept_type": "portal_market_grouping",
+    "proposed_status": "research_further",
+    "launch_priority": "research-further",
+    "evidence_strength": "weak_to_moderate",
+    "source_count": 2,
+    "independent_source_count": 2,
+    "independent_publishers": [
+      "Chas Everitt",
+      "Property24"
+    ],
+    "source_categories": [
+      "established_agency_market_guide",
+      "portal_market_taxonomy"
+    ],
+    "description": "A portal-recognised grouping with insufficient independent evidence for a Property Listify launch identity.",
+    "geographic_scope_narrative": "Portal usage includes Annlin, Doornpoort, East Lynne, Gezina, Magalieskruin, Montana and Mamelodi, but the set is too broad and overlaps Pretoria North, Moot and Pretoria East.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [
+      "pretoria_moot",
+      "pretoria_north",
+      "pretoria_east"
+    ],
+    "overlapping_search_area_candidate_ids": [
+      "sa-gp-v01-7132766aa303d6f49ba5",
+      "sa-gp-v01-1a6e17db053a30764b50",
+      "sa-gp-v01-b88900563cf89711224b"
+    ],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Do not model until independent local-market evidence separates it from Moot and Pretoria North.",
+    "consumer_search_usefulness": "Unclear; likely lower than direct factual suburb queries.",
+    "recommendation": "Avoid launch; retain only as research evidence.",
+    "source_disagreements": "The main evidence is a single broad portal grouping.",
+    "overlap_notes": "High overlap and no clear consensus core.",
+    "consumer_query_notes": "Unsupported/defer.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-6cf9b49dbe20bd16e20d",
+      "src-gp-sa-v01-cec858b0af43abdf17a1"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 4,
+    "membership_state_counts": {
+      "disputed": 3,
+      "unresolved": 1
+    },
+    "resolved_membership_count": 3,
+    "unresolved_membership_count": 1
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-04bd34fe3a085c45f853",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria West",
+    "normalized_name": "pretoria west",
+    "aliases": [
+      "western Pretoria"
+    ],
+    "market_concept_type": "factual_node_or_unproven_market",
+    "proposed_status": "avoid",
+    "launch_priority": "avoid",
+    "evidence_strength": "direct_factual_only",
+    "source_count": 2,
+    "independent_source_count": 2,
+    "independent_publishers": [
+      "Private Property",
+      "Property24"
+    ],
+    "source_categories": [
+      "portal_market_taxonomy"
+    ],
+    "description": "A direct property/factual location query, not a sufficiently evidenced broader Search Area for this cycle.",
+    "geographic_scope_narrative": "Current evidence supports a direct Pretoria West node and listing trend page, but not a stable supra-suburb membership set.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [],
+    "overlapping_search_area_candidate_ids": [],
+    "same_name_factual_collision": false,
+    "same_name_factual_collision_ids": [],
+    "nesting_recommendation": "Not applicable for MVP.",
+    "consumer_search_usefulness": "High as a direct factual query; low incremental value as a separate broad Search Area on current evidence.",
+    "recommendation": "Avoid Search Area creation; retain direct factual handling.",
+    "source_disagreements": "No broad consensus set collected.",
+    "overlap_notes": "Do not manufacture a market layer where the factual node serves the intent.",
+    "consumer_query_notes": "Canonical factual location.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-5ccc10d50c340c560ee0",
+      "src-gp-sa-v01-ae408b001050f91ed356"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 0,
+    "membership_state_counts": {},
+    "resolved_membership_count": 0,
+    "unresolved_membership_count": 0
+  },
+  {
+    "schema_version": "0.1",
+    "search_area_candidate_id": "sa-gp-v01-3abf5262dd02101363a9",
+    "identity_authority": "property_market_search_area",
+    "preferred_name": "Pretoria Central",
+    "normalized_name": "pretoria central",
+    "aliases": [
+      "central Pretoria",
+      "Pretoria CBD"
+    ],
+    "market_concept_type": "factual_node_or_unproven_market",
+    "proposed_status": "avoid",
+    "launch_priority": "avoid",
+    "evidence_strength": "direct_factual_only",
+    "source_count": 1,
+    "independent_source_count": 1,
+    "independent_publishers": [
+      "Property24"
+    ],
+    "source_categories": [
+      "portal_market_taxonomy"
+    ],
+    "description": "A direct urban/factual property query without enough evidence that a broader Search Area improves discovery.",
+    "geographic_scope_narrative": "The current evidence is direct-query property usage; no stable broader membership is proposed.",
+    "broader_search_area_candidate_id": null,
+    "relationship_type": null,
+    "overlapping_search_area_keys": [],
+    "overlapping_search_area_candidate_ids": [],
+    "same_name_factual_collision": true,
+    "same_name_factual_collision_ids": [
+      "pl-gp-v01-cb0da1b356fb6b089466"
+    ],
+    "nesting_recommendation": "Not applicable for MVP.",
+    "consumer_search_usefulness": "High as a direct factual node; low as an additional market taxonomy.",
+    "recommendation": "Avoid Search Area creation.",
+    "source_disagreements": "No market-area consensus researched.",
+    "overlap_notes": "Avoid duplicate market/factual pages without evidence.",
+    "consumer_query_notes": "Canonical factual location.",
+    "source_evidence_ids": [
+      "src-gp-sa-v01-990c59526565ebb9ae9f"
+    ],
+    "created_or_researched_date": "2026-08-15",
+    "last_verified_date": "2026-08-15",
+    "membership_assertion_count": 0,
+    "membership_state_counts": {},
+    "resolved_membership_count": 0,
+    "unresolved_membership_count": 0
+  }
+]

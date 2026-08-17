@@ -3,6 +3,7 @@ import { type SearchFilters } from './urlUtils';
 import type { LocationNode } from '@/types/location';
 import { createSearchIntentValidation, type SearchIntentValidationCode } from './searchIntent';
 import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
+import { RENT_PUBLIC_PROPERTY_TYPES } from '../../../shared/property-taxonomy';
 import {
   buildTransactionalGeographyHref,
   createCanonicalSearchLocation,
@@ -25,11 +26,7 @@ export const BUY_PROPERTY_TYPE_OPTIONS = [
   { value: 'farm', label: 'Farm' },
 ] as const;
 
-const LEGACY_PROPERTY_TYPES = new Set([
-  ...BUY_PROPERTY_TYPE_OPTIONS.map(option => option.value),
-  'plot',
-  'commercial',
-]);
+const RENT_PROPERTY_TYPES = new Set<string>(RENT_PUBLIC_PROPERTY_TYPES);
 
 export interface PropertySearchInput {
   searchQuery?: string;
@@ -87,14 +84,13 @@ function addSupportedBuyFilters(input: PropertySearchInput, filters: SearchFilte
 }
 
 /**
- * Preserve the existing non-Buy composer behavior while S1 tightens only the
- * launch-critical Buy contract.
+ * Keep Rent composer output aligned with the canonical public rental contract.
  */
-function addSupportedLegacyFilters(input: PropertySearchInput, filters: SearchFilters) {
+function addSupportedRentFilters(input: PropertySearchInput, filters: SearchFilters) {
   const propertyType = String(input.propertyType || '')
     .trim()
     .toLowerCase();
-  if (LEGACY_PROPERTY_TYPES.has(propertyType)) {
+  if (RENT_PROPERTY_TYPES.has(propertyType)) {
     filters.propertyType = propertyType;
   }
 
@@ -151,10 +147,10 @@ export function buildPropertySearchUrl({
   if (transactionType === 'for-sale') {
     addSupportedBuyFilters(filterInput, filters);
   } else {
-    addSupportedLegacyFilters(filterInput, filters);
+    addSupportedRentFilters(filterInput, filters);
   }
 
-  let canonicalSelection: { scope: SearchScope; context: GeographySearchContext } | undefined;
+  let canonicalSelection: CanonicalSearchLocation | undefined;
   let multiLocationScope: SearchScope | undefined;
   if (locations.length > 0 && searchScope) {
     return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
@@ -190,6 +186,7 @@ export function buildPropertySearchUrl({
       searchAreaAvailability,
       localityRefinementId,
       context: searchScopeContext || canonicalSelection?.context,
+      factualLocationId: canonicalSelection?.factualLocationId,
       filters,
       resultState: { sort: 'relevance', page: 0 },
     }) || '/'

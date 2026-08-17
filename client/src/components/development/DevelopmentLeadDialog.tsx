@@ -20,12 +20,13 @@ import { trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 import { formatPriceCompact } from '@/lib/formatPrice';
 import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
 
-type LeadDialogMode = 'brochure' | 'contact' | 'qualification' | 'info';
+type LeadDialogMode = 'brochure' | 'contact' | 'qualification' | 'info' | 'viewing';
 
 interface DevelopmentLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: LeadDialogMode;
+  listingType?: 'sale' | 'rent';
   ctaLocation?: string;
   unitContext?: {
     id?: number | string | null;
@@ -92,12 +93,54 @@ const MODE_COPY: Record<
     leadSource: 'development_detail_info',
     successMessage: 'Information request submitted.',
   },
+  viewing: {
+    title: 'Request a Viewing',
+    description:
+      'Share your details and the rental team will follow up about a suitable viewing time.',
+    submitLabel: 'Request a Viewing',
+    leadSource: 'development_detail_viewing',
+    successMessage: 'Your viewing request has been sent.',
+  },
 };
+
+function getModeCopy(mode: LeadDialogMode, isRentalListing: boolean) {
+  const copy = MODE_COPY[mode];
+  if (!isRentalListing) return copy;
+
+  if (mode === 'contact') {
+    return {
+      ...copy,
+      title: 'Contact Rental Team',
+      description:
+        'Send your enquiry and the rental team can respond with availability, monthly rent, and next steps.',
+    };
+  }
+
+  if (mode === 'info') {
+    return {
+      ...copy,
+      title: 'Request Rental Information',
+      description:
+        'Share your details to receive the latest monthly rent, specifications, and availability for this unit.',
+    };
+  }
+
+  if (mode === 'brochure') {
+    return {
+      ...copy,
+      description:
+        'Share your details to receive the rental brochure and latest monthly pricing for this development.',
+    };
+  }
+
+  return copy;
+}
 
 export function DevelopmentLeadDialog({
   open,
   onOpenChange,
   mode,
+  listingType = 'sale',
   ctaLocation,
   unitContext,
   development,
@@ -127,11 +170,14 @@ export function DevelopmentLeadDialog({
     }
   }, [open]);
 
-  const copy = MODE_COPY[mode];
+  const isRentalListing = listingType === 'rent';
+  const copy = getModeCopy(mode, isRentalListing);
   const resolvedUnitName = unitContext?.unitName || unitContext?.name || null;
   const resolvedUnitId =
     unitContext?.unitId ||
-    (unitContext?.id !== null && unitContext?.id !== undefined ? String(unitContext.id) : undefined);
+    (unitContext?.id !== null && unitContext?.id !== undefined
+      ? String(unitContext.id)
+      : undefined);
 
   const generatedMessage = useMemo(() => {
     const subject = resolvedUnitName?.trim()
@@ -139,7 +185,9 @@ export function DevelopmentLeadDialog({
       : development.name;
 
     if (mode === 'brochure') {
-      return `Please send me the brochure and latest pricing for ${subject}.`;
+      return isRentalListing
+        ? `Please send me the brochure and latest monthly rent details for ${subject}.`
+        : `Please send me the brochure and latest pricing for ${subject}.`;
     }
 
     if (mode === 'qualification') {
@@ -156,17 +204,26 @@ export function DevelopmentLeadDialog({
       return `I would like to start a full qualification review for ${subject}.${incomeLine}${depositLine}${buyingPowerLine}`.trim();
     }
 
-    if (mode === 'info') {
-      return `Please send me more information about ${subject}, including pricing, specifications, and available options.`;
+    if (mode === 'viewing') {
+      return `I would like to request a viewing for ${subject}. Please contact me to discuss a suitable time.`;
     }
 
-    return `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
+    if (mode === 'info') {
+      return isRentalListing
+        ? `Please send me more information about ${subject}, including monthly rent, specifications, and availability.`
+        : `Please send me more information about ${subject}, including pricing, specifications, and available options.`;
+    }
+
+    return isRentalListing
+      ? `I am interested in renting ${subject}. Please contact me with monthly rent, availability, and next steps.`
+      : `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
   }, [
     affordabilityData?.availableDeposit,
     affordabilityData?.maxAffordable,
     affordabilityData?.monthlyIncome,
     development.name,
     mode,
+    isRentalListing,
     resolvedUnitName,
   ]);
 
@@ -182,8 +239,8 @@ export function DevelopmentLeadDialog({
         result?.deliveryStatus === 'delivered'
           ? copy.successMessage
           : result?.deliveryStatus === 'attention_required'
-            ? 'Your request was received. Sales follow-up still needs attention.'
-            : 'Your request was received. Sales delivery is being completed.',
+            ? `Your request was received. ${isRentalListing ? 'Rental' : 'Sales'} follow-up still needs attention.`
+            : `Your request was received. ${isRentalListing ? 'Rental' : 'Sales'} delivery is being completed.`,
       );
       onOpenChange(false);
 
@@ -193,7 +250,11 @@ export function DevelopmentLeadDialog({
           window.location.href = development.brochureUrl;
         }
       } else if (mode === 'brochure') {
-        toast.info('The sales team will send the brochure to you shortly.');
+        toast.info(
+          isRentalListing
+            ? 'The rental team will send the brochure to you shortly.'
+            : 'The sales team will send the brochure to you shortly.',
+        );
       }
     },
     onError: error => {
@@ -233,6 +294,7 @@ export function DevelopmentLeadDialog({
       email: form.email.trim(),
       phone: form.phone.trim(),
       message: form.message.trim() || generatedMessage,
+      leadType: mode === 'viewing' ? 'viewing_request' : 'inquiry',
       leadSource: copy.leadSource,
       sourceSurface: ctaLocation || 'development_detail',
       referrerUrl: typeof window !== 'undefined' ? window.location.href : undefined,
@@ -259,7 +321,11 @@ export function DevelopmentLeadDialog({
             <DialogHeader className="space-y-3 text-left">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge className="border-0 bg-orange-500/15 text-orange-200 hover:bg-orange-500/15">
-                  {mode === 'info' ? 'Unit Enquiry' : 'Lead Capture'}
+                  {mode === 'info'
+                    ? 'Unit Enquiry'
+                    : mode === 'viewing'
+                      ? 'Viewing Request'
+                      : 'Lead Capture'}
                 </Badge>
                 {unitContext?.unitName ? (
                   <Badge className="border-0 bg-white/10 text-white hover:bg-white/10">
@@ -286,8 +352,9 @@ export function DevelopmentLeadDialog({
                     </p>
                   ) : null}
                   <p className="text-xs leading-5 text-slate-300">
-                    This enquiry will be routed with the right development and unit context so the
-                    sales team can follow up with the correct information.
+                    This enquiry will be routed with the right development and unit context so the{' '}
+                    {isRentalListing ? 'rental team' : 'sales team'} can follow up with the correct
+                    information.
                   </p>
                 </div>
               </div>
@@ -299,12 +366,14 @@ export function DevelopmentLeadDialog({
                 <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
                   <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Price From
+                      {isRentalListing ? 'Monthly rent from' : 'Price From'}
                     </p>
                     <p className="mt-2 text-base font-bold text-white">
                       {unitContext.unitPriceFrom
-                        ? formatPriceCompact(unitContext.unitPriceFrom)
-                        : 'On request'}
+                        ? `${formatPriceCompact(unitContext.unitPriceFrom)}${isRentalListing ? ' / month' : ''}`
+                        : isRentalListing
+                          ? 'Monthly rent on request'
+                          : 'On request'}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-3">
@@ -333,8 +402,8 @@ export function DevelopmentLeadDialog({
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="text-sm font-semibold text-white">What happens after submit</p>
                 <p className="mt-1 text-sm leading-6 text-slate-300">
-                  The request is stored as a qualified development lead and can be actioned by the
-                  right sales team without losing the unit context.
+                  The request is stored with development context and can be actioned by the right{' '}
+                  {isRentalListing ? 'rental' : 'sales'} team without losing the unit context.
                 </p>
               </div>
               <div className="flex items-center gap-4 text-xs text-slate-300">
@@ -344,7 +413,7 @@ export function DevelopmentLeadDialog({
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Mail className="h-3.5 w-3.5" />
-                  Sales attribution
+                  {isRentalListing ? 'Rental attribution' : 'Sales attribution'}
                 </span>
               </div>
             </div>
@@ -370,8 +439,8 @@ export function DevelopmentLeadDialog({
                       </p>
                     ) : null}
                     <p className="text-xs text-slate-500">
-                      Your details are used to connect you with the correct sales and qualification
-                      team.
+                      Your details are used to connect you with the correct{' '}
+                      {isRentalListing ? 'rental' : 'sales and qualification'} team.
                     </p>
                   </div>
                 </div>
@@ -455,9 +524,17 @@ export function DevelopmentLeadDialog({
                     if (errors.consent) setErrors(prev => ({ ...prev, consent: '' }));
                   }}
                 />
-                <Label htmlFor="development-lead-consent" className="text-xs leading-5 text-slate-600">
+                <Label
+                  htmlFor="development-lead-consent"
+                  className="text-xs leading-5 text-slate-600"
+                >
                   I agree to be contacted about this enquiry. See our{' '}
-                  <a className="text-blue-700 underline" href="/legal/privacy" target="_blank" rel="noreferrer">
+                  <a
+                    className="text-blue-700 underline"
+                    href="/legal/privacy"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     Privacy Policy
                   </a>
                   .

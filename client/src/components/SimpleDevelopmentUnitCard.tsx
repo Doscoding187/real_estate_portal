@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { Bath, Bed, Building2, MapPin, Trees } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { withApiBase } from '@/lib/mediaUtils';
+import { withRentalPeriod } from '@/lib/rentPresentation';
 import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
 
 export interface SimpleDevelopmentUnitCardProps {
@@ -19,6 +20,7 @@ export interface SimpleDevelopmentUnitCardProps {
   bathrooms?: number | null;
   unitSize?: number | null;
   yardSize?: number | null;
+  listingType?: 'sale' | 'rent';
   badgeLabel?: string;
 }
 
@@ -51,6 +53,7 @@ export function SimpleDevelopmentUnitCard({
   bathrooms,
   unitSize,
   yardSize,
+  listingType,
   badgeLabel = 'New development',
 }: SimpleDevelopmentUnitCardProps) {
   const locationLabel = suburb ? `${suburb}, ${city}` : city;
@@ -121,7 +124,7 @@ export function SimpleDevelopmentUnitCard({
 
       <div className="p-4">
         <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">
-          {formatPrice(priceFrom, priceTo)}
+          {withRentalPeriod(formatPrice(priceFrom, priceTo), listingType)}
         </div>
 
         <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">

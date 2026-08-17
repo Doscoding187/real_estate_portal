@@ -39,8 +39,14 @@ function getPropertyDescriptor(filters: Partial<SearchFilters>): string {
 }
 
 export function getSavedSearchSourceLabel(filters: Partial<SearchFilters>): string {
-  if (filters.listingSource === 'manual') return 'Property Listings';
-  if (filters.listingSource === 'development') return 'New Developments';
+  const rentalLabel = filters.listingType === 'rent';
+  if (filters.listingSource === 'manual') {
+    return rentalLabel ? 'Rental Listings' : 'Property Listings';
+  }
+  if (filters.listingSource === 'development') {
+    return rentalLabel ? 'Rental Developments' : 'New Developments';
+  }
+  if (rentalLabel) return 'Rental Listings';
   return 'All Results';
 }
 

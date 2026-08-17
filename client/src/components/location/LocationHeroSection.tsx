@@ -17,6 +17,8 @@ import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import type { LocationNode } from '@/types/location';
 import { buildLocationDiscoveryPath } from '@/lib/locationDiscovery';
 import { buildBuySearchUrl, buildPropertySearchUrl } from '@/lib/heroJourneySearch';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 
 interface HeroCampaign {
   imageUrl: string;
@@ -61,7 +63,7 @@ const filterConfig = {
     },
   },
   rental: {
-    propertyTypes: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Room', 'Studio'],
+    propertyTypes: [...RENT_PUBLIC_PROPERTY_TYPES],
   },
   developments: {
     types: [
@@ -86,6 +88,14 @@ const filterConfig = {
   },
 };
 
+const RENT_PROPERTY_TYPE_LABELS: Record<string, string> = {
+  apartment: 'Apartment',
+  house: 'House',
+  townhouse: 'Townhouse',
+  cluster_home: 'Cluster home',
+  farm: 'Farm',
+};
+
 export function LocationHeroSection({
   locationName,
   locationSlug,
@@ -104,6 +114,7 @@ export function LocationHeroSection({
   const [internalActiveTab, setInternalActiveTab] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showFilters, setShowFilters] = useState(false);
+  const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const activeTab = controlledActiveTab ?? internalActiveTab;
   const locationSegments = locationSlug.split('/').filter(Boolean);
 
@@ -138,7 +149,14 @@ export function LocationHeroSection({
   });
 
   const handleCategoryClick = (categoryId: string) => {
-    if (neutralMode && categoryId !== 'buy') return;
+    if (categoryId === 'rental' && !rentJourneyEnabled) return;
+    if (
+      neutralMode &&
+      categoryId !== 'buy' &&
+      !(categoryId === 'rental' && rentJourneyEnabled)
+    ) {
+      return;
+    }
     if (controlledActiveTab === undefined) {
       setInternalActiveTab(categoryId);
     }
@@ -154,6 +172,7 @@ export function LocationHeroSection({
   const getSearchPath = (categoryId: string | null, location: LocationNode) => {
     const effectiveCategoryId = categoryId || (neutralMode ? '' : 'buy');
     if (!effectiveCategoryId) return undefined;
+    if (effectiveCategoryId === 'rental' && !rentJourneyEnabled) return undefined;
 
     if (neutralMode && effectiveCategoryId === 'buy') {
       return buildCanonicalBuyResultsPath(location);
@@ -236,11 +255,13 @@ export function LocationHeroSection({
         <Card className="w-full max-w-6xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-6 md:p-8">
           {/* Category Tabs */}
           <div className="flex flex-wrap lg:flex-nowrap justify-center gap-2 mb-6">
-            {categories.map(category => {
+            {categories
+              .filter(category => category.id !== 'rental' || rentJourneyEnabled)
+              .map(category => {
               const Icon = category.icon;
               const isActive = activeTab === category.id;
-              const isUnavailableInNeutralMode =
-                neutralMode && category.id !== 'buy' && category.id !== 'rental';
+                const isUnavailableInNeutralMode =
+                  neutralMode && category.id !== 'buy' && category.id !== 'rental';
               return (
                 <button
                   key={category.id}
@@ -261,8 +282,8 @@ export function LocationHeroSection({
                   <Icon className="h-4 w-4" />
                   {category.label}
                 </button>
-              );
-            })}
+                );
+              })}
 
             {/* Post Property CTA */}
             <button
@@ -275,7 +296,9 @@ export function LocationHeroSection({
           </div>
 
           {/* Dynamic Filter Panel */}
-          {showFilters && activeTab && (
+          {showFilters &&
+            activeTab &&
+            (activeTab !== 'rental' || rentJourneyEnabled) && (
             <div className="mb-6 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* BUY FILTERS */}
@@ -392,7 +415,7 @@ export function LocationHeroSection({
                           <SelectItem value="all">Any Type</SelectItem>
                           {filterConfig.rental.propertyTypes.map(type => (
                             <SelectItem key={type} value={type}>
-                              {type}
+                              {RENT_PROPERTY_TYPE_LABELS[type] || type}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -400,20 +423,20 @@ export function LocationHeroSection({
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Max Budget
+                        Max monthly rent
                       </Label>
                       <Select
                         value={filters.priceMax}
                         onValueChange={val => handleFilterChange('priceMax', val)}
                       >
                         <SelectTrigger className="h-10 bg-gray-50/50">
-                          <SelectValue placeholder="Any Budget" />
+                          <SelectValue placeholder="Any monthly rent" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="5000">R 5,000</SelectItem>
-                          <SelectItem value="10000">R 10,000</SelectItem>
-                          <SelectItem value="20000">R 20,000</SelectItem>
-                          <SelectItem value="50000">R 50,000+</SelectItem>
+                          <SelectItem value="5000">R 5,000 / month</SelectItem>
+                          <SelectItem value="10000">R 10,000 / month</SelectItem>
+                          <SelectItem value="20000">R 20,000 / month</SelectItem>
+                          <SelectItem value="50000">R 50,000+ / month</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

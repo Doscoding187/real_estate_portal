@@ -35,6 +35,7 @@ import {
   narrowSearchAreaQueryBoundary,
   type PublicSearchQueryBoundary,
 } from './searchAreaQueryBoundary';
+import { searchDiscoveryService } from './searchDiscoveryService';
 
 export interface PublicSearchInventoryInput {
   province?: string;
@@ -42,6 +43,7 @@ export interface PublicSearchInventoryInput {
   suburb?: string[];
   locations?: string[];
   locationId?: string;
+  factualLocationId?: string;
   locationIds?: string[];
   searchAreaId?: string;
   searchAreaIds?: string[];
@@ -120,6 +122,7 @@ export interface PublicSearchInventoryResult {
 function hasLocationIntent(input: PublicSearchInventoryInput): boolean {
   return Boolean(
     input.locationId ||
+    input.factualLocationId ||
     input.locationIds?.length ||
     input.searchAreaId ||
     input.searchAreaIds?.length ||
@@ -240,6 +243,17 @@ export interface SearchAreaResolver {
   ) => Promise<SearchAreaResolution>;
 }
 
+export type PublicSearchExecutionMode = 'public' | 'controlled_acceptance';
+
+export interface PublicSearchServiceOptions {
+  /**
+   * Controlled server-side acceptance may execute candidate Search Areas while
+   * they remain preview lifecycle. This is deliberately not part of the public
+   * request contract and is disabled in production environments.
+   */
+  executionMode?: PublicSearchExecutionMode;
+}
+
 export interface PublicLocationResolver {
   resolvePublicLocation: (opts: {
     locationId?: string;
@@ -331,10 +345,27 @@ function sourceSort(sortOption: PublicSearchBlendSortOption): SortOption {
 }
 
 export class PublicSearchService {
+  private readonly executionMode: PublicSearchExecutionMode;
+
   constructor(
     private readonly searchAreaResolver: SearchAreaResolver = searchAreaAuthority,
     private readonly publicLocationResolver: PublicLocationResolver = locationResolver,
-  ) {}
+    options: PublicSearchServiceOptions = {},
+  ) {
+    const productionRuntime =
+      process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production';
+    this.executionMode =
+      options.executionMode === 'controlled_acceptance' && !productionRuntime
+        ? 'controlled_acceptance'
+        : 'public';
+  }
+
+  private searchAreaResolutionOptions(journey: 'buy' | 'rent'): ResolveSearchAreaOptions {
+    return {
+      journey,
+      ...(this.executionMode === 'controlled_acceptance' ? { includePreview: true } : {}),
+    };
+  }
 
   async searchInventory(input: PublicSearchInventoryInput): Promise<PublicSearchInventoryResult> {
     const validationIssue = validatePublicSearchInput(input);
@@ -357,6 +388,40 @@ export class PublicSearchService {
       : DEFAULT_SEARCH_RESULT_SORT;
     const sourceSortOption = sourceSort(sortOption);
 
+    let effectiveLocationId = input.locationId;
+    if (input.factualLocationId) {
+      const factualResolution = await searchDiscoveryService.resolveSelection(
+        {
+          kind: 'canonical_location',
+          canonicalLocationId: input.locationId || '',
+          factualLocationId: input.factualLocationId,
+        },
+        { journey: input.listingType === 'sale' ? 'buy' : 'rent' },
+      );
+
+      if (factualResolution.status !== 'resolved') {
+        return emptyLocationResult(input, 'unavailable', factualResolution.message);
+      }
+
+      if (factualResolution.scope.kind === 'search_area' || factualResolution.scope.kind === 'multi_location') {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'The selected factual identity did not resolve to a canonical location scope.',
+        );
+      }
+
+      const resolvedLocationId = factualResolution.scope.canonicalLocationId;
+      if (input.locationId && input.locationId !== resolvedLocationId) {
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'The factual identity does not match its canonical runtime handle.',
+        );
+      }
+      effectiveLocationId = resolvedLocationId;
+    }
+
     let location: ResolvedLocation | null = null;
     let queryBoundary: PublicSearchQueryBoundary | undefined;
     let searchAreaContext: PublicSearchInventoryResult['searchAreaContext'];
@@ -375,11 +440,12 @@ export class PublicSearchService {
       }
 
       const searchAreaJourney = input.listingType === 'sale' ? 'buy' : 'rent';
-      const resolution = await this.searchAreaResolver.resolveSearchArea(input.searchAreaId, {
-        journey: searchAreaJourney,
-      });
+      const resolution = await this.searchAreaResolver.resolveSearchArea(
+        input.searchAreaId,
+        this.searchAreaResolutionOptions(searchAreaJourney),
+      );
 
-      if (resolution.status === 'preview') {
+      if (resolution.status === 'preview' && this.executionMode !== 'controlled_acceptance') {
         return emptyLocationResult(input, 'unavailable', searchAreaFailureMessage('preview_only'));
       }
 
@@ -443,14 +509,17 @@ export class PublicSearchService {
       const searchAreaIds = canonicalizeSearchAreaIds(input.searchAreaIds);
       const resolutions = await Promise.all(
         searchAreaIds.map(searchAreaId =>
-          this.searchAreaResolver.resolveSearchArea(searchAreaId, {
-            journey: searchAreaJourney,
-          }),
+          this.searchAreaResolver.resolveSearchArea(
+            searchAreaId,
+            this.searchAreaResolutionOptions(searchAreaJourney),
+          ),
         ),
       );
 
       const unavailableResolution = resolutions.find(
-        resolution => resolution.status !== 'available',
+        resolution =>
+          resolution.status === 'unavailable' ||
+          (resolution.status === 'preview' && this.executionMode !== 'controlled_acceptance'),
       );
       if (unavailableResolution?.status === 'preview') {
         return emptyLocationResult(input, 'unavailable', searchAreaFailureMessage('preview_only'));
@@ -465,7 +534,9 @@ export class PublicSearchService {
 
       const boundaries = resolutions
         .map(resolution =>
-          resolution.status === 'available' ? buildSearchAreaQueryBoundary(resolution) : null,
+          resolution.status === 'available' || resolution.status === 'preview'
+            ? buildSearchAreaQueryBoundary(resolution)
+            : null,
         )
         .filter((boundary): boundary is NonNullable<typeof boundary> => Boolean(boundary));
       queryBoundary = combineSearchAreaQueryBoundaries(boundaries) ?? undefined;
@@ -481,8 +552,8 @@ export class PublicSearchService {
         (
           resolution,
         ): resolution is Extract<SearchAreaResolution, { status: 'available' | 'preview' }> & {
-          status: 'available';
-        } => resolution.status === 'available',
+          status: 'available' | 'preview';
+        } => resolution.status === 'available' || resolution.status === 'preview',
       );
       searchAreaContexts = availableResolutions.map(resolution => resolution.summary);
       searchAreaContext = searchAreaContexts.length === 1 ? searchAreaContexts[0] : undefined;
@@ -524,7 +595,7 @@ export class PublicSearchService {
         !input.province &&
         !input.city &&
         !input.suburb?.length &&
-        !input.locationId &&
+        !effectiveLocationId &&
         (input.locations?.length || 0) > 1
       ) {
         return emptyLocationResult(
@@ -535,7 +606,7 @@ export class PublicSearchService {
       }
 
       const resolution = await this.publicLocationResolver.resolvePublicLocation({
-        locationId: input.locationId,
+        locationId: effectiveLocationId,
         provinceSlug: input.province,
         citySlug:
           input.city ||

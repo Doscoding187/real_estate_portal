@@ -27,6 +27,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import {
   getHomepageHeroJourneys,
+  isHomepageHeroJourneyEnabled,
   normalizePublicHeroJourney,
   type PublicHeroJourneyKey,
 } from '@/lib/publicNavigation';
@@ -36,12 +37,15 @@ import {
   BUY_PROPERTY_TYPE_OPTIONS,
   getPriceRangeError,
 } from '@/lib/heroJourneySearch';
+import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import { LocationNode } from '@/types/location';
+import { trpc } from '@/lib/trpc';
 import { VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED } from '@/const';
-import { getSearchDiscoverySuggestions } from '@/lib/searchDiscovery';
-import type { SearchDiscoverySuggestion } from '@/lib/searchDiscovery';
 import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
+import { parseCanonicalLocationId } from '@shared/locationAuthority';
+import type { SearchAreaDiscoveryResult, SearchDiscoveryResult } from '@shared/searchDiscovery';
+import type { SearchJourneyId } from '@shared/searchScope';
 
 // ... imports
 export interface EnhancedHeroProps {
@@ -122,7 +126,9 @@ export function EnhancedHero({
   // the explicit intent URL.
   const activeTab = controlledTab || internalTab;
   const hasExplicitJourney = String(activeTab || '').trim().length > 0;
-  const normalizedActiveTab = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) || '' : '';
+  const requestedJourney = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) || '' : '';
+  const normalizedActiveTab =
+    requestedJourney === 'rent' && !isHomepageHeroJourneyEnabled('rent') ? '' : requestedJourney;
   const hasSelectedJourney = normalizedActiveTab.length > 0;
   const locationInputRef = useRef<HTMLInputElement>(null);
   const previousJourneyRef = useRef(normalizedActiveTab);
@@ -134,11 +140,20 @@ export function EnhancedHero({
 
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
+  const [selectedSearchArea, setSelectedSearchArea] = useState<SearchAreaDiscoveryResult | null>(
+    null,
+  );
   const hasCanonicalLocations =
-    selectedLocations.length > 0 && selectedLocations.every(hasCanonicalLocationIdentity);
-  const canSubmitSearch = hasCanonicalLocations;
+    selectedLocations.length > 0 &&
+    selectedLocations.every(
+      location => location.type !== 'area' && hasCanonicalLocationIdentity(location),
+    );
+  const hasSelectedSearchArea = Boolean(selectedSearchArea);
+  const canSubmitSearch = hasCanonicalLocations || hasSelectedSearchArea;
   const locationDiscoveryPath =
-    selectedLocations.length === 1 ? buildLocationDiscoveryPath(selectedLocations[0]) : undefined;
+    !hasSelectedSearchArea && selectedLocations.length === 1
+      ? buildLocationDiscoveryPath(selectedLocations[0])
+      : undefined;
   const [showIntentResolver, setShowIntentResolver] = useState(false);
 
   useEffect(() => {
@@ -152,12 +167,26 @@ export function EnhancedHero({
     return undefined;
   }, [normalizedActiveTab, variant]);
 
-  // Search Discovery Engine — foundation mode
+  // Search Discovery Engine — server-owned typed identity mode
   const isDiscoveryEnabled = VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED === '1';
-  const discoverySuggestions: SearchDiscoverySuggestion[] = useMemo(() => {
-    if (!isDiscoveryEnabled) return [];
-    return getSearchDiscoverySuggestions(searchQuery);
-  }, [isDiscoveryEnabled, searchQuery]);
+  const discoveryJourney = [
+    'buy',
+    'rent',
+    'shared_living',
+    'developments',
+    'plot_land',
+    'commercial',
+  ].includes(normalizedActiveTab)
+    ? (normalizedActiveTab as SearchJourneyId)
+    : undefined;
+  const { data: serverDiscoverySuggestions } = trpc.location.searchDiscoverySuggestions.useQuery(
+    { query: searchQuery, limit: 6, journey: discoveryJourney },
+    { enabled: isDiscoveryEnabled && searchQuery.trim().length >= 2 },
+  );
+  const discoverySuggestions: SearchDiscoveryResult[] = useMemo(
+    () => (isDiscoveryEnabled ? serverDiscoverySuggestions || [] : []),
+    [isDiscoveryEnabled, serverDiscoverySuggestions],
+  );
 
   // Filter panel state
   const [showFilters, setShowFilters] = useState(false);
@@ -216,17 +245,14 @@ export function EnhancedHero({
       },
     },
     rent: {
-      intents: ['Residential', 'Commercial', 'Shared Living'],
-      propertyTypes: {
-        Residential: ['House', 'Apartment', 'Townhouse', 'Cluster', 'Room', 'Studio'],
-        Commercial: ['Office', 'Retail', 'Industrial', 'Warehouse'],
-        'Shared Living': [
-          'Room in Apartment',
-          'Room in House',
-          'Co-Living Space',
-          'Student Accommodation',
-        ],
-      },
+      intents: ['Residential'],
+      propertyTypes: [
+        { value: 'house', label: 'House' },
+        { value: 'apartment', label: 'Apartment' },
+        { value: 'townhouse', label: 'Townhouse' },
+        { value: 'cluster_home', label: 'Cluster home' },
+        { value: 'farm', label: 'Farm / smallholding' },
+      ].filter(option => (RENT_PUBLIC_PROPERTY_TYPES as readonly string[]).includes(option.value)),
     },
     developments: {
       types: [
@@ -287,7 +313,11 @@ export function EnhancedHero({
     setLocation(
       buildBuySearchUrl({
         searchQuery,
-        selectedLocations,
+        selectedLocations: hasSelectedSearchArea ? [] : selectedLocations,
+        searchScope: selectedSearchArea
+          ? { kind: 'search_area', searchAreaId: selectedSearchArea.searchAreaId }
+          : undefined,
+        searchAreaAvailability: selectedSearchArea?.availability,
         propertyType: filters.propertyTypes[0],
         minPrice: filters.priceMin,
         maxPrice: filters.priceMax,
@@ -330,7 +360,11 @@ export function EnhancedHero({
         buildPropertySearchUrl({
           transactionType: 'to-rent',
           searchQuery,
-          selectedLocations,
+          selectedLocations: hasSelectedSearchArea ? [] : selectedLocations,
+          searchScope: selectedSearchArea
+            ? { kind: 'search_area', searchAreaId: selectedSearchArea.searchAreaId }
+            : undefined,
+          searchAreaAvailability: selectedSearchArea?.availability,
           propertyType: filters.propertyTypes[0],
           minPrice: filters.budgetMin,
           maxPrice: filters.budgetMax,
@@ -530,6 +564,11 @@ export function EnhancedHero({
                       inputAriaDescribedBy="homepage-journey-selection-prompt"
                       selectedLocations={selectedLocations}
                       onRemove={index => {
+                        if (hasSelectedSearchArea) {
+                          setSelectedSearchArea(null);
+                          setSelectedLocations([]);
+                          return;
+                        }
                         setSelectedLocations(prev => prev.filter((_, i) => i !== index));
                       }}
                       onChange={value => {
@@ -537,8 +576,12 @@ export function EnhancedHero({
                       }}
                       onSelect={loc => {
                         setSearchQuery('');
+                        setSelectedSearchArea(null);
 
                         setSelectedLocations(prev => {
+                          const canonicalLocations = prev.filter(
+                            location => location.type !== 'area',
+                          );
                           const isSameLocation = (candidate: LocationNode) =>
                             candidate.id === loc.id ||
                             (candidate.slug === loc.slug &&
@@ -546,14 +589,84 @@ export function EnhancedHero({
                               candidate.provinceSlug === loc.provinceSlug &&
                               candidate.citySlug === loc.citySlug);
 
-                          if (prev.some(isSameLocation)) return prev;
+                          if (canonicalLocations.some(isSameLocation)) return canonicalLocations;
 
-                          return [...prev, loc];
+                          return [...canonicalLocations, loc];
                         });
                       }}
                       onSubmit={handleSearch}
                       maxLocations={5}
                       discoverySuggestions={discoverySuggestions}
+                      onDiscoverySelect={(suggestion: SearchDiscoveryResult) => {
+                        if (suggestion.kind === 'search_area') {
+                          if (
+                            suggestion.availability !== 'available' ||
+                            !suggestion.publicEligible
+                          ) {
+                            return;
+                          }
+
+                          setSearchQuery('');
+                          setSelectedSearchArea(suggestion);
+                          setSelectedLocations([
+                            {
+                              id: suggestion.searchAreaId,
+                              searchAreaId: suggestion.searchAreaId,
+                              name: suggestion.label,
+                              slug:
+                                suggestion.publicSlug ||
+                                suggestion.label.toLowerCase().replace(/\s+/g, '-'),
+                              type: 'area',
+                              selectionKind: 'search_area',
+                              selectionTypeLabel: suggestion.display.typeLabel,
+                              selectionContextLabel: suggestion.display.contextLabel,
+                            },
+                          ]);
+                          return;
+                        }
+
+                        const parsed = parseCanonicalLocationId(suggestion.canonicalLocationId);
+                        if (!parsed) return;
+
+                        const type =
+                          parsed.level === 'province'
+                            ? 'province'
+                            : parsed.level === 'city'
+                              ? 'city'
+                              : 'suburb';
+                        const slug =
+                          suggestion.suburbSlug || suggestion.citySlug || suggestion.provinceSlug;
+                        const location: LocationNode = {
+                          id: suggestion.canonicalLocationId,
+                          canonicalLocationId: suggestion.canonicalLocationId,
+                          ...(suggestion.factualLocationId
+                            ? { factualLocationId: suggestion.factualLocationId }
+                            : {}),
+                          name: suggestion.label,
+                          slug,
+                          type,
+                          provinceSlug: suggestion.provinceSlug,
+                          citySlug: suggestion.citySlug,
+                        };
+
+                        setSearchQuery('');
+                        setSelectedSearchArea(null);
+                        setSelectedLocations(prev => {
+                          const canonicalLocations = prev.filter(
+                            location => location.type !== 'area',
+                          );
+                          if (
+                            canonicalLocations.some(
+                              candidate =>
+                                candidate.canonicalLocationId === location.canonicalLocationId ||
+                                candidate.factualLocationId === location.factualLocationId,
+                            )
+                          ) {
+                            return canonicalLocations;
+                          }
+                          return [...canonicalLocations, location];
+                        });
+                      }}
                       onDiscoveryNavigate={(path: string) => {
                         setLocation(path);
                       }}
@@ -596,7 +709,7 @@ export function EnhancedHero({
                   </Button>
                 </form>
 
-                {showIntentResolver && !hasSelectedJourney && hasCanonicalLocations ? (
+                {showIntentResolver && !hasSelectedJourney && canSubmitSearch ? (
                   <section
                     className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4"
                     aria-labelledby="homepage-location-intent-heading"
@@ -614,7 +727,11 @@ export function EnhancedHero({
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         type="button"
-                        disabled
+                        disabled={!hasSelectedSearchArea}
+                        onClick={() => {
+                          handleTabChange('buy');
+                          setShowIntentResolver(false);
+                        }}
                         aria-describedby={
                           selectedLocations.length > 1 ? 'homepage-location-intent-note' : undefined
                         }
@@ -623,8 +740,16 @@ export function EnhancedHero({
                       >
                         Buy
                       </Button>
-                      <Button type="button" variant="outline" disabled>
-                        Rent (coming soon)
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={!hasSelectedSearchArea}
+                        onClick={() => {
+                          handleTabChange('rent');
+                          setShowIntentResolver(false);
+                        }}
+                      >
+                        Rent
                       </Button>
                       <Button type="button" variant="outline" disabled>
                         Explore these areas (coming soon)
@@ -675,7 +800,7 @@ export function EnhancedHero({
                   <div className="mt-5 border-t border-slate-100 pt-5 animate-in slide-in-from-top-2 duration-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       {/* BUY FILTERS */}
-                      {activeTab === 'buy' && (
+                      {normalizedActiveTab === 'buy' && (
                         <>
                           {priceRangeError && (
                             <p
@@ -816,7 +941,7 @@ export function EnhancedHero({
                       )}
 
                       {/* RENTAL FILTERS */}
-                      {activeTab === 'rent' && (
+                      {normalizedActiveTab === 'rent' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -831,33 +956,31 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {Object.values(filterConfig.rent.propertyTypes)
-                                  .flat()
-                                  .map((type: string) => (
-                                    <SelectItem key={type} value={type}>
-                                      {type}
-                                    </SelectItem>
-                                  ))}
+                                {filterConfig.rent.propertyTypes.map((option: any) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
 
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Max Budget
+                              Max monthly rent
                             </Label>
                             <Select
                               value={filters.budgetMax}
                               onValueChange={val => handleFilterChange('budgetMax', val)}
                             >
                               <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                                <SelectValue placeholder="Any Budget" />
+                                <SelectValue placeholder="Any monthly rent" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="5000">R 5,000</SelectItem>
-                                <SelectItem value="10000">R 10,000</SelectItem>
-                                <SelectItem value="20000">R 20,000</SelectItem>
-                                <SelectItem value="50000">R 50,000+</SelectItem>
+                                <SelectItem value="5000">R 5,000 / month</SelectItem>
+                                <SelectItem value="10000">R 10,000 / month</SelectItem>
+                                <SelectItem value="20000">R 20,000 / month</SelectItem>
+                                <SelectItem value="50000">R 50,000+ / month</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -865,7 +988,7 @@ export function EnhancedHero({
                       )}
 
                       {/* DEVELOPMENTS FILTERS */}
-                      {activeTab === 'developments' && (
+                      {normalizedActiveTab === 'developments' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -940,7 +1063,7 @@ export function EnhancedHero({
                       )}
 
                       {/* PLOT & LAND FILTERS */}
-                      {activeTab === 'plot_land' && (
+                      {normalizedActiveTab === 'plot_land' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1000,7 +1123,7 @@ export function EnhancedHero({
                       )}
 
                       {/* COMMERCIAL FILTERS */}
-                      {activeTab === 'commercial' && (
+                      {normalizedActiveTab === 'commercial' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1060,7 +1183,7 @@ export function EnhancedHero({
                       )}
 
                       {/* SHARED LIVING FILTERS */}
-                      {activeTab === 'shared_living' && (
+                      {normalizedActiveTab === 'shared_living' && (
                         <>
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

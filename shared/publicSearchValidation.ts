@@ -1,4 +1,6 @@
+import { isFactualGeographyId } from './factualRuntimeGeographyBridge';
 import { parseCanonicalLocationId } from './locationAuthority';
+import { RENT_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
 import { isSearchAreaId, MULTI_LOCATION_MAX, MULTI_LOCATION_MIN } from './searchScope';
 
 export interface PublicSearchInputValidationIssue {
@@ -12,10 +14,12 @@ interface PublicSearchInputLike {
   suburb?: string[];
   locations?: string[];
   locationId?: string;
+  factualLocationId?: string;
   locationIds?: string[];
   searchAreaId?: string;
   searchAreaIds?: string[];
   listingType?: 'sale' | 'rent';
+  propertyType?: string;
   minPrice?: number;
   maxPrice?: number;
   minArea?: number;
@@ -45,6 +49,17 @@ export function validatePublicSearchInput(
     return {
       path: 'listingType',
       message: 'The public search journey must be Buy or Rent.',
+    };
+  }
+
+  if (
+    listingType === 'rent' &&
+    input.propertyType !== undefined &&
+    !(RENT_PUBLIC_PROPERTY_TYPES as readonly string[]).includes(input.propertyType)
+  ) {
+    return {
+      path: 'propertyType',
+      message: 'This rental property type is not available in the Rent journey.',
     };
   }
 
@@ -103,6 +118,13 @@ export function validatePublicSearchInput(
   const canonicalLocation = input.locationId
     ? parseCanonicalLocationId(input.locationId)
     : undefined;
+
+  if (input.factualLocationId && !isFactualGeographyId(input.factualLocationId)) {
+    return {
+      path: 'factualLocationId',
+      message: 'The factual location ID must use a stable Property Listify identity.',
+    };
+  }
 
   if (input.searchAreaId && !isSearchAreaId(input.searchAreaId)) {
     return {
@@ -210,6 +232,19 @@ export function validatePublicSearchInput(
     return {
       path: 'searchAreaId',
       message: 'Search Area requests cannot combine a Search Area with broad geography fields.',
+    };
+  }
+
+  if (
+    input.factualLocationId &&
+    (input.searchAreaId ||
+      input.searchAreaIds?.length ||
+      input.locationIds?.length ||
+      input.locations?.length)
+  ) {
+    return {
+      path: 'factualLocationId',
+      message: 'A factual location identity cannot be combined with an OR geography selection.',
     };
   }
 

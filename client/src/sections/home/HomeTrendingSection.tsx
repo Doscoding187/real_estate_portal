@@ -168,7 +168,8 @@ export function HomeTrendingSection({
                         area={item.area}
                         yardSize={item.yardSize}
                         propertyType={item.propertyType}
-                        badgeLabel="Resale"
+                        listingType={item.listingType}
+                        badgeLabel={item.listingType === 'rent' ? 'Property listing' : 'Resale'}
                       />
                     ) : item.kind === 'unit' ? (
                       <SimpleDevelopmentUnitCard
@@ -185,6 +186,7 @@ export function HomeTrendingSection({
                         bathrooms={item.bathrooms}
                         unitSize={item.unitSize}
                         yardSize={item.yardSize}
+                        listingType={item.listingType}
                         badgeLabel="New development"
                       />
                     ) : (

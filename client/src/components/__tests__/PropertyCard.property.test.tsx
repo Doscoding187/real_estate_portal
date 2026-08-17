@@ -149,6 +149,23 @@ describe('PropertyCard - Property-Based Tests', () => {
     expect(screen.getByRole('button', { name: 'View details' })).toBeInTheDocument();
   });
 
+  it('does not expose Compare for Rent even when a caller supplies a comparison handler', () => {
+    render(
+      <PropertyCard
+        id="rent-card"
+        propertyId={43}
+        title="Rental home"
+        price={15000}
+        location="Rosebank, Johannesburg"
+        image="https://example.com/rent.jpg"
+        listingType="rent"
+        onCompareClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /Compare property/i })).not.toBeInTheDocument();
+  });
+
   /**
    * Property Test 10: Required field display
    *

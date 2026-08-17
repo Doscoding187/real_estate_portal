@@ -1,0 +1,6 @@
+# Runtime dependencies for the reproducible source-processing pipeline.
+# These are zero-cost, open-source libraries; they are not application/runtime
+# geography providers.
+# The PyPI distribution is named osmium; it provides the `osmium` import.
+osmium==4.0.2
+shapely==2.1.1

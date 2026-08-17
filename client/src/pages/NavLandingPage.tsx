@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { HomeLayout } from '@/layouts/HomeLayout';
 import { Button } from '@/components/ui/button';
 import { applySeo } from '@/lib/seo';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 type LandingPageConfig = {
   title: string;
@@ -680,6 +681,8 @@ function getPageConfig(): LandingPageConfig {
 
 export default function NavLandingPage() {
   const page = getPageConfig();
+  const primaryCtaEnabled =
+    !page.primaryCta.href.startsWith('/property-to-rent') || isHomepageHeroJourneyEnabled('rent');
 
   useEffect(() => {
     applySeo({
@@ -704,9 +707,11 @@ export default function NavLandingPage() {
               {page.description}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href={page.primaryCta.href}>
-                <Button className="w-full sm:w-auto">{page.primaryCta.label}</Button>
-              </Link>
+              {primaryCtaEnabled ? (
+                <Link href={page.primaryCta.href}>
+                  <Button className="w-full sm:w-auto">{page.primaryCta.label}</Button>
+                </Link>
+              ) : null}
               {page.secondaryCta ? (
                 <Link href={page.secondaryCta.href}>
                   <Button variant="outline" className="w-full sm:w-auto">

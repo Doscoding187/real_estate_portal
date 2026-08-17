@@ -6,9 +6,16 @@ import { resolveDatabaseAuthority } from '../context';
 import {
   CANONICAL_GEOGRAPHY_DIGEST,
   CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
+  canonicalGeographyIdFromRow,
+  GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS,
+  GOVERNED_RUNTIME_REFERENCE_DIGEST,
   prepareCanonicalGeography,
   verifyCanonicalGeography,
 } from '../dataAdapters/canonicalGeography';
+import {
+  GOVERNED_RUNTIME_REFERENCE_ROWS,
+  GOVERNED_RUNTIME_REFERENCE_VERSION,
+} from '../dataAdapters/governedRuntimeGeography';
 import {
   buildScenarioInsertStatement,
   SEARCH_TO_LEAD_SCENARIO_DIGEST,
@@ -142,6 +149,17 @@ class UnexpectedConnection implements AuthoritySqlConnection {
 }
 
 describe('bounded Database Authority data adapters', () => {
+  it('reads canonical geography IDs from direct and aliased verifier columns', () => {
+    expect(canonicalGeographyIdFromRow({ id: 7 }, 'province')).toBe(7);
+    expect(canonicalGeographyIdFromRow({ province_id: 11 }, 'gauteng', 'province_id')).toBe(11);
+    expect(canonicalGeographyIdFromRow({ city_id: 23 }, 'gauteng/johannesburg', 'city_id')).toBe(
+      23,
+    );
+    expect(() => canonicalGeographyIdFromRow({ province_id: 0 }, 'gauteng', 'province_id')).toThrow(
+      'invalid ID',
+    );
+  });
+
   it('publishes deterministic versions and the required geography minimum', () => {
     expect(CANONICAL_GEOGRAPHY_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_GEOGRAPHY_EXPECTED_ROWS).toEqual({
@@ -149,6 +167,21 @@ describe('bounded Database Authority data adapters', () => {
       cities: 10,
       suburbs: 10,
     });
+    expect(GOVERNED_RUNTIME_REFERENCE_VERSION).toBe(
+      'gauteng-runtime-reference-projection-v0.1',
+    );
+    expect(GOVERNED_RUNTIME_REFERENCE_DIGEST).toMatch(/^[a-f0-9]{64}$/);
+    expect(GOVERNED_RUNTIME_REFERENCE_ROWS).toHaveLength(64);
+    expect(GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS).toEqual({
+      provinces: 9,
+      cities: 29,
+      suburbs: 50,
+    });
+    expect(
+      GOVERNED_RUNTIME_REFERENCE_ROWS.every(
+        row => !('runtimeCompatibilityIds' in row) && !('environmentRuntimeCompatibilityIds' in row),
+      ),
+    ).toBe(true);
     expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v1');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_COMMERCIAL_VERSION).toBe('canonical-commercial-v1');

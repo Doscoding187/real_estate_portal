@@ -11,6 +11,10 @@ import {
   withTransaction,
   type AdapterEvidence,
 } from './common';
+import {
+  GOVERNED_RUNTIME_REFERENCE_ROWS,
+  GOVERNED_RUNTIME_REFERENCE_VERSION,
+} from './governedRuntimeGeography';
 
 export const CANONICAL_GEOGRAPHY_VERSION = 'canonical-geography-v2' as const;
 
@@ -230,6 +234,52 @@ const SUBURBS = [
   },
 ] as const;
 
+type CityReference = {
+  provinceSlug: string;
+  name: string;
+  slug: string;
+  latitude?: string | number;
+  longitude?: string | number;
+};
+
+type SuburbReference = {
+  citySlug: string;
+  name: string;
+  slug: string;
+  postalCode?: string;
+  latitude?: string | number;
+  longitude?: string | number;
+};
+
+const GOVERNED_CITY_REFERENCES: readonly CityReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS
+  .filter(
+    (row): row is (typeof GOVERNED_RUNTIME_REFERENCE_ROWS)[number] & {
+      runtimeParentNaturalKey: string;
+    } => row.runtimeStorageLevel === 'city' && Boolean(row.runtimeParentNaturalKey),
+  )
+  .map(row => ({
+    provinceSlug: row.runtimeParentNaturalKey.split('/').slice(-1)[0]!,
+    name: row.name,
+    slug: row.slug,
+    ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
+    ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
+  }));
+
+const GOVERNED_SUBURB_REFERENCES: readonly SuburbReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS
+  .filter(
+    (row): row is (typeof GOVERNED_RUNTIME_REFERENCE_ROWS)[number] & {
+      runtimeParentNaturalKey: string;
+    } => row.runtimeStorageLevel === 'suburb' && Boolean(row.runtimeParentNaturalKey),
+  )
+  .map(row => ({
+    citySlug: row.runtimeParentNaturalKey,
+    name: row.name,
+    slug: row.slug,
+    ...(row.postalCode ? { postalCode: row.postalCode } : {}),
+    ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
+    ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
+  }));
+
 const REFERENCE_PAYLOAD = Object.freeze({ provinces: PROVINCES, cities: CITIES, suburbs: SUBURBS });
 export const CANONICAL_GEOGRAPHY_DIGEST = stableDigest(REFERENCE_PAYLOAD);
 export const CANONICAL_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
@@ -237,21 +287,59 @@ export const CANONICAL_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
   cities: CITIES.length,
   suburbs: SUBURBS.length,
 });
+export const GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS = Object.freeze({
+  provinces: new Set([
+    ...PROVINCES.map(item => item.slug),
+    ...GOVERNED_RUNTIME_REFERENCE_ROWS
+      .filter(row => row.runtimeStorageLevel === 'province')
+      .map(row => row.runtimeNaturalKey),
+  ]).size,
+  cities: new Set([
+    ...CITIES.map(item => `${item.provinceSlug}/${item.slug}`),
+    ...GOVERNED_RUNTIME_REFERENCE_ROWS
+      .filter(row => row.runtimeStorageLevel === 'city')
+      .map(row => row.runtimeNaturalKey),
+  ]).size,
+  suburbs: new Set([
+    ...SUBURBS.map(item => {
+      const city = CITIES.find(candidate => candidate.slug === item.citySlug);
+      return `${city?.provinceSlug ?? ''}/${item.citySlug}/${item.slug}`;
+    }),
+    ...GOVERNED_RUNTIME_REFERENCE_ROWS
+      .filter(row => row.runtimeStorageLevel === 'suburb')
+      .map(row => row.runtimeNaturalKey),
+  ]).size,
+});
+export const GOVERNED_RUNTIME_REFERENCE_DIGEST = stableDigest(GOVERNED_RUNTIME_REFERENCE_ROWS);
 const PROVINCE_SLUG_PLACEHOLDERS = PROVINCES.map(() => '?').join(', ');
 
 export type GeographyReferenceEvidence = AdapterEvidence & {
   expected: { provinces: number; cities: number; suburbs: number };
   verified: { provinces: number; cities: number; suburbs: number };
+  runtimeProjection: {
+    version: string;
+    digest: string;
+    expected: { provinces: number; cities: number; suburbs: number };
+    rows: number;
+  };
   migrationHead: string;
 };
 
 type RowIdentity = { id: number; name: string; slug: string };
 
-function asId(row: Record<string, unknown>, label: string): number {
-  const id = Number(rowValue(row, 'id'));
+export function canonicalGeographyIdFromRow(
+  row: Record<string, unknown>,
+  label: string,
+  idField = 'id',
+): number {
+  const id = Number(rowValue(row, idField));
   if (!Number.isSafeInteger(id) || id <= 0)
     throw new Error(`Canonical geography ${label} has an invalid ID.`);
   return id;
+}
+
+function asId(row: Record<string, unknown>, label: string, idField = 'id'): number {
+  return canonicalGeographyIdFromRow(row, label, idField);
 }
 
 async function ensureProvince(
@@ -289,7 +377,7 @@ async function ensureProvince(
 
 async function ensureCity(
   connection: AuthoritySqlConnection,
-  item: (typeof CITIES)[number],
+  item: CityReference,
   provinceId: number,
 ): Promise<RowIdentity> {
   const rows = await queryRows(
@@ -312,7 +400,7 @@ async function ensureCity(
   }
   const result: any = await connection.execute(
     'INSERT INTO cities (provinceId, name, latitude, longitude, isMetro, slug) VALUES (?, ?, ?, ?, ?, ?)',
-    [provinceId, item.name, item.latitude, item.longitude, 1, item.slug],
+    [provinceId, item.name, item.latitude ?? null, item.longitude ?? null, 1, item.slug],
   );
   const id = Number(result?.[0]?.insertId ?? result?.insertId);
   if (!Number.isSafeInteger(id) || id <= 0)
@@ -322,7 +410,7 @@ async function ensureCity(
 
 async function ensureSuburb(
   connection: AuthoritySqlConnection,
-  item: (typeof SUBURBS)[number],
+  item: SuburbReference,
   cityId: number,
 ): Promise<RowIdentity> {
   const rows = await queryRows(
@@ -337,7 +425,7 @@ async function ensureSuburb(
     if (
       String(rowValue(row, 'name')) !== item.name ||
       Number(rowValue(row, 'cityId')) !== cityId ||
-      String(rowValue(row, 'postalCode') ?? '') !== item.postalCode
+      item.postalCode !== undefined && String(rowValue(row, 'postalCode') ?? '') !== item.postalCode
     ) {
       throw new Error(
         `Canonical geography suburb ${item.slug} conflicts with the approved hierarchy.`,
@@ -347,7 +435,7 @@ async function ensureSuburb(
   }
   const result: any = await connection.execute(
     'INSERT INTO suburbs (cityId, name, latitude, longitude, postalCode, slug) VALUES (?, ?, ?, ?, ?, ?)',
-    [cityId, item.name, item.latitude, item.longitude, item.postalCode, item.slug],
+    [cityId, item.name, item.latitude ?? null, item.longitude ?? null, item.postalCode ?? null, item.slug],
   );
   const id = Number(result?.[0]?.insertId ?? result?.insertId);
   if (!Number.isSafeInteger(id) || id <= 0)
@@ -377,9 +465,11 @@ export async function verifyCanonicalGeographyReferenceData(
     const provinceSlug = String(rowValue(row, 'province_slug') ?? '');
     if (provinceSlug) provinceRows.set(provinceSlug, row);
     const citySlug = String(rowValue(row, 'city_slug') ?? '');
-    if (citySlug) cityRows.set(citySlug, row);
+    const cityNaturalKey = citySlug ? `${provinceSlug}/${citySlug}` : '';
+    if (cityNaturalKey) cityRows.set(cityNaturalKey, row);
     const suburbSlug = String(rowValue(row, 'suburb_slug') ?? '');
-    if (suburbSlug) suburbRows.set(suburbSlug, row);
+    const suburbNaturalKey = suburbSlug ? `${cityNaturalKey}/${suburbSlug}` : '';
+    if (suburbNaturalKey) suburbRows.set(suburbNaturalKey, row);
     if (
       citySlug &&
       Number(rowValue(row, 'city_province_id')) !== Number(rowValue(row, 'province_id'))
@@ -406,15 +496,58 @@ export async function verifyCanonicalGeographyReferenceData(
     }
   }
   for (const item of CITIES) {
-    const row = cityRows.get(item.slug);
+    const row = cityRows.get(`${item.provinceSlug}/${item.slug}`);
     if (!row || String(rowValue(row, 'city_name')) !== item.name) {
       throw new Error(`Canonical geography is missing city ${item.slug}.`);
     }
   }
   for (const item of SUBURBS) {
-    const row = suburbRows.get(item.slug);
+    const city = CITIES.find(candidate => candidate.slug === item.citySlug);
+    const row = city ? suburbRows.get(`${city.provinceSlug}/${item.citySlug}/${item.slug}`) : null;
     if (!row || String(rowValue(row, 'suburb_name')) !== item.name) {
       throw new Error(`Canonical geography is missing suburb ${item.slug}.`);
+    }
+  }
+  for (const row of GOVERNED_RUNTIME_REFERENCE_ROWS) {
+    if (row.runtimeStorageLevel === 'province') {
+      const province = provinceRows.get(row.runtimeNaturalKey);
+      if (!province || String(rowValue(province, 'province_name')) !== row.name) {
+        throw new Error(`Canonical geography is missing governed province ${row.runtimeNaturalKey}.`);
+      }
+      continue;
+    }
+
+    if (row.runtimeStorageLevel === 'city') {
+      const city = cityRows.get(row.runtimeNaturalKey);
+      if (!city || String(rowValue(city, 'city_name')) !== row.name) {
+        throw new Error(`Canonical geography is missing governed city ${row.runtimeNaturalKey}.`);
+      }
+      const parent = row.runtimeParentNaturalKey
+        ? provinceRows.get(row.runtimeParentNaturalKey)
+        : undefined;
+      if (
+        !parent ||
+        Number(rowValue(city, 'city_province_id')) !==
+          asId(parent, row.runtimeParentNaturalKey || 'province', 'province_id')
+      ) {
+        throw new Error(`Governed city ${row.runtimeNaturalKey} is attached to the wrong province.`);
+      }
+      continue;
+    }
+
+    const suburb = suburbRows.get(row.runtimeNaturalKey);
+    if (!suburb || String(rowValue(suburb, 'suburb_name')) !== row.name) {
+      throw new Error(`Canonical geography is missing governed suburb ${row.runtimeNaturalKey}.`);
+    }
+    const parent = row.runtimeParentNaturalKey
+      ? cityRows.get(row.runtimeParentNaturalKey)
+      : undefined;
+    if (
+      !parent ||
+      Number(rowValue(suburb, 'suburb_city_id')) !==
+        asId(parent, row.runtimeParentNaturalKey || 'city', 'city_id')
+    ) {
+      throw new Error(`Governed suburb ${row.runtimeNaturalKey} is attached to the wrong city.`);
     }
   }
   return {
@@ -442,15 +575,17 @@ export async function prepareCanonicalGeography(input: {
     for (const item of PROVINCES)
       provinces.set(item.slug, await ensureProvince(input.connection, item));
     const cities = new Map<string, RowIdentity>();
-    for (const item of CITIES) {
+    for (const item of [...CITIES, ...GOVERNED_CITY_REFERENCES]) {
       const province = provinces.get(item.provinceSlug);
       if (!province)
         throw new Error(
           `Canonical geography configuration is missing province ${item.provinceSlug}.`,
         );
-      cities.set(item.slug, await ensureCity(input.connection, item, province.id));
+      const city = await ensureCity(input.connection, item, province.id);
+      cities.set(`${item.provinceSlug}/${item.slug}`, city);
+      if (!cities.has(item.slug)) cities.set(item.slug, city);
     }
-    for (const item of SUBURBS) {
+    for (const item of [...SUBURBS, ...GOVERNED_SUBURB_REFERENCES]) {
       const city = cities.get(item.citySlug);
       if (!city)
         throw new Error(`Canonical geography configuration is missing city ${item.citySlug}.`);
@@ -463,8 +598,14 @@ export async function prepareCanonicalGeography(input: {
     adapter: 'canonical-geography',
     version: CANONICAL_GEOGRAPHY_VERSION,
     digest: CANONICAL_GEOGRAPHY_DIGEST,
-    expected: CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
+    expected: GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS,
     verified,
+    runtimeProjection: {
+      version: GOVERNED_RUNTIME_REFERENCE_VERSION,
+      digest: GOVERNED_RUNTIME_REFERENCE_DIGEST,
+      expected: GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS,
+      rows: GOVERNED_RUNTIME_REFERENCE_ROWS.length,
+    },
     migrationHead: manifest.document.expectedHead,
   };
 }
@@ -488,8 +629,14 @@ export async function verifyCanonicalGeography(input: {
     adapter: 'canonical-geography',
     version: CANONICAL_GEOGRAPHY_VERSION,
     digest: CANONICAL_GEOGRAPHY_DIGEST,
-    expected: CANONICAL_GEOGRAPHY_EXPECTED_ROWS,
+    expected: GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS,
     verified,
+    runtimeProjection: {
+      version: GOVERNED_RUNTIME_REFERENCE_VERSION,
+      digest: GOVERNED_RUNTIME_REFERENCE_DIGEST,
+      expected: GOVERNED_RUNTIME_GEOGRAPHY_EXPECTED_ROWS,
+      rows: GOVERNED_RUNTIME_REFERENCE_ROWS.length,
+    },
     migrationHead: manifest.document.expectedHead,
   };
 }

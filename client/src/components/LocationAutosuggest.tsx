@@ -5,8 +5,8 @@ import { PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
 import { slugify } from '@/lib/urlUtils';
 import { trpc } from '@/lib/trpc';
 import { LocationNode } from '@/types/location';
-import type { SearchDiscoverySuggestion } from '@/lib/searchDiscovery';
 import { encodeCanonicalLocationId } from '../../../shared/locationAuthority';
+import type { SearchDiscoveryResult } from '../../../shared/searchDiscovery';
 
 interface PlacePrediction {
   place_id: string;
@@ -67,7 +67,8 @@ interface LocationAutosuggestProps {
   inputRef?: RefObject<HTMLInputElement>;
   inputAriaDescribedBy?: string;
   // Search Discovery Engine — foundation for future smart suggestions
-  discoverySuggestions?: SearchDiscoverySuggestion[];
+  discoverySuggestions?: SearchDiscoveryResult[];
+  onDiscoverySelect?: (suggestion: SearchDiscoveryResult) => void;
   onDiscoveryNavigate?: (canonicalPath: string) => void;
 }
 
@@ -87,6 +88,7 @@ export function LocationAutosuggest({
   inputRef,
   inputAriaDescribedBy,
   discoverySuggestions,
+  onDiscoverySelect,
   onDiscoveryNavigate,
 }: LocationAutosuggestProps) {
   const [query, setQuery] = useState('');
@@ -123,7 +125,10 @@ export function LocationAutosuggest({
   );
   const databaseSuggestions: DatabaseLocationSuggestion[] =
     (databaseLocations as DatabaseLocationSuggestion[] | undefined) || [];
-  const suggestionCount = predictions.length + databaseSuggestions.length;
+  const discoverySuggestionCount = discoverySuggestions?.length ?? 0;
+  const databaseSuggestionOffset = discoverySuggestionCount;
+  const predictionSuggestionOffset = databaseSuggestionOffset + databaseSuggestions.length;
+  const suggestionCount = predictionSuggestionOffset + predictions.length;
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -294,14 +299,33 @@ export function LocationAutosuggest({
   };
 
   const handleSuggestionSelect = (index: number) => {
-    if (index < predictions.length) {
-      handlePredictionSelect(predictions[index]);
+    if (index < discoverySuggestionCount) {
+      const suggestion = discoverySuggestions?.[index];
+      if (!suggestion) return;
+      if (onDiscoverySelect) {
+        setQuery('');
+        setSelectedIndex(-1);
+        if (onChange) onChange('');
+        setShowSuggestions(false);
+        activeInputRef.current?.focus();
+        onDiscoverySelect(suggestion);
+        return;
+      }
+      if (suggestion.kind === 'canonical_location') {
+        onDiscoveryNavigate?.(suggestion.canonicalPath);
+      }
       return;
     }
 
-    const databaseIndex = index - predictions.length;
+    const databaseIndex = index - databaseSuggestionOffset;
     const suggestion = databaseSuggestions[databaseIndex];
-    if (suggestion) handleDatabaseLocationSelect(suggestion);
+    if (suggestion) {
+      handleDatabaseLocationSelect(suggestion);
+      return;
+    }
+
+    const predictionIndex = index - predictionSuggestionOffset;
+    if (predictionIndex >= 0) handlePredictionSelect(predictions[predictionIndex]);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -370,7 +394,16 @@ export function LocationAutosuggest({
               className="flex items-center gap-1.5 bg-blue-700 text-white text-sm px-3 py-1.5 rounded-md whitespace-nowrap shadow-sm animate-in fade-in zoom-in duration-200"
               onClick={e => e.stopPropagation()}
             >
-              <span className="font-medium truncate max-w-[150px]">{loc.name}</span>
+              <span className="flex min-w-0 flex-col text-left">
+                <span className="font-medium truncate max-w-[150px]">{loc.name}</span>
+                {loc.selectionTypeLabel ? (
+                  <span className="max-w-[150px] truncate text-[10px] text-blue-100">
+                    {[loc.selectionTypeLabel, loc.selectionContextLabel]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                ) : null}
+              </span>
               <button
                 type="button"
                 onClick={() => onRemove?.(index)}
@@ -456,12 +489,26 @@ export function LocationAutosuggest({
                 <div className="px-4 pt-2.5 pb-1 text-xs font-semibold uppercase tracking-widest text-slate-400">
                   Discover
                 </div>
-                {discoverySuggestions.map(s => (
+                {discoverySuggestions.map((s, index) => (
                   <div
-                    key={`disc-${s.canonicalPath}`}
+                    key={`disc-${s.kind}-${s.kind === 'search_area' ? s.searchAreaId : s.canonicalLocationId}`}
+                    id={`${listboxId}-option-${index}`}
                     role="option"
+                    aria-selected={index === selectedIndex}
                     tabIndex={-1}
-                    onClick={() => onDiscoveryNavigate?.(s.canonicalPath)}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                    onClick={() => {
+                      if (onDiscoverySelect) {
+                        setQuery('');
+                        setSelectedIndex(-1);
+                        if (onChange) onChange('');
+                        setShowSuggestions(false);
+                        activeInputRef.current?.focus();
+                        onDiscoverySelect(s);
+                        return;
+                      }
+                      if (s.kind === 'canonical_location') onDiscoveryNavigate?.(s.canonicalPath);
+                    }}
                     className="flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-blue-50"
                   >
                     <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
@@ -469,10 +516,12 @@ export function LocationAutosuggest({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm text-gray-900 truncate">{s.label}</div>
-                      <div className="text-xs text-gray-500 truncate capitalize">{s.type}</div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {[s.display.typeLabel, s.display.contextLabel].filter(Boolean).join(' · ')}
+                      </div>
                     </div>
                     <div className="text-xs text-emerald-600 font-medium whitespace-nowrap">
-                      {s.source}
+                      {s.kind === 'search_area' ? 'Search Area' : 'Location'}
                     </div>
                   </div>
                 ))}
@@ -484,7 +533,7 @@ export function LocationAutosuggest({
 
             {/* Database-backed catalog fallback when Google Places is unavailable. */}
             {databaseSuggestions.map((location, index) => {
-              const suggestionIndex = predictions.length + index;
+              const suggestionIndex = databaseSuggestionOffset + index;
               const context = [location.cityName, location.provinceName].filter(Boolean).join(', ');
               return (
                 <div
@@ -517,17 +566,18 @@ export function LocationAutosuggest({
             {/* Google Places predictions */}
             {predictions.map((prediction, index) => {
               const locationType = getLocationType(prediction.types);
+              const suggestionIndex = predictionSuggestionOffset + index;
               return (
                 <div
                   key={prediction.place_id}
-                  id={`${listboxId}-option-${index}`}
+                  id={`${listboxId}-option-${suggestionIndex}`}
                   role="option"
-                  aria-selected={index === selectedIndex}
+                  aria-selected={suggestionIndex === selectedIndex}
                   tabIndex={-1}
                   onClick={() => handlePredictionSelect(prediction)}
-                  onMouseEnter={() => setSelectedIndex(index)}
+                  onMouseEnter={() => setSelectedIndex(suggestionIndex)}
                   className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                    index === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
+                    suggestionIndex === selectedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'
                   }`}
                 >
                   <div

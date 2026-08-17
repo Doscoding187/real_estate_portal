@@ -211,6 +211,37 @@ describe('transactional journey runtime closure', () => {
     expect(url).toContain('locationId=province%3A1');
   });
 
+  it('serializes canonical Rent property and monthly-rent filters', () => {
+    const params = new URL(
+      buildPropertySearchUrl({
+        transactionType: 'to-rent',
+        selectedLocations: [gauteng],
+        propertyType: 'cluster_home',
+        minPrice: '5000',
+        maxPrice: '20000',
+      }),
+      'https://listify.test',
+    ).searchParams;
+
+    expect(params.get('propertyType')).toBe('cluster_home');
+    expect(params.get('minPrice')).toBe('5000');
+    expect(params.get('maxPrice')).toBe('20000');
+  });
+
+  it('does not serialize unsupported Rent property types from the composer', () => {
+    const params = new URL(
+      buildPropertySearchUrl({
+        transactionType: 'to-rent',
+        selectedLocations: [gauteng],
+        propertyType: 'commercial',
+      }),
+      'https://listify.test',
+    ).searchParams;
+
+    expect(params.get('propertyType')).toBeNull();
+    expect(params.get('locationId')).toBe('province:1');
+  });
+
   it.each(['shared_living', 'developments', 'plot_land', 'commercial', 'unknown', '', null])(
     'fails closed for unsupported runtime transaction type %s',
     transactionType => {
