@@ -283,9 +283,11 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
-        <div className="flex items-center justify-center py-fluid-xl">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
+        <main id="main-content" tabIndex={-1} className="outline-none">
+          <div className="flex items-center justify-center py-fluid-xl">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
+        </main>
       </div>
     );
   }
@@ -297,20 +299,22 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
-        <div className="container py-fluid-xl text-center">
-          <h2 className="mb-4 text-2xl font-semibold">Property temporarily unavailable</h2>
-          <p className="mb-6 text-slate-500">
-            We could not load this property right now. Your search is still available.
-          </p>
-          <div className="flex flex-col justify-center gap-3 sm:flex-row">
-            <Button onClick={() => void refetch()} disabled={isFetching}>
-              {isFetching ? 'Trying again…' : 'Try again'}
-            </Button>
-            <Button variant="outline" onClick={handleUnavailableReturn}>
-              Return to results
-            </Button>
+        <main id="main-content" tabIndex={-1} className="outline-none">
+          <div className="container py-fluid-xl text-center">
+            <h2 className="mb-4 text-2xl font-semibold">Property temporarily unavailable</h2>
+            <p className="mb-6 text-slate-500">
+              We could not load this property right now. Your search is still available.
+            </p>
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+              <Button onClick={() => void refetch()} disabled={isFetching}>
+                {isFetching ? 'Trying again…' : 'Try again'}
+              </Button>
+              <Button variant="outline" onClick={handleUnavailableReturn}>
+                Return to results
+              </Button>
+            </div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -320,14 +324,16 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     return (
       <div className="min-h-screen bg-background">
         <ListingNavbar />
-        <div className="container py-fluid-xl text-center">
-          <h2 className="mb-4 text-2xl font-semibold">Property no longer available</h2>
-          <p className="mb-6 text-slate-500">
-            This listing may have been removed, unpublished or replaced. Return to your results to
-            keep browsing legitimate public inventory.
-          </p>
-          <Button onClick={handleUnavailableReturn}>Return to results</Button>
-        </div>
+        <main id="main-content" tabIndex={-1} className="outline-none">
+          <div className="container py-fluid-xl text-center">
+            <h2 className="mb-4 text-2xl font-semibold">Property no longer available</h2>
+            <p className="mb-6 text-slate-500">
+              This listing may have been removed, unpublished or replaced. Return to your results
+              to keep browsing legitimate public inventory.
+            </p>
+            <Button onClick={handleUnavailableReturn}>Return to results</Button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -772,6 +778,8 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       />
       <ListingNavbar />
 
+      {/* prettier-ignore */}
+      <main id="main-content" tabIndex={-1} className="outline-none">
       {/* Hero / Header Section */}
       <div className="bg-white border-b border-slate-200 pt-16">
         <div className="container py-6">
@@ -856,6 +864,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 variant="outline"
                 size="icon"
                 onClick={handleShare}
+                aria-label="Share property"
                 className="h-10 w-10 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
               >
                 <Share2 className="h-3.5 w-3.5" />
@@ -1084,7 +1093,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         {/* Main Content Area - Two Column Layout (8/4) */}
         <div className="grid grid-cols-12 gap-6">
           {/* LEFT COLUMN (8 columns) */}
-          <div className="col-span-12 lg:col-span-8 space-y-6">
+          <div className="order-2 col-span-12 space-y-6 lg:order-1 lg:col-span-8">
             {/* 2.1 About This Property */}
             {description.trim() && (
               <Card className="border-slate-200 shadow-sm">
@@ -1110,59 +1119,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               </Card>
             )}
 
-            {/* 2.2 Listing Agent */}
-            {contactMode === 'agent' && contactIdentity && (
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-fluid-h3 font-bold text-slate-900">
-                    Listing Agent
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-5">
-                  <div className="grid gap-6">
-                    <div className="space-y-5">
-                      <div className="flex items-start gap-4">
-                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                          {contactIdentity.image ? (
-                            <img
-                              src={contactIdentity.image}
-                              alt={contactIdentity.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-blue-100 text-xl font-bold text-blue-700">
-                              {contactIdentity.name?.charAt(0) || '?'}
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="mb-2 flex flex-wrap items-center gap-2">
-                            {contactBadgeLabel && (
-                              <Badge className="border border-blue-200 bg-blue-50 text-[10px] text-blue-700 hover:bg-blue-50">
-                                {contactBadgeLabel}
-                              </Badge>
-                            )}
-                          </div>
-                          <h3 className="text-xl font-bold text-slate-900">
-                            {contactIdentity.name || 'Listing Agent'}
-                          </h3>
-                          {contactSubline && (
-                            <p className="mt-1 text-sm font-medium text-slate-600">
-                              {contactSubline}
-                            </p>
-                          )}
-                          <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                            {contactIntro}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 2.3 Canonical Features & Context */}
+            {/* 2.2 Canonical Features & Context */}
             {propertyFeatureGroups.length > 0 ? (
               <div
                 id={featureSpecItems.length === 0 ? 'features' : undefined}
@@ -1300,8 +1257,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
             </section>
           </div>
 
-          {/* RIGHT COLUMN (4 columns) */}
-          <div className="col-span-12 lg:col-span-4">
+          {/* RIGHT COLUMN (4 columns). It comes first on mobile so identity and
+              the next action stay close to the price and gallery. */}
+          <div className="order-1 col-span-12 lg:order-2 lg:col-span-4">
             <div className="space-y-4 lg:sticky lg:top-24">
               {hasPrimaryContactAction && (
                 <div
@@ -1391,6 +1349,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                                 {contactSubline}
                               </p>
                             )}
+                            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                              {contactIntro}
+                            </p>
                           </div>
                         </div>
 
@@ -1630,6 +1591,8 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           </div>
         </aside>
       )}
+
+      </main>
 
       <PropertyContactModal
         isOpen={isContactModalOpen}

@@ -612,6 +612,7 @@ export function LocationAutosuggest({
         !isDatabaseSearchLoading &&
         (predictions.length === 0 &&
         databaseSuggestions.length === 0 &&
+        discoverySuggestionCount === 0 &&
         debouncedQuery.length >= 2 ? (
           <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
             <p className="text-sm text-gray-500 text-center">

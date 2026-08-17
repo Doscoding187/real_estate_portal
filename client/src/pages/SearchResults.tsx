@@ -819,7 +819,9 @@ export default function SearchResults({
   if (isLegacyPropertiesRoute) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 text-center">
-        <p className="text-sm text-slate-600">Returning you to the canonical search journey…</p>
+        <main id="main-content" tabIndex={-1} className="outline-none">
+          <p className="text-sm text-slate-600">Returning you to the canonical search journey…</p>
+        </main>
       </div>
     );
   }
@@ -834,6 +836,8 @@ export default function SearchResults({
         showMobileLocationSearch
       />
 
+      {/* prettier-ignore */}
+      <main id="main-content" tabIndex={-1} className="outline-none">
       <div className="container pb-32 pt-44 md:pt-24 lg:pb-12">
         <div className="mx-auto w-full max-w-[1280px]">
           {/* Header Section */}
@@ -1142,6 +1146,7 @@ export default function SearchResults({
           </div>
         </div>
       </div>
+      </main>
 
       {/* Mobile Sticky Controls (Persistent Bottom Bar) */}
       {(displayState === 'results' || displayState === 'zero') && (

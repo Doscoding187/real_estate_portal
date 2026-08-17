@@ -29,6 +29,7 @@ interface SidebarFiltersProps {
   listingType?: 'sale' | 'rent';
   showAmenities?: boolean;
   showLocationRefinement?: boolean;
+  showHeader?: boolean;
 }
 
 const AMENITIES = [
@@ -115,6 +116,7 @@ export function SidebarFilters({
   listingType,
   showAmenities = true,
   showLocationRefinement = true,
+  showHeader = true,
 }: SidebarFiltersProps) {
   const isRentalJourney = listingType === 'rent';
   const listingSourceOptions = LISTING_SOURCE_OPTIONS.map(option =>
@@ -326,24 +328,26 @@ export function SidebarFilters({
 
   return (
     <div className="w-full bg-white rounded-lg border border-slate-200 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-lg text-slate-800">Filters</h3>
-        <div className="flex gap-2">
-          {onSaveSearch && (
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveSearch}>
-              Save
+      {showHeader && (
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-800">Filters</h3>
+          <div className="flex gap-2">
+            {onSaveSearch && (
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveSearch}>
+                Save
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800"
+              onClick={() => onFilterChange({})}
+            >
+              Reset all
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-blue-600 hover:text-blue-800 h-auto p-0 text-xs font-medium"
-            onClick={() => onFilterChange({})}
-          >
-            Reset all
-          </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Accordion
         type="multiple"

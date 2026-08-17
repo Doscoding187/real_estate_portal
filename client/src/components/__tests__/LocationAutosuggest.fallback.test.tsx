@@ -111,6 +111,36 @@ describe('LocationAutosuggest database fallback', () => {
     expect(input).toHaveFocus();
   });
 
+  it('does not contradict a governed discovery suggestion with an empty message', async () => {
+    useLocationSearchQuery.mockReturnValue({ data: [], isLoading: false });
+
+    render(
+      <LocationAutosuggest
+        discoverySuggestions={[
+          {
+            kind: 'canonical_location',
+            canonicalLocationId: 'city:12',
+            label: 'Johannesburg',
+            factualLevel: 'city',
+            searchScopeKind: 'metro_city',
+            display: { typeLabel: 'Metro city', contextLabel: 'Gauteng' },
+            provinceSlug: 'gauteng',
+            citySlug: 'johannesburg',
+            canonicalPath: '/gauteng/johannesburg',
+            source: 'canonical_geography',
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Joh' } });
+
+    await waitFor(() =>
+      expect(screen.getByRole('option', { name: /Johannesburg/ })).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('No locations found')).not.toBeInTheDocument();
+  });
+
   it('blocks an eleventh selection when the reconstructed selection already has ten locations', () => {
     const onSelect = vi.fn();
     const selectedLocations = Array.from({ length: 10 }, (_, index) => ({

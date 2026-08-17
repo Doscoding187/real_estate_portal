@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
   ListingNavbar,
@@ -43,7 +43,11 @@ describe('ListingNavbar mobile location refinement', () => {
 
     expect(screen.getByTestId('listing-navbar-mobile-location-search')).toBeInTheDocument();
     expect(document.getElementById(LISTING_NAVBAR_LOCATION_INPUT_IDS.mobile)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove Parkhurst' })).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('listing-navbar-mobile-location-search')).getByRole('button', {
+        name: 'Remove Parkhurst',
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Update property search' })).toBeEnabled();
   });
 
@@ -51,5 +55,22 @@ describe('ListingNavbar mobile location refinement', () => {
     render(<ListingNavbar />);
 
     expect(screen.queryByTestId('listing-navbar-mobile-location-search')).not.toBeInTheDocument();
+  });
+
+  it('exposes the Buy/Rent chooser as a keyboard-operable menu', () => {
+    render(<ListingNavbar />);
+
+    const journeyTrigger = screen.getByRole('button', { name: 'Buy', exact: true });
+    expect(journeyTrigger).toHaveAttribute('aria-haspopup', 'menu');
+    expect(journeyTrigger).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(journeyTrigger);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rent' }));
+
+    expect(screen.getByRole('button', { name: 'Rent', exact: true })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
   });
 });

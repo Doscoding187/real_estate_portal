@@ -374,12 +374,12 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                   </p>
                 </div>
               </div>
-              <div className="relative z-20 flex shrink-0 gap-1 sm:justify-end">
+              <div className="relative z-20 flex w-full min-w-0 gap-2 sm:w-auto sm:justify-end">
                 {whatsappTarget && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-10 w-full gap-1 border-primary px-3 text-[11px] text-primary hover:bg-primary/10 sm:h-9 sm:w-auto sm:text-[10px]"
+                    className="h-10 shrink-0 gap-1 border-primary px-3 text-[11px] text-primary hover:bg-primary/10 sm:h-9 sm:w-auto sm:text-[10px]"
                     onClick={event => {
                       event.stopPropagation();
                       setContactIntent('whatsapp');
@@ -393,7 +393,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                   <Button
                     asChild
                     size="sm"
-                    className="h-10 w-full gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:text-[10px]"
+                    className="h-10 min-w-0 flex-1 gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:flex-none sm:text-[10px]"
                   >
                     <Link href={listingHref} onClick={data.onOpen}>
                       <Mail className="h-3 w-3" />
@@ -403,7 +403,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 ) : (
                   <Button
                     size="sm"
-                    className="h-10 w-full gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:text-[10px]"
+                    className="h-10 min-w-0 flex-1 gap-1 bg-primary px-3 text-[11px] text-primary-foreground hover:bg-primary/90 sm:h-9 sm:w-auto sm:flex-none sm:text-[10px]"
                     disabled={!canOpenContact}
                     onClick={() => setContactIntent('contact')}
                   >

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
   Box,
@@ -179,15 +179,21 @@ export function PropertyImageGallery({
     <div className="flex h-full flex-col gap-3">
       {/* Main Image */}
       <div className="group relative aspect-[4/3] min-h-[260px] flex-1 overflow-hidden rounded-2xl bg-slate-100 md:aspect-auto md:min-h-[520px]">
-        <img
-          src={sortedImages[selectedImageIndex].imageUrl}
-          alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
-          className="h-full min-h-[260px] w-full cursor-pointer object-cover transition-transform hover:scale-[1.02] md:min-h-[520px]"
+        <button
+          type="button"
+          aria-label={`Open photo gallery for ${propertyTitle}`}
+          className="absolute inset-0 h-full w-full cursor-zoom-in rounded-2xl text-left focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/60"
           onClick={() => setIsLightboxOpen(true)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-        />
+        >
+          <img
+            src={sortedImages[selectedImageIndex].imageUrl}
+            alt={`${propertyTitle} - Image ${selectedImageIndex + 1}`}
+            className="h-full min-h-[260px] w-full object-cover transition-transform hover:scale-[1.02] md:min-h-[520px]"
+          />
+        </button>
 
         {/* Desktop Image Counter */}
         <div className="absolute bottom-4 left-4 hidden items-center gap-1.5 rounded-full bg-slate-950/75 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur md:inline-flex">
@@ -242,6 +248,7 @@ export function PropertyImageGallery({
               key={tab.id}
               type="button"
               aria-label={`${tab.label}, ${tab.meta}`}
+              aria-pressed={activeMediaTab === tab.id}
               disabled={!tab.enabled}
               onClick={tab.action}
               className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -301,12 +308,21 @@ export function PropertyImageGallery({
 
       {/* Lightbox Modal */}
       <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
-        <DialogContent className="max-w-full h-full p-2 sm:p-8 lg:max-w-7xl lg:h-[90vh] lg:p-16 bg-black/95">
+        <DialogContent
+          aria-label={`${propertyTitle} photo gallery`}
+          className="h-full max-w-full bg-black/95 p-2 sm:p-8 lg:h-[90vh] lg:max-w-7xl lg:p-16"
+        >
+          <DialogTitle className="sr-only">{propertyTitle} photo gallery</DialogTitle>
+          <DialogDescription className="sr-only">
+            Browse photos of {propertyTitle}. Use the previous and next photo controls or swipe on
+            touch devices.
+          </DialogDescription>
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Close Button */}
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Close photo gallery"
               className="absolute top-4 right-4 z-50 text-white hover:bg-white/20 rounded-full"
               onClick={() => setIsLightboxOpen(false)}
             >
@@ -347,6 +363,7 @@ export function PropertyImageGallery({
               <Button
                 variant="secondary"
                 size="icon"
+                aria-label="Zoom out"
                 onClick={() => setZoomLevel(prev => Math.max(1, prev - 0.25))}
                 disabled={zoomLevel <= 1}
               >
@@ -358,6 +375,7 @@ export function PropertyImageGallery({
               <Button
                 variant="secondary"
                 size="icon"
+                aria-label="Zoom in"
                 onClick={() => setZoomLevel(prev => Math.min(3, prev + 0.25))}
                 disabled={zoomLevel >= 3}
               >
