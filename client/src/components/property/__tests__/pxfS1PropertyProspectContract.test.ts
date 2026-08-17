@@ -75,7 +75,7 @@ describe('PXF-S1 property prospect contract', () => {
     expect(modal).toContain(
       "leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry'",
     );
-    expect(modal).toContain("'Failed to send inquiry. Please try again.'");
+    expect(modal).toContain("'We could not save your enquiry. Please try again.'");
     expect(page).toContain('if (isLoading)');
     expect(page).toContain('Property Not Found');
     expect(page).toContain('trpc.properties.getById.useQuery');

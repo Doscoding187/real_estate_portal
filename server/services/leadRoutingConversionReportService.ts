@@ -206,6 +206,7 @@ export async function getLeadRoutingConversionReport(input?: {
       source: leads.source,
       brandLeadStatus: leads.brandLeadStatus,
       leadDeliveryMethod: leads.leadDeliveryMethod,
+      deliveryStatus: leads.deliveryStatus,
       propertyOwnerId: properties.ownerId,
       propertyOwnerRole: users.role,
       status: leads.status,

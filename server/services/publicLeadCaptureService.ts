@@ -34,6 +34,7 @@ import {
 } from './publicLeadCustodyService';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { resolveApprovedPublicProperty } from './approvedPublicPropertyService';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -262,6 +263,10 @@ function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'The prospect phone number is too long.' });
   }
 
+  if (input.message && input.message.trim().length > 5000) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The enquiry message is too long.' });
+  }
+
   if (getPublicTargetCount(input) === 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -453,6 +458,19 @@ export async function resolveLeadOwnership(
         message: 'Property not available for public enquiries.',
       });
     }
+
+    // Enquiry acceptance must use the same source-listing, approval,
+    // projection and media contract as public detail/search. A projection row
+    // that is merely marked available is not sufficient evidence of public
+    // eligibility.
+    const approvedPublicProperty = await resolveApprovedPublicProperty(propertyId);
+    if (!approvedPublicProperty) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Property not available for public enquiries.',
+      });
+    }
+    property = { ...property, ...approvedPublicProperty.property };
 
     if (requestedDevelopmentId && Number(property.developmentId || 0) !== requestedDevelopmentId) {
       throw new TRPCError({
@@ -792,13 +810,37 @@ export async function capturePublicLead(
 
   const source = normalizeLeadSource(input.sourceSurface || input.source || input.leadSource);
   const leadSource = normalizeLeadSource(input.leadSource || input.source || input.sourceSurface);
-  const existing = await findLeadByCaptureRequestId(database, input.captureRequestId);
+  let existing = await findLeadByCaptureRequestId(database, input.captureRequestId);
   if (existing) {
     if (!isEquivalentReplay(existing, input, source, leadSource)) {
       throw new TRPCError({
         code: 'CONFLICT',
         message: 'This request ID belongs to a different enquiry context.',
       });
+    }
+    // A transient failure after the lead insert must be recoverable: replaying
+    // the same request ID resumes the durable delivery-attempt record instead
+    // of acknowledging a lead that has no custody state.
+    if (!Array.isArray(existing.deliveryAttempts) || existing.deliveryAttempts.length === 0) {
+      const replayResolved = await resolveLeadOwnership(input);
+      const replayStatus: LeadDeliveryStatus =
+        replayResolved.leadCustody === 'verified_customer_recipient'
+          ? 'delivered'
+          : 'attention_required';
+      await recordInitialLeadDeliveryAttempt({
+        leadId: Number(existing.id),
+        deliveryKey: deliveryKeyForOwnership(replayResolved),
+        recipientType: replayResolved.recipientType,
+        recipientId: replayResolved.recipientId,
+        channel: replayResolved.leadDeliveryMethod,
+        status: replayStatus,
+        supplyOrigin: replayResolved.supplyOrigin,
+        leadCustody: replayResolved.leadCustody,
+        error: replayResolved.reason,
+        database,
+      });
+      const replayExisting = await findLeadByCaptureRequestId(database, input.captureRequestId);
+      if (replayExisting) existing = replayExisting;
     }
     return resultForExistingLead(existing);
   }
@@ -881,39 +923,51 @@ export async function capturePublicLead(
     database,
   });
 
-  if (resolved.propertyId) {
-    await database
-      .update(properties)
-      .set({ enquiries: sql`${properties.enquiries} + 1` })
-      .where(eq(properties.id, resolved.propertyId));
-  }
-
-  await recordAgentOsEventForAgentId({
-    agentId: resolved.agentId,
-    eventType: 'agent_lead_received',
-    eventData: {
+  // These are useful counters/analytics, but they are not the custody
+  // acknowledgement boundary. A failure here must not make a durably
+  // captured enquiry look lost or force a duplicate retry.
+  const optionalSideEffects = await Promise.allSettled([
+    resolved.propertyId
+      ? database
+          .update(properties)
+          .set({ enquiries: sql`${properties.enquiries} + 1` })
+          .where(eq(properties.id, resolved.propertyId))
+      : Promise.resolve(),
+    recordAgentOsEventForAgentId({
+      agentId: resolved.agentId,
+      eventType: 'agent_lead_received',
+      eventData: {
+        leadId,
+        propertyId: resolved.propertyId ?? null,
+        developmentId: resolved.developmentId ?? null,
+        leadSource,
+        leadType,
+        route,
+        supplyOrigin: resolved.supplyOrigin,
+        leadCustody: resolved.leadCustody,
+      },
+    }),
+    recordProspectLeadAction({
+      db: database,
       leadId,
-      propertyId: resolved.propertyId ?? null,
-      developmentId: resolved.developmentId ?? null,
-      leadSource,
-      leadType,
-      route,
-      supplyOrigin: resolved.supplyOrigin,
-      leadCustody: resolved.leadCustody,
-    },
-  });
-
-  await recordProspectLeadAction({
-    db: database,
-    leadId,
-    authenticatedUserId: input.authenticatedUserId,
-    source,
-    propertyId: resolved.propertyId,
-    developmentId: resolved.developmentId,
-    referrerUrl: input.referrerUrl,
-    utmSource: input.utmSource,
-    utmMedium: input.utmMedium,
-    utmCampaign: input.utmCampaign,
+      authenticatedUserId: input.authenticatedUserId,
+      source,
+      propertyId: resolved.propertyId,
+      developmentId: resolved.developmentId,
+      referrerUrl: input.referrerUrl,
+      utmSource: input.utmSource,
+      utmMedium: input.utmMedium,
+      utmCampaign: input.utmCampaign,
+    }),
+  ]);
+  optionalSideEffects.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error('[capturePublicLead] Optional post-capture side effect failed', {
+        leadId,
+        sideEffect: index,
+        error: result.reason,
+      });
+    }
   });
 
   if (resolved.cataloguePublisherId) {

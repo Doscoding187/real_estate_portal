@@ -67,6 +67,7 @@ interface ContactFormState {
   inquiryType: InquiryType;
   message: string;
   consentAccepted: boolean;
+  website: string;
 }
 
 export function PropertyContactModal({
@@ -94,6 +95,7 @@ export function PropertyContactModal({
     inquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
     message: initialMessage || '',
     consentAccepted: false,
+    website: '',
   });
   const [captureRequestId, setCaptureRequestId] = useState(() => createLeadCaptureRequestId());
 
@@ -118,6 +120,7 @@ export function PropertyContactModal({
       inquiryType: intent === 'viewing_request' ? 'viewing' : prev.inquiryType,
       message: initialMessage || '',
       consentAccepted: false,
+      website: '',
     }));
     setCaptureRequestId(createLeadCaptureRequestId());
   }, [initialMessage, intent, isOpen]);
@@ -140,15 +143,21 @@ export function PropertyContactModal({
         inquiryType: 'general',
         message: '',
         consentAccepted: false,
+        website: '',
       });
       setCaptureRequestId(createLeadCaptureRequestId());
       onClose();
     },
     onError: error => {
+      const code = String(error.data?.code || '');
       toast.error(
-        intent === 'viewing_request'
-          ? 'Unable to submit your viewing request. Please try again.'
-          : 'Failed to send inquiry. Please try again.',
+        code === 'TOO_MANY_REQUESTS'
+          ? 'Too many enquiries from this connection. Please try again in a minute.'
+          : code === 'NOT_FOUND'
+            ? 'This property is no longer available for enquiries.'
+            : intent === 'viewing_request'
+              ? 'Unable to submit your viewing request. Please try again.'
+              : 'We could not save your enquiry. Please try again.',
       );
       console.error('Lead creation error:', error);
     },
@@ -174,6 +183,7 @@ export function PropertyContactModal({
       email: formData.email,
       phone: formData.phone,
       message: `[${formData.inquiryType.toUpperCase()}] ${formData.message}`,
+      website: formData.website,
       leadType: formData.inquiryType === 'viewing' ? 'viewing_request' : 'inquiry',
       source,
       cataloguePublisherId,
@@ -232,6 +242,7 @@ export function PropertyContactModal({
               placeholder="John Doe"
               value={formData.name}
               onChange={e => handleChange('name', e.target.value)}
+              maxLength={200}
               required
             />
           </div>
@@ -246,6 +257,7 @@ export function PropertyContactModal({
               placeholder="john@example.com"
               value={formData.email}
               onChange={e => handleChange('email', e.target.value)}
+              maxLength={320}
               required
             />
           </div>
@@ -258,6 +270,7 @@ export function PropertyContactModal({
               placeholder="+27 12 345 6789"
               value={formData.phone}
               onChange={e => handleChange('phone', e.target.value)}
+              maxLength={50}
             />
           </div>
 
@@ -270,8 +283,20 @@ export function PropertyContactModal({
               placeholder="I'm interested in this property and would like to know more..."
               value={formData.message}
               onChange={e => handleChange('message', e.target.value)}
+              maxLength={5000}
               rows={4}
               required
+            />
+          </div>
+
+          <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+            <Label htmlFor="property-enquiry-website">Website</Label>
+            <Input
+              id="property-enquiry-website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={formData.website}
+              onChange={e => handleChange('website', e.target.value)}
             />
           </div>
 

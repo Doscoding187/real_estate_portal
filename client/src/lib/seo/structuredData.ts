@@ -228,7 +228,7 @@ export function buildWebsiteStructuredData({
   name,
   url = '/',
   description,
-  searchPath = '/properties?search={search_term_string}',
+  searchPath = '/property-for-sale?search={search_term_string}',
 }: WebsiteStructuredDataInput): StructuredDataValue {
   const absoluteUrl = toAbsoluteUrl(url);
   const schema: StructuredDataValue = {

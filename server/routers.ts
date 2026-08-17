@@ -74,10 +74,6 @@ function parseTextList(value?: string | null) {
     .filter(Boolean);
 }
 
-function isPublicPropertyStatus(status: unknown): boolean {
-  return status === 'available' || status === 'published';
-}
-
 async function getPropertyContactAgent(
   drizzleDb: Awaited<ReturnType<typeof getDb>>,
   {
@@ -486,6 +482,8 @@ const appRouterConfig = {
           (input.sortOption as any) || 'date_desc',
           page,
           input.limit,
+          undefined,
+          { publicOnly: true },
         );
 
         if (!input.includeDevelopments) {
@@ -847,6 +845,8 @@ const appRouterConfig = {
           'date_desc',
           page,
           pageSize,
+          undefined,
+          { publicOnly: true },
         );
         return results.properties;
       }),
@@ -968,7 +968,7 @@ const appRouterConfig = {
 
         const publicProperty: Record<string, any> = {
           ...property,
-          listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
+          listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'platform',
           development: development || undefined,
           developerBrand: developerBrand || undefined,
           agent: agent || undefined,
@@ -1005,13 +1005,8 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        const property = await db.getPropertyById(input.propertyId);
-        if (!property || !isPublicPropertyStatus((property as any).status)) {
-          // Match public detail behavior and avoid using the media endpoint to
-          // enumerate unpublished inventory.
-          return [];
-        }
-        return await db.getPropertyImages(input.propertyId);
+        const approvedPublicProperty = await resolveApprovedPublicProperty(input.propertyId);
+        return approvedPublicProperty?.images || [];
       }),
 
     // Property Management (CRUD) - Protected

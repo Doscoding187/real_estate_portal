@@ -74,7 +74,7 @@ export interface PropertyCardProps {
   propertyType?: string;
   listingType?: string;
   listingSource?: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   status?: string;
   floor?: string;
   transactionType?: string;
@@ -150,9 +150,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           : 'manual';
   const resolvedListerType =
     listerType ||
-    (agent ? 'agent' : resolvedListingSource === 'development' ? undefined : 'private');
+    (agent ? 'agent' : resolvedListingSource === 'development' ? undefined : 'platform');
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
+  const isPlatformListing = resolvedListingSource === 'manual' && resolvedListerType === 'platform';
   const isRentalListing = isExplicitRentListing(listingType);
   const compareHandler = isRentalListing ? undefined : onCompareClick;
   const privateContactCopy = getPrivateListingContactCopy(listingType);
@@ -188,7 +189,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       ? 'Contact Developer'
       : isPrivateListing
         ? privateContactCopy.action
-        : 'Contact Agent');
+        : isPlatformListing
+          ? 'Enquire via Property Listify'
+          : 'Contact Agent');
   const displayBadges = Array.isArray(badges)
     ? badges.filter(
         badge =>
@@ -536,10 +539,14 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                 </div>
                 <div>
                   <div className="text-xs font-medium text-slate-900">
-                    {privateContactCopy.identity}
+                    {isPlatformListing ? 'Property Listify' : privateContactCopy.identity}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    {isRentalListing ? 'Private rental listing' : 'Private listing'}
+                    {isPlatformListing
+                      ? 'Managed through Property Listify'
+                      : isRentalListing
+                        ? 'Private rental listing'
+                        : 'Private listing'}
                   </div>
                 </div>
               </>

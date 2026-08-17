@@ -695,9 +695,9 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Platform custody queue. This is deliberately super-admin-only: a
-   * platform-curated lead has no customer organization recipient until an
-   * explicit verified relationship exists.
+   * Platform custody queue. This is deliberately super-admin-only: every
+   * public lead marked attention_required without an agent/agency recipient
+   * must have an explicit monitored Property Listify operations destination.
    */
   getPlatformManagedLeads: superAdminProcedure
     .input(
@@ -728,8 +728,6 @@ export const superAdminPublisherRouter = router({
             eq(leads.deliveryStatus, 'attention_required'),
             isNull(leads.agentId),
             isNull(leads.agencyId),
-            eq(cataloguePublishers.authorityKind, 'platform_reference'),
-            isNull(cataloguePublishers.developerOrganisationId),
           ),
         )
         .orderBy(desc(leads.createdAt))

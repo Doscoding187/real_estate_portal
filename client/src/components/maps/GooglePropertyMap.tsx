@@ -30,7 +30,7 @@ interface PropertyMarker {
   propertyType: string;
   listingType: string;
   listingSource?: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   primaryBadge?: string;
   latitude: number;
   longitude: number;

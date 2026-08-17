@@ -42,8 +42,8 @@ export interface ListingResultCardData {
   description?: string;
   listingType?: 'sale' | 'rent' | string;
   listingSource?: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
-  contactRole?: 'agent' | 'developer' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
+  contactRole?: 'agent' | 'developer' | 'private' | 'platform';
   postedBy?: string;
   agentAvatarUrl?: string;
   propertyId?: number;
@@ -91,10 +91,13 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     (resolvedListingSource === 'manual'
       ? data.contactRole === 'private'
         ? 'private'
-        : 'agent'
+        : data.contactRole === 'platform'
+          ? 'platform'
+          : 'agent'
       : undefined);
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
+  const isPlatformListing = resolvedListingSource === 'manual' && resolvedListerType === 'platform';
   const isRentalListing = isExplicitRentListing(data.listingType);
   const compareHandler = isRentalListing ? undefined : data.onCompare;
   const privateContactCopy = getPrivateListingContactCopy(data.listingType);
@@ -107,7 +110,9 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
           ? 'Developer Team'
           : isPrivateListing
             ? 'Private Seller'
-            : 'Listing Agent';
+            : isPlatformListing
+              ? 'Property Listify'
+              : 'Listing Agent';
   const hasAgentName = identityDisplayName !== '-';
   const agentInitials = hasAgentName
     ? identityDisplayName
@@ -132,7 +137,9 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
     ? 'Contact Developer'
     : isPrivateListing
       ? privateContactCopy.action
-      : 'Contact Agent';
+      : isPlatformListing
+        ? 'Enquire via Property Listify'
+        : 'Contact Agent';
   const whatsappTarget = String(data.contactWhatsapp || data.contactPhone || '').trim();
   const emailTarget = String(data.contactEmail || '').trim();
   const resolvedImage = withApiBase(data.image) || PROPERTY_IMAGE_FALLBACK;
@@ -142,6 +149,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const canOpenContact = !!(
     data.agentId ||
     data.cataloguePublisherId ||
+    isPlatformListing ||
     emailTarget ||
     whatsappTarget
   );

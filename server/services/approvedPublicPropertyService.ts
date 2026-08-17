@@ -32,7 +32,7 @@ export interface ApprovedPublicPropertyResolution {
   property: Record<string, any>;
   images: Array<Record<string, any>>;
   media: Array<Record<string, any>>;
-  authority: 'approved_listing' | 'legacy_projection';
+  authority: 'approved_listing';
   /** Internal bridge metadata; never a public route identity. */
   sourceListingId: number | null;
 }
@@ -73,27 +73,6 @@ function parseRecord(value: unknown): Record<string, any> | null {
   } catch {
     return null;
   }
-}
-
-function parseProjectionAmenities(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(item => String(item).trim()).filter(Boolean);
-  if (typeof value !== 'string') return [];
-  const trimmed = value.trim();
-  if (!trimmed) return [];
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (Array.isArray(parsed)) {
-      return parsed.map(item => String(item).trim()).filter(Boolean);
-    }
-  } catch {
-    // Legacy projections also persisted comma-delimited public amenities.
-  }
-
-  return trimmed
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
 }
 
 function uniqueStrings(values: unknown[]): string[] {
@@ -344,89 +323,6 @@ function knownMeasurement(value: any): number | undefined {
     : undefined;
 }
 
-function mapLegacyProjectionOnly(
-  property: Record<string, any>,
-  projectionImages: Array<Record<string, any>>,
-): ApprovedPublicPropertyResolution | null {
-  const propertySettings = parseRecord(property.propertySettings);
-  if (!propertySettings) return null;
-
-  const images = projectionImages;
-  const media = images.map(image => ({
-    ...image,
-    mediaType: 'image' as const,
-    type: 'image' as const,
-    processingStatus: 'completed' as const,
-  }));
-  const primaryImage = images.find(image => Number(image.isPrimary) === 1) || images[0];
-  const mainImage = primaryImage?.imageUrl || resolveMediaDeliveryUrl(property.mainImage) || '';
-  const publicCoordinates = normalizeCoordinatePair(
-    property.publicLatitude,
-    property.publicLongitude,
-  );
-  const publicLocationPrecision =
-    property.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
-  // A legacy compatibility address is only safe to use when that legacy row
-  // explicitly opted into exact disclosure. Approximate rows must not recover
-  // a private-looking compatibility address simply because publicAddress is
-  // absent.
-  const publicAddress =
-    property.publicAddress ||
-    (publicLocationPrecision === 'exact' ? property.address : null) ||
-    null;
-  const amenities = parseProjectionAmenities(property.amenities);
-  const virtualTour = getSafePropertyPresentationVirtualTour(propertySettings.propertyPresentation);
-  const publicProjection = publicProjectionFields(property);
-
-  return {
-    authority: 'legacy_projection',
-    sourceListingId: null,
-    property: {
-      ...publicProjection,
-      sourceType: 'legacy_property_projection',
-      title: property.title,
-      description: property.description,
-      price: Number(property.price || 0),
-      displayPrice: Number(property.price || 0),
-      listingType: property.listingType,
-      transactionType: property.listingType,
-      propertyType: property.propertyType,
-      bedrooms: property.bedrooms,
-      bathrooms: property.bathrooms,
-      area: property.area,
-      internalAreaM2: property.internalAreaM2,
-      erfSizeM2: property.erfSizeM2,
-      landAreaM2: property.landAreaM2,
-      address: publicAddress || undefined,
-      zipCode: publicLocationPrecision === 'exact' ? property.zipCode || undefined : undefined,
-      publicAddress,
-      latitude: publicCoordinates?.latitude ?? null,
-      longitude: publicCoordinates?.longitude ?? null,
-      publicLatitude: publicCoordinates?.latitude ?? null,
-      publicLongitude: publicCoordinates?.longitude ?? null,
-      publicLocationPrecision,
-      amenities,
-      features: amenities,
-      propertySettings,
-      propertyDetails: propertySettings,
-      mainImage,
-      media,
-      mediaSummary: {
-        photoCount: images.length,
-        hasVideo: Boolean(property.videoUrl),
-        hasFloorplan: false,
-        hasDocuments: false,
-        hasVirtualTour: Boolean(virtualTour),
-      },
-      virtualTour: virtualTour || null,
-      virtualTourUrl: virtualTour?.embedUrl || null,
-      listingSource: 'manual',
-    },
-    images,
-    media,
-  };
-}
-
 function mapApprovedListingProperty(
   property: Record<string, any>,
   sourceListing: Record<string, any>,
@@ -578,8 +474,10 @@ function mapApprovedListingProperty(
  * Resolve the one public contract for a manual property identity.
  *
  * Listing-backed properties fail closed unless their stable projection and
- * last-approved source aggregate are one coherent committed version. Unlinked
- * historical properties remain on a visibly separate projection-only mapper.
+ * last-approved source aggregate are one coherent committed version. The
+ * projection-only historical mapper is intentionally not a public authority;
+ * unlinked rows must be migrated or quarantined before they can re-enter the
+ * public buyer journey.
  */
 export async function resolveApprovedPublicProperty(
   propertyId: number,
@@ -595,9 +493,7 @@ export async function resolveApprovedPublicProperty(
   const projectionImages = normalizeProjectionImages(
     await dataSource.getPropertyImages(propertyId),
   );
-  if (property.sourceListingId == null) {
-    return mapLegacyProjectionOnly(property, projectionImages);
-  }
+  if (property.sourceListingId == null) return null;
 
   const sourceListingId = Number(property.sourceListingId);
   if (!Number.isSafeInteger(sourceListingId) || sourceListingId <= 0) return null;
@@ -607,4 +503,34 @@ export async function resolveApprovedPublicProperty(
 
   const approvedMedia = await dataSource.getListingMedia(sourceListingId);
   return mapApprovedListingProperty(property, sourceListing, projectionImages, approvedMedia);
+}
+
+/**
+ * Resolve the canonical public eligibility set for a collection of property
+ * projection IDs. This deliberately uses the same full source/projection/media
+ * contract as detail rather than introducing a weaker search-only predicate.
+ */
+export async function resolveApprovedPublicPropertyIds(
+  propertyIds: readonly number[],
+  dataSource: ApprovedPublicPropertyDataSource = defaultDataSource,
+): Promise<number[]> {
+  const uniqueIds = Array.from(
+    new Set(
+      propertyIds.filter(id => Number.isSafeInteger(id) && id > 0),
+    ),
+  );
+  const eligibleIds: number[] = [];
+  const concurrency = 8;
+
+  for (let offset = 0; offset < uniqueIds.length; offset += concurrency) {
+    const batch = uniqueIds.slice(offset, offset + concurrency);
+    const resolutions = await Promise.all(
+      batch.map(propertyId => resolveApprovedPublicProperty(propertyId, dataSource)),
+    );
+    resolutions.forEach((resolution, index) => {
+      if (resolution?.authority === 'approved_listing') eligibleIds.push(batch[index]);
+    });
+  }
+
+  return eligibleIds;
 }

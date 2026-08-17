@@ -13,9 +13,11 @@ import {
   developerOrganisations,
   agents,
   agencies,
+  users,
   suburbs,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/mysql-core';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type {
   PropertyFilters,
@@ -34,14 +36,19 @@ import type { ListingPropertyType } from '../../shared/listing-types';
 import { normalizeFeaturesContext } from '../../shared/features-context';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import { normalizeCoordinatePair } from '../../shared/location-contract';
+import { resolveApprovedPublicPropertyIds } from './approvedPublicPropertyService';
 
 // Cache key prefix for property searches
-// Authority version: v6 preserves fractional approved bathroom projections,
+// Authority version: v7 applies canonical approved public-property
+// eligibility before returning search totals/pages. It also preserves
+// fractional approved bathroom projections,
 // routes approved image-mirror storage keys through the configured media
 // adapter, and keeps missing/invalid public coordinates nullable. Advancing the
 // namespace prevents a cached v5 payload with numeric-zero missing coordinates
 // surviving this correction.
-const CACHE_PREFIX = 'property:search:v6:';
+const CACHE_PREFIX = 'property:search:v7:';
+
+const propertyOwnerAgencies = alias(agencies, 'property_owner_agencies');
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 
@@ -49,6 +56,11 @@ type ManualPropertyFilters = PropertyFilters & {
   /** Internal route option; never inferred from listing or revision state. */
   featuredOnly?: boolean;
 };
+
+export interface PropertySearchOptions {
+  /** Apply the canonical approved source-listing public contract. */
+  publicOnly?: boolean;
+}
 
 type QueryLocationIds = Array<{
   provinceId?: number;
@@ -232,9 +244,18 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
       }
     : undefined;
 
-  const isPrivate = property.listerType === 'private' || !property.agent?.name;
-  const identityName = isPrivate ? property.agent?.name || 'Private Seller' : property.agent?.name;
-  const identityRole: SearchCardResult['contactRole'] = isPrivate ? 'private' : 'agent';
+  const isPrivate = property.listerType === 'private';
+  const isPlatform = property.listerType === 'platform' || !property.agent?.name;
+  const identityName = isPrivate
+    ? property.agent?.name || 'Private Seller'
+    : isPlatform
+      ? 'Property Listify'
+      : property.agent?.name;
+  const identityRole: SearchCardResult['contactRole'] = isPrivate
+    ? 'private'
+    : isPlatform
+      ? 'platform'
+      : 'agent';
   const location = [property.suburb, property.city, property.province].filter(Boolean).join(', ');
   const image = String(
     resolveMediaUrl(property.mainImage) ||
@@ -315,6 +336,7 @@ export class PropertySearchService {
     page: number = 1,
     pageSize: number = 12,
     queryBoundary?: PublicSearchQueryBoundary,
+    options: PropertySearchOptions = {},
   ): Promise<SearchResults> {
     if (queryBoundary && queryLocationIdsFromBoundary(queryBoundary).length === 0) {
       return {
@@ -328,7 +350,14 @@ export class PropertySearchService {
     }
 
     // Generate cache key
-    const cacheKey = this.generateCacheKey(filters, sortOption, page, pageSize, queryBoundary);
+    const cacheKey = this.generateCacheKey(
+      filters,
+      sortOption,
+      page,
+      pageSize,
+      queryBoundary,
+      options,
+    );
 
     // Try to get from cache
     const cached = await redisCache.get<SearchResults>(cacheKey);
@@ -446,17 +475,38 @@ export class PropertySearchService {
     // Build query conditions with resolved location IDs
     const conditions = this.buildFilterConditions(filters, locationIds);
 
-    // Get total count
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(properties)
-      .leftJoin(developments, eq(properties.developmentId, developments.id))
-      .where(and(...conditions));
-
-    const total = Number(countResult[0]?.count || 0);
-
     // Calculate pagination
     const offset = (page - 1) * pageSize;
+
+    // Public search uses the same source-listing, approval, projection and
+    // media contract as property detail. Resolve eligibility before slicing a
+    // page so totals, pagination and cards cannot expose stale rows.
+    const publicConditions = options.publicOnly
+      ? [...conditions, sql`${properties.sourceListingId} IS NOT NULL`]
+      : conditions;
+    let total = 0;
+    let eligiblePageIds: number[] | undefined;
+    if (options.publicOnly) {
+      const candidateRows = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .leftJoin(developments, eq(properties.developmentId, developments.id))
+        .where(and(...publicConditions))
+        .orderBy(this.buildSortOrder(sortOption));
+      const eligibleIds = await resolveApprovedPublicPropertyIds(
+        candidateRows.map(row => Number(row.id)),
+      );
+      total = eligibleIds.length;
+      eligiblePageIds = eligibleIds.slice(offset, offset + pageSize);
+    } else {
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(properties)
+        .leftJoin(developments, eq(properties.developmentId, developments.id))
+        .where(and(...conditions));
+      total = Number(countResult[0]?.count || 0);
+    }
+
     const hasMore = offset + pageSize < total;
 
     // Build sort order
@@ -520,6 +570,11 @@ export class PropertySearchService {
         agentEmail: agents.email,
         agentProfileImage: agents.profileImage,
         agencyName: agencies.name,
+        ownerName: users.name,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+        ownerAgencyId: propertyOwnerAgencies.id,
+        ownerAgencyName: propertyOwnerAgencies.name,
         agentId: properties.agentId,
         cataloguePublisherId: sql<number>`COALESCE(${properties.cataloguePublisherId}, ${developments.cataloguePublisherId})`,
         builderBrandName: cataloguePublishers.name,
@@ -540,10 +595,23 @@ export class PropertySearchService {
       .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
       .leftJoin(agents, and(eq(properties.agentId, agents.id), eq(agents.status, 'approved')))
       .leftJoin(agencies, and(eq(agents.agencyId, agencies.id), eq(agencies.isVerified, 1)))
-      .where(and(...conditions))
+      .leftJoin(users, eq(properties.ownerId, users.id))
+      .leftJoin(
+        propertyOwnerAgencies,
+        and(
+          eq(users.agencyId, propertyOwnerAgencies.id),
+          eq(propertyOwnerAgencies.isVerified, 1),
+        ),
+      )
+      .where(
+        and(
+          ...publicConditions,
+          ...(eligiblePageIds ? [inArray(properties.id, eligiblePageIds)] : []),
+        ),
+      )
       .orderBy(orderBy)
       .limit(pageSize)
-      .offset(offset);
+      .offset(options.publicOnly ? 0 : offset);
 
     // Get images for properties
     const propertyIds = results.map((p: any) => Number(p.id));
@@ -676,12 +744,21 @@ export class PropertySearchService {
         String(prop.agentDisplayName || '').trim() ||
         [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim()
       ).trim();
+      const ownerName = (
+        String(prop.ownerName || '').trim() ||
+        [prop.ownerFirstName, prop.ownerLastName].filter(Boolean).join(' ').trim()
+      ).trim();
+      const ownerAgencyName = String(prop.ownerAgencyName || '').trim();
+      // An owner name alone is not a public recipient signal. Only expose the
+      // owner identity when it is backed by a verified agency relationship;
+      // otherwise custody remains platform/attention-review as appropriate.
+      const publicContactName = agentName || (ownerAgencyName ? ownerName || ownerAgencyName : '');
       const developerName = String(prop.developerName || '').trim();
       const developerLogo = prop.developerLogo || undefined;
       const builderName = String(prop.builderBrandName || '').trim() || developerName;
       const builderLogo = prop.builderLogoUrl || developerLogo;
 
-      const hasAgentIdentity = !!agentName;
+      const hasAgentIdentity = !!publicContactName;
       const storedBadges = Array.isArray(details.badges) ? details.badges : [];
       const publicCoordinates = normalizeCoordinatePair(prop.latitude, prop.longitude);
 
@@ -753,12 +830,16 @@ export class PropertySearchService {
         status: this.mapStatus(prop.status),
         listedDate: new Date(prop.listedDate),
         listingSource: 'manual',
-        listerType: hasAgentIdentity ? (prop.agencyName ? 'agency' : 'agent') : 'private',
+        listerType: hasAgentIdentity
+          ? prop.agencyName || ownerAgencyName
+            ? 'agency'
+            : 'agent'
+          : 'platform',
         agent: hasAgentIdentity
           ? {
-              id: String(prop.agentId || 0),
-              name: agentName,
-              agency: String(prop.agencyName || ''),
+              id: String(prop.agentId || prop.ownerId || 0),
+              name: publicContactName,
+              agency: String(prop.agencyName || ownerAgencyName || ''),
               phone: String(prop.agentPhone || ''),
               whatsapp: String(prop.agentWhatsapp || ''),
               email: String(prop.agentEmail || ''),
@@ -836,7 +917,14 @@ export class PropertySearchService {
   /** Return featured manual inventory through the same projection-only read path. */
   async searchFeaturedProperties(limit: number = 6): Promise<Property[]> {
     const pageSize = Math.max(1, Math.min(50, Math.floor(limit)));
-    const results = await this.searchProperties({ featuredOnly: true }, 'date_desc', 1, pageSize);
+    const results = await this.searchProperties(
+      { featuredOnly: true },
+      'date_desc',
+      1,
+      pageSize,
+      undefined,
+      { publicOnly: true },
+    );
     return results.properties;
   }
 
@@ -1117,11 +1205,13 @@ export class PropertySearchService {
     page: number,
     pageSize: number,
     queryBoundary?: PublicSearchQueryBoundary,
+    options: PropertySearchOptions = {},
   ): string {
     const filterStr = JSON.stringify(filters);
     const hash = this.simpleHash(filterStr);
     const boundaryKey = queryBoundary ? `:${queryBoundary.authorityKey}` : '';
-    return `${CACHE_PREFIX}${hash}${boundaryKey}:${sortOption}:${page}:${pageSize}`;
+    const authorityKey = options.publicOnly ? ':public' : ':internal';
+    return `${CACHE_PREFIX}${hash}${boundaryKey}${authorityKey}:${sortOption}:${page}:${pageSize}`;
   }
 
   /**

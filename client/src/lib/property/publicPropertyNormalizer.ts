@@ -90,7 +90,7 @@ export type PublicPropertyCard = {
   propertyType?: string;
   listingType?: string;
   listingSource: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   contactRole: SearchCardIdentity['role'];
   identity: SearchCardIdentity;
   development?: SearchCardDevelopmentRef;
@@ -1733,6 +1733,8 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
     ? 'developer'
     : property.listerType === 'private'
       ? 'private'
+      : property.listerType === 'platform'
+        ? 'platform'
       : 'agent';
   const identityName =
     developerBrand?.brandName ||
@@ -1740,7 +1742,11 @@ export function normalizePublicPropertyCard(property: PropertyLike): PublicPrope
     agent?.displayName ||
     agent?.name ||
     [agent?.firstName, agent?.lastName].filter(Boolean).join(' ') ||
-    (contactRole === 'private' ? 'Private Seller' : 'Listing Agent');
+    (contactRole === 'private'
+      ? 'Private Seller'
+      : contactRole === 'platform'
+        ? 'Property Listify'
+        : 'Listing Agent');
 
   return {
     kind: 'property',

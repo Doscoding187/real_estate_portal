@@ -122,7 +122,7 @@ export default function Home() {
           <HomeMobileView
             activeHeroTab={effectiveHeroTab}
             heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/')}
+            onBrowseProperties={() => setLocation('/property-for-sale')}
             onProvinceChange={setSelectedProvince}
             onTabChange={handleTabChange}
             popularCities={popularCities}
@@ -133,7 +133,7 @@ export default function Home() {
           <HomeDesktopView
             activeHeroTab={effectiveHeroTab}
             heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/')}
+            onBrowseProperties={() => setLocation('/property-for-sale')}
             onProvinceChange={setSelectedProvince}
             onTabChange={handleTabChange}
             popularCities={popularCities}

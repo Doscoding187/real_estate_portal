@@ -399,7 +399,7 @@ describe('ApprovedPublicProperty authority', () => {
     await expect(resolveApprovedPublicProperty(501, dataSource(fixture))).resolves.toBeNull();
   });
 
-  it('keeps unlinked legacy inventory on a projection-only compatibility path', async () => {
+  it('fails closed for unlinked legacy inventory until it is migrated or quarantined', async () => {
     const source = dataSource();
     source.getPropertyById.mockResolvedValue({
       id: 77,
@@ -425,20 +425,7 @@ describe('ApprovedPublicProperty authority', () => {
 
     const result = await resolveApprovedPublicProperty(77, source);
 
-    expect(result?.authority).toBe('legacy_projection');
-    expect(result?.property).toMatchObject({
-      id: 77,
-      title: 'Legacy projected home',
-      sourceType: 'legacy_property_projection',
-      mainImage: 'https://cdn.example.test/legacy.jpg',
-      virtualTour: null,
-    });
-    expect(result?.property).not.toHaveProperty('sourceListingId');
-    expect(result?.property.address).toBeUndefined();
-    expect(result?.property).not.toHaveProperty('placeId');
-    expect(result?.property).not.toHaveProperty('privateAddress');
-    expect(result?.property.zipCode).toBeUndefined();
-    expect(JSON.stringify(result?.property)).not.toContain('PRIVATE LEGACY ADDRESS');
+    expect(result).toBeNull();
     expect(source.getListingById).not.toHaveBeenCalled();
     expect(source.getListingMedia).not.toHaveBeenCalled();
   });

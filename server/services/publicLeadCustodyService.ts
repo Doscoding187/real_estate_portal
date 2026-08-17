@@ -196,7 +196,8 @@ function platformResolution(
     developerId: null,
     leadDeliveryMethod: 'manual',
     brandLeadStatus: 'captured',
-    reason: null,
+    reason:
+      'No verified customer recipient is attached; the lead is queued for Property Listify operations review.',
   };
 }
 

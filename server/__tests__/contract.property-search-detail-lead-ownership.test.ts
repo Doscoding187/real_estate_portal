@@ -20,6 +20,7 @@ const {
   mockLeadUpdateWhere,
   mockCaptureBrandLead,
   mockRecordAgentOsEventForAgentId,
+  mockResolveApprovedPublicProperty,
 } = vi.hoisted(() => ({
   mockSearchProperties: vi.fn(),
   mockSearchFeaturedProperties: vi.fn(),
@@ -40,6 +41,7 @@ const {
   mockLeadUpdateWhere: vi.fn(),
   mockCaptureBrandLead: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
+  mockResolveApprovedPublicProperty: vi.fn(),
 }));
 
 vi.mock('../services/propertySearchService', () => ({
@@ -75,6 +77,10 @@ vi.mock('../services/publicLeadCaptureService', () => ({
 
 vi.mock('../services/agentOsEventService', () => ({
   recordAgentOsEventForAgentId: mockRecordAgentOsEventForAgentId,
+}));
+
+vi.mock('../services/approvedPublicPropertyService', () => ({
+  resolveApprovedPublicProperty: mockResolveApprovedPublicProperty,
 }));
 
 import { appRouter } from '../routers';
@@ -156,7 +162,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       ownerId: 100,
       developmentId: null,
       cataloguePublisherId: null,
-      sourceListingId: null,
+      sourceListingId: 9001,
       amenities: 'Pool',
       propertySettings: '{}',
       mainImage: 'https://cdn.example.com/property.jpg',
@@ -201,6 +207,21 @@ describe('single-property search-detail-lead ownership contract', () => {
 
     mockGetDetailDb.mockResolvedValue({
       select: mockDetailSelect,
+    });
+
+    mockResolveApprovedPublicProperty.mockImplementation(async (propertyId: number) => {
+      const property = await mockGetPropertyById(propertyId);
+      if (!property || !['available', 'published'].includes(String(property.status))) return null;
+      if (!property.sourceListingId) return null;
+      const listing = await mockGetListingById(property.sourceListingId);
+      if (listing?.approvalStatus === 'pending') return null;
+      return {
+        authority: 'approved_listing',
+        sourceListingId: Number(property.sourceListingId),
+        property: { ...property },
+        images: await mockGetPropertyImages(propertyId),
+        media: [],
+      };
     });
 
     mockLeadSelect
@@ -357,6 +378,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       id: 779,
       title: 'Public Property Images',
       status: 'available',
+      sourceListingId: 9004,
     });
     mockGetPropertyImages.mockResolvedValueOnce([
       {
@@ -399,7 +421,7 @@ describe('single-property search-detail-lead ownership contract', () => {
       ownerId: 100,
       developmentId: null,
       cataloguePublisherId: null,
-      sourceListingId: null,
+      sourceListingId: 9002,
       amenities: 'Garden',
       propertySettings: '{}',
       mainImage: 'https://cdn.example.com/published.jpg',
@@ -502,6 +524,8 @@ describe('single-property search-detail-lead ownership contract', () => {
       'date_desc',
       1,
       10,
+      undefined,
+      { publicOnly: true },
     );
     expect(mockSearchListings).not.toHaveBeenCalled();
   });

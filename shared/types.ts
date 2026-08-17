@@ -731,7 +731,7 @@ export interface Property {
   propertyType: PublicPropertyType;
   listingType: 'sale' | 'rent';
   listingSource?: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   bedrooms?: number;
   bathrooms?: number;
   internalAreaM2?: number;
@@ -966,7 +966,7 @@ export interface SearchCardDeveloperBrandRef {
 }
 
 export interface SearchCardIdentity {
-  role: 'agent' | 'developer' | 'private';
+  role: 'agent' | 'developer' | 'private' | 'platform';
   name: string;
   avatarUrl?: string | null;
   phone?: string | null;
@@ -1001,7 +1001,7 @@ export interface SearchCardResult {
   propertyType: Property['propertyType'];
   listingType: Property['listingType'];
   listingSource: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   contactRole: SearchCardIdentity['role'];
   identity: SearchCardIdentity;
   development?: SearchCardDevelopmentRef;

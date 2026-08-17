@@ -20,6 +20,7 @@ function makeRow(overrides: Partial<LeadRoutingAuditRow> = {}): LeadRoutingAudit
     source: 'property_detail',
     brandLeadStatus: null,
     leadDeliveryMethod: null,
+    deliveryStatus: null,
     propertyOwnerId: null,
     propertyOwnerRole: null,
     ...overrides,
@@ -103,5 +104,21 @@ describe('leadRoutingAuditService', () => {
         issue: 'brand_capture_only',
       }),
     ]);
+  });
+
+  it('treats an unroutable public property lead as platform custody review', () => {
+    expect(
+      classifyLeadRouting(
+        makeRow({
+          propertyId: 77,
+          propertyOwnerRole: 'visitor',
+          deliveryStatus: 'attention_required',
+        }),
+      ),
+    ).toMatchObject({
+      routeType: 'direct',
+      recipientType: 'context_only',
+      issue: 'platform_custody_review',
+    });
   });
 });

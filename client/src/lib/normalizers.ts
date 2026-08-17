@@ -299,7 +299,7 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
     development: card.development,
     developerBrand: card.developerBrand,
     agent:
-      card.contactRole !== 'developer' && card.identity.name
+      card.contactRole !== 'developer' && card.contactRole !== 'platform' && card.identity.name
         ? {
             id: card.identity.agentId,
             name: card.identity.name,
@@ -347,7 +347,9 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
     status: undefined,
     transactionType: normalized.listingType || card.transactionType,
     agent:
-      normalized.contactRole !== 'developer' && normalized.identity.name
+      normalized.contactRole !== 'developer' &&
+      normalized.contactRole !== 'platform' &&
+      normalized.identity.name
         ? {
             id: normalized.identity.agentId ? String(normalized.identity.agentId) : undefined,
             name: normalized.identity.name,

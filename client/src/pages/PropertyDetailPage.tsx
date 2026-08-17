@@ -232,7 +232,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     'enquiry',
   );
 
-  const { data, isLoading } = trpc.properties.getById.useQuery(
+  const { data, error, isLoading } = trpc.properties.getById.useQuery(
     { id: propertyId },
     { enabled: propertyId > 0 },
   );
@@ -300,6 +300,24 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
     );
   }
 
+  // A resolver miss is different from a temporary transport failure. Keep the
+  // recovery action on the canonical Buy/Rent search root rather than sending
+  // the buyer back to the generic home page.
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <ListingNavbar />
+        <div className="container py-fluid-xl text-center">
+          <h2 className="mb-4 text-2xl font-semibold">Property temporarily unavailable</h2>
+          <p className="mb-6 text-slate-500">
+            We could not load this property right now. Your search is still available.
+          </p>
+          <Button onClick={() => setLocation('/property-for-sale')}>Return to Buy search</Button>
+        </div>
+      </div>
+    );
+  }
+
   // Property not found
   if (!data?.property) {
     return (
@@ -310,7 +328,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           <p className="text-slate-500 mb-6">
             The property you're looking for doesn't exist or has been removed.
           </p>
-          <Button onClick={() => setLocation('/')}>Choose a search journey</Button>
+          <Button onClick={() => setLocation('/property-for-sale')}>Return to Buy search</Button>
         </div>
       </div>
     );
@@ -481,7 +499,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       ? 'developer'
       : normalizedListerType === 'private'
         ? 'private'
-        : 'unknown';
+        : normalizedListerType === 'platform'
+          ? 'platform'
+          : 'unknown';
   const contactRoleLabel =
     contactMode === 'private'
       ? privateContactCopy.role
@@ -489,7 +509,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
         ? 'Developer'
         : contactMode === 'agent'
           ? 'Agent'
-          : null;
+          : contactMode === 'platform'
+            ? 'Property Listify'
+            : null;
   const contactIdentity =
     contactMode === 'agent'
       ? agent
@@ -516,6 +538,18 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
               agency: undefined,
               areasServed: [],
             }
+          : contactMode === 'platform'
+            ? {
+                id: undefined,
+                agencyId: undefined,
+                name: 'Property Listify',
+                image: undefined,
+                phone: undefined,
+                whatsapp: undefined,
+                email: undefined,
+                agency: undefined,
+                areasServed: [],
+              }
           : undefined;
   const propertyBadges = Array.isArray(specs.badges)
     ? specs.badges
@@ -682,12 +716,16 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
           : 'Registered Agent'
         : contactMode === 'private'
           ? privateContactCopy.badge
+          : contactMode === 'platform'
+            ? 'Property Listify managed'
           : null;
   const contactIntro =
     contactMode === 'developer'
       ? 'Reach the development contact for pricing, availability, and next steps.'
       : contactMode === 'private'
         ? privateContactCopy.intro
+        : contactMode === 'platform'
+          ? 'Your enquiry is recorded and reviewed through Property Listify operations.'
         : 'Connect directly with the agent handling this listing.';
   const agentAgencyLabel =
     contactMode === 'agent' ? String(contactIdentity?.agency || '').trim() || 'Independent' : '';
@@ -700,7 +738,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
       ? developmentName || 'New development listing'
       : contactMode === 'agent'
         ? [agentAgencyLabel, agentPrimaryArea].filter(Boolean).join(' · ') || 'Independent'
-        : '';
+        : contactMode === 'platform'
+          ? 'Actionable follow-up through Property Listify operations'
+          : '';
   const contactAvailabilityItems = [
     whatsappNumber ? 'WhatsApp available' : null,
     directPhone ? 'Call available' : null,
@@ -716,14 +756,13 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                 value: String(contactIdentity.activeListingsCount),
               }
             : null,
-          {
-            key: 'rating',
-            label: 'Rating',
-            value:
-              typeof contactIdentity?.rating === 'number'
-                ? `${contactIdentity.rating.toFixed(1)}`
-                : '5.0',
-          },
+          typeof contactIdentity?.rating === 'number'
+            ? {
+                key: 'rating',
+                label: 'Rating',
+                value: `${contactIdentity.rating.toFixed(1)}`,
+              }
+            : null,
           typeof contactIdentity?.yearsExperience === 'number'
             ? {
                 key: 'experience',
@@ -1166,7 +1205,7 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
 
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     <Button
-                      variant="outline"
+                      variant="default"
                       className="h-11 border-slate-200 text-slate-800 hover:bg-slate-50 focus-visible:ring-blue-500/30"
                       onClick={handleOpenStandardEnquiry}
                     >
@@ -1186,8 +1225,10 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                     {contactMode === 'private'
                       ? 'Private seller · Listed directly by the owner'
                       : contactMode === 'developer'
-                        ? 'Developer listing · Availability confirmed through Listify'
-                        : 'Listing agent · Enquiries routed through Listify'}
+                        ? 'Developer listing · Enquiries routed through Property Listify'
+                        : contactMode === 'platform'
+                          ? 'Property Listify managed · Operations follow-up required'
+                          : 'Listing agent · Enquiries routed through Property Listify'}
                   </p>
                 </div>
               )}
@@ -1800,7 +1841,9 @@ export default function PropertyDetailPage(props: PropertyDetailProps) {
                               ? 'Developer Contact'
                               : contactMode === 'private'
                                 ? privateContactCopy.section
-                                : 'Listing Contact'}
+                                : contactMode === 'platform'
+                                  ? 'Property Listify Operations'
+                                  : 'Listing Contact'}
                           </p>
                         </div>
                         <div className="flex items-start gap-4">

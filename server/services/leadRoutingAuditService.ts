@@ -4,6 +4,7 @@ import { leads, properties, users } from '../../drizzle/schema';
 
 type UserRole = 'visitor' | 'agent' | 'agency_admin' | 'property_developer' | 'super_admin' | null;
 type LeadDeliveryMethod = 'email' | 'crm_export' | 'manual' | 'none' | null;
+type LeadDeliveryStatus = 'pending' | 'delivered' | 'failed' | 'attention_required' | null;
 
 export interface LeadRoutingAuditRow {
   id: number;
@@ -19,6 +20,7 @@ export interface LeadRoutingAuditRow {
   source: string | null;
   brandLeadStatus: string | null;
   leadDeliveryMethod: LeadDeliveryMethod;
+  deliveryStatus: LeadDeliveryStatus;
   propertyOwnerId: number | null;
   propertyOwnerRole: UserRole;
 }
@@ -45,7 +47,11 @@ export interface LeadRoutingAuditAttentionLead {
   email: string;
   routeType: 'brand' | 'direct' | 'unknown';
   recipientType: 'brand' | 'agent' | 'agency' | 'private' | 'context_only' | 'unknown';
-  issue: 'brand_capture_only' | 'direct_context_without_owner' | 'unknown_route';
+  issue:
+    | 'brand_capture_only'
+    | 'platform_custody_review'
+    | 'direct_context_without_owner'
+    | 'unknown_route';
   leadSource: string;
   propertyId: number | null;
   developmentId: number | null;
@@ -73,6 +79,19 @@ function normalizeSource(value?: string | null) {
 
 export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassification {
   const normalizedSource = normalizeSource(row.leadSource || row.source);
+
+  if (
+    row.deliveryStatus === 'attention_required' &&
+    !row.agentId &&
+    !row.agencyId
+  ) {
+    return {
+      routeType: row.cataloguePublisherId ? 'brand' : 'direct',
+      recipientType: row.cataloguePublisherId ? 'brand' : 'context_only',
+      normalizedSource,
+      issue: 'platform_custody_review',
+    };
+  }
 
   if (row.cataloguePublisherId) {
     return {
@@ -230,6 +249,7 @@ export async function getLeadRoutingAudit(input?: {
       source: leads.source,
       brandLeadStatus: leads.brandLeadStatus,
       leadDeliveryMethod: leads.leadDeliveryMethod,
+      deliveryStatus: leads.deliveryStatus,
       propertyOwnerId: properties.ownerId,
       propertyOwnerRole: users.role,
     })

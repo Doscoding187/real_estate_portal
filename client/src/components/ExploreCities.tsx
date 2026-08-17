@@ -192,6 +192,17 @@ export function ExploreCities({
     description ||
     'Use city pages as a starting point for local listings, suburb research, and market discovery.';
   const viewAllPath = basePath === '' || basePath === '/' ? '/' : '/property-for-sale';
+  const cityHref = (city: City) => {
+    if (basePath === '/property-for-sale' || basePath === '/property-to-rent') {
+      const params = new URLSearchParams(queryParams.replace(/^[?&]/, ''));
+      params.set('province', city.provinceSlug);
+      params.set('city', city.slug);
+      const query = params.toString();
+      return `${basePath}${query ? `?${query}` : ''}`;
+    }
+
+    return `${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(/\/\//g, '/');
+  };
 
   return (
     <section className="home-section bg-white">
@@ -224,10 +235,7 @@ export function ExploreCities({
             {displayedCities.map(city => (
               <Link
                 key={city.slug}
-                href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(
-                  /\/\//g,
-                  '/',
-                )}
+                href={cityHref(city)}
                 className="w-[75vw] max-w-[236px] flex-none snap-start sm:w-auto"
               >
                 <div className="group h-full cursor-pointer">

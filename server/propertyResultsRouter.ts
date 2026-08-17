@@ -106,6 +106,8 @@ export const propertyResultsRouter = router({
           input.sortOption as SortOption,
           input.page,
           input.pageSize,
+          undefined,
+          { publicOnly: true },
         );
 
         return {

@@ -42,10 +42,10 @@ describe('SearchRefinementBar - Property 6: Search URL Construction', () => {
           if (filters.bathrooms !== undefined)
             params.append('bathrooms', filters.bathrooms.toString());
 
-          const searchUrl = `/properties?${params.toString()}`;
+          const searchUrl = `/property-for-sale?${params.toString()}`;
 
-          // Property: URL should always start with /properties?
-          expect(searchUrl).toMatch(/^\/properties\?/);
+          // Property: URL should always use the canonical Buy search root.
+          expect(searchUrl).toMatch(/^\/property-for-sale\?/);
 
           // Property: All defined filters should be in the URL
           if (filters.propertyType) {
