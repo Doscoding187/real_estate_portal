@@ -107,6 +107,7 @@ export interface PublicDevelopmentDetail extends PublicDevelopmentSearchItem {
   structuralType: string | null;
   floors: number | null;
   marketingRole: 'exclusive' | 'joint' | 'open' | null;
+  launchDate: string | null;
   isPublished: number;
   approvalStatus: 'draft' | 'pending' | 'approved' | 'rejected' | null;
   cataloguePublisherId: number;
@@ -140,6 +141,7 @@ export interface PublicDevelopmentProjectionDevelopment {
   transactionType: 'for_sale' | 'for_rent' | 'auction';
   status: PublicDevelopmentSearchStatus;
   nature: 'new' | 'phase' | 'extension' | 'redevelopment';
+  launchDate?: string | null;
   completionDate: string | null;
   createdAt: string | null;
   isFeatured: unknown;
