@@ -1,0 +1,4166 @@
+{
+  "candidate_layer": {
+    "candidate_matches_not_deleted": true,
+    "candidate_only": 2740,
+    "rejected_non_independent": 101,
+    "source_assertions_not_deleted": true,
+    "source_records_not_deleted": true,
+    "total_candidates": 4321
+  },
+  "canonical_result": {
+    "aliases_or_official_name_assertion_count": 1066,
+    "auto_promoted": 109,
+    "by_canonical_type": {
+      "city": 6,
+      "district_municipality": 8,
+      "estate/residential_development_candidate": 2,
+      "local_municipality": 22,
+      "locality": 171,
+      "neighbourhood": 41,
+      "province": 2,
+      "suburb": 860,
+      "town": 334,
+      "village": 34
+    },
+    "candidate_only_retained_outside_canonical": 2740,
+    "difference_from_expected": 0,
+    "expected_accepted_identity_count": 1480,
+    "formal_founder_review_rows": 0,
+    "historical_name_assertion_count": 11,
+    "identities_with_admin_uncertainty": 39,
+    "identities_with_alias_or_official_name_assertions": 510,
+    "identities_with_boundary_conflict": 39,
+    "identities_with_historical_name_assertions": 10,
+    "identities_with_spatial_uncertainty": 39,
+    "identities_with_unresolved_type": 516,
+    "name_assertion_count": 2526,
+    "non_searchable_source_label_count": 536,
+    "provisional_attribute_identities": 1371,
+    "rejected_non_independent_retained_outside_canonical": 101,
+    "source_link_count": 3196,
+    "total_factual_canonical_identities": 1480
+  },
+  "canonical_status": "factual_canonical",
+  "duplicate_safety": {
+    "aliases_are_name_assertions_not_canonical_records": true,
+    "candidate_only_and_rejected_rows_not_canonical": 2841,
+    "canonical_normalized_name_groups_with_multiple_identities": 38,
+    "canonical_records_in_duplicate_name_groups": 80,
+    "examples": [
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-291cc8f92a238f80f336",
+          "pl-gp-v01-b3af21b267c8fc08148a"
+        ],
+        "normalized_name": "boekenhoutfontein"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-7512ed98a4c11040e081",
+          "pl-gp-v01-b78d6ceaf3f2620c6a90"
+        ],
+        "normalized_name": "boksburg noord"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-8b89e64faafb2d2a2bd3",
+          "pl-gp-v01-d8ebe59601c465915d22"
+        ],
+        "normalized_name": "claremont"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-0fa379e850ad534c6a98",
+          "pl-gp-v01-91c9f6428655a91f1630"
+        ],
+        "normalized_name": "diepkloof"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-40f40b15702550798e75",
+          "pl-gp-v01-a69bc596dda5eced7dc3"
+        ],
+        "normalized_name": "doornfontein"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-38957c0dfb1dd73a722e",
+          "pl-gp-v01-d22f5766a31c2ab7c32b"
+        ],
+        "normalized_name": "dorandia"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-1790ed4314d6d7d3b9b5",
+          "pl-gp-v01-f004120e305bf927e9ac"
+        ],
+        "normalized_name": "eikenhof"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-1e32c07668460cae218f",
+          "pl-gp-v01-b4b64a12d456a96f5779"
+        ],
+        "normalized_name": "eikepark"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-81d90f95df19721264e4",
+          "pl-gp-v01-be36df4188a3220df51c"
+        ],
+        "normalized_name": "elandsfontein"
+      },
+      {
+        "canonical_location_ids": [
+          "pl-gp-v01-1bc4fddfe6b87d4c035f",
+          "pl-gp-v01-22471433d1c2554ed3af",
+          "pl-gp-v01-e6b487b96c3959078c70"
+        ],
+        "normalized_name": "gauteng"
+      }
+    ],
+    "source_representation_secondary_rows_not_canonical": 26
+  },
+  "evidence_owner": "respective source; source IDs, assertions and licence obligations remain attached",
+  "identity_owner": "Property Listify",
+  "input_checksums": {
+    "candidate_catalogue": {
+      "available": true,
+      "filename": "gauteng_candidate_catalogue_v0.1.jsonl",
+      "sha256": "6a4cef405ae68300597f4fe4166643bbca144d9ca231dec89d97339252dc1b1b",
+      "size_bytes": 15142226
+    },
+    "candidate_matches": {
+      "available": true,
+      "filename": "gauteng_candidate_matches_v0.1.jsonl",
+      "sha256": "46fe9993baf802e5e8e45ccb295e09b4ec4519e7a79ade49de2253270da5691f",
+      "size_bytes": 6781984
+    },
+    "promotion_simulation": {
+      "available": true,
+      "filename": "gauteng_canonical_promotion_simulation_v0.2.jsonl",
+      "sha256": "a3050ccb7706ccb3a7fc08e333a6b6b3e9e2f9e2bc77f5d061d52bc960971f65",
+      "size_bytes": 19423767
+    },
+    "source_assertions": {
+      "available": true,
+      "filename": "gauteng_source_assertions_v0.1.jsonl",
+      "sha256": "6184d08f60068fd9413cd0460f174c4b440b809ed13c3acc91bb6e4673960358",
+      "size_bytes": 40541560
+    },
+    "source_records": {
+      "available": true,
+      "filename": "gauteng_source_records_v0.1.jsonl",
+      "sha256": "104edafb1bb79bf1e2bfed911d200cb23455165b397cd3dcce70123eab4b8d11",
+      "size_bytes": 19318852
+    }
+  },
+  "kyalami_khayalami": {
+    "canonical_location_id": null,
+    "existing_candidate_interpretations": [
+      {
+        "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+        "candidate_type": "neighbourhood",
+        "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+        "preferred_name": "Kyalami",
+        "promotion_class": "candidate_only",
+        "sources": [
+          "geonames"
+        ]
+      }
+    ],
+    "identity_relationship": "official spelling correction; one factual identity",
+    "licence_gate": {
+      "reason": "Official identity evidence is strong, but a reusable commercial persistence/derivative-use right for the official web/GIS/database material was not established.",
+      "required_next_step": "Obtain written permission or an explicit commercial-compatible licence from the relevant rights holder, then attach the official evidence to the existing Kyalami candidate without changing unrelated canonical IDs.",
+      "status": "blocked"
+    },
+    "machine_canonical_decision": "candidate_only_until_commercial_reuse_gate",
+    "official_corrected_name": "Khayalami",
+    "preferred_common_consumer_name": "Kyalami",
+    "related_names_must_remain_separate": [
+      "Kyalami Estate / Khayalami Estate",
+      "Kyalami Hills / Khayalami Hills",
+      "Kyalami AH / Khayalami AH",
+      "Kyalami Gardens / Khayalami Gardens",
+      "Kyalami Ridge / Khayalami Ridge",
+      "other Kyalami-family places"
+    ],
+    "research_status": "official_identity_evidence_found_licence_gate_unresolved",
+    "sources": [
+      {
+        "commercial_reuse_status": "not_cleared",
+        "finding": "Khayalami is recorded as a correction of spelling from Kyalami for a township in the City of Joburg Municipality area in Gauteng.",
+        "published_or_reference_date": "2016-06-17",
+        "source": "South African Government Gazette 40081, GoN 730",
+        "url": "https://www.gov.za/sites/default/files/gcis_document/201606/40081gon730.pdf"
+      },
+      {
+        "commercial_reuse_status": "no_explicit_commercial_derivative_licence_found",
+        "finding": "The official GIS lookup maps KYALAMI proper and the named Kyalami-family places to KHAYALAMI spellings.",
+        "published_or_reference_date": null,
+        "source": "City of Johannesburg Corporate Geo-Informatics Online Maps",
+        "url": "https://joburg.itntnetworks.co.za/online-maps/"
+      },
+      {
+        "commercial_reuse_status": "no_explicit_commercial_derivative_licence_verified",
+        "finding": "The Department identifies the South African Geographical Names Council process and publishes an approved-names database resource.",
+        "published_or_reference_date": null,
+        "source": "Department of Sport, Arts and Culture geographical-names process",
+        "url": "https://www.dsac.gov.za/South%20African%20Geographical%20Names%20process"
+      },
+      {
+        "commercial_reuse_status": "permission_required_for_commercial_use",
+        "finding": "The accessible terms limit ordinary copying to non-commercial informational/reference purposes and require prior written permission for commercial use.",
+        "published_or_reference_date": null,
+        "source": "South African Government website terms",
+        "url": "https://www.gov.za/terms-and-conditions-use-0"
+      }
+    ]
+  },
+  "licensing_distribution": {
+    "by_canonical_licensing_classification": {
+      "mixed_odbl_supported": 534,
+      "osm_only_odbl_provisional": 668,
+      "permissive_supported": 278
+    },
+    "mixed_odbl_supported": 534,
+    "odbl_evidence_remains_non_proprietary": true,
+    "osm_only_odbl_provisional": 668,
+    "permissive_supported": 278
+  },
+  "name_model": {
+    "aliases_are_not_canonical_identities": true,
+    "separate_name_assertion_layer": true,
+    "supported_roles": [
+      "preferred_common",
+      "official",
+      "alias",
+      "historical",
+      "spelling_variant"
+    ]
+  },
+  "output_paths": {
+    "canonical_geography_jsonl": "gauteng_factual_canonical_geography_v0.1.jsonl",
+    "canonical_names_jsonl": "gauteng_factual_canonical_names_v0.1.jsonl",
+    "canonical_source_links_jsonl": "gauteng_factual_canonical_source_links_v0.1.jsonl",
+    "canonical_summary_json": "gauteng_factual_canonical_summary_v0.1.json",
+    "canonical_summary_markdown": "gauteng_factual_canonical_summary_v0.1.md",
+    "kyalami_evidence_json": "gauteng_factual_canonical_kyalami_evidence_v0.1.json"
+  },
+  "output_version": "v0.1",
+  "promotion_authority": {
+    "accepted_promotion_classes": [
+      "auto_promotable_factual_identity",
+      "promotable_with_provisional_attributes"
+    ],
+    "policy_version": "0.2.0",
+    "simulation_output": "gauteng_canonical_promotion_simulation_v0.2.jsonl"
+  },
+  "required_property_search_probes": [
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-482952abc84b2eccf7d2",
+          "canonical_type": "city",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Johannesburgo",
+              "name_assertion_id": "cln-name-04a6db903175fa038f05",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesburgo",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Yoxannesburg",
+              "name_assertion_id": "cln-name-2e51b14ac56a557d20d4",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "yoxannesburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Yohannesburq",
+              "name_assertion_id": "cln-name-3470104be97dbbbbd4a6",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "yohannesburq",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Q34647",
+              "name_assertion_id": "cln-name-3ab275578345caab8f89",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q34647",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "https://ru.wikipedia.org/wiki/%D0%99%D0%BE%D1%85%D0%B0%D0%BD%D0%BD%D0%B5%D1%81%D0%B1%D1%83%D1%80%D0%B3",
+              "name_assertion_id": "cln-name-4031432bbe4806e77ef4",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https ru wikipedia org wiki d0 99 d0 be d1 85 d0 b0 d0 bd d0 bd d0 b5 d1 81 d0 b1 d1 83 d1 80 d0 b3",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "EGoli",
+              "name_assertion_id": "cln-name-456142d40a9a09918a65",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "egoli",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johannesburgu",
+              "name_assertion_id": "cln-name-46a4e7c9f24aef0c3270",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesburgu",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Ioannesburgum",
+              "name_assertion_id": "cln-name-520b77975da2919f504b",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "ioannesburgum",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johannesburg, South Africa",
+              "name_assertion_id": "cln-name-57a3b104a282336b0e44",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesburg south africa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "IJohannesburg",
+              "name_assertion_id": "cln-name-62ed1f86976732f500be",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "ijohannesburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johanesburgo",
+              "name_assertion_id": "cln-name-642c0e116d0ac8dc2b9a",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johanesburgo",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johanesburgas",
+              "name_assertion_id": "cln-name-7334a20861cc2911d636",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johanesburgas",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johannesburga",
+              "name_assertion_id": "cln-name-78f83b0f5f86de701797",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesburga",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "J·ohanesbôrg",
+              "name_assertion_id": "cln-name-7d14c3643c07cd2669c2",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "j ohanesborg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Jo'anna",
+              "name_assertion_id": "cln-name-858502a0e14bce1f3df3",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "joanna",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "http://id.loc.gov/authorities/names/n79104288",
+              "name_assertion_id": "cln-name-86b5d8b6a8adcb349672",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "http id loc gov authorities names n79104288",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Jóhannesarborg",
+              "name_assertion_id": "cln-name-96ca9829d9dae812a88b",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesarborg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johannesbourg",
+              "name_assertion_id": "cln-name-a37441eefac075bd8371",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesbourg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Yok-hon-nì-sṳ̂-páu",
+              "name_assertion_id": "cln-name-ae1821f3572d194a2296",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "yok hon ni su pau",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Johannesburg",
+              "name_assertion_id": "cln-name-b4181c87667782596664",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki johannesburg",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Yohannesburg",
+              "name_assertion_id": "cln-name-b6c03e19f44ccaf52740",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "yohannesburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Joanesburgo",
+              "name_assertion_id": "cln-name-b7fcbfc70edc25e88bbe",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "joanesburgo",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johannesburg",
+              "name_assertion_id": "cln-name-c044cf2c1c1c4d61e1fa",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "johannesburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "IGoli",
+              "name_assertion_id": "cln-name-c1575378a02963449a79",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "igoli",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Jo'burg",
+              "name_assertion_id": "cln-name-c5117270daa80d528907",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "joburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Xohanesburgo",
+              "name_assertion_id": "cln-name-c9a63698dd37cf22870f",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "xohanesburgo",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "JNB",
+              "name_assertion_id": "cln-name-d432d8026e108001f571",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "jnb",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZAJNB",
+              "name_assertion_id": "cln-name-dcdc26644a5396dffe18",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zajnb",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Johannesburg, Gauteng",
+              "name_assertion_id": "cln-name-e29f8605d6a6c968e2c8",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesburg gauteng",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Johannesburg, Gauteng, South Africa",
+              "name_assertion_id": "cln-name-e9176440403c3d0004e9",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesburg gauteng south africa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Jozi",
+              "name_assertion_id": "cln-name-fbfb242576645e95443f",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "jozi",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Johannesburg",
+          "representative_latitude": -26.204680555499998,
+          "representative_longitude": 28.046675999999998,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "johannesburg",
+      "probe": "Johannesburg"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Tshwane",
+                "source_native_id": "47623444B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Tshwane",
+                "source_native_id": "15628383B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-d55f7cb52192bba95e88",
+          "canonical_type": "city",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "http://id.loc.gov/authorities/names/n79023000",
+              "name_assertion_id": "cln-name-02a05442a8529462e007",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "http id loc gov authorities names n79023000",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Pretoria, Gauteng, South Africa",
+              "name_assertion_id": "cln-name-0919a9eb8ab90da822d5",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretoria gauteng south africa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretorija",
+              "name_assertion_id": "cln-name-0a529f259fcc27285d9c",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretorija",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretoria, Gauteng",
+              "name_assertion_id": "cln-name-0e0b67acf842fa49be35",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretoria gauteng",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretorio",
+              "name_assertion_id": "cln-name-19ed91b8db8bd8884935",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretorio",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Tshwane",
+              "name_assertion_id": "cln-name-344a0c5d73c020c929f2",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "tshwane",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Prétoriye",
+              "name_assertion_id": "cln-name-36fbcf29e088e6668e98",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretoriye",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Q3926",
+              "name_assertion_id": "cln-name-399852e8a9e04aef04f5",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q3926",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B5%D1%82%D0%BE%D1%80%D0%B8%D1%8F",
+              "name_assertion_id": "cln-name-489b0c3764cf41c89451",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https ru wikipedia org wiki d0 9f d1 80 d0 b5 d1 82 d0 be d1 80 d0 b8 d1 8f",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "FAPR",
+              "name_assertion_id": "cln-name-4df403e4aa372ca07bfd",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "fapr",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretourii",
+              "name_assertion_id": "cln-name-4f736454b9f57c7bf233",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretourii",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretoriya",
+              "name_assertion_id": "cln-name-536c287b60139f30ff9b",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretoriya",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "E-Pitoli",
+              "name_assertion_id": "cln-name-5413bd7c6417492ac11f",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "e pitoli",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Priturya",
+              "name_assertion_id": "cln-name-5e40bc699f4cc90c4e59",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "priturya",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretorie",
+              "name_assertion_id": "cln-name-643c99f1cf4c5c7be725",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretorie",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretoria, S Africa",
+              "name_assertion_id": "cln-name-6cc39133984b375bc872",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretoria s africa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Piritōria",
+              "name_assertion_id": "cln-name-8ccdbefdd34870a7afb3",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "piritoria",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Pretoria",
+              "name_assertion_id": "cln-name-8e3048c34da1603d553e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki pretoria",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "PRY",
+              "name_assertion_id": "cln-name-939ac77a70211bb58133",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pry",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretorii",
+              "name_assertion_id": "cln-name-9670e65944c8f479369e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretorii",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pta",
+              "name_assertion_id": "cln-name-a93d996c049e8d78618e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pta",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretoria",
+              "name_assertion_id": "cln-name-ab3048ec1e1937e980ea",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "pretoria",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretooriyaa",
+              "name_assertion_id": "cln-name-b1007ec3527d69178442",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretooriyaa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Tsindiitłʼííshí",
+              "name_assertion_id": "cln-name-b11172675f0f23c1960f",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "tsindiit iishi",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pretoria, South Africa",
+              "name_assertion_id": "cln-name-c6f0941ee7e34390821f",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pretoria south africa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Praetoria",
+              "name_assertion_id": "cln-name-cf0f4ce7ab40aecbc14e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "praetoria",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Pitori",
+              "name_assertion_id": "cln-name-dee62a3839776fdb2c60",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "pitori",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "IPitoli",
+              "name_assertion_id": "cln-name-ea530194009e102354b6",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "ipitoli",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZAPRY",
+              "name_assertion_id": "cln-name-f43324de13558f16d1a3",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zapry",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Pretoria",
+          "representative_latitude": -25.7459277,
+          "representative_longitude": 28.1879101,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "pretoria",
+      "probe": "Pretoria"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-418038409a1c0a00d9bc",
+          "canonical_type": "locality",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "ZASDT",
+              "name_assertion_id": "cln-name-77e587a95d841296bee3",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zasdt",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Sandton",
+              "name_assertion_id": "cln-name-d5896356c8fb69d6b501",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "sandton",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Sandton",
+              "name_assertion_id": "cln-name-fdc6ff391b7379ceb4b5",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki sandton",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Sandton",
+          "representative_latitude": -26.104,
+          "representative_longitude": 28.051666666,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "town",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-43d109a4091bf9c2044c",
+          "candidate_type": "town",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "low",
+          "identity_evidence_class": "single_source_baseline",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Sandton",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "evidence does not meet the independent identity threshold for factual canonical promotion"
+          ],
+          "representative_latitude": -26.05,
+          "representative_longitude": 27.966667,
+          "sources": [
+            "nga_gns"
+          ]
+        }
+      ],
+      "normalized_name": "sandton",
+      "probe": "Sandton"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-3462bd075a8d155a3b22",
+          "canonical_type": "city",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "ZARDB",
+              "name_assertion_id": "cln-name-05ed7daf65ae6eb6def6",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zardb",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Q2296366",
+              "name_assertion_id": "cln-name-744e6b95b4c4dfc76498",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q2296366",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Randburga",
+              "name_assertion_id": "cln-name-75e02881dd394c150a7b",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "randburga",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Randburg",
+              "name_assertion_id": "cln-name-7e820e36abc366a5d0d6",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "randburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Randburgas",
+              "name_assertion_id": "cln-name-cac2e973059d33b84633",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "randburgas",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Randburg",
+              "name_assertion_id": "cln-name-cad7987af997083d3099",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki randburg",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Rendburg",
+              "name_assertion_id": "cln-name-da6b96a999439b4cbe5d",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "rendburg",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Randburg",
+          "representative_latitude": -26.093611111,
+          "representative_longitude": 28.0020276,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "randburg",
+      "probe": "Randburg"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-c53c43d358a6be20e785",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Rosebank",
+              "name_assertion_id": "cln-name-0e5e405e095024d78475",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "rosebank",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Rosebank%2C_Gauteng",
+              "name_assertion_id": "cln-name-c008a1d8387a6b351d18",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki rosebank 2c gauteng",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Rosebank",
+          "representative_latitude": -26.145277777,
+          "representative_longitude": 28.0397487,
+          "source_names": [
+            "geonames",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "rosebank",
+      "probe": "Rosebank"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-e44e12b3b4fdcc03e7c3",
+          "canonical_type": "suburb",
+          "licence_classes": [
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "https://en.wikipedia.org/wiki/Bryanston%2C_Gauteng",
+              "name_assertion_id": "cln-name-2631e9a3a9f166eda209",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki bryanston 2c gauteng",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Bryanston",
+              "name_assertion_id": "cln-name-8dbd9a122ccc86f3357b",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "bryanston",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZABSN",
+              "name_assertion_id": "cln-name-fdc1048f85cf5aa7d7c1",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zabsn",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Bryanston",
+          "representative_latitude": -26.052107999999997,
+          "representative_longitude": 28.0280505,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "bryanston",
+      "probe": "Bryanston"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-5c4c657aecad01c64729",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "https://en.wikipedia.org/wiki/Fourways",
+              "name_assertion_id": "cln-name-07a6cab28ed60615ec80",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki fourways",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Q5476301",
+              "name_assertion_id": "cln-name-2ca8344a0c61227f532b",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q5476301",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "ZAZBQ",
+              "name_assertion_id": "cln-name-337906de4162bfe122fa",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zazbq",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Fourways",
+              "name_assertion_id": "cln-name-3b5b6316d6eea650ddf5",
+              "name_roles": [
+                "preferred_common",
+                "alias"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "fourways",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Four Ways",
+              "name_assertion_id": "cln-name-b68963478960ad9fd4d3",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "four ways",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Fourways",
+          "representative_latitude": -26.02111,
+          "representative_longitude": 28.0042447,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "fourways",
+      "probe": "Fourways"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-3531b9dc79c239438abe",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "North Riding",
+              "name_assertion_id": "cln-name-8079bf578b17446eee6c",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "north riding",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZAZDV",
+              "name_assertion_id": "cln-name-88e59489ffb690e637a0",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zazdv",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Northriding",
+              "name_assertion_id": "cln-name-c7a99d70a6862c255ea4",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "northriding",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "North Riding",
+          "representative_latitude": -26.051,
+          "representative_longitude": 27.96304,
+          "source_names": [
+            "geonames",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "north riding",
+      "probe": "North Riding"
+    },
+    {
+      "canonical_identity_found": false,
+      "canonical_interpretation_count": 0,
+      "canonical_interpretations": [],
+      "extra_candidate_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "neighbourhood",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+          "candidate_type": "neighbourhood",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "low",
+          "identity_evidence_class": "single_source_baseline",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Kyalami",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "evidence does not meet the independent identity threshold for factual canonical promotion"
+          ],
+          "representative_latitude": -25.98944,
+          "representative_longitude": 28.07667,
+          "sources": [
+            "geonames"
+          ]
+        }
+      ],
+      "normalized_name": "kyalami",
+      "probe": "Kyalami"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 2,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-0d7688adb9c7af392007",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "ZAMRD",
+              "name_assertion_id": "cln-name-5a57f6524f7a85fe9ed2",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zamrd",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Midrand",
+              "name_assertion_id": "cln-name-8c41f8c89311119aa95b",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki midrand",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Midrand",
+              "name_assertion_id": "cln-name-a5c06434befb0658e964",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "midrand",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Midrand",
+          "representative_latitude": -25.987631,
+          "representative_longitude": 28.1296225,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        },
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Ekurhuleni",
+                "source_native_id": "47623444B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Ekurhuleni",
+                "source_native_id": "15628383B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-455d2715587edce120f0",
+          "canonical_type": "locality",
+          "licence_classes": [
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS"
+          ],
+          "licensing_classification": "permissive_supported",
+          "name_assertions": [
+            {
+              "name": "Midrand",
+              "name_assertion_id": "cln-name-28aa77d367b95d3f4ada",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "midrand",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Midrand",
+          "representative_latitude": -25.978068,
+          "representative_longitude": 28.172929,
+          "source_names": [
+            "geonames",
+            "nga_gns"
+          ],
+          "type_confidence": "supported",
+          "type_state": "supported",
+          "unresolved_attributes": []
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "midrand",
+      "probe": "Midrand"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Tshwane",
+                "source_native_id": "47623444B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Tshwane",
+                "source_native_id": "15628383B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-029159849439c2ea8783",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Q1054450",
+              "name_assertion_id": "cln-name-4cb554d880c0d067e981",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q1054450",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Verwoerdburg",
+              "name_assertion_id": "cln-name-62ebfbea51036627f469",
+              "name_roles": [
+                "alias",
+                "historical"
+              ],
+              "name_type": "alias",
+              "normalized_name": "verwoerdburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Lyttelton",
+              "name_assertion_id": "cln-name-88e77f05d7031c90c87a",
+              "name_roles": [
+                "alias",
+                "historical"
+              ],
+              "name_type": "alias",
+              "normalized_name": "lyttelton",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Lyttelton%2C_Gauteng",
+              "name_assertion_id": "cln-name-a5aa6c4bd3f939e80fec",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki lyttelton 2c gauteng",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Centurion%2C_Gauteng",
+              "name_assertion_id": "cln-name-b6ef65c8b04e72dd7c93",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki centurion 2c gauteng",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Centurion",
+              "name_assertion_id": "cln-name-d6bc73e915faadcf2db2",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "centurion",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZAZAY",
+              "name_assertion_id": "cln-name-d7a7d992544fcd3b792c",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zazay",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "ZAZDK",
+              "name_assertion_id": "cln-name-f421a379fb94d6567736",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zazdk",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Centurion",
+          "representative_latitude": -25.840795,
+          "representative_longitude": 28.189444444,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "centurion",
+      "probe": "Centurion"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-47a732ae286c679217fe",
+          "canonical_type": "city",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Johannesburg/Soweto",
+              "name_assertion_id": "cln-name-1ea4a26f37111894eb62",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "johannesburg soweto",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Soweto, South Africa",
+              "name_assertion_id": "cln-name-210a5fc9c68fc659ef80",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "soweto south africa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZAZEV",
+              "name_assertion_id": "cln-name-27e5c3d9c09dca415ed3",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zazev",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Soweto",
+              "name_assertion_id": "cln-name-293db8fdc0f26794fb63",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "soweto",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Soweto",
+              "name_assertion_id": "cln-name-2b764beae5776aade611",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki soweto",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Soueto",
+              "name_assertion_id": "cln-name-3ff3c2eb7014c9d645e3",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "soueto",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Soweto, Gauteng",
+              "name_assertion_id": "cln-name-46ee4b4340c7709102e0",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "soweto gauteng",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Soveto",
+              "name_assertion_id": "cln-name-5ecf88076b9b75293d06",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "soveto",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://ru.wikipedia.org/wiki/%D0%A1%D0%BE%D1%83%D1%8D%D1%82%D0%BE",
+              "name_assertion_id": "cln-name-66e9f7de03dd668d74cb",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https ru wikipedia org wiki d0 a1 d0 be d1 83 d1 8d d1 82 d0 be",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Q217426",
+              "name_assertion_id": "cln-name-76d29b4900538d9b3146",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q217426",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Sovetas",
+              "name_assertion_id": "cln-name-d5ca0f1f1c520b8f0b25",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "sovetas",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Soweto, Johannesburg",
+              "name_assertion_id": "cln-name-d81ebf45a1947804743f",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "soweto johannesburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Mpanzaville",
+              "name_assertion_id": "cln-name-f2e386694c1452d78542",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "mpanzaville",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Soweto",
+          "representative_latitude": -26.26781,
+          "representative_longitude": 27.858492,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "soweto",
+      "probe": "Soweto"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Tshwane",
+                "source_native_id": "47623444B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Tshwane",
+                "source_native_id": "15628383B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-e85d170c3b560f058141",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Mamelodi",
+              "name_assertion_id": "cln-name-1e5b6ab8514a9bed6cf0",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "mamelodi",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Mamelodi",
+              "name_assertion_id": "cln-name-9ca5b0050f7fdc3184c5",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki mamelodi",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Mamelodi",
+          "representative_latitude": -25.713013,
+          "representative_longitude": 28.365341,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Tshwane",
+                "source_native_id": "47623444B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Tshwane",
+                "source_native_id": "15628383B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "estate/residential_development_candidate",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-ab35c1a038a865ba3e52",
+          "candidate_type": "estate/residential_development_candidate",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "low",
+          "identity_evidence_class": "single_source_baseline",
+          "licence_state": "ODBL_ONLY",
+          "preferred_name": "Mamelodi",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "OSM-only residential-development evidence is retained but requires independent corroboration before promotion"
+          ],
+          "representative_latitude": -25.71243905,
+          "representative_longitude": 28.37118504149406,
+          "sources": [
+            "osm"
+          ]
+        }
+      ],
+      "normalized_name": "mamelodi",
+      "probe": "Mamelodi"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Ekurhuleni",
+                "source_native_id": "47623444B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Ekurhuleni",
+                "source_native_id": "15628383B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-7a1604bd1ce2d85ce2c5",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Benoni",
+              "name_assertion_id": "cln-name-2707818de51c80491b6b",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "benoni",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Q818106",
+              "name_assertion_id": "cln-name-5934cd2ed330a1c06911",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q818106",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "City of Lakes, Son of my sorrow",
+              "name_assertion_id": "cln-name-7d5637b51571a9a5b9e4",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "city of lakes son of my sorrow",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZABNI",
+              "name_assertion_id": "cln-name-9b6b722f6081bbdd47e2",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zabni",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Benoni%2C_Gauteng",
+              "name_assertion_id": "cln-name-c2804da5d1ce8f62c5b0",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki benoni 2c gauteng",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Benoni",
+          "representative_latitude": -26.189665499999997,
+          "representative_longitude": 28.3159467775,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "benoni",
+      "probe": "Benoni"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Ekurhuleni",
+                "source_native_id": "47623444B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Ekurhuleni",
+                "source_native_id": "15628383B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-a8de39a1e8953f55235a",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "https://en.wikipedia.org/wiki/Boksburg",
+              "name_assertion_id": "cln-name-1270715a06b77c8a0a42",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki boksburg",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "BOKSBURGEAST",
+              "name_assertion_id": "cln-name-36cb8bd2ea8125f03b41",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "boksburgeast",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Boksburgas",
+              "name_assertion_id": "cln-name-4a4ffb7f3e1d8276442d",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "boksburgas",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Boksburg East",
+              "name_assertion_id": "cln-name-90045b9cd28737f6e32c",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "boksburg east",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "BOKSBURGOOS",
+              "name_assertion_id": "cln-name-9806b77f6dad3a805b11",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "boksburgoos",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Boksburg",
+              "name_assertion_id": "cln-name-a0cd006dd558c4134446",
+              "name_roles": [
+                "preferred_common",
+                "alias"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "boksburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Boksburg-Oos",
+              "name_assertion_id": "cln-name-c02b3087904557cad5a7",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "boksburg oos",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Boksburg",
+          "representative_latitude": -26.217433333,
+          "representative_longitude": 28.2598115,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "boksburg",
+      "probe": "Boksburg"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Ekurhuleni",
+                "source_native_id": "47623444B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Ekurhuleni",
+                "source_native_id": "15628383B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-b3eb16318b2cfaa4e685",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "ZAKMP",
+              "name_assertion_id": "cln-name-04b74a1ac28399f93777",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zakmp",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Kempton Park",
+              "name_assertion_id": "cln-name-a3c6a6bf3dafbe8eda29",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "kempton park",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Kempton_Park%2C_Gauteng",
+              "name_assertion_id": "cln-name-b4525bd31dd942879e40",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki kempton park 2c gauteng",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "KEMPTONPARK",
+              "name_assertion_id": "cln-name-d8c64984d265623243c0",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "kemptonpark",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Kempton Park",
+          "representative_latitude": -26.099381,
+          "representative_longitude": 28.23346625,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "kempton park",
+      "probe": "Kempton Park"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Ekurhuleni",
+                "source_native_id": "47623444B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Ekurhuleni",
+                "source_native_id": "15628383B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-4c21c1f81da64c1c6728",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Q1637702",
+              "name_assertion_id": "cln-name-7576953f2fff0a683e19",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q1637702",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Alberton",
+              "name_assertion_id": "cln-name-f13b8c6b41c0402e1cc3",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "alberton",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Alberton%2C_Gauteng",
+              "name_assertion_id": "cln-name-f8fdfd5620a8ae0993e0",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki alberton 2c gauteng",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Alberton",
+          "representative_latitude": -26.267105811,
+          "representative_longitude": 28.1221523,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [],
+      "normalized_name": "alberton",
+      "probe": "Alberton"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-348fc87a99e803e64cdc",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Q2166182",
+              "name_assertion_id": "cln-name-5760f888ecaaf822952a",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q2166182",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Rūdeporta",
+              "name_assertion_id": "cln-name-5ffe47ea933c147a9d83",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "rudeporta",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ZARDP",
+              "name_assertion_id": "cln-name-60078ace9707c1619aef",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zardp",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Roodeport-Maraisburg",
+              "name_assertion_id": "cln-name-6ae019021c346f7306c9",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "roodeport maraisburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Rudepurt",
+              "name_assertion_id": "cln-name-77fd73e391c43f660e8e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "rudepurt",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Rodeportas",
+              "name_assertion_id": "cln-name-86e0e62006e78faed04b",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "rodeportas",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "ROODEPORTMARAISBURG",
+              "name_assertion_id": "cln-name-88e5d27a9f86e8368432",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "roodeportmaraisburg",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Rodipoto",
+              "name_assertion_id": "cln-name-ba9573e3b77baaf9041e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "rodipoto",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Roodepoort",
+              "name_assertion_id": "cln-name-bc9e11f9347ed1e1350f",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "roodepoort",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Roodepoort",
+              "name_assertion_id": "cln-name-d1e18c15e801763d6683",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki roodepoort",
+              "searchable": false,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Roodepoort",
+          "representative_latitude": -26.156882,
+          "representative_longitude": 27.8725,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Johannesburg",
+                "source_native_id": "47623444B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Johannesburg",
+                "source_native_id": "15628383B15418766532839",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B15418766532839",
+                  "shapeISO": "",
+                  "shapeName": "City of Johannesburg",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-015d909cf09fef3e402c",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "moderate",
+          "identity_evidence_class": "multi_source_contextual_match",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Roodepoort",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -26.3717815,
+          "representative_longitude": 27.8425675,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        },
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "City of Tshwane",
+                "source_native_id": "47623444B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "City of Tshwane",
+                "source_native_id": "15628383B80921072750836",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B80921072750836",
+                  "shapeISO": "",
+                  "shapeName": "City of Tshwane",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-693ac61bb31a4b5abd33",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "moderate",
+          "identity_evidence_class": "multi_source_contextual_match",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Roodepoort",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -25.777979000000002,
+          "representative_longitude": 28.7660185,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        },
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Sedibeng",
+                "source_native_id": "47623444B84489694859974",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B84489694859974",
+                  "shapeISO": "",
+                  "shapeName": "Sedibeng",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Midvaal",
+                "source_native_id": "15628383B4021169730913",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B4021169730913",
+                  "shapeISO": "",
+                  "shapeName": "Midvaal",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-d4b677c3b5e226d41a56",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "moderate",
+          "identity_evidence_class": "multi_source_contextual_match",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Roodepoort",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -26.406519,
+          "representative_longitude": 28.017689500000003,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        }
+      ],
+      "normalized_name": "roodepoort",
+      "probe": "Roodepoort"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Ekurhuleni",
+                "source_native_id": "47623444B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Ekurhuleni",
+                "source_native_id": "15628383B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-8f4a74eab390f42c84bb",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "https://en.wikipedia.org/wiki/Germiston",
+              "name_assertion_id": "cln-name-0db1dda4fa9f112c9512",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki germiston",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "ZAGRM",
+              "name_assertion_id": "cln-name-41042d9989be44a9ede4",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zagrm",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Germiston, Gauteng",
+              "name_assertion_id": "cln-name-69dda4aa9a981271c250",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "germiston gauteng",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Q993721",
+              "name_assertion_id": "cln-name-6af3e39177230a618d5e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q993721",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Germiston, South Africa",
+              "name_assertion_id": "cln-name-b6578a62ce3de3c1759e",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "germiston south africa",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Germiston",
+              "name_assertion_id": "cln-name-df9bb7b63f015f1b4393",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "germiston",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "kwaDukathole",
+              "name_assertion_id": "cln-name-e69e28fa39d1a93ff8d1",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "kwadukathole",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Germinston",
+              "name_assertion_id": "cln-name-f8e2911debf0b1b1f8ce",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "germinston",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Germiston",
+          "representative_latitude": -26.232125,
+          "representative_longitude": 28.176651999999997,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Ekurhuleni",
+                "source_native_id": "47623444B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Ekurhuleni",
+                "source_native_id": "15628383B61881803671589",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B61881803671589",
+                  "shapeISO": "",
+                  "shapeName": "Ekurhuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-a379cb82467606fe3041",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "moderate",
+          "identity_evidence_class": "multi_source_contextual_match",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Germiston",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -26.2,
+          "representative_longitude": 28.2,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        }
+      ],
+      "normalized_name": "germiston",
+      "probe": "Germiston"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Sedibeng",
+                "source_native_id": "47623444B84489694859974",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B84489694859974",
+                  "shapeISO": "",
+                  "shapeName": "Sedibeng",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Emfuleni",
+                "source_native_id": "15628383B33735276955904",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B33735276955904",
+                  "shapeISO": "",
+                  "shapeName": "Emfuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-7751b10bef7d63ee8cea",
+          "canonical_type": "city",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "Vereeniging",
+              "name_assertion_id": "cln-name-18f972bacae1ceb90138",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "vereeniging",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "Verenigingas",
+              "name_assertion_id": "cln-name-5eb02fbe904acb094e14",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "verenigingas",
+              "searchable": true,
+              "status": "active"
+            },
+            {
+              "name": "https://en.wikipedia.org/wiki/Vereeniging",
+              "name_assertion_id": "cln-name-b878eb3dc1081ffd3a36",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki vereeniging",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Q503056",
+              "name_assertion_id": "cln-name-c5f0b820562a3d712ade",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "q503056",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "ZAVGG",
+              "name_assertion_id": "cln-name-dd3d5d7e0492360fae1c",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "zavgg",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Verenigingo",
+              "name_assertion_id": "cln-name-de80486c74098707dfe0",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "verenigingo",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Vereeniging",
+          "representative_latitude": -26.6731315,
+          "representative_longitude": 27.929047222,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Sedibeng",
+                "source_native_id": "47623444B84489694859974",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B84489694859974",
+                  "shapeISO": "",
+                  "shapeName": "Sedibeng",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Emfuleni",
+                "source_native_id": "15628383B33735276955904",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B33735276955904",
+                  "shapeISO": "",
+                  "shapeName": "Emfuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-52f29a3764eddca6a3bc",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "moderate",
+          "identity_evidence_class": "multi_source_contextual_match",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vereeniging",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -26.65,
+          "representative_longitude": 27.9,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        },
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Sedibeng",
+                "source_native_id": "47623444B84489694859974",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B84489694859974",
+                  "shapeISO": "",
+                  "shapeName": "Sedibeng",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Emfuleni",
+                "source_native_id": "15628383B33735276955904",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B33735276955904",
+                  "shapeISO": "",
+                  "shapeName": "Emfuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [
+            "FAVV",
+            "SMAALDEELLANDINGSTROKE",
+            "Smaaldeel Landingstroke",
+            "VEREENIGEENAERODROME",
+            "Vereenigeen Aerodrome",
+            "فيرينجنغ",
+            "فيرينخن"
+          ],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-7969c3d6f482f94ed839",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "high",
+          "identity_evidence_class": "direct_cross_identifier",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vereeniging",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -26.56653611,
+          "representative_longitude": 27.96054722,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        }
+      ],
+      "normalized_name": "vereeniging",
+      "probe": "Vereeniging"
+    },
+    {
+      "canonical_identity_found": true,
+      "canonical_interpretation_count": 1,
+      "canonical_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Sedibeng",
+                "source_native_id": "47623444B84489694859974",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B84489694859974",
+                  "shapeISO": "",
+                  "shapeName": "Sedibeng",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Emfuleni",
+                "source_native_id": "15628383B33735276955904",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B33735276955904",
+                  "shapeISO": "",
+                  "shapeName": "Emfuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "boundary_conflict": false,
+          "canonical_location_id": "pl-gp-v01-d7743ed65b55c354d64a",
+          "canonical_type": "town",
+          "licence_classes": [
+            "CC0",
+            "CC_BY_4",
+            "NO_RESTRICTION_GNS",
+            "ODBL_1"
+          ],
+          "licensing_classification": "mixed_odbl_supported",
+          "name_assertions": [
+            {
+              "name": "https://en.wikipedia.org/wiki/Vanderbijlpark",
+              "name_assertion_id": "cln-name-04729bde2c6eb3dd04f4",
+              "name_roles": [
+                "alias"
+              ],
+              "name_type": "alias",
+              "normalized_name": "https en wikipedia org wiki vanderbijlpark",
+              "searchable": false,
+              "status": "active"
+            },
+            {
+              "name": "Vanderbijlpark",
+              "name_assertion_id": "cln-name-18ee812e28dffce0f8fa",
+              "name_roles": [
+                "preferred_common"
+              ],
+              "name_type": "preferred_common",
+              "normalized_name": "vanderbijlpark",
+              "searchable": true,
+              "status": "active"
+            }
+          ],
+          "official_name": null,
+          "preferred_name": "Vanderbijlpark",
+          "representative_latitude": -26.709300499999998,
+          "representative_longitude": 27.83711,
+          "source_names": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "type_confidence": "provisional",
+          "type_state": "provisional",
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "extra_candidate_interpretations": [
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Sedibeng",
+                "source_native_id": "47623444B84489694859974",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B84489694859974",
+                  "shapeISO": "",
+                  "shapeName": "Sedibeng",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Emfuleni",
+                "source_native_id": "15628383B33735276955904",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B33735276955904",
+                  "shapeISO": "",
+                  "shapeName": "Emfuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [
+            "VANDERBIJLPARKVLIEGVELD",
+            "VANDERBYLPARK",
+            "Vanderbijlpark Vliegveld",
+            "Vanderbyl Park"
+          ],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-147d5612deb1538d0317",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "high",
+          "identity_evidence_class": "direct_cross_identifier",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vanderbijlpark",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -26.69197222,
+          "representative_longitude": 27.77749444,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        },
+        {
+          "administrative_context": {
+            "adm2": [
+              {
+                "level": "ADM2",
+                "name": "Sedibeng",
+                "source_native_id": "47623444B84489694859974",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "47623444B84489694859974",
+                  "shapeISO": "",
+                  "shapeName": "Sedibeng",
+                  "shapeType": "ADM2"
+                }
+              }
+            ],
+            "adm3": [
+              {
+                "level": "ADM3",
+                "name": "Emfuleni",
+                "source_native_id": "15628383B33735276955904",
+                "source_properties": {
+                  "shapeGroup": "ZAF",
+                  "shapeID": "15628383B33735276955904",
+                  "shapeISO": "",
+                  "shapeName": "Emfuleni",
+                  "shapeType": "ADM3"
+                }
+              }
+            ],
+            "province": {
+              "level": "ADM1",
+              "name": "Gauteng",
+              "source": "geoBoundaries"
+            }
+          },
+          "aliases": [],
+          "assessed_candidate_type": "other",
+          "boundary_conflict": false,
+          "candidate_location_id": "pl-gp-v01-63507f28c61c5495c998",
+          "candidate_type": "other",
+          "conflicts": [],
+          "deliberately_not_canonical": true,
+          "historical_names": [],
+          "identity_confidence": "moderate",
+          "identity_evidence_class": "multi_source_contextual_match",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vanderbijlpark",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "representative_latitude": -26.6666685,
+          "representative_longitude": 27.8333315,
+          "sources": [
+            "geonames",
+            "nga_gns"
+          ]
+        }
+      ],
+      "normalized_name": "vanderbijlpark",
+      "probe": "Vanderbijlpark"
+    }
+  ],
+  "scope": {
+    "no_candidate_layer_mutation": true,
+    "no_database_operations": true,
+    "no_product_search_changes": true,
+    "no_production_integration": true,
+    "no_search_areas": true,
+    "no_source_artifact_mutation": true
+  },
+  "special_probe_handling": {
+    "Kyalami": "No canonical row is emitted until the official evidence commercial-reuse gate is cleared; the founder naming policy is preserved in the Kyalami gate record.",
+    "Mamelodi": "Strong town/place interpretation is canonical; OSM residential-development interpretation remains candidate-only.",
+    "Sandton": "Strong multi-source interpretation is canonical; weak NGA-only interpretation remains candidate-only."
+  }
+}

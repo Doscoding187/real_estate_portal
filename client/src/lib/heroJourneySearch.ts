@@ -150,7 +150,7 @@ export function buildPropertySearchUrl({
     addSupportedRentFilters(filterInput, filters);
   }
 
-  let canonicalSelection: { scope: SearchScope; context: GeographySearchContext } | undefined;
+  let canonicalSelection: CanonicalSearchLocation | undefined;
   let multiLocationScope: SearchScope | undefined;
   if (locations.length > 0 && searchScope) {
     return buildInvalidSearchUrl(transactionType, 'multiple-locations-unsupported');
@@ -186,6 +186,7 @@ export function buildPropertySearchUrl({
       searchAreaAvailability,
       localityRefinementId,
       context: searchScopeContext || canonicalSelection?.context,
+      factualLocationId: canonicalSelection?.factualLocationId,
       filters,
       resultState: { sort: 'relevance', page: 0 },
     }) || '/'

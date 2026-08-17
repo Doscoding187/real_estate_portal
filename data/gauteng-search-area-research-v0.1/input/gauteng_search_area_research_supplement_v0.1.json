@@ -1,0 +1,1219 @@
+{
+  "schema_version": "0.1",
+  "research_date": "2026-08-15",
+  "retained_candidate_catalogue": {
+    "source_path": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_candidate_catalogue_v0.1.jsonl",
+    "repository_head": "a6cd7545a5d710dc0b1f19829f396a119f4f2f9d",
+    "catalogue_version": "v0.1",
+    "read_only_observation": true
+  },
+  "sources": [
+    {
+      "key": "pgp_jhb_south_2026",
+      "publisher": "Pam Golding Properties",
+      "domain": "pamgolding.co.za",
+      "url": "https://www.pamgolding.co.za/news-insights/johannesburg-home-buyers-seeking-value-flock-to-the-south",
+      "title_or_context": "Johannesburg home buyers seeking value flock to the south",
+      "access_date": "2026-08-15",
+      "source_category": "established_agency_market_guide",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "A current agency market article treats Johannesburg South as a value-oriented market including Alberton and southern Johannesburg suburbs.",
+      "limitations": "Agency editorial scope is market evidence, not a Property Listify boundary or reusable taxonomy."
+    },
+    {
+      "key": "chas_jhb_south_new_south",
+      "publisher": "Chas Everitt",
+      "domain": "chaseveritt.co.za",
+      "url": "https://www.chaseveritt.co.za/news/market-report-johannesburgs-new-south/",
+      "title_or_context": "Market report: Johannesburg's New South",
+      "access_date": "2026-08-15",
+      "source_category": "established_agency_market_guide",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "Chas Everitt identifies Bassonia, Glenvista and Mulbarton as core New South property-market locations.",
+      "limitations": "The article is promotional and focuses on a narrower New South concept inside the broader Johannesburg South label."
+    },
+    {
+      "key": "pp_jhb_south_neighbourhood",
+      "publisher": "Private Property",
+      "domain": "privateproperty.co.za",
+      "url": "https://www.privateproperty.co.za/neighbourhoods/johannesburg-south/26",
+      "title_or_context": "Johannesburg South neighbourhood guide",
+      "access_date": "2026-08-15",
+      "source_category": "portal_market_taxonomy",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "The portal presents Johannesburg South as a multi-suburb discovery area including Bassonia, Glenvista, Lenasia, Oakdene, Winchester Hills and Mulbarton.",
+      "limitations": "Portal neighbourhood grouping and live inventory are proprietary and changing."
+    },
+    {
+      "key": "elsja_pretoria_east",
+      "publisher": "Elsja Properties",
+      "domain": "elsjaprop.co.za",
+      "url": "https://elsjaprop.co.za/area-guides/pretoria-east",
+      "title_or_context": "Pretoria East area guide",
+      "access_date": "2026-08-15",
+      "source_category": "local_established_agency_guide",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "The area guide uses Pretoria East as a consumer-facing market spanning Waterkloof Glen, Lynnwood, Faerie Glen, Moreleta Park and Garsfontein, with transport corridors and lifestyle nodes as the organising context.",
+      "limitations": "Local agency guide is useful market evidence but does not establish statutory boundaries."
+    },
+    {
+      "key": "fine_pretoria_east_2026",
+      "publisher": "Fine & Country South Africa",
+      "domain": "fineandcountry.co.za",
+      "url": "https://www.fineandcountry.co.za/insights/blog/houses-for-sale-pretoria-east-buyers-guide",
+      "title_or_context": "Pretoria East buyer's guide",
+      "access_date": "2026-08-15",
+      "source_category": "established_agency_market_guide",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "The buyer guide discusses Pretoria East through Waterkloof Ridge, Lynnwood, Garsfontein, Moreleta Park and Silver Lakes as recognisable buyer submarkets.",
+      "limitations": "The article is a buyer guide and its selected examples are not a complete membership list."
+    },
+    {
+      "key": "mypr_pretoria_east_2026",
+      "publisher": "MyPR",
+      "domain": "mypr.co.za",
+      "url": "https://mypr.co.za/pretoria-east-property-what-buyers-need-to-know-about-one-of-gautengs-strongest-markets/",
+      "title_or_context": "Pretoria East property buyer market overview",
+      "access_date": "2026-08-15",
+      "source_category": "property_publication_market_evidence",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "A contemporary property-market publication describes Faerie Glen, Garsfontein, Moreleta Park, Woodhill and the outer N4 corridor as part of the Pretoria East buyer conversation.",
+      "limitations": "Publication evidence is secondary and should reinforce, not establish, membership by itself."
+    },
+    {
+      "key": "propertywheel_jhb_east_narrow",
+      "publisher": "Property Wheel",
+      "domain": "propertywheel.co.za",
+      "url": "https://propertywheel.co.za/2022/08/first-time-homebuyers-opt-for-highlands-north-in-johannesburg-east/",
+      "title_or_context": "Johannesburg East narrow market basket reported from Lightstone",
+      "access_date": "2026-08-15",
+      "source_category": "property_publication_market_evidence",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "The publication reports a narrow Johannesburg East basket around Highlands North and nearby inner-eastern suburbs, contrasting with wider East Rand usage.",
+      "limitations": "The article reports third-party analysis and is historical; it is retained as conflict evidence, not as a boundary authority."
+    },
+    {
+      "key": "pgp_jhb_west",
+      "publisher": "Pam Golding Properties",
+      "domain": "pamgolding.co.za",
+      "url": "https://www.pamgolding.co.za/property-search/apartments-for-sale-johannesburg-west/756",
+      "title_or_context": "Johannesburg West property search market page",
+      "access_date": "2026-08-15",
+      "source_category": "portal_market_taxonomy",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "The agency exposes Johannesburg West as a consumer property-search concept, separate from a single suburb page.",
+      "limitations": "Search landing pages are editorial/product groupings and may change with inventory."
+    },
+    {
+      "key": "sibk_jhb_west",
+      "publisher": "Sibk Property Brokers",
+      "domain": "sibk.co.za",
+      "url": "https://www.sibk.co.za/",
+      "title_or_context": "Johannesburg West agency service area",
+      "access_date": "2026-08-15",
+      "source_category": "local_established_agency_guide",
+      "reuse_classification": "market_evidence_only_no_reuse",
+      "observation": "The agency describes Johannesburg West through the Roodepoort-to-Soweto corridor, supporting recognition of the term but not a stable boundary.",
+      "limitations": "Service-area copy is broad and promotional."
+    }
+  ],
+  "candidate_updates": [
+    {
+      "key": "johannesburg_north",
+      "members": [
+        {
+          "name": "Kya Sands",
+          "gap_candidate_id": "pl-gp-v01-004b3435536898db5063",
+          "retained_candidate_catalogue_exists": true
+        }
+      ]
+    },
+    {
+      "key": "johannesburg_south",
+      "members": [
+        {
+          "name": "Brackendowns",
+          "gap_candidate_id": "pl-gp-v01-3c6d406c1e75342dd597",
+          "retained_candidate_catalogue_exists": true
+        },
+        {
+          "name": "Southdale",
+          "gap_candidate_id": "pl-gp-v01-7a226d0c238d7967a2f1",
+          "retained_candidate_catalogue_exists": true
+        }
+      ]
+    },
+    {
+      "key": "east_rand",
+      "members": [
+        {
+          "name": "Greenstone Hill",
+          "gap_candidate_id": "pl-gp-v01-1b042a7e8cb8debb6fe5",
+          "retained_candidate_catalogue_exists": true
+        }
+      ]
+    },
+    {
+      "key": "johannesburg_south",
+      "source_keys": ["pgp_jhb_south_2026", "chas_jhb_south_new_south", "pp_jhb_south_neighbourhood"]
+    },
+    {
+      "key": "pretoria_east",
+      "source_keys": ["elsja_pretoria_east", "fine_pretoria_east_2026", "mypr_pretoria_east_2026"],
+      "members": [
+        {
+          "name": "Waterkloof",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_pretoria_east", "p24_pretoria_east", "chas_pretoria"],
+          "reason": "Old East and Pretoria East sources repeatedly treat Waterkloof as a recognised Pretoria East anchor; its factual identity remains separate."
+        },
+        {
+          "name": "Brooklyn",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_pretoria_east", "p24_pretoria_east", "chas_pretoria"],
+          "reason": "Multiple market guides place Brooklyn in the established east-of-central Pretoria property market."
+        },
+        {
+          "name": "Lynnwood",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_pretoria_east", "p24_pretoria_east", "pp_old_east", "fine_pretoria_east_2026"],
+          "reason": "Lynnwood is a repeated Old East/Pretoria East anchor across independent agency and portal evidence."
+        },
+        {
+          "name": "Moreleta Park",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "seeff_moreleta", "elsja_pretoria_east"],
+          "likely_type": "suburb",
+          "reason": "Repeatedly presented as a major Pretoria East residential node; absent from the accepted factual projection and therefore retained as a gap only."
+        },
+        {
+          "name": "Menlyn",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "chas_pretoria"],
+          "reason": "Consumer-facing Pretoria East guides repeatedly use Menlyn as an east-market anchor."
+        },
+        {
+          "name": "Newlands",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "chas_pretoria"],
+          "reason": "Newlands is repeatedly named in the New Pretoria East market context; duplicate factual rows, if present, remain ambiguous."
+        },
+        {
+          "name": "Garsfontein",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_pretoria_east", "p24_pretoria_east", "elsja_pretoria_east", "fine_pretoria_east_2026"],
+          "reason": "Independent guides converge on Garsfontein as a Pretoria East corridor and residential market node."
+        },
+        {
+          "name": "Faerie Glen",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east", "seeff_faerie", "elsja_pretoria_east", "mypr_pretoria_east_2026"],
+          "reason": "Agency, portal and property-publication evidence consistently place Faerie Glen in Pretoria East."
+        },
+        {
+          "name": "Wapadrand",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "chas_pretoria"],
+          "reason": "Wapadrand is repeatedly associated with the east-market residential corridor."
+        },
+        {
+          "name": "Mooikloof",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "fine_pretoria_east_2026"],
+          "reason": "Mooikloof is a recurring Pretoria East lifestyle and estate-market node."
+        },
+        {
+          "name": "The Hills",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east_hotspot", "p24_pretoria_east_2026", "chas_pretoria"],
+          "reason": "The Hills is repeatedly surfaced in contemporary Pretoria East property discovery."
+        },
+        {
+          "name": "Muckleneuk",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["pp_pretoria_east", "pp_old_east", "chas_pretoria"],
+          "reason": "Muckleneuk is strongly supported as part of the Old East edge of the broader Pretoria East market."
+        },
+        {
+          "name": "Waterkloof Ridge",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_east", "fine_pretoria_east_2026", "pp_old_east"],
+          "reason": "Multiple guides use Waterkloof Ridge as a Pretoria East buyer and lifestyle location."
+        },
+        {
+          "name": "Equestria",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "chas_pretoria"],
+          "likely_type": "suburb",
+          "gap_candidate_id": "pl-gp-v01-3ddae5d885a178902a78",
+          "retained_candidate_catalogue_exists": true,
+          "reason": "Repeated portal and agency inclusion supports the outer-east association, but the accepted factual projection lacks the name."
+        },
+        {
+          "name": "Six Fountains",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "fine_pretoria_east_2026"],
+          "likely_type": "estate_or_suburb",
+          "reason": "Contemporary property guides repeatedly surface Six Fountains as an east-market estate node; factual promotion is not assumed."
+        },
+        {
+          "name": "Silver Lakes",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "fine_pretoria_east_2026", "p24_pretoria_east_2026"],
+          "likely_type": "estate_or_suburb",
+          "reason": "Silver Lakes is a recurring Pretoria East estate-market term, absent from the accepted factual projection."
+        },
+        {
+          "name": "Woodhill",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "mypr_pretoria_east_2026"],
+          "likely_type": "estate_or_suburb",
+          "reason": "Woodhill recurs in Pretoria East market evidence as an estate/lifestyle node, but is not promoted as factual geography here."
+        },
+        {
+          "name": "Pretoriuspark",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot"],
+          "reason": "Portal market evidence supports an east-market relationship, but the term is not needed for the initial consensus core."
+        },
+        {
+          "name": "Elarduspark",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot"],
+          "reason": "Repeatedly included on the southern/eastern edge of broad Pretoria East discovery lists."
+        },
+        {
+          "name": "Erasmuskloof",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot", "chas_pretoria"],
+          "reason": "Recognised east-market edge location, retained below core because broad portal boundaries vary."
+        },
+        {
+          "name": "Lynnwood Glen",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "fine_pretoria_east_2026"],
+          "reason": "A recurring Lynnwood/Pretoria East submarket term."
+        },
+        {
+          "name": "Lynnwood Ridge",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot"],
+          "reason": "Supported as an east-market edge node, with less cross-source depth than the core."
+        },
+        {
+          "name": "La Montagne",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot"],
+          "reason": "Repeated portal inclusion supports a cautious east-market membership."
+        },
+        {
+          "name": "Shere",
+          "state": "fringe",
+          "confidence": "low",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot"],
+          "reason": "Outer-east property evidence exists, but the term sits near lifestyle-estate/farm boundaries and should not define MVP scope."
+        },
+        {
+          "name": "Olympus AH",
+          "state": "fringe",
+          "confidence": "low",
+          "source_keys": ["p24_pretoria_east", "p24_pretoria_east_hotspot"],
+          "likely_type": "agricultural_holdings_or_locality",
+          "reason": "Observed on broad east-market lists, but factual type and market boundary require geography follow-up."
+        }
+      ]
+    },
+    {
+      "key": "midrand",
+      "members": [
+        {
+          "name": "Midrand",
+          "canonical_location_ids": ["pl-gp-v01-0d7688adb9c7af392007", "pl-gp-v01-455d2715587edce120f0"],
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_midrand", "pp_midrand", "chas_midrand"],
+          "reason": "Midrand is both a factual identity and a widely used multi-suburb property market between Johannesburg and Pretoria; both accepted factual rows are referenced explicitly."
+        },
+        {
+          "name": "Carlswald",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_midrand", "pp_midrand_guide", "chas_midrand"],
+          "reason": "Independent Midrand area guides repeatedly identify Carlswald as a core residential market node."
+        },
+        {
+          "name": "Noordwyk",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_midrand", "pp_midrand_guide", "chas_midrand"],
+          "reason": "Noordwyk is repeatedly used in Midrand property-market context."
+        },
+        {
+          "name": "Halfway House",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_midrand_guide", "p24_midrand", "chas_midrand"],
+          "reason": "A recurring central Midrand location in portal and agency guides."
+        },
+        {
+          "name": "Vorna Valley",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_midrand", "pp_midrand_guide", "chas_midrand"],
+          "reason": "Repeatedly treated as part of the Midrand residential market."
+        },
+        {
+          "name": "Blue Hills",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["pp_midrand_guide", "p24_midrand", "chas_midrand"],
+          "reason": "Blue Hills is a consistent northern Midrand edge location."
+        },
+        {
+          "name": "Glen Austin",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["pp_midrand_guide", "pp_midrand", "chas_midrand"],
+          "reason": "Repeated Midrand guide membership supports a strong, but not universal, association."
+        },
+        {
+          "name": "Barbeque Downs",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["pp_midrand", "pp_midrand_guide", "p24_midrand"],
+          "reason": "Midrand market guides include Barbeque Downs as an adjacent residential node."
+        },
+        {
+          "name": "Waterfall",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pp_midrand_guide", "chas_midrand", "p24_midrand"],
+          "likely_type": "development_or_locality",
+          "reason": "Waterfall is an important consumer property-market term in Midrand evidence, but the accepted factual projection lacks a matching promoted identity."
+        },
+        {
+          "name": "Kyalami",
+          "state": "supported",
+          "confidence": "high",
+          "source_keys": ["pp_midrand", "pp_midrand_guide", "chas_midrand"],
+          "likely_type": "suburb_or_locality",
+          "gap_candidate_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+          "retained_candidate_catalogue_exists": true,
+          "kyalami_policy_blocked": true,
+          "gap_kind": "kyalami_policy_blocked",
+          "gap_recommended_follow_up": "Retain Kyalami/Khayalami as one factual identity with Kyalami preferred and Khayalami official/corrected naming when the official-evidence licensing gate permits promotion; do not use Midrand Search Area membership to bypass that gate.",
+          "reason": "Kyalami is repeatedly part of the Midrand consumer market, but founder policy requires one factual identity and does not permit a Search Area to substitute for factual promotion."
+        }
+      ]
+    },
+    {
+      "key": "centurion",
+      "members": [
+        {
+          "name": "Centurion",
+          "canonical_location_ids": ["pl-gp-v01-029159849439c2ea8783"],
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "Centurion is a factual town identity and an established multi-suburb, estate-rich property market between Johannesburg and Pretoria."
+        },
+        {
+          "name": "Rooihuiskraal",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "Repeated Centurion market-guide membership."
+        },
+        {
+          "name": "Wierdapark",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "A recurring established Centurion residential node."
+        },
+        {
+          "name": "Eldoraigne",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "Repeatedly included in Centurion property-market coverage."
+        },
+        {
+          "name": "The Reeds",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "A consistent Centurion residential market node."
+        },
+        {
+          "name": "Highveld",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "likely_type": "suburb",
+          "gap_candidate_id": "pl-gp-v01-872c1be0799afd41479b",
+          "retained_candidate_catalogue_exists": true,
+          "reason": "Centurion East evidence names Highveld, but the accepted factual projection lacks the name."
+        },
+        {
+          "name": "Zwartkop",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "Repeated Centurion market membership."
+        },
+        {
+          "name": "Doringkloof",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "Established Centurion south/east market node."
+        },
+        {
+          "name": "Irene",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "Repeatedly used in Centurion market and estate context."
+        },
+        {
+          "name": "Midstream Estate",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "likely_type": "estate",
+          "reason": "A major Centurion estate-market anchor."
+        },
+        {
+          "name": "Amberfield",
+          "state": "supported",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "likely_type": "estate_or_suburb",
+          "reason": "Recurring Centurion estate/suburb market evidence."
+        },
+        {
+          "name": "Thatchfield",
+          "state": "supported",
+          "confidence": "high",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "likely_type": "estate_or_suburb",
+          "reason": "Recurring Centurion estate-market evidence."
+        },
+        {
+          "name": "Clubview",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_centurion", "pp_centurion_east"],
+          "reason": "Centurion East neighbourhood evidence supports inclusion below the core."
+        }
+      ]
+    },
+    {
+      "key": "west_rand",
+      "members": [
+        {
+          "name": "Krugersdorp",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_west_rand", "p24_west_rand", "harcourts_west_rand"],
+          "reason": "Independent portal and agency market pages consistently use Krugersdorp as a West Rand anchor."
+        },
+        {
+          "name": "Randfontein",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_west_rand", "p24_west_rand", "harcourts_west_rand"],
+          "reason": "Repeated West Rand market membership."
+        },
+        {
+          "name": "Westonaria",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_west_rand", "p24_west_rand", "wrdm"],
+          "reason": "Westonaria is included in portal and official district context, supporting a West Rand relationship."
+        },
+        {
+          "name": "Roodepoort",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["pp_west_rand", "p24_west_rand", "cch_roodepoort"],
+          "reason": "Roodepoort is a common western property-search node, but agency usage also calls it Johannesburg West; overlap is retained."
+        },
+        {
+          "name": "Carletonville",
+          "state": "supported",
+          "confidence": "high",
+          "source_keys": ["pp_west_rand", "p24_west_rand", "wrdm"],
+          "reason": "Repeated portal and district membership supports inclusion in a broad West Rand candidate."
+        },
+        {
+          "name": "Fochville",
+          "state": "supported",
+          "confidence": "high",
+          "source_keys": ["pp_west_rand", "p24_west_rand", "wrdm"],
+          "reason": "Repeated West Rand portal and district membership."
+        }
+      ]
+    },
+    {
+      "key": "greater_sandton",
+      "members": [
+        {
+          "name": "Sandton",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025", "c21_jhb_north"],
+          "reason": "Sandton is the anchor of a distinct greater-Sandton property market while remaining a factual location."
+        },
+        {
+          "name": "Bryanston",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025", "c21_jhb_north"],
+          "reason": "Repeatedly associated with greater Sandton and northern Johannesburg property search."
+        },
+        {
+          "name": "Morningside",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025", "p24_jhb_north"],
+          "reason": "A recurring greater-Sandton residential node."
+        },
+        {
+          "name": "Sandown",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025", "p24_jhb_north"],
+          "reason": "Repeated greater-Sandton market membership."
+        },
+        {
+          "name": "Rivonia",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025", "p24_jhb_north"],
+          "reason": "A consistent greater-Sandton and northern property-market node."
+        },
+        {
+          "name": "Hyde Park",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025"],
+          "reason": "Recognised in greater-Sandton agency market evidence, but part of a wider northern/inner-north overlap."
+        },
+        {
+          "name": "Illovo",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025"],
+          "reason": "Repeated agency membership in the greater-Sandton premium market."
+        },
+        {
+          "name": "Melrose",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025"],
+          "reason": "Recognised premium northern/eastern Johannesburg overlap."
+        },
+        {
+          "name": "Rosebank",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pgp_sandton", "pgp_sandton_2025"],
+          "reason": "Rosebank appears in broad greater-Sandton evidence but has strong independent factual urban-node intent; no Search Area should own the query by default."
+        }
+      ]
+    },
+    {
+      "key": "fourways",
+      "members": [
+        {
+          "name": "Fourways",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["harcourts_fourways", "shalan_fourways", "pgp_sandton_2025"],
+          "reason": "Fourways is both a factual location and the anchor of a recognised narrower market concept."
+        },
+        {
+          "name": "Broadacres",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["harcourts_fourways", "shalan_fourways", "pgp_sandton_2025"],
+          "reason": "Repeated Fourways market membership."
+        },
+        {
+          "name": "Craigavon",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["harcourts_fourways", "shalan_fourways", "pgp_sandton_2025"],
+          "reason": "A consistent Fourways-area residential node."
+        },
+        {
+          "name": "Magaliessig",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["harcourts_fourways", "shalan_fourways", "pgp_northern"],
+          "reason": "Repeated Fourways market membership."
+        },
+        {
+          "name": "Beverley",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["harcourts_fourways", "shalan_fourways"],
+          "reason": "Agency Fourways profiles repeatedly identify Beverley as a local market node."
+        },
+        {
+          "name": "Norscot",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["harcourts_fourways", "shalan_fourways"],
+          "gap_candidate_id": "pl-gp-v01-bba73475bc0b8d2acff7",
+          "retained_candidate_catalogue_exists": true,
+          "reason": "Recognised Fourways-area lifestyle node, with less cross-source depth than the core."
+        },
+        {
+          "name": "Lonehill",
+          "state": "supported",
+          "confidence": "high",
+          "source_keys": ["harcourts_fourways", "shalan_fourways"],
+          "likely_type": "suburb",
+          "reason": "Repeated Fourways market evidence; absent from the accepted factual projection and retained as a gap."
+        },
+        {
+          "name": "Dainfern",
+          "state": "supported",
+          "confidence": "high",
+          "source_keys": ["harcourts_fourways", "pgp_sandton", "pgp_sandton_2025"],
+          "likely_type": "suburb_or_estate",
+          "gap_candidate_id": "pl-gp-v01-e7c6c60f5fa057c0dc01",
+          "retained_candidate_catalogue_exists": true,
+          "reason": "Repeated northern/Sandton/Fourways market evidence; absent from the accepted factual projection."
+        }
+      ]
+    },
+    {
+      "key": "pretoria_old_east",
+      "members": [
+        {
+          "name": "Brooklyn",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_old_east", "realty_old_east", "fine_old_east", "chas_pretoria"],
+          "reason": "Independent guides consistently use Brooklyn as an Old East anchor."
+        },
+        {
+          "name": "Lynnwood",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_old_east", "realty_old_east", "fine_old_east", "chas_pretoria"],
+          "reason": "A repeated Old East market location."
+        },
+        {
+          "name": "Menlo Park",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_old_east", "realty_old_east", "fine_old_east"],
+          "reason": "Repeated Old East guide membership; duplicate factual rows, if present, remain unresolved rather than silently selected."
+        },
+        {
+          "name": "Waterkloof",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_old_east", "realty_old_east", "fine_old_east", "chas_pretoria"],
+          "reason": "A defining Old East property-market node."
+        },
+        {
+          "name": "Hazelwood",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pp_old_east", "realty_old_east", "fine_old_east"],
+          "reason": "Repeated Old East lifestyle-market membership."
+        },
+        {
+          "name": "Muckleneuk",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["pp_old_east", "realty_old_east", "fine_old_east"],
+          "reason": "Old East guides include Muckleneuk on the central/eastern edge."
+        },
+        {
+          "name": "Alphen Park",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["realty_old_east", "fine_old_east"],
+          "reason": "Supported Old East edge location."
+        },
+        {
+          "name": "Ashlea Gardens",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["realty_old_east", "fine_old_east"],
+          "reason": "Supported Old East edge location."
+        },
+        {
+          "name": "Waterkloof Ridge",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["realty_old_east", "fine_old_east", "pp_pretoria_east"],
+          "reason": "Recognised overlap between Old East and broader Pretoria East evidence."
+        },
+        {
+          "name": "Erasmusrand",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["realty_old_east", "fine_old_east"],
+          "reason": "Supported outer Old East relationship, not required for a first launch."
+        }
+      ]
+    },
+    {
+      "key": "pretoria_moot",
+      "members": [
+        {
+          "name": "Waverley",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Waverley is a recurring Pretoria Moot anchor; duplicate factual rows, if present, remain ambiguous."
+        },
+        {
+          "name": "Kilner Park",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Repeated Moot market membership."
+        },
+        {
+          "name": "Queenswood",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Repeated Moot market membership."
+        },
+        {
+          "name": "Villieria",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Repeated Moot market membership."
+        },
+        {
+          "name": "Rietfontein",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Repeated Moot market membership; duplicate factual rows, if present, remain ambiguous."
+        },
+        {
+          "name": "Rietondale",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Repeated Moot market membership."
+        },
+        {
+          "name": "Riviera",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Repeated Moot market membership; duplicate factual rows, if present, remain ambiguous."
+        },
+        {
+          "name": "Gezina",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot"],
+          "reason": "Repeated Moot market membership."
+        },
+        {
+          "name": "Wonderboom",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria", "era_moot", "p24_pretoria_north"],
+          "reason": "Moot and Pretoria North evidence overlap around Wonderboom."
+        },
+        {
+          "name": "Pretoria North",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria", "p24_pretoria_north"],
+          "reason": "Some broad Moot descriptions include Pretoria North, but a separate factual and post-launch market candidate also exists."
+        },
+        {
+          "name": "Doornpoort",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria", "p24_pretoria_north"],
+          "reason": "Broad Moot/greater-north evidence supports a cautious overlap."
+        },
+        {
+          "name": "Sinoville",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria", "p24_pretoria_north"],
+          "reason": "Broad Pretoria north-market evidence supports inclusion below the Moot core."
+        },
+        {
+          "name": "Annlin",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria", "p24_pretoria_north"],
+          "reason": "An overlap edge between Moot descriptions and the Pretoria North market."
+        },
+        {
+          "name": "Magalieskruin",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria", "p24_pretoria_north"],
+          "reason": "Broad north-of-central Pretoria market evidence supports a non-core overlap."
+        }
+      ]
+    },
+    {
+      "key": "pretoria_north",
+      "members": [
+        {
+          "name": "Pretoria North",
+          "canonical_location_ids": ["pl-gp-v01-4ee44948eb69374ce925"],
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_pretoria_north", "chas_pretoria_north", "chas_pretoria"],
+          "reason": "The factual suburb is also the anchor of a broader Pretoria North property-market concept; identities remain separate."
+        },
+        {
+          "name": "Annlin",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Chas Everitt's Pretoria North market profile repeatedly includes Annlin in the broader market."
+        },
+        {
+          "name": "Wonderboom",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "A recurring Pretoria North market node."
+        },
+        {
+          "name": "Theresapark",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Repeated broader Pretoria North market membership."
+        },
+        {
+          "name": "Florauna",
+          "state": "strongly_supported",
+          "confidence": "high",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Repeated broader Pretoria North market membership."
+        },
+        {
+          "name": "Mountain View",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Agency profile supports a north-market relationship, below the core."
+        },
+        {
+          "name": "Sinoville",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Recognised north-market overlap, also observed in Moot evidence."
+        },
+        {
+          "name": "Doornpoort",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Recognised outer Pretoria North market overlap."
+        },
+        {
+          "name": "Magalieskruin",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Supported broad-north relationship, not a launch boundary."
+        }
+      ]
+    },
+    {
+      "key": "vaal",
+      "members": [
+        {
+          "name": "Meyerton",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_vaal", "pp_gauteng_south", "fezile_vaal"],
+          "reason": "Meyerton is repeatedly named in Gauteng Vaal/Vaal Triangle property evidence."
+        },
+        {
+          "name": "Vereeniging",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_vaal", "pp_gauteng_south", "fezile_vaal"],
+          "reason": "A consistent Vaal market anchor."
+        },
+        {
+          "name": "Vanderbijlpark",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["p24_vaal", "pp_gauteng_south", "fezile_vaal"],
+          "reason": "A consistent Vaal/Vaal Triangle market anchor."
+        },
+        {
+          "name": "Evaton",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["pp_gauteng_south", "p24_vaal"],
+          "reason": "Gauteng South and Vaal discovery evidence supports Evaton as a Vaal edge member."
+        },
+        {
+          "name": "Sebokeng",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["pp_gauteng_south", "p24_vaal"],
+          "reason": "Repeated Vaal-area property evidence supports Sebokeng below the core."
+        },
+        {
+          "name": "Sharpeville",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_vaal", "pp_gauteng_south"],
+          "reason": "Supported Vaal relationship, with less portal/agency depth than the three-town core."
+        },
+        {
+          "name": "Three Rivers",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["p24_vaal", "pp_gauteng_south"],
+          "reason": "Recognised Vereeniging/Vaal residential node."
+        },
+        {
+          "name": "Sasolburg",
+          "state": "excluded",
+          "confidence": "high",
+          "source_keys": ["p24_vaal", "fezile_vaal"],
+          "out_of_scope": true,
+          "reason": "Vaal Triangle market evidence crosses into Sasolburg, but Sasolburg is outside the Gauteng factual geography scope and is excluded from Gauteng membership."
+        }
+      ]
+    },
+    {
+      "key": "johannesburg_east",
+      "members": [
+        {
+          "name": "Highlands North",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["lightstone_jhb_east", "propertywheel_jhb_east_narrow"],
+          "conflicting_source_keys": ["pp_jhb_east", "intro_jhb_east"],
+          "reason": "Lightstone-reported and publication evidence supports a narrow inner-east meaning, while other sources use Johannesburg East for the East Rand."
+        },
+        {
+          "name": "Oaklands",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["lightstone_jhb_east", "propertywheel_jhb_east_narrow"],
+          "conflicting_source_keys": ["pp_jhb_east", "intro_jhb_east"],
+          "reason": "Observed in the narrow inner-east basket; the label has no stable cross-source scope."
+        },
+        {
+          "name": "Benoni",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["pp_jhb_east", "intro_jhb_east"],
+          "conflicting_source_keys": ["lightstone_jhb_east", "propertywheel_jhb_east_narrow"],
+          "reason": "Broad Johannesburg East sources include Benoni, directly conflicting with narrow inner-east usage."
+        },
+        {
+          "name": "Boksburg",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["pp_jhb_east", "intro_jhb_east"],
+          "conflicting_source_keys": ["lightstone_jhb_east", "propertywheel_jhb_east_narrow"],
+          "reason": "Broad East Rand usage conflicts with the narrow inner-east meaning."
+        },
+        {
+          "name": "Edenvale",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["pp_jhb_east", "intro_jhb_east"],
+          "conflicting_source_keys": ["lightstone_jhb_east", "propertywheel_jhb_east_narrow"],
+          "reason": "Observed in broad East usage but not in the narrow inner-east basket."
+        },
+        {
+          "name": "Bedfordview",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["pp_jhb_east", "intro_jhb_east"],
+          "conflicting_source_keys": ["lightstone_jhb_east", "propertywheel_jhb_east_narrow"],
+          "reason": "Observed in broad East usage but not in the narrow inner-east basket."
+        }
+      ]
+    },
+    {
+      "key": "johannesburg_west",
+      "source_keys": ["pgp_jhb_west", "sibk_jhb_west"],
+      "members": [
+        {
+          "name": "Roodepoort",
+          "state": "core",
+          "confidence": "high",
+          "source_keys": ["pgp_jhb_west", "sibk_jhb_west", "cch_roodepoort"],
+          "reason": "Independent agency and market-report evidence consistently uses Roodepoort as a Johannesburg West anchor."
+        },
+        {
+          "name": "Soweto",
+          "state": "strongly_supported",
+          "confidence": "medium",
+          "source_keys": ["sibk_jhb_west", "joburg_tourism"],
+          "reason": "The Roodepoort-to-Soweto corridor is a recognised broad western property-market description, but the term overlaps other user intents."
+        },
+        {
+          "name": "Randburg",
+          "state": "supported",
+          "confidence": "low",
+          "source_keys": ["harcourts_west_rand", "joburg_tourism"],
+          "conflicting_source_keys": ["pp_west_rand", "cch_roodepoort"],
+          "reason": "Some broad western service areas include Randburg, while West Rand/Roodepoort sources use a narrower western scope; retain as overlap evidence only."
+        },
+        {
+          "name": "Florida",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pgp_jhb_west", "sibk_jhb_west", "cch_roodepoort"],
+          "likely_type": "suburb",
+          "reason": "Observed as a Roodepoort/Johannesburg West location, subject to later factual resolution if absent."
+        },
+        {
+          "name": "Little Falls",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pgp_jhb_west", "cch_roodepoort"],
+          "likely_type": "suburb",
+          "reason": "Observed in western property-market evidence below the core."
+        },
+        {
+          "name": "Honeydew",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pgp_jhb_west", "cch_roodepoort"],
+          "likely_type": "suburb",
+          "reason": "Observed in broad western market evidence, with overlap toward Johannesburg North."
+        }
+      ]
+    },
+    {
+      "key": "pretoria_far_east",
+      "members": [
+        {
+          "name": "Boschkop AH",
+          "state": "disputed",
+          "confidence": "low",
+          "source_keys": ["pp_pretoria_far_east", "realprop_far_east"],
+          "likely_type": "agricultural_holdings_or_locality",
+          "reason": "The term appears in Far East lifestyle/farm-market evidence, but there is no sufficiently consistent consumer boundary."
+        },
+        {
+          "name": "Bashewa AH",
+          "state": "disputed",
+          "confidence": "low",
+          "source_keys": ["pp_pretoria_far_east", "realprop_far_east"],
+          "likely_type": "agricultural_holdings_or_locality",
+          "reason": "Observed in Far East evidence, but retained as unresolved geography rather than promoted market membership."
+        },
+        {
+          "name": "Grootfontein Country Estates",
+          "state": "supported",
+          "confidence": "medium",
+          "source_keys": ["pp_pretoria_far_east", "realprop_far_east", "p24_pretoria_east"],
+          "reason": "An outer-east lifestyle/estate node is observed, but it does not establish a stable Pretoria Far East boundary."
+        }
+      ]
+    },
+    {
+      "key": "pretoria_north_east",
+      "members": [
+        {
+          "name": "Pretoria North",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_north_east"],
+          "conflicting_source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "A broad portal grouping includes Pretoria North, while agency usage distinguishes Pretoria North and Moot concepts."
+        },
+        {
+          "name": "Doornpoort",
+          "state": "disputed",
+          "confidence": "medium",
+          "source_keys": ["p24_pretoria_north_east"],
+          "conflicting_source_keys": ["chas_pretoria_north", "chas_pretoria"],
+          "reason": "Broad portal grouping conflicts with narrower north and Moot market descriptions."
+        },
+        {
+          "name": "Silver Lakes",
+          "state": "disputed",
+          "confidence": "low",
+          "source_keys": ["p24_pretoria_north_east"],
+          "conflicting_source_keys": ["fine_pretoria_east_2026", "p24_pretoria_east"],
+          "reason": "Silver Lakes is more consistently evidenced as Pretoria East than as a distinct Pretoria North East market member."
+        },
+        {
+          "name": "Mamelodi",
+          "state": "disputed",
+          "confidence": "low",
+          "source_keys": ["p24_pretoria_north_east"],
+          "conflicting_source_keys": ["chas_pretoria"],
+          "reason": "Broad portal grouping does not establish that Mamelodi belongs to a stable Pretoria North East property market."
+        }
+      ]
+    }
+  ],
+  "search_intent": [
+    {"query": "Johannesburg", "classification": "canonical_factual_location", "candidate_keys": [], "notes": "Direct factual city intent; do not replace with a supra-suburb market."},
+    {"query": "Johannesburg North", "classification": "both_disambiguation", "candidate_keys": ["johannesburg_north"], "notes": "Offer factual Johannesburg North and separate market Search Area identities."},
+    {"query": "Johannesburg South", "classification": "search_area", "candidate_keys": ["johannesburg_south"], "notes": "Primarily a broad residential market term in the evidence; no same-name accepted factual identity is used as a substitute."},
+    {"query": "Johannesburg East", "classification": "unsupported_defer", "candidate_keys": ["johannesburg_east"], "notes": "Narrow inner-east and broad East Rand meanings conflict materially."},
+    {"query": "Johannesburg West", "classification": "unsupported_defer", "candidate_keys": ["johannesburg_west"], "notes": "Recognised in agency usage but boundaries overlap Roodepoort/West Rand and lack launch-level consensus."},
+    {"query": "Sandton", "classification": "both_disambiguation", "candidate_keys": ["greater_sandton", "johannesburg_north"], "notes": "Factual Sandton intent is strong; a broader market interpretation can be offered only as a distinct identity."},
+    {"query": "Randburg", "classification": "canonical_factual_location", "candidate_keys": [], "notes": "Randburg is a factual city/suburb market anchor; broad northern membership does not replace it."},
+    {"query": "Fourways", "classification": "both_disambiguation", "candidate_keys": ["fourways", "johannesburg_north"], "notes": "Factual Fourways and a narrower Fourways market grouping are both legitimate interpretations."},
+    {"query": "Bryanston", "classification": "canonical_factual_location", "candidate_keys": [], "notes": "Direct factual suburb intent is primary; market memberships are secondary context."},
+    {"query": "Rosebank", "classification": "canonical_factual_location", "candidate_keys": [], "notes": "Strong independent urban-node intent; do not create a Search Area merely because it appears in broad premium-market guides."},
+    {"query": "Midrand", "classification": "both_disambiguation", "candidate_keys": ["midrand"], "notes": "Midrand is both a factual identity and a multi-suburb property market."},
+    {"query": "Pretoria", "classification": "canonical_factual_location", "candidate_keys": [], "notes": "Direct factual city intent."},
+    {"query": "Pretoria East", "classification": "search_area", "candidate_keys": ["pretoria_east"], "notes": "Primarily a governed consumer property-market grouping rather than a single factual suburb."},
+    {"query": "Pretoria North", "classification": "both_disambiguation", "candidate_keys": ["pretoria_north", "pretoria_moot"], "notes": "A factual suburb and a broader post-launch market concept are both evidenced."},
+    {"query": "Pretoria West", "classification": "unsupported_defer", "candidate_keys": ["pretoria_west"], "notes": "No accepted factual Pretoria West row is present and current market evidence does not justify a separate Search Area; retain the term for geography follow-up."},
+    {"query": "Centurion", "classification": "both_disambiguation", "candidate_keys": ["centurion"], "notes": "Factual town and established multi-suburb property market both matter."},
+    {"query": "East Rand", "classification": "both_disambiguation", "candidate_keys": ["east_rand"], "notes": "Strongly recognised cross-town property-market term, while the accepted factual projection also contains an East Rand locality identity."},
+    {"query": "West Rand", "classification": "search_area", "candidate_keys": ["west_rand"], "notes": "Established broader region, but useful post-launch rather than launch-critical."},
+    {"query": "Vaal", "classification": "search_area", "candidate_keys": ["vaal"], "notes": "Meaningful Gauteng property-market shorthand; scope should be Gauteng-only in this workstream."},
+    {"query": "Vaal Triangle", "classification": "alias", "candidate_keys": ["vaal"], "notes": "Resolve as an alias to the governed Vaal candidate; do not create duplicate identities."}
+  ]
+}

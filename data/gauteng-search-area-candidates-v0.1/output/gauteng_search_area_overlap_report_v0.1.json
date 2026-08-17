@@ -1,0 +1,112 @@
+{
+  "active_overlap_set": [
+    {
+      "ambiguity": "none_material",
+      "canonical_location_id": "pl-gp-v01-4c21c1f81da64c1c6728",
+      "canonical_location_preferred_name": "Alberton",
+      "interpretation": "The same accepted factual location is intentionally shared by two market concepts; this is real market geography, not a duplicate identity.",
+      "overlap_expected": true,
+      "search_area_memberships": [
+        {
+          "membership_class": "core",
+          "search_area_id": "pl-sa-gp-9314684a28ff63402832b8df",
+          "search_area_preferred_name": "Johannesburg South"
+        },
+        {
+          "membership_class": "strongly_supported",
+          "search_area_id": "pl-sa-gp-20f043e9ba8ece627365f5ad",
+          "search_area_preferred_name": "East Rand"
+        }
+      ]
+    }
+  ],
+  "active_overlapping_canonical_location_count": 1,
+  "active_overlapping_search_area_pair_count": 1,
+  "definition_version": "gauteng-search-area-definitions-v0.1",
+  "overlap_policy": {
+    "identity_rule": "canonical factual IDs remain distinct from Search Area IDs",
+    "overlap_allowed": true,
+    "overlap_expected": true,
+    "tree_required": false
+  },
+  "overlapping_search_area_pairs": [
+    {
+      "active_shared_canonical_location_count": 0,
+      "active_shared_canonical_location_ids": [],
+      "interpretation": "Research indicates market adjacency or overlap, but the conservative active canonical boundary shares no ID yet.",
+      "overlap_expected": true,
+      "relationship_type": "market_overlap_or_adjacency_without_active_shared_id",
+      "search_area_ids": [
+        "pl-sa-gp-3b36a49ecb943c88402b07fd",
+        "pl-sa-gp-01da060bb6c5807438a654e9"
+      ],
+      "search_area_preferred_names": [
+        "Johannesburg North",
+        "Midrand"
+      ]
+    },
+    {
+      "active_shared_canonical_location_count": 1,
+      "active_shared_canonical_location_ids": [
+        "pl-gp-v01-4c21c1f81da64c1c6728"
+      ],
+      "interpretation": "Exact active overlap is preserved.",
+      "overlap_expected": true,
+      "relationship_type": "active_market_overlap",
+      "search_area_ids": [
+        "pl-sa-gp-9314684a28ff63402832b8df",
+        "pl-sa-gp-20f043e9ba8ece627365f5ad"
+      ],
+      "search_area_preferred_names": [
+        "Johannesburg South",
+        "East Rand"
+      ]
+    },
+    {
+      "active_shared_canonical_location_count": 0,
+      "active_shared_canonical_location_ids": [],
+      "interpretation": "Research indicates market adjacency or overlap, but the conservative active canonical boundary shares no ID yet.",
+      "overlap_expected": true,
+      "relationship_type": "market_overlap_or_adjacency_without_active_shared_id",
+      "search_area_ids": [
+        "pl-sa-gp-3aa01dbdcd93c28e0aef9119",
+        "pl-sa-gp-01da060bb6c5807438a654e9"
+      ],
+      "search_area_preferred_names": [
+        "Pretoria East",
+        "Midrand"
+      ]
+    },
+    {
+      "active_shared_canonical_location_count": 0,
+      "active_shared_canonical_location_ids": [],
+      "interpretation": "Research indicates market adjacency or overlap, but the conservative active canonical boundary shares no ID yet.",
+      "overlap_expected": true,
+      "relationship_type": "market_overlap_or_adjacency_without_active_shared_id",
+      "search_area_ids": [
+        "pl-sa-gp-3aa01dbdcd93c28e0aef9119",
+        "pl-sa-gp-35163d1b6013797932cd94c1"
+      ],
+      "search_area_preferred_names": [
+        "Pretoria East",
+        "Centurion"
+      ]
+    },
+    {
+      "active_shared_canonical_location_count": 0,
+      "active_shared_canonical_location_ids": [],
+      "interpretation": "Research indicates market adjacency or overlap, but the conservative active canonical boundary shares no ID yet.",
+      "overlap_expected": true,
+      "relationship_type": "market_overlap_or_adjacency_without_active_shared_id",
+      "search_area_ids": [
+        "pl-sa-gp-01da060bb6c5807438a654e9",
+        "pl-sa-gp-35163d1b6013797932cd94c1"
+      ],
+      "search_area_preferred_names": [
+        "Midrand",
+        "Centurion"
+      ]
+    }
+  ],
+  "schema_version": "0.1"
+}

@@ -1,4 +1,5 @@
 import { PROVINCE_SLUGS } from './locationUtils';
+import { isFactualGeographyId } from '../../../shared/factualRuntimeGeographyBridge';
 import {
   encodeCanonicalLocationId,
   parseCanonicalLocationId,
@@ -38,6 +39,7 @@ export type SearchRouteMode = 'seo' | 'results';
 export type SearchIntentValidationCode =
   | 'canonical-location-required'
   | 'invalid-location-id'
+  | 'invalid-factual-location-id'
   | 'location-identity-mismatch'
   | 'multiple-locations-unsupported'
   | 'invalid-multi-location'
@@ -57,6 +59,8 @@ export interface GeographyIntent {
   city?: string;
   suburb?: string;
   locationId?: string;
+  /** Durable factual identity retained alongside the runtime query handle. */
+  factualLocationId?: string;
   locationIds?: string[];
   searchAreaId?: string;
   searchAreaIds?: string[];
@@ -95,6 +99,7 @@ export function buildCanonicalSavedSearchCriteria(intent: SearchIntent): Record<
   delete criteria.city;
   delete criteria.suburb;
   delete criteria.locationId;
+  delete criteria.factualLocationId;
   delete criteria.locationIds;
   delete criteria.searchAreaId;
   delete criteria.searchAreaIds;
@@ -108,6 +113,10 @@ export function buildCanonicalSavedSearchCriteria(intent: SearchIntent): Record<
   }
 
   const { geography } = intent;
+
+  if (geography.factualLocationId && isFactualGeographyId(geography.factualLocationId)) {
+    criteria.factualLocationId = geography.factualLocationId;
+  }
 
   if (geography.level === 'multi_location') {
     const rawLocationIds = geography.locationIds || [];
@@ -173,6 +182,7 @@ const SEARCH_VALIDATION_MESSAGES: Record<SearchIntentValidationCode, string> = {
   'canonical-location-required':
     'Choose a canonical province, city, or suburb suggestion before searching.',
   'invalid-location-id': 'The selected location does not match its canonical identity.',
+  'invalid-factual-location-id': 'The selected factual location does not match its durable identity.',
   'location-identity-mismatch': 'The selected location does not match its canonical hierarchy.',
   'multiple-locations-unsupported':
     'Choose one canonical province, city, or suburb before searching.',
@@ -314,6 +324,7 @@ export function resolveSearchIntent(
   const queryProvince = searchParams.get('province')?.trim().toLowerCase() || undefined;
   const queryCity = searchParams.get('city')?.trim().toLowerCase() || undefined;
   const queryLocationId = searchParams.get('locationId')?.trim() || undefined;
+  const queryFactualLocationId = searchParams.get('factualLocationId')?.trim() || undefined;
   const querySearchAreaId = searchParams.get('searchAreaId')?.trim() || undefined;
   const hasSearchArea = Boolean(querySearchAreaId && isSearchAreaId(querySearchAreaId));
   const canonicalQueryLocation = parseCanonicalLocationId(queryLocationId);
@@ -343,6 +354,15 @@ export function resolveSearchIntent(
     };
   }
 
+  if (queryFactualLocationId && !isFactualGeographyId(queryFactualLocationId)) {
+    validation ||= {
+      code: 'invalid-factual-location-id',
+      message: SEARCH_VALIDATION_MESSAGES['invalid-factual-location-id'],
+    };
+  } else if (queryFactualLocationId) {
+    geography.factualLocationId = queryFactualLocationId;
+  }
+
   if (querySearchAreaId && !hasSearchArea) {
     validation ||= {
       code: 'invalid-search-area-id',
@@ -355,6 +375,7 @@ export function resolveSearchIntent(
   if (hasMultiLocationQuery) {
     const hasConflictingGeography = Boolean(
       queryLocationId ||
+      queryFactualLocationId ||
       querySearchAreaId ||
       queryProvince ||
       queryCity ||
@@ -401,6 +422,7 @@ export function resolveSearchIntent(
     (queryProvince ||
       queryCity ||
       querySuburbs.length > 0 ||
+      queryFactualLocationId ||
       queryLocationIds.length > 0 ||
       querySearchAreaIds.length > 0 ||
       locations.length > 0)
@@ -474,6 +496,7 @@ export function resolveSearchIntent(
     !geography.searchAreaIds?.length &&
     !locations.length &&
     !queryLocationId &&
+    !queryFactualLocationId &&
     !hasMultiLocationQuery
   ) {
     const pathLocationId = pathParams.locationId?.trim() || undefined;
@@ -566,6 +589,7 @@ export function resolveSearchIntent(
         key === 'city' ||
         key === 'suburb' ||
         key === 'locationId' ||
+        key === 'factualLocationId' ||
         key === 'locationIds' ||
         key === 'searchAreaIds' ||
         key === 'locations' ||
@@ -682,6 +706,7 @@ export function generateIntentUrl(intent: SearchIntent): string {
     if (
       key === 'suburb' ||
       key === 'locationId' ||
+      key === 'factualLocationId' ||
       key === 'locationIds' ||
       key === 'searchAreaId' ||
       key === 'searchAreaIds'
@@ -722,6 +747,10 @@ export function generateIntentUrl(intent: SearchIntent): string {
       'locationId',
       encodeCanonicalLocationId(parsedCanonicalLocationId.level, parsedCanonicalLocationId.id),
     );
+  }
+
+  if (geography.factualLocationId && isFactualGeographyId(geography.factualLocationId)) {
+    queryParams.set('factualLocationId', geography.factualLocationId);
   }
 
   if (intent.validation) {

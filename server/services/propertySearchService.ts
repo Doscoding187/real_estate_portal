@@ -25,7 +25,10 @@ import type {
   SearchCardResult,
 } from '../../shared/types';
 import { locationResolver, ResolvedLocation } from './locationResolverService';
-import type { PublicSearchQueryBoundary } from './searchAreaQueryBoundary';
+import {
+  getSearchAreaQueryMembers,
+  type PublicSearchQueryBoundary,
+} from './searchAreaQueryBoundary';
 import { buildCorePropertyInformation } from '../../shared/core-property-information';
 import type { ListingPropertyType } from '../../shared/listing-types';
 import { normalizeFeaturesContext } from '../../shared/features-context';
@@ -59,9 +62,13 @@ type QueryLocationIds = Array<{
 
 function queryLocationIdsFromBoundary(boundary: PublicSearchQueryBoundary): QueryLocationIds {
   if (boundary.kind === 'canonical_members') {
-    return boundary.memberSuburbIds.map((suburbId, index) => ({
-      suburbId,
-      suburbName: boundary.memberSuburbNames[index],
+    return getSearchAreaQueryMembers(boundary).map(member => ({
+      ...(member.provinceId !== undefined ? { provinceId: member.provinceId } : {}),
+      ...(member.provinceName ? { provinceName: member.provinceName } : {}),
+      ...(member.cityId !== undefined ? { cityId: member.cityId } : {}),
+      ...(member.cityName ? { cityName: member.cityName } : {}),
+      ...(member.suburbId !== undefined ? { suburbId: member.suburbId } : {}),
+      ...(member.suburbName ? { suburbName: member.suburbName } : {}),
       canonicalOnly: true,
     }));
   }

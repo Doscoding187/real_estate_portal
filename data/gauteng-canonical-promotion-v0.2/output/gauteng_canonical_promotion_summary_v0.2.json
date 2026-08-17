@@ -1,0 +1,3017 @@
+{
+  "boundary_assessment": {
+    "candidate_by_administrative_assignment_confidence": {
+      "needs_source_verification": 143
+    },
+    "candidate_by_promotion_class": {
+      "candidate_only": 104,
+      "promotable_with_provisional_attributes": 39
+    },
+    "candidate_count": 143,
+    "recommendation": "The Gauteng spatial gate governs provincial eligibility. A source admin-code disagreement is retained as administrative-assignment uncertainty and technical/source-verification work; it does not create founder review unless identity evidence itself is materially ambiguous.",
+    "source_record_count_with_disagreement": 367,
+    "source_record_statuses": {
+      "geonames:admin_code_says_gauteng_point_outside": 215,
+      "geonames:inside_admin_code_conflict": 152
+    }
+  },
+  "comparison": {
+    "available": true,
+    "baseline_output_root": "/home/edwardspc/Desktop/Dev/listify-gauteng-canonical-promotion/data/gauteng-canonical-promotion-v0.1/output",
+    "class_transitions": {
+      "founder_review_required -> candidate_only": 9,
+      "founder_review_required -> promotable_with_provisional_attributes": 38,
+      "founder_review_required -> rejected_non_independent": 7
+    },
+    "current_formal_review_class_count": 0,
+    "current_priority_probe_count": 3,
+    "current_review_set_count": 3,
+    "disappeared_by_disposition": {
+      "administrative_assignment_is_attribute_only_technical_verification": 18,
+      "deterministic_osm_source_representation_deduplicated": 7,
+      "deterministic_osm_source_representation_kept_under_primary": 19,
+      "farm_or_non_development_source_removed_estate_interpretation": 2,
+      "identity_promoted_type_remains_provisional": 1,
+      "low_evidence_same_name_collision_deferred_to_source_verification": 7
+    },
+    "disappeared_rows": [
+      {
+        "candidate_location_id": "pl-gp-v01-014177e3d60af18c4457",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Hermanstad",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-02baee7bfa3a586c6803",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Klippan",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-09e504bc0badd1ae411a",
+        "current_assessed_candidate_type": "neighbourhood",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Eagle Canyon Golf Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-195a06a3086c61ce3c09",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Claudius",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-1f8f40faa0497e5240fc",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Kruisfontein",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-22bf93f3592f8a9c9c4b",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+        ],
+        "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+        "preferred_name": "Meadowlands East",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-28a23a6ce0b62338bcdb",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Leachville",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-291cc8f92a238f80f336",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Boekenhoutfontein",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-2ccf257a9ea9ba452f24",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Mimosa Park Inn",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-2fad4c8097c15027f8ec",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Midstream Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-30ed69a810928e5d467e",
+        "current_assessed_candidate_type": "village",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Golden Fields Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-31341ee9ee5eff570d5f",
+        "current_assessed_candidate_type": "estate/residential_development_candidate",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "development identity is independently supported; estate/development type remains provisional"
+        ],
+        "disposition": "identity_promoted_type_remains_provisional",
+        "preferred_name": "Equestria Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "estate_or_development_promotion"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-3e17179752450e0674ab",
+        "current_assessed_candidate_type": "other",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "non-OSM evidence classifies the same name as a farm rather than a residential development"
+        ],
+        "disposition": "farm_or_non_development_source_removed_estate_interpretation",
+        "preferred_name": "Tweefontein",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "estate_or_development_promotion"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-3f1f181735005aab64a6",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "rejected_non_independent",
+        "current_reason": [
+          "source object is a deterministic OSM point/area representation of pl-gp-v01-e7972062766a0f7edf50; evidence remains attached to that candidate"
+        ],
+        "disposition": "deterministic_osm_source_representation_deduplicated",
+        "preferred_name": "Richmond",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-4214791a88181e144669",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Medunsa",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-4b69303d842a194b3650",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Mooikloof",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-53ecd2695afa97eeb6aa",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Finetown",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-57153e3343c77aaa8792",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Morula Sun",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-575322ceb163d82c5e32",
+        "current_assessed_candidate_type": "neighbourhood",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Soshanguve South",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-5d26ec75e34ac3e2b46a",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Marl Bank River",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-5edf7c8af629d8f9fcfa",
+        "current_assessed_candidate_type": "estate/residential_development_candidate",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "development identity is independently supported; estate/development type remains provisional"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Waverley",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-683329ab6bd03d66f91f",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+        ],
+        "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+        "preferred_name": "Valeriedene",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-746355e341e2d43d707b",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Centurion Golf Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-7473d736705abefcd26c",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Eastvale",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-757a83f567419c726108",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Midlands Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-75c241258cf389e6b1cf",
+        "current_assessed_candidate_type": "locality",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Lion Park",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-7cf2b6364a87b87e60e3",
+        "current_assessed_candidate_type": "other",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "non-OSM evidence classifies the same name as a farm rather than a residential development"
+        ],
+        "disposition": "farm_or_non_development_source_removed_estate_interpretation",
+        "preferred_name": "Poortjie",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "estate_or_development_promotion"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-7d833344055a6cee3083",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Klipdrif",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-860ba4550eae5450996b",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Midfield Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-8774db231c83b05009d0",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "rejected_non_independent",
+        "current_reason": [
+          "source object is a deterministic OSM point/area representation of pl-gp-v01-7473d736705abefcd26c; evidence remains attached to that candidate"
+        ],
+        "disposition": "deterministic_osm_source_representation_deduplicated",
+        "preferred_name": "Eastvale",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-8b14eb4fa7538536e075",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "rejected_non_independent",
+        "current_reason": [
+          "source object is a deterministic OSM point/area representation of pl-gp-v01-757a83f567419c726108; evidence remains attached to that candidate"
+        ],
+        "disposition": "deterministic_osm_source_representation_deduplicated",
+        "preferred_name": "Midlands Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-8c187bbff01695eb3fd1",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Petersfield",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-8f4aa345c75a08ea6cc2",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "The Rocks",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-96453da361a2a4ff6bd9",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+        ],
+        "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+        "preferred_name": "Valeriedene",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-9fe8c1b3140564ce01bb",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Dalview",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-a288430cad17b85bb3b2",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Rosherville",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-ad70875e6050d4d23a11",
+        "current_assessed_candidate_type": "locality",
+        "current_promotion_class": "rejected_non_independent",
+        "current_reason": [
+          "source object is a deterministic OSM point/area representation of pl-gp-v01-5edf7c8af629d8f9fcfa; evidence remains attached to that candidate"
+        ],
+        "disposition": "deterministic_osm_source_representation_deduplicated",
+        "preferred_name": "Waverley",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-b3fb736d5dc294515832",
+        "current_assessed_candidate_type": "neighbourhood",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+        ],
+        "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+        "preferred_name": "Featherbrooke Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-b960b1e4421627018b2d",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Babelegi",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-bb3c51d1199b51b8d155",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+        ],
+        "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+        "preferred_name": "Meadowlands East",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-c1b972891e5ee3d8ab04",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Derdepoortpark",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-c4636dc929ca15585b41",
+        "current_assessed_candidate_type": "locality",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Melville Koppies",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-caf5c06237858b5da2ba",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Theoville",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-d8fc64524fc78270f0f2",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Lebaleng",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-df959cb5446d21c9b97c",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "rejected_non_independent",
+        "current_reason": [
+          "source object is a deterministic OSM point/area representation of pl-gp-v01-28a23a6ce0b62338bcdb; evidence remains attached to that candidate"
+        ],
+        "disposition": "deterministic_osm_source_representation_deduplicated",
+        "preferred_name": "Leachville",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-e2332980a9db768081c5",
+        "current_assessed_candidate_type": "neighbourhood",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+        ],
+        "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+        "preferred_name": "Country View",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-e7972062766a0f7edf50",
+        "current_assessed_candidate_type": "neighbourhood",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Richmond",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-ebc58f0311d83f8648cb",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "rejected_non_independent",
+        "current_reason": [
+          "source object is a deterministic OSM point/area representation of pl-gp-v01-2fad4c8097c15027f8ec; evidence remains attached to that candidate"
+        ],
+        "disposition": "deterministic_osm_source_representation_deduplicated",
+        "preferred_name": "Midstream Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-ef9db80b7a695b04071b",
+        "current_assessed_candidate_type": "locality",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Sandton Convention Centre",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-f4149dbaa40c31ab7bb9",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "factual identity is retained; source administrative assignment requires technical/source verification"
+        ],
+        "disposition": "administrative_assignment_is_attribute_only_technical_verification",
+        "preferred_name": "Kophou",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "boundary_admin_identity"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-f4b65f67d2fbaf4f4e93",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "rejected_non_independent",
+        "current_reason": [
+          "source object is a deterministic OSM point/area representation of pl-gp-v01-860ba4550eae5450996b; evidence remains attached to that candidate"
+        ],
+        "disposition": "deterministic_osm_source_representation_deduplicated",
+        "preferred_name": "Midfield Estate",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-f9166465fa080f4c2d95",
+        "current_assessed_candidate_type": "neighbourhood",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "same-name proximity lacks deterministic source-object identity evidence; retain separate candidates pending source verification"
+        ],
+        "disposition": "low_evidence_same_name_collision_deferred_to_source_verification",
+        "preferred_name": "Dainfern Ridge",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-fe8b00a1ad21ea9b1ec9",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Woodmead East",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-ffa5ad909f6f398c5699",
+        "current_assessed_candidate_type": "suburb",
+        "current_promotion_class": "promotable_with_provisional_attributes",
+        "current_reason": [
+          "OSM place classification is a useful factual signal but remains single-source evidence; ODbL gate is mandatory"
+        ],
+        "disposition": "deterministic_osm_source_representation_kept_under_primary",
+        "preferred_name": "Mooikloof Hillls",
+        "previous_promotion_class": "founder_review_required",
+        "previous_review_category": "ambiguous_identity_or_duplicate"
+      }
+    ],
+    "genuinely_remaining_review_rows": 0,
+    "new_review_rows": [],
+    "previous_formal_review_class_count": 54,
+    "previous_review_count": 57,
+    "previous_review_rows_disappeared": 54,
+    "remaining_previous_rows": [
+      {
+        "candidate_location_id": "pl-gp-v01-43d109a4091bf9c2044c",
+        "current_assessed_candidate_type": "town",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "evidence does not meet the independent identity threshold for factual canonical promotion"
+        ],
+        "disposition": "priority_probe_reassessed_without_formal_founder_class",
+        "preferred_name": "Sandton",
+        "previous_promotion_class": "candidate_only",
+        "previous_review_category": "important_probe_weak_evidence"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-ab35c1a038a865ba3e52",
+        "current_assessed_candidate_type": "estate/residential_development_candidate",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "OSM-only residential-development evidence is retained but requires independent corroboration before promotion"
+        ],
+        "disposition": "priority_probe_reassessed_without_formal_founder_class",
+        "preferred_name": "Mamelodi",
+        "previous_promotion_class": "candidate_only",
+        "previous_review_category": "important_probe_weak_evidence"
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+        "current_assessed_candidate_type": "neighbourhood",
+        "current_promotion_class": "candidate_only",
+        "current_reason": [
+          "evidence does not meet the independent identity threshold for factual canonical promotion"
+        ],
+        "disposition": "priority_probe_reassessed_without_formal_founder_class",
+        "preferred_name": "Kyalami",
+        "previous_promotion_class": "candidate_only",
+        "previous_review_category": "important_probe_weak_evidence"
+      }
+    ]
+  },
+  "duplicate_name_assessment": {
+    "candidate_count_in_duplicate_groups": 824,
+    "close_same_context_candidate_count": 102,
+    "examples": [
+      {
+        "candidate_count": 4,
+        "candidates": [
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "47623444B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "15628383B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-015d909cf09fef3e402c",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.3717815,
+            "representative_longitude": 27.8425675,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "47623444B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "15628383B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-348fc87a99e803e64cdc",
+            "candidate_type": "town",
+            "promotion_class": "promotable_with_provisional_attributes",
+            "representative_latitude": -26.156882,
+            "representative_longitude": 27.8725,
+            "sources": [
+              "geonames",
+              "nga_gns",
+              "osm",
+              "wikidata"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "City of Tshwane",
+                  "source_native_id": "47623444B80921072750836",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B80921072750836",
+                    "shapeISO": "",
+                    "shapeName": "City of Tshwane",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "City of Tshwane",
+                  "source_native_id": "15628383B80921072750836",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B80921072750836",
+                    "shapeISO": "",
+                    "shapeName": "City of Tshwane",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-693ac61bb31a4b5abd33",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -25.777979000000002,
+            "representative_longitude": 28.7660185,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Midvaal",
+                  "source_native_id": "15628383B4021169730913",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B4021169730913",
+                    "shapeISO": "",
+                    "shapeName": "Midvaal",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-d4b677c3b5e226d41a56",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.406519,
+            "representative_longitude": 28.017689500000003,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          }
+        ],
+        "normalized_name": "roodepoort"
+      },
+      {
+        "candidate_count": 3,
+        "candidates": [
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Emfuleni",
+                  "source_native_id": "15628383B33735276955904",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B33735276955904",
+                    "shapeISO": "",
+                    "shapeName": "Emfuleni",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-147d5612deb1538d0317",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.69197222,
+            "representative_longitude": 27.77749444,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Emfuleni",
+                  "source_native_id": "15628383B33735276955904",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B33735276955904",
+                    "shapeISO": "",
+                    "shapeName": "Emfuleni",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-63507f28c61c5495c998",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.6666685,
+            "representative_longitude": 27.8333315,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Emfuleni",
+                  "source_native_id": "15628383B33735276955904",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B33735276955904",
+                    "shapeISO": "",
+                    "shapeName": "Emfuleni",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-d7743ed65b55c354d64a",
+            "candidate_type": "town",
+            "promotion_class": "promotable_with_provisional_attributes",
+            "representative_latitude": -26.709300499999998,
+            "representative_longitude": 27.83711,
+            "sources": [
+              "geonames",
+              "nga_gns",
+              "osm",
+              "wikidata"
+            ]
+          }
+        ],
+        "normalized_name": "vanderbijlpark"
+      },
+      {
+        "candidate_count": 2,
+        "candidates": [
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "47623444B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "15628383B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-418038409a1c0a00d9bc",
+            "candidate_type": "locality",
+            "promotion_class": "promotable_with_provisional_attributes",
+            "representative_latitude": -26.104,
+            "representative_longitude": 28.051666666,
+            "sources": [
+              "geonames",
+              "nga_gns",
+              "osm",
+              "wikidata"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "47623444B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "City of Johannesburg",
+                  "source_native_id": "15628383B15418766532839",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B15418766532839",
+                    "shapeISO": "",
+                    "shapeName": "City of Johannesburg",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-43d109a4091bf9c2044c",
+            "candidate_type": "town",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.05,
+            "representative_longitude": 27.966667,
+            "sources": [
+              "nga_gns"
+            ]
+          }
+        ],
+        "normalized_name": "sandton"
+      },
+      {
+        "candidate_count": 6,
+        "candidates": [
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Midvaal",
+                  "source_native_id": "15628383B4021169730913",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B4021169730913",
+                    "shapeISO": "",
+                    "shapeName": "Midvaal",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-46caec7661968111c91b",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.76579,
+            "representative_longitude": 28.10273,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "West Rand",
+                  "source_native_id": "47623444B6623169143942",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B6623169143942",
+                    "shapeISO": "",
+                    "shapeName": "West Rand",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Merafong City",
+                  "source_native_id": "15628383B24995614588179",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B24995614588179",
+                    "shapeISO": "",
+                    "shapeName": "Merafong City",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-57eb5cd3edecdfdb6aca",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.3947385,
+            "representative_longitude": 27.510998,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Midvaal",
+                  "source_native_id": "15628383B4021169730913",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B4021169730913",
+                    "shapeISO": "",
+                    "shapeName": "Midvaal",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-5e8dc1dc85c3e910e193",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.6273185,
+            "representative_longitude": 28.1235005,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Midvaal",
+                  "source_native_id": "15628383B4021169730913",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B4021169730913",
+                    "shapeISO": "",
+                    "shapeName": "Midvaal",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-63801c3787e991236c34",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.546839499999997,
+            "representative_longitude": 28.1991815,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "Sedibeng",
+                  "source_native_id": "47623444B84489694859974",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B84489694859974",
+                    "shapeISO": "",
+                    "shapeName": "Sedibeng",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Emfuleni",
+                  "source_native_id": "15628383B33735276955904",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B33735276955904",
+                    "shapeISO": "",
+                    "shapeName": "Emfuleni",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-b56e28fc51b2338fb6d7",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -26.598740499999998,
+            "representative_longitude": 27.919271000000002,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "West Rand",
+                  "source_native_id": "47623444B6623169143942",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B6623169143942",
+                    "shapeISO": "",
+                    "shapeName": "West Rand",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "Mogale City",
+                  "source_native_id": "15628383B13881296162767",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B13881296162767",
+                    "shapeISO": "",
+                    "shapeName": "Mogale City",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-fe0105e01c70b50ef831",
+            "candidate_type": "other",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -25.869419999999998,
+            "representative_longitude": 27.5923455,
+            "sources": [
+              "geonames",
+              "nga_gns"
+            ]
+          }
+        ],
+        "normalized_name": "vaalkop"
+      },
+      {
+        "candidate_count": 2,
+        "candidates": [
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "City of Tshwane",
+                  "source_native_id": "47623444B80921072750836",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B80921072750836",
+                    "shapeISO": "",
+                    "shapeName": "City of Tshwane",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "City of Tshwane",
+                  "source_native_id": "15628383B80921072750836",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B80921072750836",
+                    "shapeISO": "",
+                    "shapeName": "City of Tshwane",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-ab35c1a038a865ba3e52",
+            "candidate_type": "estate/residential_development_candidate",
+            "promotion_class": "candidate_only",
+            "representative_latitude": -25.71243905,
+            "representative_longitude": 28.37118504149406,
+            "sources": [
+              "osm"
+            ]
+          },
+          {
+            "administrative_context": {
+              "adm2": [
+                {
+                  "level": "ADM2",
+                  "name": "City of Tshwane",
+                  "source_native_id": "47623444B80921072750836",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "47623444B80921072750836",
+                    "shapeISO": "",
+                    "shapeName": "City of Tshwane",
+                    "shapeType": "ADM2"
+                  }
+                }
+              ],
+              "adm3": [
+                {
+                  "level": "ADM3",
+                  "name": "City of Tshwane",
+                  "source_native_id": "15628383B80921072750836",
+                  "source_properties": {
+                    "shapeGroup": "ZAF",
+                    "shapeID": "15628383B80921072750836",
+                    "shapeISO": "",
+                    "shapeName": "City of Tshwane",
+                    "shapeType": "ADM3"
+                  }
+                }
+              ],
+              "province": {
+                "level": "ADM1",
+                "name": "Gauteng",
+                "source": "geoBoundaries"
+              }
+            },
+            "candidate_location_id": "pl-gp-v01-e85d170c3b560f058141",
+            "candidate_type": "town",
+            "promotion_class": "promotable_with_provisional_attributes",
+            "representative_latitude": -25.713013,
+            "representative_longitude": 28.365341,
+            "sources": [
+              "geonames",
+              "nga_gns",
+              "osm"
+            ]
+          }
+        ],
+        "normalized_name": "mamelodi"
+      }
+    ],
+    "identity_collision_candidate_count": 50,
+    "normalized_name_group_count": 292,
+    "promotion_classes": {
+      "auto_promotable_factual_identity": 18,
+      "candidate_only": 553,
+      "promotable_with_provisional_attributes": 177,
+      "rejected_non_independent": 76
+    },
+    "source_representation_primary_count": 26,
+    "source_representation_secondary_count": 26
+  },
+  "estate_development_assessment": {
+    "assessed_estate_candidate_count": 1068,
+    "by_assessed_type": {
+      "estate/residential_development_candidate": 1068,
+      "other": 77
+    },
+    "by_promotion_class": {
+      "candidate_only": 1049,
+      "promotable_with_provisional_attributes": 2,
+      "rejected_non_independent": 94
+    },
+    "generic_or_non_independent_rejected": 94,
+    "independently_supported": 4,
+    "osm_only": 1141,
+    "reclassified_count": 77,
+    "reclassified_examples": [
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-00488ddb8200adba05ab",
+        "preferred_name": "Informal Settlement",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-06aeabc2142dfeb5093c",
+        "preferred_name": "17",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-07d4d8634481f40a5d8b",
+        "preferred_name": "124",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-18e022706e75133db1fa",
+        "preferred_name": "Residential Area",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-210e26e861c63bf0a827",
+        "preferred_name": "Informal Settlement",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-253a1c57969529cd5dca",
+        "preferred_name": "Residential Area",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-27227a0cb0035f011ce8",
+        "preferred_name": "Informal Settlement",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-32737599e007e157f364",
+        "preferred_name": "flower garden",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-3279a36e2d8ea2414fc2",
+        "preferred_name": "Open Lot",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-3321cb79d6f1fb683f6e",
+        "preferred_name": "79",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-334890143efb2040daa3",
+        "preferred_name": "Residential Area",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-356427d18519642d732b",
+        "preferred_name": "Residential Area",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-37314a38a2e0579cd3e5",
+        "preferred_name": "81",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-39b14e83fb90c22f9513",
+        "preferred_name": "Informal Settlement",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-3b9d9ff19bb66f5293e3",
+        "preferred_name": "Informal Settlement",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-3e17179752450e0674ab",
+        "preferred_name": "Tweefontein",
+        "promotion_class": "candidate_only",
+        "type_assessment": "non_development_source_classification"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-3ee4cffc5714d8da78dc",
+        "preferred_name": "Informal Settlement",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-3ef1ba4b597aff57ab1c",
+        "preferred_name": "Residential Area",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-4197acc416c73a672995",
+        "preferred_name": "Residential Area",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-419b8beadd45e87c220d",
+        "preferred_name": "75",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-434118b66c48d3ebb9a7",
+        "preferred_name": "25",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-46fd20377cc9b1827c1b",
+        "preferred_name": "Informal Settlement",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-4bc69d430830992cd8a0",
+        "preferred_name": "88",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-5343a1fa6ab03d23388c",
+        "preferred_name": "23",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      },
+      {
+        "assessed_candidate_type": "other",
+        "candidate_location_id": "pl-gp-v01-53d427137f6aff907285",
+        "preferred_name": "16",
+        "promotion_class": "rejected_non_independent",
+        "type_assessment": "generic_residential_object"
+      }
+    ],
+    "reclassified_to_factual_or_other": {
+      "other": 77
+    },
+    "recommendation": "Treat OSM landuse=residential as candidate evidence, not final estate truth. OSM place=* reclassifies to the factual place type; generic/numeric labels and farm-coded non-development records do not become estates; named residential objects remain provisional candidates and require independent corroboration before promotion.",
+    "total": 1145
+  },
+  "founder_review_set": {
+    "categories": {
+      "important_probe_weak_evidence": 3
+    },
+    "count": 3,
+    "distinction": "The formal `founder_review_required` promotion class contains 0 candidates. The founder review set contains 3 records: those formal rows plus 3 priority required-probe candidates that remain `candidate_only`. Priority inclusion surfaces a weak or non-independent required probe for founder visibility; it does not change the promotion classification or promote the candidate.",
+    "formal_class_count": 0,
+    "priority_probe_count": 3,
+    "priority_probe_rows": [
+      {
+        "candidate_location_id": "pl-gp-v01-43d109a4091bf9c2044c",
+        "preferred_name": "Sandton",
+        "promotion_class": "candidate_only",
+        "reason": "required property-search probe remains weak or non-independent",
+        "required_probe_names": [
+          "Sandton"
+        ]
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-ab35c1a038a865ba3e52",
+        "preferred_name": "Mamelodi",
+        "promotion_class": "candidate_only",
+        "reason": "required property-search probe remains weak or non-independent",
+        "required_probe_names": [
+          "Mamelodi"
+        ]
+      },
+      {
+        "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+        "preferred_name": "Kyalami",
+        "promotion_class": "candidate_only",
+        "reason": "required property-search probe remains weak or non-independent",
+        "required_probe_names": [
+          "Kyalami"
+        ]
+      }
+    ]
+  },
+  "kyalami_khayalami": {
+    "additional_evidence_required": "An approved-source record or founder-supplied authoritative evidence establishing whether Khayalami is an alias, historic name or separate place.",
+    "conclusion": "The approved source pack supports Kyalami as a GeoNames-only populated-place/neighbourhood interpretation. It provides no Khayalami source record or alias, so no merge or alias assertion is made.",
+    "khayalami_source_record_count": 0,
+    "kyalami_candidates": [
+      {
+        "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+        "identity_confidence": "low",
+        "promotion_class": "candidate_only",
+        "reason": [
+          "evidence does not meet the independent identity threshold for factual canonical promotion"
+        ],
+        "sources": [
+          "geonames"
+        ],
+        "unresolved_attributes": []
+      }
+    ]
+  },
+  "licensing": {
+    "evidence_owner": "respective source licence; ODbL evidence remains identifiable",
+    "identity_owner": "Property Listify",
+    "mixed_odbl_candidates": 537,
+    "odbl_only_candidates": 1819,
+    "source_licence_classes_preserved": [
+      "CC0",
+      "CC_BY",
+      "CC_BY_4",
+      "NO_RESTRICTION_GNS",
+      "ODBL_1"
+    ]
+  },
+  "match_quality": {
+    "candidate_direct_evidence": 436,
+    "candidate_exact_contextual_evidence": 1842,
+    "fuzzy_proposals_withheld": 1632,
+    "methods": {
+      "candidate_seed": 2189,
+      "direct_cross_identifier": 816,
+      "duplicate_name_preserved": 1698,
+      "exact_contextual": 2723,
+      "fuzzy_string_similarity": 1632
+    },
+    "statuses": {
+      "ambiguous": 1638,
+      "conflict": 152,
+      "deterministic": 813,
+      "high_confidence": 2638,
+      "proposed": 1632,
+      "single_source": 2185
+    }
+  },
+  "osm_only_assessment": {
+    "alias_or_historic_tag_source_records": {
+      "alt_name": 35,
+      "official_name": 1,
+      "old_name": 3
+    },
+    "by_candidate_type": {
+      "estate/residential_development_candidate": 1066,
+      "locality": 12,
+      "neighbourhood": 32,
+      "other": 75,
+      "suburb": 608,
+      "town": 2,
+      "village": 24
+    },
+    "by_promotion_class": {
+      "candidate_only": 1051,
+      "promotable_with_provisional_attributes": 668,
+      "rejected_non_independent": 100
+    },
+    "landuse_residential_source_records": 1151,
+    "place_tag_source_records": 678,
+    "recommendation": "OSM-only factual place objects may enter the provisional class only after explicit ODbL attribution/database-strategy approval. OSM-only named residential landuse objects remain candidates; generic or numeric objects are rejected as non-independent.",
+    "total": 1819,
+    "wikidata_tag_source_records": 0,
+    "wikipedia_tag_source_records": 0
+  },
+  "output_paths": {
+    "comparison_json": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_comparison_v0.2.json",
+    "comparison_markdown": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_comparison_v0.2.md",
+    "founder_review_csv": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_founder_review_set_v0.2.csv",
+    "founder_review_jsonl": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_founder_review_set_v0.2.jsonl",
+    "policy_document": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_policy_v0.2.md",
+    "promotion_simulation_csv": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_simulation_v0.2.csv",
+    "promotion_simulation_jsonl": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_simulation_v0.2.jsonl",
+    "summary_json": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_summary_v0.2.json",
+    "summary_markdown": "/home/edwardspc/Desktop/Dev/listify-gauteng-founder-review-refinement/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_summary_v0.2.md"
+  },
+  "promotion_class_definitions": {
+    "auto_promotable_factual_identity": "Identity, name, point and proposed type are sufficiently supported for deterministic factual promotion.",
+    "candidate_only": "Evidence is retained but does not meet the independent identity threshold.",
+    "founder_review_required": "A material identity collision remains after deterministic source-representation checks; administrative and type uncertainty alone do not escalate.",
+    "promotable_with_provisional_attributes": "Identity is promotable, but type, administrative context or ODbL/licence handling remains provisional.",
+    "rejected_non_independent": "The source record is a generic/non-independent residential object rather than a named geography candidate."
+  },
+  "promotion_classes": {
+    "auto_promotable_factual_identity": 109,
+    "candidate_only": 2740,
+    "founder_review_required": 0,
+    "promotable_with_provisional_attributes": 1371,
+    "rejected_non_independent": 101
+  },
+  "promotion_metrics": {
+    "candidate_only": 2740,
+    "deterministically_handled_without_founder_review": 4318,
+    "deterministically_handled_without_founder_review_percent": 99.93,
+    "founder_review_class_count": 0,
+    "founder_review_set_count": 3,
+    "fully_auto_promotable": 109,
+    "promotable_with_provisional_attributes": 1371,
+    "promotion_without_founder_review": 1480,
+    "promotion_without_founder_review_percent": 34.25,
+    "rejected_non_independent": 101
+  },
+  "promotion_policy_version": "0.2.0",
+  "required_property_search_probes": [
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-482952abc84b2eccf7d2",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Johannesburg",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "johannesburg",
+      "probe": "Johannesburg"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-d55f7cb52192bba95e88",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Pretoria",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "pretoria",
+      "probe": "Pretoria"
+    },
+    {
+      "candidate_interpretation_count": 2,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-418038409a1c0a00d9bc",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Sandton",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-43d109a4091bf9c2044c",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "low",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Sandton",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "evidence does not meet the independent identity threshold for factual canonical promotion"
+          ],
+          "review_required": true,
+          "supporting_sources": [
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        }
+      ],
+      "normalized_name": "sandton",
+      "probe": "Sandton"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-3462bd075a8d155a3b22",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Randburg",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "randburg",
+      "probe": "Randburg"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-c53c43d358a6be20e785",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Rosebank",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "rosebank",
+      "probe": "Rosebank"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-e44e12b3b4fdcc03e7c3",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Bryanston",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "bryanston",
+      "probe": "Bryanston"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-5c4c657aecad01c64729",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Fourways",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "fourways",
+      "probe": "Fourways"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-3531b9dc79c239438abe",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "North Riding",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "north riding",
+      "probe": "North Riding"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-bf3bda5e9b73324fb944",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "low",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Kyalami",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "evidence does not meet the independent identity threshold for factual canonical promotion"
+          ],
+          "review_required": true,
+          "supporting_sources": [
+            "geonames"
+          ],
+          "unresolved_attributes": []
+        }
+      ],
+      "normalized_name": "kyalami",
+      "probe": "Kyalami"
+    },
+    {
+      "candidate_interpretation_count": 2,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-0d7688adb9c7af392007",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Midrand",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-455d2715587edce120f0",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "moderate",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Midrand",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        }
+      ],
+      "normalized_name": "midrand",
+      "probe": "Midrand"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-029159849439c2ea8783",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Centurion",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "centurion",
+      "probe": "Centurion"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-47a732ae286c679217fe",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Soweto",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "soweto",
+      "probe": "Soweto"
+    },
+    {
+      "candidate_interpretation_count": 2,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-ab35c1a038a865ba3e52",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "low",
+          "licence_state": "ODBL_ONLY",
+          "preferred_name": "Mamelodi",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "OSM-only residential-development evidence is retained but requires independent corroboration before promotion"
+          ],
+          "review_required": true,
+          "supporting_sources": [
+            "osm"
+          ],
+          "unresolved_attributes": [
+            "candidate_type",
+            "estate_or_development_product_class"
+          ]
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-e85d170c3b560f058141",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Mamelodi",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "mamelodi",
+      "probe": "Mamelodi"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-7a1604bd1ce2d85ce2c5",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Benoni",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "benoni",
+      "probe": "Benoni"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-a8de39a1e8953f55235a",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Boksburg",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "boksburg",
+      "probe": "Boksburg"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-b3eb16318b2cfaa4e685",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Kempton Park",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "kempton park",
+      "probe": "Kempton Park"
+    },
+    {
+      "candidate_interpretation_count": 1,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-4c21c1f81da64c1c6728",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Alberton",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "alberton",
+      "probe": "Alberton"
+    },
+    {
+      "candidate_interpretation_count": 4,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-015d909cf09fef3e402c",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "moderate",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Roodepoort",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-348fc87a99e803e64cdc",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Roodepoort",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-693ac61bb31a4b5abd33",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "moderate",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Roodepoort",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-d4b677c3b5e226d41a56",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "moderate",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Roodepoort",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        }
+      ],
+      "normalized_name": "roodepoort",
+      "probe": "Roodepoort"
+    },
+    {
+      "candidate_interpretation_count": 2,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-8f4a74eab390f42c84bb",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Germiston",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-a379cb82467606fe3041",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "moderate",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Germiston",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        }
+      ],
+      "normalized_name": "germiston",
+      "probe": "Germiston"
+    },
+    {
+      "candidate_interpretation_count": 3,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-52f29a3764eddca6a3bc",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "moderate",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vereeniging",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-7751b10bef7d63ee8cea",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Vereeniging",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-7969c3d6f482f94ed839",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "high",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vereeniging",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        }
+      ],
+      "normalized_name": "vereeniging",
+      "probe": "Vereeniging"
+    },
+    {
+      "candidate_interpretation_count": 3,
+      "found": true,
+      "interpretations": [
+        {
+          "candidate_location_id": "pl-gp-v01-147d5612deb1538d0317",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "high",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vanderbijlpark",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-63507f28c61c5495c998",
+          "factual_identity_would_become_canonical": false,
+          "identity_confidence": "moderate",
+          "licence_state": "PERMISSIVE_OR_ATTRIBUTION_ONLY",
+          "preferred_name": "Vanderbijlpark",
+          "promotion_class": "candidate_only",
+          "reason": [
+            "source-native evidence is not a bounded factual geography type for automatic canonical promotion"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns"
+          ],
+          "unresolved_attributes": []
+        },
+        {
+          "candidate_location_id": "pl-gp-v01-d7743ed65b55c354d64a",
+          "factual_identity_would_become_canonical": true,
+          "identity_confidence": "high",
+          "licence_state": "MIXED_INCLUDES_ODBL",
+          "preferred_name": "Vanderbijlpark",
+          "promotion_class": "promotable_with_provisional_attributes",
+          "reason": [
+            "identity is supported by deterministic or exact contextual evidence; one or more factual attributes remain provisional"
+          ],
+          "review_required": false,
+          "supporting_sources": [
+            "geonames",
+            "nga_gns",
+            "osm",
+            "wikidata"
+          ],
+          "unresolved_attributes": [
+            "candidate_type"
+          ]
+        }
+      ],
+      "normalized_name": "vanderbijlpark",
+      "probe": "Vanderbijlpark"
+    }
+  ],
+  "scope": {
+    "no_database_operations": true,
+    "no_product_search_changes": true,
+    "no_search_areas": true,
+    "no_source_artifact_mutation": true,
+    "source_root": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1"
+  },
+  "source_catalogue": {
+    "candidate_count": 4321,
+    "candidate_type_stats": {
+      "city": {
+        "alias_rate": 1.0,
+        "aliases": 6,
+        "ambiguous_count": 2,
+        "ambiguous_rate": 0.3333,
+        "boundary_conflict": 0,
+        "boundary_conflict_rate": 0.0,
+        "conflict_count": 0,
+        "conflict_rate": 0.0,
+        "duplicate_name": 2,
+        "historical_name_rate": 0.0,
+        "historical_names": 0,
+        "multi_source": 6,
+        "osm_only": 0,
+        "osm_only_rate": 0.0,
+        "promotion_classes": {
+          "promotable_with_provisional_attributes": 6
+        },
+        "single_source": 0,
+        "total": 6,
+        "type_disagreement": 6
+      },
+      "district_municipality": {
+        "alias_rate": 0.25,
+        "aliases": 2,
+        "ambiguous_count": 0,
+        "ambiguous_rate": 0.0,
+        "boundary_conflict": 0,
+        "boundary_conflict_rate": 0.0,
+        "conflict_count": 0,
+        "conflict_rate": 0.0,
+        "duplicate_name": 0,
+        "historical_name_rate": 0.0,
+        "historical_names": 0,
+        "multi_source": 2,
+        "osm_only": 0,
+        "osm_only_rate": 0.0,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 6,
+          "promotable_with_provisional_attributes": 2
+        },
+        "single_source": 6,
+        "total": 8,
+        "type_disagreement": 2
+      },
+      "estate/residential_development_candidate": {
+        "alias_rate": 0.0044,
+        "aliases": 5,
+        "ambiguous_count": 137,
+        "ambiguous_rate": 0.1197,
+        "boundary_conflict": 0,
+        "boundary_conflict_rate": 0.0,
+        "conflict_count": 0,
+        "conflict_rate": 0.0,
+        "duplicate_name": 137,
+        "historical_name_rate": 0.0,
+        "historical_names": 0,
+        "multi_source": 4,
+        "osm_only": 1141,
+        "osm_only_rate": 0.9965,
+        "promotion_classes": {
+          "candidate_only": 1049,
+          "promotable_with_provisional_attributes": 2,
+          "rejected_non_independent": 94
+        },
+        "single_source": 1141,
+        "total": 1145,
+        "type_disagreement": 1
+      },
+      "local_municipality": {
+        "alias_rate": 0.3636,
+        "aliases": 8,
+        "ambiguous_count": 2,
+        "ambiguous_rate": 0.0909,
+        "boundary_conflict": 0,
+        "boundary_conflict_rate": 0.0,
+        "conflict_count": 0,
+        "conflict_rate": 0.0,
+        "duplicate_name": 2,
+        "historical_name_rate": 0.0,
+        "historical_names": 0,
+        "multi_source": 8,
+        "osm_only": 0,
+        "osm_only_rate": 0.0,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 14,
+          "promotable_with_provisional_attributes": 8
+        },
+        "single_source": 14,
+        "total": 22,
+        "type_disagreement": 8
+      },
+      "locality": {
+        "alias_rate": 0.6872,
+        "aliases": 123,
+        "ambiguous_count": 27,
+        "ambiguous_rate": 0.1508,
+        "boundary_conflict": 5,
+        "boundary_conflict_rate": 0.0279,
+        "conflict_count": 5,
+        "conflict_rate": 0.0279,
+        "duplicate_name": 27,
+        "historical_name_rate": 0.0168,
+        "historical_names": 3,
+        "multi_source": 157,
+        "osm_only": 12,
+        "osm_only_rate": 0.067,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 5,
+          "candidate_only": 7,
+          "promotable_with_provisional_attributes": 166,
+          "rejected_non_independent": 1
+        },
+        "single_source": 22,
+        "total": 179,
+        "type_disagreement": 130
+      },
+      "neighbourhood": {
+        "alias_rate": 0.4464,
+        "aliases": 50,
+        "ambiguous_count": 10,
+        "ambiguous_rate": 0.0893,
+        "boundary_conflict": 1,
+        "boundary_conflict_rate": 0.0089,
+        "conflict_count": 1,
+        "conflict_rate": 0.0089,
+        "duplicate_name": 10,
+        "historical_name_rate": 0.0089,
+        "historical_names": 1,
+        "multi_source": 8,
+        "osm_only": 32,
+        "osm_only_rate": 0.2857,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 1,
+          "candidate_only": 71,
+          "promotable_with_provisional_attributes": 40
+        },
+        "single_source": 104,
+        "total": 112,
+        "type_disagreement": 6
+      },
+      "other": {
+        "alias_rate": 0.2438,
+        "aliases": 376,
+        "ambiguous_count": 464,
+        "ambiguous_rate": 0.3009,
+        "boundary_conflict": 104,
+        "boundary_conflict_rate": 0.0674,
+        "conflict_count": 104,
+        "conflict_rate": 0.0674,
+        "duplicate_name": 464,
+        "historical_name_rate": 0.0006,
+        "historical_names": 1,
+        "multi_source": 1074,
+        "osm_only": 0,
+        "osm_only_rate": 0.0,
+        "promotion_classes": {
+          "candidate_only": 1542
+        },
+        "single_source": 468,
+        "total": 1542,
+        "type_disagreement": 0
+      },
+      "province": {
+        "alias_rate": 1.0,
+        "aliases": 2,
+        "ambiguous_count": 2,
+        "ambiguous_rate": 1.0,
+        "boundary_conflict": 0,
+        "boundary_conflict_rate": 0.0,
+        "conflict_count": 0,
+        "conflict_rate": 0.0,
+        "duplicate_name": 2,
+        "historical_name_rate": 0.0,
+        "historical_names": 0,
+        "multi_source": 1,
+        "osm_only": 0,
+        "osm_only_rate": 0.0,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 2
+        },
+        "single_source": 1,
+        "total": 2,
+        "type_disagreement": 0
+      },
+      "suburb": {
+        "alias_rate": 0.1356,
+        "aliases": 118,
+        "ambiguous_count": 98,
+        "ambiguous_rate": 0.1126,
+        "boundary_conflict": 2,
+        "boundary_conflict_rate": 0.0023,
+        "conflict_count": 2,
+        "conflict_rate": 0.0023,
+        "duplicate_name": 98,
+        "historical_name_rate": 0.0034,
+        "historical_names": 3,
+        "multi_source": 262,
+        "osm_only": 608,
+        "osm_only_rate": 0.6989,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 51,
+          "candidate_only": 4,
+          "promotable_with_provisional_attributes": 809,
+          "rejected_non_independent": 6
+        },
+        "single_source": 608,
+        "total": 870,
+        "type_disagreement": 211
+      },
+      "town": {
+        "alias_rate": 0.5262,
+        "aliases": 211,
+        "ambiguous_count": 78,
+        "ambiguous_rate": 0.1945,
+        "boundary_conflict": 31,
+        "boundary_conflict_rate": 0.0773,
+        "conflict_count": 31,
+        "conflict_rate": 0.0773,
+        "duplicate_name": 78,
+        "historical_name_rate": 0.0075,
+        "historical_names": 3,
+        "multi_source": 331,
+        "osm_only": 2,
+        "osm_only_rate": 0.005,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 28,
+          "candidate_only": 67,
+          "promotable_with_provisional_attributes": 306
+        },
+        "single_source": 70,
+        "total": 401,
+        "type_disagreement": 144
+      },
+      "village": {
+        "alias_rate": 0.2941,
+        "aliases": 10,
+        "ambiguous_count": 4,
+        "ambiguous_rate": 0.1176,
+        "boundary_conflict": 0,
+        "boundary_conflict_rate": 0.0,
+        "conflict_count": 0,
+        "conflict_rate": 0.0,
+        "duplicate_name": 4,
+        "historical_name_rate": 0.0,
+        "historical_names": 0,
+        "multi_source": 10,
+        "osm_only": 24,
+        "osm_only_rate": 0.7059,
+        "promotion_classes": {
+          "auto_promotable_factual_identity": 2,
+          "promotable_with_provisional_attributes": 32
+        },
+        "single_source": 24,
+        "total": 34,
+        "type_disagreement": 8
+      }
+    },
+    "match_count": 9058,
+    "source_assertion_count": 65073,
+    "source_combinations": {
+      "geoboundaries": 21,
+      "geoboundaries+geonames+nga_gns": 10,
+      "geonames": 605,
+      "geonames+nga_gns": 1316,
+      "geonames+nga_gns+osm": 175,
+      "geonames+nga_gns+osm+wikidata": 122,
+      "geonames+osm": 142,
+      "geonames+osm+wikidata": 44,
+      "nga_gns": 13,
+      "nga_gns+osm+wikidata": 1,
+      "osm": 1819,
+      "osm+wikidata": 53
+    },
+    "source_record_count": 7641
+  },
+  "type_disagreement_assessment": {
+    "by_promotion_class": {
+      "promotable_with_provisional_attributes": 515,
+      "rejected_non_independent": 1
+    },
+    "candidate_count": 516,
+    "common_source_type_combinations": {
+      "ADM2|ADM3|district_municipality|local_municipality|metropolitan_municipality": 3,
+      "ADM2|district_municipality": 2,
+      "ADM3|local_municipality": 5,
+      "city|locality|town|village": 12,
+      "estate/residential_development_candidate|locality": 1,
+      "locality|neighbourhood": 2,
+      "locality|neighbourhood|suburb": 79,
+      "locality|neighbourhood|suburb|town": 7,
+      "locality|neighbourhood|suburb|town|village": 95,
+      "locality|neighbourhood|town|village": 27,
+      "locality|suburb": 14,
+      "locality|suburb|town": 2,
+      "locality|suburb|town|village": 214,
+      "locality|town|village": 25,
+      "suburb|town": 19
+    },
+    "recommendation": "Do not block a clear identity solely because GeoNames populated-place, NGA designation and OSM place taxonomies differ; preserve the hints and keep candidate_type provisional."
+  }
+}

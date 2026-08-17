@@ -1,0 +1,49 @@
+{
+  "schema_version": "0.1",
+  "research_date": "2026-08-15",
+  "seed_path": "/home/edwardspc/Desktop/Dev/listify-gauteng-search-area-research/data/gauteng-search-area-research-v0.1/input/gauteng_search_area_research_seed_v0.1.json",
+  "canonical_source_path": "/home/edwardspc/Desktop/Dev/listify-gauteng-factual-canonical-v0-1/data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_geography_v0.1.jsonl",
+  "retained_candidate_catalogue": {
+    "source_path": "/home/edwardspc/Desktop/Dev/listify-gauteng-geography-catalogue/data/gauteng-candidate-catalogue-v0.1/output/gauteng_candidate_catalogue_v0.1.jsonl",
+    "repository_head": "a6cd7545a5d710dc0b1f19829f396a119f4f2f9d",
+    "catalogue_version": "v0.1",
+    "read_only_observation": true
+  },
+  "factual_checkpoint_commit": "bd39aa38e4f7158164f3572b62db827fbf01c1a7",
+  "factual_checkpoint_content_verified": true,
+  "canonical_location_count": 1480,
+  "source_count": 62,
+  "search_area_candidate_count": 19,
+  "membership_assertion_count": 188,
+  "membership_state_counts": {
+    "core": 69,
+    "disputed": 9,
+    "excluded": 1,
+    "fringe": 1,
+    "strongly_supported": 29,
+    "supported": 48,
+    "unresolved": 31
+  },
+  "observed_membership_state_counts": {
+    "core": 75,
+    "disputed": 12,
+    "excluded": 1,
+    "fringe": 12,
+    "strongly_supported": 36,
+    "supported": 52
+  },
+  "resolved_membership_assertion_count": 156,
+  "geography_gap_candidate_count": 23,
+  "overlap_canonical_location_count": 24,
+  "overlap_membership_assertion_count": 50,
+  "search_intent_count": 20,
+  "candidate_priority_counts": {
+    "avoid": 2,
+    "launch-critical": 6,
+    "research-further": 4,
+    "useful-post-launch": 7
+  },
+  "production_changes_made": false,
+  "search_implementation_changes_made": false,
+  "database_changes_made": false
+}

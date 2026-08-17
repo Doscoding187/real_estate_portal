@@ -1,0 +1,149 @@
+{
+  "schema_version": "0.1",
+  "checkpoint": {
+    "factualCanonical": "bd39aa38e4f7158164f3572b62db827fbf01c1a7",
+    "searchAreaResearch": "5c8c04858c27339255f9648737da084097e2ec3c",
+    "searchAreaCandidates": "ccd613d2b199504e90a74d7c5a0f6728c8ca98df"
+  },
+  "projection_scope": "current factual identities across 61 memberships plus retained historical/source identities",
+  "semantic_projection_counts": {
+    "projection_ready": 60,
+    "ambiguous_projection": 0,
+    "unsupported_search_scope": 0,
+    "factual_geography_blocker": 1,
+    "other_material_blocker": 0
+  },
+  "runtime_reference_counts": {
+    "existing_reference_data": 1,
+    "reference_data_expansion_required": 59
+  },
+  "numeric_ids_are_not_durable_authority": true,
+  "conflicts": [],
+  "legacy_runtime_observations": [
+    {
+      "observation_type": "historical_runtime_type_disagrees_with_factual_type",
+      "factual_location_id": "pl-gp-v01-3462bd075a8d155a3b22",
+      "factual_name": "Randburg",
+      "factual_type": "city",
+      "historical_runtime_representation": {
+        "runtime_level": "suburb",
+        "runtime_parent_label": "Johannesburg",
+        "source": "migrations/create-location-hierarchy.sql",
+        "authority_state": "historical_non_canonical_source"
+      },
+      "resolution": "factual_type_wins_for_semantic_projection",
+      "action": "project as metro_city using a stable natural key; never use the historical suburb sample as a durable mapping"
+    },
+    {
+      "observation_type": "current_reference_catalogue_is_small",
+      "reference_rows": 5,
+      "current_reference_authority": "canonical-geography-v2",
+      "resolution": "expand_through_governed_projection_before_runtime_activation",
+      "action": "treat absent rows as runtime reference-data expansion work, not factual-geography failures"
+    }
+  ],
+  "identity_collisions": [
+    {
+      "collision_type": "same_preferred_name_factual_location_and_search_area",
+      "search_area_id": "pl-sa-gp-3b36a49ecb943c88402b07fd",
+      "search_area_preferred_name": "Johannesburg North",
+      "factual_location_ids": [
+        "pl-gp-v01-c1d935cbc90ea639eb87"
+      ],
+      "factual_preferred_names": [
+        "Johannesburg North"
+      ],
+      "identities_are_distinct": true,
+      "disambiguation_required": true,
+      "resolution": "preserve_separate_authorities",
+      "action": "do_not_merge_factual_and_search_area_identities_or_inherit_factual_boundaries",
+      "evidence_source": "data/gauteng-search-area-candidates-v0.1/output/gauteng_search_area_identity_collisions_v0.1.json"
+    },
+    {
+      "collision_type": "same_preferred_name_factual_location_and_search_area",
+      "search_area_id": "pl-sa-gp-20f043e9ba8ece627365f5ad",
+      "search_area_preferred_name": "East Rand",
+      "factual_location_ids": [
+        "pl-gp-v01-85224ee50069c93dae3e"
+      ],
+      "factual_preferred_names": [
+        "East Rand"
+      ],
+      "identities_are_distinct": true,
+      "disambiguation_required": true,
+      "resolution": "preserve_separate_authorities",
+      "action": "do_not_merge_factual_and_search_area_identities_or_inherit_factual_boundaries",
+      "evidence_source": "data/gauteng-search-area-candidates-v0.1/output/gauteng_search_area_identity_collisions_v0.1.json"
+    },
+    {
+      "collision_type": "same_preferred_name_factual_location_and_search_area",
+      "search_area_id": "pl-sa-gp-01da060bb6c5807438a654e9",
+      "search_area_preferred_name": "Midrand",
+      "factual_location_ids": [
+        "pl-gp-v01-0d7688adb9c7af392007",
+        "pl-gp-v01-455d2715587edce120f0"
+      ],
+      "factual_preferred_names": [
+        "Midrand",
+        "Midrand"
+      ],
+      "identities_are_distinct": true,
+      "disambiguation_required": true,
+      "resolution": "preserve_separate_authorities",
+      "action": "do_not_merge_factual_and_search_area_identities_or_inherit_factual_boundaries",
+      "evidence_source": "data/gauteng-search-area-candidates-v0.1/output/gauteng_search_area_identity_collisions_v0.1.json"
+    },
+    {
+      "collision_type": "same_preferred_name_factual_location_and_search_area",
+      "search_area_id": "pl-sa-gp-35163d1b6013797932cd94c1",
+      "search_area_preferred_name": "Centurion",
+      "factual_location_ids": [
+        "pl-gp-v01-029159849439c2ea8783"
+      ],
+      "factual_preferred_names": [
+        "Centurion"
+      ],
+      "identities_are_distinct": true,
+      "disambiguation_required": true,
+      "resolution": "preserve_separate_authorities",
+      "action": "do_not_merge_factual_and_search_area_identities_or_inherit_factual_boundaries",
+      "evidence_source": "data/gauteng-search-area-candidates-v0.1/output/gauteng_search_area_identity_collisions_v0.1.json"
+    }
+  ],
+  "ambiguities": [
+    {
+      "ambiguity_type": "same_name_factual_identities",
+      "normalized_name": "midrand",
+      "factual_location_ids": [
+        "pl-gp-v01-0d7688adb9c7af392007",
+        "pl-gp-v01-455d2715587edce120f0"
+      ],
+      "resolution": "historical_source_identity_only_for_ekurhuleni_record",
+      "action": "retain the Ekurhuleni-coordinate source provenance without current runtime mapping; do not merge into Johannesburg Midrand by label"
+    },
+    {
+      "ambiguity_type": "same_name_factual_identities",
+      "normalized_name": "sandton",
+      "factual_location_ids": [
+        "pl-gp-v01-418038409a1c0a00d9bc",
+        "pl-gp-v01-43d109a4091bf9c2044c"
+      ],
+      "resolution": "canonical_id_selected_by_accepted_factual_checkpoint",
+      "action": "map only the accepted factual Sandton identity; retain the candidate-only identity outside the bridge"
+    }
+  ],
+  "policy_blockers": [
+    {
+      "topic": "Kyalami/Khayalami",
+      "factual_identity": null,
+      "candidate_identity": "pl-gp-v01-bf3bda5e9b73324fb944",
+      "runtime_mapping": "blocked",
+      "rule": "one eventual factual identity; consumer name Kyalami; official name Khayalami; no runtime or Search Area workaround",
+      "evidence_source": "data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_kyalami_evidence_v0.1.json"
+    },
+    {
+      "topic": "name_only_mapping",
+      "rule": "never map a factual identity to a runtime row solely because visible labels match"
+    }
+  ]
+}

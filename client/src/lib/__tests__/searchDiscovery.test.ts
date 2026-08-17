@@ -8,9 +8,9 @@ function readRepoFile(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), 'utf8');
 }
 
-describe('feature flag VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED', () => {
-  it('is defined in const.ts with a fallback of "0"', () => {
-    expect(VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED).toBe('0');
+describe('public Search Discovery transport gate', () => {
+  it('is defined in const.ts with a public activation fallback of "1"', () => {
+    expect(VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED).toBe('1');
   });
 
   it('is referenced in EnhancedHero.tsx for flag-gating', () => {
@@ -19,11 +19,9 @@ describe('feature flag VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED', () => {
     expect(hero).toContain("=== '1'");
   });
 
-  it('flag-off path does not inject discovery suggestions into LocationAutosuggest', () => {
+  it('flag-off path still fails closed without changing server identity authority', () => {
     const hero = readRepoFile('client/src/components/EnhancedHero.tsx');
-    // When flag is off, discoverySuggestions should be an empty array
-    // (no discovery props are passed conditionally; the flag is checked via useMemo)
-    expect(hero).toContain('if (!isDiscoveryEnabled) return []');
+    expect(hero).toContain('isDiscoveryEnabled ? serverDiscoverySuggestions || [] : []');
   });
 
   it('flag-on path uses canonical path-based navigation', () => {

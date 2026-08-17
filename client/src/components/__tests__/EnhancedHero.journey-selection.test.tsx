@@ -3,8 +3,9 @@ import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { setLocation } = vi.hoisted(() => ({
+const { setLocation, searchDiscoveryQuery } = vi.hoisted(() => ({
   setLocation: vi.fn(),
+  searchDiscoveryQuery: vi.fn(() => ({ data: [] })),
 }));
 
 vi.mock('wouter', () => ({
@@ -77,6 +78,16 @@ vi.mock('@/components/LocationAutosuggest', () => ({
       </button>
     </>
   ),
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    location: {
+      searchDiscoverySuggestions: {
+        useQuery: searchDiscoveryQuery,
+      },
+    },
+  },
 }));
 
 import { EnhancedHero } from '../EnhancedHero';

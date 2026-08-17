@@ -1,0 +1,570 @@
+[
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-d35283c803598b420b87",
+    "name": "Bashewa AH",
+    "normalized_name": "bashewa ah",
+    "market_source_evidence": [
+      "src-gp-sa-v01-6dfaa46a8ff671fc8062",
+      "src-gp-sa-v01-d3f947ffb26b86db13b2"
+    ],
+    "search_area_candidates": [
+      "Pretoria Far East"
+    ],
+    "likely_type": "agricultural_holdings_or_locality",
+    "reason_it_matters": [
+      "Observed in Far East evidence, but retained as unresolved geography rather than promoted market membership."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-e9164f02cf2d3ae93328",
+    "name": "Beverley",
+    "normalized_name": "beverley",
+    "market_source_evidence": [
+      "src-gp-sa-v01-c0a29c4dcdd8e7b5aac6",
+      "src-gp-sa-v01-e4650f65dc00816de033"
+    ],
+    "search_area_candidates": [
+      "Fourways"
+    ],
+    "likely_type": null,
+    "reason_it_matters": [
+      "Agency Fourways profiles repeatedly identify Beverley as a local market node."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-10abefa9c3d65c54ecdf",
+    "name": "Boschkop AH",
+    "normalized_name": "boschkop ah",
+    "market_source_evidence": [
+      "src-gp-sa-v01-6dfaa46a8ff671fc8062",
+      "src-gp-sa-v01-d3f947ffb26b86db13b2"
+    ],
+    "search_area_candidates": [
+      "Pretoria Far East"
+    ],
+    "likely_type": "agricultural_holdings_or_locality",
+    "reason_it_matters": [
+      "The term appears in Far East lifestyle/farm-market evidence, but there is no sufficiently consistent consumer boundary."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-e9d3e4f858fe792c3d69",
+    "name": "Brackendowns",
+    "normalized_name": "brackendowns",
+    "market_source_evidence": [
+      "src-gp-sa-v01-2281e47483d4468b5c05",
+      "src-gp-sa-v01-c16c27d73278fb75e356"
+    ],
+    "search_area_candidates": [
+      "Johannesburg South"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Repeated southern/Alberton market reference, absent from the accepted canonical projection."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-3c6d406c1e75342dd597",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-0c3d8af330ac5fb41328",
+    "name": "Dainfern",
+    "normalized_name": "dainfern",
+    "market_source_evidence": [
+      "src-gp-sa-v01-83a6a1f356f355ca469c",
+      "src-gp-sa-v01-9681eb2a06641a55303a",
+      "src-gp-sa-v01-e4650f65dc00816de033",
+      "src-gp-sa-v01-c7e08cbe5d574bd4db69"
+    ],
+    "search_area_candidates": [
+      "Fourways",
+      "Johannesburg North"
+    ],
+    "likely_type": "suburb_or_estate",
+    "reason_it_matters": [
+      "Repeated northern/Sandton/Fourways market evidence; absent from the accepted factual projection.",
+      "Repeated northern estate-market evidence; do not create a factual identity here."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-e7c6c60f5fa057c0dc01",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-23e7f327a1b642ec07c9",
+    "name": "Equestria",
+    "normalized_name": "equestria",
+    "market_source_evidence": [
+      "src-gp-sa-v01-4a17509b80866f5aa302",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2",
+      "src-gp-sa-v01-cec858b0af43abdf17a1"
+    ],
+    "search_area_candidates": [
+      "Pretoria East"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Repeated portal and agency inclusion supports the outer-east association, but the accepted factual projection lacks the name."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-3ddae5d885a178902a78",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-e8470c4bb5d208a3cc5a",
+    "name": "Greenstone",
+    "normalized_name": "greenstone",
+    "market_source_evidence": [
+      "src-gp-sa-v01-755bab7ef24769b439fc",
+      "src-gp-sa-v01-f188ea5705bef80a3e57"
+    ],
+    "search_area_candidates": [
+      "East Rand"
+    ],
+    "likely_type": "development_or_locality",
+    "reason_it_matters": [
+      "East Rand lifestyle-market term absent from the accepted canonical projection; do not infer a base identity."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-761955caed109ab27221",
+    "name": "Greenstone Hill",
+    "normalized_name": "greenstone hill",
+    "market_source_evidence": [
+      "src-gp-sa-v01-755bab7ef24769b439fc",
+      "src-gp-sa-v01-fa025045fe4625999565"
+    ],
+    "search_area_candidates": [
+      "East Rand"
+    ],
+    "likely_type": "suburb_or_development",
+    "reason_it_matters": [
+      "Repeated East Rand property context, absent from the accepted canonical projection."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-1b042a7e8cb8debb6fe5",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-eedf2aee3eec88128a26",
+    "name": "Highveld",
+    "normalized_name": "highveld",
+    "market_source_evidence": [
+      "src-gp-sa-v01-50bc8effe9bdbd7df05f",
+      "src-gp-sa-v01-859ec34de6713e9fccd4"
+    ],
+    "search_area_candidates": [
+      "Centurion"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Centurion East evidence names Highveld, but the accepted factual projection lacks the name."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-872c1be0799afd41479b",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-c47a63715d62ea1a8708",
+    "name": "Kya Sands",
+    "normalized_name": "kya sands",
+    "market_source_evidence": [
+      "src-gp-sa-v01-9b8cda0dfe7b780f5f4a",
+      "src-gp-sa-v01-b2812f441ef922730f87"
+    ],
+    "search_area_candidates": [
+      "Johannesburg North"
+    ],
+    "likely_type": "suburb_or_locality",
+    "reason_it_matters": [
+      "Appears in Johannesburg northern market coverage but is absent from the accepted canonical projection."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-004b3435536898db5063",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-5fb017692c663ffc63a1",
+    "name": "Kyalami",
+    "normalized_name": "kyalami",
+    "market_source_evidence": [
+      "src-gp-sa-v01-6e88a52561abe0a3d99a",
+      "src-gp-sa-v01-6ee29145ce8d565420fe",
+      "src-gp-sa-v01-d75373f5aa700b71b4d4"
+    ],
+    "search_area_candidates": [
+      "Midrand"
+    ],
+    "likely_type": "suburb_or_locality",
+    "reason_it_matters": [
+      "Kyalami is repeatedly part of the Midrand consumer market, but founder policy requires one factual identity and does not permit a Search Area to substitute for factual promotion."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-bf3bda5e9b73324fb944",
+    "gap_kinds": [
+      "kyalami_policy_blocked"
+    ],
+    "kyalami_policy_blocked": true,
+    "recommended_geography_follow_up": "Retain Kyalami/Khayalami as one factual identity with Kyalami preferred and Khayalami official/corrected naming when the official-evidence licensing gate permits promotion; do not use Midrand Search Area membership to bypass that gate.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-f0e66962460124294ef1",
+    "name": "Liefde en Vrede",
+    "normalized_name": "liefde en vrede",
+    "market_source_evidence": [
+      "src-gp-sa-v01-c16c27d73278fb75e356"
+    ],
+    "search_area_candidates": [
+      "Johannesburg South"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Portal southern market reference requiring factual catalogue follow-up."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-a59ebc2521881aa11211",
+    "name": "Lonehill",
+    "normalized_name": "lonehill",
+    "market_source_evidence": [
+      "src-gp-sa-v01-c0a29c4dcdd8e7b5aac6",
+      "src-gp-sa-v01-e4650f65dc00816de033"
+    ],
+    "search_area_candidates": [
+      "Fourways",
+      "Johannesburg North"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Repeated Fourways market evidence; absent from the accepted factual projection and retained as a gap.",
+      "Repeated Fourways market evidence, but the accepted factual projection lacks this name."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-5be09349a9e81e4165db",
+    "name": "Moreleta Park",
+    "normalized_name": "moreleta park",
+    "market_source_evidence": [
+      "src-gp-sa-v01-4a17509b80866f5aa302",
+      "src-gp-sa-v01-8f62c8801e57b6ada2df",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2",
+      "src-gp-sa-v01-c310ad6847bc703778f9"
+    ],
+    "search_area_candidates": [
+      "Pretoria East"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Repeatedly presented as a major Pretoria East residential node; absent from the accepted factual projection and therefore retained as a gap only."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-6c3ac85f8800969631b2",
+    "name": "New Redruth",
+    "normalized_name": "new redruth",
+    "market_source_evidence": [
+      "src-gp-sa-v01-2281e47483d4468b5c05"
+    ],
+    "search_area_candidates": [
+      "Johannesburg South"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Repeated Alberton value-market reference, absent from the accepted canonical projection."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-4d316a3df2388cb66476",
+    "name": "Norscot",
+    "normalized_name": "norscot",
+    "market_source_evidence": [
+      "src-gp-sa-v01-c0a29c4dcdd8e7b5aac6",
+      "src-gp-sa-v01-e4650f65dc00816de033"
+    ],
+    "search_area_candidates": [
+      "Fourways"
+    ],
+    "likely_type": null,
+    "reason_it_matters": [
+      "Recognised Fourways-area lifestyle node, with less cross-source depth than the core."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-bba73475bc0b8d2acff7",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-62e6f95c108bf246db05",
+    "name": "Olympus AH",
+    "normalized_name": "olympus ah",
+    "market_source_evidence": [
+      "src-gp-sa-v01-4a17509b80866f5aa302",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2"
+    ],
+    "search_area_candidates": [
+      "Pretoria East"
+    ],
+    "likely_type": "agricultural_holdings_or_locality",
+    "reason_it_matters": [
+      "Observed on broad east-market lists, but factual type and market boundary require geography follow-up."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-12b53c1a99c331d7a97e",
+    "name": "Silver Lakes",
+    "normalized_name": "silver lakes",
+    "market_source_evidence": [
+      "src-gp-sa-v01-6cf9b49dbe20bd16e20d",
+      "src-gp-sa-v01-77186320e5a3c487c54b",
+      "src-gp-sa-v01-a18cf4027583820a92ef",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2"
+    ],
+    "search_area_candidates": [
+      "Pretoria North East",
+      "Pretoria East"
+    ],
+    "likely_type": null,
+    "reason_it_matters": [
+      "Silver Lakes is more consistently evidenced as Pretoria East than as a distinct Pretoria North East market member.",
+      "Silver Lakes is a recurring Pretoria East estate-market term, absent from the accepted factual projection."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-a6330016000cd02db81a",
+    "name": "Six Fountains",
+    "normalized_name": "six fountains",
+    "market_source_evidence": [
+      "src-gp-sa-v01-4a17509b80866f5aa302",
+      "src-gp-sa-v01-77186320e5a3c487c54b",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2"
+    ],
+    "search_area_candidates": [
+      "Pretoria East"
+    ],
+    "likely_type": "estate_or_suburb",
+    "reason_it_matters": [
+      "Contemporary property guides repeatedly surface Six Fountains as an east-market estate node; factual promotion is not assumed."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-a72bdc40d478655de295",
+    "name": "Southdale",
+    "normalized_name": "southdale",
+    "market_source_evidence": [
+      "src-gp-sa-v01-c16c27d73278fb75e356"
+    ],
+    "search_area_candidates": [
+      "Johannesburg South"
+    ],
+    "likely_type": "suburb",
+    "reason_it_matters": [
+      "Portal southern market reference requiring factual catalogue follow-up."
+    ],
+    "retained_candidate_catalogue_exists": true,
+    "candidate_id_where_available": "pl-gp-v01-7a226d0c238d7967a2f1",
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-15b55d4c8f5c675dc51f",
+    "name": "Tembisa",
+    "normalized_name": "tembisa",
+    "market_source_evidence": [
+      "src-gp-sa-v01-6d78ce7ea2717338a9ab",
+      "src-gp-sa-v01-f188ea5705bef80a3e57"
+    ],
+    "search_area_candidates": [
+      "East Rand"
+    ],
+    "likely_type": "town_or_locality",
+    "reason_it_matters": [
+      "Repeated East Rand portal member, absent from the accepted canonical projection."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-cd50ca5971a2c9c09af9",
+    "name": "Waterfall",
+    "normalized_name": "waterfall",
+    "market_source_evidence": [
+      "src-gp-sa-v01-6e88a52561abe0a3d99a",
+      "src-gp-sa-v01-d75373f5aa700b71b4d4",
+      "src-gp-sa-v01-f9b5b620a39af5ec0719"
+    ],
+    "search_area_candidates": [
+      "Midrand"
+    ],
+    "likely_type": "development_or_locality",
+    "reason_it_matters": [
+      "Waterfall is an important consumer property-market term in Midrand evidence, but the accepted factual projection lacks a matching promoted identity."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  },
+  {
+    "schema_version": "0.1",
+    "gap_id": "gap-gp-v01-67d15c2254ac04587e8b",
+    "name": "Woodhill",
+    "normalized_name": "woodhill",
+    "market_source_evidence": [
+      "src-gp-sa-v01-4a17509b80866f5aa302",
+      "src-gp-sa-v01-6ff8fe18d62b7308465a",
+      "src-gp-sa-v01-a91f0f7a950f90305bb2"
+    ],
+    "search_area_candidates": [
+      "Pretoria East"
+    ],
+    "likely_type": "estate_or_suburb",
+    "reason_it_matters": [
+      "Woodhill recurs in Pretoria East market evidence as an estate/lifestyle node, but is not promoted as factual geography here."
+    ],
+    "retained_candidate_catalogue_exists": "not_verified",
+    "candidate_id_where_available": null,
+    "gap_kinds": [],
+    "kyalami_policy_blocked": false,
+    "recommended_geography_follow_up": "Review against the retained candidate layer; do not promote from market evidence alone.",
+    "promoted_to_factual_canonical": false,
+    "researched_at": "2026-08-15"
+  }
+]

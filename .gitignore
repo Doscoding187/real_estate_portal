@@ -145,6 +145,83 @@ test-results/
 
 # Local MySQL runtime data
 docker/mysql-local/data/
+
+# Local, immutable source inputs for the Gauteng research catalogue. These can
+# be regenerated from the checked-in acquisition pipeline and must not be
+# edited manually or committed as application data.
+/data/gauteng-candidate-catalogue-v0.1/raw/
+/data/gauteng-candidate-catalogue-v0.1/work/
+
+# Interrupted, temporary and repair files must never become source inputs.
+/data/gauteng-candidate-catalogue-v0.1/raw/**/*.part
+/data/gauteng-candidate-catalogue-v0.1/raw/**/*.tmp
+/data/gauteng-candidate-catalogue-v0.1/raw/**/*.repair
+
+# Full catalogue projections are reproducible from the immutable raw inputs.
+# Retain only the lightweight checkpoint evidence below for review in Git.
+/data/gauteng-candidate-catalogue-v0.1/output/*
+!/data/gauteng-candidate-catalogue-v0.1/output/
+!/data/gauteng-candidate-catalogue-v0.1/output/gauteng_source_manifest_v0.1.json
+!/data/gauteng-candidate-catalogue-v0.1/output/gauteng_source_manifest_v0.1.csv
+!/data/gauteng-candidate-catalogue-v0.1/output/gauteng_coverage_conflict_report_v0.1.md
+!/data/gauteng-candidate-catalogue-v0.1/output/gauteng_catalogue_run_v0.1.json
+
+# Promotion simulation projections are reproducible from the checked-in
+# policy/tooling and the local candidate catalogue. Keep only the policy,
+# summary and bounded founder-review evidence in Git.
+/data/gauteng-canonical-promotion-v0.1/raw/
+/data/gauteng-canonical-promotion-v0.1/work/
+/data/gauteng-canonical-promotion-v0.1/output/*
+!/data/gauteng-canonical-promotion-v0.1/output/
+!/data/gauteng-canonical-promotion-v0.1/output/gauteng_canonical_promotion_policy_v0.1.md
+!/data/gauteng-canonical-promotion-v0.1/output/gauteng_canonical_promotion_summary_v0.1.json
+!/data/gauteng-canonical-promotion-v0.1/output/gauteng_canonical_promotion_summary_v0.1.md
+!/data/gauteng-canonical-promotion-v0.1/output/gauteng_founder_review_set_v0.1.jsonl
+!/data/gauteng-canonical-promotion-v0.1/output/gauteng_founder_review_set_v0.1.csv
+
+# v0.2 refinement projections are reproducible; retain only bounded review
+# evidence, policy, summary and comparison documents if this worktree is
+# later checkpointed.
+/data/gauteng-canonical-promotion-v0.2/raw/
+/data/gauteng-canonical-promotion-v0.2/work/
+/data/gauteng-canonical-promotion-v0.2/output/*
+!/data/gauteng-canonical-promotion-v0.2/output/
+!/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_policy_v0.2.md
+!/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_summary_v0.2.json
+!/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_summary_v0.2.md
+!/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_comparison_v0.2.json
+!/data/gauteng-canonical-promotion-v0.2/output/gauteng_canonical_promotion_comparison_v0.2.md
+!/data/gauteng-canonical-promotion-v0.2/output/gauteng_founder_review_set_v0.2.jsonl
+!/data/gauteng-canonical-promotion-v0.2/output/gauteng_founder_review_set_v0.2.csv
+
+# Factual canonical geography is a derived, reproducible non-production
+# projection. Keep future raw/work inputs and large JSONL projections local;
+# retain the lightweight summary and research gate for review/checkpointing.
+/data/gauteng-factual-canonical-v0.1/raw/
+/data/gauteng-factual-canonical-v0.1/work/
+/data/gauteng-factual-canonical-v0.1/output/*
+!/data/gauteng-factual-canonical-v0.1/output/
+!/data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_summary_v0.1.json
+!/data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_summary_v0.1.md
+!/data/gauteng-factual-canonical-v0.1/output/gauteng_factual_canonical_kyalami_evidence_v0.1.json
+
+# Python bytecode generated while running the standalone catalogue tooling.
+/tools/gauteng-catalogue/**/__pycache__/
+/tools/gauteng-catalogue/.venv/
+/tools/gauteng-catalogue/.pytest_cache/
+/tools/gauteng-catalogue/.mypy_cache/
+/tools/gauteng-catalogue/.ruff_cache/
+
+# Standalone Search Area research tooling caches.
+/tools/gauteng-search-area-research/**/__pycache__/
+/tools/gauteng-search-area-research/.pytest_cache/
+/tools/gauteng-search-area-research/.mypy_cache/
+/tools/gauteng-search-area-research/.ruff_cache/
+
+# The canonical-location index is a reproducible read-only projection of the
+# accepted factual checkpoint; keep it local rather than checkpointing a
+# second large geography projection with the Search Area research.
+/data/gauteng-search-area-research-v0.1/output/gauteng_factual_canonical_location_index_v0.1.jsonl
 docker/mysql-local/mysql-data/
 
 # Local editor settings may contain database connection profiles.

@@ -24,13 +24,13 @@ export const VITE_ANALYTICS_ENDPOINT = getEnvVar(
 );
 export const VITE_ANALYTICS_WEBSITE_ID = getEnvVar('VITE_ANALYTICS_WEBSITE_ID', 'local-test-site');
 
-// ===== Search Discovery Engine — Feature Flags =====
-// When enabled, homepage autosuggest may use static/adapter-safe location suggestions
-// as a foundation for future Search Discovery Engine behaviour.
-// This flag does NOT replace the existing location autosuggest — only adds foundation support.
+// ===== Search Discovery Engine — public discovery transport gate =====
+// The server-owned SearchAreaAuthority still decides which Search Areas are
+// eligible; this flag only controls whether the typed discovery surface is
+// mounted. Its activation default is on for the public Search Area slice.
 export const VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED = getEnvVar(
   'VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED',
-  '0',
+  '1',
 );
 
 // ===== Login URL =====
