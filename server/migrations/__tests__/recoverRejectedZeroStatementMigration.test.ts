@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { authorizeDatabaseOperation } from '../../_core/databaseAuthority/authorization';
 import type { AuthoritySqlConnection } from '../../_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from '../../_core/databaseAuthority/context';
@@ -11,6 +11,35 @@ import {
   REJECTED_CATALOGUE_PUBLISHER_TRIGGER,
   runRejectedZeroStatementRecovery,
 } from '../recoverRejectedZeroStatementMigration';
+
+vi.mock('../migrationManifest', async importOriginal => {
+  const actual = await importOriginal<typeof import('../migrationManifest')>();
+  const current = actual.loadAndValidateMigrationManifest();
+  const acceptedHead = '0018_distribution_access_publisher_authority.sql';
+  const acceptedIndex = current.orderedMigrations.findIndex(
+    item => item.filename === acceptedHead,
+  );
+  const expectedHead = current.orderedMigrations[acceptedIndex];
+  if (acceptedIndex < 0 || !expectedHead) {
+    throw new Error(`Historical recovery fixture could not find ${acceptedHead}.`);
+  }
+  const orderedMigrations = current.orderedMigrations.slice(0, acceptedIndex + 1);
+  const document = {
+    ...current.document,
+    expectedHead: acceptedHead,
+    migrations: current.document.migrations.slice(0, acceptedIndex + 1),
+  };
+
+  return {
+    ...actual,
+    loadAndValidateMigrationManifest: () => ({
+      ...current,
+      document,
+      orderedMigrations,
+      expectedHead,
+    }),
+  };
+});
 
 const roots: string[] = [];
 
