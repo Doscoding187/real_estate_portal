@@ -527,6 +527,97 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
     expect(afterRetryHistory).toHaveLength(1);
   });
 
+  it('completes one legacy curated submission through privileged publication without duplicating audit history', async () => {
+    const superAdminId = await insertUser('super_admin');
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
+
+    await expect(
+      developmentService.submitPlatformCuratedDevelopment(
+        developmentId,
+        superAdminId,
+        { cataloguePublisherId },
+      ),
+    ).resolves.toMatchObject({
+      id: developmentId,
+      approvalStatus: 'pending',
+      isPublished: 0,
+    });
+
+    const pendingHistory = await readApprovalHistory(developmentId);
+    expect(pendingHistory).toHaveLength(1);
+    expect(pendingHistory[0]).toMatchObject({
+      developmentId,
+      submittedBy: superAdminId,
+      status: 'pending',
+      reviewedBy: null,
+      reviewedAt: null,
+    });
+
+    const published = await developmentService.publishPlatformCuratedDevelopment(
+      developmentId,
+      superAdminId,
+      { cataloguePublisherId },
+    );
+
+    expect(published).toMatchObject({
+      id: developmentId,
+      isPublished: 1,
+      approvalStatus: 'approved',
+      cataloguePublisherId,
+    });
+    expect(published.publishedAt).toBeTruthy();
+
+    const resolvedHistory = await readApprovalHistory(developmentId);
+    expect(resolvedHistory).toHaveLength(1);
+    expect(resolvedHistory[0]).toMatchObject({
+      developmentId,
+      submittedBy: superAdminId,
+      status: 'approved',
+      submissionType: 'initial',
+      reviewedBy: superAdminId,
+    });
+    expect(resolvedHistory[0].submittedAt).toBe(pendingHistory[0].submittedAt);
+    expect(resolvedHistory[0].reviewedAt).toBe(published.publishedAt);
+  });
+
+  it('fails closed when multiple curated publication submissions remain unresolved', async () => {
+    const superAdminId = await insertUser('super_admin');
+    const cataloguePublisherId = await insertPlatformPublisher(superAdminId);
+    const developmentId = await insertDevelopment(superAdminId, cataloguePublisherId);
+    const db = await database();
+
+    await developmentService.submitPlatformCuratedDevelopment(
+      developmentId,
+      superAdminId,
+      { cataloguePublisherId },
+    );
+    await db.insert(developmentApprovalQueue).values({
+      developmentId,
+      submittedBy: superAdminId,
+      status: 'pending',
+      submissionType: 'update',
+    });
+
+    await expect(
+      developmentService.publishPlatformCuratedDevelopment(developmentId, superAdminId, {
+        cataloguePublisherId,
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Development has multiple unresolved curated publication submissions.',
+    });
+
+    expect(await readPublicationState(developmentId)).toMatchObject({
+      isPublished: 0,
+      approvalStatus: 'pending',
+    });
+    expect((await readApprovalHistory(developmentId)).map(row => row.status)).toEqual([
+      'pending',
+      'pending',
+    ]);
+  });
+
   it('takes a published curator development private before a successful update republish', async () => {
     const superAdminId = await insertUser('super_admin');
     const cataloguePublisherId = await insertPlatformPublisher(superAdminId);

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { ENV } from '../../_core/env';
 import {
   resolvePersistedUnitTypeRentalPrice,
   resolvePersistedUnitTypeSalePrice,
@@ -56,6 +57,46 @@ describe('development persisted submission readiness', () => {
         { field: 'description', message: 'Description must contain at least 50 characters.' },
       ]),
     );
+  });
+
+  it('accepts governed local-media delivery URLs when the local adapter is active', () => {
+    const previousAdapter = ENV.mediaStorageAdapter;
+    const previousProduction = ENV.isProduction;
+    ENV.mediaStorageAdapter = 'local';
+    ENV.isProduction = false;
+
+    try {
+      expect(
+        validatePersistedSubmissionReadiness(
+          {
+            ...validDevelopment,
+            images: JSON.stringify([
+              { url: '/api/local-media/object?key=properties%2Fdraft-42%2Fhero.png' },
+            ]),
+          } as never,
+          [validUnit] as never,
+        ),
+      ).toEqual([]);
+
+      expect(
+        validatePersistedSubmissionReadiness(
+          {
+            ...validDevelopment,
+            images: JSON.stringify([
+              { url: '/api/local-media/object?key=..%2F..%2Fetc%2Fpasswd' },
+            ]),
+          } as never,
+          [validUnit] as never,
+        ),
+      ).toEqual(
+        expect.arrayContaining([
+          { field: 'media', message: 'At least one persisted image with a URL is required.' },
+        ]),
+      );
+    } finally {
+      ENV.mediaStorageAdapter = previousAdapter;
+      ENV.isProduction = previousProduction;
+    }
   });
 
   it('is the shared authority used by the DOE-S0 mutation and the Home query', () => {

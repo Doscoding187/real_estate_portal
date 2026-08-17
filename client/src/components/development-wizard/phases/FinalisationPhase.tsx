@@ -128,7 +128,7 @@ export function FinalisationPhase({
   const publishDevelopment = trpc.developer.publishDevelopment.useMutation();
   const createPublisherDevelopment = trpc.superAdminPublisher.createDevelopment.useMutation();
   const updatePublisherDevelopment = trpc.superAdminPublisher.updateDevelopment.useMutation();
-  const submitPublisherDevelopment = trpc.superAdminPublisher.submitDevelopment.useMutation();
+  const publishPublisherDevelopment = trpc.superAdminPublisher.publishDevelopment.useMutation();
 
   // Run validation
   const validationResult = validateForPublish();
@@ -141,24 +141,24 @@ export function FinalisationPhase({
   const shouldUseSuperAdminFlow = isSuperAdmin && typeof publisherId === 'number';
   const finalisationCopy = shouldUseSuperAdminFlow
     ? {
-        heading: 'Review & Submit',
-        description: 'Finalize the curated catalogue details before submitting for review.',
-        readinessTitle: 'Ready to Submit for Review',
+        heading: 'Review & Publish',
+        description: 'Finalize the curated catalogue details before publishing.',
+        readinessTitle: 'Ready to Publish',
         readinessDescription:
-          'All required fields are complete. An authorised Property Listify operator can review and publish this development.',
+          'All required fields are complete. An authorised Property Listify operator can publish this development.',
         controlTitle: 'Curated Publication Controls',
-        action: 'Submit for Review',
-        disabledHelper: 'Resolve validation errors to submit.',
-        terms: 'By submitting, you confirm the curated information is supported by the recorded source.',
-        confirmTitle: 'Confirm Submission for Review',
+        action: 'Publish Development',
+        disabledHelper: 'Resolve validation errors to publish.',
+        terms: 'By publishing, you confirm the curated information is supported by the recorded source.',
+        confirmTitle: 'Confirm Publication',
         confirmDescription:
-          'You are about to submit this curated development for review. It will remain private until an authorised reviewer approves it.',
-        validationDescription: 'Your curated listing is ready for review.',
-        progress: 'Submitting...',
-        confirmAction: 'Confirm & Submit',
-        success: 'Curated development submitted for review!',
-        fallbackError: 'Failed to submit curated development for review',
-        validationErrorTitle: 'Cannot submit curated development:',
+          'You are about to publish this curated development to the Property Listify marketplace.',
+        validationDescription: 'Your curated listing passed the canonical launch checks.',
+        progress: 'Publishing...',
+        confirmAction: 'Publish Development',
+        success: 'Curated development published!',
+        fallbackError: 'Failed to publish curated development',
+        validationErrorTitle: 'Cannot publish curated development:',
       }
     : {
         heading: 'Review & Submit',
@@ -353,10 +353,10 @@ export function FinalisationPhase({
         }
       }
 
-      // Curated records enter the governed review queue; first-party records
-      // retain the existing developer submission flow.
+      // Curated records use the privileged platform publication transition;
+      // first-party records retain the existing developer submission flow.
       if (shouldUseSuperAdminFlow) {
-        await submitPublisherDevelopment.mutateAsync({
+        await publishPublisherDevelopment.mutateAsync({
           cataloguePublisherId: publisherId,
           developmentId,
         });
@@ -378,6 +378,18 @@ export function FinalisationPhase({
         await utils.superAdminPublisher.getDevelopments.invalidate({
           cataloguePublisherId: publisherId,
         });
+        try {
+          // The publisher home is not mounted while the wizard is open, so an
+          // invalidation alone can leave the operator's next screen showing
+          // the pre-publication lifecycle state. Seed it with the canonical
+          // post-publication read model before navigating back.
+          await utils.superAdminPublisher.getOperatingHome.fetch({
+            cataloguePublisherId: publisherId,
+            range: '30d',
+          });
+        } catch (refreshError) {
+          console.warn('[FinalisationPhase] Published, but publisher home refresh failed:', refreshError);
+        }
       }
 
       setShowConfirmPublish(false);

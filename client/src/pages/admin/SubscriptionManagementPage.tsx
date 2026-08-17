@@ -416,7 +416,7 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                 <TableHeader className="bg-slate-50/50">
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Agency / User</TableHead>
+                    <TableHead>Company / Account</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Reference</TableHead>
                     <TableHead>Proof</TableHead>
@@ -448,9 +448,13 @@ export default function SubscriptionManagementPage({ initialTab = 'subscriptions
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {row.agency?.name || 'Unknown Agency'}
+                              {row.agency?.name ||
+                                row.developerOrganisation?.name ||
+                                'Unknown account'}
                             </span>
-                            <span className="text-xs text-slate-500">{row.agency?.email}</span>
+                            <span className="text-xs text-slate-500">
+                              {row.agency?.email || row.developerOrganisation?.email || ''}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">

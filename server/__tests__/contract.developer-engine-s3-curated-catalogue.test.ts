@@ -70,16 +70,21 @@ describe('Developer Engine S3 curated catalogue contracts', () => {
     expect(developments).not.toContain('developer.deleteDevelopment');
   });
 
-  it('routes the existing wizard through curated drafts and review submission', () => {
+  it('routes the existing wizard through curated drafts and privileged publication', () => {
     const wizard = source('client/src/components/development-wizard/DevelopmentWizard.tsx');
     const finalisation = source('client/src/components/development-wizard/phases/FinalisationPhase.tsx');
+    const publicCatalogue = source('client/src/pages/DevelopmentsDemo.tsx');
 
     expect(wizard).toContain('superAdminPublisher.saveDraft');
     expect(wizard).toContain('superAdminPublisher.getDraft');
     expect(wizard).toContain('shouldUsePublisherApi');
-    expect(finalisation).toContain('superAdminPublisher.submitDevelopment');
-    expect(finalisation).toContain('remain private until an authorised reviewer approves it');
-    expect(finalisation).not.toContain('publishPublisherDevelopment');
+    expect(finalisation).toContain('superAdminPublisher.publishDevelopment');
+    expect(finalisation).toContain('Publish Development');
+    expect(finalisation).toContain('Ready to Publish');
+    expect(finalisation).not.toContain(
+      'remain private until an authorised reviewer approves it',
+    );
+    expect(publicCatalogue).toContain('dev.builderName || dev.developerName');
   });
 
   it('projects canonical publisher authority and review provenance into public detail', () => {

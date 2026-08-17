@@ -1,11 +1,22 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { homeQueryMock, refetchMock, setLocationMock, routeParamsMock } = vi.hoisted(() => ({
+const {
+  homeQueryMock,
+  refetchMock,
+  setLocationMock,
+  routeParamsMock,
+  updateUnitAvailabilityMutationMock,
+} = vi.hoisted(() => ({
   homeQueryMock: vi.fn(),
   refetchMock: vi.fn(),
   setLocationMock: vi.fn(),
   routeParamsMock: { developmentId: '42' },
+  updateUnitAvailabilityMutationMock: {
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+  },
 }));
 
 vi.mock('wouter', () => ({
@@ -31,6 +42,9 @@ vi.mock('@/lib/trpc', () => ({
     developer: {
       getDevelopmentHome: {
         useQuery: homeQueryMock,
+      },
+      updateUnitAvailability: {
+        useMutation: vi.fn(() => updateUnitAvailabilityMutationMock),
       },
     },
   },
@@ -99,6 +113,16 @@ function homeData(overrides: Record<string, unknown> = {}) {
       availableUnits: 4,
       reservedUnits: 2,
       derivedSoldUnits: 4,
+      unitTypes: [
+        {
+          id: 'unit-type-1',
+          name: 'Two Bedroom Apartment',
+          totalUnits: 10,
+          availableUnits: 4,
+          reservedUnits: 2,
+          derivedSoldUnits: 4,
+        },
+      ],
       auctionTermsConfiguredCount: 0,
       pricing: { kind: 'sale', from: 1200000, to: 1800000 },
       warnings: [],
@@ -119,6 +143,7 @@ function homeData(overrides: Record<string, unknown> = {}) {
 describe('DevelopmentHome Slice 2 Market Readiness', () => {
   beforeEach(() => {
     routeParamsMock.developmentId = '42';
+    updateUnitAvailabilityMutationMock.mutate.mockReset();
     homeQueryMock.mockReturnValue({
       data: homeData(),
       error: null,
@@ -208,6 +233,27 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     expect(screen.getAllByText('0 aggregate units are marked available.').length).toBeGreaterThan(
       0,
     );
+  });
+
+  it('offers a bounded live availability update from the operating inventory surface', () => {
+    render(<DevelopmentHome />);
+
+    expect(screen.getByText('Live availability by unit type')).toBeInTheDocument();
+    expect(screen.getByText('4 available of 10 · 2 reserved · 4 sold')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update availability' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Update availability' })).toBeInTheDocument();
+
+    const input = screen.getByRole('spinbutton');
+    fireEvent.change(input, { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save availability' }));
+
+    expect(updateUnitAvailabilityMutationMock.mutate).toHaveBeenCalledWith({
+      developmentId: 42,
+      unitTypeId: 'unit-type-1',
+      availableUnits: 3,
+    });
   });
 
   it('shows per-unit-type auction configuration without inventing an auction window or reserve', () => {

@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { developments, unitTypes } from '../../drizzle/schema';
+import { assertSafeLocalMediaKey, isLocalMediaStorage } from '../_core/mediaStorage';
 
 export type SubmissionValidationError = {
   field: string;
@@ -187,10 +188,27 @@ export function hasValidPersistedUnitTypeInventory(
   );
 }
 
+function hasValidLocalMediaDeliveryUrl(value: string): boolean {
+  if (!isLocalMediaStorage() || !value.startsWith('/api/local-media/object?')) return false;
+
+  try {
+    const parsed = new URL(value, 'http://property-listify.local');
+    if (parsed.pathname !== '/api/local-media/object') return false;
+    const key = parsed.searchParams.get('key');
+    if (!key) return false;
+    assertSafeLocalMediaKey(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function hasValidPersistedImage(images: unknown): boolean {
   return parseJsonField(images).some(image => {
     const url = typeof image === 'string' ? image : (image as { url?: unknown })?.url;
-    return typeof url === 'string' && /^https?:\/\//i.test(url.trim());
+    if (typeof url !== 'string') return false;
+    const normalizedUrl = url.trim();
+    return /^https?:\/\//i.test(normalizedUrl) || hasValidLocalMediaDeliveryUrl(normalizedUrl);
   });
 }
 

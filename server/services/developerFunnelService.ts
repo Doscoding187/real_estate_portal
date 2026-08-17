@@ -20,7 +20,7 @@ import {
   type SlaStatus,
   isLeadTransitionAllowed,
 } from '../../shared/developerFunnel';
-import { parseDeliveryAttempts } from './leadDeliveryService';
+import { parseDeliveryAttempts, toMySqlDateTime } from './leadDeliveryService';
 
 type LeadRow = typeof leads.$inferSelect;
 type LeadStageRow = Pick<LeadRow, 'status' | 'funnelStage' | 'lostReason'>;
@@ -267,7 +267,7 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
       return {
         status: 'contacted',
         funnelStage: 'affordability',
-        lastContactedAt: new Date().toISOString(),
+        lastContactedAt: toMySqlDateTime(),
         lostReason: null,
       };
     case 'qualified':
@@ -282,14 +282,14 @@ function canonicalStageToUpdate(stage: LeadStage): Partial<typeof leads.$inferIn
       return {
         status: 'converted',
         funnelStage: 'bond',
-        convertedAt: new Date().toISOString(),
+        convertedAt: toMySqlDateTime(),
         lostReason: null,
       };
     case 'closed_won':
       return {
         status: 'closed',
         funnelStage: 'sale',
-        convertedAt: new Date().toISOString(),
+        convertedAt: toMySqlDateTime(),
         lostReason: null,
       };
     case 'closed_lost':
@@ -411,10 +411,15 @@ export function getCanonicalLeadSource(lead: LeadSourceRow): string {
  * is derived from this one server-side timestamp and boundary.
  */
 export function getDevelopmentHomeRangeBoundary(range: DevelopmentHomeRange, now: Date) {
-  const from = new Date(now);
+  const to = new Date(now);
+  const from = new Date(to);
   const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
   from.setDate(from.getDate() - days);
-  return { from: from.toISOString(), to: now.toISOString() };
+
+  // Keep the boundaries as Date values so mysql2 serializes them using the
+  // connection/session timezone. Passing ISO UTC strings to MySQL TIMESTAMP
+  // columns can exclude fresh rows when the database session uses local time.
+  return { from, to };
 }
 
 /**
@@ -432,8 +437,8 @@ export async function getOwnedDevelopmentHomeLeadSummary(params: {
   const periodCondition = and(
     eq(leads.developmentId, params.developmentId),
     params.includePlatformCustody ? undefined : ne(leads.deliveryStatus, 'attention_required'),
-    gte(leads.createdAt, boundary.from),
-    lte(leads.createdAt, boundary.to),
+    gte(leads.createdAt, sql`${boundary.from}`),
+    lte(leads.createdAt, sql`${boundary.to}`),
   );
   const sourceChannel = sql<string>`COALESCE(NULLIF(TRIM(${leads.leadSource}), ''), NULLIF(TRIM(${leads.source}), ''), 'Unknown source')`;
   const sum = (condition: ReturnType<typeof sql>) =>
@@ -817,7 +822,7 @@ export async function assignDeveloperLead(params: AssignParams) {
     });
   }
 
-  const now = new Date().toISOString();
+  const now = toMySqlDateTime();
   const updateSet: Partial<typeof leads.$inferInsert> = {
     updatedAt: now,
   };
@@ -866,7 +871,7 @@ export async function transitionDeveloperLead(params: TransitionParams) {
 
   const updateSet: any = {
     ...canonicalStageToUpdate(toStage),
-    updatedAt: new Date().toISOString(),
+    updatedAt: toMySqlDateTime(),
   };
 
   if (params.notes) {
@@ -913,16 +918,17 @@ export async function logDeveloperLeadActivity(params: ActivityParams) {
     description,
   });
 
+  const now = toMySqlDateTime();
+  const updateSet: Partial<typeof leads.$inferInsert> = {
+    notes: appendNote(row.lead.notes, `${params.type}: ${description || 'Activity logged'}`),
+    updatedAt: now,
+  };
+
   if (['call', 'email', 'meeting', 'whatsapp'].includes(params.type)) {
-    const now = new Date().toISOString();
-    await db
-      .update(leads)
-      .set({
-        lastContactedAt: now,
-        updatedAt: now,
-      })
-      .where(eq(leads.id, params.leadId));
+    updateSet.lastContactedAt = now;
   }
+
+  await db.update(leads).set(updateSet).where(eq(leads.id, params.leadId));
 
   const updated = await getDeveloperLeadRow(params.developerId, params.leadId);
   const distributionEnabledMap = await getDistributionEnabledMapForDevelopments([
@@ -940,13 +946,13 @@ export async function logDeveloperLeadActivity(params: ActivityParams) {
 
 export async function setDeveloperLeadNextAction(params: NextActionParams) {
   const row = await getDeveloperLeadRow(params.developerId, params.leadId);
-  const now = new Date().toISOString();
+  const now = toMySqlDateTime();
   const notes = appendNote(row.lead.notes, `next_action:${params.type} at ${params.at}`);
 
   await db
     .update(leads)
     .set({
-      nextFollowUp: params.at,
+      nextFollowUp: toMySqlDateTime(params.at),
       notes,
       updatedAt: now,
     })

@@ -299,11 +299,14 @@ export function MediaPhase() {
             contentType: file.type,
           });
 
-          await fetch(uploadUrl, {
+          const uploadResponse = await fetch(uploadUrl, {
             method: 'PUT',
             body: file,
             headers: { 'Content-Type': file.type },
           });
+          if (!uploadResponse.ok) {
+            throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+          }
 
           URL.revokeObjectURL(optimisticUrl);
           toast.dismiss(loadingToast);

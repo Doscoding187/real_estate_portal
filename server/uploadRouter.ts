@@ -1,18 +1,38 @@
 import { z } from 'zod';
 import { protectedProcedure, router } from './_core/trpc';
-import { generatePresignedUploadUrl } from './_core/imageUpload';
-import { ENV } from './_core/env';
+import { requireUser } from './_core/requireUser';
+import {
+  buildLocalMediaPublicUrl,
+  buildLocalMediaUploadUrl,
+  createLocalMediaKey,
+  getMediaStorageAdapter,
+  resolveMediaDeliveryUrl,
+} from './_core/mediaStorage';
+import { createListingMediaUploadToken } from './services/listingMediaAuthority';
 import { randomUUID } from 'crypto';
 import { TRPCError } from '@trpc/server';
 
+type LocalUploadMediaType = 'image' | 'video' | 'pdf';
+
+function inferLocalUploadMediaType(contentType: string): LocalUploadMediaType | null {
+  const normalized = contentType.trim().toLowerCase();
+  if (/^image\/(jpeg|png|webp|gif|avif)$/.test(normalized)) return 'image';
+  if (/^video\/(mp4|webm|quicktime|x-matroska)$/.test(normalized)) return 'video';
+  if (normalized === 'application/pdf') return 'pdf';
+  return null;
+}
+
 /**
  * Upload Router
- * Handles file uploads to S3/CloudFront with presigned URLs
+ * Handles adapter-aware direct uploads while retaining the legacy response
+ * shape used by profile, publisher, distribution, and development flows.
  */
 export const uploadRouter = router({
   /**
-   * Generate presigned URL for direct S3 upload
-   * This allows the client to upload directly to S3 without going through the server
+   * Generate a direct upload target.
+   *
+   * Local development uses the governed local-media route and a signed upload
+   * reservation. S3 remains the only permitted production adapter.
    */
   presign: protectedProcedure
     .input(
@@ -22,15 +42,48 @@ export const uploadRouter = router({
         propertyId: z.string().optional(),
       }),
     )
-    .mutation(async ({ ctx: _ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       console.log(
         `[UploadRouter] Presign requested for file: ${input.filename}, type: ${input.contentType}`,
       );
       try {
+        const user = requireUser(ctx);
+
+        if (getMediaStorageAdapter() === 'local') {
+          const mediaType = inferLocalUploadMediaType(input.contentType);
+          if (!mediaType) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Local media uploads require an image, video, or PDF content type.',
+            });
+          }
+
+          // The legacy endpoint does not receive an authorized listing ID. Keep
+          // its local objects user-scoped rather than trusting the optional,
+          // historically client-controlled propertyId for storage authority.
+          const key = createLocalMediaKey(input.filename, `draft-${user.id}`);
+          const uploadToken = createListingMediaUploadToken({
+            key,
+            mediaType,
+            contentType: input.contentType,
+            fileName: input.filename,
+            userId: user.id,
+            listingId: null,
+          });
+
+          return {
+            url: buildLocalMediaUploadUrl(uploadToken),
+            key,
+            publicUrl: buildLocalMediaPublicUrl(key),
+            uploadToken,
+          };
+        }
+
         // Generate a unique property ID if not provided
         const propertyId = input.propertyId || randomUUID();
 
-        // Generate presigned URL
+        // Import the S3 helper only for the explicitly selected S3 adapter.
+        const { generatePresignedUploadUrl } = await import('./_core/imageUpload');
         const result = await generatePresignedUploadUrl(
           input.filename,
           input.contentType,
@@ -39,10 +92,7 @@ export const uploadRouter = router({
 
         console.log(`[UploadRouter] generated presigned URL successfully`);
 
-        // Build the public URL using CloudFront if configured, otherwise S3 bucket URL
-        const cdnUrl =
-          ENV.cloudFrontUrl || `https://${ENV.s3BucketName}.s3.${ENV.awsRegion}.amazonaws.com`;
-        const publicUrl = `${cdnUrl}/${result.key}`;
+        const publicUrl = resolveMediaDeliveryUrl(result.key) || result.key;
 
         return {
           url: result.uploadUrl,
@@ -50,6 +100,8 @@ export const uploadRouter = router({
           publicUrl,
         };
       } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
         console.error('[UploadRouter] Failed to generate presigned URL:', error);
         // Log the stack trace if available
         if (error instanceof Error) {

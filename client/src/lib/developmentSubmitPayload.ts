@@ -212,9 +212,14 @@ export function normalizeSubmitOwnershipType(value: unknown): string | undefined
 }
 
 function asOptionalString(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  return trimmed.length ? trimmed : undefined;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : undefined;
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  return undefined;
 }
 
 function normalizeParkingType(raw: unknown): SubmitParkingType {

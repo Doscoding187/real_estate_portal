@@ -88,6 +88,8 @@ describe('development submit payload helpers', () => {
         transactionType: 'for_sale',
         ownershipTypes: ['sectional-title'],
         status: 'selling',
+        launchDate: '2026-09-01',
+        completionDate: '2027-12-31',
         location: {
           address: '1 Submit Road',
           city: 'Cape Town',
@@ -140,6 +142,8 @@ describe('development submit payload helpers', () => {
       amenities: ['Pool'],
       totalUnits: 10,
       availableUnits: 8,
+      launchDate: '2026-09-01',
+      completionDate: '2027-12-31',
     });
     expect(payload.features).toEqual(
       expect.arrayContaining([
@@ -162,6 +166,38 @@ describe('development submit payload helpers', () => {
       basePriceFrom: 1_200_000,
       basePriceTo: 1_350_000,
       parkingType: 'carport',
+    });
+  });
+
+  it('serializes browser date inputs in the flat submit payload', () => {
+    const payload = buildDevelopmentSubmitPayload({
+      amenities: [],
+      wizardData: {
+        name: 'Date Submit',
+        description: 'A development with browser-shaped timeline values.',
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        status: 'selling',
+        launchDate: new Date('2026-09-01T00:00:00.000Z'),
+        completionDate: new Date('2027-12-31T00:00:00.000Z'),
+        ownershipTypes: ['sectional-title'],
+        location: { address: '1 Date Road', city: 'Johannesburg', province: 'Gauteng' },
+        unitTypes: [
+          {
+            name: 'Date Unit',
+            bedrooms: 1,
+            bathrooms: 1,
+            priceFrom: 1_000_000,
+            totalUnits: 1,
+            availableUnits: 1,
+          },
+        ],
+      },
+    });
+
+    expect(payload).toMatchObject({
+      launchDate: '2026-09-01T00:00:00.000Z',
+      completionDate: '2027-12-31T00:00:00.000Z',
     });
   });
 

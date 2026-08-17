@@ -257,8 +257,8 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
   it('uses exact aggregate counts, a bounded recent preview, and cursor-batched SLA evaluation', () => {
     const service = readRepoFile('server/services/developerFunnelService.ts');
 
-    expect(service).toContain('gte(leads.createdAt, boundary.from)');
-    expect(service).toContain('lte(leads.createdAt, boundary.to)');
+    expect(service).toContain('gte(leads.createdAt, sql`${boundary.from}`)');
+    expect(service).toContain('lte(leads.createdAt, sql`${boundary.to}`)');
     expect(service).toContain('DEVELOPMENT_HOME_RECENT_LEAD_LIMIT = 5');
     expect(service).toContain('.limit(DEVELOPMENT_HOME_RECENT_LEAD_LIMIT)');
     expect(service).toContain('DEVELOPMENT_HOME_SLA_BATCH_SIZE = 250');

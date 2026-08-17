@@ -563,6 +563,11 @@
       "purpose": "Makes the legacy distribution access publisher column compatible with the new authority while preserving the old physical shape pending explicit cleanup."
     },
     {
+      "path": "server/migrations/0019_development_launch_date.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the canonical development launch-date field required by Developer Engine readiness and public development projections."
+    },
+    {
       "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."

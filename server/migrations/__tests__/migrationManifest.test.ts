@@ -172,7 +172,7 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0018_distribution_access_publisher_authority.sql');
+    expect(manifest.expectedHead.filename).toBe('0019_development_launch_date.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +188,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0018_distribution_access_publisher_authority.sql',
+      expectedNewHead: '0019_development_launch_date.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(11);
+    expect(plan.pending).toHaveLength(12);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -205,8 +205,9 @@ describe('canonical migration manifest', () => {
       '0016_catalogue_publisher_distribution_access.sql',
       '0017_distribution_publisher_authority.sql',
       '0018_distribution_access_publisher_authority.sql',
+      '0019_development_launch_date.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0018_distribution_access_publisher_authority.sql');
+    expect(plan.expectedNewHead).toBe('0019_development_launch_date.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

@@ -795,7 +795,14 @@ export function UnitTypesPhase() {
         filename: file.name,
         contentType: file.type,
       });
-      await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      const uploadResponse = await fetch(url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed with status ${uploadResponse.status}.`);
+      }
 
       const newItem: MediaItem = {
         id: `u-${Date.now()}-${Math.random()}`,

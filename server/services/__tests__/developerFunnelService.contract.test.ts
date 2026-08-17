@@ -153,8 +153,8 @@ describe('developer funnel contract', () => {
   it('derives the selected-period lower boundary from one supplied timestamp', () => {
     const now = new Date('2026-03-01T12:00:00.000Z');
     expect(getDevelopmentHomeRangeBoundary('7d', now)).toEqual({
-      from: '2026-02-22T12:00:00.000Z',
-      to: '2026-03-01T12:00:00.000Z',
+      from: new Date('2026-02-22T12:00:00.000Z'),
+      to: new Date('2026-03-01T12:00:00.000Z'),
     });
   });
 

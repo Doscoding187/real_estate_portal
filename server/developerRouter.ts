@@ -1671,6 +1671,24 @@ export const developerRouter = router({
       );
     }),
 
+  updateUnitAvailability: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        unitTypeId: z.string().min(1).max(36),
+        availableUnits: z.number().int().min(0),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      return await developmentService.updateDeveloperUnitAvailability(
+        input.developmentId,
+        input.unitTypeId,
+        requireUser(ctx).id,
+        input.availableUnits,
+      );
+    }),
+
   getDevelopment: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {

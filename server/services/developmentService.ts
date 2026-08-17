@@ -175,14 +175,31 @@ function sanitizeDecimal(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function sanitizeDate(value: unknown): string | null {
+export function sanitizeDate(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return value.toISOString().slice(0, 19).replace('T', ' ');
   }
   if (typeof value === 'string') {
     const s = value.trim();
-    return s.length > 0 ? s : null;
+    if (!s) return null;
+
+    // Browser date inputs arrive as ISO timestamps. MySQL timestamp columns
+    // use the connection's date-time format, so normalize timezone-bearing
+    // values before Drizzle binds them.
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s) || /(?:Z|[+-]\d{2}:?\d{2})$/.test(s)) {
+      const parsed = new Date(s);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().slice(0, 19).replace('T', ' ');
+      }
+    }
+
+    // Date-only values are valid user input and represent local midnight in
+    // the persisted development timeline.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s} 00:00:00`;
+
+    // Preserve already-normalized database values for existing callers.
+    return s;
   }
   return null;
 }
@@ -510,6 +527,7 @@ export async function getPublicDevelopmentBySlug(slugOrId: string) {
       ownershipType: developments.ownershipType,
       transactionType: developments.transactionType,
       marketingRole: developments.marketingRole,
+      launchDate: developments.launchDate,
       completionDate: developments.completionDate,
       totalUnits: developments.totalUnits,
       availableUnits: developments.availableUnits,
@@ -1182,6 +1200,7 @@ export async function createDevelopment(
     customClassification: sanitizeString((developmentData as any).customClassification),
 
     estateSpecs: (developmentData as any).estateSpecs || null,
+    launchDate: sanitizeDate((developmentData as any).launchDate),
     completionDate: sanitizeDate((developmentData as any).completionDate),
 
     ownershipType: sanitizeEnum(
@@ -1467,6 +1486,8 @@ export async function updateDevelopment(
   // ---------------------------------------------------------------------------
   // Status / dates
   // ---------------------------------------------------------------------------
+  if (developmentData.launchDate !== undefined)
+    updatePayload.launchDate = sanitizeDate(developmentData.launchDate);
   if (developmentData.completionDate !== undefined)
     updatePayload.completionDate = sanitizeDate(developmentData.completionDate);
   if (developmentData.marketingRole !== undefined) {
@@ -1761,7 +1782,7 @@ export async function updateDevelopment(
   const persistUpdate = async (writeDb: any, current?: DevelopmentRow) => {
     const persistedPayload = { ...updatePayload };
 
-    // A live platform-curated record cannot be edited in place. Until S1 adds
+    // A live catalogue record cannot be edited in place. Until S1 adds
     // versioned pending revisions, the safe MVP contract is to take the
     // current public record private before the edited catalogue can be
     // republished through the canonical readiness/publication transition.
@@ -1866,11 +1887,137 @@ export async function updateDevelopment(
       return persistUpdate(tx, current);
     });
   } else {
-    await persistUpdate(db);
+    await db.transaction(async (tx: any) => {
+      const ownershipPredicate = and(
+        eq(developments.id, id),
+        eq(developments.cataloguePublisherId, developerPublisherId!),
+      );
+      const [current] = await tx
+        .select()
+        .from(developments)
+        .where(ownershipPredicate)
+        .limit(1)
+        .for('update');
+
+      if (!current) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Update failed or you do not own this development',
+        });
+      }
+
+      await persistUpdate(tx, current);
+    });
   }
 
   console.log('[updateDevelopment] Update completed successfully');
   return { success: true };
+}
+
+/**
+ * Persist a routine live-catalogue availability change without entering the
+ * full editorial update/review flow. The ownership and live-publication
+ * predicates are resolved on the server, and only the canonical unit-type
+ * availability field is mutable through this operation.
+ */
+export async function updateDeveloperUnitAvailability(
+  developmentId: number,
+  unitTypeId: string,
+  userId: number,
+  availableUnits: number,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  if (!Number.isInteger(availableUnits) || availableUnits < 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Available units must be a non-negative whole number.',
+    });
+  }
+
+  const devProfile = await developerIdentityService.getDeveloperByUserId(userId);
+  if (!devProfile) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
+  }
+
+  return db.transaction(async (tx: any) => {
+    const [development] = await tx
+      .select({
+        id: developments.id,
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+      })
+      .from(developments)
+      .where(
+        and(
+          eq(developments.id, developmentId),
+          eq(developments.cataloguePublisherId, devProfile.publisherId),
+        ),
+      )
+      .limit(1)
+      .for('update');
+
+    if (!development) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+    }
+    if (development.approvalStatus !== 'approved' || Number(development.isPublished) !== 1) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Routine availability updates are available for live developments only.',
+      });
+    }
+
+    const [unit] = await tx
+      .select({
+        id: unitTypes.id,
+        name: unitTypes.name,
+        totalUnits: unitTypes.totalUnits,
+        reservedUnits: unitTypes.reservedUnits,
+        availableUnits: unitTypes.availableUnits,
+      })
+      .from(unitTypes)
+      .where(
+        and(
+          eq(unitTypes.id, unitTypeId),
+          eq(unitTypes.developmentId, developmentId),
+          eq(unitTypes.isActive, 1),
+        ),
+      )
+      .limit(1)
+      .for('update');
+
+    if (!unit) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Unit type not found' });
+    }
+
+    const totalUnits = Math.max(0, Number(unit.totalUnits || 0));
+    const reservedUnits = Math.max(0, Number(unit.reservedUnits || 0));
+    if (availableUnits + reservedUnits > totalUnits) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: `Available units cannot exceed ${Math.max(totalUnits - reservedUnits, 0)} for this unit type.`,
+      });
+    }
+
+    await tx
+      .update(unitTypes)
+      .set({ availableUnits, updatedAt: mysqlDateTime() })
+      .where(and(eq(unitTypes.id, unitTypeId), eq(unitTypes.developmentId, developmentId)));
+
+    return {
+      success: true as const,
+      developmentId,
+      unitType: {
+        id: unit.id,
+        name: unit.name,
+        totalUnits,
+        availableUnits,
+        reservedUnits,
+        derivedSoldUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
+      },
+    };
+  });
 }
 
 // ===========================================================================
@@ -2937,9 +3084,10 @@ export async function unpublishPlatformCuratedDevelopment(
 
 /**
  * The privileged publication transition for platform-curated developments.
- * It remains readiness-gated and records the operator's approval in the
- * canonical review history; the separate submit/review route is preferred by
- * the curated operator workflow.
+ * It is readiness-gated and records the operator's publication decision in
+ * the canonical approval history. A legacy pending curated submission may be
+ * completed by this same privileged operator; external developer submissions
+ * continue to use the independent review boundary.
  */
 async function publishPlatformCuratedDevelopment(
   id: number,
@@ -3052,14 +3200,16 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
           inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
         ),
       )
-      .limit(1)
+      .orderBy(desc(developmentApprovalQueue.submittedAt), desc(developmentApprovalQueue.id))
+      .limit(2)
       .for('update');
-    if (openRows.length > 0) {
+    if (openRows.length > 1) {
       throw new TRPCError({
         code: 'CONFLICT',
-        message: 'Development already has an unresolved review submission.',
+        message: 'Development has multiple unresolved curated publication submissions.',
       });
     }
+    const openRow = openRows[0];
 
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
     const blockers = validatePersistedSubmissionReadiness(existingDev, persistedUnits);
@@ -3089,18 +3239,44 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
         ),
       );
 
-    await tx.insert(developmentApprovalQueue).values({
-      developmentId: id,
-      submittedBy: actor.id,
-      submittedAt: now,
-      status: 'approved',
-      submissionType: priorRows.length > 0 ? 'update' : 'initial',
-      reviewNotes: null,
-      rejectionReason: null,
-      reviewedAt: now,
-      reviewedBy: actor.id,
-      complianceChecks: null,
-    });
+    if (openRow) {
+      const result = await tx
+        .update(developmentApprovalQueue)
+        .set({
+          status: 'approved',
+          reviewedAt: now,
+          reviewedBy: actor.id,
+          reviewNotes: null,
+          rejectionReason: null,
+          complianceChecks: null,
+        })
+        .where(
+          and(
+            eq(developmentApprovalQueue.id, openRow.id),
+            inArray(developmentApprovalQueue.status, ['pending', 'reviewing']),
+          ),
+        );
+      const affectedRows = Number(result?.affectedRows ?? result?.[0]?.affectedRows ?? 0);
+      if (affectedRows !== 1) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Curated publication record changed before completion.',
+        });
+      }
+    } else {
+      await tx.insert(developmentApprovalQueue).values({
+        developmentId: id,
+        submittedBy: actor.id,
+        submittedAt: now,
+        status: 'approved',
+        submissionType: priorRows.length > 0 ? 'update' : 'initial',
+        reviewNotes: null,
+        rejectionReason: null,
+        reviewedAt: now,
+        reviewedBy: actor.id,
+        complianceChecks: null,
+      });
+    }
 
     const [published] = await tx
       .select()
@@ -3610,6 +3786,7 @@ export const developmentService = {
 
   createDevelopment,
   updateDevelopment,
+  updateDeveloperUnitAvailability,
   getDevelopmentWithPhases,
   getDevelopmentById,
   getDevelopmentsByDeveloperId,
