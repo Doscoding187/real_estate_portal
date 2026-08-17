@@ -136,6 +136,41 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
       };
       acknowledgement: string;
     }>;
+    discovery: {
+      mapRentalExcluded: true;
+      comparisonRentalExcluded: true;
+      featuredRentalExcluded: true;
+      trendingRentalExcluded: true;
+      relatedRentalExcluded: true;
+    };
+    rental: {
+      propertyId: number;
+      searchIncluded: false;
+      detail: {
+        id: number;
+        listingType: 'rent';
+        transactionType: 'rent';
+        price: number;
+        pricingIntent: 'rent';
+        monthlyRent: number;
+        publicIdentity: { role: string; provenance: string; name: string };
+      };
+      enquiry: {
+        leadId: number;
+        replayedLeadId: number;
+        duplicateReplay: true;
+        conflictingReplay: 'conflict';
+        durableLeadCount: number;
+        custody: {
+          leadCustody: string;
+          recipientType: string;
+          recipientId: number | null;
+          deliveryStatus: string;
+          deliveryMethod: string;
+        };
+        acknowledgement: string;
+      };
+    };
     negative: Record<string, { propertyId: number; searchIncluded: false; detail: null; enquiry: 'rejected' }>;
     authorization: {
       agent: { ownerVisible: true; unrelatedDenied: true };
@@ -2001,6 +2036,173 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario developer custody/acknowledgement is not truthful.');
     }
 
+    const hasPropertyInItems = (items: unknown[], propertyId: number): boolean =>
+      items.some(item => {
+        if (!item || typeof item !== 'object') return false;
+        const candidate = item as Record<string, unknown>;
+        return (
+          candidate.href === `/property/${propertyId}` ||
+          Number(candidate.propertyId ?? candidate.id) === propertyId
+        );
+      });
+
+    const comparison = await propertyCaller.properties.getPublicByIds({
+      ids: [SCENARIO_IDS.agentProperty, SCENARIO_IDS.rentalProperty],
+    });
+    const comparisonIds = comparison.map(result => {
+      const record = result as Record<string, unknown>;
+      const property = record.property as Record<string, unknown> | undefined;
+      return Number(property?.id ?? record.propertyId ?? record.id);
+    });
+    if (
+      !comparisonIds.includes(SCENARIO_IDS.agentProperty) ||
+      comparisonIds.includes(SCENARIO_IDS.rentalProperty)
+    ) {
+      throw new Error('Search-to-Lead scenario Buy comparison admitted rental inventory.');
+    }
+
+    const relatedSaleInventory = await propertyCaller.properties.getRelatedPublicInventory({
+      propertyId: SCENARIO_IDS.agentProperty,
+    });
+    if (hasPropertyInItems(relatedSaleInventory, SCENARIO_IDS.rentalProperty)) {
+      throw new Error('Search-to-Lead scenario Buy-related inventory admitted rental inventory.');
+    }
+
+    const featuredInventory = await propertyCaller.location.getFeaturedListings({
+      locationId: `suburb:${String(search.locationContext.ids.suburbId)}`,
+      limit: 10,
+    });
+    if (hasPropertyInItems(featuredInventory, SCENARIO_IDS.rentalProperty)) {
+      throw new Error('Search-to-Lead scenario Buy featured inventory admitted rental inventory.');
+    }
+
+    const buyTrending = await propertyCaller.developer.getHomeTrendingFeed({
+      tab: 'buy',
+      province: 'gauteng',
+      city: 'johannesburg',
+      suburb: 'sandton',
+      limit: 10,
+    });
+    const buyTrendingItems = Array.isArray(buyTrending?.items) ? buyTrending.items : [];
+    if (
+      hasPropertyInItems(buyTrendingItems, SCENARIO_IDS.rentalProperty) ||
+      buyTrendingItems.some(
+        item =>
+          item &&
+          typeof item === 'object' &&
+          String((item as Record<string, unknown>).listingType || '').toLowerCase() === 'rent',
+      )
+    ) {
+      throw new Error('Search-to-Lead scenario Buy trending inventory admitted rental inventory.');
+    }
+
+    // SearchResults derives its map markers from the same canonical Buy result
+    // cards, so this proves the map result set has the same sale-only boundary.
+    const mapRentalExcluded = !propertyCards.has(`/property/${SCENARIO_IDS.rentalProperty}`);
+    if (!mapRentalExcluded) {
+      throw new Error('Search-to-Lead scenario Buy map results admitted rental inventory.');
+    }
+
+    const rentalDetail = await propertyCaller.properties.getById({
+      id: SCENARIO_IDS.rentalProperty,
+    });
+    if (!rentalDetail.property || Number(rentalDetail.property.id) !== SCENARIO_IDS.rentalProperty) {
+      throw new Error('Search-to-Lead scenario rejected legitimate shared rental detail.');
+    }
+    const rentalPropertyDto = rentalDetail.property as Record<string, unknown>;
+    const rentalPricing = (rentalPropertyDto.pricingContract || {}) as Record<string, unknown>;
+    const rentalIdentity = (rentalPropertyDto.publicIdentity || {}) as Record<string, unknown>;
+    if (
+      rentalPropertyDto.listingType !== 'rent' ||
+      rentalPropertyDto.transactionType !== 'rent' ||
+      Number(rentalPropertyDto.price) !== 25000 ||
+      rentalPricing.intent !== 'rent' ||
+      Number(rentalPricing.monthlyRent) !== 25000 ||
+      rentalIdentity.role !== 'agent' ||
+      rentalIdentity.provenance !== 'agent'
+    ) {
+      throw new Error('Search-to-Lead scenario rental detail did not preserve truthful rental semantics.');
+    }
+
+    const rentalLeadInput = {
+      propertyId: SCENARIO_IDS.rentalProperty,
+      name: 'Database Authority Rental Prospect',
+      email: 'dba-rental@invalid.example',
+      phone: '+27000000000',
+      message: 'Contained local Search-to-Lead shared rental acceptance scenario.',
+      source: 'property_detail',
+      sourceSurface: 'property_detail',
+      leadSource: 'property_detail',
+      captureRequestId: 'dba-search-to-lead-v1-rental-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v1', source: 'local-test' },
+    };
+    const rentalLead = await capturePublicLead(rentalLeadInput);
+    const rentalReplay = await capturePublicLead(rentalLeadInput);
+    if (!rentalReplay.duplicate || rentalReplay.leadId !== rentalLead.leadId) {
+      throw new Error('Search-to-Lead scenario rental replay was not idempotent.');
+    }
+    let rentalConflictingReplay: 'conflict' | undefined;
+    try {
+      await capturePublicLead({ ...rentalLeadInput, message: `${rentalLeadInput.message} conflicting replay` });
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === 'CONFLICT') rentalConflictingReplay = 'conflict';
+    }
+    if (rentalConflictingReplay !== 'conflict') {
+      throw new Error('Search-to-Lead scenario accepted a conflicting rental replay.');
+    }
+    const rentalDatabase = await getDb();
+    if (!rentalDatabase) throw new Error('Search-to-Lead scenario database disappeared during rental acceptance.');
+    const rentalDurableRows = await rentalDatabase
+      .select({ id: leads.id })
+      .from(leads)
+      .where(eq(leads.captureRequestId, rentalLeadInput.captureRequestId));
+    if (rentalDurableRows.length !== 1 || Number(rentalDurableRows[0]?.id) !== rentalLead.leadId) {
+      throw new Error('Search-to-Lead scenario did not prove one durable rental lead.');
+    }
+    if (
+      rentalLead.leadCustody !== 'verified_customer_recipient' ||
+      rentalLead.recipientType !== 'agent' ||
+      rentalLead.recipientId !== SCENARIO_IDS.agent ||
+      rentalLead.deliveryStatus !== 'delivered' ||
+      rentalLead.deliveryMethod !== 'crm_export' ||
+      rentalLead.message !== 'Your enquiry has been recorded and sent to the responsible team.'
+    ) {
+      throw new Error('Search-to-Lead scenario rental custody/acknowledgement is not truthful.');
+    }
+
+    const rentalAcceptance: NonNullable<SearchToLeadScenarioEvidence['acceptance']>['rental'] = {
+      propertyId: SCENARIO_IDS.rentalProperty,
+      searchIncluded: false,
+      detail: {
+        id: Number(rentalDetail.property.id),
+        listingType: 'rent',
+        transactionType: 'rent',
+        price: Number(rentalPropertyDto.price),
+        pricingIntent: 'rent',
+        monthlyRent: Number(rentalPricing.monthlyRent),
+        publicIdentity: {
+          role: String(rentalIdentity.role),
+          provenance: String(rentalIdentity.provenance),
+          name: String(rentalIdentity.name),
+        },
+      },
+      enquiry: {
+        leadId: rentalLead.leadId,
+        replayedLeadId: rentalReplay.leadId,
+        duplicateReplay: true,
+        conflictingReplay: 'conflict',
+        durableLeadCount: rentalDurableRows.length,
+        custody: {
+          leadCustody: rentalLead.leadCustody,
+          recipientType: rentalLead.recipientType,
+          recipientId: rentalLead.recipientId,
+          deliveryStatus: rentalLead.deliveryStatus,
+          deliveryMethod: rentalLead.deliveryMethod,
+        },
+        acknowledgement: rentalLead.message || '',
+      },
+    };
+
     const negative: NonNullable<SearchToLeadScenarioEvidence['acceptance']>['negative'] = {};
     const negativeNames = [
       ['orphan', SCENARIO_IDS.orphanProperty],
@@ -2008,7 +2210,6 @@ async function runContainedApplicationVerification(
       ['archived', SCENARIO_IDS.archivedProperty],
       ['pending', SCENARIO_IDS.pendingProperty],
       ['incoherent', SCENARIO_IDS.incoherentProperty],
-      ['rental_only', SCENARIO_IDS.rentalProperty],
     ] as const;
     for (const [name, propertyId] of negativeNames) {
       if (propertyCards.has(`/property/${propertyId}`)) {
@@ -2132,6 +2333,14 @@ async function runContainedApplicationVerification(
         development: search.sourceCounts.development,
       },
       scenarios,
+      discovery: {
+        mapRentalExcluded: true,
+        comparisonRentalExcluded: true,
+        featuredRentalExcluded: true,
+        trendingRentalExcluded: true,
+        relatedRentalExcluded: true,
+      },
+      rental: rentalAcceptance,
       negative,
       authorization: {
         agent: { ownerVisible: true, unrelatedDenied: true },
