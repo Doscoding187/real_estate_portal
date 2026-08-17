@@ -83,7 +83,7 @@ describe('public Developments search authority', () => {
     expect(detail).not.toContain("longitude: '0'");
     expect(publisher).not.toContain('Unknown Developer');
     expect(publisher).toContain('No public developer description has been provided.');
-    expect(navigation).toContain("homepageVisible: true");
-    expect(navigation).toContain("homepageEnabled: true");
+    expect(navigation).toContain("homepageVisible: false");
+    expect(navigation).toContain("homepageEnabled: false");
   });
 });

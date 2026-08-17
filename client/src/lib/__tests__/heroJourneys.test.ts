@@ -24,12 +24,11 @@ describe('hero journey authority', () => {
     });
     expect(getPublicHeroJourney('buy').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
-    expect(getPublicHeroJourney('developments').homepageEnabled).toBe(true);
+    expect(getPublicHeroJourney('developments').homepageEnabled).toBe(false);
     expect(getPublicHeroJourney('find_agent').homepageEnabled).toBe(false);
     expect(getHomepageHeroJourneys().map(journey => journey.key)).toEqual([
       'buy',
       'rent',
-      'developments',
       'find_agent',
     ]);
   });
@@ -48,6 +47,6 @@ describe('hero journey authority', () => {
     expect(buildHomepageJourneyUrl('buy')).toBe('/?intent=buy');
     expect(buildHomepageJourneyUrl('find_agent')).toBe('/agents');
     expect(isHomepageHeroJourneyEnabled('buy')).toBe(true);
-    expect(isHomepageHeroJourneyEnabled('developments')).toBe(true);
+    expect(isHomepageHeroJourneyEnabled('developments')).toBe(false);
   });
 });

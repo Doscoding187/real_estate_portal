@@ -138,8 +138,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Developments',
     kind: 'property-search',
     destination: '/new-developments',
-    homepageVisible: true,
-    homepageEnabled: true,
+    homepageVisible: false,
+    homepageEnabled: false,
     supportedFields: ['location', 'developmentType', 'developmentStatus', 'minPrice', 'maxPrice'],
   },
   {
