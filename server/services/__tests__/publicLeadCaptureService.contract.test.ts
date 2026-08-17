@@ -581,6 +581,35 @@ describe('publicLeadCaptureService contract', () => {
     expect(database.insertValues).not.toHaveBeenCalled();
   });
 
+  it('rejects a stale transaction context before a development lead is persisted', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 77,
+            cataloguePublisherId: 13,
+            transactionType: 'for_sale',
+            developmentType: 'residential',
+            isPublished: 1,
+            approvalStatus: 'approved',
+          },
+        ],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          developmentId: 77,
+          transactionType: 'for_rent',
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(database.insertValues).not.toHaveBeenCalled();
+  });
+
   it('keeps a platform-curated property in custody rather than routing to public contact data', async () => {
     const database = makeFakeDatabase({
       selectResults: [

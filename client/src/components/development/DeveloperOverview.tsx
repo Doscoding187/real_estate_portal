@@ -94,8 +94,8 @@ export function DeveloperOverview({
             {developerDescription?.trim()
               ? developerDescription
               : isPlatformReference
-                ? 'Factual information about this development and its available homes.'
-                : 'Professional property developer focused on delivering quality developments.'}
+                ? 'No additional publisher description has been provided.'
+                : 'No public developer description has been provided.'}
           </p>
 
           {isPlatformReference && (sourceAttribution || formattedLastVerifiedAt) && (

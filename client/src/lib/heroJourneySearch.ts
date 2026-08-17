@@ -1,7 +1,12 @@
 import { normalizeLocationKey } from './locationUtils';
 import { type SearchFilters } from './urlUtils';
 import type { LocationNode } from '@/types/location';
-import { createSearchIntentValidation, type SearchIntentValidationCode } from './searchIntent';
+import {
+  createSearchIntentValidation,
+  generateIntentUrl,
+  type SearchIntent,
+  type SearchIntentValidationCode,
+} from './searchIntent';
 import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '../../../shared/property-taxonomy';
 import {
@@ -40,6 +45,14 @@ export interface PropertySearchInput {
   maxPrice?: string | number;
   minBedrooms?: string | number;
   minBathrooms?: string | number;
+}
+
+export interface DevelopmentsSearchInput {
+  selectedLocations?: readonly LocationNode[];
+  developmentType?: string;
+  developmentStatus?: string;
+  minPrice?: string | number;
+  maxPrice?: string | number;
 }
 
 function parseNonNegativeNumber(value: string | number | undefined): number | undefined {
@@ -195,4 +208,94 @@ export function buildPropertySearchUrl({
 
 export function buildBuySearchUrl(input: PropertySearchInput): string {
   return buildPropertySearchUrl({ ...input, transactionType: 'for-sale' });
+}
+
+/**
+ * Canonical homepage handoff for the gated New Developments journey.
+ * The journey is intentionally not visible while its activation flag is off,
+ * but when the flag is enabled this path carries the same canonical location
+ * and URL-owned refinement state consumed by /new-developments.
+ */
+export function buildDevelopmentsSearchUrl({
+  selectedLocations = [],
+  developmentType,
+  developmentStatus,
+  minPrice,
+  maxPrice,
+}: DevelopmentsSearchInput): string {
+  const locations = selectedLocations.filter(location => Boolean(location.slug || location.name));
+  const selections = locations.map(addStructuredLocation);
+  const validSelections = selections.filter(
+    (selection): selection is CanonicalSearchLocation => Boolean(selection),
+  );
+
+  if (validSelections.length !== locations.length || validSelections.length === 0) {
+    return '/new-developments?searchError=canonical-location-required';
+  }
+
+  const geography: SearchIntent['geography'] = { level: 'country' };
+  if (validSelections.length === 1) {
+    const [selection] = validSelections;
+    if (selection.scope.kind === 'province') {
+      geography.level = 'province';
+    } else if (selection.scope.kind === 'metro_city') {
+      geography.level = 'city';
+    } else if (selection.scope.kind === 'locality') {
+      geography.level = 'suburb';
+    } else {
+      return '/new-developments?searchError=canonical-location-required';
+    }
+    geography.locationId = selection.scope.canonicalLocationId;
+    Object.assign(geography, selection.context);
+  } else {
+    const multiLocationScope = createMultiLocationSearchScope(
+      validSelections.map(selection => selection.scope),
+    );
+    if (!multiLocationScope || multiLocationScope.kind !== 'multi_location') {
+      return '/new-developments?searchError=canonical-location-required';
+    }
+    const canonicalIds = multiLocationScope.members
+      .filter(member => member.kind !== 'search_area')
+      .map(member => member.canonicalLocationId);
+    if (canonicalIds.length !== validSelections.length) {
+      return '/new-developments?searchError=canonical-location-required';
+    }
+    geography.level = 'multi_location';
+    geography.locationIds = canonicalIds;
+  }
+
+  const filters: Record<string, unknown> = {};
+  const normalizedType = String(developmentType || '').trim().toLowerCase();
+  if (['residential', 'commercial', 'mixed_use', 'land'].includes(normalizedType)) {
+    filters.developmentType = normalizedType;
+  }
+
+  const normalizedStatus = String(developmentStatus || '').trim().toLowerCase();
+  if (['launching-soon', 'selling', 'sold-out'].includes(normalizedStatus)) {
+    filters.developmentStatus = normalizedStatus;
+  }
+
+  const normalizedMinPrice = parseNonNegativeNumber(minPrice);
+  const normalizedMaxPrice = parseNonNegativeNumber(maxPrice);
+  if (
+    normalizedMinPrice !== undefined &&
+    (normalizedMaxPrice === undefined || normalizedMinPrice <= normalizedMaxPrice)
+  ) {
+    filters.minPrice = normalizedMinPrice;
+  }
+  if (
+    normalizedMaxPrice !== undefined &&
+    (normalizedMinPrice === undefined || normalizedMinPrice <= normalizedMaxPrice)
+  ) {
+    filters.maxPrice = normalizedMaxPrice;
+  }
+
+  return generateIntentUrl({
+    transactionType: 'developments',
+    geography,
+    filters,
+    resultState: { sort: 'relevance', page: 0 },
+    defaults: { propertyCategory: 'residential', sort: 'relevance' },
+    routeMode: 'results',
+  });
 }

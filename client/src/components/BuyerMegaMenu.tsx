@@ -16,6 +16,7 @@ import {
 import { Link } from 'wouter';
 
 import {
+  getVisiblePublicNavigationActionItems,
   getVisiblePublicNavigationGroups,
   type PublicNavigationDestination,
   type PublicNavigationMenu,
@@ -47,13 +48,6 @@ function isPathActive(pathname: string, href?: string) {
   return pathname === basePath || pathname.startsWith(`${basePath}/`);
 }
 
-function findDestinations(menu: PublicNavigationMenu, ids: string[]) {
-  const destinations = [menu.feature, ...menu.groups.flatMap(group => group.items)];
-  return ids
-    .map(id => destinations.find(item => item.id === id))
-    .filter((item): item is PublicNavigationDestination => Boolean(item));
-}
-
 function BuyerNavigationLink({
   item,
   pathname,
@@ -83,7 +77,7 @@ function BuyerNavigationLink({
 export function BuyerMegaMenu({ menu, pathname, onNavigate, user }: BuyerMegaMenuProps) {
   const [buyingPower, propertySearch, shortlist] = getVisiblePublicNavigationGroups(menu, 'desktop');
   const [buyingPowerAction, buyingGuide] = buyingPower?.items ?? [];
-  const footerItems = findDestinations(menu, menu.actionItemIds ?? []);
+  const footerItems = getVisiblePublicNavigationActionItems(menu, 'desktop');
 
   if (!buyingPower || !propertySearch || !shortlist || !buyingPowerAction || !buyingGuide) {
     return null;

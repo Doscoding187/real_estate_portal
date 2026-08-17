@@ -16,6 +16,7 @@ import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersess
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { developerIdentityService } from './developerIdentityService';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { publicDevelopmentDetailService } from './publicDevelopmentDetailService';
 
 import {
   developments,
@@ -482,7 +483,19 @@ function buildDeveloperDisplay(dev: any) {
 // PUBLIC FUNCTIONS
 // ===========================================================================
 
+/**
+ * Canonical consumer detail read. Search and detail share the public fact
+ * projection in publicDevelopmentDetailService.
+ */
 export async function getPublicDevelopmentBySlug(slugOrId: string) {
+  return publicDevelopmentDetailService.getBySlugOrId(slugOrId);
+}
+
+/**
+ * Compatibility read retained for non-consumer historical callers. It is not
+ * used by the public New Developments detail route.
+ */
+export async function getLegacyPublicDevelopmentBySlug(slugOrId: string) {
   const db = await getDb();
   if (!db) return null;
 
@@ -783,6 +796,7 @@ export async function listPublicDevelopments(options: {
       priceFrom: developments.priceFrom,
       priceTo: developments.priceTo,
       status: developments.status,
+      transactionType: developments.transactionType,
       isFeatured: developments.isFeatured,
       rating: developments.rating,
       highlights: developments.highlights,
@@ -817,8 +831,10 @@ export async function listPublicDevelopments(options: {
             bedrooms: unitTypes.bedrooms,
             structuralType: unitTypes.structuralType,
             basePriceFrom: unitTypes.basePriceFrom,
+            monthlyRentFrom: unitTypes.monthlyRentFrom,
             displayOrder: unitTypes.displayOrder,
             developmentType: developments.developmentType,
+            transactionType: developments.transactionType,
           })
           .from(unitTypes)
           .leftJoin(developments, eq(unitTypes.developmentId, developments.id))
@@ -852,10 +868,12 @@ export async function listPublicDevelopments(options: {
     const kind = mapUnitKind(unit.structuralType, unit.developmentType);
     const label =
       unit.name || (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
+    const unitPriceFrom =
+      unit.transactionType === 'for_rent' ? unit.monthlyRentFrom : unit.basePriceFrom;
     unitsByDevelopment.get(devId)!.push({
       bedrooms: unit.bedrooms != null ? Number(unit.bedrooms) : 0,
       label,
-      priceFrom: unit.basePriceFrom != null ? Number(unit.basePriceFrom) : null,
+      priceFrom: unitPriceFrom != null ? Number(unitPriceFrom) : null,
     });
   }
 

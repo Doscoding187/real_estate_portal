@@ -5,7 +5,9 @@ const marketplaceLinks = [
   { label: 'Home', href: '/' },
   { label: 'Buy', href: '/property-for-sale' },
   ...(isHomepageHeroJourneyEnabled('rent') ? [{ label: 'Rent', href: '/property-to-rent' }] : []),
-  { label: 'Developments', href: '/new-developments' },
+  ...(isHomepageHeroJourneyEnabled('developments')
+    ? [{ label: 'Developments', href: '/new-developments' }]
+    : []),
   { label: 'Agents', href: '/agents' },
   { label: 'Developers', href: '/developers' },
   { label: 'Advertise / List Property', href: '/advertise' },

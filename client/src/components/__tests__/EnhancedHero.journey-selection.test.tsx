@@ -190,6 +190,17 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).toHaveBeenCalledWith(expect.stringContaining('locationId=city%3A12'));
   });
 
+  it('routes an enabled Developments selection to the canonical search URL', () => {
+    render(<EnhancedHero activeTab="developments" />);
+
+    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+    expect(setLocation).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/new-developments\?locationId=city%3A12/),
+    );
+  });
+
   it('supports journey-first selection but waits for a canonical location', () => {
     render(<EnhancedHero />);
 

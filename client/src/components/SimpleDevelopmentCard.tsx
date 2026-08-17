@@ -1,4 +1,5 @@
 import { formatPriceRangeCompact } from '@/lib/utils';
+import { withRentalPeriod } from '@/lib/rentPresentation';
 import { Link } from 'wouter';
 import { withApiBase } from '@/lib/mediaUtils';
 import { Building2, MapPin } from 'lucide-react';
@@ -10,14 +11,19 @@ export interface SimpleDevelopmentCardProps {
   city: string;
   suburb?: string;
   priceRange: {
-    min: number;
-    max: number;
+    min: number | null;
+    max: number | null;
   };
   image: string;
   slug?: string;
   isHotSelling?: boolean;
   isHighDemand?: boolean;
-  bedrooms?: number[] | string;
+  bedrooms?: number[] | number | string | null;
+  bedroomRange?: { min: number | null; max: number | null };
+  listingType?: 'sale' | 'rent';
+  status?: 'launching-soon' | 'selling' | 'sold-out';
+  availabilityState?: 'available' | 'sold_out' | 'not_stated';
+  publisherName?: string | null;
   href?: string;
 }
 
@@ -32,19 +38,39 @@ export function SimpleDevelopmentCard({
   isHotSelling,
   isHighDemand,
   bedrooms,
+  bedroomRange,
+  listingType,
+  status,
+  availabilityState,
+  publisherName,
   href,
 }: SimpleDevelopmentCardProps) {
   // Location display
   const locationLabel = suburb ? `${suburb}, ${city}` : city;
 
   // Format price using SquareYards-style compact formatter
-  const priceLabel = formatPriceRangeCompact(priceRange?.min, priceRange?.max);
+  const formattedPrice = formatPriceRangeCompact(priceRange?.min, priceRange?.max);
+  const priceLabel =
+    listingType === 'rent' && formattedPrice === 'Price on request'
+      ? 'Monthly rent on request'
+      : withRentalPeriod(formattedPrice, listingType);
 
   // Bedroom Label
   let bedroomLabel = '';
-  if (Array.isArray(bedrooms) && bedrooms.length > 0) {
+  const bedroomValues = bedroomRange
+    ? [bedroomRange.min, bedroomRange.max].filter(
+        (value, index, values): value is number =>
+          typeof value === 'number' && value > 0 && values.indexOf(value) === index,
+      )
+    : Array.isArray(bedrooms)
+      ? bedrooms
+      : typeof bedrooms === 'number' && bedrooms > 0
+        ? [bedrooms]
+        : [];
+
+  if (bedroomValues.length > 0) {
     // Normalize and sort: cap > 5 as 5 (display as 5+)
-    const uniqueBeds = Array.from(new Set(bedrooms.map(b => (b > 5 ? 6 : b)))).sort(
+    const uniqueBeds = Array.from(new Set(bedroomValues.map(b => (b > 5 ? 6 : b)))).sort(
       (a, b) => a - b,
     );
 
@@ -124,6 +150,10 @@ export function SimpleDevelopmentCard({
           <span className="truncate">{locationLabel}</span>
         </div>
 
+        {publisherName ? (
+          <p className="mb-3 truncate text-xs text-slate-500">Publisher: {publisherName}</p>
+        ) : null}
+
         {/* Bedrooms - Badge Style */}
         {bedroomLabel && (
           <div className="mb-3 flex items-center gap-1">
@@ -135,6 +165,16 @@ export function SimpleDevelopmentCard({
 
         {/* Price */}
         <div className="border-t border-slate-100 pt-2">
+          {status === 'launching-soon' ? (
+            <span className="mb-1 inline-flex rounded bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800">
+              Launching soon
+            </span>
+          ) : null}
+          {status === 'sold-out' || availabilityState === 'sold_out' ? (
+            <span className="mb-1 inline-flex rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">
+              Sold out · Register interest
+            </span>
+          ) : null}
           <p className="font-bold text-[#2774AE] text-fluid-sm">{priceLabel}</p>
         </div>
       </div>

@@ -44,6 +44,7 @@ import {
   getAccountWorkspaceLabel,
   getCanonicalAccountDestination,
   getPublicNavigationActiveOwner,
+  getVisiblePublicNavigationActionItems,
   getVisiblePublicNavigationMenus,
   getVisiblePublicNavigationGroups,
   PUBLIC_CITY_ENTRY,
@@ -169,13 +170,6 @@ function MenuSection({
   );
 }
 
-function findMenuDestinations(menu: PublicNavigationMenu, ids: string[]) {
-  const destinations = [menu.feature, ...menu.groups.flatMap(group => group.items)];
-  return ids
-    .map(id => destinations.find(item => item.id === id))
-    .filter((item): item is PublicNavigationDestination => Boolean(item));
-}
-
 function MegaMenu({
   menu,
   pathname,
@@ -193,7 +187,7 @@ function MegaMenu({
   const Icon = presentation.icon;
   const groups = getVisiblePublicNavigationGroups(menu, 'desktop');
   const contentLight = groups.length < 3;
-  const actionItems = findMenuDestinations(menu, menu.actionItemIds ?? []);
+  const actionItems = getVisiblePublicNavigationActionItems(menu, 'desktop');
 
   return (
     <div

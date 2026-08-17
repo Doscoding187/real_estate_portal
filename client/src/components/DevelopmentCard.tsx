@@ -11,12 +11,12 @@ export interface DevelopmentCardProps {
   title: string;
   rating?: number;
   location: string;
-  description: string;
+  description: string | null;
   image: string;
   unitTypes: {
-    bedrooms: number;
+    bedrooms: number | null;
     label: string;
-    priceFrom: number;
+    priceFrom: number | null;
   }[];
   highlights?: string[];
   developer: {
@@ -26,8 +26,11 @@ export interface DevelopmentCardProps {
   imageCount?: number;
   isFeatured?: boolean;
   isNewBooking?: boolean;
+  transactionType?: 'for_sale' | 'for_rent';
   status?: 'launching-soon' | 'selling' | 'sold-out';
+  availabilityState?: 'available' | 'sold_out' | 'not_stated';
   nature?: 'new' | 'phase' | 'extension' | 'redevelopment';
+  primaryActionLabel?: string;
   onFavoriteClick?: () => void;
   onContactClick?: () => void;
 }
@@ -46,8 +49,11 @@ export function DevelopmentCard({
   imageCount = 15,
   isFeatured = false,
   isNewBooking = false,
+  transactionType = 'for_sale',
   status,
+  availabilityState,
   nature,
+  primaryActionLabel = 'Contact Agent',
   onFavoriteClick,
   onContactClick,
 }: DevelopmentCardProps) {
@@ -163,6 +169,16 @@ export function DevelopmentCard({
                     Sold Out
                   </Badge>
                 )}
+                {availabilityState === 'sold_out' && status !== 'sold-out' && (
+                  <Badge className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200">
+                    Sold out
+                  </Badge>
+                )}
+                {availabilityState === 'available' && status !== 'sold-out' && (
+                  <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
+                    Units available
+                  </Badge>
+                )}
 
                 {/* Legacy / High Priority Badges */}
                 {isNewBooking && (
@@ -182,7 +198,7 @@ export function DevelopmentCard({
           {/* Unit Types with Pricing */}
           <div className="flex gap-3 mb-5 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
             {unitTypes.map((unit, index) => {
-              const price = typeof unit.priceFrom === 'number' ? unit.priceFrom : 0;
+              const price = typeof unit.priceFrom === 'number' ? unit.priceFrom : null;
               return (
                 <div
                   key={index}
@@ -191,9 +207,13 @@ export function DevelopmentCard({
                   <div className="text-xs text-slate-600 mb-1 truncate" title={unit.label || ''}>
                     {unit.label || ''}
                   </div>
-                  {price > 0 && (
+                  {price !== null && price > 0 ? (
                     <div className="text-lg font-bold text-[#1e1b4b]">
-                      From {formatPrice(price)}
+                      From {formatPrice(price)}{transactionType === 'for_rent' ? ' / month' : ''}
+                    </div>
+                  ) : (
+                    <div className="text-sm font-semibold text-slate-500">
+                      {transactionType === 'for_rent' ? 'Monthly rent on request' : 'Price on request'}
                     </div>
                   )}
                 </div>
@@ -202,7 +222,9 @@ export function DevelopmentCard({
           </div>
 
           {/* Description */}
-          <p className="text-sm sm:text-base text-slate-600 line-clamp-2 mb-5">{description}</p>
+          <p className="text-sm sm:text-base text-slate-600 line-clamp-2 mb-5">
+            {description || 'Description not provided.'}
+          </p>
 
           {/* Highlights */}
           {highlights.length > 0 && (
@@ -237,7 +259,7 @@ export function DevelopmentCard({
               }
             }}
           >
-            Contact Agent
+            {primaryActionLabel}
           </Button>
         </div>
       </div>

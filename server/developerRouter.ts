@@ -6,6 +6,7 @@ import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
+import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getPublisherById } from './services/cataloguePublisherService';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
@@ -774,12 +775,13 @@ export const developerRouter = router({
         title: string;
         city: string;
         suburb: string;
-        priceFrom: number;
-        priceTo: number;
+        priceFrom: number | null;
+        priceTo: number | null;
         image: string;
         href: string;
         listingType?: 'sale' | 'rent';
         bedrooms?: number | null;
+        bedroomRange?: { min: number | null; max: number | null };
         bathrooms?: number | null;
         area?: number | null;
         yardSize?: number | null;
@@ -788,6 +790,11 @@ export const developerRouter = router({
         developmentName?: string | null;
         developmentKey?: string | null;
         badges?: string[];
+        transactionType?: 'for_sale' | 'for_rent';
+        status?: 'launching-soon' | 'selling' | 'sold-out';
+        availabilityState?: 'available' | 'sold_out' | 'not_stated';
+        publisherName?: string | null;
+        publisherAuthorityKind?: 'platform_reference' | 'developer_first_party';
       };
       type ListingFeedItem = FeedItem & { kind: 'listing' };
       type UnitFeedItem = FeedItem & { kind: 'unit' };
@@ -812,6 +819,30 @@ export const developerRouter = router({
         priceTo: Number(dev.priceTo || 0),
         image: normalizeDevImage(dev.images),
         href: `/development/${dev.slug || dev.id}`,
+      });
+
+      const mapPublicDevelopment = (development: Awaited<ReturnType<typeof publicDevelopmentSearchService.search>>['items'][number]): FeedItem => ({
+        id: String(development.id),
+        kind: 'development' as const,
+        title: development.name,
+        city: development.city || '',
+        suburb: development.suburb || '',
+        priceFrom: development.priceFrom,
+        priceTo: development.priceTo,
+        image: development.images[0] || '',
+        href: development.canonicalRoute,
+        listingType: development.transactionType === 'for_rent' ? 'rent' : 'sale',
+        bedrooms: development.bedroomRange.min,
+        bedroomRange: development.bedroomRange,
+        availabilityState: development.availabilityState,
+        status: development.status,
+        transactionType: development.transactionType,
+        publisherName: development.publisher.name,
+        publisherAuthorityKind: development.publisher.authorityKind,
+        badges:
+          development.availabilityState === 'sold_out' || development.status === 'sold-out'
+            ? ['Sold out']
+            : [],
       });
 
       const listingMediaBaseUrl =
@@ -1029,14 +1060,16 @@ export const developerRouter = router({
         }
 
         if (input.tab === 'developments') {
-          const devs = await developmentService.listPublicDevelopments({
+          const publicSearch = await publicDevelopmentSearchService.search({
             province: locationFilter.province,
             city: locationFilter.city,
             suburb: locationFilter.suburb,
-            limit,
+            page: 0,
+            pageSize: limit,
+            sortOption: 'relevance',
             developmentType: 'residential',
           });
-          return { items: devs.map(mapDevelopment), source: 'developments' };
+          return { items: publicSearch.items.map(mapPublicDevelopment), source: 'developments' };
         }
 
         if (input.tab === 'plot_land') {
@@ -1196,6 +1229,7 @@ export const developerRouter = router({
       z.object({
         developmentId: z.number().int().positive(),
         cataloguePublisherId: z.number().int().positive().optional(),
+        transactionType: z.enum(['for_sale', 'for_rent']).optional(),
         unitId: z.string().trim().max(36).optional(),
         unitName: z.string().trim().max(255).optional(),
         unitPriceFrom: z.number().nonnegative().optional(),
@@ -1234,6 +1268,7 @@ export const developerRouter = router({
       return await capturePublicLead({
         developmentId: input.developmentId,
         cataloguePublisherId: input.cataloguePublisherId,
+        transactionType: input.transactionType,
         unitId: input.unitId,
         unitName: input.unitName,
         unitPriceFrom: input.unitPriceFrom,

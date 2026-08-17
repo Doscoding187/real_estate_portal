@@ -53,6 +53,7 @@ export interface PublicLeadCaptureInput {
   propertyId?: number;
   developmentId?: number;
   cataloguePublisherId?: number;
+  transactionType?: 'for_sale' | 'for_rent';
   agencyId?: number;
   agentId?: number;
   unitId?: string;
@@ -493,6 +494,17 @@ export async function resolveLeadOwnership(
       .limit(1);
   }
 
+  if (
+    input.transactionType &&
+    development?.transactionType &&
+    input.transactionType !== development.transactionType
+  ) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'The transaction context does not match the public development.',
+    });
+  }
+
   if (targetKind === 'development' && input.unitId) {
     const [unit] = await database
       .select({
@@ -641,6 +653,22 @@ async function findLeadByCaptureRequestId(database: any, captureRequestId?: stri
     .where(eq(leads.captureRequestId, captureRequestId))
     .limit(1);
   return existing || null;
+}
+
+async function existingLeadMatchesTransaction(
+  database: any,
+  existing: typeof leads.$inferSelect,
+  transactionType?: 'for_sale' | 'for_rent',
+): Promise<boolean> {
+  if (!transactionType || !existing.developmentId) return true;
+
+  const [development] = await database
+    .select({ transactionType: developments.transactionType })
+    .from(developments)
+    .where(eq(developments.id, Number(existing.developmentId)))
+    .limit(1);
+
+  return !development?.transactionType || development.transactionType === transactionType;
 }
 
 function isEquivalentReplay(
@@ -794,6 +822,12 @@ export async function capturePublicLead(
   const leadSource = normalizeLeadSource(input.leadSource || input.source || input.sourceSurface);
   const existing = await findLeadByCaptureRequestId(database, input.captureRequestId);
   if (existing) {
+    if (!(await existingLeadMatchesTransaction(database, existing, input.transactionType))) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'This request ID belongs to a different transaction context.',
+      });
+    }
     if (!isEquivalentReplay(existing, input, source, leadSource)) {
       throw new TRPCError({
         code: 'CONFLICT',

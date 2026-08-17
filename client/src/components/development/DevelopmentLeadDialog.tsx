@@ -42,6 +42,9 @@ interface DevelopmentLeadDialogProps {
     name: string;
     cataloguePublisherId?: number | null;
     brochureUrl?: string | null;
+    transactionType?: 'for_sale' | 'for_rent';
+    publisherAuthorityKind?: 'platform_reference' | 'developer_first_party';
+    isSoldOut?: boolean;
   };
   affordabilityData?: {
     monthlyIncome?: number;
@@ -103,8 +106,54 @@ const MODE_COPY: Record<
   },
 };
 
-function getModeCopy(mode: LeadDialogMode, isRentalListing: boolean) {
+function getModeCopy(
+  mode: LeadDialogMode,
+  isRentalListing: boolean,
+  isPlatformReference: boolean,
+  isSoldOut: boolean,
+) {
   const copy = MODE_COPY[mode];
+
+  if (isPlatformReference) {
+    if (mode === 'contact') {
+      return {
+        ...copy,
+        title: isSoldOut ? 'Register Interest' : 'Send Enquiry',
+        description: isSoldOut
+          ? 'Share your details with Property Listify to register interest in this sold-out development. The request will be reviewed with the correct unit context.'
+          : 'Share your details with Property Listify. This enquiry is managed as a platform reference and is not a direct message to an external developer.',
+        submitLabel: isSoldOut ? 'Register Interest' : 'Send Enquiry',
+        successMessage: isSoldOut ? 'Your interest has been registered.' : 'Your enquiry has been submitted.',
+      };
+    }
+
+    if (mode === 'viewing') {
+      return {
+        ...copy,
+        description:
+          'Share your details with Property Listify to request a viewing. The request will be reviewed with this development and unit context.',
+      };
+    }
+
+    if (mode === 'brochure') {
+      return {
+        ...copy,
+        description:
+          'Share your details with Property Listify to request the available brochure and pricing information for this development.',
+      };
+    }
+
+    if (mode === 'info') {
+      return {
+        ...copy,
+        description:
+          'Share your details with Property Listify to request the latest pricing, specifications, and availability for this unit.',
+      };
+    }
+
+    return copy;
+  }
+
   if (!isRentalListing) return copy;
 
   if (mode === 'contact') {
@@ -170,8 +219,15 @@ export function DevelopmentLeadDialog({
     }
   }, [open]);
 
-  const isRentalListing = listingType === 'rent';
-  const copy = getModeCopy(mode, isRentalListing);
+  const isRentalListing =
+    (development.transactionType ?? (listingType === 'rent' ? 'for_rent' : 'for_sale')) ===
+    'for_rent';
+  const isPlatformReference = development.publisherAuthorityKind === 'platform_reference';
+  const isSoldOut = development.isSoldOut === true;
+  const copy = getModeCopy(mode, isRentalListing, isPlatformReference, isSoldOut);
+  const custodyDescription = isPlatformReference
+    ? 'Property Listify manages this enquiry and will review the request with the development and unit context. It is not a direct message to an external developer.'
+    : `This enquiry will be routed with the right development and unit context so the ${isRentalListing ? 'rental' : 'sales'} team can follow up with the correct information.`;
   const resolvedUnitName = unitContext?.unitName || unitContext?.name || null;
   const resolvedUnitId =
     unitContext?.unitId ||
@@ -216,6 +272,10 @@ export function DevelopmentLeadDialog({
 
     return isRentalListing
       ? `I am interested in renting ${subject}. Please contact me with monthly rent, availability, and next steps.`
+      : isPlatformReference && isSoldOut
+        ? `I would like to register my interest in ${subject}. Please review my request with the available development and unit information.`
+        : isPlatformReference
+          ? `I am interested in ${subject}. Please review my enquiry with the latest available pricing, availability, and next steps.`
       : `I am interested in ${subject}. Please contact me with pricing, availability, and next steps.`;
   }, [
     affordabilityData?.availableDeposit,
@@ -224,6 +284,8 @@ export function DevelopmentLeadDialog({
     development.name,
     mode,
     isRentalListing,
+    isPlatformReference,
+    isSoldOut,
     resolvedUnitName,
   ]);
 
@@ -236,11 +298,16 @@ export function DevelopmentLeadDialog({
         path: ctaLocation || 'unknown',
       });
       toast.success(
-        result?.deliveryStatus === 'delivered'
-          ? copy.successMessage
-          : result?.deliveryStatus === 'attention_required'
-            ? `Your request was received. ${isRentalListing ? 'Rental' : 'Sales'} follow-up still needs attention.`
-            : `Your request was received. ${isRentalListing ? 'Rental' : 'Sales'} delivery is being completed.`,
+        result?.message ||
+          (result?.deliveryStatus === 'delivered'
+            ? copy.successMessage
+            : result?.deliveryStatus === 'attention_required'
+              ? isPlatformReference
+                ? 'Your request was received. Property Listify review is still required.'
+                : `Your request was received. ${isRentalListing ? 'Rental' : 'Sales'} follow-up still needs attention.`
+              : isPlatformReference
+                ? 'Your request was received and is being reviewed by Property Listify.'
+                : `Your request was received. ${isRentalListing ? 'Rental' : 'Sales'} delivery is being completed.`),
       );
       onOpenChange(false);
 
@@ -251,9 +318,11 @@ export function DevelopmentLeadDialog({
         }
       } else if (mode === 'brochure') {
         toast.info(
-          isRentalListing
-            ? 'The rental team will send the brochure to you shortly.'
-            : 'The sales team will send the brochure to you shortly.',
+          isPlatformReference
+            ? 'Property Listify will review the brochure request.'
+            : isRentalListing
+              ? 'The rental team will send the brochure to you shortly.'
+              : 'The sales team will send the brochure to you shortly.',
         );
       }
     },
@@ -285,6 +354,7 @@ export function DevelopmentLeadDialog({
     createLead.mutate({
       developmentId: development.id,
       cataloguePublisherId: development.cataloguePublisherId ?? undefined,
+      transactionType: development.transactionType,
       unitId: resolvedUnitId,
       unitName: resolvedUnitName || undefined,
       unitPriceFrom: unitContext?.unitPriceFrom,
@@ -352,9 +422,7 @@ export function DevelopmentLeadDialog({
                     </p>
                   ) : null}
                   <p className="text-xs leading-5 text-slate-300">
-                    This enquiry will be routed with the right development and unit context so the{' '}
-                    {isRentalListing ? 'rental team' : 'sales team'} can follow up with the correct
-                    information.
+                    {custodyDescription}
                   </p>
                 </div>
               </div>
@@ -373,7 +441,7 @@ export function DevelopmentLeadDialog({
                         ? `${formatPriceCompact(unitContext.unitPriceFrom)}${isRentalListing ? ' / month' : ''}`
                         : isRentalListing
                           ? 'Monthly rent on request'
-                          : 'On request'}
+                          : 'Price on request'}
                     </p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-3">
@@ -402,14 +470,15 @@ export function DevelopmentLeadDialog({
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <p className="text-sm font-semibold text-white">What happens after submit</p>
                 <p className="mt-1 text-sm leading-6 text-slate-300">
-                  The request is stored with development context and can be actioned by the right{' '}
-                  {isRentalListing ? 'rental' : 'sales'} team without losing the unit context.
+                  {isPlatformReference
+                    ? 'The request is stored with development context for Property Listify review; it is not presented as a direct developer contact.'
+                    : `The request is stored with development context and can be actioned by the right ${isRentalListing ? 'rental' : 'sales'} team without losing the unit context.`}
                 </p>
               </div>
               <div className="flex items-center gap-4 text-xs text-slate-300">
                 <span className="inline-flex items-center gap-1">
                   <Phone className="h-3.5 w-3.5" />
-                  Direct follow-up
+                  {isPlatformReference ? 'Property Listify review' : 'Publisher follow-up'}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Mail className="h-3.5 w-3.5" />
@@ -439,8 +508,9 @@ export function DevelopmentLeadDialog({
                       </p>
                     ) : null}
                     <p className="text-xs text-slate-500">
-                      Your details are used to connect you with the correct{' '}
-                      {isRentalListing ? 'rental' : 'sales and qualification'} team.
+                      {isPlatformReference
+                        ? 'Your details are used to create a Property Listify-managed request with this context.'
+                        : `Your details are used to connect you with the correct ${isRentalListing ? 'rental' : 'sales and qualification'} team.`}
                     </p>
                   </div>
                 </div>

@@ -683,6 +683,9 @@ export default function NavLandingPage() {
   const page = getPageConfig();
   const primaryCtaEnabled =
     !page.primaryCta.href.startsWith('/property-to-rent') || isHomepageHeroJourneyEnabled('rent');
+  const secondaryCtaEnabled =
+    !page.secondaryCta?.href.startsWith('/new-developments') ||
+    isHomepageHeroJourneyEnabled('developments');
 
   useEffect(() => {
     applySeo({
@@ -712,7 +715,7 @@ export default function NavLandingPage() {
                   <Button className="w-full sm:w-auto">{page.primaryCta.label}</Button>
                 </Link>
               ) : null}
-              {page.secondaryCta ? (
+              {page.secondaryCta && secondaryCtaEnabled ? (
                 <Link href={page.secondaryCta.href}>
                   <Button variant="outline" className="w-full sm:w-auto">
                     {page.secondaryCta.label}

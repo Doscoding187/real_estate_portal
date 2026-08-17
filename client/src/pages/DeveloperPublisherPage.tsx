@@ -230,7 +230,7 @@ export default function DeveloperPublisherPage() {
                     title={dev.name}
                     rating={Number(dev.rating) || 0}
                     location={`${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`}
-                    description={dev.description || ''}
+                    description={dev.description || null}
                     image={images[0] || ''}
                     unitTypes={dev.unitTypes || []}
                     highlights={(dev.highlights as string[]) || []}
@@ -240,6 +240,7 @@ export default function DeveloperPublisherPage() {
                     }}
                     imageCount={images.length}
                     isFeatured={!!dev.isFeatured}
+                    transactionType={dev.transactionType === 'for_rent' ? 'for_rent' : 'for_sale'}
                     status={dev.status}
                     nature={dev.nature}
                   />

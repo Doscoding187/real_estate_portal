@@ -138,8 +138,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Developments',
     kind: 'property-search',
     destination: '/new-developments',
-    homepageVisible: false,
-    homepageEnabled: false,
+    homepageVisible: true,
+    homepageEnabled: true,
     supportedFields: ['location', 'developmentType', 'developmentStatus', 'minPrice', 'maxPrice'],
   },
   {
@@ -369,6 +369,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             owner: 'development-engine',
             capability: 'LAUNCH_READY',
             activeHref: '/new-developments',
+            journey: 'developments',
           }),
           destination({
             id: 'buyers-plots',
@@ -977,6 +978,19 @@ export function getVisiblePublicNavigationGroups(
       items: group.items.filter(item => isPublicNavigationVisible(item, surface)),
     }))
     .filter(group => group.items.length > 0);
+}
+
+export function getVisiblePublicNavigationActionItems(
+  menu: PublicNavigationMenu,
+  surface: 'desktop' | 'mobile' = 'desktop',
+) {
+  const destinations = [menu.feature, ...menu.groups.flatMap(group => group.items)];
+  return (menu.actionItemIds || [])
+    .map(id => destinations.find(item => item.id === id))
+    .filter((item): item is PublicNavigationDestination => {
+      if (!item) return false;
+      return isPublicNavigationVisible(item, surface);
+    });
 }
 
 function matchesActiveRoute(pathname: string, routePrefix: string) {

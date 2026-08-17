@@ -46,6 +46,8 @@ describe('DevelopmentLeadDialog', () => {
           id: 77,
           name: 'Cosmopolitan Projects',
           cataloguePublisherId: 13,
+          transactionType: 'for_sale',
+          publisherAuthorityKind: 'developer_first_party',
         }}
         unitContext={{
           unitId: 'unit-1',
@@ -85,6 +87,7 @@ describe('DevelopmentLeadDialog', () => {
       expect.objectContaining({
         developmentId: 77,
         cataloguePublisherId: 13,
+        transactionType: 'for_sale',
         unitId: 'unit-1',
         unitName: 'Type A',
         unitPriceFrom: 1299000,
@@ -116,6 +119,8 @@ describe('DevelopmentLeadDialog', () => {
           id: 88,
           name: 'Maple Grove Rentals',
           cataloguePublisherId: 21,
+          transactionType: 'for_rent',
+          publisherAuthorityKind: 'developer_first_party',
         }}
         unitContext={{
           unitId: 'rent-unit-2',
@@ -153,11 +158,61 @@ describe('DevelopmentLeadDialog', () => {
       expect.objectContaining({
         developmentId: 88,
         cataloguePublisherId: 21,
+        transactionType: 'for_rent',
         unitId: 'rent-unit-2',
         unitPriceFrom: 12000,
         leadType: 'viewing_request',
         leadSource: 'development_detail_viewing',
         sourceSurface: 'development_rent_detail_viewing',
+      }),
+    );
+  });
+
+  it('uses truthful platform-reference wording for a sold-out enquiry', () => {
+    render(
+      <DevelopmentLeadDialog
+        open
+        onOpenChange={() => {}}
+        mode="contact"
+        development={{
+          id: 99,
+          name: 'Reference Heights',
+          cataloguePublisherId: 31,
+          transactionType: 'for_sale',
+          publisherAuthorityKind: 'platform_reference',
+          isSoldOut: true,
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText('Register Interest').length).toBeGreaterThan(0);
+    expect(screen.getByText(/not a direct message to an external developer/i)).toBeInTheDocument();
+    expect(screen.queryByText(/sales team can respond/i)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText(/full name/i), {
+      target: { value: 'Sam Prospect' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/email address/i), {
+      target: { value: 'sam@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/phone number/i), {
+      target: { value: '0822222222' },
+    });
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: /i agree to be contacted about this enquiry/i,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /register interest/i }));
+
+    expect(mutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        developmentId: 99,
+        cataloguePublisherId: 31,
+        transactionType: 'for_sale',
+        leadType: 'inquiry',
+        captureRequestId: expect.any(String),
+        consent: expect.objectContaining({ accepted: true }),
       }),
     );
   });
