@@ -17,26 +17,19 @@ export function CTASection({ onBrowse }: CTASectionProps) {
             Start your search
           </div>
           <h2 className="mb-3 text-[1.65rem] font-bold leading-[1.08] tracking-tight text-white sm:mb-4 sm:text-3xl md:mb-6 md:text-5xl">
-            Ready to start your property journey?
+            Ready to find your next home?
           </h2>
           <p className="mx-auto mb-5 max-w-[30rem] text-[13px] leading-5 text-blue-50 sm:text-base md:mb-10 md:text-xl md:leading-relaxed">
-            Browse listings, compare areas, discover developments, or list property with the right
-            audience.
+            Explore homes for sale, compare the details that matter, and contact the people
+            responsible for the property.
           </p>
-          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+          <div className="flex items-center justify-center">
             <Button
               size="lg"
               onClick={onBrowse}
               className="h-auto w-full rounded-full bg-white px-5 py-3.5 text-sm font-bold text-[#2774AE] shadow-2xl transition-all hover:-translate-y-1 hover:scale-[1.01] hover:bg-blue-50 sm:w-auto sm:px-8 sm:py-5 sm:text-base md:text-lg"
             >
-              Browse All Properties
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-auto w-full rounded-full border-2 border-white bg-transparent px-5 py-3.5 text-sm font-bold text-white transition-all hover:scale-[1.01] hover:bg-white hover:text-[#2774AE] sm:w-auto sm:px-8 sm:py-5 sm:text-base md:text-lg"
-            >
-              List Your Property
+              Browse homes for sale
             </Button>
           </div>
         </div>

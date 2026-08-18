@@ -41,6 +41,7 @@ vi.mock('@/components/LocationAutosuggest', () => ({
             slug: 'johannesburg',
             type: 'city',
             provinceSlug: 'gauteng',
+            parentCanonicalLocationId: 'province:1',
           })
         }
       >
@@ -57,10 +58,28 @@ vi.mock('@/components/LocationAutosuggest', () => ({
             type: 'suburb',
             provinceSlug: 'gauteng',
             citySlug: 'johannesburg',
+            parentCanonicalLocationId: 'city:12',
           })
         }
       >
         Select Sandton
+      </button>
+      <button
+        type="button"
+        data-testid="select-rosebank"
+        onClick={() =>
+          props.onSelect?.({
+            id: 'suburb:35',
+            name: 'Rosebank',
+            slug: 'rosebank',
+            type: 'suburb',
+            provinceSlug: 'gauteng',
+            citySlug: 'johannesburg',
+            parentCanonicalLocationId: 'city:12',
+          })
+        }
+      >
+        Select Rosebank
       </button>
       <button
         type="button"
@@ -140,30 +159,67 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).toHaveBeenCalledWith('/gauteng/johannesburg');
   });
 
-  it('preserves multiple canonical locations for location-first intent', () => {
+  it('submits sibling locations as one canonical Buy OR intent from the neutral resolver', () => {
     render(<EnhancedHero />);
 
-    fireEvent.click(screen.getByTestId('select-johannesburg'));
     fireEvent.click(screen.getByTestId('select-sandton'));
+    fireEvent.click(screen.getByTestId('select-rosebank'));
 
     screen
       .getAllByRole('button', { name: 'Search', exact: true })
       .forEach(button => expect(button).not.toBeDisabled());
     expect(
-      screen.getByText('What are you looking for in Johannesburg and Sandton?'),
+      screen.getByText('What are you looking for in Sandton and Rosebank?'),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
     expect(
       screen.getByRole('heading', {
-        name: 'What are you looking for in Johannesburg and Sandton?',
+        name: 'What are you looking for in Sandton and Rosebank?',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('selected-location-city:12')).toHaveTextContent('Johannesburg');
     expect(screen.getByTestId('selected-location-suburb:34')).toHaveTextContent('Sandton');
-    expect(screen.getByTestId('homepage-location-intent-buy')).toBeDisabled();
-    expect(setLocation).not.toHaveBeenCalled();
+    expect(screen.getByTestId('selected-location-suburb:35')).toHaveTextContent('Rosebank');
+    expect(screen.getByTestId('homepage-location-intent-buy')).not.toBeDisabled();
+    expect(
+      screen.getByText('Search both selected areas together. Results can match either area.'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('homepage-location-intent-buy'));
+
+    const submittedUrl = new URL(
+      String(setLocation.mock.calls.at(-1)?.[0]),
+      'https://listify.test',
+    );
+    expect(submittedUrl.pathname).toBe('/property-for-sale');
+    expect(submittedUrl.searchParams.getAll('locationIds')).toEqual(['suburb:34', 'suburb:35']);
+    expect(submittedUrl.searchParams.get('locationId')).toBeNull();
+  });
+
+  it('resolves a contradictory parent and child to the latest explicit location', () => {
+    render(<EnhancedHero />);
+
+    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getByTestId('select-sandton'));
+
+    expect(screen.queryByTestId('selected-location-city:12')).not.toBeInTheDocument();
+    expect(screen.getByTestId('selected-location-suburb:34')).toHaveTextContent('Sandton');
+    expect(
+      screen.getByText(
+        'Sandton replaces the previous area. Multi-area search combines sibling locations at the same level.',
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Buy' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+    const submittedUrl = new URL(
+      String(setLocation.mock.calls.at(-1)?.[0]),
+      'https://listify.test',
+    );
+    expect(submittedUrl.searchParams.get('locationId')).toBe('suburb:34');
+    expect(submittedUrl.searchParams.getAll('locationIds')).toEqual([]);
   });
 
   it('rejects an unresolved location identity from activating Search', () => {
@@ -187,7 +243,13 @@ describe('EnhancedHero explicit journey selection', () => {
     screen
       .getAllByRole('button', { name: 'Buy' })
       .forEach(button => expect(button).toHaveAttribute('aria-pressed', 'true'));
-    expect(setLocation).toHaveBeenCalledWith(expect.stringContaining('locationId=city%3A12'));
+    const submittedUrl = new URL(
+      String(setLocation.mock.calls.at(-1)?.[0]),
+      'https://listify.test',
+    );
+    expect(submittedUrl.pathname).toBe('/property-for-sale');
+    expect(submittedUrl.searchParams.get('locationId')).toBe('city:12');
+    expect(submittedUrl.searchParams.getAll('locationIds')).toEqual([]);
   });
 
   it('does not activate a disabled Developments selection', () => {

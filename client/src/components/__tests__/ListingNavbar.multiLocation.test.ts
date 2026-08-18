@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { canAddCanonicalLocation, reconstructCanonicalLocations } from '../ListingNavbar';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  canAddCanonicalLocation,
+  focusListingNavbarLocationInput,
+  LISTING_NAVBAR_LOCATION_INPUT_IDS,
+  reconstructCanonicalLocations,
+} from '../ListingNavbar';
 import { buildPropertySearchUrl } from '@/lib/heroJourneySearch';
 import { generateIntentUrl, resolveSearchIntent } from '@/lib/searchIntent';
 
@@ -89,5 +94,21 @@ describe('ListingNavbar multi-location reconstruction', () => {
     expect(parsed.pathname).toBe('/property-for-sale');
     expect(parsed.searchParams.get('locationId')).toBe('suburb:34');
     expect(parsed.searchParams.getAll('locationIds')).toEqual([]);
+  });
+
+  it('focuses the visible mobile refinement input before the hidden desktop input', () => {
+    const desktopInput = document.createElement('input');
+    desktopInput.id = LISTING_NAVBAR_LOCATION_INPUT_IDS.desktop;
+    const mobileInput = document.createElement('input');
+    mobileInput.id = LISTING_NAVBAR_LOCATION_INPUT_IDS.mobile;
+    mobileInput.scrollIntoView = vi.fn();
+    document.body.append(desktopInput, mobileInput);
+
+    expect(focusListingNavbarLocationInput(true)).toBe(true);
+    expect(document.activeElement).toBe(mobileInput);
+    expect(mobileInput.scrollIntoView).toHaveBeenCalledTimes(1);
+
+    desktopInput.remove();
+    mobileInput.remove();
   });
 });

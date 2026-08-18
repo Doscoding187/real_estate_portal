@@ -3,7 +3,10 @@ import { buildCanonicalCorePropertyDetails } from '../../../shared/core-property
 import { normalizeFeaturesContext } from '../../../shared/features-context';
 import { buildPricingContract } from '../../../shared/pricing-contract';
 import {
+  PUBLIC_PROPERTY_QUERY_BATCH_SIZE,
   resolveApprovedPublicProperty,
+  resolveApprovedPublicProperties,
+  type ApprovedPublicPropertyBatchDataSource,
   type ApprovedPublicPropertyDataSource,
 } from '../approvedPublicPropertyService';
 
@@ -169,6 +172,27 @@ function dataSource(
   } as any;
 }
 
+function batchDataSource(
+  fixtures: ReturnType<typeof canonicalFixture>[],
+): ApprovedPublicPropertyBatchDataSource & Record<string, ReturnType<typeof vi.fn>> {
+  return {
+    getPropertiesByIds: vi.fn(async (ids: readonly number[]) =>
+      fixtures.map(fixture => fixture.property).filter(property => ids.includes(property.id)),
+    ),
+    getPropertyImagesByPropertyIds: vi.fn(async (ids: readonly number[]) =>
+      fixtures.flatMap(fixture => fixture.propertyImages).filter(image => ids.includes(image.propertyId)),
+    ),
+    getListingsByIds: vi.fn(async (ids: readonly number[]) =>
+      fixtures
+        .map(fixture => fixture.sourceListing)
+        .filter(sourceListing => ids.includes(sourceListing.id)),
+    ),
+    getListingMediaByListingIds: vi.fn(async (ids: readonly number[]) =>
+      fixtures.flatMap(fixture => fixture.listingMedia).filter(media => ids.includes(media.listingId)),
+    ),
+  } as any;
+}
+
 describe('ApprovedPublicProperty authority', () => {
   it('resolves one stable public identity from the coherent approved source aggregate', async () => {
     const source = dataSource();
@@ -188,6 +212,53 @@ describe('ApprovedPublicProperty authority', () => {
     expect(result?.property).not.toHaveProperty('sourceListingId');
     expect(result?.property).not.toHaveProperty('sourceListing');
     expect(source.getListingById).toHaveBeenCalledWith(9001);
+  });
+
+  it('resolves representative approved properties with one bounded dependency call per aggregate', async () => {
+    const first = canonicalFixture();
+    const second = canonicalFixture();
+    second.property.id = 502;
+    second.property.sourceListingId = 9002;
+    second.propertyImages.forEach(image => {
+      image.propertyId = 502;
+    });
+    second.sourceListing.id = 9002;
+    second.listingMedia.forEach(media => {
+      media.listingId = 9002;
+    });
+    const source = batchDataSource([first, second]);
+
+    const result = await resolveApprovedPublicProperties([501, 502, 501, -1], source);
+
+    expect([...result.keys()]).toEqual([501, 502]);
+    expect(result.get(501)?.property.title).toBe('Approved Sandton Home');
+    expect(result.get(502)?.authority).toBe('approved_listing');
+    expect(source.getPropertiesByIds).toHaveBeenCalledTimes(1);
+    expect(source.getPropertiesByIds).toHaveBeenCalledWith([501, 502]);
+    expect(source.getListingsByIds).toHaveBeenCalledTimes(1);
+    expect(source.getListingsByIds).toHaveBeenCalledWith([9001, 9002]);
+    expect(source.getPropertyImagesByPropertyIds).toHaveBeenCalledTimes(1);
+    expect(source.getListingMediaByListingIds).toHaveBeenCalledTimes(1);
+  });
+
+  it('bounds every projection lookup instead of issuing one dependency call per property', async () => {
+    const propertyIds = Array.from(
+      { length: PUBLIC_PROPERTY_QUERY_BATCH_SIZE * 2 + 1 },
+      (_, index) => index + 1,
+    );
+    const source = batchDataSource([]);
+
+    await expect(resolveApprovedPublicProperties(propertyIds, source)).resolves.toEqual(new Map());
+
+    expect(source.getPropertiesByIds).toHaveBeenCalledTimes(3);
+    expect(
+      source.getPropertiesByIds.mock.calls.every(
+        ([batchIds]: [readonly number[]]) => batchIds.length <= PUBLIC_PROPERTY_QUERY_BATCH_SIZE,
+      ),
+    ).toBe(true);
+    expect(source.getListingsByIds).not.toHaveBeenCalled();
+    expect(source.getPropertyImagesByPropertyIds).not.toHaveBeenCalled();
+    expect(source.getListingMediaByListingIds).not.toHaveBeenCalled();
   });
 
   it('preserves typed approved presentation without flattening non-images into photos', async () => {
@@ -370,6 +441,16 @@ describe('ApprovedPublicProperty authority', () => {
     expect(source.getListingMedia).not.toHaveBeenCalled();
   });
 
+  it('does not treat the historical approved review state as published inventory', async () => {
+    const fixture = canonicalFixture();
+    fixture.sourceListing.status = 'approved';
+    const source = dataSource(fixture);
+
+    await expect(resolveApprovedPublicProperty(501, source)).resolves.toBeNull();
+
+    expect(source.getListingMedia).not.toHaveBeenCalled();
+  });
+
   it('fails closed when partially promoted source images disagree with the approved mirror', async () => {
     const fixture = canonicalFixture();
     fixture.listingMedia[0].originalUrl = 'https://cdn.example.test/unapproved-new-photo.jpg';
@@ -399,7 +480,7 @@ describe('ApprovedPublicProperty authority', () => {
     await expect(resolveApprovedPublicProperty(501, dataSource(fixture))).resolves.toBeNull();
   });
 
-  it('keeps unlinked legacy inventory on a projection-only compatibility path', async () => {
+  it('fails closed for unlinked legacy inventory until it is migrated or quarantined', async () => {
     const source = dataSource();
     source.getPropertyById.mockResolvedValue({
       id: 77,
@@ -425,20 +506,7 @@ describe('ApprovedPublicProperty authority', () => {
 
     const result = await resolveApprovedPublicProperty(77, source);
 
-    expect(result?.authority).toBe('legacy_projection');
-    expect(result?.property).toMatchObject({
-      id: 77,
-      title: 'Legacy projected home',
-      sourceType: 'legacy_property_projection',
-      mainImage: 'https://cdn.example.test/legacy.jpg',
-      virtualTour: null,
-    });
-    expect(result?.property).not.toHaveProperty('sourceListingId');
-    expect(result?.property.address).toBeUndefined();
-    expect(result?.property).not.toHaveProperty('placeId');
-    expect(result?.property).not.toHaveProperty('privateAddress');
-    expect(result?.property.zipCode).toBeUndefined();
-    expect(JSON.stringify(result?.property)).not.toContain('PRIVATE LEGACY ADDRESS');
+    expect(result).toBeNull();
     expect(source.getListingById).not.toHaveBeenCalled();
     expect(source.getListingMedia).not.toHaveBeenCalled();
   });

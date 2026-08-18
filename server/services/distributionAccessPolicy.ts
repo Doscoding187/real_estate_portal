@@ -5,6 +5,7 @@ import {
   developmentRequiredDocuments,
   cataloguePublishers,
   developerOrganisations,
+  developerOrganisationMemberships,
   developmentSupersessions,
   developments,
   distributionManagerAssignments,
@@ -426,6 +427,12 @@ export async function evaluateDevelopmentDistributionAccess(input: {
         WHERE development_id = ${developments.id}
           AND is_active = 1
       )`,
+      activeOperatorCount: sql<number>`(
+        SELECT COUNT(*)
+        FROM ${developerOrganisationMemberships}
+        WHERE ${developerOrganisationMemberships.organisationId} = ${cataloguePublishers.developerOrganisationId}
+          AND ${developerOrganisationMemberships.status} = 'active'
+      )`,
       activeSupersessionSource: sql<number>`EXISTS (
         SELECT 1
         FROM ${developmentSupersessions}
@@ -472,6 +479,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     organisation: development.organisation?.id ? development.organisation : null,
     unitTypes: [],
     activeUnitTypeCount: Number(development.activeUnitTypeCount || 0),
+    activeOperatorCount: Number(development.activeOperatorCount || 0),
     activeSupersessionSource: Number(development.activeSupersessionSource || 0) === 1,
     commercialAccess,
   } as any);

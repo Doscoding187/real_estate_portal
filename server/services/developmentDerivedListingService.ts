@@ -71,13 +71,18 @@ function parseJsonArray(value: unknown): any[] {
 }
 
 function parseJsonStringArray(value: unknown): string[] {
-  const normalized = parseJsonArray(value);
-  if (normalized.length > 0) {
-    return normalized
+  const labelsFromArray = (items: unknown[]): string[] =>
+    items
       .flatMap(item => {
         if (typeof item === 'string') return [item];
         if (item && typeof item === 'object') {
-          return [item.label, item.name, item.title, item.value]
+          const candidateObject = item as Record<string, unknown>;
+          return [
+            candidateObject.label,
+            candidateObject.name,
+            candidateObject.title,
+            candidateObject.value,
+          ]
             .filter(candidate => typeof candidate === 'string' && candidate.trim().length > 0)
             .map(candidate => String(candidate));
         }
@@ -85,16 +90,54 @@ function parseJsonStringArray(value: unknown): string[] {
       })
       .map(item => String(item || '').trim())
       .filter(Boolean);
+
+  if (Array.isArray(value)) {
+    return labelsFromArray(value);
   }
 
-  if (typeof value === 'string') {
-    return value
+  if (value && typeof value === 'object') {
+    return flattenFeatureCollections(value);
+  }
+
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+
+  try {
+    const parsed = JSON.parse(trimmed);
+
+    if (Array.isArray(parsed)) {
+      return labelsFromArray(parsed);
+    }
+
+    if (parsed && typeof parsed === 'object') {
+      return flattenFeatureCollections(parsed);
+    }
+
+    if (typeof parsed === 'string') {
+      try {
+        const nested = JSON.parse(parsed);
+        if (Array.isArray(nested)) return labelsFromArray(nested);
+        if (nested && typeof nested === 'object') return flattenFeatureCollections(nested);
+        return [];
+      } catch {
+        return parsed
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean);
+      }
+    }
+
+    return [];
+  } catch {
+    return trimmed
       .split(',')
       .map(item => item.trim())
       .filter(Boolean);
   }
-
-  return [];
 }
 
 function parseJsonObject(value: unknown): Record<string, any> {
@@ -608,6 +651,7 @@ function buildDevelopmentSearchCardResult(item: DevelopmentDerivedListing): Sear
     contactRole: 'developer',
     identity: {
       role: 'developer',
+      provenance: 'developer',
       name: identityName,
       avatarUrl: item.developerBrand?.logoUrl || null,
       phone: item.developerBrand?.publicContactPhone || null,

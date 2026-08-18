@@ -7,13 +7,15 @@ import {
   developments,
   cataloguePublishers,
   developerOrganisations,
-  priceAnalytics,
   suburbPriceAnalytics,
-  amenities,
 } from '../../drizzle/schema';
-import { eq, and, desc, sql, like, inArray, count, avg, getTableColumns } from 'drizzle-orm';
-import { normalizeCoordinatePair } from '../../shared/location-contract';
+import { eq, and, desc, sql, inArray, getTableColumns, type SQL } from 'drizzle-orm';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import {
+  resolvePublicPropertyEligibilities,
+  type PublicPropertyEligibilityResolution,
+} from './publicPropertyEligibilityService';
+import { toPublicPropertyDetailDto } from './publicPropertyDto';
 
 /**
  * IMPROVED Service for handling location page data aggregation
@@ -21,109 +23,119 @@ import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligi
  *
  * This version uses slug columns for better matching and performance
  */
-function safeParseImages(value: unknown): string[] {
-  if (value == null) return [];
-
-  if (Array.isArray(value)) {
-    return value
-      .map(img =>
-        typeof img === 'string'
-          ? img
-          : typeof img === 'object' && img !== null && 'url' in img
-            ? String(img.url)
-            : '',
-      )
-      .filter(Boolean);
-  }
-
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) {
-        return parsed
-          .map(img =>
-            typeof img === 'string'
-              ? img
-              : typeof img === 'object' && img !== null && 'url' in img
-                ? String(img.url)
-                : '',
-          )
-          .filter(Boolean);
-      }
-    } catch {
-      console.warn('[LocationPages] Failed to parse images JSON string');
-    }
-    return [];
-  }
-
-  return [];
-}
-
 function normalizeLocationSlug(value: string): string {
   return value.trim().toLowerCase();
 }
 
+type EligibleLocationProperty = {
+  id: number;
+  provinceId: number | null;
+  cityId: number | null;
+  suburbId: number | null;
+  price: unknown;
+  listingType: string;
+  propertyType: string;
+  featured: number;
+  resolution: PublicPropertyEligibilityResolution;
+};
+
 /**
- * Location-page inventory is a public compatibility read. Keep its existing
- * property shape, but replace legacy location fields with the approval-owned
- * public projection and remove authoring/provider evidence.
+ * Location pages are public inventory summaries, not a second publication
+ * authority. Fetch the geographically relevant projection candidates, then
+ * retain only IDs admitted by the canonical public-property contract.
  */
-function projectPublicPropertyLocation(property: Record<string, any>): Record<string, any> {
-  const projection = { ...property };
-  for (const privateField of [
-    'sourceListingId',
-    'placeId',
-    'privateAddress',
-    'coordinateSource',
-    'locationConfirmationState',
-    'providerLocationPlaceId',
-    'provider',
-  ]) {
-    delete projection[privateField];
-  }
+async function loadEligibleLocationProperties(
+  database: any,
+  locationCondition?: SQL<unknown>,
+): Promise<EligibleLocationProperty[]> {
+  const publicProjectionStatus = inArray(properties.status, ['available', 'published']);
+  const candidates = await database
+    .select({
+      id: properties.id,
+    })
+    .from(properties)
+    .where(
+      locationCondition ? and(publicProjectionStatus, locationCondition) : publicProjectionStatus,
+    )
+    .orderBy(desc(properties.createdAt));
 
-  const coordinates = normalizeCoordinatePair(property.publicLatitude, property.publicLongitude);
-  const publicLocationPrecision =
-    property.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
+  if (candidates.length === 0) return [];
 
-  return {
-    ...projection,
-    address: property.publicAddress ?? null,
-    zipCode: publicLocationPrecision === 'exact' ? (property.zipCode ?? null) : null,
-    latitude: coordinates?.latitude ?? null,
-    longitude: coordinates?.longitude ?? null,
-    publicAddress: property.publicAddress ?? null,
-    publicLatitude: coordinates?.latitude ?? null,
-    publicLongitude: coordinates?.longitude ?? null,
-    publicLocationPrecision,
-    placeId: null,
-  };
+  const resolutions = await resolvePublicPropertyEligibilities(
+    candidates.map((row: any) => Number(row.id)),
+  );
+  return candidates.flatMap((row: any) => {
+    const id = Number(row.id);
+    const resolution = resolutions.get(id);
+    if (!resolution) return [];
+    const property = resolution.property;
+    return [
+      {
+        id,
+        provinceId: Number(property.provinceId) || null,
+        cityId: Number(property.cityId) || null,
+        suburbId: Number(property.suburbId) || null,
+        price: property.price,
+        listingType: String(property.listingType || ''),
+        propertyType: String(property.propertyType || ''),
+        featured: Number(property.featured || 0),
+        resolution,
+      },
+    ];
+  });
+}
+
+function loadPropertyPreviews(rows: readonly EligibleLocationProperty[]) {
+  return rows.map(row => toPublicPropertyDetailDto(row.resolution).property);
+}
+
+function numericPrice(row: EligibleLocationProperty): number | null {
+  if (row.price === null || row.price === undefined || row.price === '') return null;
+  const value = Number(row.price);
+  return Number.isFinite(value) ? value : null;
+}
+
+function averagePropertyPrice(rows: readonly EligibleLocationProperty[]): number | null {
+  const prices = rows.map(numericPrice).filter((value): value is number => value !== null);
+  if (prices.length === 0) return null;
+  return prices.reduce((sum, value) => sum + value, 0) / prices.length;
+}
+
+function groupPropertiesByLocation(
+  rows: readonly EligibleLocationProperty[],
+  field: 'cityId' | 'suburbId',
+): Map<number, EligibleLocationProperty[]> {
+  const grouped = new Map<number, EligibleLocationProperty[]>();
+  rows.forEach(property => {
+    const locationId = Number(property[field] || 0);
+    if (!locationId) return;
+    const existing = grouped.get(locationId) || [];
+    existing.push(property);
+    grouped.set(locationId, existing);
+  });
+  return grouped;
 }
 
 export const locationPagesService = {
   async getPopularCities(limit = 12) {
     const db = await getDb();
 
-    const listingCount = sql<number>`COUNT(${properties.id})`;
+    const [rows, eligibleProperties] = await Promise.all([
+      db
+        .select({
+          id: cities.id,
+          name: cities.name,
+          slug: cities.slug,
+          provinceName: provinces.name,
+          provinceSlug: provinces.slug,
+        })
+        .from(cities)
+        .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+        .orderBy(cities.name),
+      loadEligibleLocationProperties(db),
+    ]);
 
-    const rows = await db
-      .select({
-        id: cities.id,
-        name: cities.name,
-        slug: cities.slug,
-        provinceName: provinces.name,
-        provinceSlug: provinces.slug,
-        listingCount,
-      })
-      .from(cities)
-      .innerJoin(provinces, eq(cities.provinceId, provinces.id))
-      .leftJoin(
-        properties,
-        and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
-      )
-      .groupBy(cities.id, cities.name, cities.slug, provinces.name, provinces.slug)
-      .orderBy(desc(listingCount), cities.name)
-      .limit(limit);
+    const propertiesByCity = groupPropertiesByLocation(eligibleProperties, 'cityId');
 
     return rows
       .map(row => ({
@@ -144,9 +156,14 @@ export const locationPagesService = {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, ''),
-        listingCount: Number(row.listingCount || 0),
+        listingCount: propertiesByCity.get(Number(row.id))?.length || 0,
       }))
-      .filter(row => row.listingCount > 0);
+      .filter(row => row.listingCount > 0)
+      .sort(
+        (left, right) =>
+          right.listingCount - left.listingCount || left.name.localeCompare(right.name),
+      )
+      .slice(0, limit);
   },
 
   /**
@@ -175,27 +192,46 @@ export const locationPagesService = {
     let cityList: any[] = [];
     let featuredDevelopments: any[] = [];
     let trendingSuburbs: any[] = [];
-    let stats: any = {};
+    let eligibleProperties: EligibleLocationProperty[] = [];
 
     try {
-      cityList = await db
+      eligibleProperties = await loadEligibleLocationProperties(
+        db,
+        eq(properties.provinceId, province.id),
+      );
+    } catch (error) {
+      console.warn(
+        '[LocationPages] Public property eligibility failed for province, returning empty manual inventory',
+        error,
+      );
+    }
+
+    try {
+      const provinceCities = await db
         .select({
           id: cities.id,
           name: cities.name,
           slug: cities.slug,
           isMetro: cities.isMetro,
-          listingCount: sql<number>`count(${properties.id})`,
-          avgPrice: sql<number>`avg(cast(${properties.price} as decimal(12,2)))`,
         })
         .from(cities)
-        .leftJoin(
-          properties,
-          and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
-        )
         .where(eq(cities.provinceId, province.id))
-        .groupBy(cities.id)
-        .orderBy(desc(sql`count(${properties.id})`))
-        .limit(12);
+        .orderBy(cities.name);
+      const propertiesByCity = groupPropertiesByLocation(eligibleProperties, 'cityId');
+      cityList = provinceCities
+        .map(city => {
+          const cityProperties = propertiesByCity.get(Number(city.id)) || [];
+          return {
+            ...city,
+            listingCount: cityProperties.length,
+            avgPrice: averagePropertyPrice(cityProperties),
+          };
+        })
+        .sort(
+          (left, right) =>
+            right.listingCount - left.listingCount || left.name.localeCompare(right.name),
+        )
+        .slice(0, 12);
     } catch (error) {
       console.warn('[LocationPages] City list query failed for province, returning empty', error);
     }
@@ -204,7 +240,10 @@ export const locationPagesService = {
       featuredDevelopments = await db
         .select({ ...getTableColumns(developments) })
         .from(developments)
-        .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+        .leftJoin(
+          cataloguePublishers,
+          eq(developments.cataloguePublisherId, cataloguePublishers.id),
+        )
         .leftJoin(
           developerOrganisations,
           eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
@@ -224,25 +263,29 @@ export const locationPagesService = {
     }
 
     try {
-      trendingSuburbs = await db
+      const provinceSuburbs = await db
         .select({
           id: suburbs.id,
           name: suburbs.name,
           slug: suburbs.slug,
           cityName: cities.name,
           citySlug: cities.slug,
-          listingCount: sql<number>`count(${properties.id})`,
         })
         .from(suburbs)
         .leftJoin(cities, eq(suburbs.cityId, cities.id))
-        .leftJoin(
-          properties,
-          and(eq(properties.suburbId, suburbs.id), eq(properties.status, 'published')),
-        )
         .where(eq(cities.provinceId, province.id))
-        .groupBy(suburbs.id, cities.name, cities.slug)
-        .orderBy(desc(sql`count(${properties.id})`))
-        .limit(10);
+        .orderBy(suburbs.name);
+      const propertiesBySuburb = groupPropertiesByLocation(eligibleProperties, 'suburbId');
+      trendingSuburbs = provinceSuburbs
+        .map(suburb => ({
+          ...suburb,
+          listingCount: propertiesBySuburb.get(Number(suburb.id))?.length || 0,
+        }))
+        .sort(
+          (left, right) =>
+            right.listingCount - left.listingCount || left.name.localeCompare(right.name),
+        )
+        .slice(0, 10);
     } catch (error) {
       console.warn(
         '[LocationPages] Trending suburbs query failed for province, returning empty',
@@ -250,17 +293,7 @@ export const locationPagesService = {
       );
     }
 
-    try {
-      [stats] = await db
-        .select({
-          totalListings: sql<number>`count(*)`,
-          avgPrice: sql<number>`avg(${properties.price})`,
-        })
-        .from(properties)
-        .where(and(eq(properties.provinceId, province.id), eq(properties.status, 'published')));
-    } catch (error) {
-      console.warn('[LocationPages] Stats query failed for province, returning defaults', error);
-    }
+    const averagePrice = averagePropertyPrice(eligibleProperties);
 
     return {
       province,
@@ -268,8 +301,8 @@ export const locationPagesService = {
       featuredDevelopments,
       trendingSuburbs,
       stats: {
-        totalListings: Number(stats?.totalListings || 0),
-        avgPrice: Math.round(Number(stats?.avgPrice || 0)),
+        totalListings: eligibleProperties.length,
+        avgPrice: Math.round(averagePrice || 0),
       },
     };
   },
@@ -319,31 +352,48 @@ export const locationPagesService = {
 
       console.log(`[LocationPages] Found city: ${city.name} (id: ${city.id})`);
 
-      // 2. Popular Suburbs in City
-      const listingCountSql = sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`;
+      const eligibleProperties = await loadEligibleLocationProperties(
+        db,
+        eq(properties.cityId, city.id),
+      );
 
-      const suburbList = await db
+      // 2. Popular Suburbs in City. Property metrics are derived only from
+      // canonical public IDs, while the geography catalogue remains complete.
+      const citySuburbs = await db
         .select({
           id: suburbs.id,
           name: suburbs.name,
           slug: suburbs.slug,
-          listingCount: listingCountSql,
-          avgPrice: sql<
-            number | null
-          >`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published')`,
-          avgSalePrice: sql<
-            number | null
-          >`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'sale')`,
-          avgRentalPrice: sql<
-            number | null
-          >`(SELECT AVG(${properties.price}) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'rent')`,
-          propertiesForSale: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'sale')`,
-          propertiesForRent: sql<number>`(SELECT COUNT(*) FROM ${properties} WHERE ${properties.suburbId} = ${suburbs.id} AND ${properties.status} = 'published' AND ${properties.listingType} = 'rent')`,
         })
         .from(suburbs)
         .where(eq(suburbs.cityId, city.id))
-        .orderBy(desc(listingCountSql))
-        .limit(12);
+        .orderBy(suburbs.name);
+
+      const propertiesBySuburb = groupPropertiesByLocation(eligibleProperties, 'suburbId');
+      const suburbList = citySuburbs
+        .map(suburb => {
+          const suburbProperties = propertiesBySuburb.get(Number(suburb.id)) || [];
+          const saleProperties = suburbProperties.filter(
+            property => property.listingType === 'sale',
+          );
+          const rentalProperties = suburbProperties.filter(
+            property => property.listingType === 'rent',
+          );
+          return {
+            ...suburb,
+            listingCount: suburbProperties.length,
+            avgPrice: averagePropertyPrice(suburbProperties),
+            avgSalePrice: averagePropertyPrice(saleProperties),
+            avgRentalPrice: averagePropertyPrice(rentalProperties),
+            propertiesForSale: saleProperties.length,
+            propertiesForRent: rentalProperties.length,
+          };
+        })
+        .sort(
+          (left, right) =>
+            right.listingCount - left.listingCount || left.name.localeCompare(right.name),
+        )
+        .slice(0, 12);
 
       console.log(`[LocationPages] Found ${suburbList.length} suburbs`);
 
@@ -352,17 +402,9 @@ export const locationPagesService = {
       // explicitly selected.
       const includeInventoryPreview = options?.includeInventoryPreview ?? true;
       const featuredProperties = includeInventoryPreview
-        ? await db
-            .select()
-            .from(properties)
-            .where(
-              and(
-                eq(properties.cityId, city.id),
-                eq(properties.status, 'published' as any),
-                eq(properties.featured, 1),
-              ),
-            )
-            .limit(6)
+        ? loadPropertyPreviews(
+            eligibleProperties.filter(property => Number(property.featured || 0) === 1).slice(0, 6),
+          )
         : [];
 
       // 4. Developments in City (match by city name, trim whitespace, also include suburb matches)
@@ -370,7 +412,10 @@ export const locationPagesService = {
       const cityDevelopments = await db
         .select({ ...getTableColumns(developments) })
         .from(developments)
-        .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+        .leftJoin(
+          cataloguePublishers,
+          eq(developments.cataloguePublisherId, cataloguePublishers.id),
+        )
         .leftJoin(
           developerOrganisations,
           eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
@@ -383,30 +428,25 @@ export const locationPagesService = {
         )
         .limit(8);
 
-      // 5. Aggregate Stats (handle empty case gracefully)
-      const [stats] = await db
-        .select({
-          totalListings: sql<number>`count(*)`,
-          avgPrice: sql<number>`avg(${properties.price})`,
-        })
-        .from(properties)
-        .where(and(eq(properties.cityId, city.id), eq(properties.status, 'published' as any)));
-
       // Always return city data, even if no listings exist (show empty state)
       console.log(
         `[LocationPages] Returning city data with ${featuredProperties.length} properties`,
       );
 
       // 5. Property Type Stats (for PropertyTypeExplorer)
-      const propertyTypeStats = await db
-        .select({
-          type: properties.propertyType,
-          count: count(properties.id),
-          avgPrice: avg(properties.price),
-        })
-        .from(properties)
-        .where(and(eq(properties.cityId, city.id), eq(properties.status, 'published')))
-        .groupBy(properties.propertyType);
+      const propertiesByType = new Map<string, EligibleLocationProperty[]>();
+      eligibleProperties.forEach(property => {
+        const type = String(property.propertyType || 'other');
+        const existing = propertiesByType.get(type) || [];
+        existing.push(property);
+        propertiesByType.set(type, existing);
+      });
+      const propertyTypeStats = Array.from(propertiesByType.entries()).map(([type, rows]) => ({
+        type,
+        count: rows.length,
+        avgPrice: averagePropertyPrice(rows),
+      }));
+      const averagePrice = averagePropertyPrice(eligibleProperties);
 
       // 6. Top Localities (Suburbs) by demand/inventory (for LocationTopLocalities)
       // We'll use the suburbList we already fetched, but maybe we need more stats if not present
@@ -418,14 +458,11 @@ export const locationPagesService = {
       return {
         city,
         suburbs: suburbList || [],
-        featuredProperties: (featuredProperties || []).map((p: any) => ({
-          ...projectPublicPropertyLocation(p),
-          images: safeParseImages(p.images),
-        })),
+        featuredProperties: featuredProperties || [],
         developments: cityDevelopments || [],
         stats: {
-          totalListings: Number(stats?.totalListings || 0),
-          avgPrice: Number(stats?.avgPrice || 0),
+          totalListings: eligibleProperties.length,
+          avgPrice: Number(averagePrice || 0),
         },
         propertyTypes: propertyTypeStats.map((pt: any) => ({
           type: pt.type,
@@ -492,32 +529,32 @@ export const locationPagesService = {
 
     console.log(`[LocationPages] Found suburb: ${suburb.name} (id: ${suburb.id})`);
 
-    // 2. Listing Stats — wrap in try/catch so schema drift or empty DB doesn't crash the page
-    let stats: any = {};
+    // 2. Listing Stats — public location summaries use the same final
+    // provenance/custody eligibility as search, detail and enquiry.
+    let eligibleProperties: EligibleLocationProperty[] = [];
     try {
-      [stats] = await db
-        .select({
-          totalListings: sql<number>`count(*)`,
-          avgPrice: sql<number>`avg(${properties.price})`,
-          rentalCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'rent' THEN 1 END)`,
-          saleCount: sql<number>`count(CASE WHEN ${properties.listingType} = 'sale' THEN 1 END)`,
-        })
-        .from(properties)
-        .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')));
+      eligibleProperties = await loadEligibleLocationProperties(
+        db,
+        eq(properties.suburbId, suburb.id),
+      );
     } catch (error) {
-      console.warn('[LocationPages] Stats query failed for suburb, returning defaults', error);
+      console.warn(
+        '[LocationPages] Public property eligibility failed for suburb, returning empty manual inventory',
+        error,
+      );
     }
+
+    const rentalCount = eligibleProperties.filter(
+      property => property.listingType === 'rent',
+    ).length;
+    const saleCount = eligibleProperties.filter(property => property.listingType === 'sale').length;
+    const averagePrice = averagePropertyPrice(eligibleProperties);
 
     // 3. Featured Properties in Suburb — wrap so media parsing or schema mismatch doesn't crash
     let localProperties: any[] = [];
     if (options?.includeInventoryPreview ?? true) {
       try {
-        localProperties = await db
-          .select()
-          .from(properties)
-          .where(and(eq(properties.suburbId, suburb.id), eq(properties.status, 'published')))
-          .orderBy(desc(properties.createdAt))
-          .limit(12);
+        localProperties = loadPropertyPreviews(eligibleProperties.slice(0, 12));
       } catch (error) {
         console.warn('[LocationPages] Properties query failed for suburb, returning empty', error);
       }
@@ -552,15 +589,12 @@ export const locationPagesService = {
     return {
       suburb,
       stats: {
-        totalListings: Number(stats?.totalListings || 0),
-        avgPrice: Math.round(Number(stats?.avgPrice || 0)),
-        rentalCount: Number(stats?.rentalCount || 0),
-        saleCount: Number(stats?.saleCount || 0),
+        totalListings: eligibleProperties.length,
+        avgPrice: Math.round(averagePrice || 0),
+        rentalCount,
+        saleCount,
       },
-      listings: localProperties.map((p: any) => ({
-        ...projectPublicPropertyLocation(p),
-        images: safeParseImages(p.images),
-      })),
+      listings: localProperties,
       analytics: analytics || null,
       insights,
       reviews,

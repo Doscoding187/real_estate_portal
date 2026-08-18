@@ -74,7 +74,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
     }
   });
 
-  it('keeps wizard-origin development fields intact through properties.search includeDevelopments', async () => {
+  it('returns canonical development SearchCardResult data through public inventory search', async () => {
     const db = await getDb();
     expect(db).toBeTruthy();
 
@@ -155,39 +155,63 @@ describeWithDb('Development Card Data Flow Integration', () => {
       user: null,
     } as any);
 
-    const result = await caller.properties.search({
+    const result = await caller.properties.searchPublicInventory({
       city: 'Johannesburg',
       province: 'Gauteng',
-      limit: 20,
-      offset: 0,
-      includeDevelopments: true,
+      listingType: 'sale',
+      listingSource: 'development',
+      page: 0,
+      pageSize: 20,
     });
 
-    const developmentItems = (result as any)?.developments?.items ?? [];
-    const matched = developmentItems.find((dev: any) => Number(dev.id) === createdDevelopmentId);
+    const matched = result.cards.find(
+      card => card.kind === 'development' && Number(card.developmentId) === createdDevelopmentId,
+    );
 
     expect(matched).toBeTruthy();
     expect(matched).toMatchObject({
-      id: createdDevelopmentId,
-      name: developmentName,
+      kind: 'development',
+      title: '2 Bed Apartment',
       city: 'Johannesburg',
       suburb: 'Berea',
       province: 'Gauteng',
-      status: 'selling',
-      isFeatured: false,
-      description,
-      highlights,
-      builderName,
+      price: 1200000,
+      description: 'Card-flow test unit type',
+      listingType: 'sale',
+      listingSource: 'development',
+      transactionType: 'for_sale',
+      contactRole: 'developer',
+      developmentId: createdDevelopmentId,
+      unitTypeId: expect.any(String),
+      development: {
+        id: createdDevelopmentId,
+        name: developmentName,
+        status: 'selling',
+      },
+      developerBrand: {
+        brandName: builderName,
+      },
+      identity: {
+        role: 'developer',
+        provenance: 'developer',
+        name: builderName,
+      },
     });
 
-    expect(Array.isArray(matched.images)).toBe(true);
-    expect(matched.images.length).toBeGreaterThan(0);
-    expect(Array.isArray(matched.configurations)).toBe(true);
-    expect(matched.configurations.length).toBeGreaterThan(0);
-    expect(matched.configurations[0]).toMatchObject({
-      label: '2 Bed Apartment',
-      priceFrom: 1200000,
-    });
+    expect(result.sourceCounts).toMatchObject({ manual: 0 });
+    expect(result.sourceCounts.development).toBeGreaterThanOrEqual(1);
+    expect(matched?.images).toEqual([
+      expect.objectContaining({
+        url: 'https://placehold.co/600x400/e2e8f0/64748b?text=Card+Flow',
+      }),
+    ]);
+    expect(matched?.image).toBe('https://placehold.co/600x400/e2e8f0/64748b?text=Card+Flow');
+    expect(matched?.highlights).toEqual([
+      '24 Hour Security',
+      'Prime Location',
+      'Lifestyle Amenities',
+    ]);
+    expect(matched?.highlights.some(label => /[{}[\]":]/.test(label))).toBe(false);
   });
 
   it('blocks publishing when description is empty', async () => {

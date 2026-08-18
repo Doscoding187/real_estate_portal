@@ -989,7 +989,7 @@ export class SavedSearchNotificationEngine {
     const { listingSource } = normalizeSavedSearchCriteria(search.criteria);
     const title = getSavedSearchTitle(search.name, listingSource, evaluation.newMatchCount);
     const content = getSavedSearchContent(listingSource, evaluation);
-    const actionUrl = evaluation.matches[0]?.href || '/properties';
+    const actionUrl = evaluation.matches[0]?.href || '/property-for-sale';
 
     return {
       savedSearchId: search.id,

@@ -20,10 +20,40 @@ function makeRow(overrides: Partial<LeadRoutingAuditRow> = {}): LeadRoutingAudit
     source: 'property_detail',
     brandLeadStatus: null,
     leadDeliveryMethod: null,
+    deliveryStatus: null,
+    deliveryAttempts: [],
     propertyOwnerId: null,
     propertyOwnerRole: null,
     ...overrides,
   };
+}
+
+function deliveryEvidence(input: {
+  recipientType: 'agent' | 'agency' | 'developer' | 'manual';
+  recipientId: number | null;
+  leadCustody: 'verified_customer_recipient' | 'platform_managed';
+  status?: 'delivered' | 'attention_required';
+}) {
+  const status = input.status ?? 'delivered';
+  return [
+    {
+      id: `attempt-${input.recipientType}`,
+      deliveryKey: `test:${input.recipientType}:${input.recipientId ?? 'manual'}`,
+      recipientType: input.recipientType,
+      recipientId: input.recipientId,
+      channel: input.recipientType === 'manual' ? 'manual' : 'crm_export',
+      status,
+      attemptCount: 1,
+      maxAttempts: 3,
+      attemptedAt: '2026-03-25 08:00:00',
+      deliveredAt: status === 'delivered' ? '2026-03-25 08:00:00' : null,
+      createdAt: '2026-03-25 08:00:00',
+      updatedAt: '2026-03-25 08:00:00',
+      supplyOrigin:
+        input.leadCustody === 'platform_managed' ? 'platform_curated' : 'customer_managed',
+      leadCustody: input.leadCustody,
+    },
+  ];
 }
 
 describe('leadRoutingAuditService', () => {
@@ -49,18 +79,35 @@ describe('leadRoutingAuditService', () => {
           id: 1,
           cataloguePublisherId: 99,
           leadDeliveryMethod: 'crm_export',
-          agentId: 6,
+          deliveryStatus: 'delivered',
+          deliveryAttempts: deliveryEvidence({
+            recipientType: 'developer',
+            recipientId: 6,
+            leadCustody: 'verified_customer_recipient',
+          }),
         }),
         makeRow({
           id: 2,
           agentId: 15,
           leadSource: 'search_results',
+          deliveryStatus: 'delivered',
+          deliveryAttempts: deliveryEvidence({
+            recipientType: 'agent',
+            recipientId: 15,
+            leadCustody: 'verified_customer_recipient',
+          }),
         }),
         makeRow({
           id: 3,
           propertyId: 70,
-          propertyOwnerRole: 'visitor',
           leadSource: 'property_detail',
+          deliveryStatus: 'attention_required',
+          deliveryAttempts: deliveryEvidence({
+            recipientType: 'manual',
+            recipientId: null,
+            leadCustody: 'platform_managed',
+            status: 'attention_required',
+          }),
         }),
         makeRow({
           id: 4,
@@ -83,9 +130,9 @@ describe('leadRoutingAuditService', () => {
       directRoute: 3,
       brandDeliveredSubscriber: 1,
       brandCapturedOnly: 1,
-      brandWithAgentContext: 1,
+      brandWithAgentContext: 0,
       directToAgent: 1,
-      directToPrivate: 1,
+      platformCustody: 1,
       directContextOnly: 1,
       unknownRoute: 0,
     });
@@ -95,6 +142,10 @@ describe('leadRoutingAuditService', () => {
     });
     expect(audit.attentionLeads).toEqual([
       expect.objectContaining({
+        id: 3,
+        issue: 'platform_custody_review',
+      }),
+      expect.objectContaining({
         id: 4,
         issue: 'direct_context_without_owner',
       }),
@@ -103,5 +154,46 @@ describe('leadRoutingAuditService', () => {
         issue: 'brand_capture_only',
       }),
     ]);
+  });
+
+  it('treats an unroutable public property lead as platform custody review', () => {
+    expect(
+      classifyLeadRouting(
+        makeRow({
+          propertyId: 77,
+          deliveryStatus: 'attention_required',
+          deliveryAttempts: deliveryEvidence({
+            recipientType: 'manual',
+            recipientId: null,
+            leadCustody: 'platform_managed',
+            status: 'attention_required',
+          }),
+        }),
+      ),
+    ).toMatchObject({
+      routeType: 'direct',
+      recipientType: 'platform',
+      issue: 'platform_custody_review',
+    });
+  });
+
+  it('does not treat a recipient ID without matching delivery evidence as custody', () => {
+    expect(
+      classifyLeadRouting(
+        makeRow({
+          propertyId: 77,
+          agentId: 900,
+          deliveryStatus: 'delivered',
+          deliveryAttempts: deliveryEvidence({
+            recipientType: 'agency',
+            recipientId: 44,
+            leadCustody: 'verified_customer_recipient',
+          }),
+        }),
+      ),
+    ).toMatchObject({
+      recipientType: 'context_only',
+      issue: 'recipient_evidence_missing',
+    });
   });
 });

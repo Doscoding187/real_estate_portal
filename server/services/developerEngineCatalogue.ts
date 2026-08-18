@@ -42,6 +42,8 @@ export type CanonicalDevelopmentCatalogue = {
   commercialAccess?: boolean;
   /** Optional SQL aggregate used when a consumer does not need full unit rows. */
   activeUnitTypeCount?: number;
+  /** At least one active member must be able to operate first-party lead custody. */
+  activeOperatorCount?: number;
   /** S2 defense-in-depth flag for an active curated-source supersession. */
   activeSupersessionSource?: boolean;
 };

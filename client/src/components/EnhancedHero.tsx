@@ -37,6 +37,7 @@ import {
   buildPropertySearchUrl,
   BUY_PROPERTY_TYPE_OPTIONS,
   getPriceRangeError,
+  resolveCanonicalLocationSelection,
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import { LocationAutosuggest } from './LocationAutosuggest';
@@ -94,9 +95,9 @@ const INTENT_HELPER_COPY: Record<string, string> = {
 };
 
 const TRUST_ITEMS = [
-  { label: 'Verified Listings', icon: ShieldCheck },
+  { label: 'Published properties', icon: ShieldCheck },
   { label: 'New Developments', icon: Building2 },
-  { label: 'Local Insights', icon: Map },
+  { label: 'Location search', icon: Map },
   { label: 'Agent Tools', icon: Users },
 ] as const;
 
@@ -156,6 +157,37 @@ export function EnhancedHero({
       ? buildLocationDiscoveryPath(selectedLocations[0])
       : undefined;
   const [showIntentResolver, setShowIntentResolver] = useState(false);
+  const [locationSelectionNotice, setLocationSelectionNotice] = useState<string | null>(null);
+
+  const selectCanonicalLocation = (location: LocationNode) => {
+    const resolution = resolveCanonicalLocationSelection(selectedLocations, location, 5);
+
+    setSearchQuery('');
+    setSelectedSearchArea(null);
+    setSelectedLocations(resolution.locations);
+    setShowIntentResolver(false);
+
+    if (resolution.outcome === 'replaced-incompatible') {
+      setLocationSelectionNotice(
+        `${location.name} replaces the previous area. Multi-area search combines sibling locations at the same level.`,
+      );
+      return;
+    }
+
+    if (resolution.outcome === 'invalid') {
+      setLocationSelectionNotice(
+        'Choose a Property Listify city, suburb, or province suggestion to search.',
+      );
+      return;
+    }
+
+    if (resolution.outcome === 'limit-reached') {
+      setLocationSelectionNotice('You can search up to five areas together.');
+      return;
+    }
+
+    setLocationSelectionNotice(null);
+  };
 
   useEffect(() => {
     const previousJourney = previousJourneyRef.current;
@@ -581,6 +613,7 @@ export function EnhancedHero({
                       inputAriaDescribedBy="homepage-journey-selection-prompt"
                       selectedLocations={selectedLocations}
                       onRemove={index => {
+                        setLocationSelectionNotice(null);
                         if (hasSelectedSearchArea) {
                           setSelectedSearchArea(null);
                           setSelectedLocations([]);
@@ -592,24 +625,7 @@ export function EnhancedHero({
                         setSearchQuery(value);
                       }}
                       onSelect={loc => {
-                        setSearchQuery('');
-                        setSelectedSearchArea(null);
-
-                        setSelectedLocations(prev => {
-                          const canonicalLocations = prev.filter(
-                            location => location.type !== 'area',
-                          );
-                          const isSameLocation = (candidate: LocationNode) =>
-                            candidate.id === loc.id ||
-                            (candidate.slug === loc.slug &&
-                              candidate.type === loc.type &&
-                              candidate.provinceSlug === loc.provinceSlug &&
-                              candidate.citySlug === loc.citySlug);
-
-                          if (canonicalLocations.some(isSameLocation)) return canonicalLocations;
-
-                          return [...canonicalLocations, loc];
-                        });
+                        selectCanonicalLocation(loc);
                       }}
                       onSubmit={handleSearch}
                       maxLocations={5}
@@ -625,6 +641,7 @@ export function EnhancedHero({
 
                           setSearchQuery('');
                           setSelectedSearchArea(suggestion);
+                          setLocationSelectionNotice(null);
                           setSelectedLocations([
                             {
                               id: suggestion.searchAreaId,
@@ -665,24 +682,7 @@ export function EnhancedHero({
                           provinceSlug: suggestion.provinceSlug,
                           citySlug: suggestion.citySlug,
                         };
-
-                        setSearchQuery('');
-                        setSelectedSearchArea(null);
-                        setSelectedLocations(prev => {
-                          const canonicalLocations = prev.filter(
-                            location => location.type !== 'area',
-                          );
-                          if (
-                            canonicalLocations.some(
-                              candidate =>
-                                candidate.canonicalLocationId === location.canonicalLocationId ||
-                                candidate.factualLocationId === location.factualLocationId,
-                            )
-                          ) {
-                            return canonicalLocations;
-                          }
-                          return [...canonicalLocations, location];
-                        });
+                        selectCanonicalLocation(location);
                       }}
                       onDiscoveryNavigate={(path: string) => {
                         setLocation(path);
@@ -726,6 +726,12 @@ export function EnhancedHero({
                   </Button>
                 </form>
 
+                {locationSelectionNotice ? (
+                  <p className="mt-2 text-sm text-slate-600" role="status">
+                    {locationSelectionNotice}
+                  </p>
+                ) : null}
+
                 {showIntentResolver && !hasSelectedJourney && canSubmitSearch ? (
                   <section
                     className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4"
@@ -744,10 +750,10 @@ export function EnhancedHero({
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
                         type="button"
-                        disabled={!hasSelectedSearchArea}
                         onClick={() => {
                           handleTabChange('buy');
                           setShowIntentResolver(false);
+                          submitBuySearch();
                         }}
                         aria-describedby={
                           selectedLocations.length > 1 ? 'homepage-location-intent-note' : undefined
@@ -785,8 +791,7 @@ export function EnhancedHero({
                         className="mt-3 text-xs text-slate-600"
                         role="status"
                       >
-                        The current Buy results route supports one canonical area at a time. Your
-                        selected areas remain available while multi-area Buy search is completed.
+                        Search both selected areas together. Results can match either area.
                       </p>
                     ) : null}
                   </section>

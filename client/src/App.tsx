@@ -17,6 +17,7 @@ import '@/styles/keyboard-navigation.css';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
 import { isCanonicalProvinceSlug } from './lib/locationDiscovery';
+import { buildPropertiesCompatibilityRedirect } from './lib/searchNavigation';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
@@ -26,7 +27,6 @@ import { RequireRole } from '@/components/RequireRole';
 const PropertyDetail = lazy(() => import('./pages/PropertyDetail'));
 const Favorites = lazy(() => import('./pages/Favorites'));
 const Agents = lazy(() => import('./pages/Agents'));
-const AgentDetail = lazy(() => import('./pages/AgentDetail'));
 const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
 const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const ProvincePage = lazy(() => import('./pages/ProvincePage'));
@@ -237,8 +237,15 @@ function Router() {
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
           <Route path="/admin/review/:id" component={AdminPropertyReview} />
 
-          {/* Legacy properties route (query params) */}
-          <Route path="/properties" component={SearchResults} />
+          {/* Compatibility edge: preserve inbound query state, then hand off
+              immediately to the canonical Buy transaction root. */}
+          <Route
+            path="/properties"
+            component={() => {
+              window.location.replace(buildPropertiesCompatibilityRedirect(window.location.search));
+              return null;
+            }}
+          />
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
@@ -320,7 +327,7 @@ function Router() {
           <Route path="/agents/:slug" component={AgentMicrosite} />
           <Route path="/a/:slug" component={AgentMicrosite} />
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
-          <Route path="/agent/:id" component={AgentDetail} />
+          <Route path="/agent/:id" component={AgentPublicProfile} />
 
           {/* Route Handlers / Wizards */}
           <Route path="/listings/create" component={ListingWizard} />

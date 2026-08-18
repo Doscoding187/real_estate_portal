@@ -10,6 +10,13 @@ vi.mock('../services/leadRoutingConversionReportService', () => ({
 
 import { appRouter } from '../routers';
 
+const callerFor = (role?: string) =>
+  appRouter.createCaller({
+    req: { headers: {} },
+    res: {},
+    user: role ? { id: 1, role } : null,
+  } as any);
+
 describe('system.leadRoutingConversionReport contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,12 +54,27 @@ describe('system.leadRoutingConversionReport contract', () => {
     });
   });
 
-  it('returns conversion reporting for admins', async () => {
-    const caller = appRouter.createCaller({
-      req: { headers: {} },
-      res: {},
-      user: { id: 1, role: 'super_admin' },
-    } as any);
+  it('rejects anonymous callers before reading global lead conversion data', async () => {
+    await expect(
+      callerFor().system.leadRoutingConversionReport({ days: 30 }),
+    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+
+    expect(mockGetLeadRoutingConversionReport).not.toHaveBeenCalled();
+  });
+
+  it.each(['visitor', 'agent', 'agency_admin', 'property_developer', 'service_provider'])(
+    'rejects %s before reading global lead conversion data',
+    async role => {
+      await expect(
+        callerFor(role).system.leadRoutingConversionReport({ days: 30 }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
+      expect(mockGetLeadRoutingConversionReport).not.toHaveBeenCalled();
+    },
+  );
+
+  it('returns conversion reporting for super admins', async () => {
+    const caller = callerFor('super_admin');
 
     const result = await caller.system.leadRoutingConversionReport({ days: 30 });
 

@@ -695,9 +695,9 @@ export const superAdminPublisherRouter = router({
     }),
 
   /**
-   * Platform custody queue. This is deliberately super-admin-only: a
-   * platform-curated lead has no customer organization recipient until an
-   * explicit verified relationship exists.
+   * Platform custody queue. This is deliberately super-admin-only: every
+   * public lead marked attention_required without an agent/agency recipient
+   * must have an explicit monitored Property Listify operations destination.
    */
   getPlatformManagedLeads: superAdminProcedure
     .input(
@@ -712,36 +712,62 @@ export const superAdminPublisherRouter = router({
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
       }
 
+      const queueConditions = and(
+        eq(leads.deliveryStatus, 'attention_required'),
+        isNull(leads.agentId),
+        isNull(leads.agencyId),
+        sql`JSON_LENGTH(${leads.deliveryAttempts}) > 0`,
+        sql`JSON_UNQUOTE(JSON_EXTRACT(
+          ${leads.deliveryAttempts},
+          CONCAT('$[', JSON_LENGTH(${leads.deliveryAttempts}) - 1, '].leadCustody')
+        )) = 'platform_managed'`,
+        sql`JSON_UNQUOTE(JSON_EXTRACT(
+          ${leads.deliveryAttempts},
+          CONCAT('$[', JSON_LENGTH(${leads.deliveryAttempts}) - 1, '].recipientType')
+        )) = 'manual'`,
+      );
       const rows = await dbConn
         .select({
-          lead: leads,
-          property: properties,
-          development: developments,
-          brand: cataloguePublishers,
+          id: leads.id,
+          createdAt: leads.createdAt,
+          name: leads.name,
+          email: leads.email,
+          phone: leads.phone,
+          message: leads.message,
+          leadType: leads.leadType,
+          leadSource: leads.leadSource,
+          status: leads.status,
+          propertyId: leads.propertyId,
+          developmentId: leads.developmentId,
+          cataloguePublisherId: leads.cataloguePublisherId,
+          propertyTitle: properties.title,
+          propertyAddress: properties.publicAddress,
+          propertyCity: properties.city,
+          propertyProvince: properties.province,
+          developmentName: developments.name,
+          developmentSlug: developments.slug,
+          publisherName: cataloguePublishers.name,
         })
         .from(leads)
         .leftJoin(properties, eq(leads.propertyId, properties.id))
         .leftJoin(developments, eq(leads.developmentId, developments.id))
         .leftJoin(cataloguePublishers, eq(leads.cataloguePublisherId, cataloguePublishers.id))
-        .where(
-          and(
-            eq(leads.deliveryStatus, 'attention_required'),
-            isNull(leads.agentId),
-            isNull(leads.agencyId),
-            eq(cataloguePublishers.authorityKind, 'platform_reference'),
-            isNull(cataloguePublishers.developerOrganisationId),
-          ),
-        )
+        .where(queueConditions)
         .orderBy(desc(leads.createdAt))
         .limit(input.limit)
         .offset(input.offset);
 
-      return rows.map(row => ({
-        ...row.lead,
-        property: row.property,
-        development: row.development,
-        brand: row.brand,
-      }));
+      const [countRow] = await dbConn
+        .select({ total: sql<number>`count(*)` })
+        .from(leads)
+        .where(queueConditions);
+
+      return {
+        items: rows,
+        total: Number(countRow?.total || 0),
+        limit: input.limit,
+        offset: input.offset,
+      };
     }),
 
   /**

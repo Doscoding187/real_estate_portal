@@ -54,6 +54,46 @@ function createAttemptId(): string {
   return `delivery_${Date.now()}_${random}`;
 }
 
+export function createInitialLeadDeliveryAttempt(input: {
+  deliveryKey: string;
+  recipientType: LeadDeliveryRecipientType;
+  recipientId?: number | null;
+  channel: LeadDeliveryChannel;
+  status: LeadDeliveryStatus;
+  recipientAddress?: string | null;
+  maxAttempts?: number;
+  supplyOrigin?: PublicSupplyOrigin;
+  leadCustody?: PublicLeadCustody;
+  error?: string | null;
+}): LeadDeliveryAttemptRecord {
+  const timestamp = toMySqlDateTime();
+  return {
+    id: createAttemptId(),
+    deliveryKey: input.deliveryKey,
+    recipientType: input.recipientType,
+    recipientId: input.recipientId ?? null,
+    channel: input.channel,
+    status: input.status,
+    attemptCount: 1,
+    maxAttempts: input.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+    recipientAddress: input.recipientAddress ?? null,
+    providerReference: null,
+    lastError: input.error ?? null,
+    attemptedAt: input.status === 'pending' ? null : timestamp,
+    deliveredAt: input.status === 'delivered' ? timestamp : null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    supplyOrigin: input.supplyOrigin,
+    leadCustody: input.leadCustody,
+  };
+}
+
+export function leadDeliverySummaryForInitialAttempt(
+  attempt: LeadDeliveryAttemptRecord,
+): Partial<typeof leads.$inferInsert> {
+  return leadDeliverySummaryForAttempts(attempt.status, [attempt]);
+}
+
 export function parseDeliveryAttempts(value: unknown): LeadDeliveryAttemptRecord[] {
   if (!Array.isArray(value)) return [];
 
@@ -69,7 +109,7 @@ export function parseDeliveryAttempts(value: unknown): LeadDeliveryAttemptRecord
   });
 }
 
-function summaryPatch(
+export function leadDeliverySummaryForAttempts(
   status: LeadDeliveryStatus,
   attempts: LeadDeliveryAttemptRecord[],
 ): Partial<typeof leads.$inferInsert> {
@@ -131,31 +171,12 @@ export async function recordInitialLeadDeliveryAttempt(input: {
       .find(attempt => attempt.deliveryKey === input.deliveryKey);
     if (existing) return existing;
 
-    const timestamp = toMySqlDateTime();
-    const attempt: LeadDeliveryAttemptRecord = {
-      id: createAttemptId(),
-      deliveryKey: input.deliveryKey,
-      recipientType: input.recipientType,
-      recipientId: input.recipientId ?? null,
-      channel: input.channel,
-      status: input.status,
-      attemptCount: 1,
-      maxAttempts: input.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
-      recipientAddress: input.recipientAddress ?? null,
-      providerReference: null,
-      lastError: input.error ?? null,
-      attemptedAt: input.status === 'pending' ? null : timestamp,
-      deliveredAt: input.status === 'delivered' ? timestamp : null,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      supplyOrigin: input.supplyOrigin,
-      leadCustody: input.leadCustody,
-    };
+    const attempt = createInitialLeadDeliveryAttempt(input);
 
     const nextAttempts = [...attempts, attempt];
     await tx
       .update(leads)
-      .set(summaryPatch(input.status, nextAttempts))
+      .set(leadDeliverySummaryForAttempts(input.status, nextAttempts))
       .where(eq(leads.id, input.leadId));
 
     return attempt;
@@ -196,7 +217,7 @@ export async function claimLeadDeliveryAttempt(input: {
 
     await tx
       .update(leads)
-      .set(summaryPatch('pending', attempts))
+      .set(leadDeliverySummaryForAttempts('pending', attempts))
       .where(eq(leads.id, input.leadId));
 
     return claimed;
@@ -241,7 +262,7 @@ export async function updateLeadDeliveryAttempt(input: {
     const latestStatus = attempts[attempts.length - 1]?.status || input.status;
     await tx
       .update(leads)
-      .set(summaryPatch(latestStatus, attempts))
+      .set(leadDeliverySummaryForAttempts(latestStatus, attempts))
       .where(eq(leads.id, input.leadId));
 
     return next;
@@ -302,7 +323,7 @@ export async function appendLeadDeliveryRetryAttempt(input: {
 
     await tx
       .update(leads)
-      .set(summaryPatch('pending', attempts))
+      .set(leadDeliverySummaryForAttempts('pending', attempts))
       .where(eq(leads.id, input.leadId));
 
     return retry;

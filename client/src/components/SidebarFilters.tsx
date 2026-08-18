@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ interface SidebarFiltersProps {
   listingType?: 'sale' | 'rent';
   showAmenities?: boolean;
   showLocationRefinement?: boolean;
+  showHeader?: boolean;
 }
 
 const AMENITIES = [
@@ -91,8 +92,10 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
 
 const inferPropertyTypeCategory = (value?: string): PropertyTypeCategory => {
   if (!value) return 'residential';
-  if (PROPERTY_TYPE_CATEGORIES.commercial.includes(value as any)) return 'commercial';
-  if (PROPERTY_TYPE_CATEGORIES.land.includes(value as any)) return 'land';
+  if ((PROPERTY_TYPE_CATEGORIES.commercial as readonly string[]).includes(value)) {
+    return 'commercial';
+  }
+  if ((PROPERTY_TYPE_CATEGORIES.land as readonly string[]).includes(value)) return 'land';
   return 'residential';
 };
 
@@ -113,6 +116,7 @@ export function SidebarFilters({
   listingType,
   showAmenities = true,
   showLocationRefinement = true,
+  showHeader = true,
 }: SidebarFiltersProps) {
   const isRentalJourney = listingType === 'rent';
   const listingSourceOptions = LISTING_SOURCE_OPTIONS.map(option =>
@@ -121,12 +125,10 @@ export function SidebarFilters({
   const isAllowedPropertyType = (value: string) =>
     !allowedPropertyTypes || allowedPropertyTypes.includes(value);
 
-  const selectedSuburbs = Array.isArray(filters.suburb)
-    ? filters.suburb
-    : filters.suburb
-      ? [filters.suburb]
-      : [];
-  const selectedSuburbsKey = selectedSuburbs.join('|');
+  const selectedSuburbs = useMemo(
+    () => (Array.isArray(filters.suburb) ? filters.suburb : filters.suburb ? [filters.suburb] : []),
+    [filters.suburb],
+  );
   const selectedPropertyType =
     typeof filters.propertyType === 'string' ? filters.propertyType : undefined;
 
@@ -152,7 +154,7 @@ export function SidebarFilters({
 
   useEffect(() => {
     setPendingSuburbs(selectedSuburbs);
-  }, [selectedSuburbsKey]);
+  }, [selectedSuburbs]);
 
   useEffect(() => {
     setPendingPropertyType(selectedPropertyType);
@@ -177,7 +179,7 @@ export function SidebarFilters({
 
   const handleBedroomChange = (beds: number) => {
     if (filters.minBedrooms === beds) {
-      const { minBedrooms, ...rest } = filters;
+      const { minBedrooms: _minBedrooms, ...rest } = filters;
       onFilterChange(rest);
     } else {
       onFilterChange({ ...filters, minBedrooms: beds });
@@ -186,7 +188,7 @@ export function SidebarFilters({
 
   const handleBathroomChange = (bathrooms: number) => {
     if (filters.minBathrooms === bathrooms) {
-      const { minBathrooms, ...rest } = filters;
+      const { minBathrooms: _minBathrooms, ...rest } = filters;
       onFilterChange(rest);
     } else {
       onFilterChange({ ...filters, minBathrooms: bathrooms });
@@ -195,7 +197,7 @@ export function SidebarFilters({
 
   const handleListingSourceChange = (source: SearchFilters['listingSource'] | undefined) => {
     if (!source || filters.listingSource === source) {
-      const { listingSource, ...rest } = filters;
+      const { listingSource: _listingSource, ...rest } = filters;
       onFilterChange(rest);
       return;
     }
@@ -234,16 +236,16 @@ export function SidebarFilters({
   const handleApplySuburbs = () => {
     onFilterChange({
       ...filters,
-      suburb: pendingSuburbs.length > 0 ? (pendingSuburbs as any) : undefined,
-    });
+      suburb: pendingSuburbs.length > 0 ? pendingSuburbs : undefined,
+    } as unknown as SearchFilters);
   };
 
   const handleApplyPropertyType = () => {
     if (pendingPropertyType) {
-      onFilterChange({ ...filters, propertyType: pendingPropertyType as any });
+      onFilterChange({ ...filters, propertyType: pendingPropertyType });
       return;
     }
-    const { propertyType, ...rest } = filters;
+    const { propertyType: _propertyType, ...rest } = filters;
     onFilterChange(rest);
   };
 
@@ -271,14 +273,14 @@ export function SidebarFilters({
             .split('_')
             .map(part => part.charAt(0).toUpperCase() + part.slice(1))
             .join(' '),
-        count: Number(count) || 0,
+        count: Number.isFinite(Number(count)) ? Number(count) : undefined,
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
 
     const seeded = [...fromCounts];
     FALLBACK_PROPERTY_TYPES.forEach(type => {
       if (seeded.some(option => option.value === type.value)) return;
-      seeded.push({ ...type, count: 0 });
+      seeded.push({ ...type, count: undefined });
     });
 
     return seeded.filter(option => isAllowedPropertyType(option.value)).slice(0, 10);
@@ -293,7 +295,7 @@ export function SidebarFilters({
       return {
         value,
         label: PROPERTY_TYPE_LABELS[value] || value,
-        count: 0,
+        count: undefined,
       };
     });
 
@@ -326,24 +328,26 @@ export function SidebarFilters({
 
   return (
     <div className="w-full bg-white rounded-lg border border-slate-200 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-lg text-slate-800">Filters</h3>
-        <div className="flex gap-2">
-          {onSaveSearch && (
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveSearch}>
-              Save
+      {showHeader && (
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-800">Filters</h3>
+          <div className="flex gap-2">
+            {onSaveSearch && (
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={onSaveSearch}>
+                Save
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-0 text-xs font-medium text-blue-600 hover:text-blue-800"
+              onClick={() => onFilterChange({})}
+            >
+              Reset all
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-blue-600 hover:text-blue-800 h-auto p-0 text-xs font-medium"
-            onClick={() => onFilterChange({})}
-          >
-            Reset all
-          </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Accordion
         type="multiple"
@@ -392,11 +396,20 @@ export function SidebarFilters({
           <AccordionContent>
             <div className="px-1 pt-1 pb-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-2xl font-bold text-slate-900">
-                  {formatBudgetCompact(priceRange[0])}
+                <p
+                  className="text-sm font-semibold text-slate-700"
+                  aria-label={`Minimum budget ${formatBudgetCompact(priceRange[0])}`}
+                >
+                  From{' '}
+                  <span className="text-lg font-bold text-slate-900">
+                    {formatBudgetCompact(priceRange[0])}
+                  </span>
                 </p>
-                <span className="rounded bg-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white">
-                  {formatBudgetCompact(priceRange[1])}+
+                <span
+                  className="rounded bg-orange-500 px-2 py-1 text-[10px] font-semibold text-white"
+                  aria-label={`Maximum budget ${formatBudgetCompact(priceRange[1])}`}
+                >
+                  Up to {formatBudgetCompact(priceRange[1])}
                 </span>
               </div>
               <Slider
@@ -542,9 +555,11 @@ export function SidebarFilters({
                           {type.label}
                         </span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        ({type.count.toLocaleString()})
-                      </span>
+                      {typeof type.count === 'number' && (
+                        <span className="text-[11px] font-semibold text-slate-500">
+                          ({type.count.toLocaleString()})
+                        </span>
+                      )}
                     </label>
                   );
                 })}

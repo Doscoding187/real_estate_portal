@@ -23,6 +23,7 @@ import {
   isExplicitRentListing,
   withRentalPeriod,
 } from '@/lib/rentPresentation';
+import type { SearchCardIdentity } from '@shared/types';
 
 interface ImageUrls {
   thumbnail: string;
@@ -74,7 +75,7 @@ export interface PropertyCardProps {
   propertyType?: string;
   listingType?: string;
   listingSource?: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   status?: string;
   floor?: string;
   transactionType?: string;
@@ -86,6 +87,7 @@ export interface PropertyCardProps {
   compareDisabled?: boolean;
   contactButtonLabel?: string;
   onOpen?: () => void;
+  identity?: SearchCardIdentity;
   agent?: AgentInfo;
   developerBrand?: DeveloperBrandInfo; // Public publisher display projection when present
   development?: DevelopmentInfo;
@@ -115,9 +117,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   listingType,
   listingSource,
   listerType,
-  status = 'Ready to Move',
+  status,
   floor,
-  transactionType = 'New Booking',
+  transactionType,
   propertyId,
   onFavoriteClick,
   isSaved = false,
@@ -126,12 +128,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   compareDisabled = false,
   contactButtonLabel,
   onOpen,
+  identity,
   agent,
   developerBrand,
   development,
   badges,
-  imageCount = 15,
-  videoCount = 2,
+  imageCount = 0,
+  videoCount = 0,
   hasFloorplan = false,
   hasVirtualTour = false,
   hasPublicDocuments = false,
@@ -149,10 +152,20 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           ? 'development'
           : 'manual';
   const resolvedListerType =
-    listerType ||
-    (agent ? 'agent' : resolvedListingSource === 'development' ? undefined : 'private');
+    (identity
+      ? identity.role === 'private'
+        ? 'private'
+        : identity.role === 'platform'
+          ? 'platform'
+          : identity.role === 'agency'
+            ? 'agency'
+            : identity.role === 'agent'
+              ? 'agent'
+              : undefined
+      : listerType) || (agent ? 'agent' : undefined);
   const isDevelopmentListing = resolvedListingSource === 'development';
   const isPrivateListing = resolvedListingSource === 'manual' && resolvedListerType === 'private';
+  const isPlatformListing = resolvedListingSource === 'manual' && resolvedListerType === 'platform';
   const isRentalListing = isExplicitRentListing(listingType);
   const compareHandler = isRentalListing ? undefined : onCompareClick;
   const privateContactCopy = getPrivateListingContactCopy(listingType);
@@ -171,6 +184,24 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   const developerProfileHref = developerIdentity?.slug
     ? `/developer/${developerIdentity.slug}`
     : developmentHref;
+  const canonicalIdentity = identity
+    ? {
+        name: identity.name,
+        image: identity.organizationLogoUrl || identity.avatarUrl || null,
+        label:
+          identity.role === 'agent'
+            ? 'Listed by agent'
+            : identity.role === 'agency'
+              ? 'Listed by agency'
+              : identity.role === 'developer'
+                ? 'Developer'
+                : identity.role === 'platform'
+                  ? 'Managed through Property Listify'
+                  : isRentalListing
+                    ? 'Private rental listing'
+                    : 'Private listing',
+      }
+    : null;
   const listingHref =
     href ||
     (isDevelopmentListing && (developmentHref || developerProfileHref)
@@ -188,7 +219,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       ? 'Contact Developer'
       : isPrivateListing
         ? privateContactCopy.action
-        : 'Contact Agent');
+        : isPlatformListing
+          ? 'Enquire via Property Listify'
+          : resolvedListerType === 'agency'
+            ? 'Contact Agency'
+            : resolvedListerType === 'agent'
+              ? 'Contact Agent'
+              : 'View details');
   const displayBadges = Array.isArray(badges)
     ? badges.filter(
         badge =>
@@ -429,9 +466,21 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                   <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
                     Private Listing
                   </Badge>
-                ) : (
+                ) : resolvedListerType === 'agency' ? (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                    Listed by Agency
+                  </Badge>
+                ) : isPlatformListing ? (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                    Managed by Property Listify
+                  </Badge>
+                ) : resolvedListerType === 'agent' ? (
                   <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
                     Listed by Agent
+                  </Badge>
+                ) : (
+                  <Badge className="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-100">
+                    Contact details unavailable
                   </Badge>
                 )}
               </div>
@@ -471,7 +520,27 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Footer Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
           <div className="flex items-center gap-3">
-            {isDevelopmentListing ? (
+            {canonicalIdentity ? (
+              <>
+                <div className="h-8 w-8 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                  {canonicalIdentity.image ? (
+                    <img
+                      src={canonicalIdentity.image}
+                      alt={canonicalIdentity.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-slate-200 text-xs font-bold text-slate-600">
+                      {canonicalIdentity.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-900">{canonicalIdentity.name}</div>
+                  <div className="text-[10px] text-slate-500">{canonicalIdentity.label}</div>
+                </div>
+              </>
+            ) : isDevelopmentListing ? (
               <>
                 <div
                   className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200 cursor-pointer"
@@ -529,18 +598,34 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
                   <div className="text-[10px] text-slate-500">Listed by agent</div>
                 </div>
               </>
-            ) : (
+            ) : isPrivateListing || isPlatformListing ? (
               <>
                 <div className="h-8 w-8 rounded-full bg-slate-200 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold">
                   PS
                 </div>
                 <div>
                   <div className="text-xs font-medium text-slate-900">
-                    {privateContactCopy.identity}
+                    {isPlatformListing ? 'Property Listify' : privateContactCopy.identity}
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    {isRentalListing ? 'Private rental listing' : 'Private listing'}
+                    {isPlatformListing
+                      ? 'Managed through Property Listify'
+                      : isRentalListing
+                        ? 'Private rental listing'
+                        : 'Private listing'}
                   </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden border border-slate-200 flex items-center justify-center text-slate-500 text-xs font-bold">
+                  ?
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-900">
+                    Listing contact unavailable
+                  </div>
+                  <div className="text-[10px] text-slate-500">View the property for details</div>
                 </div>
               </>
             )}

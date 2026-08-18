@@ -10,9 +10,9 @@ import {
   locationSearchCache,
   agentCoverageAreas,
 } from '../drizzle/schema';
-import { eq, and, or, like, desc, sql, count, ne, isNull } from 'drizzle-orm';
+import { eq, and, or, like, sql, count, ne, isNull } from 'drizzle-orm';
 import { requireUser } from './_core/requireUser';
-import { encodeCanonicalLocationId } from '../shared/locationAuthority';
+import { encodeCanonicalLocationId, isCanonicalLocationId } from '../shared/locationAuthority';
 import {
   ListingLocationResolutionError,
   resolveCanonicalListingLocation,
@@ -246,19 +246,24 @@ export const locationRouter = router({
   getFeaturedListings: publicProcedure
     .input(
       z.object({
-        limit: z.number().default(6),
-        locationId: z.number().optional(),
-        locationType: z.string().optional(),
+        limit: z.number().int().min(1).max(20).default(10),
+        locationId: z
+          .string()
+          .trim()
+          .refine(isCanonicalLocationId, 'A canonical province, city, or suburb ID is required.'),
       }),
     )
     .query(async ({ input }) => {
-      const { propertySearchService } = await import('./services/propertySearchService');
-      try {
-        return await propertySearchService.searchFeaturedProperties(input.limit);
-      } catch (error) {
-        console.error('Error fetching featured listings:', error);
-        return [];
-      }
+      const { publicSearchService } = await import('./services/publicSearchService');
+      const result = await publicSearchService.searchInventory({
+        locationId: input.locationId,
+        listingType: 'sale',
+        sortOption: 'date_desc',
+        page: 0,
+        pageSize: input.limit,
+      });
+
+      return result.cards;
     }),
 
   /**

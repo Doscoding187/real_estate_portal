@@ -58,10 +58,9 @@ describe('EnhancedNavbar buyer discovery menu', () => {
 
     expect(region.querySelector('.public-navbar__buyer-menu')).toBeInTheDocument();
     expect(region.querySelector('.public-navbar__mega-grid')).toBeNull();
-    expect(within(region).getByRole('link', { name: 'Browse properties for sale' })).toHaveAttribute(
-      'href',
-      '/property-for-sale',
-    );
+    expect(
+      within(region).getByRole('link', { name: 'Browse properties for sale' }),
+    ).toHaveAttribute('href', '/property-for-sale');
     expect(within(region).queryByRole('link', { name: 'New developments' })).not.toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'Plots and land' })).toHaveAttribute(
       'href',
@@ -71,26 +70,30 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/property-for-sale?propertyType=commercial',
     );
-    expect(within(region).getByRole('link', { name: 'Check my buying power' })).toHaveAttribute(
+    expect(within(region).getByRole('link', { name: 'Plan my buying budget' })).toHaveAttribute(
       'href',
-      '/tools/affordability-calculator',
+      '/guides/buying-property',
     );
   });
 
-  it('presents Buyability outcomes as information and keeps shortlist access honest for visitors', async () => {
+  it('presents the buying guide truthfully and keeps shortlist access honest for visitors', async () => {
     const region = await openBuyersMenu();
 
-    const primary = within(region).getByRole('link', { name: 'Check my buying power' });
+    const primary = within(region).getByRole('link', { name: 'Plan my buying budget' });
     expect(primary).toHaveClass('public-navbar__buyer-primary-action');
+    expect(primary).toHaveAttribute('href', '/guides/buying-property');
 
     for (const label of [
-      'Possible price range',
-      'Estimated monthly repayment',
-      'Matching 2-, 3- and 4-bedroom homes',
+      'Income, expenses and deposit factors',
+      'Bond, transfer and ownership costs',
+      'Questions to ask before you enquire',
     ]) {
       const outcome = within(region).getByText(label);
       expect(outcome.closest('a')).toBeNull();
     }
+    expect(
+      within(region).queryByText('Matching 2-, 3- and 4-bedroom homes'),
+    ).not.toBeInTheDocument();
     expect(
       within(region).queryByRole('link', { name: 'Estimate bond repayments' }),
     ).not.toBeInTheDocument();
@@ -111,7 +114,9 @@ describe('EnhancedNavbar buyer discovery menu', () => {
     });
 
     const region = await openBuyersMenu();
-    expect(within(region).queryByRole('link', { name: 'Sign in to continue' })).not.toBeInTheDocument();
+    expect(
+      within(region).queryByRole('link', { name: 'Sign in to continue' }),
+    ).not.toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'Saved properties' })).toHaveAttribute(
       'href',
       '/favorites',
@@ -132,10 +137,9 @@ describe('EnhancedNavbar buyer discovery menu', () => {
 
     const drawer = document.getElementById('main-platform-mobile-menu');
     expect(drawer).not.toBeNull();
-    expect(within(drawer!).getByRole('link', { name: 'Browse properties for sale' })).toHaveAttribute(
-      'href',
-      '/property-for-sale',
-    );
+    expect(
+      within(drawer!).getByRole('link', { name: 'Browse properties for sale' }),
+    ).toHaveAttribute('href', '/property-for-sale');
     expect(within(drawer!).getByRole('link', { name: /Saved properties/ })).toHaveAttribute(
       'href',
       '/favorites',

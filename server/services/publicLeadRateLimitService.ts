@@ -3,16 +3,14 @@ const LEAD_RATE_LIMIT_MAX_PER_WINDOW = 12;
 const leadRateLimitStore = new Map<string, number[]>();
 
 export function getPublicLeadClientIp(ctx: any): string {
-  const forwarded = ctx?.req?.headers?.['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0].trim();
-  }
+  // Express resolves req.ip using its configured trust-proxy policy. Never
+  // interpret x-forwarded-for here: doing so would let an arbitrary public
+  // client choose the rate-limit key when the proxy chain is not trusted.
+  const reqIp = ctx?.req?.ip;
+  if (typeof reqIp === 'string' && reqIp.trim().length > 0) return reqIp.trim();
 
   const socketIp = ctx?.req?.socket?.remoteAddress;
-  if (typeof socketIp === 'string' && socketIp.length > 0) return socketIp;
-
-  const reqIp = ctx?.req?.ip;
-  if (typeof reqIp === 'string' && reqIp.length > 0) return reqIp;
+  if (typeof socketIp === 'string' && socketIp.trim().length > 0) return socketIp.trim();
 
   return 'unknown';
 }

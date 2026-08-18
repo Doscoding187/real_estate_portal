@@ -158,6 +158,7 @@ describe('Search Area public query integration', () => {
         memberCanonicalLocationIds: ['suburb:34', 'suburb:35'],
         memberSuburbIds: [34, 35],
       }),
+      { publicOnly: true },
     );
     expect(mockSearchListings).toHaveBeenCalledWith(
       expect.anything(),
@@ -216,6 +217,7 @@ describe('Search Area public query integration', () => {
         memberCanonicalLocationIds: ['suburb:34'],
         memberSuburbIds: [34],
       }),
+      { publicOnly: true },
     );
   });
 
@@ -232,6 +234,7 @@ describe('Search Area public query integration', () => {
       expect.anything(),
       expect.anything(),
       expect.objectContaining({ memberSuburbIds: [34, 35] }),
+      { publicOnly: true },
     );
   });
 
@@ -327,6 +330,7 @@ describe('Search Area public query integration', () => {
         authorityKey: 'search-area:johannesburg-sandton:v1',
         memberSuburbIds: [34, 35],
       }),
+      { publicOnly: true },
     );
     expect(result).toMatchObject({
       total: 2,

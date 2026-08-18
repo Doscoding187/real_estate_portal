@@ -10,6 +10,7 @@ import { TRPCError } from '@trpc/server';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
 import { publisherLeadService } from './services/publisherLeadService';
 import { capturePublicLead } from './services/publicLeadCaptureService';
+import { PUBLIC_LEAD_INPUT_LIMITS } from './services/publicLeadInputContract';
 import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
@@ -70,24 +71,29 @@ const listPublishersSchema = z
   .optional();
 
 const capturePublisherLeadSchema = z.object({
-  cataloguePublisherId: z.number().int(),
-  developmentId: z.number().int().optional(),
-  propertyId: z.number().int().optional(),
-  unitId: z.string().trim().max(36).optional(),
-  unitName: z.string().trim().max(255).optional(),
+  cataloguePublisherId: z.number().int().positive(),
+  developmentId: z.number().int().positive().optional(),
+  propertyId: z.number().int().positive().optional(),
+  unitId: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitId).trim().optional(),
+  unitName: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.unitName).trim().optional(),
   unitPriceFrom: z.number().nonnegative().optional(),
   unitBedrooms: z.number().int().nonnegative().optional(),
   unitBathrooms: z.number().nonnegative().optional(),
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Valid email is required'),
-  phone: z.string().optional(),
-  message: z.string().optional(),
-  sourceSurface: z.string().optional(),
-  leadSource: z.string().optional(),
-  referrerUrl: z.string().optional(),
-  utmSource: z.string().optional(),
-  utmMedium: z.string().optional(),
-  utmCampaign: z.string().optional(),
+  name: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.name).trim().min(1, 'Name is required'),
+  email: z
+    .string()
+    .max(PUBLIC_LEAD_INPUT_LIMITS.email)
+    .trim()
+    .email('Valid email is required'),
+  phone: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.phone).trim().optional(),
+  message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
+  sourceSurface: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+  leadSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+  referrerUrl: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.referrerUrl).trim().optional(),
+  utmSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+  utmMedium: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+  utmCampaign: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
+  website: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.honeypot).optional(),
   affordabilityData: z
     .object({
       monthlyIncome: z.number().optional(),
@@ -95,14 +101,18 @@ const capturePublisherLeadSchema = z.object({
       monthlyDebts: z.number().optional(),
       availableDeposit: z.number().optional(),
       maxAffordable: z.number().optional(),
-      calculatedAt: z.string().optional(),
+      calculatedAt: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.calculatedAt).optional(),
     })
     .optional(),
-  captureRequestId: z.string().trim().min(8).max(128),
+  captureRequestId: z
+    .string()
+    .max(PUBLIC_LEAD_INPUT_LIMITS.captureRequestId)
+    .trim()
+    .min(PUBLIC_LEAD_INPUT_LIMITS.captureRequestIdMin),
   consent: z.object({
     accepted: z.literal(true),
-    version: z.string().trim().min(1).max(64),
-    source: z.string().trim().max(100).optional(),
+    version: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentVersion).trim().min(1),
+    source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentSource).trim().optional(),
   }),
 });
 
@@ -163,6 +173,16 @@ export const cataloguePublisherRouter = router({
    */
   captureLead: publicProcedure.input(capturePublisherLeadSchema).mutation(async ({ input, ctx }) => {
     try {
+      if (input.website && input.website.trim().length > 0) {
+        return {
+          success: true as const,
+          ignored: true as const,
+          leadId: 0,
+          route: 'brand' as const,
+          message: 'Request received',
+        };
+      }
+
       if (!checkPublicLeadRateLimit(getPublicLeadClientIp(ctx))) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',

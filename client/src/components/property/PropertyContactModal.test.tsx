@@ -1,18 +1,25 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PropertyContactModal } from './PropertyContactModal';
 
 const testState = vi.hoisted(() => ({
-  mutationOptions: null as null | { onSuccess: (result: unknown) => void },
+  mutationOptions: null as null | {
+    onSuccess: (result: unknown) => void;
+    onError: (error: { data?: { code?: string } }) => void;
+  },
   mutate: vi.fn(),
   toastSuccess: vi.fn(),
+  toastError: vi.fn(),
 }));
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     leads: {
       create: {
-        useMutation: (options: { onSuccess: (result: unknown) => void }) => {
+        useMutation: (options: {
+          onSuccess: (result: unknown) => void;
+          onError: (error: { data?: { code?: string } }) => void;
+        }) => {
           testState.mutationOptions = options;
           return { mutate: testState.mutate, isPending: false };
         },
@@ -24,7 +31,7 @@ vi.mock('@/lib/trpc', () => ({
 vi.mock('sonner', () => ({
   toast: {
     success: testState.toastSuccess,
-    error: vi.fn(),
+    error: testState.toastError,
   },
 }));
 
@@ -35,7 +42,7 @@ function renderWhatsAppCapture(summary = 'Qualified for up to R2 000 000') {
       isOpen
       onClose={onClose}
       propertyId={501}
-      propertyTitle="Verified listing"
+      propertyTitle="Agency listing"
       successMessage="Your enquiry was sent to the verified recipient."
       successAction={{
         type: 'whatsapp',
@@ -52,6 +59,11 @@ function publishSuccess(result: unknown) {
   act(() => testState.mutationOptions!.onSuccess(result));
 }
 
+function publishError(code?: string) {
+  expect(testState.mutationOptions).not.toBeNull();
+  act(() => testState.mutationOptions!.onError({ data: { code } }));
+}
+
 describe('PropertyContactModal recipient-action custody', () => {
   beforeAll(() => {
     vi.stubGlobal(
@@ -65,16 +77,19 @@ describe('PropertyContactModal recipient-action custody', () => {
   });
 
   afterAll(() => vi.unstubAllGlobals());
+  afterEach(() => vi.restoreAllMocks());
 
   beforeEach(() => {
     testState.mutationOptions = null;
     testState.mutate.mockReset();
     testState.toastSuccess.mockReset();
+    testState.toastError.mockReset();
     vi.spyOn(window, 'open').mockImplementation(() => null);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   it('opens the direct action only for a verified external recipient', () => {
-    renderWhatsAppCapture();
+    const { onClose } = renderWhatsAppCapture();
 
     publishSuccess({
       deliveryStatus: 'delivered',
@@ -91,6 +106,18 @@ describe('PropertyContactModal recipient-action custody', () => {
     expect(testState.toastSuccess).toHaveBeenCalledWith(
       'Your enquiry was sent to the verified recipient.',
     );
+    expect(screen.getByRole('heading', { name: 'Enquiry received' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Your enquiry was sent to the verified recipient.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open WhatsApp' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('wa.me/27820000000'),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('blocks attention-required recipient actions and reports verification custody truthfully', () => {
@@ -104,6 +131,7 @@ describe('PropertyContactModal recipient-action custody', () => {
     });
 
     expect(window.open).not.toHaveBeenCalled();
+    expect(screen.queryByRole('link', { name: 'Open WhatsApp' })).not.toBeInTheDocument();
     expect(testState.toastSuccess).toHaveBeenCalledWith(
       'Your enquiry was captured by Property Listify. Recipient verification is required before direct contact.',
     );
@@ -171,12 +199,92 @@ describe('PropertyContactModal recipient-action custody', () => {
       target: { value: 'Please share more details.' },
     });
     fireEvent.click(screen.getByRole('checkbox'));
-    fireEvent.submit(screen.getByRole('button', { name: 'Send Inquiry' }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
 
     expect(testState.mutate).toHaveBeenCalledTimes(1);
     const payload = testState.mutate.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(payload).toMatchObject({ propertyId: 502 });
     expect(payload).not.toHaveProperty('agentId');
     expect(payload).not.toHaveProperty('agencyId');
+  });
+
+  it('keeps practical enquiry choices and remains usable in a short viewport', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={503}
+        propertyTitle="Agency-owned listing"
+        agentName="Northside Property Group"
+        agentPhone="+27 82 000 0000"
+        agentEmail="agency@example.com"
+      />,
+    );
+
+    expect(screen.getAllByText('General enquiry').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Make an Offer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Financing Options')).not.toBeInTheDocument();
+    expect(screen.queryByText('+27 82 000 0000')).not.toBeInTheDocument();
+    expect(screen.queryByText('agency@example.com')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveClass('max-h-[calc(100dvh-1rem)]', 'overflow-y-auto');
+  });
+
+  it('presents a viewing as a delivered request rather than a guaranteed appointment or follow-up', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={505}
+        propertyTitle="Garden apartment"
+        agentName="Northside Property Group"
+        intent="viewing_request"
+        successMessage="Your viewing request was delivered. This is not a confirmed appointment; the representative can contact you to arrange a suitable time."
+      />,
+    );
+
+    expect(
+      screen.getByText(/This does not confirm an appointment; if they can accommodate it/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/will follow up/i)).not.toBeInTheDocument();
+
+    publishSuccess({
+      deliveryStatus: 'delivered',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agency',
+      recipientId: 77,
+    });
+
+    expect(screen.getByText(/This is not a confirmed appointment/)).toBeInTheDocument();
+    expect(screen.queryByText(/will follow up/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps entered details and shows a retryable persistence error in the dialog', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={504}
+        propertyTitle="Retry-safe listing"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/Your Name/), {
+      target: { value: 'Prospective Buyer' },
+    });
+    fireEvent.change(screen.getByLabelText(/Email Address/), {
+      target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/Message/), {
+      target: { value: 'Please share more details.' },
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
+    publishError('INTERNAL_SERVER_ERROR');
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'We could not save your enquiry. Your details are still here, so you can try again.',
+    );
+    expect(screen.getByLabelText(/Your Name/)).toHaveValue('Prospective Buyer');
+    expect(screen.getByLabelText(/Message/)).toHaveValue('Please share more details.');
   });
 });

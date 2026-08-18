@@ -10,6 +10,13 @@ vi.mock('../services/leadRoutingAuditService', () => ({
 
 import { appRouter } from '../routers';
 
+const callerFor = (role?: string) =>
+  appRouter.createCaller({
+    req: { headers: {} },
+    res: {},
+    user: role ? { id: 1, role } : null,
+  } as any);
+
 describe('system.leadRoutingAudit contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,7 +33,7 @@ describe('system.leadRoutingAudit contract', () => {
         brandWithAgentContext: 1,
         directToAgent: 4,
         directToAgency: 1,
-        directToPrivate: 1,
+        platformCustody: 1,
         directContextOnly: 1,
         unknownRoute: 0,
       },
@@ -51,12 +58,27 @@ describe('system.leadRoutingAudit contract', () => {
     });
   });
 
-  it('returns lead-routing audit for admins', async () => {
-    const caller = appRouter.createCaller({
-      req: { headers: {} },
-      res: {},
-      user: { id: 1, role: 'super_admin' },
-    } as any);
+  it('rejects anonymous callers before reading global lead routing data', async () => {
+    await expect(
+      callerFor().system.leadRoutingAudit({ days: 30, attentionLimit: 8 }),
+    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+
+    expect(mockGetLeadRoutingAudit).not.toHaveBeenCalled();
+  });
+
+  it.each(['visitor', 'agent', 'agency_admin', 'property_developer', 'service_provider'])(
+    'rejects %s before reading global lead routing data',
+    async role => {
+      await expect(
+        callerFor(role).system.leadRoutingAudit({ days: 30, attentionLimit: 8 }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+
+      expect(mockGetLeadRoutingAudit).not.toHaveBeenCalled();
+    },
+  );
+
+  it('returns lead-routing audit for super admins', async () => {
+    const caller = callerFor('super_admin');
 
     const result = await caller.system.leadRoutingAudit({ days: 30, attentionLimit: 8 });
 

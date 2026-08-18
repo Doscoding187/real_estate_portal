@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getDb } = vi.hoisted(() => ({
+const { getDb, resolvePublicPropertyEligibilities } = vi.hoisted(() => ({
   getDb: vi.fn(),
+  resolvePublicPropertyEligibilities: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({ getDb }));
+vi.mock('../publicPropertyEligibilityService', () => ({ resolvePublicPropertyEligibilities }));
 
 import { locationPagesService } from '../locationPagesService';
 
@@ -34,9 +36,32 @@ function makeDb(results: unknown[]) {
   return { select };
 }
 
+function makeResolution(property: Record<string, unknown>, images: Record<string, unknown>[] = []) {
+  return {
+    authority: 'approved_listing',
+    publicAuthority: 'public_property_eligibility',
+    sourceListingId: 9001,
+    property,
+    images,
+    media: images.map(image => ({ ...image, url: image.imageUrl, mediaType: 'image' })),
+    publicIdentity: {
+      role: 'agency',
+      provenance: 'agency',
+      name: 'Canonical Realty',
+      agencyId: 44,
+    },
+    custody: {
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agency',
+      recipientId: 44,
+    },
+  } as any;
+}
+
 describe('locationPagesService canonical hierarchy', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resolvePublicPropertyEligibilities.mockResolvedValue(new Map());
   });
 
   it('fails closed for an unknown province slug', async () => {
@@ -45,6 +70,74 @@ describe('locationPagesService canonical hierarchy', () => {
 
     await expect(locationPagesService.getProvinceData('not-a-province')).resolves.toBeNull();
     expect(db.select).toHaveBeenCalledTimes(1);
+  });
+
+  it('ranks popular cities using canonical eligible property IDs only', async () => {
+    resolvePublicPropertyEligibilities.mockResolvedValueOnce(
+      new Map([
+        [
+          501,
+          makeResolution({
+            id: 501,
+            provinceId: 1,
+            cityId: 12,
+            suburbId: 21,
+            price: 2_500_000,
+            listingType: 'sale',
+            propertyType: 'apartment',
+            featured: 0,
+          }),
+        ],
+      ]),
+    );
+    const db = makeDb([
+      [
+        {
+          id: 12,
+          name: 'Johannesburg',
+          slug: 'johannesburg',
+          provinceName: 'Gauteng',
+          provinceSlug: 'gauteng',
+        },
+        {
+          id: 13,
+          name: 'Pretoria',
+          slug: 'pretoria',
+          provinceName: 'Gauteng',
+          provinceSlug: 'gauteng',
+        },
+      ],
+      [
+        {
+          id: 501,
+          provinceId: 1,
+          cityId: 12,
+          suburbId: 21,
+          price: 2_500_000,
+          listingType: 'sale',
+          propertyType: 'apartment',
+          featured: 0,
+          createdAt: '2026-08-01T00:00:00.000Z',
+        },
+        {
+          id: 502,
+          provinceId: 1,
+          cityId: 13,
+          suburbId: 22,
+          price: 8_000_000,
+          listingType: 'sale',
+          propertyType: 'house',
+          featured: 0,
+          createdAt: '2026-08-02T00:00:00.000Z',
+        },
+      ],
+    ]);
+    getDb.mockResolvedValue(db);
+
+    await expect(locationPagesService.getPopularCities()).resolves.toEqual([
+      expect.objectContaining({ id: 12, listingCount: 1 }),
+    ]);
+    expect(resolvePublicPropertyEligibilities).toHaveBeenCalledWith([501, 502]);
   });
 
   it('fails closed when a city is not under the requested province', async () => {
@@ -90,7 +183,6 @@ describe('locationPagesService canonical hierarchy', () => {
       ],
       [],
       [],
-      [{ totalListings: 0, avgPrice: 0 }],
       [],
     ]);
     getDb.mockResolvedValue(db);
@@ -101,7 +193,7 @@ describe('locationPagesService canonical hierarchy', () => {
 
     expect(result?.city.slug).toBe('johannesburg');
     expect(result?.featuredProperties).toEqual([]);
-    expect(db.select).toHaveBeenCalledTimes(5);
+    expect(db.select).toHaveBeenCalledTimes(4);
   });
 
   it('preserves unavailable locality aggregates instead of converting them to zero', async () => {
@@ -119,6 +211,7 @@ describe('locationPagesService canonical hierarchy', () => {
           longitude: null,
         },
       ],
+      [],
       [
         {
           id: 1,
@@ -132,8 +225,6 @@ describe('locationPagesService canonical hierarchy', () => {
           propertiesForRent: 0,
         },
       ],
-      [],
-      [{ totalListings: 0, avgPrice: 0 }],
       [],
     ]);
     getDb.mockResolvedValue(db);
@@ -152,6 +243,48 @@ describe('locationPagesService canonical hierarchy', () => {
   });
 
   it('projects location-page inventory from public fields only', async () => {
+    resolvePublicPropertyEligibilities.mockResolvedValueOnce(
+      new Map([
+        [
+          501,
+          makeResolution(
+            {
+              id: 501,
+              provinceId: 1,
+              cityId: 12,
+              suburbId: 1,
+              title: 'Canonical approved home',
+              description: 'Buyer-safe facts from the approved source.',
+              price: 2_500_000,
+              listingType: 'sale',
+              propertyType: 'apartment',
+              featured: 1,
+              address: 'Katherine Street, Sandton, Johannesburg',
+              publicAddress: 'Katherine Street, Sandton, Johannesburg',
+              latitude: null,
+              longitude: null,
+              publicLatitude: null,
+              publicLongitude: null,
+              publicLocationPrecision: 'approximate',
+              zipCode: null,
+              sourceListingId: 9001,
+              ownerId: 100,
+              privateAddress: { streetNumber: '12', unitNumber: 'Unit 4' },
+              placeId: 'private-provider-identity',
+            },
+            [
+              {
+                id: 1,
+                propertyId: 501,
+                imageUrl: 'https://cdn.example.com/property.jpg',
+                isPrimary: 1,
+                displayOrder: 0,
+              },
+            ],
+          ),
+        ],
+      ]),
+    );
     const db = makeDb([
       [
         {
@@ -166,26 +299,31 @@ describe('locationPagesService canonical hierarchy', () => {
           longitude: null,
         },
       ],
-      [],
       [
         {
           id: 501,
-          sourceListingId: 9001,
-          address: 'PRIVATE LEGACY ADDRESS',
-          publicAddress: 'Katherine Street, Sandton, Johannesburg',
-          latitude: '-26.1076',
-          longitude: '28.0567',
-          publicLatitude: null,
-          publicLongitude: null,
-          publicLocationPrecision: 'approximate',
-          zipCode: '2196',
-          placeId: 'private-provider-identity',
-          privateAddress: { streetNumber: '12', unitNumber: 'Unit 4' },
-          images: [],
+          provinceId: 1,
+          cityId: 12,
+          suburbId: 1,
+          price: 2_500_000,
+          listingType: 'sale',
+          propertyType: 'apartment',
+          featured: 1,
+          createdAt: '2026-08-01T00:00:00.000Z',
+        },
+        {
+          id: 502,
+          provinceId: 1,
+          cityId: 12,
+          suburbId: 1,
+          price: 9_000_000,
+          listingType: 'sale',
+          propertyType: 'house',
+          featured: 1,
+          createdAt: '2026-08-02T00:00:00.000Z',
         },
       ],
       [],
-      [{ totalListings: 1, avgPrice: 2_500_000 }],
       [],
     ]);
     getDb.mockResolvedValue(db);
@@ -201,9 +339,9 @@ describe('locationPagesService canonical hierarchy', () => {
       publicLatitude: null,
       publicLongitude: null,
       publicLocationPrecision: 'approximate',
-      placeId: null,
       zipCode: null,
     });
+    expect(result?.featuredProperties[0]).not.toHaveProperty('placeId');
     expect(result?.featuredProperties[0]).not.toHaveProperty('privateAddress');
     expect(result?.featuredProperties[0]).not.toHaveProperty('sourceListingId');
     expect(JSON.stringify(result?.featuredProperties[0])).not.toContain('PRIVATE LEGACY ADDRESS');
@@ -211,5 +349,89 @@ describe('locationPagesService canonical hierarchy', () => {
     expect(JSON.stringify(result?.featuredProperties[0])).not.toContain(
       'private-provider-identity',
     );
+    expect(result?.stats).toEqual({ totalListings: 1, avgPrice: 2_500_000 });
+    expect(result?.propertyTypes).toEqual([{ type: 'apartment', count: 1, avgPrice: 2_500_000 }]);
+    expect(resolvePublicPropertyEligibilities).toHaveBeenCalledWith([501, 502]);
+  });
+
+  it('uses canonical eligibility for province totals and locality ranking', async () => {
+    resolvePublicPropertyEligibilities.mockResolvedValueOnce(
+      new Map([
+        [
+          501,
+          makeResolution({
+            id: 501,
+            provinceId: 1,
+            cityId: 12,
+            suburbId: 21,
+            price: 2_500_000,
+            listingType: 'sale',
+            propertyType: 'apartment',
+            featured: 0,
+          }),
+        ],
+      ]),
+    );
+    const db = makeDb([
+      [{ id: 1, name: 'Gauteng', slug: 'gauteng' }],
+      [
+        {
+          id: 501,
+          provinceId: 1,
+          cityId: 12,
+          suburbId: 21,
+          price: 2_500_000,
+          listingType: 'sale',
+          propertyType: 'apartment',
+          featured: 0,
+          createdAt: '2026-08-01T00:00:00.000Z',
+        },
+        {
+          id: 502,
+          provinceId: 1,
+          cityId: 13,
+          suburbId: 22,
+          price: 8_000_000,
+          listingType: 'sale',
+          propertyType: 'house',
+          featured: 0,
+          createdAt: '2026-08-02T00:00:00.000Z',
+        },
+      ],
+      [
+        { id: 12, name: 'Johannesburg', slug: 'johannesburg', isMetro: 1 },
+        { id: 13, name: 'Pretoria', slug: 'pretoria', isMetro: 1 },
+      ],
+      [],
+      [
+        {
+          id: 21,
+          name: 'Sandton',
+          slug: 'sandton',
+          cityName: 'Johannesburg',
+          citySlug: 'johannesburg',
+        },
+        {
+          id: 22,
+          name: 'Hatfield',
+          slug: 'hatfield',
+          cityName: 'Pretoria',
+          citySlug: 'pretoria',
+        },
+      ],
+    ]);
+    getDb.mockResolvedValue(db);
+
+    const result = await locationPagesService.getProvinceData('gauteng');
+
+    expect(result?.stats).toEqual({ totalListings: 1, avgPrice: 2_500_000 });
+    expect(result?.cities).toEqual([
+      expect.objectContaining({ id: 12, listingCount: 1, avgPrice: 2_500_000 }),
+      expect.objectContaining({ id: 13, listingCount: 0, avgPrice: null }),
+    ]);
+    expect(result?.trendingSuburbs).toEqual([
+      expect.objectContaining({ id: 21, listingCount: 1 }),
+      expect.objectContaining({ id: 22, listingCount: 0 }),
+    ]);
   });
 });

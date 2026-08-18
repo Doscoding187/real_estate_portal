@@ -176,6 +176,67 @@ describe('DevelopmentDerivedListingService', () => {
     });
   });
 
+  it('does not leak structured JSON syntax into highlights when unit data is empty', async () => {
+    mockOrderBy.mockResolvedValueOnce([
+      {
+        developmentId: 84,
+        developmentName: 'Structured Feature Development',
+        developmentSlug: 'structured-feature-development',
+        developmentStatus: 'selling',
+        developmentType: 'residential',
+        transactionType: 'for_sale',
+        city: 'Johannesburg',
+        suburb: 'Berea',
+        province: 'Gauteng',
+        developmentHighlights: JSON.stringify([
+          '24-Hour Security',
+          'Prime Location',
+          'Lifestyle Amenities',
+        ]),
+        developmentFeatures: '{}',
+        developmentAmenities: '[]',
+        developmentImages: '[]',
+        developmentCreatedAt: new Date('2026-03-20T10:00:00.000Z'),
+        unitTypeId: 'structured-unit',
+        unitName: 'Structured Unit',
+        unitDescription: 'A unit with structured feature fields.',
+        unitSpecifications: '{}',
+        unitAmenities: JSON.stringify({ standard: [], additional: [] }),
+        unitFeatures: '{}',
+        unitBaseFeatures: JSON.stringify({ standard: [], additional: [] }),
+        unitParkingType: null,
+        unitParkingBays: 0,
+        unitIsFurnished: 0,
+        unitTransferCostsIncluded: 0,
+        structuralType: 'apartment',
+        bedrooms: 2,
+        bathrooms: 2,
+        unitSize: 74,
+        yardSize: 0,
+        priceFrom: '1195000.00',
+        basePriceFrom: '1195000.00',
+        availableUnits: 7,
+        totalUnits: 12,
+        unitBaseMedia: '{}',
+        unitCreatedAt: new Date('2026-03-21T09:00:00.000Z'),
+      },
+    ]);
+
+    const result = await developmentDerivedListingService.searchListings(
+      { listingType: 'sale' },
+      'date_desc',
+      1,
+      20,
+    );
+
+    expect(result.items[0]?.highlights).toEqual([
+      '24 Hour Security',
+      'Prime Location',
+      'Lifestyle Amenities',
+    ]);
+    expect(result.items[0]?.highlights?.some(label => /[{}[\]":]/.test(label))).toBe(false);
+  });
+
   it('uses one canonical sibling boundary for development-derived OR filtering and totals', async () => {
     const result = await developmentDerivedListingService.searchListings(
       { listingType: 'sale' },

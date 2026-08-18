@@ -5,6 +5,7 @@ import {
   developmentSupersessions,
   developments,
   developerOrganisations,
+  developerOrganisationMemberships,
   plans,
   subscriptions,
   unitTypes,
@@ -25,6 +26,7 @@ export type PublicDevelopmentEligibilityReason =
   | 'invalid_publisher_custody'
   | 'missing_active_unit_types'
   | 'missing_launch_access'
+  | 'missing_active_operator'
   | 'active_supersession_source';
 
 export type PublicDevelopmentEligibilityResult = {
@@ -86,6 +88,9 @@ export function evaluatePublicDevelopmentEligibility(
       reasons.push('invalid_publisher_custody');
     }
     if (catalogue.commercialAccess !== true) reasons.push('missing_launch_access');
+    if (Number(catalogue.activeOperatorCount || 0) < 1) {
+      reasons.push('missing_active_operator');
+    }
   } else {
     reasons.push('invalid_publisher_custody');
   }
@@ -125,6 +130,12 @@ export function publicDevelopmentEligibilityConditions(): SQL {
         (p.authority_kind = 'developer_first_party'
           AND p.developer_organisation_id IS NOT NULL
           AND o.status = 'approved'
+          AND EXISTS (
+            SELECT 1
+            FROM ${developerOrganisationMemberships} active_member
+            WHERE active_member.organisation_id = p.developer_organisation_id
+              AND active_member.status = 'active'
+          )
           AND EXISTS (
             SELECT 1
             FROM ${subscriptions} s

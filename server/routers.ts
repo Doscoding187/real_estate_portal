@@ -7,17 +7,6 @@ import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from '../shared/db-enu
 import { systemRouter } from './_core/systemRouter';
 import { protectedProcedure, publicProcedure, router } from './_core/trpc';
 import * as db from './db';
-import { getDb } from './db-connection';
-import {
-  developments,
-  cataloguePublishers,
-  developerOrganisations,
-  agents,
-  agencies,
-  properties,
-  users,
-} from '../drizzle/schema';
-import { and, count, eq, inArray, or } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
@@ -36,7 +25,11 @@ import { requireUser } from './_core/requireUser';
 import { getActiveDistributionIdentityFlags } from './services/distributionIdentityProjection';
 import { validatePublicSearchInput } from '../shared/publicSearchValidation';
 import { PUBLIC_PROPERTY_TYPES } from '../shared/property-taxonomy';
-import { resolveApprovedPublicProperty } from './services/approvedPublicPropertyService';
+import {
+  resolvePublicPropertyEligibilities,
+  resolvePublicPropertyEligibility,
+} from './services/publicPropertyEligibilityService';
+import { toPublicPropertyDetailDto, toPublicPropertyImage } from './services/publicPropertyDto';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -66,188 +59,6 @@ function toAuthMeUser(user: User) {
   };
 }
 
-function parseTextList(value?: string | null) {
-  if (!value) return [];
-  return value
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-function isPublicPropertyStatus(status: unknown): boolean {
-  return status === 'available' || status === 'published';
-}
-
-async function getPropertyContactAgent(
-  drizzleDb: Awaited<ReturnType<typeof getDb>>,
-  {
-    agentId,
-    ownerUserId,
-  }: {
-    agentId?: number;
-    ownerUserId?: number;
-  },
-) {
-  if (!drizzleDb) return null;
-
-  const normalizedAgentId = Number(agentId || 0);
-  const normalizedOwnerUserId = Number(ownerUserId || 0);
-
-  let agentRow: any = null;
-
-  if (Number.isFinite(normalizedAgentId) && normalizedAgentId > 0) {
-    [agentRow] = await drizzleDb
-      .select({
-        id: agents.id,
-        userId: agents.userId,
-        firstName: agents.firstName,
-        lastName: agents.lastName,
-        displayName: agents.displayName,
-        profileImage: agents.profileImage,
-        phone: agents.phone,
-        whatsapp: agents.whatsapp,
-        email: agents.email,
-        agencyId: agencies.id,
-        agencyName: agencies.name,
-        slug: agents.slug,
-        yearsExperience: agents.yearsExperience,
-        areasServed: agents.areasServed,
-        rating: agents.rating,
-        reviewCount: agents.reviewCount,
-        isVerified: agents.isVerified,
-      })
-      .from(agents)
-      .leftJoin(agencies, eq(agents.agencyId, agencies.id))
-      .where(and(eq(agents.id, normalizedAgentId), eq(agents.status, 'approved')))
-      .limit(1);
-  }
-
-  if (!agentRow && Number.isFinite(normalizedOwnerUserId) && normalizedOwnerUserId > 0) {
-    [agentRow] = await drizzleDb
-      .select({
-        id: agents.id,
-        userId: agents.userId,
-        firstName: agents.firstName,
-        lastName: agents.lastName,
-        displayName: agents.displayName,
-        profileImage: agents.profileImage,
-        phone: agents.phone,
-        whatsapp: agents.whatsapp,
-        email: agents.email,
-        agencyId: agencies.id,
-        agencyName: agencies.name,
-        slug: agents.slug,
-        yearsExperience: agents.yearsExperience,
-        areasServed: agents.areasServed,
-        rating: agents.rating,
-        reviewCount: agents.reviewCount,
-        isVerified: agents.isVerified,
-      })
-      .from(agents)
-      .leftJoin(agencies, eq(agents.agencyId, agencies.id))
-      .where(and(eq(agents.userId, normalizedOwnerUserId), eq(agents.status, 'approved')))
-      .limit(1);
-  }
-
-  if (agentRow) {
-    const linkedUserId = Number(agentRow.userId || normalizedOwnerUserId || 0);
-    const [activeListingsResult] = await drizzleDb
-      .select({ count: count() })
-      .from(properties)
-      .where(
-        and(
-          Number.isFinite(linkedUserId) && linkedUserId > 0
-            ? or(eq(properties.agentId, Number(agentRow.id)), eq(properties.ownerId, linkedUserId))!
-            : eq(properties.agentId, Number(agentRow.id)),
-          inArray(properties.status, ['available', 'published'] as const),
-        ),
-      );
-
-    const name =
-      String(agentRow.displayName || '').trim() ||
-      [agentRow.firstName, agentRow.lastName].filter(Boolean).join(' ').trim();
-
-    return {
-      id: String(agentRow.id),
-      name: name || 'Agent',
-      agency: String(agentRow.agencyName || '').trim(),
-      phone: String(agentRow.phone || '').trim(),
-      whatsapp: String(agentRow.whatsapp || '').trim(),
-      email: String(agentRow.email || '').trim(),
-      image: agentRow.profileImage || undefined,
-      agencyId: agentRow.agencyId ? Number(agentRow.agencyId) : undefined,
-      slug: String(agentRow.slug || '').trim() || undefined,
-      yearsExperience:
-        typeof agentRow.yearsExperience === 'number' && agentRow.yearsExperience >= 0
-          ? agentRow.yearsExperience
-          : undefined,
-      areasServed: parseTextList(agentRow.areasServed),
-      rating: typeof agentRow.rating === 'number' ? agentRow.rating : undefined,
-      reviewCount: typeof agentRow.reviewCount === 'number' ? agentRow.reviewCount : undefined,
-      activeListingsCount: Number(activeListingsResult?.count || 0),
-      isVerified: Number(agentRow.isVerified || 0) === 1,
-    };
-  }
-
-  if (!(Number.isFinite(normalizedOwnerUserId) && normalizedOwnerUserId > 0)) {
-    return null;
-  }
-
-  const [userRow] = await drizzleDb
-    .select({
-      id: users.id,
-      name: users.name,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      phone: users.phone,
-      email: users.email,
-      role: users.role,
-      agencyId: agencies.id,
-      agencyName: agencies.name,
-    })
-    .from(users)
-    .leftJoin(agencies, eq(users.agencyId, agencies.id))
-    .where(eq(users.id, normalizedOwnerUserId))
-    .limit(1);
-
-  if (!userRow) return null;
-
-  const role = String(userRow.role || '').trim();
-  const isAgentLikeOwner = ['agent', 'agency_admin'].includes(role);
-  if (!isAgentLikeOwner) return null;
-
-  const [ownerListingsResult] = await drizzleDb
-    .select({ count: count() })
-    .from(properties)
-    .where(
-      and(
-        eq(properties.ownerId, normalizedOwnerUserId),
-        inArray(properties.status, ['available', 'published'] as const),
-      ),
-    );
-
-  const ownerName =
-    String(userRow.name || '').trim() ||
-    [userRow.firstName, userRow.lastName].filter(Boolean).join(' ').trim();
-
-  return {
-    id: `user-${userRow.id}`,
-    name: ownerName || 'Agent',
-    agency: String(userRow.agencyName || '').trim(),
-    phone: String(userRow.phone || '').trim(),
-    whatsapp: String(userRow.phone || '').trim(),
-    email: String(userRow.email || '').trim(),
-    image: undefined,
-    agencyId: userRow.agencyId ? Number(userRow.agencyId) : undefined,
-    slug: undefined,
-    yearsExperience: undefined,
-    areasServed: [],
-    rating: undefined,
-    reviewCount: undefined,
-    activeListingsCount: Number(ownerListingsResult?.count || 0),
-    isVerified: false,
-  };
-}
 import { listingRouter } from './listingRouter';
 import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
@@ -442,97 +253,81 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        const { propertySearchService } = await import('./services/propertySearchService');
+        // Compatibility edge only. First-party callers use
+        // searchPublicInventory; this procedure translates legacy offset
+        // state into that canonical authority and contains no search policy.
+        const listingType =
+          input.listingType === 'sale' || input.listingType === 'rent'
+            ? input.listingType
+            : undefined;
+        if (!listingType) {
+          return {
+            properties: [],
+            cards: [],
+            total: 0,
+            page: 1,
+            pageSize: input.limit,
+            hasMore: false,
+            ...(input.includeDevelopments ? { developments: { items: [], total: 0 } } : {}),
+          };
+        }
 
-        // Map input to PropertyFilters
-        const filters: any = {
-          city: input.city,
+        const { publicSearchService } = await import('./services/publicSearchService');
+        const result = await publicSearchService.searchInventory({
           province: input.province,
-          suburb: input.suburb, // Now supported
-          locations: input.locations, // Multi-location support
-          propertyType: input.propertyType ? [input.propertyType as any] : undefined, // Service expects array
-          listingType: input.listingType as any,
+          city: input.city,
+          suburb: input.suburb,
+          locations: input.locations,
+          propertyType: input.propertyType,
+          listingType,
+          listingSource: input.includeDevelopments ? undefined : 'manual',
           minPrice: input.minPrice,
           maxPrice: input.maxPrice,
           minBedrooms: input.minBedrooms,
           maxBedrooms: input.maxBedrooms,
           minBathrooms: input.minBathrooms,
+          minArea: input.minArea,
+          maxArea: input.maxArea,
           minErfSize: input.minErfSize,
           maxErfSize: input.maxErfSize,
-          minFloorSize: input.minFloorSize ?? input.minArea,
-          maxFloorSize: input.maxFloorSize ?? input.maxArea,
+          minFloorSize: input.minFloorSize,
+          maxFloorSize: input.maxFloorSize,
           minLandSize: input.minLandSize,
           maxLandSize: input.maxLandSize,
-          status: input.status ? [input.status as any] : undefined, // Service expects array
-          amenities: input.amenities, // Note: Service might need update if it processes amenities differently, but looks okay
-          // postedBy handling might differ or need explicit mapping if service supports it
-          bounds:
-            input.minLat && input.maxLat && input.minLng && input.maxLng
-              ? {
-                  south: input.minLat,
-                  north: input.maxLat,
-                  west: input.minLng,
-                  east: input.maxLng,
-                }
-              : undefined,
-        };
-
-        const page = Math.floor(input.offset / input.limit) + 1;
-
-        // Use the service
-        // We defaults/fallbacks are handled inside service or here
-        const propertyResults = await propertySearchService.searchProperties(
-          filters,
-          (input.sortOption as any) || 'date_desc',
-          page,
-          input.limit,
-        );
-
-        if (!input.includeDevelopments) {
-          return propertyResults;
-        }
-
-        const { developmentService } = await import('./services/developmentService');
-        const nearbyDevelopments = await developmentService.listPublicDevelopments({
-          province: input.province,
-          city: input.city,
-          limit: Math.min(input.limit, 6),
+          minLat: input.minLat,
+          maxLat: input.maxLat,
+          minLng: input.minLng,
+          maxLng: input.maxLng,
+          sortOption:
+            input.sortOption === 'suburb_asc' || input.sortOption === 'suburb_desc'
+              ? 'relevance'
+              : input.sortOption,
+          page: Math.floor(input.offset / input.limit),
+          pageSize: input.limit,
         });
-
-        const filteredDevelopments =
-          input.suburb && input.suburb.length > 0
-            ? nearbyDevelopments.filter((dev: any) => {
-                const devSuburb = String(dev.suburb || '').toLowerCase();
-                if (!devSuburb) return false;
-                return input.suburb!.some(suburb => devSuburb.includes(suburb.toLowerCase()));
-              })
-            : nearbyDevelopments;
+        const propertyCards = result.cards.filter(card => card.kind === 'property');
+        const developmentCards = result.cards.filter(card => card.kind === 'development');
 
         return {
-          ...propertyResults,
-          developments: {
-            items: filteredDevelopments.map((dev: any) => ({
-              id: Number(dev.id),
-              name: dev.name,
-              slug: dev.slug || null,
-              description: dev.description || null,
-              city: dev.city,
-              suburb: dev.suburb || null,
-              province: dev.province,
-              priceFrom: dev.priceFrom ?? null,
-              priceTo: dev.priceTo ?? null,
-              status: dev.status ?? null,
-              isFeatured: dev.isFeatured ?? false,
-              rating: dev.rating ?? null,
-              highlights: Array.isArray(dev.highlights) ? dev.highlights : [],
-              builderName: dev.builderName ?? null,
-              builderLogoUrl: dev.builderLogoUrl ?? null,
-              configurations: Array.isArray(dev.configurations) ? dev.configurations : [],
-              images: Array.isArray(dev.images) ? dev.images : [],
-              cataloguePublisherId: dev.cataloguePublisherId ?? null,
-            })),
-            total: filteredDevelopments.length,
-          },
+          properties: propertyCards,
+          cards: propertyCards,
+          total: result.sourceCounts.manual,
+          page: result.page + 1,
+          pageSize: result.pageSize,
+          hasMore: result.hasMore,
+          ...(input.includeDevelopments
+            ? {
+                developments: {
+                  items: developmentCards.map(card => ({
+                    ...card,
+                    id: Number(card.developmentId || card.development?.id || card.id),
+                    name: card.development?.name || card.title,
+                    slug: card.development?.slug || null,
+                  })),
+                  total: result.sourceCounts.development,
+                },
+              }
+            : {}),
         };
       }),
 
@@ -688,17 +483,6 @@ const appRouterConfig = {
         );
       }),
 
-    featured: publicProcedure
-      .input(
-        z.object({
-          limit: z.number().default(6),
-        }),
-      )
-      .query(async ({ input }) => {
-        const { propertySearchService } = await import('./services/propertySearchService');
-        return await propertySearchService.searchFeaturedProperties(input.limit);
-      }),
-
     // Get filter counts for search refinement
     getFilterCounts: publicProcedure
       .input(
@@ -737,7 +521,9 @@ const appRouterConfig = {
           };
 
           if (filters.listingSource === 'manual') {
-            return await propertySearchService.getFilterCounts(normalizedFilters);
+            return await propertySearchService.getFilterCounts(normalizedFilters, {
+              publicOnly: true,
+            });
           }
 
           if (filters.listingSource === 'development') {
@@ -745,7 +531,7 @@ const appRouterConfig = {
           }
 
           const [manualCounts, developmentCounts] = await Promise.all([
-            propertySearchService.getFilterCounts(normalizedFilters),
+            propertySearchService.getFilterCounts(normalizedFilters, { publicOnly: true }),
             developmentDerivedListingService.getFilterCounts(normalizedFilters),
           ]);
 
@@ -813,32 +599,6 @@ const appRouterConfig = {
         }
       }),
 
-    // getAll - Same as search but with city/propertyType filtering
-    getAll: publicProcedure
-      .input(
-        z.object({
-          limit: z.number().default(20),
-          offset: z.number().default(0),
-          city: z.string().optional(),
-          propertyType: z.string().optional(),
-        }),
-      )
-      .query(async ({ input }) => {
-        const { propertySearchService } = await import('./services/propertySearchService');
-        const pageSize = Math.max(1, Math.min(50, Math.floor(input.limit)));
-        const page = Math.floor(Math.max(0, input.offset) / pageSize) + 1;
-        const results = await propertySearchService.searchProperties(
-          {
-            city: input.city,
-            propertyType: input.propertyType ? [input.propertyType as any] : undefined,
-          },
-          'date_desc',
-          page,
-          pageSize,
-        );
-        return results.properties;
-      }),
-
     getById: publicProcedure
       .input(
         z.object({
@@ -846,144 +606,89 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        const approvedPublicProperty = await resolveApprovedPublicProperty(input.id);
-        if (!approvedPublicProperty) {
+        const publicResolution = await resolvePublicPropertyEligibility(input.id);
+        if (!publicResolution) {
           return { property: null, images: [] };
         }
 
         await db.incrementPropertyViews(input.id);
-        const property = approvedPublicProperty.property;
-        const drizzleDb = await getDb();
-
-        let development: any = null;
-        let developerBrand: any = null;
-        let agent: any = null;
-
-        if (drizzleDb) {
-          const resolvedDevelopmentId = Number((property as any).developmentId || 0);
-          const resolvedPublisherIdCandidate = Number(
-            (property as any).cataloguePublisherId || (property as any).cataloguePublisherId || 0,
-          );
-          const resolvedAgentId = Number((property as any).agentId || 0);
-
-          agent = await getPropertyContactAgent(drizzleDb, {
-            agentId: resolvedAgentId,
-            ownerUserId: Number((property as any).ownerId || 0),
-          });
-
-          if (Number.isFinite(resolvedDevelopmentId) && resolvedDevelopmentId > 0) {
-            const [dev] = await drizzleDb
-              .select({
-                id: developments.id,
-                name: developments.name,
-                slug: developments.slug,
-                cataloguePublisherId: developments.cataloguePublisherId,
-                developerName: developerOrganisations.name,
-              })
-              .from(developments)
-              .leftJoin(
-                cataloguePublishers,
-                eq(developments.cataloguePublisherId, cataloguePublishers.id),
-              )
-              .leftJoin(
-                developerOrganisations,
-                eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
-              )
-              .where(eq(developments.id, resolvedDevelopmentId))
-              .limit(1);
-
-            if (dev) {
-              development = {
-                id: Number(dev.id),
-                name: dev.name,
-                slug: dev.slug || null,
-                cataloguePublisherId: dev.cataloguePublisherId ?? null,
-                developerName: dev.developerName ?? null,
-              };
-            }
-
-            const resolvedPublisherId = Number(
-              resolvedPublisherIdCandidate || dev?.cataloguePublisherId || 0,
-            );
-            if (Number.isFinite(resolvedPublisherId) && resolvedPublisherId > 0) {
-              const [brand] = await drizzleDb
-                .select({
-                  id: cataloguePublishers.id,
-                  brandName: cataloguePublishers.name,
-                  slug: cataloguePublishers.slug,
-                  logoUrl: cataloguePublishers.logoUrl,
-                  about: cataloguePublishers.about,
-                  headOfficeLocation: cataloguePublishers.headOfficeLocation,
-                  websiteUrl: cataloguePublishers.websiteUrl,
-                  publicContactEmail: cataloguePublishers.publicContactEmail,
-                  brandTier: cataloguePublishers.brandTier,
-                  propertyFocus: cataloguePublishers.propertyFocus,
-                })
-                .from(cataloguePublishers)
-                .where(eq(cataloguePublishers.id, resolvedPublisherId))
-                .limit(1);
-
-              if (brand) {
-                developerBrand = brand as any;
-              }
-            }
-          } else if (
-            Number.isFinite(resolvedPublisherIdCandidate) &&
-            resolvedPublisherIdCandidate > 0
-          ) {
-            const [brand] = await drizzleDb
-              .select({
-                id: cataloguePublishers.id,
-                brandName: cataloguePublishers.name,
-                slug: cataloguePublishers.slug,
-                logoUrl: cataloguePublishers.logoUrl,
-                about: cataloguePublishers.about,
-                headOfficeLocation: cataloguePublishers.headOfficeLocation,
-                websiteUrl: cataloguePublishers.websiteUrl,
-                publicContactEmail: cataloguePublishers.publicContactEmail,
-                brandTier: cataloguePublishers.brandTier,
-                propertyFocus: cataloguePublishers.propertyFocus,
-              })
-              .from(cataloguePublishers)
-              .where(eq(cataloguePublishers.id, resolvedPublisherIdCandidate))
-              .limit(1);
-
-            if (brand) {
-              developerBrand = brand as any;
-            }
-          }
-        }
-
-        const publicProperty: Record<string, any> = {
-          ...property,
-          listerType: agent?.agency ? 'agency' : agent ? 'agent' : 'private',
-          development: development || undefined,
-          developerBrand: developerBrand || undefined,
-          agent: agent || undefined,
-        };
-
-        return {
-          property: publicProperty,
-          images: approvedPublicProperty.images,
-          media: approvedPublicProperty.media,
-        };
+        return toPublicPropertyDetailDto(publicResolution);
       }),
 
     getPublicByIds: publicProcedure
       .input(z.object({ ids: z.array(z.number().int().positive()).min(1).max(4) }))
       .query(async ({ input }) => {
         const uniqueIds = Array.from(new Set(input.ids));
-        const resolutions = await Promise.all(
-          uniqueIds.map(propertyId => resolveApprovedPublicProperty(propertyId)),
-        );
+        const resolutionMap = await resolvePublicPropertyEligibilities(uniqueIds);
+        const resolutions = uniqueIds.map(propertyId => resolutionMap.get(propertyId) || null);
 
         // Comparison is a Buy decision surface. Keep it on the same approved
         // public projection and explicit sale universe as the public search
         // and detail routes; never fall back to legacy inventory search.
-        return resolutions.filter(
-          (resolution): resolution is NonNullable<typeof resolution> =>
-            resolution !== null && String(resolution.property.listingType).toLowerCase() === 'sale',
-        );
+        return resolutions
+          .filter(
+            (resolution): resolution is NonNullable<typeof resolution> =>
+              resolution !== null &&
+              String(resolution.property.listingType).toLowerCase() === 'sale',
+          )
+          .map(toPublicPropertyDetailDto);
+      }),
+
+    /**
+     * Detail continuation is a constrained view of the canonical public search
+     * authority. The opened property supplies transaction, type and geography;
+     * the browser cannot widen the feed or reconstruct publication rules.
+     */
+    getRelatedPublicInventory: publicProcedure
+      .input(z.object({ propertyId: z.number().int().positive() }))
+      .query(async ({ input }) => {
+        const current = await resolvePublicPropertyEligibility(input.propertyId);
+        if (!current) return [];
+
+        const property = current.property;
+        const listingType = String(property.listingType).toLowerCase();
+        if (listingType !== 'sale' && listingType !== 'rent') return [];
+
+        const positiveId = (value: unknown) => {
+          const id = Number(value || 0);
+          return Number.isSafeInteger(id) && id > 0 ? id : null;
+        };
+        const suburbId = positiveId(property.suburbId);
+        const cityId = positiveId(property.cityId);
+        const provinceId = positiveId(property.provinceId);
+        const locationId = suburbId
+          ? `suburb:${suburbId}`
+          : cityId
+            ? `city:${cityId}`
+            : provinceId
+              ? `province:${provinceId}`
+              : undefined;
+        const propertyType = String(property.propertyType || '');
+
+        const { publicSearchService } = await import('./services/publicSearchService');
+        const result = await publicSearchService.searchInventory({
+          listingType,
+          listingSource: 'manual',
+          ...(locationId
+            ? { locationId }
+            : {
+                province: String(property.province || '') || undefined,
+                city: String(property.city || '') || undefined,
+              }),
+          ...((PUBLIC_PROPERTY_TYPES as readonly string[]).includes(propertyType)
+            ? { propertyType }
+            : {}),
+          sortOption: 'relevance',
+          page: 0,
+          pageSize: 12,
+        });
+
+        return result.cards
+          .filter(
+            card =>
+              card.kind === 'property' && Number(card.propertyId || card.id) !== input.propertyId,
+          )
+          .slice(0, 6);
       }),
 
     getImages: publicProcedure
@@ -993,13 +698,8 @@ const appRouterConfig = {
         }),
       )
       .query(async ({ input }) => {
-        const property = await db.getPropertyById(input.propertyId);
-        if (!property || !isPublicPropertyStatus((property as any).status)) {
-          // Match public detail behavior and avoid using the media endpoint to
-          // enumerate unpublished inventory.
-          return [];
-        }
-        return await db.getPropertyImages(input.propertyId);
+        const publicProperty = await resolvePublicPropertyEligibility(input.propertyId);
+        return publicProperty?.images.map(toPublicPropertyImage) || [];
       }),
 
     // Property Management (CRUD) - Protected

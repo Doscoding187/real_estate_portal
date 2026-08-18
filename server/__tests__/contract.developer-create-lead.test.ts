@@ -1,18 +1,46 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockCapturePublicLead } = vi.hoisted(() => ({
+const { mockCapturePublicLead, mockCheckRateLimit, mockGetClientIp } = vi.hoisted(() => ({
   mockCapturePublicLead: vi.fn(),
+  mockCheckRateLimit: vi.fn(),
+  mockGetClientIp: vi.fn(),
 }));
 
 vi.mock('../services/publicLeadCaptureService', () => ({
   capturePublicLead: mockCapturePublicLead,
 }));
 
+vi.mock('../services/publicLeadRateLimitService', () => ({
+  checkPublicLeadRateLimit: mockCheckRateLimit,
+  getPublicLeadClientIp: mockGetClientIp,
+}));
+
 import { appRouter } from '../routers';
+
+const callerForAnonymous = () =>
+  appRouter.createCaller({
+    req: { headers: {} },
+    res: {},
+    user: null,
+  } as any);
+
+const validLeadInput = () => ({
+  developmentId: 77,
+  name: 'Jane Doe',
+  email: 'jane@example.com',
+  captureRequestId: 'lead-request-developer-contract',
+  consent: {
+    accepted: true as const,
+    version: '2026-08-02',
+    source: 'developer_contract_test',
+  },
+});
 
 describe('developer.createLead contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCheckRateLimit.mockReturnValue(true);
+    mockGetClientIp.mockReturnValue('198.51.100.20');
     mockCapturePublicLead.mockResolvedValue({
       success: true,
       leadId: 101,
@@ -24,11 +52,7 @@ describe('developer.createLead contract', () => {
   });
 
   it('accepts development unit, source, UTM, and affordability context', async () => {
-    const caller = appRouter.createCaller({
-      req: { headers: {} },
-      res: {},
-      user: null,
-    } as any);
+    const caller = callerForAnonymous();
 
     const affordabilityData = {
       monthlyIncome: 65000,
@@ -71,6 +95,8 @@ describe('developer.createLead contract', () => {
       leadId: 101,
       route: 'brand',
     });
+    expect(mockGetClientIp).toHaveBeenCalledOnce();
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('198.51.100.20');
     expect(mockCapturePublicLead).toHaveBeenCalledWith({
       developmentId: 77,
       cataloguePublisherId: 13,
@@ -101,12 +127,66 @@ describe('developer.createLead contract', () => {
     });
   });
 
+  it('silently ignores a honeypot submission before rate limiting or capture', async () => {
+    const result = await callerForAnonymous().developer.createLead({
+      ...validLeadInput(),
+      website: 'https://bot.example.test',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      ignored: true,
+      leadId: 0,
+      route: 'brand',
+      message: 'Request received',
+    });
+    expect(mockGetClientIp).not.toHaveBeenCalled();
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+  });
+
+  it('rejects a rate-limited development enquiry before capture', async () => {
+    mockCheckRateLimit.mockReturnValue(false);
+
+    await expect(callerForAnonymous().developer.createLead(validLeadInput())).rejects.toMatchObject(
+      { code: 'TOO_MANY_REQUESTS' },
+    );
+
+    expect(mockGetClientIp).toHaveBeenCalledOnce();
+    expect(mockCheckRateLimit).toHaveBeenCalledWith('198.51.100.20');
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['name', { name: 'n'.repeat(201) }],
+    ['email', { email: 'e'.repeat(321) }],
+    ['phone', { phone: '1'.repeat(51) }],
+    ['message', { message: 'm'.repeat(5001) }],
+    ['honeypot', { website: 'w'.repeat(201) }],
+    ['unit ID', { unitId: 'u'.repeat(37) }],
+    ['unit name', { unitName: 'u'.repeat(256) }],
+    ['referrer URL', { referrerUrl: 'r'.repeat(2049) }],
+    ['UTM source', { utmSource: 'u'.repeat(101) }],
+    ['UTM medium', { utmMedium: 'u'.repeat(101) }],
+    ['UTM campaign', { utmCampaign: 'u'.repeat(101) }],
+    ['source surface', { sourceSurface: 's'.repeat(101) }],
+    ['lead source', { leadSource: 's'.repeat(101) }],
+    ['affordability timestamp', { affordabilityData: { calculatedAt: 't'.repeat(65) } }],
+  ])('rejects an oversized %s before rate limiting or capture', async (_field, override) => {
+    await expect(
+      callerForAnonymous().developer.createLead({
+        ...validLeadInput(),
+        ...override,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+
+    expect(mockGetClientIp).not.toHaveBeenCalled();
+    expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+  });
+
   it('rejects a development enquiry without consent and an idempotency key', async () => {
-    const caller = appRouter.createCaller({
-      req: { headers: {} },
-      res: {},
-      user: null,
-    } as any);
+    const caller = callerForAnonymous();
 
     await expect(
       caller.developer.createLead({
@@ -119,11 +199,7 @@ describe('developer.createLead contract', () => {
   });
 
   it('passes a rental viewing request through the existing lead custody path', async () => {
-    const caller = appRouter.createCaller({
-      req: { headers: {} },
-      res: {},
-      user: null,
-    } as any);
+    const caller = callerForAnonymous();
 
     await caller.developer.createLead({
       developmentId: 88,

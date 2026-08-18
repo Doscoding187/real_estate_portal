@@ -6,11 +6,13 @@ const {
   mockRecordAgentOsEventForAgentId,
   mockRecordProspectLeadAction,
   mockIncrementLeadCountAsync,
+  mockResolvePublicPropertyEligibility,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
   mockRecordProspectLeadAction: vi.fn(),
   mockIncrementLeadCountAsync: vi.fn(),
+  mockResolvePublicPropertyEligibility: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({
@@ -32,6 +34,10 @@ vi.mock('../cataloguePublisherService', () => ({
   },
 }));
 
+vi.mock('../publicPropertyEligibilityService', () => ({
+  resolvePublicPropertyEligibility: mockResolvePublicPropertyEligibility,
+}));
+
 import { capturePublicLead } from '../publicLeadCaptureService';
 
 type FakeDatabaseOptions = {
@@ -42,7 +48,12 @@ type FakeDatabaseOptions = {
 function makeFakeDatabase(options: FakeDatabaseOptions = {}) {
   const selectResults = [...(options.selectResults || [])];
   const state = { deliveryAttempts: [] as unknown[] };
-  const insertValues = vi.fn().mockResolvedValue([{ insertId: options.insertId || 456 }]);
+  const insertValues = vi.fn().mockImplementation(async (values: any) => {
+    state.deliveryAttempts = Array.isArray(values?.deliveryAttempts)
+      ? values.deliveryAttempts
+      : [];
+    return [{ insertId: options.insertId || 456 }];
+  });
   const updateWhere = vi.fn().mockResolvedValue(undefined);
   const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
 
@@ -167,6 +178,30 @@ describe('publicLeadCaptureService contract', () => {
     mockRecordAgentOsEventForAgentId.mockResolvedValue(undefined);
     mockRecordProspectLeadAction.mockResolvedValue(undefined);
     mockIncrementLeadCountAsync.mockResolvedValue(undefined);
+    mockResolvePublicPropertyEligibility.mockImplementation(async (propertyId: number) =>
+      propertyId === 503 || propertyId === 504
+        ? null
+        : {
+            publicAuthority: 'public_property_eligibility',
+            property: {
+              id: propertyId,
+              developmentId: null,
+              cataloguePublisherId: null,
+            },
+            custody: {
+              supplyOrigin: 'customer_managed',
+              leadCustody: 'verified_customer_recipient',
+              recipientType: 'agent',
+              recipientId: 33,
+              agentId: 33,
+              agencyId: null,
+              developerId: null,
+              leadDeliveryMethod: 'crm_export',
+              brandLeadStatus: null,
+              reason: null,
+            },
+          },
+    );
   });
 
   it('captures platform-curated development demand in platform custody without a fake recipient', async () => {
@@ -182,6 +217,7 @@ describe('publicLeadCaptureService contract', () => {
             transactionType: 'for_sale',
             developmentType: 'residential',
             activeUnitTypeCount: 1,
+            activeOperatorCount: 1,
           },
         ],
         [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
@@ -254,6 +290,7 @@ describe('publicLeadCaptureService contract', () => {
             transactionType: 'for_sale',
             developmentType: 'residential',
             activeUnitTypeCount: 1,
+            activeOperatorCount: 1,
           },
         ],
         [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
@@ -291,6 +328,7 @@ describe('publicLeadCaptureService contract', () => {
             transactionType: 'for_sale',
             developmentType: 'residential',
             activeUnitTypeCount: 1,
+            activeOperatorCount: 1,
           },
         ],
         [{ id: 'unit-1', developmentId: 77, isActive: 1 }],
@@ -393,6 +431,22 @@ describe('publicLeadCaptureService contract', () => {
   });
 
   it('routes an assigned agency agent with both canonical agent and agency attribution', async () => {
+    mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+      publicAuthority: 'public_property_eligibility',
+      property: { id: 505, developmentId: null, cataloguePublisherId: null },
+      custody: {
+        supplyOrigin: 'customer_managed',
+        leadCustody: 'verified_customer_recipient',
+        recipientType: 'agent',
+        recipientId: 33,
+        agentId: 33,
+        agencyId: 44,
+        developerId: null,
+        leadDeliveryMethod: 'crm_export',
+        brandLeadStatus: null,
+        reason: null,
+      },
+    });
     const database = makeFakeDatabase({
       selectResults: [
         [],
@@ -443,6 +497,22 @@ describe('publicLeadCaptureService contract', () => {
   });
 
   it('routes an agency-owned property without an assigned agent to the verified agency', async () => {
+    mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+      publicAuthority: 'public_property_eligibility',
+      property: { id: 502, developmentId: null, cataloguePublisherId: null },
+      custody: {
+        supplyOrigin: 'customer_managed',
+        leadCustody: 'verified_customer_recipient',
+        recipientType: 'agency',
+        recipientId: 44,
+        agentId: null,
+        agencyId: 44,
+        developerId: null,
+        leadDeliveryMethod: 'crm_export',
+        brandLeadStatus: null,
+        reason: null,
+      },
+    });
     const database = makeFakeDatabase({
       selectResults: [
         [],
@@ -492,7 +562,7 @@ describe('publicLeadCaptureService contract', () => {
     );
   });
 
-  it('keeps a public property without a verified agent or agency in platform custody', async () => {
+  it('rejects a projection-only property without a canonical approved source listing', async () => {
     const database = makeFakeDatabase({
       selectResults: [
         [],
@@ -512,24 +582,10 @@ describe('publicLeadCaptureService contract', () => {
     });
     mockGetDb.mockResolvedValue(database);
 
-    const result = await capturePublicLead(baseInput({ propertyId: 503 }));
-
-    expect(result).toMatchObject({
-      success: true,
-      leadId: 903,
-      deliveryStatus: 'attention_required',
-      supplyOrigin: 'platform_curated',
-      leadCustody: 'platform_managed',
-      recipientType: 'manual',
-      recipientId: null,
+    await expect(capturePublicLead(baseInput({ propertyId: 503 }))).rejects.toMatchObject({
+      code: 'NOT_FOUND',
     });
-    expect(database.insertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        propertyId: 503,
-        agentId: null,
-        agencyId: null,
-      }),
-    );
+    expect(database.insertValues).not.toHaveBeenCalled();
   });
 
   it('rejects a non-public property before creating a lead', async () => {
@@ -611,6 +667,22 @@ describe('publicLeadCaptureService contract', () => {
   });
 
   it('keeps a platform-curated property in custody rather than routing to public contact data', async () => {
+    mockResolvePublicPropertyEligibility.mockResolvedValueOnce({
+      publicAuthority: 'public_property_eligibility',
+      property: { id: 501, developmentId: null, cataloguePublisherId: 13 },
+      custody: {
+        supplyOrigin: 'platform_curated',
+        leadCustody: 'platform_managed',
+        recipientType: 'manual',
+        recipientId: null,
+        agentId: null,
+        agencyId: null,
+        developerId: null,
+        leadDeliveryMethod: 'manual',
+        brandLeadStatus: 'captured',
+        reason: 'Explicit Property Listify operations custody.',
+      },
+    });
     const database = makeFakeDatabase({
       selectResults: [
         [],
@@ -621,7 +693,7 @@ describe('publicLeadCaptureService contract', () => {
             developmentId: null,
             cataloguePublisherId: 13,
             agentId: null,
-            sourceListingId: null,
+            sourceListingId: 9001,
             ownerId: null,
           },
         ],
@@ -727,6 +799,72 @@ describe('publicLeadCaptureService contract', () => {
     ).resolves.toMatchObject({ leadId: 812, duplicate: true, deliveryStatus: 'delivered' });
   });
 
+  it('does not turn optional post-capture analytics failure into a lost enquiry', async () => {
+    const database = makeFakeDatabase({
+      selectResults: [
+        [],
+        [
+          {
+            id: 501,
+            status: 'published',
+            developmentId: null,
+            cataloguePublisherId: null,
+            agentId: 33,
+            sourceListingId: 9001,
+            ownerId: 81,
+          },
+        ],
+        [{ id: 33, userId: 70, agencyId: null, status: 'approved' }],
+        [{ id: 70, role: 'agent' }],
+        [],
+      ],
+      insertId: 905,
+    });
+    mockGetDb.mockResolvedValue(database);
+    mockRecordProspectLeadAction.mockRejectedValueOnce(new Error('analytics unavailable'));
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          propertyId: 501,
+          source: 'property_detail',
+          sourceSurface: 'property_detail',
+          leadSource: 'property_detail',
+        }),
+      ),
+    ).resolves.toMatchObject({ leadId: 905, deliveryStatus: 'delivered' });
+    expect(database.state.deliveryAttempts).toHaveLength(1);
+  });
+
+  it('resumes a missing delivery attempt on an idempotent replay', async () => {
+    const replayLead = existingLead({ deliveryAttempts: [], deliveryStatus: 'delivered' });
+    const finalizedReplayLead = existingLead();
+    const database = makeFakeDatabase({
+      selectResults: [
+        [replayLead],
+        [finalizedReplayLead],
+      ],
+    });
+    mockGetDb.mockResolvedValue(database);
+
+    await expect(
+      capturePublicLead(
+        baseInput({
+          propertyId: 501,
+          source: 'property_detail',
+          sourceSurface: 'property_detail',
+          leadSource: 'property_detail',
+        }),
+      ),
+    ).resolves.toMatchObject({ leadId: 812, duplicate: true });
+    expect(database.state.deliveryAttempts).toHaveLength(1);
+    expect(database.state.deliveryAttempts[0]).toMatchObject({
+      status: 'delivered',
+      recipientType: 'agent',
+      recipientId: 33,
+    });
+  });
+
   it('rejects reuse of a capture identity for a different submitted target', async () => {
     const mismatchDb = makeFakeDatabase({ selectResults: [[existingLead()]] });
     mockGetDb.mockResolvedValue(mismatchDb);
@@ -763,6 +901,31 @@ describe('publicLeadCaptureService contract', () => {
     await expect(
       capturePublicLead({ name: 'Jane Doe', email: 'jane@example.com', propertyId: 501 }),
     ).rejects.toBeInstanceOf(TRPCError);
+    expect(mockGetDb).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['name', { name: 'n'.repeat(201) }],
+    ['email', { email: `${'e'.repeat(309)}@example.test` }],
+    ['phone', { phone: '1'.repeat(51) }],
+    ['message', { message: 'm'.repeat(5001) }],
+    ['source', { source: 's'.repeat(101) }],
+    ['lead source', { leadSource: 's'.repeat(101) }],
+    ['source surface', { sourceSurface: 's'.repeat(101) }],
+    ['referrer URL', { referrerUrl: 'r'.repeat(2049) }],
+    ['UTM source', { utmSource: 'u'.repeat(101) }],
+    ['UTM medium', { utmMedium: 'u'.repeat(101) }],
+    ['UTM campaign', { utmCampaign: 'u'.repeat(101) }],
+    ['unit identifier', { unitId: 'u'.repeat(37), developmentId: 77 }],
+    ['unit name', { unitName: 'u'.repeat(256), developmentId: 77 }],
+    ['capture identity', { captureRequestId: 'r'.repeat(129) }],
+    ['consent version', { consent: { ...consent, version: 'v'.repeat(65) } }],
+    ['consent source', { consent: { ...consent, source: 's'.repeat(101) } }],
+    ['affordability timestamp', { affordabilityData: { calculatedAt: 't'.repeat(65) } }],
+  ])('rejects an oversized %s before database access', async (_field, override) => {
+    await expect(capturePublicLead(baseInput({ propertyId: 501, ...override }))).rejects.toMatchObject(
+      { code: 'BAD_REQUEST' },
+    );
     expect(mockGetDb).not.toHaveBeenCalled();
   });
 });

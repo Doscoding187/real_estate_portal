@@ -415,13 +415,13 @@ describe('Property Card Data Flow Integration', () => {
 
     const matched = result.properties.find(p => Number(p.id) === createdPropertyId) as any;
     expect(matched).toBeTruthy();
-    expect(matched.listerType).toBe('private');
+    expect(matched.listerType).toBeUndefined();
     expect(matched.agent).toBeUndefined();
     expect(
       result.cards?.find(card => Number(card.propertyId) === createdPropertyId)?.identity,
     ).toMatchObject({
-      role: 'private',
-      name: 'Private Seller',
+      role: 'agent',
+      name: 'Listing contact unavailable',
       agentId: undefined,
       agencyId: undefined,
     });
