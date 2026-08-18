@@ -84,7 +84,8 @@ describe('Developer Engine S3 curated catalogue contracts', () => {
     expect(finalisation).not.toContain(
       'remain private until an authorised reviewer approves it',
     );
-    expect(publicCatalogue).toContain('dev.builderName || dev.developerName');
+    expect(publicCatalogue).toContain('trpc.properties.searchDevelopments.useQuery');
+    expect(publicCatalogue).toContain('name: development.publisher.name');
   });
 
   it('projects canonical publisher authority and review provenance into public detail', () => {

@@ -133,21 +133,15 @@ export default function DevelopmentQualificationPage() {
   });
 
   const developmentPricing = useMemo(() => {
-    const unitTypes = Array.isArray(dev?.unitTypes) ? dev.unitTypes : [];
-    const prices = unitTypes
-      .flatMap((unit: any) => [Number(unit.basePriceFrom || 0), Number(unit.basePriceTo || 0)])
-      .filter((value: number) => Number.isFinite(value) && value > 0);
-
-    const minPrice =
-      (prices.length > 0 ? Math.min(...prices) : 0) || Number(dev?.priceFrom || 0) || 0;
-    const maxPrice =
-      (prices.length > 0 ? Math.max(...prices) : 0) || Number(dev?.priceTo || 0) || minPrice;
+    const minPrice = dev?.publicFacts?.priceFrom ?? null;
+    const maxPrice = dev?.publicFacts?.priceTo ?? null;
 
     return {
       minPrice,
-      maxPrice: maxPrice > minPrice ? maxPrice : undefined,
+      maxPrice:
+        minPrice !== null && maxPrice !== null && maxPrice > minPrice ? maxPrice : undefined,
     };
-  }, [dev?.priceFrom, dev?.priceTo, dev?.unitTypes]);
+  }, [dev?.publicFacts]);
 
   const selectedUnit = useMemo(() => {
     if (!dev || !initialUnitKey) return null;
@@ -177,7 +171,11 @@ export default function DevelopmentQualificationPage() {
   );
   const maxAffordable = Math.max(affordableLoan + availableDeposit, 0);
   const comfortFloor = Math.max(Math.round(maxAffordable * 0.82), 0);
-  const targetPrice = Math.max(Number(selectedUnit?.basePriceFrom || 0), 0) || developmentPricing.minPrice;
+  const targetPriceValue = selectedUnit
+    ? selectedUnit.publicFacts?.priceFrom ?? null
+    : developmentPricing.minPrice;
+  const targetPrice =
+    typeof targetPriceValue === 'number' && targetPriceValue > 0 ? targetPriceValue : 0;
   const depositGap = Math.max(targetPrice - maxAffordable, 0);
   const estimatedTargetRepayment = calculateMonthlyRepayment(
     Math.max(targetPrice - availableDeposit, 0),
@@ -253,12 +251,21 @@ export default function DevelopmentQualificationPage() {
 
     createLead.mutate({
       developmentId: dev.id,
-      cataloguePublisherId: (dev as any).cataloguePublisherId ?? undefined,
+      cataloguePublisherId: dev.publicFacts.publisher.id,
       unitId: selectedUnit ? toUnitRouteKey(selectedUnit) : undefined,
       unitName: selectedUnit?.name || undefined,
-      unitPriceFrom: selectedUnit?.basePriceFrom != null ? Number(selectedUnit.basePriceFrom) : undefined,
-      unitBedrooms: selectedUnit?.bedrooms != null ? Number(selectedUnit.bedrooms) : undefined,
-      unitBathrooms: selectedUnit?.bathrooms != null ? Number(selectedUnit.bathrooms) : undefined,
+      unitPriceFrom:
+        selectedUnit?.publicFacts?.priceFrom != null
+          ? Number(selectedUnit.publicFacts.priceFrom)
+          : undefined,
+      unitBedrooms:
+        selectedUnit?.publicFacts?.bedrooms != null
+          ? Number(selectedUnit.publicFacts.bedrooms)
+          : undefined,
+      unitBathrooms:
+        selectedUnit?.publicFacts?.bathrooms != null
+          ? Number(selectedUnit.publicFacts.bathrooms)
+          : undefined,
       name: contact.name.trim(),
       email: contact.email.trim(),
       phone: contact.phone.trim(),
@@ -311,9 +318,55 @@ export default function DevelopmentQualificationPage() {
     );
   }
 
-  const priceLabel = developmentPricing.maxPrice
+  if (dev.publicFacts.transactionType === 'for_rent') {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <ListingNavbar />
+        <div className="container mx-auto px-4 pb-16 pt-28">
+          <Card className="mx-auto max-w-2xl border-slate-200">
+            <CardContent className="p-10 text-center">
+              <h1 className="text-2xl font-bold text-slate-900">Affordability is for purchases</h1>
+              <p className="mt-2 text-slate-600">
+                This development is offered to rent. Request rental information or a viewing from
+                the development page instead.
+              </p>
+              <Button className="mt-6" onClick={() => setLocation(`/development/${dev.slug || slug}`)}>
+                Back to development
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (targetPrice === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <ListingNavbar />
+        <div className="container mx-auto px-4 pb-16 pt-28">
+          <Card className="mx-auto max-w-2xl border-slate-200">
+            <CardContent className="p-10 text-center">
+              <h1 className="text-2xl font-bold text-slate-900">Price not available</h1>
+              <p className="mt-2 text-slate-600">
+                The publisher has not supplied a current price for this development or unit. Ask
+                the sales team for the latest pricing before starting an affordability check.
+              </p>
+              <Button className="mt-6" onClick={() => setLocation(`/development/${dev.slug || slug}`)}>
+                Back to development
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const priceLabel = developmentPricing.maxPrice && developmentPricing.minPrice !== null
     ? `${formatPriceCompact(developmentPricing.minPrice)} - ${formatPriceCompact(developmentPricing.maxPrice)}`
-    : formatPriceCompact(developmentPricing.minPrice);
+    : developmentPricing.minPrice !== null
+      ? formatPriceCompact(developmentPricing.minPrice)
+      : 'Price on request';
   const progressValue = step === 1 ? 33 : step === 2 ? 66 : 100;
 
   return (
@@ -759,7 +812,7 @@ export default function DevelopmentQualificationPage() {
                     <p>
                       Developer:{' '}
                       <span className="font-semibold text-slate-900">
-                        {dev.publisher?.name || dev.developer?.name || 'Developer'}
+                        {dev.publicFacts.publisher.name}
                       </span>
                     </p>
                   </div>

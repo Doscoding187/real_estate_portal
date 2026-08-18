@@ -1,4 +1,4 @@
-import { useLocation, useParams } from 'wouter';
+import { useLocation, useParams, useSearch } from 'wouter';
 import { useEffect, useRef, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { ListingNavbar } from '@/components/ListingNavbar';
@@ -79,6 +79,10 @@ import {
   SA_PRIME_RATE,
 } from '@/lib/bond-calculator';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
+import {
+  appendDevelopmentSearchReturn,
+  getDevelopmentSearchReturn,
+} from '@/lib/developmentJourneyContinuity';
 
 type AmenityTabKey = AmenityCategory | 'other';
 
@@ -224,14 +228,15 @@ const resolveUnitFloorPlanUrl = (unit: any): string | null => {
 };
 
 const getUnitAvailabilityState = (unit: any) => {
-  const availableUnits = Math.max(0, Number(unit?.availableUnits || 0));
-  const totalUnits = Math.max(0, Number(unit?.totalUnits || 0));
+  const publicFacts = unit?.publicFacts;
+  const availableUnits = Math.max(0, Number(publicFacts?.availableUnits ?? 0));
+  const availabilityState = publicFacts?.availabilityState;
 
-  if (totalUnits > 0 && availableUnits <= 0) {
+  if (availabilityState === 'sold_out') {
     return {
       label: 'Sold out',
       className: 'border-rose-200 bg-rose-50 text-rose-700',
-      primaryLabel: 'Join Waitlist',
+      primaryLabel: 'Register interest',
     };
   }
 
@@ -251,11 +256,17 @@ const getUnitAvailabilityState = (unit: any) => {
     };
   }
 
-  return null;
+  return {
+    label: 'Availability on request',
+    className: 'border-slate-200 bg-slate-50 text-slate-600',
+    primaryLabel: 'Request Information',
+  };
 };
 
 type UnitTypeCarouselProps = {
   units: any[];
+  transactionType: 'for_sale' | 'for_rent';
+  publisherAuthorityKind: 'platform_reference' | 'developer_first_party';
   onRequestCallback: (unit: any) => void;
   onRequestInformation: (unit: any) => void;
   onOpenFloorPlan: (unit: any) => void;
@@ -263,6 +274,8 @@ type UnitTypeCarouselProps = {
 
 function UnitTypeCarousel({
   units,
+  transactionType,
+  publisherAuthorityKind,
   onRequestCallback,
   onRequestInformation,
   onOpenFloorPlan,
@@ -303,16 +316,20 @@ function UnitTypeCarousel({
       >
         <CarouselContent className="-ml-4">
           {units.map(unit => {
-            const unitPriceFrom = parseNumber(unit.basePriceFrom) ?? 0;
-            const unitPriceTo = parseNumber(unit.basePriceTo);
+            const unitPriceFrom = parseNumber(unit.publicFacts?.priceFrom);
+            const unitPriceTo = parseNumber(unit.publicFacts?.priceTo);
             const availability = getUnitAvailabilityState(unit);
-            const exactPriceFrom = formatExactRand(unitPriceFrom) || 'Price on request';
+            const exactPriceFrom =
+              formatExactRand(unitPriceFrom) ||
+              (transactionType === 'for_rent'
+                ? 'Monthly rent on request'
+                : 'Price on request');
             const exactPriceTo =
-              unitPriceTo !== null && unitPriceTo > unitPriceFrom
+              unitPriceTo !== null && unitPriceFrom !== null && unitPriceTo > unitPriceFrom
                 ? formatExactRand(unitPriceTo)
                 : null;
             const estimatedRepayment =
-              unitPriceFrom > 0
+              transactionType === 'for_sale' && unitPriceFrom !== null && unitPriceFrom > 0
                 ? Math.round(
                     calculateMonthlyRepayment(
                       unitPriceFrom,
@@ -326,8 +343,14 @@ function UnitTypeCarousel({
                 ? Math.round(estimatedRepayment * QUICK_QUALIFICATION_PAYMENT_RATIO)
                 : null;
             const secondaryActionLabel = 'View Plan & Details';
+            const primaryActionLabel =
+              unit.publicFacts?.availabilityState === 'sold_out'
+                ? 'Register interest'
+                : publisherAuthorityKind === 'platform_reference'
+                  ? 'Send enquiry'
+                  : availability?.primaryLabel || 'Request Callback';
 
-            return (
+              return (
               <CarouselItem
                 key={unit.id}
                 className="pl-4 md:basis-[74%] lg:basis-[54%] xl:basis-[43%]"
@@ -361,8 +384,19 @@ function UnitTypeCarousel({
                           {unit.name}
                         </h4>
                         <p className="mt-1 truncate text-[13px] font-bold text-slate-900">
-                          {exactPriceTo ? `${exactPriceFrom} - ${exactPriceTo}` : exactPriceFrom}
+                          {exactPriceTo
+                            ? `${exactPriceFrom} - ${exactPriceTo}${transactionType === 'for_rent' ? ' / month' : ''}`
+                            : transactionType === 'for_rent' && unitPriceFrom !== null
+                              ? `${exactPriceFrom} / month`
+                              : exactPriceFrom}
                         </p>
+                        {availability ? (
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${availability.className}`}
+                          >
+                            {availability.label}
+                          </span>
+                        ) : null}
                       </div>
                       {estimatedRepayment ? (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
@@ -392,7 +426,7 @@ function UnitTypeCarousel({
                         className="h-9 px-2 text-[11px] font-semibold text-white bg-orange-500 hover:bg-orange-600"
                         onClick={() => onRequestCallback(unit)}
                       >
-                        {availability?.primaryLabel || 'Request Callback'}
+                        {primaryActionLabel}
                       </Button>
                       <Button
                         variant="outline"
@@ -452,11 +486,15 @@ type DevelopmentActionPanelProps = {
   quickDeposit: string;
   onQuickDepositChange: (value: string) => void;
   quickQualification: QuickQualificationState | null;
+  transactionType: 'for_sale' | 'for_rent';
+  canQualify: boolean;
   brochureUrl: string | null;
   unitTypeCount: number;
   onStartQualification: () => void;
   onDownloadBrochure: () => void;
   onContactSales: () => void;
+  contactLabel: string;
+  contactDescription: string;
 };
 
 function DevelopmentActionPanel({
@@ -467,11 +505,15 @@ function DevelopmentActionPanel({
   quickDeposit,
   onQuickDepositChange,
   quickQualification,
+  transactionType,
+  canQualify,
   brochureUrl,
   unitTypeCount,
   onStartQualification,
   onDownloadBrochure,
   onContactSales,
+  contactLabel,
+  contactDescription,
 }: DevelopmentActionPanelProps) {
   return (
     <Card className="overflow-hidden border-slate-200 shadow-sm">
@@ -480,10 +522,15 @@ function DevelopmentActionPanel({
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-200">
             Interested in {developmentName}?
           </p>
-          <h3 className="mt-2 text-lg font-bold">Check affordability and take the next step.</h3>
+          <h3 className="mt-2 text-lg font-bold">
+            {transactionType === 'for_sale'
+              ? 'Check affordability and take the next step.'
+              : 'Request pricing and take the next step.'}
+          </h3>
         </div>
 
         <div className="space-y-4 p-4">
+          {transactionType === 'for_sale' && canQualify ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -560,14 +607,21 @@ function DevelopmentActionPanel({
               </div>
             ) : null}
           </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              {contactDescription}
+            </div>
+          )}
 
           <div className="grid gap-2">
-            <Button
-              className="h-10 bg-orange-500 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
-              onClick={onStartQualification}
-            >
-              Start Full Qualification
-            </Button>
+            {transactionType === 'for_sale' && canQualify ? (
+              <Button
+                className="h-10 bg-orange-500 text-sm font-semibold text-white shadow-sm hover:bg-orange-600"
+                onClick={onStartQualification}
+              >
+                Start Full Qualification
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               className="h-10 border-blue-200 text-sm font-semibold text-blue-700 hover:bg-blue-50"
@@ -580,14 +634,16 @@ function DevelopmentActionPanel({
               className="h-9 text-xs font-medium text-slate-600 hover:text-slate-900"
               onClick={onContactSales}
             >
-              Contact Sales Team
+              {contactLabel}
             </Button>
           </div>
 
           <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-3 text-[11px] text-slate-600">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              Free pre-qualification available
+              {transactionType === 'for_sale' && canQualify
+                ? 'Free pre-qualification available'
+                : 'Current pricing and availability supplied on request'}
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
@@ -595,7 +651,7 @@ function DevelopmentActionPanel({
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-              {unitTypeCount} unit types available
+              {unitTypeCount} unit types listed
             </div>
           </div>
         </div>
@@ -607,6 +663,10 @@ function DevelopmentActionPanel({
 export default function DevelopmentDetail() {
   const { slug } = useParams();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const returnToResults = getDevelopmentSearchReturn(search);
+  const withSearchReturn = (path: string) =>
+    appendDevelopmentSearchReturn(path, returnToResults);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxTitle, setLightboxTitle] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -702,14 +762,16 @@ export default function DevelopmentDetail() {
     const params = new URLSearchParams();
     if (parsedQuickIncome > 0) params.set('income', `${parsedQuickIncome}`);
     if (quickDepositAmount > 0) params.set('deposit', `${quickDepositAmount}`);
-    const query = params.toString() ? `?${params.toString()}` : '';
+    const qualificationPath = withSearchReturn(
+      `/development/${slug}/qualification${params.toString() ? `?${params.toString()}` : ''}`,
+    );
     trackCTAClick({
       ctaLabel: 'Check If You Qualify',
       ctaLocation,
       ctaHref:
         typeof window !== 'undefined'
-          ? `${window.location.origin}/development/${slug}/qualification${query}`
-          : `/development/${slug}/qualification${query}`,
+          ? `${window.location.origin}${qualificationPath}`
+          : qualificationPath,
     });
     trackFunnelStep({
       funnel: 'development_detail',
@@ -717,7 +779,7 @@ export default function DevelopmentDetail() {
       action: 'start',
       path: ctaLocation,
     });
-    setLocation(`/development/${slug}/qualification${query}`);
+    setLocation(qualificationPath);
   };
 
   const handleUnitCallback = (unit: any) => {
@@ -729,31 +791,24 @@ export default function DevelopmentDetail() {
   };
 
   const handleUnitFloorPlan = (unit: any) => {
+    const unitPath = withSearchReturn(
+      `/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`,
+    );
     trackCTAClick({
       ctaLabel: 'View Plan & Details',
       ctaLocation: `unit_card_${unit.id}_floor_plan`,
       ctaHref:
         typeof window !== 'undefined'
-          ? `${window.location.origin}/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`
-          : `/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`,
+          ? `${window.location.origin}${unitPath}`
+          : unitPath,
     });
-    setLocation(`/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`);
+    setLocation(unitPath);
   };
 
   // Fetch real development by slug or ID
   const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
     { slugOrId: slug || '' },
     { enabled: !!slug },
-  );
-
-  console.log('[DevelopmentDetail] dev =', dev);
-  console.log('[DevelopmentDetail] dev.developer =', dev?.developer);
-  console.log('[DevelopmentDetail] dev.publisher =', (dev as any)?.publisher);
-
-  // Fetch other developments from same developer
-  const { data: allDevelopments } = trpc.developer.listPublicDevelopments.useQuery(
-    { limit: 50 },
-    { enabled: !!dev?.id },
   );
 
   const amenityList = normalizeAmenities(dev?.amenities);
@@ -847,7 +902,7 @@ export default function DevelopmentDetail() {
     );
   }
 
-  if (!dev) {
+  if (!dev || !dev.publicFacts) {
     return (
       <div className="min-h-screen bg-slate-50">
         <ListingNavbar />
@@ -938,6 +993,10 @@ export default function DevelopmentDetail() {
     return '-';
   };
 
+  const publicFacts = dev.publicFacts;
+  const publisher = publicFacts.publisher;
+  const isPlatformReference = publisher.authorityKind === 'platform_reference';
+
   // 1. RAW DATA EXTRACTION
   const rawImages = parseJSON(dev.images);
   const rawVideos = parseJSON(dev.videos);
@@ -1000,6 +1059,7 @@ export default function DevelopmentDetail() {
   const estateSpecs = (() => {
     if (!dev.estateSpecs) return {};
     if (typeof dev.estateSpecs === 'object') return dev.estateSpecs;
+    if (typeof dev.estateSpecs !== 'string') return {};
     try {
       return JSON.parse(dev.estateSpecs);
     } catch (e) {
@@ -1007,67 +1067,16 @@ export default function DevelopmentDetail() {
     }
   })();
 
-  // Calculate sales metrics from unit types
-  const fallbackSales = (() => {
-    const unitTypes = dev.unitTypes || [];
-    const totals = unitTypes.reduce(
-      (acc: any, u: any) => {
-        const total = Math.max(0, Number(u.totalUnits || 0));
-        const avail = Math.max(0, Number(u.availableUnits || 0));
-        const reserved = Math.max(0, Number(u.reservedUnits || 0));
-        acc.total += total;
-        acc.available += avail;
-        acc.reserved += reserved;
-        return acc;
-      },
-      { total: 0, available: 0, reserved: 0 },
-    );
-
-    let totalUnits = totals.total;
-    let availableUnits = totals.available;
-    let reservedUnits = totals.reserved;
-
-    if (totalUnits <= 0) {
-      totalUnits = Number(dev.totalUnits || 0);
-      availableUnits = Number(
-        dev.availableUnits !== undefined && dev.availableUnits !== null
-          ? dev.availableUnits
-          : totalUnits,
-      );
-      reservedUnits = Number((dev as any).reservedUnits || 0);
-    }
-
-    if (totalUnits <= 0) return { soldPct: null, total: 0, available: 0, reserved: 0, sold: 0 };
-
-    const clampedReserved = Math.min(Math.max(reservedUnits, 0), totalUnits);
-    const clampedAvailable = Math.min(Math.max(availableUnits, 0), totalUnits - clampedReserved);
-    const sold = Math.max(totalUnits - clampedAvailable - clampedReserved, 0);
-    const soldPct = Math.round((sold / totalUnits) * 100);
-
-    return {
-      soldPct,
-      total: totalUnits,
-      available: clampedAvailable,
-      reserved: clampedReserved,
-      sold,
-    };
-  })();
-  const salesFromApi = dev.salesMetrics
-    ? {
-        soldPct: dev.salesMetrics.soldPct,
-        total: dev.salesMetrics.totalUnits ?? dev.salesMetrics.total ?? 0,
-        available: dev.salesMetrics.availableUnits ?? dev.salesMetrics.available ?? 0,
-        reserved: dev.salesMetrics.reservedUnits ?? dev.salesMetrics.reserved ?? 0,
-        sold: dev.salesMetrics.soldUnits ?? dev.salesMetrics.sold ?? 0,
-      }
-    : null;
-  const sales = salesFromApi ?? fallbackSales;
-
-  // The governed Catalogue Publisher projection owns the public identity.
-  const publisher =
-    (dev as any).publisher ||
-    null;
-  const isPlatformReference = publisher?.authorityKind === 'platform_reference';
+  const sales =
+    publicFacts.totalUnits !== null && publicFacts.availableUnits !== null
+      ? {
+          soldPct: dev.salesMetrics?.soldPct ?? null,
+          total: publicFacts.totalUnits,
+          available: publicFacts.availableUnits,
+          reserved: dev.salesMetrics?.reservedUnits ?? 0,
+          sold: dev.salesMetrics?.soldUnits ?? 0,
+        }
+      : null;
 
   // ... (Update development object)
   const unifiedMediaRaw = [
@@ -1107,30 +1116,29 @@ export default function DevelopmentDetail() {
 
   const development = {
     // ... existing fields ...
-    id: dev.id,
-    name: dev.name,
+    id: publicFacts.id,
+    name: publicFacts.name,
 
     // ✅ Publisher-first developer identity
-    developer: publisher?.name || dev.developer?.name || 'Unknown Developer',
-    developerLogo: publisher?.logoUrl || publisher?.logo || dev.developer?.logo || null,
-    developerDescription:
-      publisher?.description ||
-      dev.developer?.description ||
-      (isPlatformReference
-        ? 'Factual information about this development and its available homes.'
-        : 'Professional property developer committed to quality and excellence.'),
-    developerWebsite: publisher?.websiteUrl || publisher?.website || dev.developer?.website || null,
-    developerSlug: publisher?.slug || dev.developer?.slug || null,
+    developer: publisher.name,
+    developerLogo: publisher.logoUrl,
+    developerDescription: publisher.description ?? null,
+    developerWebsite: publisher.websiteUrl ?? null,
+    developerSlug: isPlatformReference ? null : publisher.slug ?? null,
 
-    location: `${dev.suburb ? dev.suburb + ', ' : ''}${dev.city}`,
+    location: `${publicFacts.suburb ? `${publicFacts.suburb}, ` : ''}${publicFacts.city}`,
     address: dev.address || '',
-    description: dev.description || '',
-    completionDate: dev.completionDate ? new Date(dev.completionDate).toLocaleDateString() : null,
-    totalUnits: dev.totalUnits || 0,
-    availableUnits: dev.availableUnits || 0,
-    startingPrice: Number(dev.priceFrom) || 0,
-    developmentType: dev.developmentType || 'residential',
-    status: dev.status,
+    description: publicFacts.description,
+    completionDate: publicFacts.completionDate
+      ? new Date(publicFacts.completionDate).toLocaleDateString()
+      : null,
+    totalUnits: publicFacts.totalUnits,
+    availableUnits: publicFacts.availableUnits,
+    startingPrice: publicFacts.priceFrom,
+    developmentType: publicFacts.developmentType,
+    transactionType: publicFacts.transactionType,
+    status: publicFacts.status,
+    availabilityState: publicFacts.availabilityState,
 
     // Media Props
     heroMedia: heroMedia,
@@ -1149,7 +1157,7 @@ export default function DevelopmentDetail() {
 
     indices: galleryIndices,
     amenities: amenities,
-    isVerified: !!(dev.developerDisplay as any)?.isVerified,
+    isVerified: false,
 
     // CRITICAL: Ensure we rely on unitTypes, not mixed sources
     units: units.map((u: any) => {
@@ -1166,7 +1174,7 @@ export default function DevelopmentDetail() {
           heroMedia?.type === 'image' ? heroMedia.image?.url : undefined,
         ),
         normalizedOwnership: finalLabel,
-        normalizedType: formatLabel(u.structuralType || u.type || 'Apartment'),
+        normalizedType: formatLabel(u.structuralType || u.type || 'Unit type'),
         floorSize: u.unitSize,
         landSize: u.erfSize || u.yardSize,
       };
@@ -1184,32 +1192,46 @@ export default function DevelopmentDetail() {
     return null;
   })();
 
-  const unitPriceValues = (development.units || [])
-    .flatMap((unit: any) => [Number(unit.basePriceFrom || 0), Number(unit.basePriceTo || 0)])
-    .filter((value: number) => Number.isFinite(value) && value > 0);
-
-  const derivedPriceFrom =
-    (unitPriceValues.length > 0 ? Math.min(...unitPriceValues) : 0) ||
-    Number(dev.priceFrom || 0) ||
-    development.startingPrice;
-  const derivedPriceTo =
-    (unitPriceValues.length > 0 ? Math.max(...unitPriceValues) : 0) ||
-    Number(dev.priceTo || 0) ||
-    undefined;
-
+  const derivedPriceFrom = publicFacts.priceFrom;
   const priceToDisplay =
-    derivedPriceTo && derivedPriceTo > derivedPriceFrom ? derivedPriceTo : undefined;
-  const estimatedRepaymentFrom = calculateMonthlyRepayment(
-    derivedPriceFrom,
-    SA_PRIME_RATE,
-    DEFAULT_BOND_TERM_YEARS,
-  );
-  const minimumIncomeRequired = Math.round(
-    estimatedRepaymentFrom * QUICK_QUALIFICATION_PAYMENT_RATIO,
-  );
+    derivedPriceFrom !== null &&
+    publicFacts.priceTo !== null &&
+    publicFacts.priceTo > derivedPriceFrom
+      ? publicFacts.priceTo
+      : null;
+  const isRentalDevelopment = publicFacts.transactionType === 'for_rent';
+  const isSoldOut = publicFacts.availabilityState === 'sold_out';
+  const contactActionLabel = isSoldOut
+    ? 'Register interest'
+    : isPlatformReference
+      ? 'Send enquiry'
+      : isRentalDevelopment
+        ? 'Contact Rental Team'
+        : 'Contact Sales Team';
+  const contactActionDescription = isPlatformReference
+    ? 'Property Listify manages enquiries for this reference and will review your request.'
+    : isRentalDevelopment
+      ? 'Contact the rental team for current monthly rent and availability information.'
+      : 'Contact the sales team for current pricing and availability information.';
+  const estimatedRepaymentFrom =
+    !isRentalDevelopment && derivedPriceFrom !== null
+      ? calculateMonthlyRepayment(derivedPriceFrom, SA_PRIME_RATE, DEFAULT_BOND_TERM_YEARS)
+      : null;
+  const minimumIncomeRequired =
+    estimatedRepaymentFrom !== null
+      ? Math.round(estimatedRepaymentFrom * QUICK_QUALIFICATION_PAYMENT_RATIO)
+      : null;
 
-  const normalizedStatus = dev.status ? formatLabel(dev.status) : 'Now Selling';
-  const normalizedCompletionDate = development.completionDate || 'Completion TBC';
+  const normalizedStatus = formatLabel(publicFacts.status);
+  const normalizedCompletionDate = development.completionDate || 'Completion date unavailable';
+  const developmentPriceLabel =
+    derivedPriceFrom === null
+      ? isRentalDevelopment
+        ? 'Monthly rent on request'
+        : 'Price on request'
+      : priceToDisplay
+        ? `${formatPriceCompact(derivedPriceFrom)} - ${formatPriceCompact(priceToDisplay)}`
+        : `${formatPriceCompact(derivedPriceFrom)}${isRentalDevelopment ? ' / month' : ''}`;
 
   const parsedQuickIncome = Number(quickIncome.replace(/[^\d.]/g, ''));
   const parsedQuickDeposit = Number(quickDeposit.replace(/[^\d.]/g, ''));
@@ -1217,7 +1239,7 @@ export default function DevelopmentDetail() {
   const quickDepositAmount =
     Number.isFinite(parsedQuickDeposit) && parsedQuickDeposit > 0 ? parsedQuickDeposit : 0;
   const quickQualification: QuickQualificationState | null = (() => {
-    if (!hasQuickIncome) return null;
+    if (!hasQuickIncome || isRentalDevelopment || derivedPriceFrom === null) return null;
 
     const maxMonthlyRepayment = parsedQuickIncome / QUICK_QUALIFICATION_PAYMENT_RATIO;
     const baseAffordable = Math.round(
@@ -1264,36 +1286,17 @@ export default function DevelopmentDetail() {
     };
   })();
 
-  const relatedPublicDevelopments = ((allDevelopments || []) as any[]).filter((entry: any) => {
-    if (!entry || Number(entry.id) === Number(dev.id)) return false;
-
-    const entryBrandId = Number(entry.cataloguePublisherId || 0);
-    if (
-      (dev as any).cataloguePublisherId &&
-      entryBrandId === Number((dev as any).cataloguePublisherId)
-    ) {
-      return true;
-    }
-
-    if (dev.developer?.id && Number(entry.developerId || 0) === Number(dev.developer.id)) {
-      return true;
-    }
-
-    if (entry.builderName && entry.builderName === development.developer) {
-      return true;
-    }
-
-    return false;
-  });
-
-  const developerProjectCount =
-    relatedPublicDevelopments.length > 0 ? relatedPublicDevelopments.length + 1 : null;
+  // Related projects remain outside this canonical detail read until a
+  // publisher-scoped public summary query exists. Do not call the legacy
+  // listPublicDevelopments projection from the detail page.
+  const relatedPublicDevelopments: any[] = [];
+  const developerProjectCount = null;
 
   return (
     <>
       <MetaControl
         title={`${development.name} | ${development.developer}`}
-        description={development.description}
+        description={development.description || undefined}
         image={
           development.heroMedia.type === 'image' ? development.heroMedia.image?.url : undefined
         }
@@ -1303,6 +1306,16 @@ export default function DevelopmentDetail() {
         <ListingNavbar />
 
         <div className="pt-24 pb-4 container max-w-7xl mx-auto px-4">
+          {returnToResults ? (
+            <Button
+              variant="ghost"
+              className="mb-3 gap-2 px-0 text-slate-700"
+              onClick={() => setLocation(returnToResults)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back to search results
+            </Button>
+          ) : null}
           <Breadcrumbs
             items={[
               { label: 'Home', href: '/' },
@@ -1346,7 +1359,7 @@ export default function DevelopmentDetail() {
                     <StatCard
                       icon={Home}
                       label="Type"
-                      value={formatLabel(dev.developmentType)}
+                      value={formatLabel(publicFacts.developmentType)}
                       color="blue"
                     />
                     <StatCard icon={Check} label="Status" value={normalizedStatus} color="green" />
@@ -1359,7 +1372,7 @@ export default function DevelopmentDetail() {
                     <StatCard
                       icon={LayoutGrid}
                       label="Unit Types"
-                      value={getUnitTypeLabel(dev.unitTypes || [])}
+                      value={getUnitTypeLabel(publicFacts.unitTypes || [])}
                       color="orange"
                     />
                   </div>
@@ -1369,6 +1382,7 @@ export default function DevelopmentDetail() {
                 <DevelopmentOverviewCard
                   priceFrom={derivedPriceFrom}
                   priceTo={priceToDisplay}
+                  transactionType={publicFacts.transactionType}
                   monthlyRepayment={estimatedRepaymentFrom}
                   minimumIncome={minimumIncomeRequired}
                   completionDate={normalizedCompletionDate}
@@ -1385,11 +1399,15 @@ export default function DevelopmentDetail() {
                     quickDeposit={quickDeposit}
                     onQuickDepositChange={setQuickDeposit}
                     quickQualification={quickQualification}
+                    transactionType={publicFacts.transactionType}
+                    canQualify={!isRentalDevelopment && derivedPriceFrom !== null}
                     brochureUrl={brochureUrl}
-                    unitTypeCount={dev.unitTypes?.length || 0}
+                    unitTypeCount={publicFacts.unitTypeCount}
                     onStartQualification={() => navigateToQualification('hero_action_panel')}
                     onDownloadBrochure={() => openLeadDialog('brochure', 'hero_action_panel')}
                     onContactSales={() => openLeadDialog('contact', 'hero_action_panel')}
+                    contactLabel={contactActionLabel}
+                    contactDescription={contactActionDescription}
                   />
                 </div>
               </div>
@@ -1403,10 +1421,20 @@ export default function DevelopmentDetail() {
                         Interested in {development.name}?
                       </p>
                       <h3 className="mt-2 text-xl font-bold">
-                        Check fit, get the brochure, or talk to sales.
+                        {isSoldOut
+                          ? 'Register interest or request information.'
+                          : isPlatformReference
+                            ? 'Check the details and send an enquiry.'
+                            : isRentalDevelopment
+                              ? 'Get the rent details and take the next step.'
+                              : 'Check fit, get the brochure, or talk to sales.'}
                       </h3>
                       <p className="mt-2 text-sm text-slate-300">
-                        Check affordability, request the brochure, or contact the sales team.
+                        {isPlatformReference
+                          ? 'Property Listify manages this reference enquiry and will review your request.'
+                          : isRentalDevelopment
+                            ? 'Request the brochure or contact the rental team for current availability.'
+                            : 'Check affordability, request the brochure, or contact the sales team.'}
                       </p>
                     </div>
 
@@ -1487,12 +1515,17 @@ export default function DevelopmentDetail() {
                         ) : (
                           <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-white p-4">
                             <p className="text-sm font-medium text-slate-700">
-                              Check whether homes from {formatSARandShort(derivedPriceFrom)} fit
-                              your income.
+                              {derivedPriceFrom !== null && !isRentalDevelopment
+                                ? `Check whether homes from ${formatSARandShort(derivedPriceFrom)} fit your income.`
+                                : isRentalDevelopment
+                                  ? 'Monthly rent is available on request. Contact the publisher for details.'
+                                  : 'Price is available on request. Contact the publisher for details.'}
                             </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              Estimated with a 10% deposit and a 20-year bond term.
-                            </p>
+                            {derivedPriceFrom !== null && !isRentalDevelopment ? (
+                              <p className="mt-1 text-xs text-slate-500">
+                                Estimated with a 10% deposit and a 20-year bond term.
+                              </p>
+                            ) : null}
                           </div>
                         )}
                       </div>
@@ -1519,7 +1552,7 @@ export default function DevelopmentDetail() {
                           onClick={() => openLeadDialog('contact', 'hero_action_panel')}
                         >
                           <Mail className="mr-2 h-4 w-4" />
-                          Contact Sales Team
+                          {contactActionLabel}
                         </Button>
                       </div>
 
@@ -1534,7 +1567,7 @@ export default function DevelopmentDetail() {
                         </div>
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                          {dev.unitTypes?.length || 0} unit types available
+                          {publicFacts.unitTypeCount} unit types listed
                         </div>
                       </div>
                     </div>
@@ -1614,14 +1647,6 @@ export default function DevelopmentDetail() {
                       );
                     })()}
 
-                    {!isPlatformReference && (
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-blue-600 mt-auto pt-2 text-xs font-medium"
-                      >
-                        View Developer Profile →
-                      </Button>
-                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1658,19 +1683,24 @@ export default function DevelopmentDetail() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
-                      <div
-                        className={`text-slate-600 leading-relaxed whitespace-pre-line overflow-hidden transition-all duration-300 ${isExpanded ? '' : 'line-clamp-6'}`}
-                      >
-                        {development.description ||
-                          'Experience luxury living in this exclusive new development. Providing state-of-the-art amenities and modern architectural design, this is the perfect place to call home.'}
-                      </div>
-                      <Button
-                        variant="link"
-                        className="p-0 h-auto text-blue-600 font-medium mt-4 hover:text-blue-700"
-                        onClick={() => setIsExpanded(!isExpanded)}
-                      >
-                        {isExpanded ? 'Show Less' : 'Read Full Description'}
-                      </Button>
+                      {development.description ? (
+                        <>
+                          <div
+                            className={`text-slate-600 leading-relaxed whitespace-pre-line overflow-hidden transition-all duration-300 ${isExpanded ? '' : 'line-clamp-6'}`}
+                          >
+                            {development.description}
+                          </div>
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto text-blue-600 font-medium mt-4 hover:text-blue-700"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                          >
+                            {isExpanded ? 'Show Less' : 'Read Full Description'}
+                          </Button>
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-500">Description not provided.</p>
+                      )}
                     </CardContent>
                   </Card>
                 </section>
@@ -1687,8 +1717,8 @@ export default function DevelopmentDetail() {
                     // Use the normalized units from the development object
                     const allUnits = development.units || [];
                     const normalizedUnits = allUnits.map((u: any) => {
-                      const bed = Number(u.bedrooms);
-                      const hasBedroom = Number.isFinite(bed) && bed >= 0;
+                      const bed = u.publicFacts?.bedrooms;
+                      const hasBedroom = typeof bed === 'number' && Number.isFinite(bed) && bed >= 0;
                       const bedroomKey = hasBedroom ? bed.toString() : 'other';
                       const bedroomLabel = hasBedroom ? `${bed}` : 'Other';
                       return {
@@ -1781,8 +1811,10 @@ export default function DevelopmentDetail() {
                             value={key}
                             className="mt-0 focus-visible:outline-none"
                           >
-                            <UnitTypeCarousel
+                              <UnitTypeCarousel
                               units={bedroomGroups.get(key)?.units || []}
+                              transactionType={publicFacts.transactionType}
+                              publisherAuthorityKind={publicFacts.publisher.authorityKind}
                               onRequestCallback={handleUnitCallback}
                               onRequestInformation={handleUnitInformation}
                               onOpenFloorPlan={handleUnitFloorPlan}
@@ -2024,29 +2056,37 @@ export default function DevelopmentDetail() {
 
                 {/* Location Section */}
                 <section id="location" className="w-full space-y-6">
-                  <NearbyLandmarks
-                    property={{
-                      id: dev.id,
-                      title: dev.name,
-                      latitude: dev.latitude || '0',
-                      longitude: dev.longitude || '0',
-                    }}
-                  />
+                  {dev.latitude && dev.longitude ? (
+                    <NearbyLandmarks
+                      property={{
+                        id: publicFacts.id,
+                        title: publicFacts.name,
+                        latitude: dev.latitude,
+                        longitude: dev.longitude,
+                      }}
+                    />
+                  ) : (
+                    <Card className="border-slate-200 shadow-sm">
+                      <CardContent className="p-6 text-sm text-slate-500">
+                        Map location not provided. Request the exact pin from the publisher.
+                      </CardContent>
+                    </Card>
+                  )}
 
                   <Card className="border-slate-200 shadow-sm">
                     <CardContent className="p-6">
                       <SuburbInsights
-                        suburbId={dev.suburbId || 0}
-                        suburbName={dev.suburb || dev.city}
+                        suburbId={dev.locationId || 0}
+                        suburbName={publicFacts.suburb || publicFacts.city}
                         isDevelopment={true}
                       />
                     </CardContent>
                   </Card>
 
                   <LocalityGuide
-                    suburb={dev.suburb || dev.city}
-                    city={dev.city}
-                    province={dev.province}
+                    suburb={publicFacts.suburb || publicFacts.city}
+                    city={publicFacts.city}
+                    province={publicFacts.province}
                   />
                 </section>
               </main>
@@ -2065,11 +2105,15 @@ export default function DevelopmentDetail() {
                     quickDeposit={quickDeposit}
                     onQuickDepositChange={setQuickDeposit}
                     quickQualification={quickQualification}
+                    transactionType={publicFacts.transactionType}
+                    canQualify={!isRentalDevelopment && derivedPriceFrom !== null}
                     brochureUrl={brochureUrl}
-                    unitTypeCount={dev.unitTypes?.length || 0}
+                    unitTypeCount={publicFacts.unitTypeCount}
                     onStartQualification={() => navigateToQualification('sidebar_interest_card')}
                     onDownloadBrochure={() => openLeadDialog('brochure', 'sidebar_interest_card')}
                     onContactSales={() => openLeadDialog('contact', 'sidebar_interest_card')}
+                    contactLabel={contactActionLabel}
+                    contactDescription={contactActionDescription}
                   />
                 </div>
               </aside>
@@ -2084,20 +2128,18 @@ export default function DevelopmentDetail() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
               Price From
             </p>
-            <p className="truncate text-base font-bold text-slate-900">
-              {priceToDisplay
-                ? `${formatPriceCompact(derivedPriceFrom)} - ${formatPriceCompact(priceToDisplay)}`
-                : formatPriceCompact(derivedPriceFrom)}
-            </p>
+            <p className="truncate text-base font-bold text-slate-900">{developmentPriceLabel}</p>
           </div>
           <div className="grid flex-1 grid-cols-3 gap-2">
-            <Button
-              size="sm"
-              className="h-10 bg-orange-500 px-2 text-xs font-semibold text-white hover:bg-orange-600"
-              onClick={() => navigateToQualification('mobile_sticky')}
-            >
-              Qualify
-            </Button>
+            {!isRentalDevelopment && derivedPriceFrom !== null ? (
+              <Button
+                size="sm"
+                className="h-10 bg-orange-500 px-2 text-xs font-semibold text-white hover:bg-orange-600"
+                onClick={() => navigateToQualification('mobile_sticky')}
+              >
+                Qualify
+              </Button>
+            ) : null}
             <Button
               size="sm"
               variant="outline"
@@ -2128,12 +2170,16 @@ export default function DevelopmentDetail() {
           if (!open) setActiveLeadUnit(null);
         }}
         mode={leadDialogMode}
+        listingType={isRentalDevelopment ? 'rent' : 'sale'}
         ctaLocation={leadDialogLocation}
         development={{
           id: development.id,
           name: development.name,
-          cataloguePublisherId: (dev as any).cataloguePublisherId ?? publisher?.id ?? null,
+          cataloguePublisherId: publicFacts.publisher.id,
           brochureUrl,
+          transactionType: publicFacts.transactionType,
+          publisherAuthorityKind: publicFacts.publisher.authorityKind,
+          isSoldOut,
         }}
         unitContext={
           activeLeadUnit
@@ -2141,19 +2187,21 @@ export default function DevelopmentDetail() {
                 unitId: String(activeLeadUnit.id),
                 unitName: String(activeLeadUnit.name || '').trim() || undefined,
                 unitPriceFrom:
-                  Number.isFinite(Number(activeLeadUnit.basePriceFrom)) &&
-                  Number(activeLeadUnit.basePriceFrom) > 0
-                    ? Number(activeLeadUnit.basePriceFrom)
+                  Number.isFinite(Number(activeLeadUnit.publicFacts?.priceFrom)) &&
+                  Number(activeLeadUnit.publicFacts?.priceFrom) > 0
+                    ? Number(activeLeadUnit.publicFacts.priceFrom)
                     : undefined,
                 unitBedrooms:
-                  Number.isFinite(Number(activeLeadUnit.bedrooms)) &&
-                  Number(activeLeadUnit.bedrooms) >= 0
-                    ? Number(activeLeadUnit.bedrooms)
+                  typeof activeLeadUnit.publicFacts?.bedrooms === 'number' &&
+                  Number.isFinite(activeLeadUnit.publicFacts.bedrooms) &&
+                  activeLeadUnit.publicFacts.bedrooms >= 0
+                    ? activeLeadUnit.publicFacts.bedrooms
                     : undefined,
                 unitBathrooms:
-                  Number.isFinite(Number(activeLeadUnit.bathrooms)) &&
-                  Number(activeLeadUnit.bathrooms) >= 0
-                    ? Number(activeLeadUnit.bathrooms)
+                  typeof activeLeadUnit.publicFacts?.bathrooms === 'number' &&
+                  Number.isFinite(activeLeadUnit.publicFacts.bathrooms) &&
+                  activeLeadUnit.publicFacts.bathrooms >= 0
+                    ? activeLeadUnit.publicFacts.bathrooms
                     : undefined,
               }
             : null

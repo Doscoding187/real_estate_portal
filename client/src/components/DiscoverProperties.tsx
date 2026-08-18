@@ -110,10 +110,16 @@ export function DiscoverProperties({
   locationName = 'South Africa',
 }: DiscoverPropertiesProps = {}) {
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
+  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const defaultTitle = `Browse by city, category, and property journey`;
-  const defaultSubtitle = rentJourneyEnabled
-    ? `Not sure what to search yet? Explore homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`
-    : `Not sure what to search yet? Explore homes and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
+  const defaultSubtitle =
+    rentJourneyEnabled && developmentsJourneyEnabled
+      ? `Not sure what to search yet? Explore homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`
+      : rentJourneyEnabled
+        ? `Not sure what to search yet? Explore homes and rentals across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`
+        : developmentsJourneyEnabled
+          ? `Not sure what to search yet? Explore homes and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`
+          : `Not sure what to search yet? Explore homes across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`;
 
   const displayTitle = title || defaultTitle;
   const displaySubtitle = subtitle || defaultSubtitle;
@@ -141,7 +147,11 @@ export function DiscoverProperties({
     if (emblaApi) emblaApi.scrollNext();
   }, [emblaApi]);
 
-  const filteredProperties = propertyTypes.filter(p => p.listingType === listingType);
+  const filteredProperties = propertyTypes.filter(
+    p =>
+      p.listingType === listingType &&
+      (p.listingType !== 'developments' || developmentsJourneyEnabled),
+  );
   const mobileSectionCopy: Record<
     'sale' | 'rent' | 'developments',
     { title: string; description: string; cta: string }
@@ -185,6 +195,7 @@ export function DiscoverProperties({
   };
 
   const handleDevelopmentsClick = () => {
+    if (!developmentsJourneyEnabled) return;
     setDevelopmentsExpanded(!developmentsExpanded);
     if (!developmentsExpanded) {
       setListingType('developments');
@@ -238,7 +249,11 @@ export function DiscoverProperties({
                 { id: 'developments', label: 'Developments' },
               ] as const
             )
-              .filter(tab => tab.id !== 'rent' || rentJourneyEnabled)
+              .filter(
+                tab =>
+                  (tab.id !== 'rent' || rentJourneyEnabled) &&
+                  (tab.id !== 'developments' || developmentsJourneyEnabled),
+              )
               .map(tab => {
               const isActive = listingType === tab.id;
               return (
@@ -358,8 +373,10 @@ export function DiscoverProperties({
                 </div>
               ) : null}
 
-              {/* New Developments */}
-              <div>
+              {developmentsJourneyEnabled ? (
+                <>
+                  {/* New Developments */}
+                  <div>
                 <button
                   onClick={handleDevelopmentsClick}
                   className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
@@ -395,7 +412,9 @@ export function DiscoverProperties({
                     </a>
                   </div>
                 </div>
-              </div>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
 

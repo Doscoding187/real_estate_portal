@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   mockSearchDevelopmentListings,
+  mockSearchDevelopments,
   mockGetPublicDevelopmentBySlug,
   mockListPublicDevelopments,
   mockGetDb,
@@ -19,6 +20,7 @@ const {
   mockRecordAgentOsEventForAgentId,
 } = vi.hoisted(() => ({
   mockSearchDevelopmentListings: vi.fn(),
+  mockSearchDevelopments: vi.fn(),
   mockGetPublicDevelopmentBySlug: vi.fn(),
   mockListPublicDevelopments: vi.fn(),
   mockGetDb: vi.fn(),
@@ -46,6 +48,12 @@ vi.mock('../services/developmentService', () => ({
   developmentService: {
     getPublicDevelopmentBySlug: mockGetPublicDevelopmentBySlug,
     listPublicDevelopments: mockListPublicDevelopments,
+  },
+}));
+
+vi.mock('../services/publicDevelopmentSearchService', () => ({
+  publicDevelopmentSearchService: {
+    search: mockSearchDevelopments,
   },
 }));
 
@@ -104,6 +112,16 @@ describe('development search-detail-lead public journey contract', () => {
     process.env.NODE_ENV = 'test';
 
     mockListPublicDevelopments.mockResolvedValue([]);
+    mockSearchDevelopments.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 0,
+      pageSize: 20,
+      hasMore: false,
+      limit: 20,
+      offset: 0,
+      locationState: 'not_requested',
+    });
     mockSearchDevelopmentListings.mockResolvedValue({
       items: [
         {
@@ -285,6 +303,7 @@ describe('development search-detail-lead public journey contract', () => {
     const lead = await caller.developer.createLead({
       developmentId: card.developmentId,
       cataloguePublisherId: 999,
+      transactionType: 'for_sale',
       unitId: unit.id,
       unitName: unit.name,
       unitPriceFrom: unit.basePriceFrom,
@@ -319,6 +338,7 @@ describe('development search-detail-lead public journey contract', () => {
       expect.objectContaining({
         developmentId: 77,
         cataloguePublisherId: 999,
+        transactionType: 'for_sale',
         unitId: 'unit-a',
         unitName: 'Type A',
         unitPriceFrom: 1299000,
@@ -354,5 +374,87 @@ describe('development search-detail-lead public journey contract', () => {
     });
 
     expect(detail).toBeNull();
+  });
+
+  it('uses the shared public development projection for homepage development feeds', async () => {
+    mockSearchDevelopments.mockResolvedValueOnce({
+      items: [
+        {
+          id: 77,
+          name: 'Rental Heights',
+          slug: 'rental-heights',
+          canonicalRoute: '/development/rental-heights',
+          description: null,
+          images: [],
+          city: 'Johannesburg',
+          suburb: 'Berea',
+          province: 'Gauteng',
+          developmentType: 'residential',
+          transactionType: 'for_rent',
+          status: 'selling',
+          nature: 'new',
+          completionDate: null,
+          createdAt: '2026-08-15T00:00:00.000Z',
+          isFeatured: false,
+          rating: null,
+          highlights: [],
+          publisher: {
+            id: 13,
+            name: 'Rental Homes Publisher',
+            logoUrl: null,
+            authorityKind: 'platform_reference',
+          },
+          priceFrom: null,
+          priceTo: null,
+          bedroomRange: { min: 2, max: 3 },
+          unitTypes: [],
+          unitTypeCount: 0,
+          availableUnitTypeCount: 0,
+          availableUnits: null,
+          totalUnits: null,
+          availabilityState: 'not_stated',
+        },
+      ],
+      total: 1,
+      page: 0,
+      pageSize: 1,
+      hasMore: false,
+      limit: 1,
+      offset: 0,
+      locationState: 'resolved',
+    });
+
+    const caller = appRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+
+    const result = await caller.developer.getHomeTrendingFeed({
+      tab: 'developments',
+      province: 'Gauteng',
+      limit: 1,
+    });
+
+    expect(result.items[0]).toMatchObject({
+      id: '77',
+      href: '/development/rental-heights',
+      listingType: 'rent',
+      priceFrom: null,
+      priceTo: null,
+      bedroomRange: { min: 2, max: 3 },
+      availabilityState: 'not_stated',
+      publisherName: 'Rental Homes Publisher',
+      publisherAuthorityKind: 'platform_reference',
+    });
+    expect(mockSearchDevelopments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        province: 'Gauteng',
+        developmentType: 'residential',
+        pageSize: 1,
+        sortOption: 'relevance',
+      }),
+    );
+    expect(mockListPublicDevelopments).not.toHaveBeenCalled();
   });
 });

@@ -24,6 +24,7 @@ describe('hero journey authority', () => {
     });
     expect(getPublicHeroJourney('buy').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
+    expect(getPublicHeroJourney('developments').homepageEnabled).toBe(false);
     expect(getPublicHeroJourney('find_agent').homepageEnabled).toBe(false);
     expect(getHomepageHeroJourneys().map(journey => journey.key)).toEqual([
       'buy',

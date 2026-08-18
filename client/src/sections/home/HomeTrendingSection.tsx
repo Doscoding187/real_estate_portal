@@ -3,6 +3,7 @@ import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
 import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import {
   Carousel,
   CarouselContent,
@@ -24,18 +25,23 @@ type TrendingItem = {
   title: string;
   city: string;
   suburb: string;
-  priceFrom: number;
-  priceTo: number;
+  priceFrom: number | null;
+  priceTo: number | null;
   image: string;
   href: string;
   listingType?: 'sale' | 'rent';
   bedrooms?: number | null;
+  bedroomRange?: { min: number | null; max: number | null };
   bathrooms?: number | null;
   area?: number | null;
   yardSize?: number | null;
   unitSize?: number | null;
   propertyType?: string | null;
   developmentName?: string | null;
+  transactionType?: 'for_sale' | 'for_rent';
+  status?: 'launching-soon' | 'selling' | 'sold-out';
+  availabilityState?: 'available' | 'sold_out' | 'not_stated';
+  publisherName?: string | null;
   badges?: string[];
 };
 
@@ -94,17 +100,23 @@ export function HomeTrendingSection({
   onProvinceChange,
   activeHeroTab,
 }: HomeTrendingSectionProps) {
+  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const railLimit = 10;
   const heroContent = {
     title: `${TAB_COPY[activeHeroTab].titleBase} in ${selectedProvince}`,
     subtitle: MOBILE_FRIENDLY_SUBTITLES[activeHeroTab] || TAB_COPY[activeHeroTab].subtitleBase,
   };
 
-  const { data: trendingData } = trpc.developer.getHomeTrendingFeed.useQuery({
-    tab: activeHeroTab,
-    province: selectedProvince,
-    limit: railLimit,
-  });
+  const { data: trendingData } = trpc.developer.getHomeTrendingFeed.useQuery(
+    {
+      tab: activeHeroTab,
+      province: selectedProvince,
+      limit: railLimit,
+    },
+    { enabled: activeHeroTab !== 'developments' || developmentsJourneyEnabled },
+  );
+
+  if (activeHeroTab === 'developments' && !developmentsJourneyEnabled) return null;
 
   const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, railLimit);
 
@@ -203,6 +215,12 @@ export function HomeTrendingSection({
                         slug={item.kind === 'development' ? item.id : undefined}
                         href={item.href}
                         isHotSelling
+                        bedrooms={item.bedrooms}
+                        bedroomRange={item.bedroomRange}
+                        listingType={item.listingType}
+                        status={item.status}
+                        availabilityState={item.availabilityState}
+                        publisherName={item.publisherName}
                       />
                     )}
                   </div>

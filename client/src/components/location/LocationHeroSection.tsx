@@ -16,7 +16,11 @@ import { trackEvent } from '@/lib/analytics';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import type { LocationNode } from '@/types/location';
 import { buildLocationDiscoveryPath } from '@/lib/locationDiscovery';
-import { buildBuySearchUrl, buildPropertySearchUrl } from '@/lib/heroJourneySearch';
+import {
+  buildBuySearchUrl,
+  buildDevelopmentsSearchUrl,
+  buildPropertySearchUrl,
+} from '@/lib/heroJourneySearch';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 
@@ -66,15 +70,8 @@ const filterConfig = {
     propertyTypes: [...RENT_PUBLIC_PROPERTY_TYPES],
   },
   developments: {
-    types: [
-      'Full Title',
-      'Sectional Title',
-      'Security Estate',
-      'Retirement',
-      'Luxury',
-      'Affordable Housing',
-    ],
-    statuses: ['Off-Plan', 'Under Construction', 'Completed', 'Launching Soon'],
+    types: ['residential', 'commercial', 'mixed_use', 'land'],
+    statuses: ['launching-soon', 'selling', 'sold-out'],
   },
   plot_land: {
     types: ['Residential', 'Commercial', 'Agricultural', 'Industrial'],
@@ -115,6 +112,7 @@ export function LocationHeroSection({
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showFilters, setShowFilters] = useState(false);
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
+  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const activeTab = controlledActiveTab ?? internalActiveTab;
   const locationSegments = locationSlug.split('/').filter(Boolean);
 
@@ -150,6 +148,7 @@ export function LocationHeroSection({
 
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === 'rental' && !rentJourneyEnabled) return;
+    if (categoryId === 'developments' && !developmentsJourneyEnabled) return;
     if (
       neutralMode &&
       categoryId !== 'buy' &&
@@ -173,6 +172,7 @@ export function LocationHeroSection({
     const effectiveCategoryId = categoryId || (neutralMode ? '' : 'buy');
     if (!effectiveCategoryId) return undefined;
     if (effectiveCategoryId === 'rental' && !rentJourneyEnabled) return undefined;
+    if (effectiveCategoryId === 'developments' && !developmentsJourneyEnabled) return undefined;
 
     if (neutralMode && effectiveCategoryId === 'buy') {
       return buildCanonicalBuyResultsPath(location);
@@ -182,7 +182,13 @@ export function LocationHeroSection({
     if (!category) return '/';
 
     if (category.listingType === 'development') {
-      return `/new-developments?location=${encodeURIComponent(location.name)}`;
+      return buildDevelopmentsSearchUrl({
+        selectedLocations: [location],
+        developmentType: filters.developmentType,
+        developmentStatus: filters.developmentStatus,
+        minPrice: filters.priceMin,
+        maxPrice: filters.priceMax,
+      });
     }
 
     if (category.listingType === 'sale' || category.listingType === 'rent') {
@@ -256,7 +262,11 @@ export function LocationHeroSection({
           {/* Category Tabs */}
           <div className="flex flex-wrap lg:flex-nowrap justify-center gap-2 mb-6">
             {categories
-              .filter(category => category.id !== 'rental' || rentJourneyEnabled)
+              .filter(
+                category =>
+                  (category.id !== 'rental' || rentJourneyEnabled) &&
+                  (category.id !== 'developments' || developmentsJourneyEnabled),
+              )
               .map(category => {
               const Icon = category.icon;
               const isActive = activeTab === category.id;

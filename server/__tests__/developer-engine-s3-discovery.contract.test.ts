@@ -9,18 +9,17 @@ function source(relativePath: string): string {
 }
 
 describe('Developer Engine S3 discovery convergence contracts', () => {
-  it('keeps /new-developments on the canonical public development list projection', () => {
+  it('keeps /new-developments on the canonical public development search projection', () => {
     const page = source('client/src/pages/DevelopmentsDemo.tsx');
-    const router = source('server/developerRouter.ts');
-    const service = source('server/services/developmentService.ts');
+    const router = source('server/routers.ts');
+    const searchService = source('server/services/publicDevelopmentSearchService.ts');
 
-    expect(page).toContain('trpc.developer.listPublicDevelopments.useQuery');
-    expect(page).toContain('canonicalRoute={dev.canonicalRoute}');
-    expect(router).toContain('listPublicDevelopments: publicProcedure');
-    expect(router).toContain('developmentService.listPublicDevelopments');
-    expect(service).toContain(
-      'const conditions: any[] = [publicDevelopmentEligibilityConditions()];',
-    );
+    expect(page).toContain('trpc.properties.searchDevelopments.useQuery');
+    expect(page).not.toContain('trpc.developer.listPublicDevelopments.useQuery');
+    expect(router).toContain('searchDevelopments: publicProcedure');
+    expect(router).toContain('publicDevelopmentSearchService.search(input)');
+    expect(searchService).toContain('publicDevelopmentEligibilityConditions()');
+    expect(searchService).toContain('eq(unitTypes.isActive, 1)');
   });
 
   it('keeps the manual Listing Wizard independent from Developer Engine lifecycle queries', () => {

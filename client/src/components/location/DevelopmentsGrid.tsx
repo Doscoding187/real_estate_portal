@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Building2 } from 'lucide-react';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { getPrimaryDevelopmentImageUrl, PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 interface DevelopmentsGridProps {
   developments: any[]; // Using any to be flexible with backend return type for now
@@ -10,6 +11,7 @@ interface DevelopmentsGridProps {
 }
 
 export function DevelopmentsGrid({ developments, locationName }: DevelopmentsGridProps) {
+  if (!isHomepageHeroJourneyEnabled('developments')) return null;
   if (!developments || developments.length === 0) return null;
 
   return (

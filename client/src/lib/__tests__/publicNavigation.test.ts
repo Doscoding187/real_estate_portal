@@ -9,6 +9,7 @@ import {
   getSafeNextPath,
   getVisiblePublicNavigationMenus,
   getVisiblePublicNavigationGroups,
+  getVisiblePublicNavigationActionItems,
   isPublicNavigationVisible,
   normalizePublicHeroJourney,
   PUBLIC_CITY_ENTRY,
@@ -116,6 +117,34 @@ describe('public navigation authority', () => {
     expect(visibleItems.some(item => item.href === '/compare')).toBe(false);
     expect(visibleItems.some(item => item.href.includes('propertyType=commercial'))).toBe(false);
     expect(visibleItems.some(item => /alert|enquir/i.test(item.label))).toBe(false);
+  });
+
+  it('keeps New Developments hidden across action-item navigation through the central activation authority', () => {
+    const buyers = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'buyers');
+    expect(buyers).toBeDefined();
+    expect(getPublicHeroJourney('developments').homepageVisible).toBe(false);
+    expect(getPublicHeroJourney('developments').homepageEnabled).toBe(false);
+    for (const surface of ['desktop', 'mobile'] as const) {
+      expect(getVisiblePublicNavigationActionItems(buyers!, surface)).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]),
+      );
+    }
+  });
+
+  it('keeps development exposure on the one canonical journey destination', () => {
+    expect(getPublicHeroJourney('developments')).toMatchObject({
+      destination: '/new-developments',
+      homepageVisible: false,
+      homepageEnabled: false,
+    });
+    expect(
+      PUBLIC_NAVIGATION_MENUS.flatMap(menu => [
+        menu.feature,
+        ...menu.groups.flatMap(group => group.items),
+      ])
+        .filter(item => item.journey === 'developments')
+        .map(item => item.href),
+    ).toEqual(['/new-developments']);
   });
 
   it('keeps Shared Living independent from the Rent transaction route until its contract exists', () => {

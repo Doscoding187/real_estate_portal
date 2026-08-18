@@ -32,6 +32,7 @@ import {
 } from '@/lib/commercialCatalog';
 import { DeveloperWorkspacePreview } from './DeveloperWorkspacePreview';
 import { COMMERCIAL_HERO_CLASS } from './commercialHero';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 type DeveloperCapability = {
   label: string;
@@ -586,6 +587,7 @@ function DeveloperFaqSection({ faqs }: { faqs: readonly DeveloperFaq[] }) {
 
 export default function DeveloperProductLandingPage() {
   const { data: catalog } = useCommercialCatalog('developer');
+  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const product = catalog?.products.find(item => item.productKey === 'developer_launch_access');
   const price = product ? getCommercialPricePresentation(product) : null;
   const term = product ? getCommercialTermPresentation(product) : null;
@@ -758,7 +760,10 @@ export default function DeveloperProductLandingPage() {
               <DeveloperWorkspacePreview />
             </div>
             <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-12">
-              {DEVELOPER_CAPABILITIES.map((capability, index) => (
+              {DEVELOPER_CAPABILITIES.filter(
+                capability =>
+                  capability.href !== '/new-developments' || developmentsJourneyEnabled,
+              ).map((capability, index) => (
                 <CapabilityCard
                   key={capability.label}
                   capability={capability}
@@ -801,12 +806,14 @@ export default function DeveloperProductLandingPage() {
                   Projects that meet publication requirements can appear in Property Listify's
                   development and location discovery experience.
                 </p>
-                <a
-                  href="/new-developments"
-                  className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950"
-                >
-                  Browse developments <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </a>
+                {developmentsJourneyEnabled ? (
+                  <a
+                    href="/new-developments"
+                    className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950"
+                  >
+                    Browse developments <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                ) : null}
               </article>
               <article className="flex h-full flex-col rounded-[26px] border border-slate-200 bg-white p-7 shadow-sm">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700">
@@ -817,12 +824,14 @@ export default function DeveloperProductLandingPage() {
                   Unit choices can carry their own images, floor-plan context, price guidance,
                   availability and details before a buyer selects an enquiry path.
                 </p>
-                <a
-                  href="/new-developments"
-                  className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950"
-                >
-                  See public discovery <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </a>
+                {developmentsJourneyEnabled ? (
+                  <a
+                    href="/new-developments"
+                    className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-slate-950"
+                  >
+                    See public discovery <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </a>
+                ) : null}
               </article>
               <article className="flex h-full flex-col rounded-[26px] border border-slate-200 bg-white p-7 shadow-sm">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-50 text-orange-700">

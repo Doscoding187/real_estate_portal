@@ -16,7 +16,7 @@ export interface SimpleHomeListingCardProps {
   suburb?: string;
   image?: string | null;
   href: string;
-  price: number;
+  price: number | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
   area?: number | null;

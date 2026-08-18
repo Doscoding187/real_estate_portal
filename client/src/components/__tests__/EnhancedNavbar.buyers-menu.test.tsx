@@ -62,10 +62,7 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/property-for-sale',
     );
-    expect(within(region).getAllByRole('link', { name: 'New developments' })[0]).toHaveAttribute(
-      'href',
-      '/new-developments',
-    );
+    expect(within(region).queryByRole('link', { name: 'New developments' })).not.toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'Plots and land' })).toHaveAttribute(
       'href',
       '/property-for-sale?propertyType=plot',
@@ -78,7 +75,6 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/tools/affordability-calculator',
     );
-    expect(within(region).getAllByRole('link', { name: 'New developments' })).toHaveLength(2);
   });
 
   it('presents Buyability outcomes as information and keeps shortlist access honest for visitors', async () => {
@@ -144,9 +140,6 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/favorites',
     );
-    expect(within(drawer!).getByRole('link', { name: 'New developments' })).toHaveAttribute(
-      'href',
-      '/new-developments',
-    );
+    expect(within(drawer!).queryByRole('link', { name: 'New developments' })).not.toBeInTheDocument();
   });
 });

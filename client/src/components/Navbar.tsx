@@ -91,7 +91,9 @@ export function Navbar() {
     { href: '/', label: 'Home', icon: Home },
     { href: '/property-for-sale', label: 'Buy' },
     ...(isHomepageHeroJourneyEnabled('rent') ? [{ href: '/property-to-rent', label: 'Rent' }] : []),
-    { href: '/new-developments', label: 'Developments' },
+    ...(isHomepageHeroJourneyEnabled('developments')
+      ? [{ href: '/new-developments', label: 'Developments' }]
+      : []),
     { href: '/agents', label: 'Agents' },
     { href: '/developers', label: 'Developers' },
     { href: '/advertise', label: 'Advertise / List Property' },

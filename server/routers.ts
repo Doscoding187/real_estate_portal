@@ -600,53 +600,41 @@ const appRouterConfig = {
     searchDevelopments: publicProcedure
       .input(
         z.object({
+          locationId: z.string().trim().min(1).optional(),
+          locationIds: z.array(z.string().trim().min(1)).max(10).optional(),
+          searchAreaId: z.string().trim().min(1).optional(),
+          searchAreaIds: z.array(z.string().trim().min(1)).max(10).optional(),
           province: z.string().optional(),
           city: z.string().optional(),
-          suburb: z.array(z.string()).optional(),
-          limit: z.number().default(20),
-          offset: z.number().default(0),
+          suburb: z.union([z.string(), z.array(z.string())]).optional(),
+          locations: z.array(z.string()).max(10).optional(),
+          /** Compatibility-only input from the former DiscoverProperties handoff. */
+          search: z.string().trim().max(120).optional(),
+          developmentType: z
+            .enum(['residential', 'commercial', 'mixed_use', 'land'])
+            .optional(),
+          developmentStatus: z.enum(['launching-soon', 'selling', 'sold-out']).optional(),
+          transactionType: z.enum(['for_sale', 'for_rent']).optional(),
+          minPrice: z.number().min(0).optional(),
+          maxPrice: z.number().min(0).optional(),
+          minBedrooms: z.number().min(0).optional(),
+          maxBedrooms: z.number().min(0).optional(),
+          availability: z.enum(['available', 'sold_out']).optional(),
+          sortOption: z
+            .enum(['relevance', 'price_asc', 'price_desc', 'date_desc', 'date_asc'])
+            .optional(),
+          page: z.number().int().min(0).max(PUBLIC_SEARCH_MAX_PAGE_INDEX).optional(),
+          pageSize: z.number().int().min(1).max(50).optional(),
+          /** Legacy vocabulary is translated at this procedure boundary. */
+          limit: z.number().int().min(1).max(50).optional(),
+          offset: z.number().int().min(0).optional(),
         }),
       )
       .query(async ({ input }) => {
-        const { developmentService } = await import('./services/developmentService');
-        const safeLimit = Math.max(1, Math.min(input.limit, 50));
-        const cappedOffset = Math.max(0, input.offset);
-        const poolLimit = Math.min(200, cappedOffset + safeLimit);
-
-        const allResults = await developmentService.listPublicDevelopments({
-          province: input.province,
-          city: input.city,
-          limit: poolLimit,
-        });
-
-        const filteredResults =
-          input.suburb && input.suburb.length > 0
-            ? allResults.filter((dev: any) => {
-                const devSuburb = String(dev.suburb || '').toLowerCase();
-                if (!devSuburb) return false;
-                return input.suburb!.some(suburb => devSuburb.includes(suburb.toLowerCase()));
-              })
-            : allResults;
-
-        const paged = filteredResults.slice(cappedOffset, cappedOffset + safeLimit);
-
-        return {
-          items: paged.map((dev: any) => ({
-            id: Number(dev.id),
-            name: dev.name,
-            slug: dev.slug || null,
-            city: dev.city,
-            suburb: dev.suburb || null,
-            province: dev.province,
-            priceFrom: dev.priceFrom ?? null,
-            priceTo: dev.priceTo ?? null,
-            images: Array.isArray(dev.images) ? dev.images : [],
-            cataloguePublisherId: dev.cataloguePublisherId ?? null,
-          })),
-          total: filteredResults.length,
-          limit: safeLimit,
-          offset: cappedOffset,
-        };
+        const { publicDevelopmentSearchService } = await import(
+          './services/publicDevelopmentSearchService'
+        );
+        return publicDevelopmentSearchService.search(input);
       }),
 
     searchDevelopmentListings: publicProcedure

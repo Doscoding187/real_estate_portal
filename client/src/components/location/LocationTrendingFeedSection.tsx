@@ -38,18 +38,22 @@ type TrendingFeedItem = {
   title: string;
   city: string;
   suburb: string;
-  priceFrom: number;
-  priceTo: number;
+  priceFrom: number | null;
+  priceTo: number | null;
   image: string;
   href: string;
   listingType?: 'sale' | 'rent';
   bedrooms?: number | null;
+  bedroomRange?: { min: number | null; max: number | null };
   bathrooms?: number | null;
   area?: number | null;
   yardSize?: number | null;
   unitSize?: number | null;
   propertyType?: string | null;
   developmentName?: string | null;
+  status?: 'launching-soon' | 'selling' | 'sold-out';
+  availabilityState?: 'available' | 'sold_out' | 'not_stated';
+  publisherName?: string | null;
   badges?: string[];
 };
 
@@ -101,11 +105,18 @@ export function LocationTrendingFeedSection({
 }: LocationTrendingFeedSectionProps) {
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
+  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   const requestedActiveTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
   const activeTab =
-    requestedActiveTab === 'rent' && !rentJourneyEnabled ? null : requestedActiveTab;
+    requestedActiveTab === 'rent' && !rentJourneyEnabled
+      ? null
+      : requestedActiveTab === 'developments' && !developmentsJourneyEnabled
+        ? null
+        : requestedActiveTab;
   const visibleFeedTabs = FEED_TABS.filter(
-    tab => tab.value !== 'rent' || rentJourneyEnabled,
+    tab =>
+      (tab.value !== 'rent' || rentJourneyEnabled) &&
+      (tab.value !== 'developments' || developmentsJourneyEnabled),
   );
 
   const { data: feedData } = trpc.developer.getHomeTrendingFeed.useQuery(
@@ -229,6 +240,12 @@ export function LocationTrendingFeedSection({
                         slug={item.kind === 'development' ? item.id : undefined}
                         href={item.href}
                         isHotSelling
+                        bedrooms={item.bedrooms}
+                        bedroomRange={item.bedroomRange}
+                        listingType={item.listingType}
+                        status={item.status}
+                        availabilityState={item.availabilityState}
+                        publisherName={item.publisherName}
                       />
                     )}
                   </div>

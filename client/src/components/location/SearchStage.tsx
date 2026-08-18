@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 // Simplified property types for the quick search
 const PROPERTY_TYPES = [
@@ -33,6 +34,7 @@ export function SearchStage({ locationName, locationSlug, totalListings }: Searc
   const [activeTab, setActiveTab] = useState('buy');
   const [propertyType, setPropertyType] = useState('all');
   const [_, setLocation] = useLocation();
+  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
 
   const handleSearch = () => {
     // Search Input => Transaction Intent (SRP). Geography remains query state
@@ -57,9 +59,8 @@ export function SearchStage({ locationName, locationSlug, totalListings }: Searc
 
     // Future: Handle 'new_development' tab -> /new-developments
     if (activeTab === 'new_development') {
+      if (!developmentsJourneyEnabled) return;
       targetPath = `/new-developments`;
-      // We might need a city/province filter for devs?
-      // for now just route root
     }
 
     // Force Transaction Mode
@@ -93,12 +94,12 @@ export function SearchStage({ locationName, locationSlug, totalListings }: Searc
             >
               Commercial
             </TabsTrigger>
-            <TabsTrigger
+            {developmentsJourneyEnabled ? <TabsTrigger
               value="new_development"
               className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 font-medium"
             >
               New Developments
-            </TabsTrigger>
+            </TabsTrigger> : null}
           </TabsList>
         </Tabs>
       </div>

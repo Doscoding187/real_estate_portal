@@ -33,6 +33,7 @@ import {
 } from '@/lib/publicNavigation';
 import {
   buildBuySearchUrl,
+  buildDevelopmentsSearchUrl,
   buildPropertySearchUrl,
   BUY_PROPERTY_TYPE_OPTIONS,
   getPriceRangeError,
@@ -128,7 +129,7 @@ export function EnhancedHero({
   const hasExplicitJourney = String(activeTab || '').trim().length > 0;
   const requestedJourney = hasExplicitJourney ? normalizePublicHeroJourney(activeTab) || '' : '';
   const normalizedActiveTab =
-    requestedJourney === 'rent' && !isHomepageHeroJourneyEnabled('rent') ? '' : requestedJourney;
+    requestedJourney && !isHomepageHeroJourneyEnabled(requestedJourney) ? '' : requestedJourney;
   const hasSelectedJourney = normalizedActiveTab.length > 0;
   const locationInputRef = useRef<HTMLInputElement>(null);
   const previousJourneyRef = useRef(normalizedActiveTab);
@@ -255,16 +256,8 @@ export function EnhancedHero({
       ].filter(option => (RENT_PUBLIC_PROPERTY_TYPES as readonly string[]).includes(option.value)),
     },
     developments: {
-      types: [
-        'Full Title',
-        'Sectional Title',
-        'Security Estate',
-        'Retirement',
-        'Co-Living',
-        'Luxury',
-        'Affordable Housing',
-      ],
-      statuses: ['Off-Plan', 'Under Construction', 'Completed', 'Launching Soon'],
+      types: ['residential', 'commercial', 'mixed_use', 'land'],
+      statuses: ['launching-soon', 'selling', 'sold-out'],
     },
     plot_land: {
       types: ['Residential', 'Commercial', 'Agricultural', 'Industrial'],
@@ -373,6 +366,27 @@ export function EnhancedHero({
       return;
     }
 
+    if (effectiveJourney === 'developments') {
+      const nextPriceRangeError = getPriceRangeError(filters.priceMin, filters.priceMax);
+      if (nextPriceRangeError) {
+        setPriceRangeError(nextPriceRangeError);
+        setShowFilters(true);
+        return;
+      }
+
+      setPriceRangeError(null);
+      setLocation(
+        buildDevelopmentsSearchUrl({
+          selectedLocations,
+          developmentType: filters.developmentType,
+          developmentStatus: filters.developmentStatus,
+          minPrice: filters.priceMin,
+          maxPrice: filters.priceMax,
+        }),
+      );
+      return;
+    }
+
     setLocation('/');
   };
 
@@ -392,7 +406,10 @@ export function EnhancedHero({
     { label: 'Cheap Rentals', icon: Key, filters: { listingType: 'rent', maxPrice: 6000 } },
   ];
 
-  const shortcuts = customShortcuts || defaultShortcuts;
+  const shortcuts = (customShortcuts || defaultShortcuts).filter(
+    shortcut =>
+      shortcut.path !== '/new-developments' || isHomepageHeroJourneyEnabled('developments'),
+  );
 
   const handleShortcutClick = (shortcut: any) => {
     if (shortcut.path) {

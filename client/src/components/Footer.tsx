@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, Send } from 'lucide-react';
+import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 export function Footer() {
   return (
@@ -73,15 +74,17 @@ export function Footer() {
                   Search properties
                 </Link>
               </li>
-              <li>
-                <Link
-                  href="/new-developments"
-                  className="hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  New developments
-                </Link>
-              </li>
+              {isHomepageHeroJourneyEnabled('developments') ? (
+                <li>
+                  <Link
+                    href="/new-developments"
+                    className="hover:text-white transition-colors flex items-center gap-2"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    New developments
+                  </Link>
+                </li>
+              ) : null}
               <li>
                 <Link
                   href="/list-property"
