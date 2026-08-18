@@ -118,6 +118,14 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
     deliveryStatus: string;
     deliveryMethod: string;
     sourceCounts: { manual: number; development: number };
+    development: {
+      leadId: number;
+      replayedLeadId: number;
+      duplicateReplay: true;
+      conflictingReplay: 'conflict';
+      durableLeadCount: number;
+      acknowledgement: string;
+    };
     scenarios: Record<string, {
       propertyId: number;
       cardHref: string;
@@ -2016,6 +2024,20 @@ async function runContainedApplicationVerification(
     if (!developmentReplay.duplicate || developmentReplay.leadId !== developmentLead.leadId) {
       throw new Error('Search-to-Lead scenario developer replay was not idempotent.');
     }
+    let developmentConflictingReplay: 'conflict' | undefined;
+    try {
+      await capturePublicLead({
+        ...developmentLeadInput,
+        message: `${developmentLeadInput.message} conflicting replay`,
+      });
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === 'CONFLICT') {
+        developmentConflictingReplay = 'conflict';
+      }
+    }
+    if (developmentConflictingReplay !== 'conflict') {
+      throw new Error('Search-to-Lead scenario accepted a conflicting developer replay.');
+    }
     const database = await getDb();
     if (!database) throw new Error('Search-to-Lead scenario database disappeared during developer acceptance.');
     const developmentDurableRows = await database
@@ -2331,6 +2353,14 @@ async function runContainedApplicationVerification(
       sourceCounts: {
         manual: search.sourceCounts.manual,
         development: search.sourceCounts.development,
+      },
+      development: {
+        leadId: developmentLead.leadId,
+        replayedLeadId: developmentReplay.leadId,
+        duplicateReplay: true,
+        conflictingReplay: 'conflict',
+        durableLeadCount: developmentDurableRows.length,
+        acknowledgement: developmentLead.message || '',
       },
       scenarios,
       discovery: {
