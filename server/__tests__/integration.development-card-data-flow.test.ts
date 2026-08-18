@@ -158,6 +158,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
     const result = await caller.properties.search({
       city: 'Johannesburg',
       province: 'Gauteng',
+      listingType: 'sale',
       limit: 20,
       offset: 0,
       includeDevelopments: true,

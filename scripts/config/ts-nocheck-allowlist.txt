@@ -73,7 +73,6 @@ client/src/pages/admin/SubscriptionManagement.tsx
 client/src/pages/admin/SubscriptionManagementPage.tsx
 client/src/pages/agency/SubscriptionPage.tsx
 client/src/pages/AgencyFeed.tsx
-client/src/pages/AgentDetail.tsx
 client/src/pages/Agents.tsx
 client/src/pages/DeveloperPublisherPage.tsx
 client/src/pages/OnboardingSuccess.tsx
