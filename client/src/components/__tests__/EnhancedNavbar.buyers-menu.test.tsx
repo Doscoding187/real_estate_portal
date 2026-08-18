@@ -62,9 +62,7 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/property-for-sale',
     );
-    const developmentLinks = within(region).getAllByRole('link', { name: 'New developments' });
-    expect(developmentLinks.length).toBeGreaterThan(0);
-    developmentLinks.forEach(link => expect(link).toHaveAttribute('href', '/new-developments'));
+    expect(within(region).queryByRole('link', { name: 'New developments' })).not.toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'Plots and land' })).toHaveAttribute(
       'href',
       '/property-for-sale?propertyType=plot',
@@ -142,9 +140,6 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/favorites',
     );
-    expect(within(drawer!).getByRole('link', { name: 'New developments' })).toHaveAttribute(
-      'href',
-      '/new-developments',
-    );
+    expect(within(drawer!).queryByRole('link', { name: 'New developments' })).not.toBeInTheDocument();
   });
 });
