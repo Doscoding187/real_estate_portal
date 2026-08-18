@@ -106,6 +106,22 @@ describe('agency listing inventory contract', () => {
     });
   });
 
+  it('uses canonical leads as the active enquiry source when no projection metric exists', () => {
+    const listing = mapAgencyListingRow(
+      baseRow({
+        listingLeadCount: 3,
+        publicEnquiries: null,
+      }),
+      19,
+    );
+
+    expect(listing.performance).toMatchObject({
+      enquiries: 3,
+      source: 'canonical_leads',
+      available: true,
+    });
+  });
+
   it('shows private pending edits as public plus pending authoring work', () => {
     const listing = mapAgencyListingRow(
       baseRow({

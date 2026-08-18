@@ -1,10 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MySqlDialect } from 'drizzle-orm/mysql-core';
 
-const { mockSelect, mockRedisGet, mockRedisSet, mockResolveLocation } = vi.hoisted(() => ({
+const {
+  mockSelect,
+  mockRedisGet,
+  mockRedisSet,
+  mockResolveLocation,
+  mockResolvePublicPropertyEligibilities,
+  mockResolvePublicPropertyEligibilityIds,
+} = vi.hoisted(() => ({
   mockSelect: vi.fn(),
   mockRedisGet: vi.fn(),
   mockRedisSet: vi.fn(),
   mockResolveLocation: vi.fn(),
+  mockResolvePublicPropertyEligibilities: vi.fn(),
+  mockResolvePublicPropertyEligibilityIds: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({
@@ -20,7 +30,15 @@ vi.mock('../locationResolverService', () => ({
   locationResolver: { resolveLocation: mockResolveLocation },
 }));
 
-import { PropertySearchService } from '../propertySearchService';
+vi.mock('../publicPropertyEligibilityService', () => ({
+  resolvePublicPropertyEligibilities: mockResolvePublicPropertyEligibilities,
+  resolvePublicPropertyEligibilityIds: mockResolvePublicPropertyEligibilityIds,
+}));
+
+import {
+  buildManualPropertySortOrder,
+  PropertySearchService,
+} from '../propertySearchService';
 
 function terminalWhereQuery(rows: unknown[]) {
   const query: any = {};
@@ -44,6 +62,15 @@ function pagedQuery(rows: unknown[]) {
 function orderedQuery(rows: unknown[]) {
   const query: any = {};
   query.from = vi.fn(() => query);
+  query.where = vi.fn(() => query);
+  query.orderBy = vi.fn().mockResolvedValue(rows);
+  return query;
+}
+
+function candidateQuery(rows: unknown[]) {
+  const query: any = {};
+  query.from = vi.fn(() => query);
+  query.leftJoin = vi.fn(() => query);
   query.where = vi.fn(() => query);
   query.orderBy = vi.fn().mockResolvedValue(rows);
   return query;
@@ -100,6 +127,25 @@ describe('manual property Search approved projection authority', () => {
     mockRedisGet.mockResolvedValue(null);
     mockRedisSet.mockResolvedValue(undefined);
     mockResolveLocation.mockResolvedValue(null);
+    mockResolvePublicPropertyEligibilities.mockReset();
+    mockResolvePublicPropertyEligibilityIds.mockReset();
+  });
+
+  it.each([
+    'price_asc',
+    'price_desc',
+    'date_desc',
+    'date_asc',
+    'suburb_asc',
+    'suburb_desc',
+  ] as const)('adds a stable ascending property-ID tie-breaker for %s', sortOption => {
+    const dialect = new MySqlDialect();
+    const order = buildManualPropertySortOrder(sortOption).map(value =>
+      dialect.sqlToQuery(value).sql,
+    );
+
+    expect(order).toHaveLength(2);
+    expect(order[1]).toBe('`properties`.`id` asc');
   });
 
   it('builds a canonical card from properties + propertyImages without reading listing state', async () => {
@@ -290,4 +336,77 @@ describe('manual property Search approved projection authority', () => {
       expect(result.cards[0].bathrooms).toBe(bathrooms);
     },
   );
+
+  it('filters public search candidates through the canonical approved-property authority before pagination', async () => {
+    mockSelect
+      .mockReturnValueOnce(candidateQuery([{ id: 501 }, { id: 502 }]))
+      .mockReturnValueOnce(pagedQuery([
+        {
+          id: 501,
+          title: 'Canonical public result',
+          description: 'Approved projection fixture.',
+          price: 1_000_000,
+          suburb: 'Sandton',
+          address: 'Sandton, Johannesburg',
+          city: 'Johannesburg',
+          province: 'Gauteng',
+          propertyType: 'house',
+          listingType: 'sale',
+          bedrooms: 3,
+          bathrooms: 2,
+          internalAreaM2: 180,
+          erfSizeM2: 420,
+          landAreaM2: null,
+          floorSize: 180,
+          erfSize: 420,
+          landSize: 420,
+          status: 'available',
+          listedDate: new Date('2026-08-10T10:00:00Z'),
+          mainImage: 'https://cdn.example.test/public.jpg',
+          sourceListingId: 9001,
+          ownerId: 100,
+          agentId: 33,
+          propertySettings: '{}',
+          agentDisplayName: 'Jane Agent',
+          agentPhone: '+27110001111',
+          agentWhatsapp: '+27110001111',
+          agentEmail: 'jane@example.test',
+          agencyName: 'Approved Realty',
+          videoCount: 0,
+        },
+      ]))
+      .mockReturnValueOnce(orderedQuery([]));
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(
+      new Map([
+        [
+          501,
+          {
+            property: { id: 501 },
+            images: [],
+            publicIdentity: {
+              role: 'agent',
+              provenance: 'agent',
+              name: 'Jane Agent',
+              organizationName: 'Approved Realty',
+              agentId: 33,
+            },
+          },
+        ],
+      ]),
+    );
+
+    const result = await new PropertySearchService().searchProperties(
+      {},
+      'date_desc',
+      1,
+      12,
+      undefined,
+      { publicOnly: true },
+    );
+
+    expect(mockResolvePublicPropertyEligibilities).toHaveBeenCalledWith([501, 502]);
+    expect(result).toMatchObject({ total: 1, hasMore: false });
+    expect(result.properties).toHaveLength(1);
+    expect(result.properties[0].id).toBe('501');
+  });
 });

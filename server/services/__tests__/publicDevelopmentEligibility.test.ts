@@ -10,6 +10,7 @@ function catalogue(
     unitTypes?: CanonicalDevelopmentCatalogue['unitTypes'];
     commercialAccess?: boolean;
     activeUnitTypeCount?: number;
+    activeOperatorCount?: number;
     activeSupersessionSource?: boolean;
   } = {},
 ): CanonicalDevelopmentCatalogue {
@@ -38,6 +39,7 @@ function catalogue(
     organisation: overrides.organisation ?? null,
     unitTypes: overrides.unitTypes ?? [{ id: 'unit-101', developmentId: 101, isActive: 1 }],
     commercialAccess: overrides.commercialAccess ?? true,
+    activeOperatorCount: overrides.activeOperatorCount ?? 1,
     ...(overrides.activeUnitTypeCount === undefined
       ? {}
       : { activeUnitTypeCount: overrides.activeUnitTypeCount }),
@@ -92,6 +94,28 @@ describe('public development eligibility authority', () => {
       eligible: false,
       operatingMode: 'developer',
       reasons: expect.arrayContaining(['missing_launch_access']),
+    });
+  });
+
+  it('keeps first-party inventory private when no active operator can receive its leads', () => {
+    const result = evaluatePublicDevelopmentEligibility(
+      catalogue({
+        development: { cataloguePublisherId: 22 },
+        publisher: {
+          id: 22,
+          authorityKind: 'developer_first_party',
+          developerOrganisationId: 7,
+          sourceAttribution: null,
+        },
+        organisation: { id: 7, status: 'approved' },
+        activeOperatorCount: 0,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      eligible: false,
+      operatingMode: 'developer',
+      reasons: expect.arrayContaining(['missing_active_operator']),
     });
   });
 

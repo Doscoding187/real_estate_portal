@@ -94,7 +94,7 @@ export function SearchRefinementBar({
     if (filters.bedrooms) params.append('bedrooms', filters.bedrooms.toString());
     if (filters.bathrooms) params.append('bathrooms', filters.bathrooms.toString());
 
-    const searchUrl = `/properties?${params.toString()}`;
+    const searchUrl = `/property-for-sale?${params.toString()}`;
 
     if (onSearch) {
       onSearch(filters);

@@ -292,24 +292,13 @@ export function normalizePropertyForUI(raw: any): PropertyCardProps | null {
 export function searchCardResultToPropertyCardProps(card: SearchCardResult): PropertyCardProps {
   const normalized = normalizePublicPropertyCard({
     ...card,
+    publicIdentity: card.identity,
     image: card.image || card.images?.[0]?.url,
     images: card.images,
     propertyId: card.propertyId,
     developmentId: card.developmentId,
     development: card.development,
     developerBrand: card.developerBrand,
-    agent:
-      card.contactRole !== 'developer' && card.identity.name
-        ? {
-            id: card.identity.agentId,
-            name: card.identity.name,
-            agencyId: card.identity.agencyId,
-            phone: card.identity.phone,
-            whatsapp: card.identity.whatsapp,
-            email: card.identity.email,
-            image: card.identity.avatarUrl,
-          }
-        : undefined,
   });
 
   const developerBrand =
@@ -346,21 +335,7 @@ export function searchCardResultToPropertyCardProps(card: SearchCardResult): Pro
     listerType: normalized.listerType,
     status: undefined,
     transactionType: normalized.listingType || card.transactionType,
-    agent:
-      normalized.contactRole !== 'developer' && normalized.identity.name
-        ? {
-            id: normalized.identity.agentId ? String(normalized.identity.agentId) : undefined,
-            name: normalized.identity.name,
-            agencyId: normalized.identity.agencyId
-              ? String(normalized.identity.agencyId)
-              : undefined,
-            agency: undefined,
-            phone: normalized.identity.phone || undefined,
-            whatsapp: normalized.identity.whatsapp || undefined,
-            email: normalized.identity.email || undefined,
-            image: normalized.identity.avatarUrl || undefined,
-          }
-        : undefined,
+    identity: normalized.identity,
     developerBrand,
     development: normalized.development,
     badges: normalized.badges,

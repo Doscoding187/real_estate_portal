@@ -71,6 +71,7 @@ export function MobileStickyControls({
         <Button
           variant="ghost"
           size="sm"
+          aria-label={currentView === 'map' ? 'Show list view' : 'Show map view'}
           className="h-10 rounded-full px-2.5 text-slate-700 hover:bg-slate-100"
           onClick={toggleView}
         >

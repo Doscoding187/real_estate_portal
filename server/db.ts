@@ -11,7 +11,6 @@ import {
   sql,
   SQL,
   isNull,
-  isNotNull,
   not,
   count,
   avg,
@@ -172,16 +171,29 @@ function getPricingProjection(
   pricing: Record<string, unknown> | null | undefined,
   propertyDetails: Record<string, unknown> | null | undefined,
 ) {
-  const contract = buildPricingContract(action, pricing, propertyDetails);
+  // Publication is a write boundary: the current authored scalar columns are
+  // authoritative. A revision cloned from a published listing can still carry
+  // the previous embedded pricing contract until this projection is rebuilt,
+  // so preferring that snapshot would silently republish the old price.
+  const contract = buildPricingContract(action, pricing, propertyDetails, {
+    preferEmbedded: false,
+  });
   const recurringCosts = contract?.intent === 'sale' ? contract.recurringCosts : {};
   const levyFact =
     recurringCosts.bodyCorporateLevy ||
     recurringCosts.hoaEstateLevy ||
     recurringCosts.otherMandatoryCharge;
 
+  const primaryPrice =
+    contract?.intent === 'sale'
+      ? contract.askingPrice
+      : contract?.intent === 'rent'
+        ? contract.monthlyRent
+        : getPrimaryPrice(action, pricing, propertyDetails);
+
   return {
     contract,
-    price: getPrimaryPrice(action, pricing, propertyDetails) ?? 0,
+    price: primaryPrice ?? 0,
     ratesAndTaxes: getMoneyFactAmount(recurringCosts.ratesAndTaxes) ?? null,
     legacyLevy: getMoneyFactAmount(levyFact) ?? null,
   };
@@ -2157,7 +2169,11 @@ export async function createListing(
 
       const insertValues: any = {
         ownerId: listingData.userId,
-        agentId: agentId,
+        // A manager may convert a seller prospect assigned to another
+        // approved agency agent. Persist the assignment that was validated
+        // above rather than silently replacing it with the acting user's
+        // agent identity (or null for an agency administrator).
+        agentId: effectiveAgentId,
         agencyId,
         action: listingData.action,
         propertyType: listingData.propertyType,
@@ -3221,6 +3237,294 @@ function remapApprovedRevisionPresentationMedia(
   };
 }
 
+function parsePublicationRecord(value: unknown, label: string): Record<string, any> {
+  if (value === undefined || value === null || value === '') return {};
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, any>;
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, any>;
+      }
+    } catch {
+      // The public projection boundary fails closed below. A malformed source
+      // snapshot must never be converted into an empty public record.
+    }
+  }
+  throw new Error(`Listing ${label} is not a valid publication record`);
+}
+
+function publicListingTypeForAction(action: unknown): 'sale' | 'rent' | 'auction' {
+  if (action === 'sell') return 'sale';
+  if (action === 'rent') return 'rent';
+  if (action === 'auction') return 'auction';
+  throw new Error(`Unsupported listing action for public projection: ${String(action)}`);
+}
+
+function knownCoreNumber(fact: any): number | null {
+  return fact?.status === 'known' && Number.isFinite(Number(fact.value))
+    ? Number(fact.value)
+    : null;
+}
+
+function knownCoreMeasurement(fact: any): number | null {
+  return fact?.status === 'known' && Number.isFinite(Number(fact.valueM2))
+    ? Number(fact.valueM2)
+    : null;
+}
+
+type CanonicalPublicPropertyProjection = {
+  canonicalDetails: Record<string, any>;
+  propertyValues: Record<string, any>;
+};
+
+/**
+ * Keep the canonical source row internally coherent when a revision changes
+ * intent. Revision drafts are cloned from the live row, so columns belonging
+ * to the previous intent can otherwise survive a Sale -> Rent (or equivalent)
+ * transition even though they are no longer valid authored truth.
+ */
+function buildCanonicalListingPricingSnapshot(listing: any) {
+  const action = String(listing.action);
+  return {
+    askingPrice: action === 'sell' ? listing.askingPrice : null,
+    negotiable: action === 'sell' ? listing.negotiable : 0,
+    transferCostEstimate: action === 'sell' ? listing.transferCostEstimate : null,
+    monthlyRent: action === 'rent' ? listing.monthlyRent : null,
+    deposit: action === 'rent' ? listing.deposit : null,
+    leaseTerms: action === 'rent' ? listing.leaseTerms : null,
+    availableFrom: action === 'rent' ? listing.availableFrom : null,
+    utilitiesIncluded: action === 'rent' ? listing.utilitiesIncluded : 0,
+    startingBid: action === 'auction' ? listing.startingBid : null,
+    reservePrice: action === 'auction' ? listing.reservePrice : null,
+    auctionDateTime: action === 'auction' ? listing.auctionDateTime : null,
+    auctionTermsDocumentUrl: action === 'auction' ? listing.auctionTermsDocumentUrl : null,
+  };
+}
+
+/**
+ * Build the complete public read-model snapshot from one canonical listing
+ * version. Initial approval and approved revisions both pass through this
+ * function so taxonomy, pricing, core facts, location, presentation and
+ * ownership cannot drift behind a partial field patch.
+ */
+async function buildCanonicalPublicPropertyProjection(
+  database: any,
+  listing: any,
+  input: {
+    sourceListingId: number;
+    approvedAt: string;
+    propertyDetails?: Record<string, any>;
+  },
+): Promise<CanonicalPublicPropertyProjection> {
+  const details = input.propertyDetails
+    ? { ...input.propertyDetails }
+    : parsePublicationRecord(listing.propertyDetails, 'property details');
+  const pricing = parsePublicationRecord(listing.pricing, 'pricing');
+  const featuresContext = normalizeFeaturesContext(details.featuresContext, details);
+  const canonicalDetails: Record<string, any> = {
+    ...details,
+    featuresContext,
+    ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, details),
+  };
+  const pricingProjection = getPricingProjection(
+    String(listing.action),
+    pricing,
+    canonicalDetails,
+  );
+  if (pricingProjection.contract) {
+    canonicalDetails.pricingContract = pricingProjection.contract;
+  }
+
+  const core = buildCorePropertyInformation(
+    String(listing.propertyType) as any,
+    canonicalDetails,
+  );
+  const bedrooms = knownCoreNumber(core.bedrooms) ??
+    (Number.isFinite(Number(details.bedrooms)) ? Number(details.bedrooms) : null);
+  const bathrooms = knownCoreNumber(core.bathrooms) ??
+    (Number.isFinite(Number(details.bathrooms)) ? Number(details.bathrooms) : null);
+  const internalAreaM2 = knownCoreMeasurement(core.internalArea);
+  const erfSizeM2 = knownCoreMeasurement(core.erfArea);
+  const landAreaM2 =
+    core.farmLandArea?.status === 'known' &&
+    Number.isFinite(Number(core.farmLandArea.normalizedM2))
+      ? Number(core.farmLandArea.normalizedM2)
+      : null;
+  const compatibilityAreaCandidates = [
+    details.unitSizeM2,
+    details.houseAreaM2,
+    details.floorAreaM2,
+    details.erfSizeM2,
+    details.landAreaM2,
+  ];
+  const compatibilityArea = compatibilityAreaCandidates
+    .map(value => Number(value))
+    .find(value => Number.isFinite(value) && value > 0);
+
+  // `area` remains a required compatibility/search column. Prefer the same
+  // normalized core facts as Detail, including erf/land area where a dwelling
+  // floor area is not applicable.
+  const area = internalAreaM2 ?? erfSizeM2 ?? landAreaM2 ?? compatibilityArea ?? 0;
+  const authoredAmenities = Array.isArray(details.amenities)
+    ? details.amenities
+    : typeof details.amenities === 'string'
+      ? details.amenities.split(',')
+      : [];
+  const amenitiesList = Array.from(
+    new Set(
+      [...featuresContext.spaces, ...featuresContext.security.features, ...authoredAmenities]
+        .map(value => String(value || '').trim())
+        .filter(Boolean),
+    ),
+  );
+  const publicLocation = await buildPublicLocationProjection(database, listing);
+  const listingType = publicListingTypeForAction(listing.action);
+
+  return {
+    canonicalDetails,
+    propertyValues: {
+      title: listing.title,
+      description: listing.description,
+      propertyType: toPublicPropertyType(String(listing.propertyType)),
+      listingType,
+      transactionType: listingType,
+      price: pricingProjection.price,
+      bedrooms,
+      bathrooms,
+      area,
+      internalAreaM2,
+      erfSizeM2,
+      landAreaM2,
+      address: publicLocation.publicAddress || 'Location available on enquiry',
+      city: listing.city,
+      province: listing.province,
+      zipCode: listing.postalCode,
+      latitude: publicLocation.publicLatitude,
+      longitude: publicLocation.publicLongitude,
+      provinceId: listing.provinceId,
+      cityId: listing.cityId,
+      suburbId: listing.suburbId,
+      publicAddress: publicLocation.publicAddress,
+      publicLatitude: publicLocation.publicLatitude,
+      publicLongitude: publicLocation.publicLongitude,
+      publicLocationPrecision: publicLocation.publicLocationPrecision,
+      locationText:
+        publicLocation.publicAddress ||
+        [listing.suburb, listing.city, listing.province].filter(Boolean).join(', ') ||
+        'Location available on enquiry',
+      // Provider IDs and development/catalogue ownership are not valid
+      // provenance for a manual-listing projection.
+      placeId: null,
+      developmentId: null,
+      cataloguePublisherId: null,
+      amenities: amenitiesList.length > 0 ? amenitiesList.join(',') : null,
+      status: 'available' as any,
+      featured: listing.featured || 0,
+      agentId: listing.agentId || null,
+      ownerId: listing.ownerId,
+      sourceListingId: input.sourceListingId,
+      propertySettings: JSON.stringify(canonicalDetails),
+      videoUrl: null,
+      virtualTourUrl:
+        getSafePropertyPresentationVirtualTour(canonicalDetails.propertyPresentation)?.embedUrl ||
+        null,
+      levies: pricingProjection.legacyLevy,
+      ratesAndTaxes: pricingProjection.ratesAndTaxes,
+      updatedAt: input.approvedAt,
+    },
+  };
+}
+
+async function upsertCanonicalPublicPropertyProjection(
+  database: any,
+  propertyValues: Record<string, any>,
+): Promise<number> {
+  const [existingProperty] = await database
+    .select({ id: properties.id })
+    .from(properties)
+    .where(eq(properties.sourceListingId, Number(propertyValues.sourceListingId)))
+    .limit(1);
+
+  if (existingProperty) {
+    await database
+      .update(properties)
+      .set(propertyValues)
+      .where(eq(properties.id, Number(existingProperty.id)));
+    return Number(existingProperty.id);
+  }
+
+  const [propertyResult] = await database.insert(properties).values({
+    ...propertyValues,
+    views: 0,
+    enquiries: 0,
+    createdAt: propertyValues.updatedAt,
+  });
+  return Number((propertyResult as any).insertId);
+}
+
+function buildApprovedRevisionSourceSnapshot(
+  revision: any,
+  canonicalDetails: Record<string, any>,
+  mediaSynchronization: {
+    primaryMediaId: number | null;
+    mediaIdMap: Map<number, number>;
+  },
+  reviewedBy: number,
+  approvedAt: string,
+) {
+  const promotedPrimaryMediaId = mediaSynchronization.primaryMediaId
+    ? mediaSynchronization.mediaIdMap.get(Number(mediaSynchronization.primaryMediaId)) || null
+    : null;
+
+  return {
+    // Explicit provenance/ownership is part of the approved version. The
+    // commercial-owner equality guard has already proved that a revision
+    // cannot move inventory across customers.
+    ownerId: revision.ownerId,
+    agentId: revision.agentId || null,
+    agencyId: revision.agencyId || null,
+    action: revision.action,
+    propertyType: revision.propertyType,
+    title: revision.title,
+    description: revision.description,
+    ...buildCanonicalListingPricingSnapshot(revision),
+    propertyDetails: canonicalDetails,
+    address: revision.address,
+    latitude: revision.latitude,
+    longitude: revision.longitude,
+    city: revision.city,
+    suburb: revision.suburb,
+    province: revision.province,
+    postalCode: revision.postalCode,
+    placeId: revision.placeId,
+    locationId: revision.locationId,
+    provinceId: revision.provinceId,
+    cityId: revision.cityId,
+    suburbId: revision.suburbId,
+    privateAddress: revision.privateAddress,
+    coordinateSource: revision.coordinateSource,
+    locationConfirmationState: revision.locationConfirmationState,
+    publicLocationPrecision: revision.publicLocationPrecision,
+    mainMediaId: promotedPrimaryMediaId,
+    mainMediaType: promotedPrimaryMediaId ? ('image' as const) : null,
+    readinessScore: revision.readinessScore,
+    qualityScore: revision.qualityScore,
+    qualityBreakdown: revision.qualityBreakdown,
+    metaTitle: revision.metaTitle,
+    metaDescription: revision.metaDescription,
+    searchTags: revision.searchTags,
+    featured: revision.featured || 0,
+    status: 'published' as any,
+    approvalStatus: 'approved' as any,
+    reviewedBy,
+    reviewedAt: approvedAt,
+    updatedAt: approvedAt,
+  };
+}
+
 /**
  * Search results are cached independently from the approval transaction. The
  * cache must be invalidated only after the transaction commits so a failed
@@ -3326,98 +3630,35 @@ export async function approveListing(
     if (!isSameListingCommercialOwner(revisionCommercialOwner, originalCommercialOwner)) {
       throw new Error('Listing revision commercial owner does not match the original listing');
     }
-    const approvedPricingProjection = getPricingProjection(
-      String((listing as any).action),
-      (listing as any).pricing,
-      (listing as any).propertyDetails,
-    );
-    const approvedPropertyDetailsBeforeMedia = {
-      ...(((listing as any).propertyDetails as Record<string, unknown>) || {}),
-      ...(approvedPricingProjection.contract
-        ? { pricingContract: approvedPricingProjection.contract }
-        : {}),
-    };
     const mediaSynchronization = await synchronizeApprovedRevisionMedia(
       originalListingId,
       listingId,
       db,
     );
     const approvedPropertyDetails = remapApprovedRevisionPresentationMedia(
-      approvedPropertyDetailsBeforeMedia as Record<string, any>,
+      parsePublicationRecord((listing as any).propertyDetails, 'property details'),
       mediaSynchronization.mediaIdMap,
     );
-    const approvedVirtualTour = getSafePropertyPresentationVirtualTour(
-      approvedPropertyDetails['propertyPresentation'],
-    );
     const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const approvedLocationProjection = await buildPublicLocationProjection(db, listing);
+    const projection = await buildCanonicalPublicPropertyProjection(db, listing, {
+      sourceListingId: originalListingId,
+      approvedAt,
+      propertyDetails: approvedPropertyDetails,
+    });
     await db
       .update(listings)
-      .set({
-        askingPrice: (listing as any).askingPrice,
-        negotiable: (listing as any).negotiable,
-        transferCostEstimate: (listing as any).transferCostEstimate,
-        monthlyRent: (listing as any).monthlyRent,
-        deposit: (listing as any).deposit,
-        leaseTerms: (listing as any).leaseTerms,
-        availableFrom: (listing as any).availableFrom,
-        utilitiesIncluded: (listing as any).utilitiesIncluded,
-        startingBid: (listing as any).startingBid,
-        reservePrice: (listing as any).reservePrice,
-        auctionDateTime: (listing as any).auctionDateTime,
-        auctionTermsDocumentUrl: (listing as any).auctionTermsDocumentUrl,
-        address: (listing as any).address,
-        latitude: (listing as any).latitude,
-        longitude: (listing as any).longitude,
-        city: (listing as any).city,
-        suburb: (listing as any).suburb,
-        province: (listing as any).province,
-        postalCode: (listing as any).postalCode,
-        placeId: (listing as any).placeId,
-        provinceId: (listing as any).provinceId,
-        cityId: (listing as any).cityId,
-        suburbId: (listing as any).suburbId,
-        privateAddress: (listing as any).privateAddress,
-        coordinateSource: (listing as any).coordinateSource,
-        locationConfirmationState: (listing as any).locationConfirmationState,
-        publicLocationPrecision: (listing as any).publicLocationPrecision,
-        propertyDetails: approvedPropertyDetails,
-        virtualTourUrl: approvedVirtualTour?.embedUrl || null,
-        title: listing.title,
-        description: listing.description,
-        updatedAt: approvedAt,
-      } as any)
+      .set(
+        buildApprovedRevisionSourceSnapshot(
+          listing,
+          projection.canonicalDetails,
+          mediaSynchronization,
+          reviewedBy,
+          approvedAt,
+        ) as any,
+      )
       .where(eq(listings.id, originalListingId));
+    await upsertCanonicalPublicPropertyProjection(db, projection.propertyValues);
     await syncPublishedListingMediaToPropertyMirror(originalListingId, db);
-    await db
-      .update(properties)
-      .set({
-        price: approvedPricingProjection.price,
-        title: listing.title,
-        description: listing.description,
-        propertySettings: JSON.stringify(approvedPropertyDetails),
-        levies: approvedPricingProjection.legacyLevy,
-        ratesAndTaxes: approvedPricingProjection.ratesAndTaxes,
-        address: approvedLocationProjection.publicAddress || 'Location available on enquiry',
-        latitude: approvedLocationProjection.publicLatitude,
-        longitude: approvedLocationProjection.publicLongitude,
-        publicAddress: approvedLocationProjection.publicAddress,
-        publicLatitude: approvedLocationProjection.publicLatitude,
-        publicLongitude: approvedLocationProjection.publicLongitude,
-        publicLocationPrecision: approvedLocationProjection.publicLocationPrecision,
-        provinceId: (listing as any).provinceId,
-        cityId: (listing as any).cityId,
-        suburbId: (listing as any).suburbId,
-        locationText: approvedLocationProjection.publicAddress || 'Location available on enquiry',
-        placeId: null,
-        updatedAt: approvedAt,
-      } as any)
-      .where(
-        and(
-          eq(properties.sourceListingId, originalListingId),
-          isNotNull(properties.sourceListingId),
-        ),
-      );
     await db
       .update(listings)
       .set({
@@ -3435,142 +3676,19 @@ export async function approveListing(
     return;
   }
 
-  // 2. Prepare property data
-  // Parse pricing JSON if it's a string
-  let pricingData: any = {};
-  if (listing.pricing) {
-    try {
-      pricingData =
-        typeof listing.pricing === 'string' ? JSON.parse(listing.pricing) : listing.pricing;
-    } catch (e) {
-      console.error('Failed to parse pricing:', e);
-    }
-  }
-
-  // Parse propertyDetails JSON if it's a string
-  let details: any = {};
-  if (listing.propertyDetails) {
-    try {
-      details =
-        typeof listing.propertyDetails === 'string'
-          ? JSON.parse(listing.propertyDetails)
-          : listing.propertyDetails;
-    } catch (e) {
-      console.error('Failed to parse propertyDetails:', e);
-    }
-  }
-
-  const core = buildCorePropertyInformation(String(listing.propertyType) as any, details);
-  const featuresContext = normalizeFeaturesContext(details.featuresContext, details);
-  const canonicalDetails = {
-    ...details,
-    featuresContext,
-    ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, details),
-  };
-  const pricingProjection = getPricingProjection(
-    String(listing.action),
-    pricingData,
-    canonicalDetails,
-  );
-  if (pricingProjection.contract) {
-    canonicalDetails.pricingContract = pricingProjection.contract;
-  }
-  const knownNumber = (fact: any): number | null =>
-    fact?.status === 'known' && Number.isFinite(Number(fact.value)) ? Number(fact.value) : null;
-  const knownMeasurement = (fact: any): number | null =>
-    fact?.status === 'known' && Number.isFinite(Number(fact.valueM2)) ? Number(fact.valueM2) : null;
-  const bedrooms = knownNumber(core.bedrooms) ?? (Number(details.bedrooms) || 0);
-  const bathrooms = knownNumber(core.bathrooms) ?? (Number(details.bathrooms) || 0);
-  const internalAreaM2 = knownMeasurement(core.internalArea);
-  const erfSizeM2 = knownMeasurement(core.erfArea);
-  const landAreaM2 =
-    core.farmLandArea?.status === 'known' ? Number(core.farmLandArea.normalizedM2) : null;
-
-  // `area` remains a legacy compatibility field. The typed columns below are
-  // the authority for new public search/detail consumers.
-  const area =
-    internalAreaM2 ??
-    (Number(details.unitSizeM2) || Number(details.houseAreaM2) || Number(details.floorAreaM2) || 0);
-
-  // Map amenities
-  const amenitiesList = [...featuresContext.spaces, ...featuresContext.security.features];
-  const amenitiesString = amenitiesList.length > 0 ? amenitiesList.join(',') : null;
-
-  // 3. Upsert the public property projection
-
-  // Re-evaluate immediately before the first public write. This is defence in
-  // depth for entitlement changes between review and projection.
+  // Initial approval and revision approval use the same complete projection
+  // builder. Re-evaluate immediately before the first public write as defence
+  // in depth for entitlement changes between review and projection.
   await assertListingPublicationEntitled(db, { listingId, operation: 'public_projection' });
-  const publicLocationProjection = await buildPublicLocationProjection(db, listing);
-
-  const propertyValues: any = {
-    title: listing.title,
-    description: listing.description,
-    propertyType: toPublicPropertyType(String(listing.propertyType)),
-    listingType:
-      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
-    transactionType:
-      listing.action === 'sell' ? 'sale' : listing.action === 'rent' ? 'rent' : 'auction',
-    price: pricingProjection.price,
-    bedrooms: bedrooms,
-    bathrooms: bathrooms,
-    area: area,
-    internalAreaM2,
-    erfSizeM2,
-    landAreaM2,
-    address: publicLocationProjection.publicAddress || 'Location available on enquiry',
-    city: listing.city,
-    province: listing.province,
-    zipCode: listing.postalCode,
-    latitude: publicLocationProjection.publicLatitude,
-    longitude: publicLocationProjection.publicLongitude,
-    provinceId: listing.provinceId,
-    cityId: listing.cityId,
-    suburbId: listing.suburbId,
-    publicAddress: publicLocationProjection.publicAddress,
-    publicLatitude: publicLocationProjection.publicLatitude,
-    publicLongitude: publicLocationProjection.publicLongitude,
-    publicLocationPrecision: publicLocationProjection.publicLocationPrecision,
-    locationText: publicLocationProjection.publicAddress || `${listing.city}, ${listing.province}`,
-    // Provider IDs are authoring evidence, never a public location authority.
-    placeId: null,
-    amenities: amenitiesString,
-    status: 'available' as any,
-    featured: listing.featured || 0,
-    agentId: listing.agentId,
-    ownerId: listing.ownerId,
+  const approvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const projection = await buildCanonicalPublicPropertyProjection(db, listing, {
     sourceListingId: listingId,
-    propertySettings: JSON.stringify(canonicalDetails),
-    virtualTourUrl:
-      getSafePropertyPresentationVirtualTour(canonicalDetails.propertyPresentation)?.embedUrl ||
-      null,
-    // These columns are legacy compatibility projections. Public pricing
-    // detail reads the versioned contract stored in propertySettings.
-    levies: pricingProjection.legacyLevy,
-    ratesAndTaxes: pricingProjection.ratesAndTaxes,
-    updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-  };
-
-  const existingProperty = await db
-    .select({ id: properties.id })
-    .from(properties)
-    .where(eq(properties.sourceListingId, listingId))
-    .limit(1);
-
-  let newPropertyId: number;
-
-  if (existingProperty.length > 0) {
-    newPropertyId = existingProperty[0].id;
-    await db.update(properties).set(propertyValues).where(eq(properties.id, newPropertyId));
-  } else {
-    const [propertyResult] = await db.insert(properties).values({
-      ...propertyValues,
-      views: 0,
-      enquiries: 0,
-      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    });
-    newPropertyId = Number(propertyResult.insertId);
-  }
+    approvedAt,
+  });
+  const newPropertyId = await upsertCanonicalPublicPropertyProjection(
+    db,
+    projection.propertyValues,
+  );
 
   // 4. Sync Media
   const mediaItems = await getListingMedia(listingId, db);
@@ -3592,7 +3710,7 @@ export async function approveListing(
       imageUrl: item.processedUrl || item.originalUrl,
       isPrimary: mainMedia && Number(mainMedia.id) === Number(item.id) ? 1 : 0,
       displayOrder: item.displayOrder,
-      createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      createdAt: approvedAt,
     });
   }
 
@@ -3602,8 +3720,12 @@ export async function approveListing(
     .set({
       status: 'published' as any,
       approvalStatus: 'approved' as any,
-      publishedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
-      updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      ...buildCanonicalListingPricingSnapshot(listing),
+      propertyDetails: projection.canonicalDetails,
+      reviewedBy,
+      reviewedAt: approvedAt,
+      publishedAt: approvedAt,
+      updatedAt: approvedAt,
     })
     .where(eq(listings.id, listingId));
 
@@ -3613,7 +3735,7 @@ export async function approveListing(
     .set({
       status: 'approved' as any,
       reviewedBy,
-      reviewedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      reviewedAt: approvedAt,
       reviewNotes: notes,
     })
     .where(eq(listingApprovalQueue.listingId, listingId));

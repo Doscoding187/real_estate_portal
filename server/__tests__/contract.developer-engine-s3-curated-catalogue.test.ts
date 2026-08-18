@@ -30,11 +30,16 @@ describe('Developer Engine S3 curated catalogue contracts', () => {
   it('keeps curated authority separate from organisation-owned publication', () => {
     const router = source('server/superAdminPublisherRouter.ts');
     const developmentService = source('server/services/developmentService.ts');
+    const publisherContext = source('server/services/cataloguePublisherContextService.ts');
+    const developerIdentity = source('server/services/developerIdentityService.ts');
     const eligibility = source('server/services/publicDevelopmentEligibility.ts');
 
     expect(router).toContain("emulatorOnly ? 'platform_reference' : undefined");
-    expect(router).toContain("eq(cataloguePublishers.authorityKind, 'platform_reference')");
-    expect(router).toContain('isNull(cataloguePublishers.developerOrganisationId)');
+    expect(publisherContext).toContain(
+      "eq(cataloguePublishers.authorityKind, 'platform_reference')",
+    );
+    expect(developerIdentity).toContain("publisher.authorityKind !== 'platform_reference'");
+    expect(developerIdentity).toContain('publisher.developerOrganisationId !== null');
     expect(developmentService).toContain("eq(users.role, 'super_admin')");
     expect(developmentService).toContain("eq(cataloguePublishers.isVisible, 1)");
     expect(developmentService).toContain('sourceAttribution');

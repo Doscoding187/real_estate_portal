@@ -30,6 +30,7 @@ const completeAgency = {
   email: 'hello@pilot.example',
   city: 'Cape Town',
   province: 'Western Cape',
+  isVerified: 1,
 };
 const completeBranding = {
   companyName: 'Pilot Agency',
@@ -44,6 +45,7 @@ function agencyDb(input: {
   listing?: Record<string, unknown>;
   owner?: Record<string, unknown>;
   agent?: Record<string, unknown> | null;
+  agency?: Record<string, unknown>;
   subscription?: Record<string, unknown> | null;
   plan?: Record<string, unknown> | null;
   entitlements?: Array<Record<string, unknown>>;
@@ -52,7 +54,7 @@ function agencyDb(input: {
   const listing = { ...agencyListing, ...(input.listing || {}) };
   const results: any[][] = [[listing], [{ ...agencyOwner, ...(input.owner || {}) }]];
   if (listing.agentId) results.push([input.agent || { id: listing.agentId, agencyId: 77 }]);
-  results.push([completeAgency], [completeBranding]);
+  results.push([{ ...completeAgency, ...(input.agency || {}) }], [completeBranding]);
   results.push(
     [
       input.subscription
@@ -75,38 +77,29 @@ function agencyDb(input: {
 function independentAgentDb(input: {
   activeListingCount?: number;
   entitlements?: Array<Record<string, unknown>>;
+  agent?: Record<string, unknown>;
 }) {
   const future = new Date(at.getTime() + 86_400_000).toISOString();
+  const agent = {
+    id: 45,
+    userId: 200,
+    agencyId: null,
+    status: 'approved',
+    isVerified: 1,
+    profileImage: 'a',
+    areasServed: 'b',
+    bio: 'c',
+    phone: 'd',
+    focus: 'sales',
+    propertyTypes: 'house',
+    ...(input.agent || {}),
+  };
   return new QueuedDb([
     [{ id: 12, ownerId: 200, agencyId: null, agentId: 45 }],
     [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1 }],
-    [
-      {
-        id: 45,
-        userId: 200,
-        agencyId: null,
-        profileImage: 'a',
-        areasServed: 'b',
-        bio: 'c',
-        phone: 'd',
-        focus: 'sales',
-        propertyTypes: 'house',
-      },
-    ],
+    [agent],
     [{ id: 200, role: 'agent', agencyId: null, emailVerified: 1 }],
-    [
-      {
-        id: 45,
-        userId: 200,
-        agencyId: null,
-        profileImage: 'a',
-        areasServed: 'b',
-        bio: 'c',
-        phone: 'd',
-        focus: 'sales',
-        propertyTypes: 'house',
-      },
-    ],
+    [agent],
     [
       {
         subscription: { status: 'active', currentPeriodEnd: future },
@@ -154,6 +147,16 @@ describe('listing publication entitlement service', () => {
 
   it('denies an agency with no canonical subscription', async () => {
     await expectAgencyDenied({}, 'subscription_required');
+  });
+
+  it('denies an unverified agency before subscription-backed publication', async () => {
+    await expectAgencyDenied(
+      {
+        agency: { isVerified: 0 },
+        subscription: { status: 'active', cancelAtPeriodEnd: 0 },
+      },
+      'agency_unverified',
+    );
   });
 
   it('denies pending, suspended, and explicitly expired agency subscriptions', async () => {
@@ -216,6 +219,22 @@ describe('listing publication entitlement service', () => {
         at,
       }),
     ).rejects.toMatchObject({ reason: 'listing_capacity_exhausted' });
+  });
+
+  it('denies independent agents whose canonical profile is unapproved or unverified', async () => {
+    await expect(
+      assertListingPublicationEntitled(
+        independentAgentDb({ agent: { status: 'pending', isVerified: 1 } }),
+        { listingId: 12, operation: 'submit', at },
+      ),
+    ).rejects.toMatchObject({ reason: 'individual_agent_unapproved' });
+
+    await expect(
+      assertListingPublicationEntitled(
+        independentAgentDb({ agent: { status: 'approved', isVerified: 0 } }),
+        { listingId: 12, operation: 'submit', at },
+      ),
+    ).rejects.toMatchObject({ reason: 'individual_agent_unverified' });
   });
 
   it('accepts a valid agency grace period', async () => {
@@ -291,6 +310,8 @@ describe('listing publication entitlement service', () => {
           id: 45,
           userId: 200,
           agencyId: null,
+          status: 'approved',
+          isVerified: 1,
           profileImage: 'a',
           areasServed: 'b',
           bio: 'c',
@@ -305,6 +326,8 @@ describe('listing publication entitlement service', () => {
           id: 45,
           userId: 200,
           agencyId: null,
+          status: 'approved',
+          isVerified: 1,
           profileImage: 'a',
           areasServed: 'b',
           bio: 'c',

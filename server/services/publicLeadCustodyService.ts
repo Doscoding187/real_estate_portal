@@ -19,6 +19,7 @@ export interface PublicAgentOwnershipCandidate {
   userId: number | null;
   agencyId: number | null;
   status: string | null;
+  isVerified?: number | null;
   userRole?: string | null;
 }
 
@@ -42,6 +43,7 @@ export interface PublicBrandOwnershipCandidate {
   ownerType?: string | null;
   linkedDeveloperAccountId?: number | null;
   isVisible: number | null;
+  sourceAttribution?: string | null;
   isSubscriber?: number | null;
 }
 
@@ -95,16 +97,13 @@ function positiveId(value: number | null | undefined): number | null {
   return Number.isSafeInteger(normalized) && normalized > 0 ? normalized : null;
 }
 
-function isOperationalUserRole(role: string | null | undefined): boolean {
-  return Boolean(role && role !== 'visitor');
-}
-
 function isVerifiedAgent(agent: PublicAgentOwnershipCandidate | null | undefined): boolean {
   return Boolean(
     agent &&
       agent.status === 'approved' &&
+      Number(agent.isVerified || 0) === 1 &&
       positiveId(agent.userId) &&
-      isOperationalUserRole(agent.userRole),
+      agent.userRole === 'agent',
   );
 }
 
@@ -129,7 +128,8 @@ function isPlatformBrand(brand: PublicBrandOwnershipCandidate | null | undefined
       Number(brand.isVisible) === 1 &&
       (brand.authorityKind === 'platform_reference' || brand.ownerType === 'platform') &&
       !positiveId(brand.developerOrganisationId) &&
-      !positiveId(brand.linkedDeveloperAccountId),
+      !positiveId(brand.linkedDeveloperAccountId) &&
+      String(brand.sourceAttribution || '').trim(),
   );
 }
 
@@ -196,7 +196,8 @@ function platformResolution(
     developerId: null,
     leadDeliveryMethod: 'manual',
     brandLeadStatus: 'captured',
-    reason: null,
+    reason:
+      'No verified customer recipient is attached; the lead is queued for Property Listify operations review.',
   };
 }
 
@@ -331,7 +332,11 @@ export function resolvePublicPropertyCustody(
     );
   }
 
-  return platformResolution(input.brand);
+  return attentionResolution(
+    'customer_managed',
+    'The property has no explicit verified supply provenance or actionable recipient.',
+    input.brand,
+  );
 }
 
 export function resolvePublicDevelopmentCustody(
@@ -389,15 +394,11 @@ export function resolvePublicDevelopmentCustody(
     );
   }
 
-  if (input.devOwnerType === 'platform') {
-    if (developerId || brand?.ownerType === 'developer') {
-      return attentionResolution(
-        'platform_curated',
-        'The development mixes platform and customer ownership references.',
-        brand,
-      );
-    }
-    return platformResolution(brand);
+  if (input.devOwnerType === 'platform' && !brand) {
+    return attentionResolution(
+      'platform_curated',
+      'Platform development custody requires an explicit verified Catalogue Publisher.',
+    );
   }
 
   if (brand && isPlatformBrand(brand)) {
@@ -440,7 +441,11 @@ export function resolvePublicDevelopmentCustody(
     );
   }
 
-  return platformResolution(brand);
+  return attentionResolution(
+    'customer_managed',
+    'The development has no explicit verified publisher provenance or actionable recipient.',
+    brand,
+  );
 }
 
 export function resolvePublicBrandOnlyCustody(

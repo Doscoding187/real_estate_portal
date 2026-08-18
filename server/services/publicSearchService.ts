@@ -646,12 +646,15 @@ export class PublicSearchService {
                 sourcePage,
                 sourcePageSize,
                 queryBoundary,
+                { publicOnly: true },
               )
             : propertySearchService.searchProperties(
                 filters,
                 sourceSortOption,
                 sourcePage,
                 sourcePageSize,
+                undefined,
+                { publicOnly: true },
               )
           : null,
         developmentEnabled

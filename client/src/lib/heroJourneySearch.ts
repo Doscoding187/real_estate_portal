@@ -55,6 +55,105 @@ export interface DevelopmentsSearchInput {
   maxPrice?: string | number;
 }
 
+export type LocationSelectionOutcome =
+  | 'added'
+  | 'duplicate'
+  | 'invalid'
+  | 'limit-reached'
+  | 'replaced-incompatible';
+
+export interface LocationSelectionResolution {
+  locations: LocationNode[];
+  outcome: LocationSelectionOutcome;
+}
+
+function haveCompatibleCanonicalParents(
+  current: LocationNode,
+  candidate: LocationNode,
+  scopeKind: CanonicalSearchLocation['scope']['kind'],
+): boolean {
+  if (scopeKind === 'province') return true;
+
+  if (current.parentCanonicalLocationId && candidate.parentCanonicalLocationId) {
+    return current.parentCanonicalLocationId === candidate.parentCanonicalLocationId;
+  }
+
+  if (scopeKind === 'metro_city') {
+    const currentProvince = normalizeLocationKey(current.provinceSlug || '');
+    const candidateProvince = normalizeLocationKey(candidate.provinceSlug || '');
+    return !currentProvince || !candidateProvince || currentProvince === candidateProvince;
+  }
+
+  const currentCity = normalizeLocationKey(current.citySlug || '');
+  const candidateCity = normalizeLocationKey(candidate.citySlug || '');
+  const currentProvince = normalizeLocationKey(current.provinceSlug || '');
+  const candidateProvince = normalizeLocationKey(candidate.provinceSlug || '');
+  const citiesMatch = !currentCity || !candidateCity || currentCity === candidateCity;
+  const provincesMatch =
+    !currentProvince || !candidateProvince || currentProvince === candidateProvince;
+  return citiesMatch && provincesMatch;
+}
+
+/**
+ * Keeps the homepage composer inside the public multi-location contract.
+ * The server remains authoritative, but the client does not knowingly retain
+ * a parent/child or cross-parent selection that cannot form one sibling OR scope.
+ */
+export function resolveCanonicalLocationSelection(
+  selectedLocations: readonly LocationNode[],
+  candidate: LocationNode,
+  maxLocations = 5,
+): LocationSelectionResolution {
+  const currentLocations = selectedLocations.filter(location => location.type !== 'area');
+  const candidateSelection = addStructuredLocation(candidate);
+
+  if (!candidateSelection) {
+    return {
+      locations: currentLocations.length > 0 ? [...currentLocations] : [candidate],
+      outcome: 'invalid',
+    };
+  }
+
+  const candidateScope = candidateSelection.scope;
+  const candidateIdentity =
+    candidateScope.kind === 'search_area'
+      ? `search_area:${candidateScope.searchAreaId}`
+      : candidateScope.canonicalLocationId;
+  const existingSelections = currentLocations.map(location => ({
+    location,
+    selection: addStructuredLocation(location),
+  }));
+
+  if (
+    existingSelections.some(({ selection }) => {
+      if (!selection) return false;
+      const scope = selection.scope;
+      const identity =
+        scope.kind === 'search_area'
+          ? `search_area:${scope.searchAreaId}`
+          : scope.canonicalLocationId;
+      return identity === candidateIdentity;
+    })
+  ) {
+    return { locations: [...currentLocations], outcome: 'duplicate' };
+  }
+
+  const canCombine = existingSelections.every(({ location, selection }) => {
+    if (!selection || selection.scope.kind !== candidateScope.kind) return false;
+    return haveCompatibleCanonicalParents(location, candidate, candidateScope.kind);
+  });
+
+  if (!canCombine && currentLocations.length > 0) {
+    return { locations: [candidate], outcome: 'replaced-incompatible' };
+  }
+
+  if (currentLocations.length >= maxLocations) {
+    return { locations: [...currentLocations], outcome: 'limit-reached' };
+  }
+
+  return { locations: [...currentLocations, candidate], outcome: 'added' };
+}
+
 function parseNonNegativeNumber(value: string | number | undefined): number | undefined {
   if (value === undefined || value === '') return undefined;
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -117,9 +216,9 @@ function addSupportedRentFilters(input: PropertySearchInput, filters: SearchFilt
   }
 }
 
-function addStructuredLocation(location: LocationNode) {
+function addStructuredLocation(location: LocationNode): CanonicalSearchLocation | undefined {
   const slug = normalizeLocationKey(location.slug || location.name);
-  if (!slug) return false;
+  if (!slug) return undefined;
 
   return createCanonicalSearchLocation({ ...location, slug });
 }

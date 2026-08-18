@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarFilters } from '@/components/SidebarFilters';
@@ -28,23 +28,59 @@ export function MobileFilterDrawer({
   showLocationRefinement = true,
 }: MobileFilterDrawerProps) {
   const [localFilters, setLocalFilters] = useState(filters);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Sync local filters when prop changes
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
 
-  // Prevent body scroll when drawer is open
+  // Treat the filter sheet as a modal interaction: keep focus inside it,
+  // support Escape, restore focus, and prevent background scrolling.
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
+    if (!isOpen) return undefined;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(
+        drawerRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter(element => element.getAttribute('aria-hidden') !== 'true');
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-  }, [isOpen]);
+
+    document.addEventListener('keydown', handleKeyDown);
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [isOpen, onClose]);
 
   const handleApply = () => {
     onFilterChange(localFilters);
@@ -55,28 +91,52 @@ export function MobileFilterDrawer({
     setLocalFilters({});
   };
 
+  const handleSaveSearch = () => {
+    onClose();
+    onSaveSearch?.();
+  };
+
   if (!isOpen) return null;
 
   return (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-50 transition-opacity lg:hidden"
+        aria-hidden="true"
+        className="fixed inset-0 z-50 bg-black/50 transition-opacity lg:hidden"
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden animate-in slide-in-from-bottom duration-300">
-        <div className="bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
+      <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-property-filter-title"
+        className="fixed inset-x-0 bottom-0 z-50 animate-in slide-in-from-bottom duration-300 lg:hidden"
+      >
+        <div className="flex max-h-[90dvh] flex-col rounded-t-2xl bg-white shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-slate-800">Filters</h2>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <X className="h-5 w-5 text-gray-500" />
-            </button>
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+            <h2 id="mobile-property-filter-title" className="text-lg font-semibold text-slate-800">
+              Filter property results
+            </h2>
+            <div className="flex items-center gap-1">
+              {onSaveSearch && (
+                <Button type="button" variant="ghost" size="sm" onClick={handleSaveSearch}>
+                  Save search
+                </Button>
+              )}
+              <button
+                ref={closeButtonRef}
+                type="button"
+                aria-label="Close filters"
+                onClick={onClose}
+                className="rounded-full p-2 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
           </div>
 
           {/* Filter Content */}
@@ -89,11 +149,15 @@ export function MobileFilterDrawer({
               listingType={listingType}
               showAmenities={showAmenities}
               showLocationRefinement={showLocationRefinement}
+              showHeader={false}
             />
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center gap-3 px-4 py-4 border-t border-gray-200 bg-white">
+          <div
+            className="flex items-center gap-3 border-t border-gray-200 bg-white px-4 pt-4"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+          >
             <Button variant="outline" className="flex-1" onClick={handleReset}>
               Reset
             </Button>

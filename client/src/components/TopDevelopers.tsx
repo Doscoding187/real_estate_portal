@@ -14,11 +14,11 @@ import { trpc } from '@/lib/trpc';
 
 export function TopDevelopers() {
   const [, setLocation] = useLocation();
-  const displayMetric = (value: unknown, fallback = 'Info soon') => {
+  const displayMetric = (value: unknown, fallback = '—') => {
     const num = Number(value);
     return Number.isFinite(num) && num > 0 ? String(num) : fallback;
   };
-  const displayCount = (value: unknown, fallback = 'Soon') => {
+  const displayCount = (value: unknown, fallback = '—') => {
     const num = Number(value);
     return Number.isFinite(num) && num > 0 ? String(num) : fallback;
   };
@@ -28,7 +28,13 @@ export function TopDevelopers() {
   };
 
   // Fetch visible Catalogue Publishers (now enriched with stats)
-  const { data: developers, isLoading } = trpc.cataloguePublisher.listPublishers.useQuery({
+  const {
+    data: developers,
+    isError,
+    isFetching,
+    isLoading,
+    refetch,
+  } = trpc.cataloguePublisher.listPublishers.useQuery({
     isVisible: true,
     limit: 12,
   });
@@ -41,7 +47,7 @@ export function TopDevelopers() {
         {/* Section Header */}
         <div className="home-section-header">
           <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
-            Connect with trusted property developers
+            Explore property developers
           </h2>
           <p className="text-slate-600 max-w-3xl leading-relaxed text-xs md:text-sm">
             Explore developer profiles, active project pipelines, and new development opportunities
@@ -50,26 +56,60 @@ export function TopDevelopers() {
         </div>
 
         {isLoading ? (
-          <div className="home-card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} className="border-slate-200">
-                <CardContent className="p-6">
-                  <div className="flex gap-4 mb-4">
-                    <Skeleton className="w-20 h-20 rounded-xl" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-5 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
+          <div
+            className="-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0"
+            data-testid="developer-feed-loading"
+            role="status"
+            aria-label="Loading developer profiles"
+          >
+            <div className="flex gap-2">
+              {[0, 1, 2].map(index => (
+                <Card
+                  key={index}
+                  className="min-w-0 flex-[0_0_78%] border-slate-200 sm:flex-[0_0_56%] md:flex-[0_0_48%] lg:flex-[0_0_24%]"
+                  data-testid="developer-profile-skeleton"
+                >
+                  <CardContent className="p-3.5 sm:p-4">
+                    <div className="mb-3 flex gap-3">
+                      <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
+                      <div className="flex-1 space-y-2 pt-1">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
                     </div>
-                  </div>
-                  <Skeleton className="h-20 w-full mb-4" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Skeleton className="h-12 w-full rounded-lg" />
+                      <Skeleton className="h-12 w-full rounded-lg" />
+                    </div>
+                    <Skeleton className="mt-3 h-9 w-full rounded-lg" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <span className="sr-only">Loading developer profiles</span>
+          </div>
+        ) : isError ? (
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-8 text-center"
+            role="alert"
+          >
+            <Building2 className="mx-auto h-9 w-9 text-amber-500" />
+            <h3 className="mt-3 text-sm font-bold text-slate-900">
+              Developer profiles could not be loaded
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+              This is a temporary loading problem, not an empty developer catalogue. Try again or
+              browse the developer directory.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-4 border-amber-300 bg-white"
+              disabled={isFetching}
+              onClick={() => void refetch()}
+            >
+              {isFetching ? 'Trying again…' : 'Try again'}
+            </Button>
           </div>
         ) : hasDevelopers ? (
           /* Developers Carousel */
@@ -82,7 +122,7 @@ export function TopDevelopers() {
               className="w-full"
             >
               <CarouselContent className="-ml-2">
-                {compactDevelopers.map((developer: any) => (
+                {compactDevelopers.map(developer => (
                   <CarouselItem
                     key={developer.id}
                     className="pl-2 basis-[78%] sm:basis-[56%] md:basis-1/2 lg:basis-1/4"
@@ -122,7 +162,7 @@ export function TopDevelopers() {
                                   : 'text-sm'
                               }`}
                             >
-                              {displayMetric(developer.stats?.totalProjects, 'New')}
+                              {displayMetric(developer.stats?.totalProjects)}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
                               Projects
@@ -135,7 +175,9 @@ export function TopDevelopers() {
                                 hasNumericValue(developer.stats?.experience) ? 'text-lg' : 'text-sm'
                               }`}
                             >
-                              {displayMetric(developer.stats?.experience, 'Info soon')}
+                              {hasNumericValue(developer.stats?.experience)
+                                ? `${displayMetric(developer.stats?.experience)} yrs`
+                                : '—'}
                             </span>
                             <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
                               Experience
@@ -211,7 +253,7 @@ export function TopDevelopers() {
               Developer profiles are being prepared
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-              We will show developer profiles here as soon as live brand data is available.
+              Published developer profiles will appear here when catalogue data is available.
             </p>
           </div>
         )}

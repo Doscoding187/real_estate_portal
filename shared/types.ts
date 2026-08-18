@@ -731,7 +731,7 @@ export interface Property {
   propertyType: PublicPropertyType;
   listingType: 'sale' | 'rent';
   listingSource?: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   bedrooms?: number;
   bathrooms?: number;
   internalAreaM2?: number;
@@ -759,8 +759,15 @@ export interface Property {
   status: 'available' | 'under_offer' | 'sold' | 'let';
   listedDate: Date;
 
-  // Agent info
-  agent: {
+  /**
+   * Canonical server-resolved public supply identity. Public Buy surfaces must
+   * use this contract rather than infer a seller from missing agent data.
+   */
+  publicIdentity?: PublicPropertySupplyIdentity;
+
+  // Legacy/internal property consumers may still carry an agent projection.
+  // Canonical public cards and detail use publicIdentity.
+  agent?: {
     id: string;
     name: string;
     agency: string;
@@ -965,9 +972,14 @@ export interface SearchCardDeveloperBrandRef {
   publicContactPhone?: string | null;
 }
 
-export interface SearchCardIdentity {
-  role: 'agent' | 'developer' | 'private';
+export type PublicPropertySupplyRole = 'agent' | 'agency' | 'developer' | 'platform';
+
+export interface PublicPropertySupplyIdentity {
+  role: PublicPropertySupplyRole;
+  provenance: 'agent' | 'agency' | 'developer' | 'platform_curated';
   name: string;
+  organizationName?: string | null;
+  organizationLogoUrl?: string | null;
   avatarUrl?: string | null;
   phone?: string | null;
   whatsapp?: string | null;
@@ -976,6 +988,17 @@ export interface SearchCardIdentity {
   agencyId?: number;
   cataloguePublisherId?: number;
 }
+
+/**
+ * Shared result-card identity. `private` remains only for an explicitly
+ * supported legacy/Rent contract; P-BUY never derives it from absence.
+ */
+export type SearchCardIdentity =
+  | PublicPropertySupplyIdentity
+  | (Omit<PublicPropertySupplyIdentity, 'role' | 'provenance'> & {
+      role: 'private';
+      provenance: 'private';
+    });
 
 export interface SearchCardResult {
   kind: 'property' | 'development';
@@ -1001,7 +1024,7 @@ export interface SearchCardResult {
   propertyType: Property['propertyType'];
   listingType: Property['listingType'];
   listingSource: 'manual' | 'development';
-  listerType?: 'agent' | 'agency' | 'private';
+  listerType?: 'agent' | 'agency' | 'private' | 'platform';
   contactRole: SearchCardIdentity['role'];
   identity: SearchCardIdentity;
   development?: SearchCardDevelopmentRef;

@@ -2,21 +2,21 @@ import { TRPCError } from '@trpc/server';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
-  agents,
-  agencies,
   cataloguePublishers,
   developerOrganisations,
+  developerOrganisationMemberships,
   developmentSupersessions,
   developments,
   leads,
   properties,
   unitTypes,
-  users,
 } from '../../drizzle/schema';
 import { cataloguePublisherService } from './cataloguePublisherService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
 import { recordProspectLeadAction } from './prospectJourneyService';
 import {
+  createInitialLeadDeliveryAttempt,
+  leadDeliverySummaryForInitialAttempt,
   recordInitialLeadDeliveryAttempt,
   toMySqlDateTime,
   type LeadDeliveryRecipientType,
@@ -25,15 +25,17 @@ import {
 import {
   resolvePublicBrandOnlyCustody,
   resolvePublicDevelopmentCustody,
-  resolvePublicPropertyCustody,
   type PublicBrandOwnershipCandidate,
   type PublicDevelopmentOwnershipCandidates,
   type PublicLeadCustody,
+  type PublicLeadCustodyResolution,
   type PublicLeadRecipientType,
   type PublicSupplyOrigin,
 } from './publicLeadCustodyService';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
+import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -82,7 +84,7 @@ export interface PublicLeadCaptureInput {
   };
 }
 
-interface ResolvedLeadOwnership {
+export interface ResolvedLeadOwnership {
   propertyId?: number;
   developmentId?: number;
   cataloguePublisherId?: number;
@@ -216,10 +218,6 @@ function coerceLeadType(input?: string): LeadType {
   return 'inquiry';
 }
 
-function isPublicPropertyStatus(status: unknown): boolean {
-  return status === 'available' || status === 'published';
-}
-
 function isDuplicateKeyError(error: unknown): boolean {
   const code = String((error as { code?: unknown })?.code || '');
   const message = String((error as { message?: unknown })?.message || '').toLowerCase();
@@ -233,34 +231,92 @@ function getPublicTargetCount(input: PublicLeadCaptureInput): number {
 }
 
 function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
-  if (!input.captureRequestId?.trim()) {
+  const captureRequestId = input.captureRequestId?.trim() || '';
+  if (
+    captureRequestId.length < PUBLIC_LEAD_INPUT_LIMITS.captureRequestIdMin ||
+    (input.captureRequestId?.length || 0) > PUBLIC_LEAD_INPUT_LIMITS.captureRequestId
+  ) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'A stable enquiry request ID is required.',
     });
   }
 
-  if (!input.consent?.accepted || !input.consent.version?.trim()) {
+  const consentVersion = input.consent?.version?.trim() || '';
+  if (
+    !input.consent?.accepted ||
+    !consentVersion ||
+    (input.consent?.version?.length || 0) > PUBLIC_LEAD_INPUT_LIMITS.consentVersion
+  ) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Consent is required before submitting an enquiry.',
     });
   }
 
-  if (!input.name?.trim() || input.name.trim().length > 200) {
+  if (
+    input.consent.source &&
+    input.consent.source.length > PUBLIC_LEAD_INPUT_LIMITS.consentSource
+  ) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The consent source is too long.' });
+  }
+
+  if (!input.name?.trim() || input.name.length > PUBLIC_LEAD_INPUT_LIMITS.name) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'A valid prospect name is required.' });
   }
 
   if (
     !input.email?.trim() ||
-    input.email.trim().length > 320 ||
+    input.email.length > PUBLIC_LEAD_INPUT_LIMITS.email ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())
   ) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'A valid prospect email is required.' });
   }
 
-  if (input.phone && input.phone.trim().length > 50) {
+  if (input.phone && input.phone.length > PUBLIC_LEAD_INPUT_LIMITS.phone) {
     throw new TRPCError({ code: 'BAD_REQUEST', message: 'The prospect phone number is too long.' });
+  }
+
+  if (input.message && input.message.length > PUBLIC_LEAD_INPUT_LIMITS.message) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The enquiry message is too long.' });
+  }
+
+  for (const [label, value] of [
+    ['lead source', input.source],
+    ['lead source', input.leadSource],
+    ['source surface', input.sourceSurface],
+  ] as const) {
+    if (value && value.length > PUBLIC_LEAD_INPUT_LIMITS.source) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: `The ${label} is too long.` });
+    }
+  }
+
+  if (input.referrerUrl && input.referrerUrl.length > PUBLIC_LEAD_INPUT_LIMITS.referrerUrl) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The referrer URL is too long.' });
+  }
+
+  for (const value of [input.utmSource, input.utmMedium, input.utmCampaign]) {
+    if (value && value.length > PUBLIC_LEAD_INPUT_LIMITS.utm) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'The campaign attribution is too long.' });
+    }
+  }
+
+  if (input.unitId && input.unitId.length > PUBLIC_LEAD_INPUT_LIMITS.unitId) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The unit identifier is too long.' });
+  }
+
+  if (input.unitName && input.unitName.length > PUBLIC_LEAD_INPUT_LIMITS.unitName) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'The unit name is too long.' });
+  }
+
+  if (
+    input.affordabilityData?.calculatedAt &&
+    input.affordabilityData.calculatedAt.length > PUBLIC_LEAD_INPUT_LIMITS.calculatedAt
+  ) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'The affordability calculation timestamp is too long.',
+    });
   }
 
   if (getPublicTargetCount(input) === 0) {
@@ -290,85 +346,12 @@ async function selectBrand(database: any, brandId: number) {
     .from(cataloguePublishers)
     .where(eq(cataloguePublishers.id, brandId))
     .limit(1);
-  return brand || null;
-}
-
-async function loadAgentCandidates(database: any, ids: number[]) {
-  const normalizedIds = Array.from(new Set(ids.filter(id => id > 0)));
-  if (normalizedIds.length === 0) return new Map<number, any>();
-
-  const agentRows = await database
-    .select({
-      id: agents.id,
-      userId: agents.userId,
-      agencyId: agents.agencyId,
-      status: agents.status,
-    })
-    .from(agents)
-    .where(inArray(agents.id, normalizedIds));
-
-  const userIds = agentRows
-    .map((agent: any) => positiveId(agent.userId))
-    .filter((id: number | undefined): id is number => id !== undefined);
-  const userRows =
-    userIds.length > 0
-      ? await database
-          .select({ id: users.id, role: users.role })
-          .from(users)
-          .where(inArray(users.id, userIds))
-      : [];
-  const roleByUserId = new Map<number, string | null>(
-    userRows.map((user: any) => [Number(user.id), user.role || null]),
-  );
-
-  return new Map<number, any>(
-    agentRows.map((agent: any) => [
-      Number(agent.id),
-      {
-        id: Number(agent.id),
-        userId: positiveId(agent.userId) || null,
-        agencyId: positiveId(agent.agencyId) || null,
-        status: agent.status || null,
-        userRole: roleByUserId.get(Number(agent.userId)) || null,
-      },
-    ]),
-  );
-}
-
-async function loadAgencyCandidates(database: any, ids: number[]) {
-  const normalizedIds = Array.from(new Set(ids.filter(id => id > 0)));
-  if (normalizedIds.length === 0) return new Map<number, any>();
-
-  const rows = await database
-    .select({ id: agencies.id, isVerified: agencies.isVerified })
-    .from(agencies)
-    .where(inArray(agencies.id, normalizedIds));
-  return new Map<number, any>(
-    rows.map((agency: any) => [
-      Number(agency.id),
-      { id: Number(agency.id), isVerified: Number(agency.isVerified || 0) },
-    ]),
-  );
-}
-
-async function loadUserCandidates(database: any, ids: number[]) {
-  const normalizedIds = Array.from(new Set(ids.filter(id => id > 0)));
-  if (normalizedIds.length === 0) return new Map<number, any>();
-
-  const rows = await database
-    .select({ id: users.id, agencyId: users.agencyId, role: users.role })
-    .from(users)
-    .where(inArray(users.id, normalizedIds));
-  return new Map<number, any>(
-    rows.map((user: any) => [
-      Number(user.id),
-      {
-        id: Number(user.id),
-        agencyId: positiveId(user.agencyId) || null,
-        role: user.role || null,
-      },
-    ]),
-  );
+  return brand
+    ? {
+        ...brand,
+        isSubscriber: brand.authorityKind === 'developer_first_party' ? 1 : 0,
+      }
+    : null;
 }
 
 async function loadDeveloperCandidates(database: any, ids: number[]) {
@@ -399,7 +382,7 @@ function mapCustodyResolution(
     developmentId?: number;
     cataloguePublisherId?: number;
   },
-  custody: ReturnType<typeof resolvePublicPropertyCustody>,
+  custody: PublicLeadCustodyResolution,
 ): ResolvedLeadOwnership {
   return {
     propertyId: input.propertyId,
@@ -435,25 +418,14 @@ export async function resolveLeadOwnership(
 
   let property: any = null;
   if (propertyId) {
-    [property] = await database
-      .select({
-        id: properties.id,
-        status: properties.status,
-        developmentId: properties.developmentId,
-        cataloguePublisherId: properties.cataloguePublisherId,
-        agentId: properties.agentId,
-        ownerId: properties.ownerId,
-      })
-      .from(properties)
-      .where(eq(properties.id, propertyId))
-      .limit(1);
-
-    if (!property || !isPublicPropertyStatus(property.status)) {
+    const publicProperty = await resolvePublicPropertyEligibility(propertyId);
+    if (!publicProperty) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Property not available for public enquiries.',
       });
     }
+    property = publicProperty.property;
 
     if (requestedDevelopmentId && Number(property.developmentId || 0) !== requestedDevelopmentId) {
       throw new TRPCError({
@@ -461,6 +433,22 @@ export async function resolveLeadOwnership(
         message: 'The property and development enquiry targets do not match.',
       });
     }
+
+    const persistedBrandId = positiveId(property.cataloguePublisherId);
+    if (requestedBrandId && requestedBrandId !== persistedBrandId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'The brand attribution does not match the public target.',
+      });
+    }
+
+    return mapCustodyResolution(
+      {
+        propertyId,
+        cataloguePublisherId: persistedBrandId,
+      },
+      publicProperty.custody,
+    );
   }
 
   const developmentId = property?.developmentId
@@ -481,6 +469,17 @@ export async function resolveLeadOwnership(
           FROM ${unitTypes}
           WHERE ${unitTypes.developmentId} = ${sql.raw('developments.id')}
             AND ${unitTypes.isActive} = 1
+        )`,
+        activeOperatorCount: sql<number>`(
+          SELECT COUNT(*)
+          FROM ${developerOrganisationMemberships}
+          WHERE ${developerOrganisationMemberships.organisationId} = (
+            SELECT ${cataloguePublishers.developerOrganisationId}
+            FROM ${cataloguePublishers}
+            WHERE ${cataloguePublishers.id} = ${developments.cataloguePublisherId}
+            LIMIT 1
+          )
+            AND ${developerOrganisationMemberships.status} = 'active'
         )`,
         activeSupersessionSource: sql<number>`EXISTS (
           SELECT 1
@@ -569,6 +568,7 @@ export async function resolveLeadOwnership(
       organisation: developerId ? developerMap.get(developerId) : null,
       unitTypes: [],
       activeUnitTypeCount: Number(development?.activeUnitTypeCount || 0),
+      activeOperatorCount: Number(development?.activeOperatorCount || 0),
       activeSupersessionSource: Number(development?.activeSupersessionSource || 0) === 1,
       commercialAccess,
     } as any);
@@ -585,6 +585,13 @@ export async function resolveLeadOwnership(
       brand,
       brandReferenceInvalid,
     });
+
+    if (custody.leadCustody === 'attention_required') {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Development not available for public enquiries.',
+      });
+    }
 
     return mapCustodyResolution(
       {
@@ -604,45 +611,17 @@ export async function resolveLeadOwnership(
       developer: developerId ? developerMap.get(developerId) : null,
     });
 
+    if (custody.leadCustody === 'attention_required') {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Developer brand not available for public enquiries.',
+      });
+    }
+
     return mapCustodyResolution({ cataloguePublisherId: brand?.id }, custody);
   }
 
-  // Public enquiry attribution is projection-owned. sourceListingId is an
-  // internal publication bridge, never a fallback into mutable listing state.
-  const agentIds = [positiveId(property.agentId)].filter((id): id is number => id !== undefined);
-  const agentMap = await loadAgentCandidates(database, agentIds);
-  const ownerIds = [positiveId(property.ownerId)].filter((id): id is number => id !== undefined);
-  const userMap = await loadUserCandidates(database, ownerIds);
-
-  const agencyIds = [
-    ...Array.from(userMap.values()).map(user => positiveId(user.agencyId)),
-    ...agentIds.map(agentId => positiveId(agentMap.get(agentId)?.agencyId)),
-  ].filter((id): id is number => id !== undefined);
-  const agencyMap = await loadAgencyCandidates(database, agencyIds);
-
-  const custody = resolvePublicPropertyCustody({
-    propertyAgentId: property.agentId,
-    ownerAgencyId: userMap.get(Number(property.ownerId))?.agencyId,
-    cataloguePublisherId: brand?.id,
-    directAgent: property.agentId ? agentMap.get(Number(property.agentId)) : null,
-    directAgentAgency: property.agentId
-      ? agencyMap.get(Number(agentMap.get(Number(property.agentId))?.agencyId))
-      : null,
-    ownerAgency: userMap.get(Number(property.ownerId))?.agencyId
-      ? agencyMap.get(Number(userMap.get(Number(property.ownerId))?.agencyId))
-      : null,
-    brand: brand as PublicBrandOwnershipCandidate | null,
-    brandReferenceInvalid,
-  });
-
-  return mapCustodyResolution(
-    {
-      propertyId: property.id,
-      developmentId: developmentId || undefined,
-      cataloguePublisherId: brand?.id,
-    },
-    custody,
-  );
+  throw new TRPCError({ code: 'BAD_REQUEST', message: 'A public target is required.' });
 }
 
 async function findLeadByCaptureRequestId(database: any, captureRequestId?: string) {
@@ -736,27 +715,16 @@ function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadC
   const deliveryStatus = existing.deliveryStatus || 'pending';
   const attempts = Array.isArray(existing.deliveryAttempts) ? existing.deliveryAttempts : [];
   const latestAttempt = attempts.length > 0 ? (attempts[attempts.length - 1] as any) : null;
-  const supplyOrigin: PublicSupplyOrigin =
-    latestAttempt?.supplyOrigin ||
-    (existing.leadDeliveryMethod === 'manual' && !existing.agentId && !existing.agencyId
-      ? 'platform_curated'
-      : 'customer_managed');
-  const leadCustody: PublicLeadCustody =
-    latestAttempt?.leadCustody ||
-    (deliveryStatus === 'attention_required'
-      ? supplyOrigin === 'platform_curated'
-        ? 'platform_managed'
-        : 'attention_required'
-      : 'verified_customer_recipient');
-  const recipientType: PublicLeadCaptureResult['recipientType'] =
-    latestAttempt?.recipientType ||
-    (existing.cataloguePublisherId
-      ? 'brand'
-      : existing.agentId
-        ? 'agent'
-        : existing.agencyId
-          ? 'agency'
-          : 'manual');
+  if (!latestAttempt?.supplyOrigin || !latestAttempt?.leadCustody) {
+    throw new TRPCError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'The enquiry is stored, but its custody acknowledgement is still being finalized.',
+    });
+  }
+
+  const supplyOrigin = latestAttempt.supplyOrigin as PublicSupplyOrigin;
+  const leadCustody = latestAttempt.leadCustody as PublicLeadCustody;
+  const recipientType = latestAttempt.recipientType as PublicLeadCaptureResult['recipientType'];
   const brandLeadStatus =
     existing.brandLeadStatus === 'captured' ||
     existing.brandLeadStatus === 'delivered_unsubscribed' ||
@@ -767,21 +735,28 @@ function resultForExistingLead(existing: typeof leads.$inferSelect): PublicLeadC
   return {
     success: true,
     leadId: existing.id,
-    route: recipientType === 'brand' || recipientType === 'developer' ? 'brand' : 'direct',
+    route:
+      recipientType === 'brand' ||
+      recipientType === 'developer' ||
+      (recipientType === 'manual' && Boolean(existing.cataloguePublisherId))
+        ? 'brand'
+        : 'direct',
     delivered: deliveryStatus === 'delivered',
     deliveryStatus,
     deliveryMethod: existing.leadDeliveryMethod === 'crm_export' ? 'crm_export' : 'manual',
-    deliveryAttemptId: latestAttempt?.id,
+    deliveryAttemptId: latestAttempt.id,
     duplicate: true,
     supplyOrigin,
     leadCustody,
     recipientType,
-    recipientId: latestAttempt?.recipientId ?? existing.agentId ?? existing.agencyId ?? null,
+    recipientId: latestAttempt.recipientId ?? null,
     brandLeadStatus,
     message:
       deliveryStatus === 'delivered'
-        ? 'This enquiry has already been received.'
-        : 'This enquiry has already been received and is being processed.',
+        ? 'This enquiry has already been received by the responsible team.'
+        : leadCustody === 'platform_managed'
+          ? 'This enquiry has already been received by Property Listify operations.'
+          : 'This enquiry has already been received and is being processed.',
   };
 }
 
@@ -807,7 +782,50 @@ function messageForResolution(resolved: ResolvedLeadOwnership): string {
   if (resolved.leadCustody === 'platform_managed') {
     return 'Your enquiry has been recorded. Property Listify will review the request.';
   }
-  return 'Your enquiry has been recorded and requires recipient review.';
+  throw new TRPCError({
+    code: 'NOT_FOUND',
+    message: 'This listing does not currently have an actionable enquiry destination.',
+  });
+}
+
+async function recoverExistingLead(
+  database: any,
+  existing: typeof leads.$inferSelect,
+  input: PublicLeadCaptureInput,
+  source: string,
+  leadSource: string,
+): Promise<PublicLeadCaptureResult> {
+  if (!isEquivalentReplay(existing, input, source, leadSource)) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'This request ID belongs to a different enquiry context.',
+    });
+  }
+
+  let durableLead = existing;
+  if (!Array.isArray(existing.deliveryAttempts) || existing.deliveryAttempts.length === 0) {
+    const replayResolved = await resolveLeadOwnership(input);
+    const replayStatus: LeadDeliveryStatus =
+      replayResolved.leadCustody === 'verified_customer_recipient'
+        ? 'delivered'
+        : 'attention_required';
+    await recordInitialLeadDeliveryAttempt({
+      leadId: Number(existing.id),
+      deliveryKey: deliveryKeyForOwnership(replayResolved),
+      recipientType: replayResolved.recipientType,
+      recipientId: replayResolved.recipientId,
+      channel: replayResolved.leadDeliveryMethod,
+      status: replayStatus,
+      supplyOrigin: replayResolved.supplyOrigin,
+      leadCustody: replayResolved.leadCustody,
+      error: replayResolved.reason,
+      database,
+    });
+    durableLead =
+      (await findLeadByCaptureRequestId(database, input.captureRequestId)) || existing;
+  }
+
+  return resultForExistingLead(durableLead);
 }
 
 export async function capturePublicLead(
@@ -820,7 +838,7 @@ export async function capturePublicLead(
 
   const source = normalizeLeadSource(input.sourceSurface || input.source || input.leadSource);
   const leadSource = normalizeLeadSource(input.leadSource || input.source || input.sourceSurface);
-  const existing = await findLeadByCaptureRequestId(database, input.captureRequestId);
+  let existing = await findLeadByCaptureRequestId(database, input.captureRequestId);
   if (existing) {
     if (!(await existingLeadMatchesTransaction(database, existing, input.transactionType))) {
       throw new TRPCError({
@@ -828,13 +846,7 @@ export async function capturePublicLead(
         message: 'This request ID belongs to a different transaction context.',
       });
     }
-    if (!isEquivalentReplay(existing, input, source, leadSource)) {
-      throw new TRPCError({
-        code: 'CONFLICT',
-        message: 'This request ID belongs to a different enquiry context.',
-      });
-    }
-    return resultForExistingLead(existing);
+    return recoverExistingLead(database, existing, input, source, leadSource);
   }
 
   const resolved = await resolveLeadOwnership(input);
@@ -847,6 +859,17 @@ export async function capturePublicLead(
       resolved.cataloguePublisherId)
       ? 'brand'
       : 'direct';
+  const deliveryAttempt = createInitialLeadDeliveryAttempt({
+    deliveryKey: deliveryKeyForOwnership(resolved),
+    recipientType: resolved.recipientType,
+    recipientId: resolved.recipientId,
+    channel: resolved.leadDeliveryMethod,
+    status: deliveryStatus,
+    supplyOrigin: resolved.supplyOrigin,
+    leadCustody: resolved.leadCustody,
+    error: resolved.reason,
+  });
+  const deliverySummary = leadDeliverySummaryForInitialAttempt(deliveryAttempt);
 
   let insertResult: any;
   try {
@@ -882,72 +905,65 @@ export async function capturePublicLead(
       consentSource: input.consent?.source || null,
       brandLeadStatus: resolved.brandLeadStatus || null,
       leadDeliveryMethod: resolved.leadDeliveryMethod,
-      deliveryStatus,
-      deliveryAttempts: null,
+      ...deliverySummary,
     } satisfies LeadInsert);
   } catch (error) {
     if (input.captureRequestId && isDuplicateKeyError(error)) {
       const duplicate = await findLeadByCaptureRequestId(database, input.captureRequestId);
       if (duplicate) {
-        if (!isEquivalentReplay(duplicate, input, source, leadSource)) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'This request ID belongs to a different enquiry context.',
-          });
-        }
-        return resultForExistingLead(duplicate);
+        return recoverExistingLead(database, duplicate, input, source, leadSource);
       }
     }
     throw error;
   }
 
   const leadId = Number(insertResult.insertId);
-  const deliveryAttempt = await recordInitialLeadDeliveryAttempt({
-    leadId,
-    deliveryKey: deliveryKeyForOwnership({ ...resolved }),
-    recipientType: resolved.recipientType,
-    recipientId: resolved.recipientId,
-    channel: resolved.leadDeliveryMethod,
-    status: deliveryStatus,
-    supplyOrigin: resolved.supplyOrigin,
-    leadCustody: resolved.leadCustody,
-    error: resolved.reason,
-    database,
-  });
 
-  if (resolved.propertyId) {
-    await database
-      .update(properties)
-      .set({ enquiries: sql`${properties.enquiries} + 1` })
-      .where(eq(properties.id, resolved.propertyId));
-  }
-
-  await recordAgentOsEventForAgentId({
-    agentId: resolved.agentId,
-    eventType: 'agent_lead_received',
-    eventData: {
+  // These are useful counters/analytics, but they are not the custody
+  // acknowledgement boundary. A failure here must not make a durably
+  // captured enquiry look lost or force a duplicate retry.
+  const optionalSideEffects = await Promise.allSettled([
+    resolved.propertyId
+      ? database
+          .update(properties)
+          .set({ enquiries: sql`${properties.enquiries} + 1` })
+          .where(eq(properties.id, resolved.propertyId))
+      : Promise.resolve(),
+    recordAgentOsEventForAgentId({
+      agentId: resolved.agentId,
+      eventType: 'agent_lead_received',
+      eventData: {
+        leadId,
+        propertyId: resolved.propertyId ?? null,
+        developmentId: resolved.developmentId ?? null,
+        leadSource,
+        leadType,
+        route,
+        supplyOrigin: resolved.supplyOrigin,
+        leadCustody: resolved.leadCustody,
+      },
+    }),
+    recordProspectLeadAction({
+      db: database,
       leadId,
-      propertyId: resolved.propertyId ?? null,
-      developmentId: resolved.developmentId ?? null,
-      leadSource,
-      leadType,
-      route,
-      supplyOrigin: resolved.supplyOrigin,
-      leadCustody: resolved.leadCustody,
-    },
-  });
-
-  await recordProspectLeadAction({
-    db: database,
-    leadId,
-    authenticatedUserId: input.authenticatedUserId,
-    source,
-    propertyId: resolved.propertyId,
-    developmentId: resolved.developmentId,
-    referrerUrl: input.referrerUrl,
-    utmSource: input.utmSource,
-    utmMedium: input.utmMedium,
-    utmCampaign: input.utmCampaign,
+      authenticatedUserId: input.authenticatedUserId,
+      source,
+      propertyId: resolved.propertyId,
+      developmentId: resolved.developmentId,
+      referrerUrl: input.referrerUrl,
+      utmSource: input.utmSource,
+      utmMedium: input.utmMedium,
+      utmCampaign: input.utmCampaign,
+    }),
+  ]);
+  optionalSideEffects.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error('[capturePublicLead] Optional post-capture side effect failed', {
+        leadId,
+        sideEffect: index,
+        error: result.reason,
+      });
+    }
   });
 
   if (resolved.cataloguePublisherId) {

@@ -1,9 +1,11 @@
 import { desc, eq, gte } from 'drizzle-orm';
 import { getDb } from '../db';
 import { leads, properties, users } from '../../drizzle/schema';
+import { parseDeliveryAttempts } from './leadDeliveryService';
 
 type UserRole = 'visitor' | 'agent' | 'agency_admin' | 'property_developer' | 'super_admin' | null;
 type LeadDeliveryMethod = 'email' | 'crm_export' | 'manual' | 'none' | null;
+type LeadDeliveryStatus = 'pending' | 'delivered' | 'failed' | 'attention_required' | null;
 
 export interface LeadRoutingAuditRow {
   id: number;
@@ -19,6 +21,8 @@ export interface LeadRoutingAuditRow {
   source: string | null;
   brandLeadStatus: string | null;
   leadDeliveryMethod: LeadDeliveryMethod;
+  deliveryStatus: LeadDeliveryStatus;
+  deliveryAttempts: unknown;
   propertyOwnerId: number | null;
   propertyOwnerRole: UserRole;
 }
@@ -33,7 +37,7 @@ export interface LeadRoutingAuditSummary {
   brandWithAgentContext: number;
   directToAgent: number;
   directToAgency: number;
-  directToPrivate: number;
+  platformCustody: number;
   directContextOnly: number;
   unknownRoute: number;
 }
@@ -44,8 +48,13 @@ export interface LeadRoutingAuditAttentionLead {
   name: string;
   email: string;
   routeType: 'brand' | 'direct' | 'unknown';
-  recipientType: 'brand' | 'agent' | 'agency' | 'private' | 'context_only' | 'unknown';
-  issue: 'brand_capture_only' | 'direct_context_without_owner' | 'unknown_route';
+  recipientType: 'brand' | 'agent' | 'agency' | 'developer' | 'platform' | 'context_only' | 'unknown';
+  issue:
+    | 'brand_capture_only'
+    | 'platform_custody_review'
+    | 'recipient_evidence_missing'
+    | 'direct_context_without_owner'
+    | 'unknown_route';
   leadSource: string;
   propertyId: number | null;
   developmentId: number | null;
@@ -61,7 +70,7 @@ export interface LeadRoutingAuditResult {
 
 interface LeadRoutingClassification {
   routeType: 'brand' | 'direct' | 'unknown';
-  recipientType: 'brand' | 'agent' | 'agency' | 'private' | 'context_only' | 'unknown';
+  recipientType: 'brand' | 'agent' | 'agency' | 'developer' | 'platform' | 'context_only' | 'unknown';
   normalizedSource: string;
   issue: LeadRoutingAuditAttentionLead['issue'] | null;
 }
@@ -73,17 +82,24 @@ function normalizeSource(value?: string | null) {
 
 export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassification {
   const normalizedSource = normalizeSource(row.leadSource || row.source);
+  const attempts = parseDeliveryAttempts(row.deliveryAttempts);
+  const latestAttempt = attempts[attempts.length - 1];
 
-  if (row.cataloguePublisherId) {
+  if (latestAttempt?.leadCustody === 'platform_managed') {
     return {
-      routeType: 'brand',
-      recipientType: 'brand',
+      routeType: row.cataloguePublisherId ? 'brand' : 'direct',
+      recipientType: 'platform',
       normalizedSource,
-      issue: row.leadDeliveryMethod === 'none' ? 'brand_capture_only' : null,
+      issue: row.deliveryStatus === 'attention_required' ? 'platform_custody_review' : null,
     };
   }
 
-  if (row.agentId) {
+  if (
+    latestAttempt?.leadCustody === 'verified_customer_recipient' &&
+    latestAttempt.status === 'delivered' &&
+    latestAttempt.recipientType === 'agent' &&
+    Number(latestAttempt.recipientId) === Number(row.agentId)
+  ) {
     return {
       routeType: 'direct',
       recipientType: 'agent',
@@ -92,7 +108,12 @@ export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassi
     };
   }
 
-  if (row.agencyId) {
+  if (
+    latestAttempt?.leadCustody === 'verified_customer_recipient' &&
+    latestAttempt.status === 'delivered' &&
+    latestAttempt.recipientType === 'agency' &&
+    Number(latestAttempt.recipientId) === Number(row.agencyId)
+  ) {
     return {
       routeType: 'direct',
       recipientType: 'agency',
@@ -101,21 +122,41 @@ export function classifyLeadRouting(row: LeadRoutingAuditRow): LeadRoutingClassi
     };
   }
 
-  if (row.propertyOwnerRole === 'visitor') {
+  if (
+    latestAttempt?.leadCustody === 'verified_customer_recipient' &&
+    latestAttempt.status === 'delivered' &&
+    latestAttempt.recipientType === 'developer' &&
+    row.cataloguePublisherId
+  ) {
     return {
-      routeType: 'direct',
-      recipientType: 'private',
+      routeType: 'brand',
+      recipientType: 'developer',
       normalizedSource,
       issue: null,
     };
   }
 
-  if (row.propertyId || row.developmentId) {
+  if (row.cataloguePublisherId && row.leadDeliveryMethod === 'none') {
     return {
-      routeType: 'direct',
+      routeType: 'brand',
+      recipientType: 'brand',
+      normalizedSource,
+      issue: 'brand_capture_only',
+    };
+  }
+
+  if (
+    row.propertyId ||
+    row.developmentId ||
+    row.cataloguePublisherId ||
+    row.agentId ||
+    row.agencyId
+  ) {
+    return {
+      routeType: row.cataloguePublisherId ? 'brand' : 'direct',
       recipientType: 'context_only',
       normalizedSource,
-      issue: 'direct_context_without_owner',
+      issue: latestAttempt ? 'recipient_evidence_missing' : 'direct_context_without_owner',
     };
   }
 
@@ -141,7 +182,7 @@ export function buildLeadRoutingAudit(
     brandWithAgentContext: 0,
     directToAgent: 0,
     directToAgency: 0,
-    directToPrivate: 0,
+    platformCustody: 0,
     directContextOnly: 0,
     unknownRoute: 0,
   };
@@ -151,6 +192,7 @@ export function buildLeadRoutingAudit(
 
   for (const row of rows) {
     const classification = classifyLeadRouting(row);
+    if (classification.recipientType === 'platform') summary.platformCustody += 1;
     sourceCounts.set(
       classification.normalizedSource,
       (sourceCounts.get(classification.normalizedSource) || 0) + 1,
@@ -166,7 +208,6 @@ export function buildLeadRoutingAudit(
       summary.directRoute += 1;
       if (classification.recipientType === 'agent') summary.directToAgent += 1;
       if (classification.recipientType === 'agency') summary.directToAgency += 1;
-      if (classification.recipientType === 'private') summary.directToPrivate += 1;
       if (classification.recipientType === 'context_only') summary.directContextOnly += 1;
     } else {
       summary.unknownRoute += 1;
@@ -230,6 +271,8 @@ export async function getLeadRoutingAudit(input?: {
       source: leads.source,
       brandLeadStatus: leads.brandLeadStatus,
       leadDeliveryMethod: leads.leadDeliveryMethod,
+      deliveryStatus: leads.deliveryStatus,
+      deliveryAttempts: leads.deliveryAttempts,
       propertyOwnerId: properties.ownerId,
       propertyOwnerRole: users.role,
     })

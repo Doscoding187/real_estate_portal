@@ -42,7 +42,6 @@ export function ExploreCities({
       slug: 'johannesburg',
       provinceSlug: 'gauteng',
       image: 'https://images.unsplash.com/photo-1577948000111-9c9707350061?w=800&q=80',
-      propertyCount: '24,500+ Properties',
     },
     {
       name: 'Pretoria',
@@ -50,7 +49,6 @@ export function ExploreCities({
       slug: 'pretoria',
       provinceSlug: 'gauteng',
       image: 'https://images.unsplash.com/photo-1624638760980-cb05d15a5198?w=800&q=80',
-      propertyCount: '9,800+ Properties',
     },
     {
       name: 'Sandton',
@@ -58,7 +56,6 @@ export function ExploreCities({
       slug: 'sandton',
       provinceSlug: 'gauteng',
       image: 'https://images.unsplash.com/photo-1576485290814-1c72aa4bbb8e?w=800&q=80',
-      propertyCount: '6,300+ Properties',
     },
     {
       name: 'Midrand',
@@ -66,7 +63,6 @@ export function ExploreCities({
       slug: 'midrand',
       provinceSlug: 'gauteng',
       image: 'https://images.unsplash.com/photo-1575517111478-7f60e971579f?w=800&q=80',
-      propertyCount: '4,100+ Properties',
     },
     {
       name: 'Centurion',
@@ -74,7 +70,6 @@ export function ExploreCities({
       slug: 'centurion',
       provinceSlug: 'gauteng',
       image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&q=80',
-      propertyCount: '3,500+ Properties',
     },
     {
       name: 'Randburg',
@@ -82,49 +77,42 @@ export function ExploreCities({
       slug: 'randburg',
       provinceSlug: 'gauteng',
       image: 'https://images.unsplash.com/photo-1628191011993-4350f555e09f?w=800&q=80',
-      propertyCount: '2,950+ Properties',
     },
     {
       name: 'Roodepoort',
       province: 'Gauteng',
       slug: 'roodepoort',
       provinceSlug: 'gauteng',
-      propertyCount: '2,800+ Properties',
     },
     {
       name: 'Benoni',
       province: 'Gauteng',
       slug: 'benoni',
       provinceSlug: 'gauteng',
-      propertyCount: '2,400+ Properties',
     },
     {
       name: 'Boksburg',
       province: 'Gauteng',
       slug: 'boksburg',
       provinceSlug: 'gauteng',
-      propertyCount: '2,200+ Properties',
     },
     {
       name: 'Alberton',
       province: 'Gauteng',
       slug: 'alberton',
       provinceSlug: 'gauteng',
-      propertyCount: '2,100+ Properties',
     },
     {
       name: 'Kempton Park',
       province: 'Gauteng',
       slug: 'kempton-park',
       provinceSlug: 'gauteng',
-      propertyCount: '1,900+ Properties',
     },
     {
       name: 'Soweto',
       province: 'Gauteng',
       slug: 'soweto',
       provinceSlug: 'gauteng',
-      propertyCount: '1,500+ Properties',
     },
     // Other Provinces (for Homepage)
     {
@@ -133,7 +121,6 @@ export function ExploreCities({
       slug: 'cape-town',
       provinceSlug: 'western-cape',
       image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800&q=80',
-      propertyCount: '18,200+ Properties',
     },
     {
       name: 'Durban',
@@ -141,7 +128,6 @@ export function ExploreCities({
       slug: 'durban',
       provinceSlug: 'kwazulu-natal',
       image: 'https://images.unsplash.com/photo-1549297136-1c4b7b25055b?w=800&q=80',
-      propertyCount: '12,400+ Properties',
     },
     {
       name: 'Umhlanga',
@@ -149,7 +135,6 @@ export function ExploreCities({
       slug: 'umhlanga',
       provinceSlug: 'kwazulu-natal',
       image: 'https://images.unsplash.com/photo-1516029272338-782f9c5220c8?w=800&q=80',
-      propertyCount: '3,200+ Properties',
     },
     {
       name: 'Stellenbosch',
@@ -157,7 +142,6 @@ export function ExploreCities({
       slug: 'stellenbosch',
       provinceSlug: 'western-cape',
       image: 'https://images.unsplash.com/photo-1518182170546-0766cac6cf66?w=800&q=80',
-      propertyCount: '2,800+ Properties',
     },
     {
       name: 'Gqeberha',
@@ -165,7 +149,6 @@ export function ExploreCities({
       slug: 'gqeberha',
       provinceSlug: 'eastern-cape',
       image: 'https://images.unsplash.com/photo-1577909384666-382559639556?w=800&q=80',
-      propertyCount: '2,100+ Properties',
     },
     {
       name: 'Bloemfontein',
@@ -173,25 +156,55 @@ export function ExploreCities({
       slug: 'bloemfontein',
       provinceSlug: 'free-state',
       image: 'https://images.unsplash.com/photo-1549487950-8b0933580434?w=800&q=80',
-      propertyCount: '1,800+ Properties',
     },
   ];
+
+  const homepageCityOrder = [
+    'johannesburg',
+    'cape-town',
+    'durban',
+    'pretoria',
+    'gqeberha',
+    'bloemfontein',
+    'polokwane',
+    'mbombela',
+    'mahikeng',
+  ];
+  const nationalFallbackCities = [...cities].sort((left, right) => {
+    const leftPriority = homepageCityOrder.indexOf(left.slug);
+    const rightPriority = homepageCityOrder.indexOf(right.slug);
+    if (leftPriority === -1 && rightPriority === -1) return left.name.localeCompare(right.name);
+    if (leftPriority === -1) return 1;
+    if (rightPriority === -1) return -1;
+    return leftPriority - rightPriority;
+  });
 
   const allCities =
     customLocations && customLocations.length > 0
       ? customLocations
       : provinceSlug
         ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
-        : cities;
+        : nationalFallbackCities;
 
   const displayedCities = allCities.slice(0, visibleCount);
   const remainingCount = allCities.length - visibleCount;
 
-  const displayTitle = title || 'Explore real estate by popular city';
+  const displayTitle = title || 'Explore property by city';
   const displayDescription =
     description ||
     'Use city pages as a starting point for local listings, suburb research, and market discovery.';
   const viewAllPath = basePath === '' || basePath === '/' ? '/' : '/property-for-sale';
+  const cityHref = (city: City) => {
+    if (basePath === '/property-for-sale' || basePath === '/property-to-rent') {
+      const params = new URLSearchParams(queryParams.replace(/^[?&]/, ''));
+      params.set('province', city.provinceSlug);
+      params.set('city', city.slug);
+      const query = params.toString();
+      return `${basePath}${query ? `?${query}` : ''}`;
+    }
+
+    return `${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(/\/\//g, '/');
+  };
 
   return (
     <section className="home-section bg-white">
@@ -224,10 +237,7 @@ export function ExploreCities({
             {displayedCities.map(city => (
               <Link
                 key={city.slug}
-                href={`${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(
-                  /\/\//g,
-                  '/',
-                )}
+                href={cityHref(city)}
                 className="w-[75vw] max-w-[236px] flex-none snap-start sm:w-auto"
               >
                 <div className="group h-full cursor-pointer">

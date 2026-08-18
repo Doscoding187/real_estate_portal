@@ -199,6 +199,7 @@ vi.mock('../services/propertySearchService', () => ({
 import {
   approveListing,
   archiveListing,
+  createListing,
   deleteListing,
   rejectListing,
   replaceListingMedia,
@@ -262,7 +263,11 @@ const listingMediaRow = (overrides: Record<string, any> = {}) => ({
   ...overrides,
 });
 
-const configureRevisionApproval = (revisionId = 5602, originalId = 5601) => {
+const configureRevisionApproval = (
+  revisionId = 5602,
+  originalId = 5601,
+  revisionOverrides: Record<string, any> = {},
+) => {
   fakeDb.setNextSelectResult([
     listingRow({
       id: revisionId,
@@ -270,6 +275,7 @@ const configureRevisionApproval = (revisionId = 5602, originalId = 5601) => {
       approvalStatus: 'pending',
       revisionOfListingId: originalId,
       propertyDetails: { bedrooms: 4, bathrooms: 2 },
+      ...revisionOverrides,
     }),
   ]);
   fakeDb.setNextSelectResult([
@@ -299,6 +305,9 @@ const configureRevisionApproval = (revisionId = 5602, originalId = 5601) => {
       displayOrder: 1,
     }),
   ]);
+  // Complete public projection upsert for the original canonical source.
+  fakeDb.setNextSelectResult([{ id: 777 }]);
+  // Public media synchronization resolves the freshly promoted source again.
   fakeDb.setNextSelectResult([
     listingRow({
       id: originalId,
@@ -333,6 +342,62 @@ beforeEach(() => {
     responsibleAgentId: 55,
   } as any);
   vi.mocked(mockInvalidatePublicSearchCache).mockResolvedValue(undefined);
+});
+
+// ===========================================================================
+// createListing — seller-prospect custody contract
+// ===========================================================================
+
+describe('createListing (lower-level)', () => {
+  it('persists the validated seller-prospect assignee for an agency-manager conversion', async () => {
+    fakeDb.setNextSelectResult([]); // The acting agency manager has no agent profile.
+    fakeDb.setNextSelectResult([{ agencyId: 77, role: 'agency_admin' }]);
+    fakeDb.setNextSelectResult([{ id: 55 }]); // Assigned, approved agency agent.
+    fakeDb.setNextSelectResult([
+      {
+        id: 901,
+        stage: 'qualified',
+        convertedListingId: null,
+        assignedAgentId: 55,
+      },
+    ]);
+
+    await createListing({
+      userId: 100,
+      action: 'sell',
+      propertyType: 'house',
+      title: 'Seller conversion home',
+      description: 'An agency-managed seller conversion.',
+      pricing: { askingPrice: 2_500_000 },
+      propertyDetails: {},
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      slug: 'seller-conversion-ts-fixed',
+      media: [],
+      sellerProspectConversion: {
+        sellerProspectId: 901,
+        agencyId: 77,
+        assignedAgentId: 55,
+        actorUserId: 100,
+      },
+    });
+
+    const listingInsert = fakeDb.calls.find(
+      call => call.type === 'insert' && call.table === 'listings',
+    );
+    expect(listingInsert?.values).toMatchObject({
+      ownerId: 100,
+      agencyId: 77,
+      agentId: 55,
+    });
+    const conversionActivity = fakeDb.calls.find(
+      call => call.type === 'insert' && call.table === 'seller_prospect_activities',
+    );
+    expect(conversionActivity?.values?.metadata).toEqual({
+      listingId: 99999,
+      assignedAgentId: 55,
+    });
+  });
 });
 
 // ===========================================================================
@@ -454,6 +519,119 @@ describe('approveListing (lower-level)', () => {
       ),
     ).toBe(true);
     expect(mockInvalidatePublicSearchCache).toHaveBeenCalledOnce();
+  });
+
+  it('promotes a revised intent, taxonomy, pricing, facts, location and media as one canonical snapshot', async () => {
+    configureRevisionApproval(5602, 5601, {
+      action: 'rent',
+      propertyType: 'townhouse',
+      title: 'Revised coastal townhouse',
+      description: 'The complete approved revision.',
+      // These stale Sale columns came from the cloned live row and must be
+      // cleared when Rent becomes the canonical intent.
+      askingPrice: '2500000.00',
+      transferCostEstimate: '125000.00',
+      monthlyRent: '18500.00',
+      deposit: '37000.00',
+      leaseTerms: '12 months',
+      availableFrom: '2026-09-01 00:00:00',
+      utilitiesIncluded: 1,
+      propertyDetails: {
+        bedrooms: 3,
+        bathrooms: 2,
+        unitSizeM2: 135,
+        amenities: ['Balcony'],
+        // A cloned embedded contract must not override current authored
+        // pricing at the publication boundary.
+        pricingContract: {
+          version: 1,
+          intent: 'rent',
+          monthlyRent: 11000,
+          deposit: { status: 'known', amount: 11000 },
+        },
+      },
+      address: '8 Ocean View',
+      privateAddress: { streetNumber: '8', streetName: 'Ocean View' },
+      latitude: '-33.9181000',
+      longitude: '18.3852000',
+      city: 'Cape Town',
+      suburb: 'Sea Point',
+      province: 'Western Cape',
+      postalCode: '8005',
+      provinceId: 1,
+      cityId: 2,
+      suburbId: 3,
+      coordinateSource: 'manual_confirmed',
+      locationConfirmationState: 'confirmed',
+      publicLocationPrecision: 'exact',
+    });
+
+    await approveListing(5602, 990005);
+
+    const promotedSource = fakeDb.calls.find(
+      call =>
+        call.type === 'update' &&
+        call.table === 'listings' &&
+        call.set?.status === 'published',
+    );
+    expect(promotedSource?.set).toMatchObject({
+      action: 'rent',
+      propertyType: 'townhouse',
+      title: 'Revised coastal townhouse',
+      askingPrice: null,
+      transferCostEstimate: null,
+      monthlyRent: '18500.00',
+      deposit: '37000.00',
+      leaseTerms: '12 months',
+      city: 'Cape Town',
+      suburb: 'Sea Point',
+      provinceId: 1,
+      cityId: 2,
+      suburbId: 3,
+      mainMediaId: 99999,
+      mainMediaType: 'image',
+    });
+    expect((promotedSource?.set?.propertyDetails as any)?.pricingContract).toMatchObject({
+      intent: 'rent',
+      monthlyRent: 18500,
+    });
+    expect((promotedSource?.set?.propertyDetails as any)?.corePropertyInformation).toMatchObject({
+      bedrooms: { status: 'known', value: 3 },
+      bathrooms: { status: 'known', value: 2 },
+      internalArea: { status: 'known', valueM2: 135, unit: 'm2' },
+    });
+
+    const publicProjection = fakeDb.calls.find(
+      call =>
+        call.type === 'update' &&
+        call.table === 'properties' &&
+        call.set?.sourceListingId === 5601,
+    );
+    expect(publicProjection?.set).toMatchObject({
+      sourceListingId: 5601,
+      listingType: 'rent',
+      transactionType: 'rent',
+      propertyType: 'townhouse',
+      price: 18500,
+      bedrooms: 3,
+      bathrooms: 2,
+      area: 135,
+      internalAreaM2: 135,
+      city: 'Cape Town',
+      province: 'Western Cape',
+      provinceId: 1,
+      cityId: 2,
+      suburbId: 3,
+      publicAddress: '8 Ocean View, Sea Point, Cape Town, Western Cape',
+      publicLocationPrecision: 'exact',
+    });
+    expect(JSON.parse(String(publicProjection?.set?.propertySettings))).toMatchObject({
+      pricingContract: { intent: 'rent', monthlyRent: 18500 },
+      corePropertyInformation: {
+        bedrooms: { status: 'known', value: 3 },
+        internalArea: { status: 'known', valueM2: 135, unit: 'm2' },
+      },
+    });
   });
 
   it.each([

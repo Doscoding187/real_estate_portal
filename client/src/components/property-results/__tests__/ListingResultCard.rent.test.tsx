@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ListingResultCard } from '../ListingResultCard';
 
 vi.mock('wouter', () => ({
+  Link: ({ href, children, ...props }: ComponentProps<'a'> & { href: string }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
   useLocation: () => ['/property-for-sale', vi.fn()],
 }));
 

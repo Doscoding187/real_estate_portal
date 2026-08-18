@@ -126,6 +126,8 @@ describe('publicSearchService contract', () => {
       'date_desc',
       1,
       4,
+      undefined,
+      { publicOnly: true },
     );
     expect(mockSearchListings).toHaveBeenCalledWith(
       expect.objectContaining({ city: 'johannesburg', province: 'gauteng' }),
@@ -171,6 +173,8 @@ describe('publicSearchService contract', () => {
       'date_desc',
       1,
       12,
+      undefined,
+      { publicOnly: true },
     );
     expect(mockSearchListings).toHaveBeenCalledWith(
       expect.objectContaining({ bounds: expectedBounds }),
@@ -195,6 +199,8 @@ describe('publicSearchService contract', () => {
       'date_desc',
       1,
       (PUBLIC_SEARCH_MAX_PAGE_INDEX + 1) * 12,
+      undefined,
+      { publicOnly: true },
     );
     expect(result).toMatchObject({
       page: PUBLIC_SEARCH_MAX_PAGE_INDEX,
@@ -339,6 +345,8 @@ describe('publicSearchService contract', () => {
       'price_asc',
       1,
       12,
+      undefined,
+      { publicOnly: true },
     );
     expect(mockSearchListings).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -381,6 +389,8 @@ describe('publicSearchService contract', () => {
       'date_desc',
       1,
       12,
+      undefined,
+      { publicOnly: true },
     );
   });
 
@@ -426,6 +436,8 @@ describe('publicSearchService contract', () => {
       'date_desc',
       1,
       12,
+      undefined,
+      { publicOnly: true },
     );
     expect(mockSearchListings).toHaveBeenCalledWith(
       expect.objectContaining({ city: 'johannesburg', province: 'gauteng' }),

@@ -11,7 +11,6 @@ import { PropertyCategories } from '@/components/PropertyCategories';
 import { Building2 } from 'lucide-react';
 // import { FeaturedListings } from '@/components/location/FeaturedListings'; // Removed
 import { TabbedListingSection } from '@/components/location/TabbedListingSection';
-import { SuburbInsights } from '@/components/property/SuburbInsights';
 
 import PropertyCard from '@/components/PropertyCard';
 import { normalizePropertyForUI } from '@/lib/normalizers';
@@ -266,17 +265,6 @@ export default function SuburbPage({
             )}
 
             <MarketInsights stats={stats} locationName={suburb.name} type="suburb" />
-
-            <div className="container py-8">
-              <SuburbInsights
-                suburbId={suburb.id}
-                suburbName={suburb.name}
-                pros={insights?.pros}
-                cons={insights?.cons}
-                reviews={reviews}
-                rating={4.8} // TODO: Calculate actual average rating
-              />
-            </div>
 
             {/* Interactive Map Section */}
             {suburb.latitude && suburb.longitude && (

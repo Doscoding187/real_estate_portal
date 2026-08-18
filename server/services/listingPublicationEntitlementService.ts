@@ -36,9 +36,12 @@ export type ListingPublicationFailureCode =
   | 'subscription_expired'
   | 'subscription_plan_unresolved'
   | 'subscription_plan_ineligible'
+  | 'agency_unverified'
   | 'agency_profile_incomplete'
   | 'agency_branding_incomplete'
   | 'individual_agent_email_unverified'
+  | 'individual_agent_unapproved'
+  | 'individual_agent_unverified'
   | 'individual_agent_profile_incomplete'
   | 'listing_capacity_exhausted';
 
@@ -354,6 +357,12 @@ export async function assertListingPublicationEntitled(
         'This listing does not have a resolvable commercial owner.',
       );
     }
+    if (Number(agency.isVerified || 0) !== 1) {
+      throw new ListingPublicationEntitlementError(
+        'agency_unverified',
+        'The agency must be verified before publishing listings.',
+      );
+    }
     if (!(agency.name && agency.email && agency.city && agency.province)) {
       throw new ListingPublicationEntitlementError(
         'agency_profile_incomplete',
@@ -404,6 +413,18 @@ export async function assertListingPublicationEntitled(
     throw new ListingPublicationEntitlementError(
       'commercial_owner_unresolved',
       'This listing does not have a resolvable commercial owner.',
+    );
+  }
+  if (agent.status !== 'approved') {
+    throw new ListingPublicationEntitlementError(
+      'individual_agent_unapproved',
+      'The agent profile must be approved before publishing listings.',
+    );
+  }
+  if (Number(agent.isVerified || 0) !== 1) {
+    throw new ListingPublicationEntitlementError(
+      'individual_agent_unverified',
+      'The agent profile must be verified before publishing listings.',
     );
   }
   if (user.emailVerified !== 1) {

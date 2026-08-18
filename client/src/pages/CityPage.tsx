@@ -19,7 +19,6 @@ import { TabbedListingSection } from '@/components/location/TabbedListingSection
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { LocationTrendingFeedSection } from '@/components/location/LocationTrendingFeedSection';
 import type { FeedTab } from '@/components/location/LocationTrendingFeedSection';
-import { PropertyInsights } from '@/components/PropertyInsights';
 import { MarketInsights } from '@/components/location/MarketInsights';
 import { SEOTextBlock } from '@/components/location/SEOTextBlock';
 import { FinalCTA } from '@/components/location/FinalCTA';
@@ -36,6 +35,7 @@ import { HighDemandProjectsCarousel } from '@/components/location/HighDemandProj
 import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAgenciesCarousel';
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
+import { encodeCanonicalLocationId } from '@shared/locationAuthority';
 
 export default function CityPage({
   params,
@@ -75,7 +75,7 @@ export default function CityPage({
   // Bare geography routes are always neutral discovery pages. Transactional search
   // state belongs to the explicit /property-for-sale or /property-to-rent roots.
   const { data, isLoading, error } = trpc.locationPages.getCityData.useQuery(
-    { provinceSlug, citySlug, includeInventoryPreview: !isLocationDiscovery },
+    { provinceSlug, citySlug, includeInventoryPreview: false },
     { enabled: true },
   );
 
@@ -110,7 +110,6 @@ export default function CityPage({
   const {
     city,
     suburbs = [],
-    featuredProperties = [],
     developments = [],
     stats = {
       totalListings: 0,
@@ -203,13 +202,18 @@ export default function CityPage({
         searchStage={null}
         discoveryMode={isLocationDiscovery}
         featuredProperties={
-          isLocationDiscovery ? undefined : (
+          locationPathPrefix === '/property-for-sale' ? (
             <FeaturedPropertiesCarousel
-              locationId={city.id}
-              locationName={city.name}
-              locationScope="city"
+              location={{
+                id: encodeCanonicalLocationId('city', Number(city.id)),
+                canonicalLocationId: encodeCanonicalLocationId('city', Number(city.id)),
+                name: city.name,
+                slug: citySlug,
+                type: 'city',
+                provinceSlug,
+              }}
             />
-          )
+          ) : undefined
         }
         // Section 6: Property Type Explorer
         // Section 6: Property Type Explorer
@@ -260,11 +264,11 @@ export default function CityPage({
               slug: suburb.slug,
               provinceSlug: `${provinceSlug}/${citySlug}`,
               propertyCount: suburb.listingCount
-                ? `${suburb.listingCount.toLocaleString()}+ Properties`
+                ? `${suburb.listingCount.toLocaleString()} properties`
                 : undefined,
             }))}
-            title={`Popular Suburbs in ${city.name}`}
-            description={`Explore top-rated suburbs in ${city.name}, offering a mix of investment opportunities and dream homes.`}
+            title={`Explore suburbs in ${city.name}`}
+            description={`Browse available property and local market pages across ${city.name}.`}
           />
         }
         recommendedAgents={<RecommendedAgents locationType="city" locationId={city.id} />}

@@ -13,9 +13,11 @@ import {
   developerOrganisations,
   agents,
   agencies,
+  users,
   suburbs,
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, inArray, or, sql, SQL, desc, asc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/mysql-core';
 import { redisCache, CacheTTL } from '../lib/redis';
 import type {
   PropertyFilters,
@@ -34,21 +36,74 @@ import type { ListingPropertyType } from '../../shared/listing-types';
 import { normalizeFeaturesContext } from '../../shared/features-context';
 import { resolveMediaDeliveryUrl } from '../_core/mediaStorage';
 import { normalizeCoordinatePair } from '../../shared/location-contract';
+import {
+  resolvePublicPropertyEligibilities,
+  resolvePublicPropertyEligibilityIds,
+  type PublicPropertyEligibilityResolution,
+} from './publicPropertyEligibilityService';
+import { PUBLIC_PROPERTY_QUERY_BATCH_SIZE } from './approvedPublicPropertyService';
 
 // Cache key prefix for property searches
-// Authority version: v6 preserves fractional approved bathroom projections,
+// Authority version: v7 applies canonical approved public-property
+// eligibility before returning search totals/pages. It also preserves
+// fractional approved bathroom projections,
 // routes approved image-mirror storage keys through the configured media
 // adapter, and keeps missing/invalid public coordinates nullable. Advancing the
 // namespace prevents a cached v5 payload with numeric-zero missing coordinates
 // surviving this correction.
-const CACHE_PREFIX = 'property:search:v6:';
+const CACHE_PREFIX = 'property:search:v8:';
+
+const propertyOwnerAgencies = alias(agencies, 'property_owner_agencies');
 
 type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 
-type ManualPropertyFilters = PropertyFilters & {
-  /** Internal route option; never inferred from listing or revision state. */
-  featuredOnly?: boolean;
-};
+export interface PropertySearchOptions {
+  /** Apply the canonical approved source-listing public contract. */
+  publicOnly?: boolean;
+}
+
+/**
+ * Manual-property pages must remain stable when the selected sort field ties.
+ * A property ID tie-breaker prevents candidates moving between pages across
+ * otherwise identical requests.
+ */
+export function buildManualPropertySortOrder(sortOption: SortOption): [SQL, SQL] {
+  let primaryOrder: SQL;
+  switch (sortOption) {
+    case 'price_asc':
+      primaryOrder = asc(properties.price);
+      break;
+    case 'price_desc':
+      primaryOrder = desc(properties.price);
+      break;
+    case 'date_asc':
+      primaryOrder = asc(properties.createdAt);
+      break;
+    case 'suburb_asc':
+      primaryOrder = asc(properties.publicAddress);
+      break;
+    case 'suburb_desc':
+      primaryOrder = desc(properties.publicAddress);
+      break;
+    case 'date_desc':
+    default:
+      primaryOrder = desc(properties.createdAt);
+      break;
+  }
+
+  return [primaryOrder, asc(properties.id)];
+}
+
+function boundedPropertyIdCondition(propertyIds: readonly number[]): SQL {
+  if (propertyIds.length === 0) return sql`0 = 1`;
+  const conditions: SQL[] = [];
+  for (let offset = 0; offset < propertyIds.length; offset += PUBLIC_PROPERTY_QUERY_BATCH_SIZE) {
+    conditions.push(
+      inArray(properties.id, propertyIds.slice(offset, offset + PUBLIC_PROPERTY_QUERY_BATCH_SIZE)),
+    );
+  }
+  return conditions.length === 1 ? conditions[0] : or(...conditions)!;
+}
 
 type QueryLocationIds = Array<{
   provinceId?: number;
@@ -232,9 +287,25 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
       }
     : undefined;
 
-  const isPrivate = property.listerType === 'private' || !property.agent?.name;
-  const identityName = isPrivate ? property.agent?.name || 'Private Seller' : property.agent?.name;
-  const identityRole: SearchCardResult['contactRole'] = isPrivate ? 'private' : 'agent';
+  const identity = property.publicIdentity ||
+    (property.listerType === 'private'
+      ? {
+          role: 'private',
+          provenance: 'private',
+          name: property.agent?.name || 'Private Seller',
+        }
+      : {
+          role: 'agent',
+          provenance: 'agent',
+          name: property.agent?.name || 'Listing contact unavailable',
+          organizationName: property.agent?.agency || null,
+          avatarUrl: property.agent?.image || null,
+          phone: property.agent?.phone || null,
+          whatsapp: property.agent?.whatsapp || property.agent?.phone || null,
+          email: property.agent?.email || null,
+          agentId: Number(property.agent?.id || 0) || undefined,
+          agencyId: Number(property.agent?.agencyId || 0) || undefined,
+        });
   const location = [property.suburb, property.city, property.province].filter(Boolean).join(', ');
   const image = String(
     resolveMediaUrl(property.mainImage) ||
@@ -244,8 +315,6 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
       '',
   ).trim();
   const propertyId = Number(property.id || 0);
-  const agentId = Number(property.agent?.id || 0);
-  const agencyId = Number(property.agent?.agencyId || 0);
 
   return {
     kind: 'property',
@@ -272,17 +341,8 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
     listingType: property.listingType,
     listingSource: 'manual',
     listerType: property.listerType,
-    contactRole: identityRole,
-    identity: {
-      role: identityRole,
-      name: identityName,
-      avatarUrl: property.agent?.image || null,
-      phone: property.agent?.phone || null,
-      whatsapp: property.agent?.whatsapp || property.agent?.phone || null,
-      email: property.agent?.email || null,
-      agentId: Number.isFinite(agentId) && agentId > 0 ? agentId : undefined,
-      agencyId: Number.isFinite(agencyId) && agencyId > 0 ? agencyId : undefined,
-    },
+    contactRole: identity.role,
+    identity,
     development,
     developerBrand,
     highlights: Array.isArray(property.highlights) ? property.highlights : [],
@@ -310,11 +370,12 @@ export class PropertySearchService {
    * Requirements: 2.3 (sorting), 6.1-6.3 (pagination), 7.1 (result count)
    */
   async searchProperties(
-    filters: ManualPropertyFilters,
+    filters: PropertyFilters,
     sortOption: SortOption = 'date_desc',
     page: number = 1,
     pageSize: number = 12,
     queryBoundary?: PublicSearchQueryBoundary,
+    options: PropertySearchOptions = {},
   ): Promise<SearchResults> {
     if (queryBoundary && queryLocationIdsFromBoundary(queryBoundary).length === 0) {
       return {
@@ -328,10 +389,21 @@ export class PropertySearchService {
     }
 
     // Generate cache key
-    const cacheKey = this.generateCacheKey(filters, sortOption, page, pageSize, queryBoundary);
+    const cacheKey = this.generateCacheKey(
+      filters,
+      sortOption,
+      page,
+      pageSize,
+      queryBoundary,
+      options,
+    );
 
-    // Try to get from cache
-    const cached = await redisCache.get<SearchResults>(cacheKey);
+    // Public eligibility includes mutable provenance and recipient state. A
+    // cached payload could remain visible after archive or reassignment, so
+    // P-BUY revalidates on every request. Internal search may still cache.
+    const cached = options.publicOnly
+      ? null
+      : await redisCache.get<SearchResults>(cacheKey);
     if (cached) {
       return {
         ...cached,
@@ -446,21 +518,46 @@ export class PropertySearchService {
     // Build query conditions with resolved location IDs
     const conditions = this.buildFilterConditions(filters, locationIds);
 
-    // Get total count
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(properties)
-      .leftJoin(developments, eq(properties.developmentId, developments.id))
-      .where(and(...conditions));
-
-    const total = Number(countResult[0]?.count || 0);
-
     // Calculate pagination
     const offset = (page - 1) * pageSize;
+
+    // Public search uses the same source-listing, approval, projection and
+    // media contract as property detail. Resolve eligibility before slicing a
+    // page so totals, pagination and cards cannot expose stale rows.
+    const publicConditions = options.publicOnly
+      ? [...conditions, sql`${properties.sourceListingId} IS NOT NULL`]
+      : conditions;
+    let total = 0;
+    let eligiblePageIds: number[] | undefined;
+    let publicResolutionById = new Map<number, PublicPropertyEligibilityResolution>();
+    if (options.publicOnly) {
+      const candidateRows = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .leftJoin(developments, eq(properties.developmentId, developments.id))
+        .where(and(...publicConditions))
+        .orderBy(...buildManualPropertySortOrder(sortOption));
+      publicResolutionById = await resolvePublicPropertyEligibilities(
+        candidateRows.map(row => Number(row.id)),
+      );
+      const eligibleIds = candidateRows
+        .map(row => Number(row.id))
+        .filter(propertyId => publicResolutionById.has(propertyId));
+      total = eligibleIds.length;
+      eligiblePageIds = eligibleIds.slice(offset, offset + pageSize);
+    } else {
+      const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(properties)
+        .leftJoin(developments, eq(properties.developmentId, developments.id))
+        .where(and(...conditions));
+      total = Number(countResult[0]?.count || 0);
+    }
+
     const hasMore = offset + pageSize < total;
 
     // Build sort order
-    const orderBy = this.buildSortOrder(sortOption);
+    const orderBy = buildManualPropertySortOrder(sortOption);
 
     // Execute search query
     const results = await db
@@ -520,6 +617,11 @@ export class PropertySearchService {
         agentEmail: agents.email,
         agentProfileImage: agents.profileImage,
         agencyName: agencies.name,
+        ownerName: users.name,
+        ownerFirstName: users.firstName,
+        ownerLastName: users.lastName,
+        ownerAgencyId: propertyOwnerAgencies.id,
+        ownerAgencyName: propertyOwnerAgencies.name,
         agentId: properties.agentId,
         cataloguePublisherId: sql<number>`COALESCE(${properties.cataloguePublisherId}, ${developments.cataloguePublisherId})`,
         builderBrandName: cataloguePublishers.name,
@@ -540,15 +642,35 @@ export class PropertySearchService {
       .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
       .leftJoin(agents, and(eq(properties.agentId, agents.id), eq(agents.status, 'approved')))
       .leftJoin(agencies, and(eq(agents.agencyId, agencies.id), eq(agencies.isVerified, 1)))
-      .where(and(...conditions))
-      .orderBy(orderBy)
+      .leftJoin(users, eq(properties.ownerId, users.id))
+      .leftJoin(
+        propertyOwnerAgencies,
+        and(
+          eq(users.agencyId, propertyOwnerAgencies.id),
+          eq(propertyOwnerAgencies.isVerified, 1),
+        ),
+      )
+      .where(
+        and(
+          ...publicConditions,
+          ...(eligiblePageIds ? [boundedPropertyIdCondition(eligiblePageIds)] : []),
+        ),
+      )
+      .orderBy(...orderBy)
       .limit(pageSize)
-      .offset(offset);
+      .offset(options.publicOnly ? 0 : offset);
 
     // Get images for properties
     const propertyIds = results.map((p: any) => Number(p.id));
-    const images =
-      propertyIds.length > 0
+    const images = options.publicOnly
+      ? propertyIds.flatMap(propertyId =>
+          (publicResolutionById.get(propertyId)?.images || []).map(image => ({
+            propertyId,
+            imageUrl: image.imageUrl || image.url,
+            isPrimary: image.isPrimary,
+          })),
+        )
+      : propertyIds.length > 0
         ? await db
             .select({
               propertyId: propertyImages.propertyId,
@@ -571,7 +693,11 @@ export class PropertySearchService {
     });
 
     // Transform results to Property type
-    const transformedProperties: Property[] = results.map((prop: any) => {
+    const transformedProperties: Property[] = results.map((rawProperty: any) => {
+      const publicResolution = publicResolutionById.get(Number(rawProperty.id));
+      const prop = publicResolution
+        ? { ...rawProperty, ...publicResolution.property }
+        : rawProperty;
       const details = parseJsonObject(prop.propertySettings);
       const featuresContext = normalizeFeaturesContext(details.featuresContext, details);
       const hasCanonicalStep4 =
@@ -676,12 +802,22 @@ export class PropertySearchService {
         String(prop.agentDisplayName || '').trim() ||
         [prop.agentFirstName, prop.agentLastName].filter(Boolean).join(' ').trim()
       ).trim();
+      const ownerName = (
+        String(prop.ownerName || '').trim() ||
+        [prop.ownerFirstName, prop.ownerLastName].filter(Boolean).join(' ').trim()
+      ).trim();
+      const ownerAgencyName = String(prop.ownerAgencyName || '').trim();
+      // An owner name alone is not a public recipient signal. Only expose the
+      // owner identity when it is backed by a verified agency relationship;
+      // otherwise custody remains platform/attention-review as appropriate.
+      const publicContactName = agentName || (ownerAgencyName ? ownerName || ownerAgencyName : '');
       const developerName = String(prop.developerName || '').trim();
       const developerLogo = prop.developerLogo || undefined;
       const builderName = String(prop.builderBrandName || '').trim() || developerName;
       const builderLogo = prop.builderLogoUrl || developerLogo;
 
-      const hasAgentIdentity = !!agentName;
+      const hasAgentIdentity = !!publicContactName;
+      const publicIdentity = publicResolution?.publicIdentity;
       const storedBadges = Array.isArray(details.badges) ? details.badges : [];
       const publicCoordinates = normalizeCoordinatePair(prop.latitude, prop.longitude);
 
@@ -753,18 +889,37 @@ export class PropertySearchService {
         status: this.mapStatus(prop.status),
         listedDate: new Date(prop.listedDate),
         listingSource: 'manual',
-        listerType: hasAgentIdentity ? (prop.agencyName ? 'agency' : 'agent') : 'private',
-        agent: hasAgentIdentity
-          ? {
-              id: String(prop.agentId || 0),
-              name: agentName,
-              agency: String(prop.agencyName || ''),
-              phone: String(prop.agentPhone || ''),
-              whatsapp: String(prop.agentWhatsapp || ''),
-              email: String(prop.agentEmail || ''),
-              image: prop.agentProfileImage || undefined,
-            }
-          : undefined,
+        publicIdentity,
+        listerType:
+          publicIdentity?.role ||
+          (hasAgentIdentity
+            ? prop.agencyName || ownerAgencyName
+              ? 'agency'
+              : 'agent'
+            : undefined),
+        agent:
+          publicIdentity?.role === 'agent'
+            ? {
+                id: String(publicIdentity.agentId),
+                name: publicIdentity.name,
+                agency: String(publicIdentity.organizationName || ''),
+                phone: String(publicIdentity.phone || ''),
+                whatsapp: String(publicIdentity.whatsapp || ''),
+                email: String(publicIdentity.email || ''),
+                image: publicIdentity.avatarUrl || undefined,
+                agencyId: publicIdentity.agencyId,
+              }
+            : !publicIdentity && hasAgentIdentity
+              ? {
+                  id: String(prop.agentId || prop.ownerId || 0),
+                  name: publicContactName,
+                  agency: String(prop.agencyName || ownerAgencyName || ''),
+                  phone: String(prop.agentPhone || ''),
+                  whatsapp: String(prop.agentWhatsapp || ''),
+                  email: String(prop.agentEmail || ''),
+                  image: prop.agentProfileImage || undefined,
+                }
+              : undefined,
         developerBrand,
         development,
         developmentId:
@@ -828,16 +983,11 @@ export class PropertySearchService {
     };
 
     // Cache the results
-    await redisCache.set(cacheKey, searchResults, CacheTTL.FEED_RESULTS);
+    if (!options.publicOnly) {
+      await redisCache.set(cacheKey, searchResults, CacheTTL.FEED_RESULTS);
+    }
 
     return searchResults;
-  }
-
-  /** Return featured manual inventory through the same projection-only read path. */
-  async searchFeaturedProperties(limit: number = 6): Promise<Property[]> {
-    const pageSize = Math.max(1, Math.min(50, Math.floor(limit)));
-    const results = await this.searchProperties({ featuredOnly: true }, 'date_desc', 1, pageSize);
-    return results.properties;
   }
 
   /**
@@ -846,15 +996,13 @@ export class PropertySearchService {
    * Uses hybrid approach: ID-based queries when available, text fallback otherwise
    */
   private buildFilterConditions(
-    filters: ManualPropertyFilters,
+    filters: PropertyFilters,
     locationIds: QueryLocationIds = [],
   ): SQL[] {
     const conditions: SQL[] = [];
 
     // Only show published/available properties by default
     conditions.push(or(eq(properties.status, 'available'), eq(properties.status, 'published'))!);
-    if (filters.featuredOnly) conditions.push(eq(properties.featured, 1));
-
     // Location filters - Use Hybrid Approach (ID OR Text) to handle legitimate legacy data
 
     // Location filters - Use Hybrid Approach (ID OR Text)
@@ -1068,29 +1216,6 @@ export class PropertySearchService {
   }
 
   /**
-   * Build sort order based on SortOption
-   * Requirement 2.3: Support all sort options
-   */
-  private buildSortOrder(sortOption: SortOption): SQL {
-    switch (sortOption) {
-      case 'price_asc':
-        return asc(properties.price);
-      case 'price_desc':
-        return desc(properties.price);
-      case 'date_desc':
-        return desc(properties.createdAt);
-      case 'date_asc':
-        return asc(properties.createdAt);
-      case 'suburb_asc':
-        return asc(properties.publicAddress);
-      case 'suburb_desc':
-        return desc(properties.publicAddress);
-      default:
-        return desc(properties.createdAt);
-    }
-  }
-
-  /**
    * Map database status to Property status
    */
   private mapStatus(dbStatus: string): Property['status'] {
@@ -1112,16 +1237,18 @@ export class PropertySearchService {
    * Generate cache key for search results
    */
   private generateCacheKey(
-    filters: ManualPropertyFilters,
+    filters: PropertyFilters,
     sortOption: SortOption,
     page: number,
     pageSize: number,
     queryBoundary?: PublicSearchQueryBoundary,
+    options: PropertySearchOptions = {},
   ): string {
     const filterStr = JSON.stringify(filters);
     const hash = this.simpleHash(filterStr);
     const boundaryKey = queryBoundary ? `:${queryBoundary.authorityKey}` : '';
-    return `${CACHE_PREFIX}${hash}${boundaryKey}:${sortOption}:${page}:${pageSize}`;
+    const authorityKey = options.publicOnly ? ':public' : ':internal';
+    return `${CACHE_PREFIX}${hash}${boundaryKey}${authorityKey}:${sortOption}:${page}:${pageSize}`;
   }
 
   /**
@@ -1141,7 +1268,10 @@ export class PropertySearchService {
    * Get filter counts for preview
    * Requirement 7.3: Show count before applying filter
    */
-  async getFilterCounts(baseFilters: PropertyFilters): Promise<{
+  async getFilterCounts(
+    baseFilters: PropertyFilters,
+    options: PropertySearchOptions = {},
+  ): Promise<{
     total: number;
     byType: Record<string, number>;
     byBedrooms: Record<string, number>;
@@ -1205,13 +1335,39 @@ export class PropertySearchService {
     }
 
     const conditions = this.buildFilterConditions(baseFilters, locationIds);
+    const applyPublicEligibility = async (baseConditions: SQL[]): Promise<SQL[] | null> => {
+      if (!options.publicOnly) return baseConditions;
+
+      const candidates = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .leftJoin(developments, eq(properties.developmentId, developments.id))
+        .where(and(...baseConditions, sql`${properties.sourceListingId} IS NOT NULL`));
+      const eligibleIds = await resolvePublicPropertyEligibilityIds(
+        candidates.map(row => Number(row.id)),
+      );
+      return eligibleIds.length > 0
+        ? [...baseConditions, boundedPropertyIdCondition(eligibleIds)]
+        : null;
+    };
+    const eligibleConditions = await applyPublicEligibility(conditions);
+    if (!eligibleConditions) {
+      return {
+        total: 0,
+        byType: {},
+        byBedrooms: {},
+        byLocation: [],
+        byPropertyType: {},
+        byPriceRange: [],
+      };
+    }
 
     // Get total count
     const totalResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
-      .where(and(...conditions));
+      .where(and(...eligibleConditions));
 
     const total = Number(totalResult[0]?.count || 0);
 
@@ -1223,7 +1379,7 @@ export class PropertySearchService {
       })
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
-      .where(and(...conditions))
+      .where(and(...eligibleConditions))
       .groupBy(properties.propertyType);
 
     const byPropertyType: Record<string, number> = {};
@@ -1240,7 +1396,7 @@ export class PropertySearchService {
       })
       .from(properties)
       .leftJoin(developments, eq(properties.developmentId, developments.id))
-      .where(and(...conditions))
+      .where(and(...eligibleConditions))
       .groupBy(properties.bedrooms);
 
     const byBedrooms: Record<string, number> = {};
@@ -1274,40 +1430,45 @@ export class PropertySearchService {
         locations: undefined,
       };
       const baseNoGeoConditions = this.buildFilterConditions(baseFilterNoGeo, []);
+      const eligibleBaseNoGeoConditions = await applyPublicEligibility(baseNoGeoConditions);
 
       const currentSuburbSlug = baseFilters.suburb?.[0]?.toLowerCase();
       const currentSuburbName = resolvedLocation.suburb?.name?.toLowerCase();
       const refLat = parseCoordinate(resolvedLocation.suburb?.latitude);
       const refLng = parseCoordinate(resolvedLocation.suburb?.longitude);
 
-      const suburbCounts = await Promise.all(
-        citySuburbs.map(async suburbItem => {
-          const countResult = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(properties)
-            .leftJoin(developments, eq(properties.developmentId, developments.id))
-            .where(and(...baseNoGeoConditions, eq(properties.suburbId, suburbItem.id)));
-          const count = Number(countResult[0]?.count || 0);
-          if (count <= 0) return null;
+      const suburbCounts = eligibleBaseNoGeoConditions
+        ? await Promise.all(
+            citySuburbs.map(async suburbItem => {
+              const countResult = await db
+                .select({ count: sql<number>`count(*)` })
+                .from(properties)
+                .leftJoin(developments, eq(properties.developmentId, developments.id))
+                .where(
+                  and(...eligibleBaseNoGeoConditions, eq(properties.suburbId, suburbItem.id)),
+                );
+              const count = Number(countResult[0]?.count || 0);
+              if (count <= 0) return null;
 
-          const distanceKm =
-            refLat !== null && refLng !== null
-              ? (() => {
-                  const lat = parseCoordinate(suburbItem.latitude);
-                  const lng = parseCoordinate(suburbItem.longitude);
-                  if (lat === null || lng === null) return Number.POSITIVE_INFINITY;
-                  return haversineKm(refLat, refLng, lat, lng);
-                })()
-              : Number.POSITIVE_INFINITY;
+              const distanceKm =
+                refLat !== null && refLng !== null
+                  ? (() => {
+                      const lat = parseCoordinate(suburbItem.latitude);
+                      const lng = parseCoordinate(suburbItem.longitude);
+                      if (lat === null || lng === null) return Number.POSITIVE_INFINITY;
+                      return haversineKm(refLat, refLng, lat, lng);
+                    })()
+                  : Number.POSITIVE_INFINITY;
 
-          return {
-            name: suburbItem.name,
-            slug: suburbItem.slug || slugifyText(suburbItem.name),
-            count,
-            distanceKm,
-          };
-        }),
-      );
+              return {
+                name: suburbItem.name,
+                slug: suburbItem.slug || slugifyText(suburbItem.name),
+                count,
+                distanceKm,
+              };
+            }),
+          )
+        : [];
 
       byLocation = suburbCounts
         .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -1337,19 +1498,22 @@ export class PropertySearchService {
         cityName: loc.cityName,
       }));
       const locationConditions = this.buildFilterConditions(locationFilters, locationIdsForCounts);
+      const eligibleLocationConditions = await applyPublicEligibility(locationConditions);
       const locationNameExpr = sql<string>`COALESCE(NULLIF(${suburbs.name}, ''), NULLIF(${properties.city}, ''), 'Other')`;
-      const locationResults = await db
-        .select({
-          name: locationNameExpr,
-          count: sql<number>`count(*)`,
-        })
-        .from(properties)
-        .leftJoin(developments, eq(properties.developmentId, developments.id))
-        .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
-        .where(and(...locationConditions))
-        .groupBy(locationNameExpr)
-        .orderBy(desc(sql`count(*)`))
-        .limit(12);
+      const locationResults = eligibleLocationConditions
+        ? await db
+            .select({
+              name: locationNameExpr,
+              count: sql<number>`count(*)`,
+            })
+            .from(properties)
+            .leftJoin(developments, eq(properties.developmentId, developments.id))
+            .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
+            .where(and(...eligibleLocationConditions))
+            .groupBy(locationNameExpr)
+            .orderBy(desc(sql`count(*)`))
+            .limit(12)
+        : [];
 
       byLocation = locationResults
         .map((row: any) => ({
@@ -1372,7 +1536,7 @@ export class PropertySearchService {
     const byPriceRange = await Promise.all(
       priceRanges.map(async ({ range, min, max }) => {
         const rangeConditions = [
-          ...conditions,
+          ...eligibleConditions,
           gte(properties.price, min),
           lte(properties.price, max),
         ];

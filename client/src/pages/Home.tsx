@@ -60,18 +60,6 @@ export default function Home() {
     limit: 12,
   });
 
-  const provinces = [
-    'Gauteng',
-    'Western Cape',
-    'KwaZulu-Natal',
-    'Eastern Cape',
-    'Mpumalanga',
-    'Limpopo',
-    'North West',
-    'Free State',
-    'Northern Cape',
-  ];
-
   const handleTabChange = (tab: string) => {
     const normalizedTab = normalizeHeroUiTab(tab);
     if (!normalizedTab) return;
@@ -122,22 +110,20 @@ export default function Home() {
           <HomeMobileView
             activeHeroTab={effectiveHeroTab}
             heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/')}
+            onBrowseProperties={() => setLocation('/property-for-sale')}
             onProvinceChange={setSelectedProvince}
             onTabChange={handleTabChange}
             popularCities={popularCities}
-            provinces={provinces}
             selectedProvince={selectedProvince}
           />
         ) : (
           <HomeDesktopView
             activeHeroTab={effectiveHeroTab}
             heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/')}
+            onBrowseProperties={() => setLocation('/property-for-sale')}
             onProvinceChange={setSelectedProvince}
             onTabChange={handleTabChange}
             popularCities={popularCities}
-            provinces={provinces}
             selectedProvince={selectedProvince}
           />
         )}

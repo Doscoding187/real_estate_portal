@@ -5,8 +5,11 @@ import { Building2 } from 'lucide-react';
 import { HomeLayout } from '@/layouts/HomeLayout';
 
 export default function AgentPublicProfile() {
-  const [, params] = useRoute('/agent/profile/:agentId');
-  const agentId = params?.agentId ? parseInt(params.agentId) : null;
+  const [, profileParams] = useRoute('/agent/profile/:agentId');
+  const [, legacyParams] = useRoute('/agent/:id');
+  const rawAgentId = profileParams?.agentId || legacyParams?.id || '';
+  const parsedAgentId = Number(rawAgentId);
+  const agentId = Number.isSafeInteger(parsedAgentId) && parsedAgentId > 0 ? parsedAgentId : null;
   const [, setLocation] = useLocation();
 
   const routeQuery = trpc.agent.getPublicProfileRouteById.useQuery(
@@ -19,7 +22,7 @@ export default function AgentPublicProfile() {
 
   useEffect(() => {
     if (routeQuery.data?.slug) {
-      setLocation(`/agents/${routeQuery.data.slug}`);
+      setLocation(`/agents/${routeQuery.data.slug}`, { replace: true });
     }
   }, [routeQuery.data?.slug, setLocation]);
 
