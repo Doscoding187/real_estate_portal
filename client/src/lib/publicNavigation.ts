@@ -402,7 +402,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
       capability: 'LAUNCH_READY',
       activeHref: '/property-for-sale',
     }),
-    actionItemIds: ['buyers-developments'],
     groups: [
       {
         label: 'Plan your purchase',

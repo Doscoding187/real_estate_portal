@@ -53,7 +53,7 @@ describe('EnhancedNavbar buyer discovery menu', () => {
     mockUseLocation.mockReturnValue(['/', vi.fn()]);
   });
 
-  it('opens the buyer menu with canonical discovery and action destinations', async () => {
+  it('opens the buyer menu with canonical discovery destinations', async () => {
     const region = await openBuyersMenu();
 
     expect(region.querySelector('.public-navbar__buyer-menu')).toBeInTheDocument();
@@ -61,7 +61,9 @@ describe('EnhancedNavbar buyer discovery menu', () => {
     expect(
       within(region).getByRole('link', { name: 'Browse properties for sale' }),
     ).toHaveAttribute('href', '/property-for-sale');
-    expect(within(region).queryByRole('link', { name: 'New developments' })).not.toBeInTheDocument();
+    const developmentsLinks = within(region).getAllByRole('link', { name: 'New developments' });
+    expect(developmentsLinks).toHaveLength(1);
+    expect(developmentsLinks[0]).toHaveAttribute('href', '/new-developments');
     expect(within(region).getByRole('link', { name: 'Plots and land' })).toHaveAttribute(
       'href',
       '/property-for-sale?propertyType=plot',
@@ -144,6 +146,8 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/favorites',
     );
-    expect(within(drawer!).queryByRole('link', { name: 'New developments' })).not.toBeInTheDocument();
+    const developmentsLinks = within(drawer!).getAllByRole('link', { name: 'New developments' });
+    expect(developmentsLinks).toHaveLength(1);
+    expect(developmentsLinks[0]).toHaveAttribute('href', '/new-developments');
   });
 });

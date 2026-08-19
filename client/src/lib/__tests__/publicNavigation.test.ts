@@ -9,7 +9,6 @@ import {
   getSafeNextPath,
   getVisiblePublicNavigationMenus,
   getVisiblePublicNavigationGroups,
-  getVisiblePublicNavigationActionItems,
   isPublicNavigationVisible,
   normalizePublicHeroJourney,
   PUBLIC_CITY_ENTRY,
@@ -141,11 +140,22 @@ describe('public navigation authority', () => {
       homepageEnabled: false,
     });
     for (const surface of ['desktop', 'mobile'] as const) {
+      const localItems = getVisiblePublicNavigationGroups(
+        buyers!,
+        surface,
+        localIntegrationRelease,
+      ).flatMap(group => group.items);
+      const productionItems = getVisiblePublicNavigationGroups(
+        buyers!,
+        surface,
+        containedProductionRelease,
+      ).flatMap(group => group.items);
+
       expect(
-        getVisiblePublicNavigationActionItems(buyers!, surface, localIntegrationRelease),
+        localItems,
       ).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]));
       expect(
-        getVisiblePublicNavigationActionItems(buyers!, surface, containedProductionRelease),
+        productionItems,
       ).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]),
       );
