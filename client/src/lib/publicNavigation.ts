@@ -5,6 +5,7 @@ import {
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
+import { parseDeployEnv } from './env.contract';
 
 export type PublicNavigationCapabilityStatus =
   | 'LAUNCH_READY'
@@ -94,15 +95,88 @@ export interface PublicHeroJourneyDefinition {
   mobileLabel: string;
   kind: PublicHeroJourneyKind;
   destination: string;
-  homepageVisible: boolean;
-  homepageEnabled: boolean;
+  /** Product capability, independent of a hosted release decision. */
+  productHomepageVisible: boolean;
+  /** Product capability, independent of a hosted release decision. */
+  productHomepageEnabled: boolean;
   supportedFields: readonly string[];
 }
 
+export type ResolvedPublicHeroJourneyDefinition = PublicHeroJourneyDefinition & {
+  /** Runtime exposure after product capability and environment release resolve together. */
+  homepageVisible: boolean;
+  /** Runtime interactivity after product capability and environment release resolve together. */
+  homepageEnabled: boolean;
+};
+
+export interface PublicJourneyReleaseContext {
+  /** Hosted builds require an explicit release; local development previews product capability. */
+  hostedReleaseControlled: boolean;
+  /** Explicit supplemental releases from the public, build-time release manifest. */
+  supplementalReleasedJourneys: readonly string[];
+}
+
+type PublicJourneyRuntimeEnvironment = {
+  PROD?: boolean;
+  VITE_DEPLOY_ENV?: string;
+  VITE_PUBLIC_JOURNEY_RELEASES?: string;
+};
+
+const PUBLIC_JOURNEY_RELEASE_MANIFEST_ENV = 'VITE_PUBLIC_JOURNEY_RELEASES';
+const BASELINE_RELEASED_PUBLIC_JOURNEYS: readonly PublicHeroJourneyKey[] = [
+  'buy',
+  'rent',
+  'find_agent',
+];
+
+function parseSupplementalPublicJourneyReleases(value: unknown): readonly string[] {
+  return Array.from(
+    new Set(
+      String(value || '')
+        .split(',')
+        .map(item => item.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+}
+
 /**
- * Canonical public journey authority shared by the hero and public navigation.
- * Menu copy can remain audience-specific, but route meaning and stable intent
- * keys must come from this registry.
+ * One release authority for public journeys. Local development intentionally
+ * previews completed product capability, while all hosted builds (including
+ * production) retain only their baseline releases until a journey is named in
+ * the build-time manifest. The manifest is public configuration, never a
+ * signal of backend or database availability.
+ */
+export function resolvePublicJourneyReleaseContext(
+  environment: PublicJourneyRuntimeEnvironment = import.meta.env,
+): PublicJourneyReleaseContext {
+  const deployEnv = parseDeployEnv(environment.VITE_DEPLOY_ENV);
+  return {
+    hostedReleaseControlled: Boolean(environment.PROD) || deployEnv !== 'development',
+    supplementalReleasedJourneys: parseSupplementalPublicJourneyReleases(
+      environment[PUBLIC_JOURNEY_RELEASE_MANIFEST_ENV],
+    ),
+  };
+}
+
+const RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT = resolvePublicJourneyReleaseContext();
+
+export function isPublicHeroJourneyReleased(
+  key: PublicHeroJourneyKey,
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
+): boolean {
+  return (
+    !releaseContext.hostedReleaseControlled ||
+    BASELINE_RELEASED_PUBLIC_JOURNEYS.includes(key) ||
+    releaseContext.supplementalReleasedJourneys.includes(key)
+  );
+}
+
+/**
+ * Canonical product capability authority shared by the hero and public
+ * navigation. Menu copy can remain audience-specific, but route meaning,
+ * stable intent keys, and product readiness come from this registry. Hosted
+ * release exposure is resolved separately through the release authority above.
  */
 export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
   {
@@ -111,8 +185,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Buy',
     kind: 'property-search',
     destination: '/property-for-sale',
-    homepageVisible: true,
-    homepageEnabled: true,
+    productHomepageVisible: true,
+    productHomepageEnabled: true,
     supportedFields: [
       'location',
       'propertyType',
@@ -128,8 +202,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Rent',
     kind: 'property-search',
     destination: '/property-to-rent',
-    homepageVisible: true,
-    homepageEnabled: true,
+    productHomepageVisible: true,
+    productHomepageEnabled: true,
     supportedFields: ['location', 'propertyType', 'minPrice', 'maxPrice'],
   },
   {
@@ -138,8 +212,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Developments',
     kind: 'property-search',
     destination: '/new-developments',
-    homepageVisible: false,
-    homepageEnabled: false,
+    productHomepageVisible: true,
+    productHomepageEnabled: true,
     supportedFields: ['location', 'developmentType', 'developmentStatus', 'minPrice', 'maxPrice'],
   },
   {
@@ -151,8 +225,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     // search contract is not part of the public Buy/Rent runtime yet.
     // Keep the definition neutral until that journey has its own authority.
     destination: '/',
-    homepageVisible: false,
-    homepageEnabled: false,
+    productHomepageVisible: false,
+    productHomepageEnabled: false,
     supportedFields: ['location', 'roomType', 'minPrice', 'maxPrice'],
   },
   {
@@ -161,8 +235,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Plots & Land',
     kind: 'property-search',
     destination: '/property-for-sale',
-    homepageVisible: false,
-    homepageEnabled: false,
+    productHomepageVisible: false,
+    productHomepageEnabled: false,
     supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
   },
   {
@@ -171,8 +245,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Commercial',
     kind: 'property-search',
     destination: '/property-for-sale',
-    homepageVisible: false,
-    homepageEnabled: false,
+    productHomepageVisible: false,
+    productHomepageEnabled: false,
     supportedFields: ['location', 'saleOrRent', 'commercialUseType'],
   },
   {
@@ -181,8 +255,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Find an Agent',
     kind: 'direct-navigation',
     destination: '/agents',
-    homepageVisible: true,
-    homepageEnabled: false,
+    productHomepageVisible: true,
+    productHomepageEnabled: false,
     supportedFields: [],
   },
 ];
@@ -213,19 +287,35 @@ const PUBLIC_HERO_JOURNEY_ALIASES: Record<string, PublicHeroJourneyKey> = {
   'find-an-agent': 'find_agent',
 };
 
-export function getPublicHeroJourney(key: PublicHeroJourneyKey) {
-  return (
+export function getPublicHeroJourney(
+  key: PublicHeroJourneyKey,
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
+): ResolvedPublicHeroJourneyDefinition {
+  const journey =
     PUBLIC_HERO_JOURNEY_BY_KEY.get(key) ||
-    PUBLIC_HERO_JOURNEY_BY_KEY.get(DEFAULT_PUBLIC_HERO_JOURNEY)!
-  );
+    PUBLIC_HERO_JOURNEY_BY_KEY.get(DEFAULT_PUBLIC_HERO_JOURNEY)!;
+  const released = isPublicHeroJourneyReleased(journey.key, releaseContext);
+
+  return {
+    ...journey,
+    homepageVisible: journey.productHomepageVisible && released,
+    homepageEnabled: journey.productHomepageEnabled && released,
+  };
 }
 
-export function getHomepageHeroJourneys(): readonly PublicHeroJourneyDefinition[] {
-  return PUBLIC_HERO_JOURNEYS.filter(journey => journey.homepageVisible);
+export function getHomepageHeroJourneys(
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
+): readonly ResolvedPublicHeroJourneyDefinition[] {
+  return PUBLIC_HERO_JOURNEYS.map(journey =>
+    getPublicHeroJourney(journey.key, releaseContext),
+  ).filter(journey => journey.homepageVisible);
 }
 
-export function isHomepageHeroJourneyEnabled(key: PublicHeroJourneyKey): boolean {
-  return getPublicHeroJourney(key).homepageEnabled;
+export function isHomepageHeroJourneyEnabled(
+  key: PublicHeroJourneyKey,
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
+): boolean {
+  return getPublicHeroJourney(key, releaseContext).homepageEnabled;
 }
 
 export function normalizePublicHeroJourney(
@@ -312,7 +402,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
       capability: 'LAUNCH_READY',
       activeHref: '/property-for-sale',
     }),
-    actionItemIds: ['buyers-developments'],
     groups: [
       {
         label: 'Plan your purchase',
@@ -946,28 +1035,33 @@ const VISIBLE_CAPABILITIES = new Set<PublicNavigationCapabilityStatus>([
 export function isPublicNavigationVisible(
   item: PublicNavigationDestination,
   surface: 'desktop' | 'mobile' = 'desktop',
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
 ) {
   return (
     VISIBLE_CAPABILITIES.has(item.capability) &&
-    (!item.journey || isHomepageHeroJourneyEnabled(item.journey)) &&
+    (!item.journey || isHomepageHeroJourneyEnabled(item.journey, releaseContext)) &&
     (surface === 'desktop' ? item.desktopVisible !== false : item.mobileVisible !== false)
   );
 }
 
 export function getVisiblePublicNavigationMenus(
   surface: 'desktop' | 'mobile' = 'desktop',
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
 ): PublicNavigationMenu[] {
-  return PUBLIC_NAVIGATION_MENUS.filter(menu => isPublicNavigationVisible(menu.feature, surface));
+  return PUBLIC_NAVIGATION_MENUS.filter(menu =>
+    isPublicNavigationVisible(menu.feature, surface, releaseContext),
+  );
 }
 
 export function getVisiblePublicNavigationGroups(
   menu: PublicNavigationMenu,
   surface: 'desktop' | 'mobile' = 'desktop',
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
 ) {
   return menu.groups
     .map(group => ({
       ...group,
-      items: group.items.filter(item => isPublicNavigationVisible(item, surface)),
+      items: group.items.filter(item => isPublicNavigationVisible(item, surface, releaseContext)),
     }))
     .filter(group => group.items.length > 0);
 }
@@ -975,13 +1069,14 @@ export function getVisiblePublicNavigationGroups(
 export function getVisiblePublicNavigationActionItems(
   menu: PublicNavigationMenu,
   surface: 'desktop' | 'mobile' = 'desktop',
+  releaseContext: PublicJourneyReleaseContext = RUNTIME_PUBLIC_JOURNEY_RELEASE_CONTEXT,
 ) {
   const destinations = [menu.feature, ...menu.groups.flatMap(group => group.items)];
   return (menu.actionItemIds || [])
     .map(id => destinations.find(item => item.id === id))
     .filter((item): item is PublicNavigationDestination => {
       if (!item) return false;
-      return isPublicNavigationVisible(item, surface);
+      return isPublicNavigationVisible(item, surface, releaseContext);
     });
 }
 

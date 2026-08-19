@@ -6,6 +6,7 @@ import {
   isHomepageHeroJourneyEnabled,
   normalizePublicHeroJourney,
   parseHomepageJourney,
+  resolvePublicJourneyReleaseContext,
 } from '@/lib/publicNavigation';
 
 describe('hero journey authority', () => {
@@ -24,11 +25,12 @@ describe('hero journey authority', () => {
     });
     expect(getPublicHeroJourney('buy').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
-    expect(getPublicHeroJourney('developments').homepageEnabled).toBe(false);
+    expect(getPublicHeroJourney('developments').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('find_agent').homepageEnabled).toBe(false);
     expect(getHomepageHeroJourneys().map(journey => journey.key)).toEqual([
       'buy',
       'rent',
+      'developments',
       'find_agent',
     ]);
   });
@@ -47,6 +49,66 @@ describe('hero journey authority', () => {
     expect(buildHomepageJourneyUrl('buy')).toBe('/?intent=buy');
     expect(buildHomepageJourneyUrl('find_agent')).toBe('/agents');
     expect(isHomepageHeroJourneyEnabled('buy')).toBe(true);
-    expect(isHomepageHeroJourneyEnabled('developments')).toBe(false);
+    expect(isHomepageHeroJourneyEnabled('developments')).toBe(true);
+  });
+
+  it('keeps completed Developments capability separate from hosted release activation', () => {
+    const localIntegrationRelease = resolvePublicJourneyReleaseContext({
+      PROD: false,
+      VITE_DEPLOY_ENV: 'development',
+    });
+    const containedHostedRelease = resolvePublicJourneyReleaseContext({
+      PROD: true,
+      VITE_DEPLOY_ENV: 'production',
+    });
+    const explicitHostedRelease = resolvePublicJourneyReleaseContext({
+      PROD: true,
+      VITE_DEPLOY_ENV: 'production',
+      VITE_PUBLIC_JOURNEY_RELEASES: 'developments',
+    });
+
+    expect(getPublicHeroJourney('developments', localIntegrationRelease)).toMatchObject({
+      destination: '/new-developments',
+      productHomepageVisible: true,
+      productHomepageEnabled: true,
+      homepageVisible: true,
+      homepageEnabled: true,
+    });
+    expect(getPublicHeroJourney('developments', containedHostedRelease)).toMatchObject({
+      productHomepageVisible: true,
+      productHomepageEnabled: true,
+      homepageVisible: false,
+      homepageEnabled: false,
+    });
+    expect(getPublicHeroJourney('developments', explicitHostedRelease)).toMatchObject({
+      homepageVisible: true,
+      homepageEnabled: true,
+    });
+    expect(getHomepageHeroJourneys(containedHostedRelease).map(journey => journey.key)).toEqual([
+      'buy',
+      'rent',
+      'find_agent',
+    ]);
+    expect(getHomepageHeroJourneys(explicitHostedRelease).map(journey => journey.key)).toEqual([
+      'buy',
+      'rent',
+      'developments',
+      'find_agent',
+    ]);
+  });
+
+  it('cannot release unfinished homepage journeys through a hosted manifest', () => {
+    const hostedRelease = resolvePublicJourneyReleaseContext({
+      PROD: true,
+      VITE_DEPLOY_ENV: 'production',
+      VITE_PUBLIC_JOURNEY_RELEASES: 'shared_living,plot_land,commercial',
+    });
+
+    for (const journey of ['shared_living', 'plot_land', 'commercial'] as const) {
+      expect(getPublicHeroJourney(journey, hostedRelease)).toMatchObject({
+        homepageVisible: false,
+        homepageEnabled: false,
+      });
+    }
   });
 });
