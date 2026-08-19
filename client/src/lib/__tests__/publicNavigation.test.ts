@@ -14,6 +14,7 @@ import {
   normalizePublicHeroJourney,
   PUBLIC_CITY_ENTRY,
   PUBLIC_NAVIGATION_MENUS,
+  resolvePublicJourneyReleaseContext,
 } from '@/lib/publicNavigation';
 
 describe('public navigation authority', () => {
@@ -119,23 +120,43 @@ describe('public navigation authority', () => {
     expect(visibleItems.some(item => /alert|enquir/i.test(item.label))).toBe(false);
   });
 
-  it('keeps New Developments hidden across action-item navigation through the central activation authority', () => {
+  it('derives desktop and mobile Developments exposure from one product-and-release authority', () => {
     const buyers = PUBLIC_NAVIGATION_MENUS.find(menu => menu.id === 'buyers');
     expect(buyers).toBeDefined();
-    expect(getPublicHeroJourney('developments').homepageVisible).toBe(false);
-    expect(getPublicHeroJourney('developments').homepageEnabled).toBe(false);
+    const localIntegrationRelease = resolvePublicJourneyReleaseContext({
+      PROD: false,
+      VITE_DEPLOY_ENV: 'development',
+    });
+    const containedProductionRelease = resolvePublicJourneyReleaseContext({
+      PROD: true,
+      VITE_DEPLOY_ENV: 'production',
+    });
+
+    expect(getPublicHeroJourney('developments', localIntegrationRelease)).toMatchObject({
+      homepageVisible: true,
+      homepageEnabled: true,
+    });
+    expect(getPublicHeroJourney('developments', containedProductionRelease)).toMatchObject({
+      homepageVisible: false,
+      homepageEnabled: false,
+    });
     for (const surface of ['desktop', 'mobile'] as const) {
-      expect(getVisiblePublicNavigationActionItems(buyers!, surface)).not.toEqual(
+      expect(
+        getVisiblePublicNavigationActionItems(buyers!, surface, localIntegrationRelease),
+      ).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]));
+      expect(
+        getVisiblePublicNavigationActionItems(buyers!, surface, containedProductionRelease),
+      ).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]),
       );
     }
   });
 
-  it('keeps development exposure on the one canonical journey destination', () => {
+  it('keeps development product capability and exposure on one canonical journey destination', () => {
     expect(getPublicHeroJourney('developments')).toMatchObject({
       destination: '/new-developments',
-      homepageVisible: false,
-      homepageEnabled: false,
+      productHomepageVisible: true,
+      productHomepageEnabled: true,
     });
     expect(
       PUBLIC_NAVIGATION_MENUS.flatMap(menu => [

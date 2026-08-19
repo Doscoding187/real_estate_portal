@@ -37,12 +37,12 @@ describe('public Developments search authority', () => {
 
     expect(router).toContain("transactionType: z.enum(['for_sale', 'for_rent']).optional()");
     expect(page).toContain(
-      "      transactionType:\n" +
+      '      transactionType:\n' +
         "        intent.filters.transactionType === 'for_sale' || intent.filters.transactionType === 'for_rent'\n" +
         '          ? intent.filters.transactionType\n' +
         '          : undefined,',
     );
-    expect(page).toContain('value={intent.filters.transactionType || \'\'}');
+    expect(page).toContain("value={intent.filters.transactionType || ''}");
     expect(page).toContain('<option value="">Sale or rent</option>');
   });
 
@@ -58,7 +58,9 @@ describe('public Developments search authority', () => {
     expect(detailService).toContain('publicDevelopmentEligibilityConditions()');
     expect(detailService).toContain('eq(unitTypes.isActive, 1)');
     expect(detailService).toContain('projectPublicDevelopmentFacts(development, projectionUnits)');
-    expect(developmentService).toContain('return publicDevelopmentDetailService.getBySlugOrId(slugOrId);');
+    expect(developmentService).toContain(
+      'return publicDevelopmentDetailService.getBySlugOrId(slugOrId);',
+    );
     expect(detail).toContain('const publicFacts = dev.publicFacts;');
     expect(detail).toContain('activeLeadUnit.publicFacts?.priceFrom');
     expect(detail).toContain("listingType={isRentalDevelopment ? 'rent' : 'sale'}");
@@ -71,7 +73,7 @@ describe('public Developments search authority', () => {
     expect(detail).not.toMatch(/trpc\.developer\.listPublicDevelopments/);
   });
 
-  it('contains unsafe public fallbacks and keeps activation on the central authority', () => {
+  it('contains unsafe public fallbacks and keeps product capability separate from release authority', () => {
     const detailService = readRepoFile('server/services/publicDevelopmentDetailService.ts');
     const detail = readRepoFile('client/src/pages/DevelopmentDetail.tsx');
     const publisher = readRepoFile('client/src/components/development/DeveloperOverview.tsx');
@@ -83,7 +85,9 @@ describe('public Developments search authority', () => {
     expect(detail).not.toContain("longitude: '0'");
     expect(publisher).not.toContain('Unknown Developer');
     expect(publisher).toContain('No public developer description has been provided.');
-    expect(navigation).toContain("homepageVisible: false");
-    expect(navigation).toContain("homepageEnabled: false");
+    expect(navigation).toContain('productHomepageVisible: true');
+    expect(navigation).toContain('productHomepageEnabled: true');
+    expect(navigation).toContain('isPublicHeroJourneyReleased');
+    expect(navigation).toContain('VITE_PUBLIC_JOURNEY_RELEASES');
   });
 });
