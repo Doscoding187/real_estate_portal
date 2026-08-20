@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0030_land_conflict_cases.sql",
+  "expectedHead": "0033_land_evidence_access_audit.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -317,6 +317,36 @@
       "checksum": "5a803eb27a0e29d9e1e33259a86b3495c28f116c4938bca79b1e7057f97c27f8",
       "parent": "0029_land_verification_events.sql",
       "parentChecksum": "e761aa322b4b84477435a7e72839dcb63c3232bf9fa4fde1892b02b79bc0413a",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 31,
+      "filename": "0031_land_review_cases.sql",
+      "checksum": "96f580f1166d3531c35e72b933f56f20d0e9f27d9e67715dc530c5363790e9c5",
+      "parent": "0030_land_conflict_cases.sql",
+      "parentChecksum": "5a803eb27a0e29d9e1e33259a86b3495c28f116c4938bca79b1e7057f97c27f8",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 32,
+      "filename": "0032_land_review_events.sql",
+      "checksum": "258e70a1465e3bc2d29727ace498ec45608245c5562e4baa7df0a3c24968dad9",
+      "parent": "0031_land_review_cases.sql",
+      "parentChecksum": "96f580f1166d3531c35e72b933f56f20d0e9f27d9e67715dc530c5363790e9c5",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 33,
+      "filename": "0033_land_evidence_access_audit.sql",
+      "checksum": "92515db6c2f291b5aed0674a242e25ac4e0c3950e83cf519cb1ba59cf470be9f",
+      "parent": "0032_land_review_events.sql",
+      "parentChecksum": "258e70a1465e3bc2d29727ace498ec45608245c5562e4baa7df0a3c24968dad9",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

@@ -9,6 +9,9 @@ import {
   landListingLinks,
   landMarketingAuthorities,
   landParcels,
+  landReviewCases,
+  landReviewEvents,
+  landEvidenceAccessAudit,
   landVerificationAssertions,
   landVerificationEvents,
 } from '../../../drizzle/schema';
@@ -32,6 +35,9 @@ describe('buildLandPassport', () => {
     expect(landVerificationAssertions[Symbol.for('drizzle:Name')]).toBe('land_verification_assertions');
     expect(landAssertionEvidence[Symbol.for('drizzle:Name')]).toBe('land_assertion_evidence');
     expect(landVerificationEvents[Symbol.for('drizzle:Name')]).toBe('land_verification_events');
+    expect(landReviewCases[Symbol.for('drizzle:Name')]).toBe('land_review_cases');
+    expect(landReviewEvents[Symbol.for('drizzle:Name')]).toBe('land_review_events');
+    expect(landEvidenceAccessAudit[Symbol.for('drizzle:Name')]).toBe('land_evidence_access_audit');
     expect(LAND_CLASSIFICATIONS).not.toContain('plot');
     expect(LAND_CLASSIFICATIONS).not.toContain('land');
   });

@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "dcb01f39e3161982fd0fb0bdcd36fafb67587779e1ef8cb096d915603bc1d0e8",
+  "structuralDigest": "5500289dad949c48e70ad62e97c4b8af46f0138a83f2f42ec5a319e3c2067721",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 196,
+  "tableCount": 199,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -120,10 +120,13 @@
     "land_assets",
     "land_claims",
     "land_conflict_cases",
+    "land_evidence_access_audit",
     "land_evidence_documents",
     "land_listing_links",
     "land_marketing_authorities",
     "land_parcels",
+    "land_review_cases",
+    "land_review_events",
     "land_verification_assertions",
     "land_verification_events",
     "launch_content_quotas",

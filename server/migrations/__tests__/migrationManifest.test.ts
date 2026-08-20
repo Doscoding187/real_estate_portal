@@ -172,7 +172,7 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0030_land_conflict_cases.sql');
+    expect(manifest.expectedHead.filename).toBe('0033_land_evidence_access_audit.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +188,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0030_land_conflict_cases.sql',
+      expectedNewHead: '0033_land_evidence_access_audit.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(23);
+    expect(plan.pending).toHaveLength(26);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -217,8 +217,11 @@ describe('canonical migration manifest', () => {
       '0028_land_assertion_evidence.sql',
       '0029_land_verification_events.sql',
       '0030_land_conflict_cases.sql',
+      '0031_land_review_cases.sql',
+      '0032_land_review_events.sql',
+      '0033_land_evidence_access_audit.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0030_land_conflict_cases.sql');
+    expect(plan.expectedNewHead).toBe('0033_land_evidence_access_audit.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

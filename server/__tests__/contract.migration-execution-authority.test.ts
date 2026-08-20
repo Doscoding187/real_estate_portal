@@ -379,9 +379,12 @@ describe('migration execution authority', () => {
       '0028_land_assertion_evidence.sql',
       '0029_land_verification_events.sql',
       '0030_land_conflict_cases.sql',
+      '0031_land_review_cases.sql',
+      '0032_land_review_events.sql',
+      '0033_land_evidence_access_audit.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0030_land_conflict_cases.sql',
+      '0033_land_evidence_access_audit.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

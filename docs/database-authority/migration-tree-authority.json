@@ -623,6 +623,21 @@
       "purpose": "Creates platform-local parcel/listing conflict cases without asserting real-world double-sale clearance."
     },
     {
+      "path": "server/migrations/0031_land_review_cases.sql",
+      "classification": "canonical active",
+      "purpose": "Creates the durable, listing-scoped Land review authority distinct from generic listing approval."
+    },
+    {
+      "path": "server/migrations/0032_land_review_events.sql",
+      "classification": "canonical active",
+      "purpose": "Creates append-only Land review events across submission, decision, re-review and suspension."
+    },
+    {
+      "path": "server/migrations/0033_land_evidence_access_audit.sql",
+      "classification": "canonical active",
+      "purpose": "Creates private Land evidence access auditing without retaining evidence contents or storage credentials."
+    },
+    {
       "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."

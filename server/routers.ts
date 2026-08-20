@@ -92,6 +92,7 @@ import { demandRouter } from './demandRouter';
 import { servicesEngineRouter } from './servicesEngineRouter';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { discoveryRouter } from './domains/discovery/router';
+import { landRouter } from './landRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -113,6 +114,7 @@ const appRouterConfig = {
   googleMaps: googleMapsRouter,
   priceInsights: priceInsightsRouter,
   listing: listingRouter,
+  land: landRouter,
   upload: uploadRouter,
   settings: settingsRouter,
   savedSearch: savedSearchRouter,

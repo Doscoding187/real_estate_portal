@@ -229,6 +229,70 @@ export const landVerificationEvents = mysqlTable(
   table => [index('idx_land_verification_events_assertion_time').on(table.assertionId, table.occurredAt)],
 );
 
+export const landReviewCases = mysqlTable(
+  'land_review_cases',
+  {
+    id: int().autoincrement().primaryKey(),
+    listingId: int('listing_id').notNull().references(() => listings.id, { onDelete: 'restrict' }),
+    state: mysqlEnum('state', ['draft', 'pending', 'reviewing', 'changes_requested', 'approved', 'rejected', 'suspended'])
+      .default('draft')
+      .notNull(),
+    submissionSequence: int('submission_sequence').default(0).notNull(),
+    currentReviewerUserId: int('current_reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    decisionByUserId: int('decision_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }),
+    reviewedAt: timestamp('reviewed_at', { mode: 'string' }),
+    decidedAt: timestamp('decided_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_land_review_cases_listing').on(table.listingId),
+    index('idx_land_review_cases_state').on(table.state, table.updatedAt),
+  ],
+);
+
+export const landReviewEvents = mysqlTable(
+  'land_review_events',
+  {
+    id: int().autoincrement().primaryKey(),
+    reviewCaseId: int('review_case_id').notNull().references(() => landReviewCases.id, { onDelete: 'restrict' }),
+    submissionSequence: int('submission_sequence').notNull(),
+    actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    eventType: mysqlEnum('event_type', ['submitted', 'review_started', 'changes_requested', 'resubmitted', 'rejected', 'approved', 'suspended', 'reopened'])
+      .notNull(),
+    previousState: varchar('previous_state', { length: 32 }),
+    nextState: varchar('next_state', { length: 32 }).notNull(),
+    reasonCode: varchar('reason_code', { length: 100 }),
+    comment: text('comment'),
+    metadata: json('metadata'),
+    occurredAt: timestamp('occurred_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_land_review_events_case_time').on(table.reviewCaseId, table.occurredAt),
+    index('idx_land_review_events_case_submission').on(table.reviewCaseId, table.submissionSequence),
+  ],
+);
+
+export const landEvidenceAccessAudit = mysqlTable(
+  'land_evidence_access_audit',
+  {
+    id: int().autoincrement().primaryKey(),
+    evidenceDocumentId: int('evidence_document_id').notNull().references(() => landEvidenceDocuments.id, { onDelete: 'restrict' }),
+    actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    action: mysqlEnum('action', ['view', 'retrieve', 'signed_access', 'download']).notNull(),
+    authorizationOutcome: mysqlEnum('authorization_outcome', ['allowed', 'denied']).notNull(),
+    accessContext: mysqlEnum('access_context', ['author_custodian', 'agency_custodian', 'land_reviewer', 'platform_admin', 'other']).notNull(),
+    organisationId: int('organisation_id'),
+    requestCorrelationId: varchar('request_correlation_id', { length: 100 }),
+    occurredAt: timestamp('occurred_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_land_evidence_access_document_time').on(table.evidenceDocumentId, table.occurredAt),
+    index('idx_land_evidence_access_actor_time').on(table.actorUserId, table.occurredAt),
+  ],
+);
+
 export const landConflictCases = mysqlTable(
   'land_conflict_cases',
   {
