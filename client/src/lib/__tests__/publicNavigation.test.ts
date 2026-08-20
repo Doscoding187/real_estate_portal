@@ -39,7 +39,8 @@ describe('public navigation authority', () => {
       menu.groups.flatMap(group => group.items.map(item => item.href)),
     );
 
-    expect(hrefs).toContain('/property-for-sale?propertyType=plot');
+    expect(hrefs).toContain('/plots-and-land');
+    expect(hrefs).not.toContain('/property-for-sale?propertyType=plot');
     expect(hrefs).toContain('/property-for-sale?propertyType=commercial');
     expect(hrefs).not.toContain('/property-for-sale?propertyType=land');
     expect(hrefs.some(href => href.includes('propertyType=office'))).toBe(false);

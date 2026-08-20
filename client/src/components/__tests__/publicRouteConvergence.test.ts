@@ -26,8 +26,8 @@ describe('public route convergence', () => {
     expect(app).toContain('window.location.replace(`/new-developments${window.location.search}`)');
   });
 
-  it('uses the supported plot search value for the Plots and Land journey', () => {
-    expect(getPublicHeroJourney('plot_land').destination).toBe('/property-for-sale');
+  it('uses the canonical Land route for the Plots and Land journey', () => {
+    expect(getPublicHeroJourney('plot_land').destination).toBe('/plots-and-land');
   });
 
   it('uses the canonical developments root on corrected public discovery surfaces', () => {

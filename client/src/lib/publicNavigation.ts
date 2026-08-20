@@ -235,8 +235,10 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Plots & Land',
     kind: 'property-search',
     destination: '/plots-and-land',
-    productHomepageVisible: false,
-    productHomepageEnabled: false,
+    // Product-complete locally; hosted exposure remains controlled by the
+    // existing public-journey release manifest.
+    productHomepageVisible: true,
+    productHomepageEnabled: true,
     supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
   },
   {
@@ -455,10 +457,11 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           destination({
             id: 'buyers-plots',
             label: 'Plots and land',
-            href: `${getPublicHeroJourney('plot_land').destination}?propertyType=plot`,
-            owner: 'property-search',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/property-for-sale',
+            href: getPublicHeroJourney('plot_land').destination,
+            owner: 'land-engine',
+            capability: 'LAUNCH_READY',
+            activeHref: '/plots-and-land',
+            journey: 'plot_land',
           }),
           destination({
             id: 'buyers-commercial',
