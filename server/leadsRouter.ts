@@ -118,14 +118,14 @@ export const leadsRouter = router({
           consent: leadConsentSchema.optional(),
         })
         .superRefine((input, refinementContext) => {
-          if ((input.propertyId || input.developmentId) && !input.captureRequestId) {
+          if ((input.listingId || input.propertyId || input.developmentId) && !input.captureRequestId) {
             refinementContext.addIssue({
               code: z.ZodIssueCode.custom,
               path: ['captureRequestId'],
               message: 'A stable enquiry request ID is required.',
             });
           }
-          if ((input.propertyId || input.developmentId) && !input.consent) {
+          if ((input.listingId || input.propertyId || input.developmentId) && !input.consent) {
             refinementContext.addIssue({
               code: z.ZodIssueCode.custom,
               path: ['consent'],

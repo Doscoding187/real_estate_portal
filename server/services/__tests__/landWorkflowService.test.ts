@@ -41,8 +41,16 @@ describe('Land workflow readiness authority', () => {
     expect(result.blockers.publication).toContain('critical_verification_attention');
   });
 
+  it('blocks publication when a persisted critical assertion timestamp is expired', () => {
+    const result = ready({ assertions: [{ claimCode: 'zoning_land_use', status: 'verified', expiresAt: '2026-08-19 00:00:00', recheckDueAt: null }] });
+    expect(result.publicationEligible).toBe(false);
+    expect(result.blockers.publication).toContain('critical_verification_attention');
+  });
+
   it('separates author and reviewer authority', () => {
     expect(isLandAuthorRole('agent')).toBe(true);
+    expect(isLandAuthorRole('property_developer')).toBe(true);
+    expect(isLandAuthorRole('developer')).toBe(false);
     expect(isLandAuthorRole('viewer')).toBe(false);
     expect(isLandReviewerRole('agent')).toBe(false);
     expect(isLandReviewerRole('super_admin')).toBe(true);

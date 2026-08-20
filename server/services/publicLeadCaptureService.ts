@@ -667,6 +667,8 @@ function isEquivalentReplay(
   source: string,
   leadSource: string,
 ): boolean {
+  const existingListingId = positiveId(existing.listingId);
+  const inputListingId = positiveId(input.listingId);
   const existingPropertyId = positiveId(existing.propertyId);
   const existingDevelopmentId = positiveId(existing.developmentId);
   const inputPropertyId = positiveId(input.propertyId);
@@ -678,16 +680,19 @@ function isEquivalentReplay(
   // a development may derive brand attribution. Those server-owned fields are
   // not part of the submitted identity when the caller omitted them. When the
   // caller did submit an attribution, it must still match exactly.
-  const targetMatches = inputPropertyId
-    ? existingPropertyId === inputPropertyId &&
+  const targetMatches = inputListingId
+    ? existingListingId === inputListingId &&
+      !existingPropertyId && !existingDevelopmentId && !existingBrandId
+    : inputPropertyId
+    ? !existingListingId && existingPropertyId === inputPropertyId &&
       (!inputDevelopmentId || existingDevelopmentId === inputDevelopmentId) &&
       (!inputBrandId || existingBrandId === inputBrandId)
     : inputDevelopmentId
-      ? !existingPropertyId &&
+      ? !existingListingId && !existingPropertyId &&
         existingDevelopmentId === inputDevelopmentId &&
         (!inputBrandId || existingBrandId === inputBrandId)
       : inputBrandId
-        ? !existingPropertyId && !existingDevelopmentId && existingBrandId === inputBrandId
+        ? !existingListingId && !existingPropertyId && !existingDevelopmentId && existingBrandId === inputBrandId
         : false;
 
   const contextMatches =

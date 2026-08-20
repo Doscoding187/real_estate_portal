@@ -226,6 +226,24 @@ describe('publicLeadCaptureService contract', () => {
     }));
   });
 
+  it('replays an identical Land listing enquiry idempotently but rejects a changed target', async () => {
+    const replay = existingLead({
+      listingId: 701,
+      propertyId: null,
+      source: 'land_detail',
+      leadSource: 'plots_and_land',
+    });
+    const database = makeFakeDatabase({ selectResults: [[replay]] });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(baseInput({ listingId: 701, source: 'plots_and_land', leadSource: 'plots_and_land', sourceSurface: 'land_detail' }));
+    expect(result).toMatchObject({ success: true, duplicate: true, leadId: 812 });
+    expect(database.insertValues).not.toHaveBeenCalled();
+
+    mockGetDb.mockResolvedValue(makeFakeDatabase({ selectResults: [[replay]] }));
+    await expect(capturePublicLead(baseInput({ listingId: 702, source: 'plots_and_land', leadSource: 'plots_and_land', sourceSurface: 'land_detail' }))).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
   it('rejects a non-public Land listing without exposing its custody', async () => {
     mockGetDb.mockResolvedValue(makeFakeDatabase());
     mockResolvePublicLandLeadCustody.mockResolvedValue(null);

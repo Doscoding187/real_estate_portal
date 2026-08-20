@@ -20,6 +20,20 @@ export type LandVerificationStatus =
 
 export type LandTrustState = 'listed_with_disclosures' | 'passport_checked' | 'passport_attention_required';
 
+type DateLike = Date | string | null | undefined;
+
+/** Drizzle timestamp mode is string for the Land schema; normalize at the domain boundary. */
+export function normalizeLandTimestamp(value: DateLike): Date | null {
+  if (!value) return null;
+  const normalized = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(normalized.getTime()) ? null : normalized;
+}
+
+export function isLandTimestampDue(value: DateLike, now: Date): boolean {
+  const normalized = normalizeLandTimestamp(value);
+  return normalized !== null && normalized.getTime() <= now.getTime();
+}
+
 export function deriveLandTrustState(input: {
   marketingAuthorityActive: boolean;
   hasHighSeverityOpenConflict: boolean;
@@ -30,8 +44,8 @@ export function deriveLandTrustState(input: {
   const now = input.now || new Date();
   const attentionRequired = input.assertions.some(assertion =>
     assertion.status === 'contradicted' || assertion.status === 'expired' ||
-    (assertion.expiresAt !== null && assertion.expiresAt <= now) ||
-    (assertion.recheckDueAt !== null && assertion.recheckDueAt <= now),
+    isLandTimestampDue(assertion.expiresAt, now) ||
+    isLandTimestampDue(assertion.recheckDueAt, now),
   );
   if (attentionRequired) return 'passport_attention_required';
   return input.assertions.length > 0 && input.assertions.every(a => a.status === 'verified')
@@ -48,8 +62,8 @@ export interface LandVerificationAssertion {
   verifierType: string;
   verifierName: string | null;
   checkedAt: Date | null;
-  recheckDueAt: Date | null;
-  expiresAt: Date | null;
+  recheckDueAt: Date | string | null;
+  expiresAt: Date | string | null;
 }
 
 /** Public Passport payload. It deliberately has no evidence IDs, document names or storage references. */

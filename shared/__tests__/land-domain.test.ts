@@ -27,6 +27,21 @@ describe('Land domain foundation', () => {
     expect(deriveLandTrustState({ marketingAuthorityActive: true, hasHighSeverityOpenConflict: true, assertions: [verified] })).toBeNull();
   });
 
+  it('treats persisted string timestamps as expired verification evidence', () => {
+    const assertion = {
+      claimCode: 'zoning_land_use' as const, status: 'verified' as const,
+      publicConclusion: null, limitations: null, sourceProvider: null,
+      verifierType: 'property_listify_review', verifierName: null, checkedAt: null,
+      recheckDueAt: null, expiresAt: '2026-08-19 00:00:00',
+    };
+    expect(deriveLandTrustState({
+      marketingAuthorityActive: true,
+      hasHighSeverityOpenConflict: false,
+      assertions: [assertion],
+      now: new Date('2026-08-20T00:00:00Z'),
+    })).toBe('passport_attention_required');
+  });
+
   it('publishes claim conclusions without a path to private evidence custody', () => {
     const publicAssertions = toPublicLandPassportAssertions([{
       claimCode: 'zoning_land_use', status: 'contradicted', publicConclusion: 'The supplied zoning claim could not be confirmed.',

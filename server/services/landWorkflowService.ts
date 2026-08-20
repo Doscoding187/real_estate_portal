@@ -17,7 +17,7 @@ import {
   listings,
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
-import { deriveLandTrustState, type LandClaimCode, type LandClassification } from '../../shared/land-domain';
+import { deriveLandTrustState, isLandTimestampDue, type LandClaimCode, type LandClassification } from '../../shared/land-domain';
 import { buildLocalMediaUploadUrl, getMediaStorageAdapter, inspectLocalMediaObject } from '../_core/mediaStorage';
 import { createLandEvidenceDeliveryToken, createLandEvidenceUploadReservation, createPrivateEvidenceS3DeliveryUrl, createPrivateEvidenceS3UploadUrl, inspectPrivateEvidenceS3Object, verifyLandEvidenceUploadReservation } from './landEvidenceStorage';
 
@@ -28,7 +28,7 @@ const timestamp = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 const criticalClaimCodes = new Set<LandClaimCode>(['land_extent', 'access', 'zoning_land_use']);
 
 export function isLandAuthorRole(role: string | null | undefined) {
-  return ['agent', 'agency_admin', 'developer', 'super_admin'].includes(String(role));
+  return ['agent', 'agency_admin', 'property_developer', 'super_admin'].includes(String(role));
 }
 
 export function isLandReviewerRole(role: string | null | undefined) {
@@ -44,7 +44,7 @@ export function calculateLandReadiness(input: {
   mediaCount: number;
   caseState: CaseState | null;
   hasHighConflict: boolean;
-  assertions: readonly { status: string; claimCode: string; expiresAt: Date | null; recheckDueAt: Date | null }[];
+  assertions: readonly { status: string; claimCode: string; expiresAt: Date | string | null; recheckDueAt: Date | string | null }[];
 }) {
   const draft: string[] = [];
   const submission: string[] = [];
@@ -62,7 +62,7 @@ export function calculateLandReadiness(input: {
   if (input.caseState !== 'approved') publication.push('land_review_approval');
   if (input.hasHighConflict) publication.push('unresolved_high_severity_conflict');
   const now = new Date();
-  if (input.assertions.some(item => criticalClaimCodes.has(item.claimCode as LandClaimCode) && (item.status === 'contradicted' || item.status === 'expired' || (item.expiresAt && item.expiresAt <= now) || (item.recheckDueAt && item.recheckDueAt <= now)))) publication.push('critical_verification_attention');
+  if (input.assertions.some(item => criticalClaimCodes.has(item.claimCode as LandClaimCode) && (item.status === 'contradicted' || item.status === 'expired' || isLandTimestampDue(item.expiresAt, now) || isLandTimestampDue(item.recheckDueAt, now)))) publication.push('critical_verification_attention');
   return {
     draftComplete: draft.length === 0,
     submissionReady: draft.length === 0 && submission.length === 0,
@@ -118,6 +118,11 @@ export async function recordLandClaims(input: { listingId: number; userId: numbe
 
 export async function declareMarketingAuthority(input: { listingId: number; userId: number; actorType: 'owner_direct' | 'agent' | 'agency' | 'developer' | 'other'; authorityType: 'sole_mandate' | 'open_mandate' | 'joint_mandate' | 'owner_direct' | 'other'; supportingEvidenceId?: number | null; expiresAt?: string | null }) {
   const db = await database(); const { link } = await ownedLandListing(db, input.listingId, input.userId);
+  if (input.supportingEvidenceId) {
+    const [evidence] = await db.select({ id: landEvidenceDocuments.id }).from(landEvidenceDocuments)
+      .where(and(eq(landEvidenceDocuments.id, input.supportingEvidenceId), eq(landEvidenceDocuments.landAssetId, link.landAssetId))).limit(1);
+    if (!evidence) throw new Error('Supporting evidence must belong to this Land Asset.');
+  }
   const [agent] = await db.select().from(agents).where(eq(agents.userId, input.userId)).limit(1);
   await db.insert(landMarketingAuthorities).values({ landAssetId: link.landAssetId, actorType: input.actorType, authorityType: input.authorityType, agentId: agent?.id ?? null, agencyId: agent?.agencyId ?? null, authorityStatus: 'pending', supportingEvidenceId: input.supportingEvidenceId || null, expiresAt: input.expiresAt || null });
 }
