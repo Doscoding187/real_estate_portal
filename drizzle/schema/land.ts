@@ -1,4 +1,5 @@
 import {
+  AnyMySqlColumn,
   check,
   decimal,
   index,
@@ -190,7 +191,10 @@ export const landVerificationAssertions = mysqlTable(
     checkedAt: timestamp('checked_at', { mode: 'string' }),
     recheckDueAt: timestamp('recheck_due_at', { mode: 'string' }),
     expiresAt: timestamp('expires_at', { mode: 'string' }),
-    supersedesAssertionId: int('supersedes_assertion_id'),
+    supersedesAssertionId: int('supersedes_assertion_id').references(
+      (): AnyMySqlColumn => landVerificationAssertions.id,
+      { onDelete: 'set null' },
+    ),
     reviewedByUserId: int('reviewed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   },
