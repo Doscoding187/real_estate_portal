@@ -4,9 +4,28 @@ import { getDb } from '../db-connection';
 import { deriveLandTrustState } from '../../shared/land-domain';
 
 type Input = { classification?: 'residential_stand' | 'development_land' | 'commercial_industrial_land'; city?: string; province?: string; minPrice?: number; maxPrice?: number; minSize?: number; maxSize?: number };
+type PublicLandRow = { listingId: number; slug: string; title: string; description: string | null; askingPrice: string | null; city: string | null; province: string | null; classification: string; intendedUse: string | null; precision: 'approximate' | 'exact'; assetId: number; agentId: number | null; agencyId: number | null; extentM2: string | null; parcelCount: number };
 async function database() { const db = await getDb(); if (!db) throw new Error('Database not available'); return db; }
 export function isPublicLandEligible(input: { listingStatus: string; listingApprovalStatus: string | null; reviewState: string; authorityStatus: string; hasBlockingConflict: boolean }) {
   return ['approved', 'published'].includes(input.listingStatus) && input.listingApprovalStatus === 'approved' && input.reviewState === 'approved' && input.authorityStatus === 'active' && !input.hasBlockingConflict;
+}
+export function publicLocationPrecision(precision: 'approximate' | 'exact') {
+  return precision === 'exact' ? 'Known site position' : 'Approximate site location';
+}
+export function publicParcelComposition(parcelCount: number) {
+  return parcelCount === 1 ? 'This site comprises 1 parcel.' : `This site comprises ${parcelCount} parcels.`;
+}
+/** Explicit allow-list boundary between internal Land rows and the public API. */
+export function toPublicLandDto(row: PublicLandRow, passportValue: Awaited<ReturnType<typeof passport>>) {
+  return {
+    listingId: row.listingId, slug: row.slug, title: row.title, description: row.description,
+    askingPrice: row.askingPrice, city: row.city, province: row.province,
+    classification: row.classification, intendedUse: row.intendedUse, precision: row.precision,
+    extentM2: row.extentM2, parcelCount: Number(row.parcelCount),
+    href: `/land/${row.slug}`, passport: passportValue,
+    // These are routing identifiers for the existing lead authority, not evidence or parcel identity.
+    agentId: row.agentId, agencyId: row.agencyId,
+  };
 }
 
 async function passport(db: Awaited<ReturnType<typeof database>>, assetId: number) {
@@ -20,11 +39,12 @@ async function passport(db: Awaited<ReturnType<typeof database>>, assetId: numbe
 export async function searchPublicLand(input: Input = {}) {
   const db = await database(); const conditions = [eq(landListingLinks.linkStatus, 'active'), eq(landReviewCases.state, 'approved'), eq(landMarketingAuthorities.authorityStatus, 'active'), inArray(listings.status, ['approved', 'published']), eq(listings.approvalStatus, 'approved')];
   if (input.classification) conditions.push(eq(landAssets.classification, input.classification)); if (input.city) conditions.push(eq(listings.city, input.city)); if (input.province) conditions.push(eq(listings.province, input.province)); if (input.minPrice) conditions.push(gte(listings.askingPrice, String(input.minPrice))); if (input.maxPrice) conditions.push(lte(listings.askingPrice, String(input.maxPrice)));
-  const rows = await db.select({ listingId: listings.id, slug: listings.slug, title: listings.title, description: listings.description, askingPrice: listings.askingPrice, city: listings.city, province: listings.province, classification: landAssets.classification, intendedUse: landAssets.intendedUse, precision: landAssets.publicLocationPrecision, assetId: landAssets.id, agentId: landMarketingAuthorities.agentId, agencyId: landMarketingAuthorities.agencyId, extentM2: landParcels.extentM2, parcelCount: sql<number>`count(${landAssetParcels.id})` }).from(landListingLinks).innerJoin(listings, eq(landListingLinks.listingId, listings.id)).innerJoin(landAssets, eq(landListingLinks.landAssetId, landAssets.id)).innerJoin(landReviewCases, eq(landReviewCases.listingId, listings.id)).innerJoin(landMarketingAuthorities, eq(landMarketingAuthorities.landAssetId, landAssets.id)).innerJoin(landAssetParcels, eq(landAssetParcels.landAssetId, landAssets.id)).innerJoin(landParcels, eq(landAssetParcels.parcelId, landParcels.id)).where(and(...conditions)).groupBy(listings.id, landAssets.id, landParcels.extentM2).orderBy(desc(listings.createdAt));
+  const parcelSummary = db.select({ landAssetId: landAssetParcels.landAssetId, extentM2: sql<string | null>`sum(${landParcels.extentM2})`, parcelCount: sql<number>`count(${landAssetParcels.id})` }).from(landAssetParcels).innerJoin(landParcels, eq(landAssetParcels.parcelId, landParcels.id)).groupBy(landAssetParcels.landAssetId).as('land_parcel_summary');
+  const rows = await db.select({ listingId: listings.id, slug: listings.slug, title: listings.title, description: listings.description, askingPrice: listings.askingPrice, city: listings.city, province: listings.province, classification: landAssets.classification, intendedUse: landAssets.intendedUse, precision: landAssets.publicLocationPrecision, assetId: landAssets.id, agentId: landMarketingAuthorities.agentId, agencyId: landMarketingAuthorities.agencyId, extentM2: parcelSummary.extentM2, parcelCount: parcelSummary.parcelCount }).from(landListingLinks).innerJoin(listings, eq(landListingLinks.listingId, listings.id)).innerJoin(landAssets, eq(landListingLinks.landAssetId, landAssets.id)).innerJoin(landReviewCases, eq(landReviewCases.listingId, listings.id)).innerJoin(landMarketingAuthorities, eq(landMarketingAuthorities.landAssetId, landAssets.id)).innerJoin(parcelSummary, eq(parcelSummary.landAssetId, landAssets.id)).where(and(...conditions)).orderBy(desc(listings.createdAt));
   const publicRows = await Promise.all(rows.map(async row => {
     const conflicts = await db.select({ id: landConflictCases.id }).from(landConflictCases).where(and(eq(landConflictCases.landAssetId, row.assetId), eq(landConflictCases.severity, 'high'), sql`${landConflictCases.reviewStatus} in ('open','reviewing')`));
     if (!isPublicLandEligible({ listingStatus: 'approved', listingApprovalStatus: 'approved', reviewState: 'approved', authorityStatus: 'active', hasBlockingConflict: conflicts.length > 0 })) return null;
-    return { ...row, href: `/land/${row.slug}`, passport: await passport(db, row.assetId) };
+    return toPublicLandDto(row, await passport(db, row.assetId));
   }));
   return publicRows.filter((row): row is NonNullable<typeof row> => Boolean(row)).filter(row => (!input.minSize || Number(row.extentM2) >= input.minSize) && (!input.maxSize || Number(row.extentM2) <= input.maxSize));
 }
