@@ -631,7 +631,11 @@ function Router() {
           {/* 2. TRANSACTION ROOTS (Query-Based SRP)                         */}
           {/* Geography remains canonical query state on these roots.        */}
           {/* ============================================================== */}
-          <Route path="/property-for-sale" component={SearchResults} />
+          <Route path="/property-for-sale" component={() => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('propertyType') === 'plot') { params.delete('propertyType'); window.location.replace(`/plots-and-land${params.toString() ? `?${params}` : ''}`); return null; }
+            return <SearchResults />;
+          }} />
           <Route path="/plots-and-land" component={PlotsAndLand} />
           <Route path="/land/:slug" component={LandDetail} />
           <Route path="/property-to-rent" component={SearchResults} />
