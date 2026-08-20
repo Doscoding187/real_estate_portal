@@ -230,8 +230,11 @@ export const landConflictCases = mysqlTable(
   {
     id: int().autoincrement().primaryKey(),
     landAssetId: int('land_asset_id').notNull().references(() => landAssets.id, { onDelete: 'cascade' }),
-    conflictingLandAssetId: int('conflicting_land_asset_id').references(() => landAssets.id, { onDelete: 'set null' }),
-    conflictingListingId: int('conflicting_listing_id').references(() => listings.id, { onDelete: 'set null' }),
+    // Candidate references are deliberately restrictive: the database check below
+    // guarantees a case has a candidate, so deleting either candidate must be an
+    // explicit reviewed operation rather than silently invalidating its audit trail.
+    conflictingLandAssetId: int('conflicting_land_asset_id').references(() => landAssets.id),
+    conflictingListingId: int('conflicting_listing_id').references(() => listings.id),
     matchingBasis: json('matching_basis').notNull(),
     severity: mysqlEnum('severity', ['low', 'medium', 'high']).notNull(),
     reviewStatus: mysqlEnum('review_status', ['open', 'reviewing', 'resolved_no_conflict', 'resolved_conflict', 'dismissed']).default('open').notNull(),

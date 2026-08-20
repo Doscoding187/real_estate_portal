@@ -314,7 +314,7 @@
     {
       "sequence": 30,
       "filename": "0030_land_conflict_cases.sql",
-      "checksum": "74fa83c00598170621d8ee39eadc1dceb01a64bec71bad2d77ba40e4fec3e925",
+      "checksum": "5a803eb27a0e29d9e1e33259a86b3495c28f116c4938bca79b1e7057f97c27f8",
       "parent": "0029_land_verification_events.sql",
       "parentChecksum": "e761aa322b4b84477435a7e72839dcb63c3232bf9fa4fde1892b02b79bc0413a",
       "kind": "ddl",

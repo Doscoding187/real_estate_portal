@@ -13,8 +13,8 @@ CREATE TABLE `land_conflict_cases` (
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   CONSTRAINT `fk_land_conflict_case_asset` FOREIGN KEY (`land_asset_id`) REFERENCES `land_assets` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_land_conflict_case_other_asset` FOREIGN KEY (`conflicting_land_asset_id`) REFERENCES `land_assets` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_land_conflict_case_listing` FOREIGN KEY (`conflicting_listing_id`) REFERENCES `listings` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_land_conflict_case_other_asset` FOREIGN KEY (`conflicting_land_asset_id`) REFERENCES `land_assets` (`id`),
+  CONSTRAINT `fk_land_conflict_case_listing` FOREIGN KEY (`conflicting_listing_id`) REFERENCES `listings` (`id`),
   CONSTRAINT `fk_land_conflict_case_reviewer` FOREIGN KEY (`reviewer_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_land_conflict_case_candidate` CHECK (`conflicting_land_asset_id` IS NOT NULL OR `conflicting_listing_id` IS NOT NULL),
   KEY `idx_land_conflict_cases_asset_status` (`land_asset_id`,`review_status`)
