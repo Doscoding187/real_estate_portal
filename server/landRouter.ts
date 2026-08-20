@@ -9,7 +9,9 @@ import {
   declareMarketingAuthority,
   isLandAuthorRole,
   landWorkflowSnapshot,
+  landReviewQueue,
   recordLandClaims,
+  requestPrivateLandEvidenceUpload,
   submitLandForReview,
   transitionLandReview,
 } from './services/landWorkflowService';
@@ -37,7 +39,10 @@ export const landRouter = router({
   declareAuthority: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), actorType: z.enum(['owner_direct', 'agent', 'agency', 'developer', 'other']), authorityType: z.enum(['sole_mandate', 'open_mandate', 'joint_mandate', 'owner_direct', 'other']), supportingEvidenceId: z.number().int().positive().optional(), expiresAt: z.string().datetime().optional() })).mutation(async ({ ctx, input }) => {
     try { await declareMarketingAuthority({ ...input, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
-  addPrivateEvidence: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), evidenceType: z.enum(['mandate', 'identity', 'title_registry', 'parcel_survey', 'professional_report', 'planning', 'other']), privateStorageKey: z.string().trim().min(8).max(500), originalFileName: z.string().trim().max(255).optional(), mimeType: z.string().trim().max(120).optional(), byteSize: z.number().int().positive().optional(), sha256: z.string().regex(/^[a-f0-9]{64}$/).optional(), parcelId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
+  requestPrivateEvidenceUpload: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), fileName: z.string().trim().min(1).max(255), contentType: z.string().trim().max(120) })).mutation(async ({ ctx, input }) => {
+    try { return await requestPrivateLandEvidenceUpload({ ...input, userId: author(ctx).id }); } catch (error) { return rethrow(error); }
+  }),
+  addPrivateEvidence: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), evidenceType: z.enum(['mandate', 'identity', 'title_registry', 'parcel_survey', 'professional_report', 'planning', 'other']), uploadToken: z.string().trim().min(20), parcelId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
     try { return { evidenceDocumentId: await addPrivateEvidence({ ...input, userId: author(ctx).id }) }; } catch (error) { return rethrow(error); }
   }),
   getWorkspace: protectedProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ ctx, input }) => {
@@ -47,6 +52,7 @@ export const landRouter = router({
     try { await submitLandForReview({ listingId: input.listingId, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
   reviewerWorkspace: superAdminProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ input }) => landWorkflowSnapshot(input.listingId)),
+  reviewerQueue: superAdminProcedure.query(() => landReviewQueue()),
   review: superAdminProcedure.input(z.object({ listingId: z.number().int().positive(), action: z.enum(['start', 'request_changes', 'reject', 'approve', 'suspend']), reasonCode: z.string().trim().max(100).optional(), comment: z.string().trim().max(4000).optional() })).mutation(async ({ ctx, input }) => {
     try { await transitionLandReview({ ...input, reviewerUserId: requireUser(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),

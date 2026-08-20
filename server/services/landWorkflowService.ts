@@ -18,6 +18,8 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import { deriveLandTrustState, type LandClaimCode, type LandClassification } from '../../shared/land-domain';
+import { buildLocalMediaUploadUrl, getMediaStorageAdapter, inspectLocalMediaObject } from '../_core/mediaStorage';
+import { createLandEvidenceDeliveryToken, createLandEvidenceUploadReservation, createPrivateEvidenceS3DeliveryUrl, createPrivateEvidenceS3UploadUrl, inspectPrivateEvidenceS3Object, verifyLandEvidenceUploadReservation } from './landEvidenceStorage';
 
 type Database = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 type CaseState = 'draft' | 'pending' | 'reviewing' | 'changes_requested' | 'approved' | 'rejected' | 'suspended';
@@ -120,10 +122,20 @@ export async function declareMarketingAuthority(input: { listingId: number; user
   await db.insert(landMarketingAuthorities).values({ landAssetId: link.landAssetId, actorType: input.actorType, authorityType: input.authorityType, agentId: agent?.id ?? null, agencyId: agent?.agencyId ?? null, authorityStatus: 'pending', supportingEvidenceId: input.supportingEvidenceId || null, expiresAt: input.expiresAt || null });
 }
 
-export async function addPrivateEvidence(input: { listingId: number; userId: number; evidenceType: 'mandate' | 'identity' | 'title_registry' | 'parcel_survey' | 'professional_report' | 'planning' | 'other'; privateStorageKey: string; originalFileName?: string | null; mimeType?: string | null; byteSize?: number | null; sha256?: string | null; parcelId?: number | null }) {
+export async function requestPrivateLandEvidenceUpload(input: { listingId: number; userId: number; fileName: string; contentType: string }) {
   const db = await database(); const { link } = await ownedLandListing(db, input.listingId, input.userId);
-  if (!input.privateStorageKey.startsWith(`private/land/${link.landAssetId}/`) || /^https?:\/\//i.test(input.privateStorageKey)) throw new Error('Evidence must use a private Land storage reference.');
-  const result = await db.insert(landEvidenceDocuments).values({ landAssetId: link.landAssetId, parcelId: input.parcelId || null, evidenceType: input.evidenceType, privateStorageKey: input.privateStorageKey, originalFileName: input.originalFileName || null, mimeType: input.mimeType || null, byteSize: input.byteSize || null, sha256: input.sha256 || null, uploadedByUserId: input.userId });
+  const reservation = createLandEvidenceUploadReservation({ landAssetId: link.landAssetId, userId: input.userId, fileName: input.fileName, contentType: input.contentType });
+  const uploadUrl = getMediaStorageAdapter() === 'local' ? buildLocalMediaUploadUrl(reservation.token) : await createPrivateEvidenceS3UploadUrl(reservation.payload);
+  return { uploadUrl, uploadToken: reservation.token, expiresInSeconds: 600 };
+}
+
+export async function addPrivateEvidence(input: { listingId: number; userId: number; evidenceType: 'mandate' | 'identity' | 'title_registry' | 'parcel_survey' | 'professional_report' | 'planning' | 'other'; uploadToken: string; parcelId?: number | null }) {
+  const db = await database(); const { link } = await ownedLandListing(db, input.listingId, input.userId);
+  const reservation = verifyLandEvidenceUploadReservation(input.uploadToken, { userId: input.userId, landAssetId: link.landAssetId });
+  const uploaded = getMediaStorageAdapter() === 'local'
+    ? await inspectLocalMediaObject(reservation.key, reservation.contentType)
+    : await inspectPrivateEvidenceS3Object(reservation);
+  const result = await db.insert(landEvidenceDocuments).values({ landAssetId: link.landAssetId, parcelId: input.parcelId || null, evidenceType: input.evidenceType, privateStorageKey: reservation.key, originalFileName: reservation.fileName, mimeType: uploaded.contentType, byteSize: uploaded.contentLength, uploadedByUserId: input.userId });
   return Number((result as any)[0]?.insertId ?? (result as any).insertId);
 }
 
@@ -148,6 +160,17 @@ export async function landWorkflowSnapshot(listingId: number, userId?: number) {
   const readiness = calculateLandReadiness({ listing, asset, parcels, authority: authority || null, evidenceCount: evidence.length, mediaCount, caseState: (reviewCase?.state as CaseState | undefined) || null, hasHighConflict: conflicts.length > 0, assertions: assertions as any });
   const trustState = reviewCase?.state === 'approved' ? deriveLandTrustState({ marketingAuthorityActive: authority?.authorityStatus === 'active', hasHighSeverityOpenConflict: conflicts.length > 0, assertions: assertions as any }) : null;
   return { listing, asset, parcels, authority, reviewCase, reviewEvents, readiness, trustState, evidence: evidence.map(({ privateStorageKey, ...safe }) => safe) };
+}
+
+export async function landReviewQueue() {
+  const db = await database();
+  return db.select({ listingId: landReviewCases.listingId, state: landReviewCases.state, submissionSequence: landReviewCases.submissionSequence, submittedAt: landReviewCases.submittedAt, title: listings.title, city: listings.city, province: listings.province, classification: landAssets.classification })
+    .from(landReviewCases)
+    .innerJoin(listings, eq(landReviewCases.listingId, listings.id))
+    .innerJoin(landListingLinks, and(eq(landListingLinks.listingId, listings.id), eq(landListingLinks.linkStatus, 'active')))
+    .innerJoin(landAssets, eq(landAssets.id, landListingLinks.landAssetId))
+    .where(inArray(landReviewCases.state, ['pending', 'reviewing', 'changes_requested', 'suspended']))
+    .orderBy(desc(landReviewCases.updatedAt));
 }
 
 export async function submitLandForReview(input: { listingId: number; userId: number }) {
@@ -197,7 +220,8 @@ export async function accessPrivateLandEvidence(input: { evidenceDocumentId: num
   const allowed = reviewer || custodian;
   await db.insert(landEvidenceAccessAudit).values({ evidenceDocumentId: evidence.id, actorUserId: input.actorUserId, action: 'retrieve', authorizationOutcome: allowed ? 'allowed' : 'denied', accessContext: reviewer ? 'land_reviewer' : custodian ? 'author_custodian' : 'other', requestCorrelationId: input.requestCorrelationId || null });
   if (!allowed) throw new Error('Not authorized to access private Land evidence.');
-  // Storage identity remains server-only. A bounded delivery route can later stream
-  // or sign this object after repeating the same authorization check.
-  return { id: evidence.id, mimeType: evidence.mimeType, originalFileName: evidence.originalFileName, accessGranted: true };
+  const deliveryUrl = getMediaStorageAdapter() === 'local'
+    ? `/api/local-media/private-evidence?deliveryToken=${encodeURIComponent(createLandEvidenceDeliveryToken({ evidenceDocumentId: evidence.id, actorUserId: input.actorUserId, key: evidence.privateStorageKey }))}`
+    : await createPrivateEvidenceS3DeliveryUrl(evidence.privateStorageKey);
+  return { id: evidence.id, mimeType: evidence.mimeType, originalFileName: evidence.originalFileName, accessGranted: true, deliveryUrl, expiresInSeconds: 300 };
 }

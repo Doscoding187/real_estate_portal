@@ -47,6 +47,7 @@ const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSuppo
 const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
+const LandAuthoringWorkspace = lazy(() => import('./pages/agent/LandAuthoringWorkspace'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
@@ -86,6 +87,7 @@ const ProExplorePage = lazy(() => import('./pages/pro/ProExplorePage'));
 
 const SuperAdminDashboard = lazy(() => import('@/pages/admin/SuperAdminDashboard'));
 const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview'));
+const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 
 // Import new role-based dashboards
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
@@ -236,6 +238,9 @@ function Router() {
           {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
           {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
           <Route path="/admin/review/:id" component={AdminPropertyReview} />
+          <Route path="/admin/land-review">
+            <RequireRole role="super_admin"><LandReviewWorkspace /></RequireRole>
+          </Route>
 
           {/* Compatibility edge: preserve inbound query state, then hand off
               immediately to the canonical Buy transaction root. */}
@@ -258,6 +263,9 @@ function Router() {
             <RequireRole role="agent">
               <AgentListings />
             </RequireRole>
+          </Route>
+          <Route path="/agent/land/create">
+            <RequireRole role="agent"><LandAuthoringWorkspace /></RequireRole>
           </Route>
           <Route path="/agent/leads">
             <RequireRole role="agent">

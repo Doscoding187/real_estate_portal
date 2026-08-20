@@ -23,7 +23,7 @@ export type LocalMediaObject = {
 };
 
 const DEFAULT_LOCAL_MEDIA_ROOT = join(homedir(), '.local', 'share', 'property-listify', 'media');
-const LOCAL_MEDIA_KEY_PATTERN = /^properties\/(?:\d+|draft-\d+)\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const LOCAL_MEDIA_KEY_PATTERN = /^(?:properties\/(?:\d+|draft-\d+)|private\/land\/\d+)\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const LOCAL_MEDIA_MAX_BYTES = {
   image: 15 * 1024 * 1024,
   video: 80 * 1024 * 1024,
@@ -178,6 +178,7 @@ export function buildLocalMediaUploadUrl(uploadToken: string): string {
 }
 
 export function buildLocalMediaPublicUrl(key: string): string {
+  if (key.startsWith('private/')) throw new Error('Private evidence cannot be assigned a public media URL.');
   return `/api/local-media/object?key=${encodeURIComponent(assertSafeLocalMediaKey(key))}`;
 }
 
