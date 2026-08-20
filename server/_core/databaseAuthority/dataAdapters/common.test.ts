@@ -90,9 +90,9 @@ describe('durable Database Authority migration guard', () => {
     });
 
     expect(result.document.expectedHead).toBe(
-      '0033_land_evidence_access_audit.sql',
+      '0034_listing_lead_association.sql',
     );
-    expect(result.orderedMigrations).toHaveLength(34);
+    expect(result.orderedMigrations).toHaveLength(35);
   });
 
   it('rejects an otherwise valid prefix when the database is behind the manifest head', async () => {
