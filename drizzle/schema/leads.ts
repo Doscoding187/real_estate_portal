@@ -148,8 +148,10 @@ export const leads = mysqlTable(
       () => cataloguePublishers.id,
       { onDelete: 'set null' },
     ),
+    // Appended by migration 0034; Listing is the canonical marketing source for new Land leads.
+    listingId: int('listing_id').references(() => listings.id, { onDelete: 'restrict' }),
   },
-  table => [unique('uq_leads_capture_request').on(table.captureRequestId)],
+  table => [unique('uq_leads_capture_request').on(table.captureRequestId), index('idx_leads_listing_id').on(table.listingId)],
 );
 
 export const leadActivities = mysqlTable('lead_activities', {

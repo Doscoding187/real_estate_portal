@@ -1,0 +1,23 @@
+CREATE TABLE `land_verification_assertions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `claim_id` int NOT NULL,
+  `status` enum('unverified','asserted','verified','contradicted','expired','unavailable','withdrawn') NOT NULL,
+  `public_conclusion` text,
+  `limitations` text,
+  `source_provider` varchar(255),
+  `verifier_type` enum('platform_operations','authoritative_source','conveyancer','planner','surveyor','professional_partner','approved_automation','other') NOT NULL,
+  `verifier_name` varchar(255),
+  `process_reference` varchar(255),
+  `checked_at` timestamp NULL,
+  `recheck_due_at` timestamp NULL,
+  `expires_at` timestamp NULL,
+  `supersedes_assertion_id` int,
+  `reviewed_by_user_id` int,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_land_verification_assertion_claim` FOREIGN KEY (`claim_id`) REFERENCES `land_claims` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_land_verification_assertion_supersedes` FOREIGN KEY (`supersedes_assertion_id`) REFERENCES `land_verification_assertions` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_land_verification_assertion_reviewer` FOREIGN KEY (`reviewed_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  KEY `idx_land_verification_claim_status` (`claim_id`,`status`),
+  KEY `idx_land_verification_recheck` (`recheck_due_at`)
+);

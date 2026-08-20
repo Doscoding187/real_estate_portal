@@ -31,6 +31,7 @@ describe('hero journey authority', () => {
       'buy',
       'rent',
       'developments',
+      'plot_land',
       'find_agent',
     ]);
   });
@@ -97,18 +98,23 @@ describe('hero journey authority', () => {
     ]);
   });
 
-  it('cannot release unfinished homepage journeys through a hosted manifest', () => {
+  it('releases completed Plots & Land only through an explicit hosted manifest', () => {
     const hostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
       VITE_PUBLIC_JOURNEY_RELEASES: 'shared_living,plot_land,commercial',
     });
 
-    for (const journey of ['shared_living', 'plot_land', 'commercial'] as const) {
+    for (const journey of ['shared_living', 'commercial'] as const) {
       expect(getPublicHeroJourney(journey, hostedRelease)).toMatchObject({
         homepageVisible: false,
         homepageEnabled: false,
       });
     }
+    expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
+      homepageVisible: true,
+      homepageEnabled: true,
+      destination: '/plots-and-land',
+    });
   });
 });

@@ -35,6 +35,7 @@ import {
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
+import { resolvePublicLandLeadCustody } from './landPublicService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
@@ -52,6 +53,7 @@ interface AffordabilityData {
 export interface PublicLeadCaptureInput {
   /** Set only by an authenticated server boundary; never a public client field. */
   authenticatedUserId?: number;
+  listingId?: number;
   propertyId?: number;
   developmentId?: number;
   cataloguePublisherId?: number;
@@ -85,6 +87,7 @@ export interface PublicLeadCaptureInput {
 }
 
 export interface ResolvedLeadOwnership {
+  listingId?: number;
   propertyId?: number;
   developmentId?: number;
   cataloguePublisherId?: number;
@@ -225,7 +228,7 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 function getPublicTargetCount(input: PublicLeadCaptureInput): number {
-  return [input.propertyId, input.developmentId, input.cataloguePublisherId].filter(
+  return [input.listingId, input.propertyId, input.developmentId, input.cataloguePublisherId].filter(
     value => positiveId(value) !== undefined,
   ).length;
 }
@@ -322,7 +325,7 @@ function assertPublicCaptureInput(input: PublicLeadCaptureInput) {
   if (getPublicTargetCount(input) === 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'A public property, development or brand target is required.',
+      message: 'A public listing, property, development or brand target is required.',
     });
   }
 
@@ -408,8 +411,16 @@ export async function resolveLeadOwnership(
   if (!database) throw new Error('Database not available');
 
   const propertyId = positiveId(input.propertyId);
+  const listingId = positiveId(input.listingId);
   const requestedDevelopmentId = positiveId(input.developmentId);
   const requestedBrandId = positiveId(input.cataloguePublisherId);
+  if (listingId && propertyId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose one canonical enquiry source.' });
+  if (listingId) {
+    const land = await resolvePublicLandLeadCustody(listingId);
+    if (!land) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not available for public enquiries.' });
+    const agentId = positiveId(land.agentId); const agencyId = positiveId(land.agencyId); const recipientId = agentId ?? agencyId;
+    return { listingId, agentId, agencyId, supplyOrigin: 'customer_managed', leadCustody: recipientId ? 'verified_customer_recipient' : 'attention_required', recipientType: recipientId ? (agentId ? 'agent' : 'agency') : 'manual', recipientId: recipientId ?? null, leadDeliveryMethod: recipientId ? 'crm_export' : 'manual', reason: recipientId ? null : 'The approved Land authority has no deliverable marketing recipient.' };
+  }
   const targetKind: 'property' | 'development' | 'brand' = propertyId
     ? 'property'
     : requestedDevelopmentId
@@ -656,6 +667,8 @@ function isEquivalentReplay(
   source: string,
   leadSource: string,
 ): boolean {
+  const existingListingId = positiveId(existing.listingId);
+  const inputListingId = positiveId(input.listingId);
   const existingPropertyId = positiveId(existing.propertyId);
   const existingDevelopmentId = positiveId(existing.developmentId);
   const inputPropertyId = positiveId(input.propertyId);
@@ -667,16 +680,19 @@ function isEquivalentReplay(
   // a development may derive brand attribution. Those server-owned fields are
   // not part of the submitted identity when the caller omitted them. When the
   // caller did submit an attribution, it must still match exactly.
-  const targetMatches = inputPropertyId
-    ? existingPropertyId === inputPropertyId &&
+  const targetMatches = inputListingId
+    ? existingListingId === inputListingId &&
+      !existingPropertyId && !existingDevelopmentId && !existingBrandId
+    : inputPropertyId
+    ? !existingListingId && existingPropertyId === inputPropertyId &&
       (!inputDevelopmentId || existingDevelopmentId === inputDevelopmentId) &&
       (!inputBrandId || existingBrandId === inputBrandId)
     : inputDevelopmentId
-      ? !existingPropertyId &&
+      ? !existingListingId && !existingPropertyId &&
         existingDevelopmentId === inputDevelopmentId &&
         (!inputBrandId || existingBrandId === inputBrandId)
       : inputBrandId
-        ? !existingPropertyId && !existingDevelopmentId && existingBrandId === inputBrandId
+        ? !existingListingId && !existingPropertyId && !existingDevelopmentId && existingBrandId === inputBrandId
         : false;
 
   const contextMatches =
@@ -874,6 +890,7 @@ export async function capturePublicLead(
   let insertResult: any;
   try {
     [insertResult] = await database.insert(leads).values({
+      listingId: resolved.listingId || null,
       propertyId: resolved.propertyId || null,
       developmentId: resolved.developmentId || null,
       cataloguePublisherId: resolved.cataloguePublisherId || null,

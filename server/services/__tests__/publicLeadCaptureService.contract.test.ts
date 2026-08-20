@@ -7,12 +7,14 @@ const {
   mockRecordProspectLeadAction,
   mockIncrementLeadCountAsync,
   mockResolvePublicPropertyEligibility,
+  mockResolvePublicLandLeadCustody,
 } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
   mockRecordAgentOsEventForAgentId: vi.fn(),
   mockRecordProspectLeadAction: vi.fn(),
   mockIncrementLeadCountAsync: vi.fn(),
   mockResolvePublicPropertyEligibility: vi.fn(),
+  mockResolvePublicLandLeadCustody: vi.fn(),
 }));
 
 vi.mock('../../db', () => ({
@@ -36,6 +38,10 @@ vi.mock('../cataloguePublisherService', () => ({
 
 vi.mock('../publicPropertyEligibilityService', () => ({
   resolvePublicPropertyEligibility: mockResolvePublicPropertyEligibility,
+}));
+
+vi.mock('../landPublicService', () => ({
+  resolvePublicLandLeadCustody: mockResolvePublicLandLeadCustody,
 }));
 
 import { capturePublicLead } from '../publicLeadCaptureService';
@@ -202,6 +208,49 @@ describe('publicLeadCaptureService contract', () => {
             },
           },
     );
+    mockResolvePublicLandLeadCustody.mockResolvedValue({ listingId: 701, agentId: 33, agencyId: 9 });
+  });
+
+  it('persists the canonical listing source for a public Land enquiry and derives custody server-side', async () => {
+    const database = makeFakeDatabase({ selectResults: [[]], insertId: 902 });
+    mockGetDb.mockResolvedValue(database);
+
+    await capturePublicLead(baseInput({ listingId: 701, agencyId: 999, agentId: 998 }));
+
+    expect(mockResolvePublicLandLeadCustody).toHaveBeenCalledWith(701);
+    expect(database.insertValues).toHaveBeenCalledWith(expect.objectContaining({
+      listingId: 701,
+      propertyId: null,
+      agentId: 33,
+      agencyId: 9,
+    }));
+  });
+
+  it('replays an identical Land listing enquiry idempotently but rejects a changed target', async () => {
+    const replay = existingLead({
+      listingId: 701,
+      propertyId: null,
+      source: 'land_detail',
+      leadSource: 'plots_and_land',
+    });
+    const database = makeFakeDatabase({ selectResults: [[replay]] });
+    mockGetDb.mockResolvedValue(database);
+
+    const result = await capturePublicLead(baseInput({ listingId: 701, source: 'plots_and_land', leadSource: 'plots_and_land', sourceSurface: 'land_detail' }));
+    expect(result).toMatchObject({ success: true, duplicate: true, leadId: 812 });
+    expect(database.insertValues).not.toHaveBeenCalled();
+
+    mockGetDb.mockResolvedValue(makeFakeDatabase({ selectResults: [[replay]] }));
+    await expect(capturePublicLead(baseInput({ listingId: 702, source: 'plots_and_land', leadSource: 'plots_and_land', sourceSurface: 'land_detail' }))).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('rejects a non-public Land listing without exposing its custody', async () => {
+    mockGetDb.mockResolvedValue(makeFakeDatabase());
+    mockResolvePublicLandLeadCustody.mockResolvedValue(null);
+
+    await expect(capturePublicLead(baseInput({ listingId: 702 }))).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
   });
 
   it('captures platform-curated development demand in platform custody without a fake recipient', async () => {

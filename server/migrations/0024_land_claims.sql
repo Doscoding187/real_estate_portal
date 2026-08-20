@@ -1,0 +1,20 @@
+CREATE TABLE `land_claims` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `land_asset_id` int,
+  `parcel_id` int,
+  `claim_code` varchar(100) NOT NULL,
+  `value_state` enum('asserted','unknown','unavailable','not_applicable') NOT NULL,
+  `claimed_value` json,
+  `declared_by_user_id` int,
+  `declared_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `withdrawn_at` timestamp NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_land_claims_asset` FOREIGN KEY (`land_asset_id`) REFERENCES `land_assets` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_land_claims_parcel` FOREIGN KEY (`parcel_id`) REFERENCES `land_parcels` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_land_claims_declared_by` FOREIGN KEY (`declared_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_land_claims_one_subject` CHECK (((`land_asset_id` IS NOT NULL) + (`parcel_id` IS NOT NULL)) = 1),
+  KEY `idx_land_claims_asset_code` (`land_asset_id`,`claim_code`),
+  KEY `idx_land_claims_parcel_code` (`parcel_id`,`claim_code`)
+);

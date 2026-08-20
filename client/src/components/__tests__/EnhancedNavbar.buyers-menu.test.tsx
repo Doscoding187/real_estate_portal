@@ -66,7 +66,7 @@ describe('EnhancedNavbar buyer discovery menu', () => {
     expect(developmentsLinks[0]).toHaveAttribute('href', '/new-developments');
     expect(within(region).getByRole('link', { name: 'Plots and land' })).toHaveAttribute(
       'href',
-      '/property-for-sale?propertyType=plot',
+      '/plots-and-land',
     );
     expect(within(region).getByRole('link', { name: 'Commercial property' })).toHaveAttribute(
       'href',
