@@ -207,7 +207,10 @@ export async function transitionLandReview(input: { listingId: number; reviewerU
     await tx.insert(landReviewEvents).values({ reviewCaseId: reviewCase.id, submissionSequence: reviewCase.submissionSequence, actorUserId: input.reviewerUserId, eventType, previousState: String(reviewCase.state), nextState, reasonCode: input.reasonCode || null, comment: input.comment || null, occurredAt: now });
     if (input.action === 'request_changes') await tx.update(listings).set({ status: 'draft', approvalStatus: 'pending', updatedAt: now } as any).where(eq(listings.id, input.listingId));
     if (input.action === 'reject') await tx.update(listings).set({ status: 'rejected', approvalStatus: 'rejected', reviewedBy: input.reviewerUserId, reviewedAt: now, rejectionNote: input.comment || null } as any).where(eq(listings.id, input.listingId));
-    if (input.action === 'approve') await tx.update(landMarketingAuthorities).set({ authorityStatus: 'active', reviewerUserId: input.reviewerUserId, reviewedAt: now, reviewerOutcome: 'approved', updatedAt: now }).where(eq(landMarketingAuthorities.landAssetId, snapshot.asset!.id));
+    if (input.action === 'approve') {
+      await tx.update(landMarketingAuthorities).set({ authorityStatus: 'active', reviewerUserId: input.reviewerUserId, reviewedAt: now, reviewerOutcome: 'approved', updatedAt: now }).where(eq(landMarketingAuthorities.landAssetId, snapshot.asset!.id));
+      await tx.update(listings).set({ status: 'approved', approvalStatus: 'approved', reviewedBy: input.reviewerUserId, reviewedAt: now, updatedAt: now } as any).where(eq(listings.id, input.listingId));
+    }
   });
 }
 

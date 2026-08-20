@@ -93,6 +93,7 @@ import { servicesEngineRouter } from './servicesEngineRouter';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { discoveryRouter } from './domains/discovery/router';
 import { landRouter } from './landRouter';
+import { landPublicRouter } from './landPublicRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -115,6 +116,7 @@ const appRouterConfig = {
   priceInsights: priceInsightsRouter,
   listing: listingRouter,
   land: landRouter,
+  landPublic: landPublicRouter,
   upload: uploadRouter,
   settings: settingsRouter,
   savedSearch: savedSearchRouter,

@@ -234,7 +234,7 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     label: 'Plots & Land',
     mobileLabel: 'Plots & Land',
     kind: 'property-search',
-    destination: '/property-for-sale',
+    destination: '/plots-and-land',
     productHomepageVisible: false,
     productHomepageEnabled: false,
     supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
