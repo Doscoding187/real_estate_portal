@@ -368,9 +368,20 @@ describe('migration execution authority', () => {
       '0017_distribution_publisher_authority.sql',
       '0018_distribution_access_publisher_authority.sql',
       '0019_development_launch_date.sql',
+      '0020_land_parcels.sql',
+      '0021_land_assets.sql',
+      '0022_land_asset_parcels.sql',
+      '0023_land_listing_links.sql',
+      '0024_land_claims.sql',
+      '0025_land_evidence_documents.sql',
+      '0026_land_marketing_authorities.sql',
+      '0027_land_verification_assertions.sql',
+      '0028_land_assertion_evidence.sql',
+      '0029_land_verification_events.sql',
+      '0030_land_conflict_cases.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0019_development_launch_date.sql',
+      '0030_land_conflict_cases.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
