@@ -48,4 +48,12 @@ export async function searchPublicLand(input: Input = {}) {
   }));
   return publicRows.filter((row): row is NonNullable<typeof row> => Boolean(row)).filter(row => (!input.minSize || Number(row.extentM2) >= input.minSize) && (!input.maxSize || Number(row.extentM2) <= input.maxSize));
 }
+/** Server-only custody lookup; Land lead recipients are never accepted from the client. */
+export async function resolvePublicLandLeadCustody(listingId: number) {
+  const db = await database();
+  const [row] = await db.select({ listingId: listings.id, assetId: landAssets.id, agentId: landMarketingAuthorities.agentId, agencyId: landMarketingAuthorities.agencyId }).from(landListingLinks).innerJoin(listings, eq(landListingLinks.listingId, listings.id)).innerJoin(landAssets, eq(landListingLinks.landAssetId, landAssets.id)).innerJoin(landReviewCases, eq(landReviewCases.listingId, listings.id)).innerJoin(landMarketingAuthorities, eq(landMarketingAuthorities.landAssetId, landAssets.id)).where(and(eq(listings.id, listingId), eq(landListingLinks.linkStatus, 'active'), eq(landReviewCases.state, 'approved'), eq(landMarketingAuthorities.authorityStatus, 'active'), inArray(listings.status, ['approved', 'published']), eq(listings.approvalStatus, 'approved'))).limit(1);
+  if (!row) return null;
+  const conflicts = await db.select({ id: landConflictCases.id }).from(landConflictCases).where(and(eq(landConflictCases.landAssetId, row.assetId), eq(landConflictCases.severity, 'high'), sql`${landConflictCases.reviewStatus} in ('open','reviewing')`));
+  return isPublicLandEligible({ listingStatus: 'approved', listingApprovalStatus: 'approved', reviewState: 'approved', authorityStatus: 'active', hasBlockingConflict: conflicts.length > 0 }) ? { listingId: row.listingId, agentId: row.agentId, agencyId: row.agencyId } : null;
+}
 export async function publicLandDetail(slug: string) { const results = await searchPublicLand(); return results.find(item => item.slug === slug) ?? null; }

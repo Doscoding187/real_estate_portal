@@ -84,6 +84,7 @@ export const leadsRouter = router({
     .input(
       z
         .object({
+          listingId: z.number().int().positive().optional(),
           propertyId: z.number().int().positive().optional(),
           developmentId: z.number().int().positive().optional(),
           cataloguePublisherId: z.number().int().positive().optional(),
