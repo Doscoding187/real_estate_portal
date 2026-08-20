@@ -568,6 +568,81 @@
       "purpose": "Adds the canonical development launch-date field required by Developer Engine readiness and public development projections."
     },
     {
+      "path": "server/migrations/0020_land_parcels.sql",
+      "classification": "canonical active",
+      "purpose": "Creates durable private canonical parcel identity independent of listings."
+    },
+    {
+      "path": "server/migrations/0021_land_assets.sql",
+      "classification": "canonical active",
+      "purpose": "Creates Land Asset/site authority and Land-domain classification."
+    },
+    {
+      "path": "server/migrations/0022_land_asset_parcels.sql",
+      "classification": "canonical active",
+      "purpose": "Creates normalized multi-parcel Land Asset composition."
+    },
+    {
+      "path": "server/migrations/0023_land_listing_links.sql",
+      "classification": "canonical active",
+      "purpose": "Links shared marketing listings to Land Assets without making listings cadastral authority."
+    },
+    {
+      "path": "server/migrations/0024_land_claims.sql",
+      "classification": "canonical active",
+      "purpose": "Creates seller-declared Land facts separately from verification conclusions."
+    },
+    {
+      "path": "server/migrations/0025_land_evidence_documents.sql",
+      "classification": "canonical active",
+      "purpose": "Creates private Land evidence custody distinct from marketing media."
+    },
+    {
+      "path": "server/migrations/0026_land_marketing_authorities.sql",
+      "classification": "canonical active",
+      "purpose": "Creates asset-specific marketing authority independent of authenticated practitioner identity."
+    },
+    {
+      "path": "server/migrations/0027_land_verification_assertions.sql",
+      "classification": "canonical active",
+      "purpose": "Creates claim-specific verification conclusions, provenance and freshness."
+    },
+    {
+      "path": "server/migrations/0028_land_assertion_evidence.sql",
+      "classification": "canonical active",
+      "purpose": "Links private evidence to verification assertions with supporting or contradictory meaning."
+    },
+    {
+      "path": "server/migrations/0029_land_verification_events.sql",
+      "classification": "canonical active",
+      "purpose": "Creates immutable verification history for review, supersession, contradiction and expiry."
+    },
+    {
+      "path": "server/migrations/0030_land_conflict_cases.sql",
+      "classification": "canonical active",
+      "purpose": "Creates platform-local parcel/listing conflict cases without asserting real-world double-sale clearance."
+    },
+    {
+      "path": "server/migrations/0031_land_review_cases.sql",
+      "classification": "canonical active",
+      "purpose": "Creates the durable, listing-scoped Land review authority distinct from generic listing approval."
+    },
+    {
+      "path": "server/migrations/0032_land_review_events.sql",
+      "classification": "canonical active",
+      "purpose": "Creates append-only Land review events across submission, decision, re-review and suspension."
+    },
+    {
+      "path": "server/migrations/0033_land_evidence_access_audit.sql",
+      "classification": "canonical active",
+      "purpose": "Creates private Land evidence access auditing without retaining evidence contents or storage credentials."
+    },
+    {
+      "path": "server/migrations/0034_listing_lead_association.sql",
+      "classification": "canonical active",
+      "purpose": "Associates listing-generated leads with their durable marketing Listing."
+    },
+    {
       "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."

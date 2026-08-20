@@ -1,0 +1,21 @@
+CREATE TABLE `land_conflict_cases` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `land_asset_id` int NOT NULL,
+  `conflicting_land_asset_id` int,
+  `conflicting_listing_id` int,
+  `matching_basis` json NOT NULL,
+  `severity` enum('low','medium','high') NOT NULL,
+  `review_status` enum('open','reviewing','resolved_no_conflict','resolved_conflict','dismissed') NOT NULL DEFAULT 'open',
+  `reviewer_user_id` int,
+  `reviewer_outcome` text,
+  `resolved_at` timestamp NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_land_conflict_case_asset` FOREIGN KEY (`land_asset_id`) REFERENCES `land_assets` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_land_conflict_case_other_asset` FOREIGN KEY (`conflicting_land_asset_id`) REFERENCES `land_assets` (`id`),
+  CONSTRAINT `fk_land_conflict_case_listing` FOREIGN KEY (`conflicting_listing_id`) REFERENCES `listings` (`id`),
+  CONSTRAINT `fk_land_conflict_case_reviewer` FOREIGN KEY (`reviewer_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_land_conflict_case_candidate` CHECK (`conflicting_land_asset_id` IS NOT NULL OR `conflicting_listing_id` IS NOT NULL),
+  KEY `idx_land_conflict_cases_asset_status` (`land_asset_id`,`review_status`)
+);

@@ -172,7 +172,7 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0019_development_launch_date.sql');
+    expect(manifest.expectedHead.filename).toBe('0034_listing_lead_association.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +188,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0019_development_launch_date.sql',
+      expectedNewHead: '0034_listing_lead_association.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(12);
+    expect(plan.pending).toHaveLength(27);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -206,8 +206,23 @@ describe('canonical migration manifest', () => {
       '0017_distribution_publisher_authority.sql',
       '0018_distribution_access_publisher_authority.sql',
       '0019_development_launch_date.sql',
+      '0020_land_parcels.sql',
+      '0021_land_assets.sql',
+      '0022_land_asset_parcels.sql',
+      '0023_land_listing_links.sql',
+      '0024_land_claims.sql',
+      '0025_land_evidence_documents.sql',
+      '0026_land_marketing_authorities.sql',
+      '0027_land_verification_assertions.sql',
+      '0028_land_assertion_evidence.sql',
+      '0029_land_verification_events.sql',
+      '0030_land_conflict_cases.sql',
+      '0031_land_review_cases.sql',
+      '0032_land_review_events.sql',
+      '0033_land_evidence_access_audit.sql',
+      '0034_listing_lead_association.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0019_development_launch_date.sql');
+    expect(plan.expectedNewHead).toBe('0034_listing_lead_association.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {
