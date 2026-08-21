@@ -246,10 +246,12 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     label: 'Commercial',
     mobileLabel: 'Commercial',
     kind: 'property-search',
-    destination: '/property-for-sale',
-    productHomepageVisible: false,
-    productHomepageEnabled: false,
-    supportedFields: ['location', 'saleOrRent', 'commercialUseType'],
+    destination: '/commercial',
+    // Office Leasing is product-complete locally; hosted exposure remains
+    // controlled by the existing public-journey release manifest.
+    productHomepageVisible: true,
+    productHomepageEnabled: true,
+    supportedFields: ['location'],
   },
   {
     key: 'find_agent',
@@ -463,14 +465,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             activeHref: '/plots-and-land',
             journey: 'plot_land',
           }),
-          destination({
-            id: 'buyers-commercial',
-            label: 'Commercial property',
-            href: `${getPublicHeroJourney('commercial').destination}?propertyType=commercial`,
-            owner: 'property-search',
-            capability: 'LIMITED_BUT_VALID',
-            activeHref: '/property-for-sale',
-          }),
         ],
       },
       {
@@ -581,11 +575,11 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
           destination({
             id: 'renters-commercial',
             label: 'Commercial property to rent',
-            href: '/property-to-rent?propertyType=commercial',
-            owner: 'rental-search',
-            capability: 'DEFERRED',
-            activeHref: '/property-to-rent',
-            journey: 'rent',
+            href: getPublicHeroJourney('commercial').destination,
+            owner: 'commercial-engine',
+            capability: 'LAUNCH_READY',
+            activeHref: '/commercial',
+            journey: 'commercial',
           }),
         ],
       },

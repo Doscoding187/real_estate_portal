@@ -56,7 +56,10 @@ describe('EnhancedNavbar renter discovery menu', () => {
     expect(screen.getByRole('region', { name: 'For Renters navigation' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Browse all rentals' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Compare rentals' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /commercial property to rent/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /commercial property to rent/i })).toHaveAttribute(
+      'href',
+      '/commercial',
+    );
   });
 
   it('exposes the same truthful Rent destinations from the mobile drawer', () => {
@@ -70,7 +73,12 @@ describe('EnhancedNavbar renter discovery menu', () => {
         .queryAllByRole('link')
         .some(link => link.getAttribute('href')?.startsWith('/property-to-rent')),
     ).toBe(true);
-    expect(within(drawer!).queryByRole('link', { name: 'Compare rentals' })).not.toBeInTheDocument();
+    expect(
+      within(drawer!).queryByRole('link', { name: 'Compare rentals' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(drawer!).getByRole('link', { name: /commercial property to rent/i }),
+    ).toHaveAttribute('href', '/commercial');
     expect(within(drawer!).getByText('For Renters')).toBeInTheDocument();
   });
 });

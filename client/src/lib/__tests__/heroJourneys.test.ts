@@ -26,12 +26,20 @@ describe('hero journey authority', () => {
     expect(getPublicHeroJourney('buy').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('developments').homepageEnabled).toBe(true);
+    expect(getPublicHeroJourney('commercial')).toMatchObject({
+      destination: '/commercial',
+      productHomepageVisible: true,
+      productHomepageEnabled: true,
+      homepageVisible: true,
+      homepageEnabled: true,
+    });
     expect(getPublicHeroJourney('find_agent').homepageEnabled).toBe(false);
     expect(getHomepageHeroJourneys().map(journey => journey.key)).toEqual([
       'buy',
       'rent',
       'developments',
       'plot_land',
+      'commercial',
       'find_agent',
     ]);
   });
@@ -98,23 +106,26 @@ describe('hero journey authority', () => {
     ]);
   });
 
-  it('releases completed Plots & Land only through an explicit hosted manifest', () => {
+  it('releases completed journeys only through an explicit hosted manifest', () => {
     const hostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
       VITE_PUBLIC_JOURNEY_RELEASES: 'shared_living,plot_land,commercial',
     });
 
-    for (const journey of ['shared_living', 'commercial'] as const) {
-      expect(getPublicHeroJourney(journey, hostedRelease)).toMatchObject({
-        homepageVisible: false,
-        homepageEnabled: false,
-      });
-    }
+    expect(getPublicHeroJourney('shared_living', hostedRelease)).toMatchObject({
+      homepageVisible: false,
+      homepageEnabled: false,
+    });
     expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
       homepageVisible: true,
       homepageEnabled: true,
       destination: '/plots-and-land',
+    });
+    expect(getPublicHeroJourney('commercial', hostedRelease)).toMatchObject({
+      homepageVisible: true,
+      homepageEnabled: true,
+      destination: '/commercial',
     });
   });
 });
