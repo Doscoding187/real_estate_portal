@@ -172,7 +172,7 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0042_commercial_economics_value_state_semantics.sql');
+    expect(manifest.expectedHead.filename).toBe('0044_commercial_positive_availability_provenance.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +188,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0042_commercial_economics_value_state_semantics.sql',
+      expectedNewHead: '0044_commercial_positive_availability_provenance.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(35);
+    expect(plan.pending).toHaveLength(37);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -229,8 +229,10 @@ describe('canonical migration manifest', () => {
       '0040_commercial_availability_listing_links.sql',
       '0041_commercial_availability_freshness_semantics.sql',
       '0042_commercial_economics_value_state_semantics.sql',
+      '0043_commercial_specification_value_state_integrity.sql',
+      '0044_commercial_positive_availability_provenance.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0042_commercial_economics_value_state_semantics.sql');
+    expect(plan.expectedNewHead).toBe('0044_commercial_positive_availability_provenance.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

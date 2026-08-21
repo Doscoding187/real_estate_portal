@@ -34,7 +34,9 @@ export const commercialAssets = mysqlTable(
     provinceId: int('province_id').references(() => provinces.id, { onDelete: 'set null' }),
     cityId: int('city_id').references(() => cities.id, { onDelete: 'set null' }),
     suburbId: int('suburb_id').references(() => suburbs.id, { onDelete: 'set null' }),
-    lifecycleStatus: mysqlEnum('lifecycle_status', ['active', 'retired']).default('active').notNull(),
+    lifecycleStatus: mysqlEnum('lifecycle_status', ['active', 'retired'])
+      .default('active')
+      .notNull(),
     createdByUserId: int('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
@@ -70,7 +72,9 @@ export const commercialSpaces = mysqlTable(
     identifier: varchar({ length: 255 }).notNull(),
     rentableAreaM2: decimal('rentable_area_m2', { precision: 14, scale: 2 }),
     usableAreaM2: decimal('usable_area_m2', { precision: 14, scale: 2 }),
-    lifecycleStatus: mysqlEnum('lifecycle_status', ['active', 'retired']).default('active').notNull(),
+    lifecycleStatus: mysqlEnum('lifecycle_status', ['active', 'retired'])
+      .default('active')
+      .notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
   },
@@ -110,8 +114,12 @@ export const commercialSpaceSpecifications = mysqlTable(
       'tenant_mix_context',
       'delivery_access',
     ]).notNull(),
-    valueState: mysqlEnum('value_state', ['known', 'unknown', 'unavailable', 'not_applicable'])
-      .notNull(),
+    valueState: mysqlEnum('value_state', [
+      'known',
+      'unknown',
+      'unavailable',
+      'not_applicable',
+    ]).notNull(),
     numericValue: decimal('numeric_value', { precision: 16, scale: 2 }),
     textValue: varchar('text_value', { length: 500 }),
     booleanValue: int('boolean_value'),
@@ -128,6 +136,12 @@ export const commercialSpaceSpecifications = mysqlTable(
     check(
       'chk_commercial_space_specifications_boolean',
       sql.raw('`boolean_value` IS NULL OR `boolean_value` IN (0,1)'),
+    ),
+    check(
+      'chk_commercial_space_specifications_value_state',
+      sql.raw(
+        "((`value_state` = 'known') AND ((`numeric_value` IS NOT NULL) + (`text_value` IS NOT NULL) + (`boolean_value` IS NOT NULL) = 1)) OR ((`value_state` IN ('unknown','unavailable','not_applicable')) AND (`numeric_value` IS NULL) AND (`text_value` IS NULL) AND (`boolean_value` IS NULL))",
+      ),
     ),
   ],
 );
@@ -159,7 +173,9 @@ export const commercialAvailabilities = mysqlTable(
       'other',
     ]),
     confirmationSourceLabel: varchar('confirmation_source_label', { length: 255 }),
-    confirmedByUserId: int('confirmed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    confirmedByUserId: int('confirmed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     reconfirmationDueAt: timestamp('reconfirmation_due_at', { mode: 'string' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
@@ -171,9 +187,9 @@ export const commercialAvailabilities = mysqlTable(
     ),
     index('idx_commercial_availabilities_reconfirmation').on(table.reconfirmationDueAt),
     check(
-      'chk_commercial_availabilities_confirmed_freshness',
+      'chk_commercial_availabilities_positive_claim_provenance',
       sql.raw(
-        "(`availability_state` <> 'available_confirmed') OR (`last_confirmed_at` IS NOT NULL AND `confirmation_source` IS NOT NULL AND `reconfirmation_due_at` IS NOT NULL)",
+        "(`availability_state` NOT IN ('available_confirmed','available_upcoming')) OR (`last_confirmed_at` IS NOT NULL AND `confirmation_source` IS NOT NULL AND `reconfirmation_due_at` IS NOT NULL)",
       ),
     ),
     check(
@@ -205,8 +221,12 @@ export const commercialAvailabilityEconomics = mysqlTable(
       'deposit',
       'incentive',
     ]).notNull(),
-    valueState: mysqlEnum('value_state', ['supplied', 'estimated', 'unknown', 'not_applicable'])
-      .notNull(),
+    valueState: mysqlEnum('value_state', [
+      'supplied',
+      'estimated',
+      'unknown',
+      'not_applicable',
+    ]).notNull(),
     chargeBasis: mysqlEnum('charge_basis', [
       'per_m2_month',
       'per_bay_month',
@@ -254,7 +274,9 @@ export const commercialAvailabilityListingLinks = mysqlTable(
     commercialAvailabilityId: int('commercial_availability_id')
       .notNull()
       .references(() => commercialAvailabilities.id, { onDelete: 'restrict' }),
-    listingId: int('listing_id').notNull().references(() => listings.id, { onDelete: 'restrict' }),
+    listingId: int('listing_id')
+      .notNull()
+      .references(() => listings.id, { onDelete: 'restrict' }),
     linkStatus: mysqlEnum('link_status', ['active', 'ended']).default('active').notNull(),
     linkedAt: timestamp('linked_at', { mode: 'string' }).defaultNow().notNull(),
     endedAt: timestamp('ended_at', { mode: 'string' }),

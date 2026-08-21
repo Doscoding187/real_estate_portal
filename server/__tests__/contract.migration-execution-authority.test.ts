@@ -391,9 +391,11 @@ describe('migration execution authority', () => {
       '0040_commercial_availability_listing_links.sql',
       '0041_commercial_availability_freshness_semantics.sql',
       '0042_commercial_economics_value_state_semantics.sql',
+      '0043_commercial_specification_value_state_integrity.sql',
+      '0044_commercial_positive_availability_provenance.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0042_commercial_economics_value_state_semantics.sql',
+      '0044_commercial_positive_availability_provenance.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

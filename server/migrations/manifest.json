@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0042_commercial_economics_value_state_semantics.sql",
+  "expectedHead": "0044_commercial_positive_availability_provenance.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -442,6 +442,28 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "COMM-S0-RC-2026-08-21-Edward"
+    },
+    {
+      "sequence": 43,
+      "filename": "0043_commercial_specification_value_state_integrity.sql",
+      "checksum": "765d4f8ea7cf27c39e136849bce22e5a67f0d3856db342d1cf1621809ba6d422",
+      "parent": "0042_commercial_economics_value_state_semantics.sql",
+      "parentChecksum": "f9e5f11438428c29cb66a74cbc7befe9c9bef845857240b6b937f547afaed40e",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "COMM-S0-pre-pr-authority-correction-2026-08-21-Edward"
+    },
+    {
+      "sequence": 44,
+      "filename": "0044_commercial_positive_availability_provenance.sql",
+      "checksum": "eb2f5f1c354eaf32c76c04617cac17445abb5db1e97bdbc9359585b3a923be28",
+      "parent": "0043_commercial_specification_value_state_integrity.sql",
+      "parentChecksum": "765d4f8ea7cf27c39e136849bce22e5a67f0d3856db342d1cf1621809ba6d422",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "COMM-S0-pre-pr-authority-correction-2026-08-21-Edward"
     }
   ]
 }

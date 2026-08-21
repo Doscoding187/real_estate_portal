@@ -30,9 +30,9 @@ This authority deliberately does not implement public routes, search, authoring 
 
 ## Trust rules
 
-- Availability state, source, timestamp and reconfirmation due date are explicit.
+- Positive availability claims (`available_confirmed` and `available_upcoming`) require source, confirmation timestamp and reconfirmation due date. Upcoming availability also requires an occupation date; a policy window is deliberately deferred.
 - Economic inputs declare `supplied`, `estimated`, `unknown`, or `not_applicable`; calculated results are labelled `calculated` and never stored as asserted marketing facts.
-- Specification codes are a governed vocabulary with typed values. `propertyDetails` JSON is not Commercial authority.
+- Specification codes are a governed vocabulary with typed values. Database constraints require exactly one value only for `known` and no hidden value for `unknown`, `unavailable` or `not_applicable`; `shared/commercial-domain.ts` is the canonical code-to-value-kind write contract. This avoids a brittle SQL code/type matrix while preventing arbitrary forms in future authoring. `propertyDetails` JSON is not Commercial authority.
 - Analytical cost estimates are not professional valuation or appraisal.
 
 ## Existing-platform boundary
