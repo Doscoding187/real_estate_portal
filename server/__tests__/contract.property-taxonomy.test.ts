@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_MANUAL_PROPERTY_TYPES,
+  BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
+  BUY_LEGACY_PUBLIC_PROPERTY_TYPES,
   BUY_PUBLIC_PROPERTY_TYPES,
   RENT_PUBLIC_PROPERTY_TYPES,
   getAuthorablePropertyTypes,
@@ -25,13 +27,21 @@ describe('canonical manual property taxonomy', () => {
     expect(PROPERTY_TYPE_DEFINITIONS.shared_living.authoringState).toBe('legacy');
     expect(PROPERTY_TYPE_DEFINITIONS.townhouse.publicType).toBe('townhouse');
     expect(PROPERTY_TYPE_DEFINITIONS.cluster_home.publicType).toBe('cluster_home');
-    expect(BUY_PUBLIC_PROPERTY_TYPES).toEqual([
+    expect(BUY_ACTIVE_PUBLIC_PROPERTY_TYPES).toEqual([
       'apartment',
       'house',
-      'villa',
       'townhouse',
       'cluster_home',
       'farm',
+    ]);
+    expect(BUY_LEGACY_PUBLIC_PROPERTY_TYPES).toEqual(['villa']);
+    expect(BUY_PUBLIC_PROPERTY_TYPES).toEqual([
+      'apartment',
+      'house',
+      'townhouse',
+      'cluster_home',
+      'farm',
+      'villa',
     ]);
     expect(RENT_PUBLIC_PROPERTY_TYPES).toEqual([
       'apartment',

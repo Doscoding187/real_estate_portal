@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BUY_PROPERTY_TYPES,
   parseBuySearchParams,
   sanitizeBuySearchFilters,
   toBuyPublicSearchFilters,
@@ -73,6 +74,17 @@ describe('canonical Buy search contract', () => {
       listingSource: 'manual',
       minPrice: 500000,
       minBedrooms: 2,
+    });
+  });
+
+  it('keeps historical villa searches readable without presenting Villa as an active Buy choice', () => {
+    expect(BUY_PROPERTY_TYPES).not.toContain('villa');
+
+    expect(
+      parseBuySearchParams(new URLSearchParams('propertyType=villa&minPrice=2500000')),
+    ).toEqual({
+      propertyType: 'villa',
+      minPrice: 2_500_000,
     });
   });
 });

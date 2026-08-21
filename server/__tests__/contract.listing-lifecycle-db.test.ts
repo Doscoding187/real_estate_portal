@@ -437,6 +437,47 @@ describe('approveListing (lower-level)', () => {
     expect(inserts[0].values.sourceListingId).toBe(5002);
   });
 
+  it('projects canonical Buy facts from an approved sale listing into searchable public inventory', async () => {
+    fakeDb.setNextSelectResult([
+      listingRow({
+        id: 5006,
+        askingPrice: '2500000.00',
+        pricing: JSON.stringify({ version: 1, intent: 'sale', askingPrice: 2500000 }),
+        propertyDetails: JSON.stringify({
+          corePropertyInformation: {
+            version: 1,
+            bedrooms: { status: 'known', value: 3 },
+            bathrooms: { status: 'known', value: 2.5 },
+            internalArea: { status: 'known', valueM2: 180, unit: 'm2' },
+            erfArea: { status: 'known', valueM2: 600, unit: 'm2' },
+          },
+        }),
+      }),
+    ]);
+    fakeDb.setNextSelectResult([]);
+
+    await approveListing(5006, 1);
+
+    const projection = fakeDb.calls.find(
+      call =>
+        call.type === 'insert' &&
+        call.table === 'properties' &&
+        call.values?.sourceListingId === 5006,
+    );
+
+    expect(projection?.values).toMatchObject({
+      sourceListingId: 5006,
+      listingType: 'sale',
+      propertyType: 'house',
+      price: 2500000,
+      bedrooms: 3,
+      bathrooms: 2.5,
+      area: 180,
+      internalAreaM2: 180,
+      erfSizeM2: 600,
+    });
+  });
+
   it('upserts — updates existing property on second call (idempotency)', async () => {
     // First approval — no existing property
     fakeDb.setNextSelectResult([listingRow({ id: 5003 })]);

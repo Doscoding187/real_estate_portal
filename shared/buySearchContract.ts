@@ -7,15 +7,23 @@
  * must not survive as active Buy filters.
  */
 
-import { BUY_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
+import {
+  BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
+  BUY_PUBLIC_PROPERTY_TYPES,
+} from './property-taxonomy';
 
 export const BUY_TRANSACTION_TYPE = 'for-sale' as const;
 export const BUY_LISTING_TYPE = 'sale' as const;
 
-// Existing callers keep this export name; the taxonomy owns the values.
-export const BUY_PROPERTY_TYPES = BUY_PUBLIC_PROPERTY_TYPES;
+// This is the product-facing choice set used by first-party Buy surfaces.
+// Compatibility-only values remain accepted by the read contract below so a
+// historical public URL never becomes a dead link.
+export const BUY_PROPERTY_TYPES = BUY_ACTIVE_PUBLIC_PROPERTY_TYPES;
 
-export type BuyPropertyType = (typeof BUY_PROPERTY_TYPES)[number];
+// The complete read vocabulary is deliberately separate from selectable UI.
+export const BUY_COMPATIBLE_PROPERTY_TYPES = BUY_PUBLIC_PROPERTY_TYPES;
+
+export type BuyPropertyType = (typeof BUY_COMPATIBLE_PROPERTY_TYPES)[number];
 
 export const BUY_LISTING_SOURCES = ['manual', 'development'] as const;
 export type BuyListingSource = (typeof BUY_LISTING_SOURCES)[number];
@@ -54,7 +62,10 @@ export interface BuyPublicSearchFilters extends BuySearchFilters {
 }
 
 export function isBuyPropertyType(value: unknown): value is BuyPropertyType {
-  return typeof value === 'string' && (BUY_PROPERTY_TYPES as readonly string[]).includes(value);
+  return (
+    typeof value === 'string' &&
+    (BUY_COMPATIBLE_PROPERTY_TYPES as readonly string[]).includes(value)
+  );
 }
 
 function parseFiniteNumber(value: unknown): number | undefined {

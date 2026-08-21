@@ -210,13 +210,33 @@ export const PROPERTY_TYPE_TEMPLATES = Object.fromEntries(
   ]),
 ) as Record<ListingPropertyType, PropertyTypeTemplate>;
 
-export const BUY_PUBLIC_PROPERTY_TYPES = [
+/**
+ * Types that a buyer may select in the current Buy journey. These values must
+ * be backed by an active inventory producer; this is intentionally not a
+ * mirror of every value the public projection can still read.
+ */
+export const BUY_ACTIVE_PUBLIC_PROPERTY_TYPES = [
   'apartment',
   'house',
-  'villa',
   'townhouse',
   'cluster_home',
   'farm',
+] as const satisfies readonly PublicPropertyType[];
+
+/**
+ * Compatibility-only Buy values. Villa remains queryable for existing public
+ * inventory and historical shared URLs, but has no active manual or
+ * development inventory producer and must not be offered as a new selection.
+ */
+export const BUY_LEGACY_PUBLIC_PROPERTY_TYPES = ['villa'] as const satisfies readonly PublicPropertyType[];
+
+/**
+ * Complete Buy read vocabulary. Keep this distinct from the active selection
+ * list above so compatibility does not silently become product capability.
+ */
+export const BUY_PUBLIC_PROPERTY_TYPES = [
+  ...BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
+  ...BUY_LEGACY_PUBLIC_PROPERTY_TYPES,
 ] as const satisfies readonly PublicPropertyType[];
 
 export type BuyPublicPropertyType = (typeof BUY_PUBLIC_PROPERTY_TYPES)[number];
