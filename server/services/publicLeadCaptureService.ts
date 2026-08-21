@@ -830,6 +830,12 @@ async function recoverExistingLead(
   }
 
   let durableLead = existing;
+  if (positiveId(input.commercialAvailabilityId)) {
+    const resolvedCommercial = await resolveLeadOwnership(input);
+    if (!resolvedCommercial.commercialContext) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
+    const [context] = await database.select({ id: commercialLeadContexts.id }).from(commercialLeadContexts).where(eq(commercialLeadContexts.leadId, existing.id)).limit(1);
+    if (!context) await database.insert(commercialLeadContexts).values({ leadId: existing.id, listingId: resolvedCommercial.listingId!, commercialAssetId: resolvedCommercial.commercialContext.commercialAssetId, commercialSpaceId: resolvedCommercial.commercialContext.commercialSpaceId, commercialAvailabilityId: resolvedCommercial.commercialContext.commercialAvailabilityId });
+  }
   if (!Array.isArray(existing.deliveryAttempts) || existing.deliveryAttempts.length === 0) {
     const replayResolved = await resolveLeadOwnership(input);
     const replayStatus: LeadDeliveryStatus =
@@ -900,7 +906,8 @@ export async function capturePublicLead(
 
   let insertResult: any;
   try {
-    [insertResult] = await database.insert(leads).values({
+    const persist = async (tx: any) => {
+    [insertResult] = await tx.insert(leads).values({
       listingId: resolved.listingId || null,
       propertyId: resolved.propertyId || null,
       developmentId: resolved.developmentId || null,
@@ -935,6 +942,9 @@ export async function capturePublicLead(
       leadDeliveryMethod: resolved.leadDeliveryMethod,
       ...deliverySummary,
     } satisfies LeadInsert);
+    if (resolved.commercialContext) await tx.insert(commercialLeadContexts).values({ leadId: Number(insertResult.insertId), listingId: resolved.listingId!, commercialAssetId: resolved.commercialContext.commercialAssetId, commercialSpaceId: resolved.commercialContext.commercialSpaceId, commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId });
+    };
+    if (resolved.commercialContext && typeof (database as any).transaction === 'function') await (database as any).transaction(persist); else await persist(database);
   } catch (error) {
     if (input.captureRequestId && isDuplicateKeyError(error)) {
       const duplicate = await findLeadByCaptureRequestId(database, input.captureRequestId);
@@ -946,16 +956,6 @@ export async function capturePublicLead(
   }
 
   const leadId = Number(insertResult.insertId);
-
-  if (resolved.commercialContext) {
-    await database.insert(commercialLeadContexts).values({
-      leadId,
-      listingId: resolved.listingId!,
-      commercialAssetId: resolved.commercialContext.commercialAssetId,
-      commercialSpaceId: resolved.commercialContext.commercialSpaceId,
-      commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId,
-    });
-  }
 
   // These are useful counters/analytics, but they are not the custody
   // acknowledgement boundary. A failure here must not make a durably

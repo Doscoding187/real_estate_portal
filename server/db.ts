@@ -60,6 +60,9 @@ import {
   partners,
   explorePartners,
   auditLogs,
+  commercialAvailabilityEconomics,
+  commercialAvailabilityListingLinks,
+  commercialAvailabilities,
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env';
@@ -101,6 +104,17 @@ import {
   summarizePropertyPresentation,
 } from '../shared/property-presentation';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
+import { assertCommercialPricingContract } from '../shared/commercial-domain';
+
+async function validateCommercialOfficeListingPricing(db: any, listingId: number): Promise<boolean> {
+  const [link] = await db.select().from(commercialAvailabilityListingLinks).where(and(eq(commercialAvailabilityListingLinks.listingId, listingId), eq(commercialAvailabilityListingLinks.linkStatus, 'active'))).limit(1);
+  if (!link) return false;
+  const [availability] = await db.select().from(commercialAvailabilities).where(eq(commercialAvailabilities.id, link.commercialAvailabilityId)).limit(1);
+  if (!availability || availability.transactionType !== 'lease') throw new Error('Commercial Office listing has no active lease availability.');
+  const economics = await db.select().from(commercialAvailabilityEconomics).where(eq(commercialAvailabilityEconomics.commercialAvailabilityId, availability.id));
+  assertCommercialPricingContract({ pricingMode: availability.pricingMode as any, economics: economics.map((item: any) => ({ componentCode: item.componentCode, valueState: item.valueState, chargeBasis: item.chargeBasis, amountMinor: item.amountMinor, rangeMaximumMinor: item.rangeMaximumMinor })) });
+  return true;
+}
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -2599,7 +2613,8 @@ export async function submitListingForReview(listingId: number, database?: any) 
   if (locationIssues.length > 0) {
     throw new Error(locationIssues.join(' '));
   }
-  const pricingIssues = validatePricingContract(
+  const commercialPricing = await validateCommercialOfficeListingPricing(db, listingId);
+  const pricingIssues = commercialPricing ? [] : validatePricingContract(
     String((transitionListing as any).action),
     (listing as any)?.pricing,
     (listing as any)?.propertyDetails,
@@ -3597,7 +3612,8 @@ export async function approveListing(
       : {}),
   });
 
-  const pricingIssues = validatePricingContract(
+  const commercialPricing = await validateCommercialOfficeListingPricing(db, listingId);
+  const pricingIssues = commercialPricing ? [] : validatePricingContract(
     String((listing as any).action),
     (listing as any).pricing,
     (listing as any).propertyDetails,
