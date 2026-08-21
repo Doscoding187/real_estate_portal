@@ -80,6 +80,10 @@ class FakeDrizzle {
 
   private resolveSelect(tableName: string) {
     this.record({ type: 'select', table: tableName });
+    // Generic Listing lifecycle fixtures intentionally own no canonical Commercial
+    // association. Preserve their queued Listing/projection expectations while
+    // representing the authoritative absence of Commercial capability ownership.
+    if (tableName === 'commercial_availability_listing_links') return [];
     return this.selectResults.shift() || [];
   }
 
@@ -98,6 +102,7 @@ class FakeDrizzle {
       },
       limit: (n: number) => {
         this.record({ type: 'select', table: tableName, whereCols });
+        if (tableName === 'commercial_availability_listing_links') return Promise.resolve([]);
         return Promise.resolve(this.selectResults.shift() || []);
       },
       orderBy: (_order: any) => {
@@ -107,6 +112,7 @@ class FakeDrizzle {
       then: (resolve: (v: any) => void) => {
         // If awaited directly (no .limit() called), resolve immediately
         this.record({ type: 'select', table: tableName, whereCols });
+        if (tableName === 'commercial_availability_listing_links') return resolve([]);
         resolve(this.selectResults.shift() || []);
       },
     };
