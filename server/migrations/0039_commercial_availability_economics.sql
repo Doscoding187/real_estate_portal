@@ -1,0 +1,20 @@
+CREATE TABLE `commercial_availability_economics` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `commercial_availability_id` int NOT NULL,
+  `component_code` enum('base_rent','operating_costs','rates_recoveries','parking','fixed_levies','utilities','security_service','other_recovery','deposit','incentive') NOT NULL,
+  `value_state` enum('supplied','estimated','unknown','not_applicable') NOT NULL,
+  `charge_basis` enum('per_m2_month','per_bay_month','fixed_monthly','annual','once'),
+  `amount_minor` int,
+  `range_maximum_minor` int,
+  `currency` varchar(3) NOT NULL DEFAULT 'ZAR',
+  `vat_treatment` enum('included','excluded','not_applicable','unknown') NOT NULL DEFAULT 'unknown',
+  `annual_escalation_percent` decimal(5,2),
+  `source_label` varchar(255),
+  `supplied_at` timestamp NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `uq_commercial_availability_economics_component` UNIQUE (`commercial_availability_id`,`component_code`),
+  CONSTRAINT `fk_commercial_availability_economics_availability` FOREIGN KEY (`commercial_availability_id`) REFERENCES `commercial_availabilities` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_commercial_availability_economics_range` CHECK (`range_maximum_minor` IS NULL OR (`amount_minor` IS NOT NULL AND `range_maximum_minor` >= `amount_minor`))
+);

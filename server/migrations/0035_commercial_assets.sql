@@ -1,0 +1,20 @@
+CREATE TABLE `commercial_assets` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `asset_kind` enum('office_building','industrial_park','retail_centre','standalone_premises','mixed_use','other') NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `address` text,
+  `province_id` int,
+  `city_id` int,
+  `suburb_id` int,
+  `lifecycle_status` enum('active','retired') NOT NULL DEFAULT 'active',
+  `created_by_user_id` int,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_commercial_assets_province` FOREIGN KEY (`province_id`) REFERENCES `provinces` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_commercial_assets_city` FOREIGN KEY (`city_id`) REFERENCES `cities` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_commercial_assets_suburb` FOREIGN KEY (`suburb_id`) REFERENCES `suburbs` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_commercial_assets_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  KEY `idx_commercial_assets_geography` (`province_id`,`city_id`,`suburb_id`),
+  KEY `idx_commercial_assets_kind_status` (`asset_kind`,`lifecycle_status`)
+);

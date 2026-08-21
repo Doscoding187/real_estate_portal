@@ -172,7 +172,7 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0034_listing_lead_association.sql');
+    expect(manifest.expectedHead.filename).toBe('0042_commercial_economics_value_state_semantics.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +188,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0034_listing_lead_association.sql',
+      expectedNewHead: '0042_commercial_economics_value_state_semantics.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(27);
+    expect(plan.pending).toHaveLength(35);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -221,8 +221,16 @@ describe('canonical migration manifest', () => {
       '0032_land_review_events.sql',
       '0033_land_evidence_access_audit.sql',
       '0034_listing_lead_association.sql',
+      '0035_commercial_assets.sql',
+      '0036_commercial_spaces.sql',
+      '0037_commercial_space_specifications.sql',
+      '0038_commercial_availabilities.sql',
+      '0039_commercial_availability_economics.sql',
+      '0040_commercial_availability_listing_links.sql',
+      '0041_commercial_availability_freshness_semantics.sql',
+      '0042_commercial_economics_value_state_semantics.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0034_listing_lead_association.sql');
+    expect(plan.expectedNewHead).toBe('0042_commercial_economics_value_state_semantics.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

@@ -20,6 +20,7 @@ export * from './referrals';
 export * from './canvassing';
 export * from './listingPerformance';
 export * from './land';
+export * from './commercial';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';

@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0034_listing_lead_association.sql",
+  "expectedHead": "0042_commercial_economics_value_state_semantics.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -360,6 +360,88 @@
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 35,
+      "filename": "0035_commercial_assets.sql",
+      "checksum": "93145dd09355fb3d7b86e5ad91abe6f5c76edfd2a547864e369493842a32dff2",
+      "parent": "0034_listing_lead_association.sql",
+      "parentChecksum": "7d6d03852721892d3ee3284344c7263b25813d19e71d0997df9dad04ab712ea9",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 36,
+      "filename": "0036_commercial_spaces.sql",
+      "checksum": "b24ac0399a67072703f01a19b7853a24db5772865b64bccd29a4cac001b20d1f",
+      "parent": "0035_commercial_assets.sql",
+      "parentChecksum": "93145dd09355fb3d7b86e5ad91abe6f5c76edfd2a547864e369493842a32dff2",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 37,
+      "filename": "0037_commercial_space_specifications.sql",
+      "checksum": "7d931ab25b6974e08bc7f03a2654677f66c436afb46a168ebd95e9b45c475d83",
+      "parent": "0036_commercial_spaces.sql",
+      "parentChecksum": "b24ac0399a67072703f01a19b7853a24db5772865b64bccd29a4cac001b20d1f",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 38,
+      "filename": "0038_commercial_availabilities.sql",
+      "checksum": "35461c25ffb5103986e46652a98274605b38d600630e407923426a6d6ad667a8",
+      "parent": "0037_commercial_space_specifications.sql",
+      "parentChecksum": "7d931ab25b6974e08bc7f03a2654677f66c436afb46a168ebd95e9b45c475d83",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 39,
+      "filename": "0039_commercial_availability_economics.sql",
+      "checksum": "528fe2e6256d5ed921188914e1e7a793729266b6740356d15cc53623aea5be43",
+      "parent": "0038_commercial_availabilities.sql",
+      "parentChecksum": "35461c25ffb5103986e46652a98274605b38d600630e407923426a6d6ad667a8",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 40,
+      "filename": "0040_commercial_availability_listing_links.sql",
+      "checksum": "447c614c25b926b303fc07ce1ac25f163e1d5a118488922d6923160c7dc2f8b5",
+      "parent": "0039_commercial_availability_economics.sql",
+      "parentChecksum": "528fe2e6256d5ed921188914e1e7a793729266b6740356d15cc53623aea5be43",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 41,
+      "filename": "0041_commercial_availability_freshness_semantics.sql",
+      "checksum": "d0842886e989edcf5638ab505fb02a0be0441f6fa5e477212f9e3227885b1d2d",
+      "parent": "0040_commercial_availability_listing_links.sql",
+      "parentChecksum": "447c614c25b926b303fc07ce1ac25f163e1d5a118488922d6923160c7dc2f8b5",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "COMM-S0-RC-2026-08-21-Edward"
+    },
+    {
+      "sequence": 42,
+      "filename": "0042_commercial_economics_value_state_semantics.sql",
+      "checksum": "f9e5f11438428c29cb66a74cbc7befe9c9bef845857240b6b937f547afaed40e",
+      "parent": "0041_commercial_availability_freshness_semantics.sql",
+      "parentChecksum": "d0842886e989edcf5638ab505fb02a0be0441f6fa5e477212f9e3227885b1d2d",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "COMM-S0-RC-2026-08-21-Edward"
     }
   ]
 }
