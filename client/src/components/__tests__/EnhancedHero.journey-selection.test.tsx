@@ -263,6 +263,15 @@ describe('EnhancedHero explicit journey selection', () => {
     );
   });
 
+  it('submits a canonical location through the Office Leasing Commercial journey', () => {
+    render(<EnhancedHero activeTab="commercial" />);
+
+    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+    expect(setLocation).toHaveBeenCalledWith('/commercial');
+  });
+
   it('supports journey-first selection but waits for a canonical location', () => {
     render(<EnhancedHero />);
 

@@ -201,6 +201,9 @@ describe('public navigation authority', () => {
       homepageVisible: true,
       homepageEnabled: true,
     });
+    expect(getPublicHeroJourney('commercial', localIntegrationRelease).supportedFields).toEqual([
+      'location',
+    ]);
     expect(getPublicHeroJourney('commercial', containedHostedRelease)).toMatchObject({
       homepageVisible: false,
       homepageEnabled: false,
@@ -213,10 +216,9 @@ describe('public navigation authority', () => {
     const commercialItems = PUBLIC_NAVIGATION_MENUS.flatMap(menu =>
       menu.groups.flatMap(group => group.items),
     ).filter(item => item.journey === 'commercial');
-    expect(commercialItems).toHaveLength(2);
+    expect(commercialItems).toHaveLength(1);
     expect(commercialItems).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: 'buyers-commercial', href: '/commercial' }),
         expect.objectContaining({ id: 'renters-commercial', href: '/commercial' }),
       ]),
     );

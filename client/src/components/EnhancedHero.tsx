@@ -27,6 +27,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import {
   getHomepageHeroJourneys,
+  getPublicHeroJourney,
   isHomepageHeroJourneyEnabled,
   normalizePublicHeroJourney,
   type PublicHeroJourneyKey,
@@ -416,6 +417,14 @@ export function EnhancedHero({
           maxPrice: filters.priceMax,
         }),
       );
+      return;
+    }
+
+    // Commercial currently exposes the completed Office Leasing journey only.
+    // The public Commercial page owns its own bounded Office refinements; do
+    // not manufacture sale, use-type, or generic-property filters here.
+    if (effectiveJourney === 'commercial') {
+      setLocation(getPublicHeroJourney('commercial').destination);
       return;
     }
 
@@ -1144,64 +1153,13 @@ export function EnhancedHero({
                         </>
                       )}
 
-                      {/* COMMERCIAL FILTERS */}
+                      {/* COMMERCIAL OFFICE LEASING */}
                       {normalizedActiveTab === 'commercial' && (
-                        <>
-                          <div className="space-y-2">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              I want to
-                            </Label>
-                            <div className="flex p-1 bg-gray-100 rounded-lg h-10">
-                              <button
-                                onClick={() => handleFilterChange('saleOrRent', 'sale')}
-                                className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'sale' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
-                              >
-                                Buy
-                              </button>
-                              <button
-                                onClick={() => handleFilterChange('saleOrRent', 'rent')}
-                                className={`flex-1 rounded-md text-sm font-medium transition-all ${filters.saleOrRent === 'rent' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-900'}`}
-                              >
-                                Rent
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Use Type
-                            </Label>
-                            <Select
-                              value={filters.commercialUseType}
-                              onValueChange={val => handleFilterChange('commercialUseType', val)}
-                            >
-                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
-                                <SelectValue placeholder="Any Use" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">Any Use</SelectItem>
-                                {filterConfig.commercial.useTypes.map(type => (
-                                  <SelectItem key={type} value={type}>
-                                    {type}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Min Size (m²)
-                            </Label>
-                            <Input
-                              type="number"
-                              placeholder="Min m²"
-                              className="h-10 bg-gray-50/50 border-gray-200"
-                              value={filters.lotSizeMin}
-                              onChange={e => handleFilterChange('lotSizeMin', e.target.value)}
-                            />
-                          </div>
-                        </>
+                        <p className="text-sm text-slate-600 md:col-span-2">
+                          Commercial currently helps businesses find office space to lease. Continue
+                          to view available spaces, occupancy costs, and Office-specific
+                          requirements.
+                        </p>
                       )}
 
                       {/* SHARED LIVING FILTERS */}

@@ -68,10 +68,9 @@ describe('EnhancedNavbar buyer discovery menu', () => {
       'href',
       '/plots-and-land',
     );
-    expect(within(region).getByRole('link', { name: 'Commercial property' })).toHaveAttribute(
-      'href',
-      '/commercial',
-    );
+    expect(
+      within(region).queryByRole('link', { name: 'Commercial property' }),
+    ).not.toBeInTheDocument();
     expect(within(region).getByRole('link', { name: 'Plan my buying budget' })).toHaveAttribute(
       'href',
       '/guides/buying-property',

@@ -251,7 +251,7 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     // controlled by the existing public-journey release manifest.
     productHomepageVisible: true,
     productHomepageEnabled: true,
-    supportedFields: ['location', 'saleOrRent', 'commercialUseType'],
+    supportedFields: ['location'],
   },
   {
     key: 'find_agent',
@@ -464,15 +464,6 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             capability: 'LAUNCH_READY',
             activeHref: '/plots-and-land',
             journey: 'plot_land',
-          }),
-          destination({
-            id: 'buyers-commercial',
-            label: 'Commercial property',
-            href: getPublicHeroJourney('commercial').destination,
-            owner: 'commercial-engine',
-            capability: 'LAUNCH_READY',
-            activeHref: '/commercial',
-            journey: 'commercial',
           }),
         ],
       },
