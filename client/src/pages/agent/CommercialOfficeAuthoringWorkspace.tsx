@@ -34,6 +34,9 @@ export default function CommercialOfficeAuthoringWorkspace() {
   const [more, setMore] = useState(false);
   const [f, setF] = useState({
     building: '',
+    streetNumber: '',
+    streetName: '',
+    confirmLocation: false,
     suite: '',
     area: '',
     title: '',
@@ -122,6 +125,8 @@ export default function CommercialOfficeAuthoringWorkspace() {
         throw new Error('Select the existing Office building for this space.');
       if (assetMode === 'new' && (!provinceId || !cityId))
         throw new Error('Select the canonical Province and City for this Office building.');
+      if (assetMode === 'new' && (!f.streetName || !f.confirmLocation))
+        throw new Error('Enter the building street and confirm its physical location.');
       const asset =
         assetMode === 'new'
           ? {
@@ -130,6 +135,13 @@ export default function CommercialOfficeAuthoringWorkspace() {
               provinceId: Number(provinceId),
               cityId: Number(cityId),
               suburbId: suburbId ? Number(suburbId) : null,
+              privateAddress: {
+                ...(f.streetNumber ? { streetNumber: f.streetNumber } : {}),
+                streetName: f.streetName,
+                buildingName: f.building,
+              },
+              coordinateSource: 'manual_confirmed' as const,
+              confirmPhysicalLocation: true as const,
             }
           : { mode: 'existing' as const, commercialAssetId: Number(commercialAssetId) };
       const result = await create.mutateAsync({
@@ -287,6 +299,8 @@ export default function CommercialOfficeAuthoringWorkspace() {
           {assetMode === 'new' ? (
             <>
               {input('Building / asset name', 'building')}
+              {input('Street number (optional)', 'streetNumber')}
+              {input('Street name', 'streetName')}
               <label className="grid gap-1 text-sm">
                 <span>Province</span>
                 <select
@@ -305,6 +319,14 @@ export default function CommercialOfficeAuthoringWorkspace() {
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="flex gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={f.confirmLocation}
+                  onChange={event => set('confirmLocation', event.target.checked)}
+                />{' '}
+                I confirm this is the physical building location.
               </label>
               <label className="grid gap-1 text-sm">
                 <span>City</span>

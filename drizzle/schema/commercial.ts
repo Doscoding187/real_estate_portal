@@ -4,6 +4,7 @@ import {
   decimal,
   index,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   text,
@@ -40,10 +41,30 @@ export const commercialAssets = mysqlTable(
     createdByUserId: int('created_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    /** Canonical physical-location authority; `address` remains a transitional display projection. */
+    privateAddress: json('private_address'),
+    latitude: decimal({ precision: 10, scale: 7 }),
+    longitude: decimal({ precision: 10, scale: 7 }),
+    providerLocationPlaceId: varchar('provider_location_place_id', { length: 255 }),
+    coordinateSource: mysqlEnum('coordinate_source', ['autocomplete', 'map', 'manual_confirmed']),
+    locationConfirmationState: mysqlEnum('location_confirmation_state', [
+      'confirmed',
+      'needs_confirmation',
+    ])
+      .default('needs_confirmation')
+      .notNull(),
+    publicLocationPrecision: mysqlEnum('public_location_precision', ['approximate', 'exact'])
+      .default('approximate')
+      .notNull(),
+    locationConfirmedByUserId: int('location_confirmed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    locationConfirmedAt: timestamp('location_confirmed_at', { mode: 'string' }),
   },
   table => [
     index('idx_commercial_assets_geography').on(table.provinceId, table.cityId, table.suburbId),
     index('idx_commercial_assets_kind_status').on(table.assetKind, table.lifecycleStatus),
+    index('idx_commercial_assets_location_confirmation').on(table.locationConfirmationState),
   ],
 );
 

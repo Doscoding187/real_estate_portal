@@ -172,7 +172,7 @@ describe('canonical migration manifest', () => {
       kind: 'ddl',
       statementPolicy: 'single-ddl',
     });
-    expect(manifest.expectedHead.filename).toBe('0049_commercial_lead_contexts.sql');
+    expect(manifest.expectedHead.filename).toBe('0050_commercial_asset_physical_location.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -188,11 +188,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0049_commercial_lead_contexts.sql',
+      expectedNewHead: '0050_commercial_asset_physical_location.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(42);
+    expect(plan.pending).toHaveLength(43);
     expect(plan.pending.map(item => item.filename)).toEqual([
       '0008_developer_organisations.sql',
       '0009_developer_organisation_memberships.sql',
@@ -236,8 +236,9 @@ describe('canonical migration manifest', () => {
       '0047_commercial_gross_rental_component.sql',
       '0048_commercial_lease_terms.sql',
       '0049_commercial_lead_contexts.sql',
+      '0050_commercial_asset_physical_location.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0049_commercial_lead_contexts.sql');
+    expect(plan.expectedNewHead).toBe('0050_commercial_asset_physical_location.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

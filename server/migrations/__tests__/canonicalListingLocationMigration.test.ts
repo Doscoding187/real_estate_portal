@@ -22,7 +22,7 @@ describe('PLE-6B canonical listing location migration', () => {
       approvalReference: 'PLE-6B-2026-08-10-Edward',
     });
     expect(manifest.expectedHead.filename).toBe(
-      '0049_commercial_lead_contexts.sql',
+      '0050_commercial_asset_physical_location.sql',
     );
   });
 

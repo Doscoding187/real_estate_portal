@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0049_commercial_lead_contexts.sql",
+  "expectedHead": "0050_commercial_asset_physical_location.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -516,6 +516,17 @@
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 50,
+      "filename": "0050_commercial_asset_physical_location.sql",
+      "checksum": "20e950381cf082d94b3dca1fcc1b79b0d601f4dea2a65873829a0672f962e4f3",
+      "parent": "0049_commercial_lead_contexts.sql",
+      "parentChecksum": "ff17f3d19065138ae82a94ecb4c8e6ff7904439c25f095e1cc552e0560055df5",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "COMM-S1-commercial-asset-physical-location-2026-08-21-Edward"
     }
   ]
 }

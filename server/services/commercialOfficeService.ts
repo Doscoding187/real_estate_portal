@@ -27,6 +27,7 @@ import {
 import { verifyListingMediaUploadToken } from './listingMediaAuthority';
 import { toMySqlDateTime } from './leadDeliveryService';
 import { resolveCanonicalListingLocation } from './listingLocationResolver';
+import type { PrivateAddress } from '../../shared/location-contract';
 
 type Database = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 const positivePublicStates = [
@@ -150,10 +151,16 @@ export type CreateOfficeDraftInput = {
     | {
         mode: 'new';
         name: string;
-        address?: string | null;
         provinceId: number;
         cityId: number;
         suburbId?: number | null;
+        privateAddress: PrivateAddress;
+        coordinateSource: 'autocomplete' | 'map' | 'manual_confirmed';
+        latitude?: number | null;
+        longitude?: number | null;
+        providerLocationPlaceId?: string | null;
+        publicLocationPrecision?: 'approximate' | 'exact';
+        confirmPhysicalLocation: true;
       }
     | { mode: 'existing'; commercialAssetId: number };
   space: {
@@ -200,17 +207,40 @@ type CanonicalOfficeLocation = {
   province: string;
   city: string;
   suburb: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  providerLocationPlaceId: string | null;
+  coordinateSource: 'autocomplete' | 'map' | 'manual_confirmed' | null;
+  privateAddress: PrivateAddress | null;
+  locationConfirmationState: 'confirmed' | 'needs_confirmation';
+  publicLocationPrecision: 'approximate' | 'exact';
 };
 
 async function resolveRequiredOfficeLocation(input: {
   provinceId: number | null | undefined;
   cityId: number | null | undefined;
   suburbId?: number | null;
+  privateAddress?: PrivateAddress | null;
+  coordinateSource?: 'autocomplete' | 'map' | 'manual_confirmed' | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  providerLocationPlaceId?: string | null;
+  locationConfirmationState?: 'confirmed' | 'needs_confirmation';
+  publicLocationPrecision?: 'approximate' | 'exact';
 }): Promise<CanonicalOfficeLocation> {
   const resolved = await resolveCanonicalListingLocation({
     provinceId: input.provinceId,
     cityId: input.cityId,
     suburbId: input.suburbId || null,
+    privateAddress: input.privateAddress || null,
+    coordinateSource: input.coordinateSource || null,
+    latitude: input.latitude ?? null,
+    longitude: input.longitude ?? null,
+    providerLocationPlaceId: input.providerLocationPlaceId || null,
+    locationConfirmationState: input.locationConfirmationState || 'needs_confirmation',
+    publicLocationPrecision: input.publicLocationPrecision || 'approximate',
+    propertyType: 'commercial',
   });
   if (!resolved.provinceId || !resolved.cityId || !resolved.province || !resolved.city) {
     throw new Error('Select a valid canonical Province and City for this Office building.');
@@ -222,6 +252,14 @@ async function resolveRequiredOfficeLocation(input: {
     province: resolved.province,
     city: resolved.city,
     suburb: resolved.suburb || null,
+    address: resolved.address,
+    latitude: resolved.coordinatePair?.latitude ?? null,
+    longitude: resolved.coordinatePair?.longitude ?? null,
+    providerLocationPlaceId: resolved.providerLocationPlaceId,
+    coordinateSource: resolved.coordinateSource,
+    privateAddress: resolved.privateAddress,
+    locationConfirmationState: resolved.locationConfirmationState,
+    publicLocationPrecision: resolved.publicLocationPrecision,
   };
 }
 
@@ -236,6 +274,13 @@ export async function reusableOfficeAssetsForAuthor(userId: number) {
       provinceId: commercialAssets.provinceId,
       cityId: commercialAssets.cityId,
       suburbId: commercialAssets.suburbId,
+      privateAddress: commercialAssets.privateAddress,
+      latitude: commercialAssets.latitude,
+      longitude: commercialAssets.longitude,
+      providerLocationPlaceId: commercialAssets.providerLocationPlaceId,
+      coordinateSource: commercialAssets.coordinateSource,
+      locationConfirmationState: commercialAssets.locationConfirmationState,
+      publicLocationPrecision: commercialAssets.publicLocationPrecision,
     })
     .from(commercialAssets)
     .where(
@@ -249,7 +294,8 @@ export async function reusableOfficeAssetsForAuthor(userId: number) {
   const reusable = await Promise.all(
     candidates.map(async asset => {
       try {
-        return { ...asset, location: await resolveRequiredOfficeLocation(asset) };
+        const location = await resolveRequiredOfficeLocation(asset);
+        return location.locationConfirmationState === 'confirmed' ? { ...asset, location } : null;
       } catch {
         return null;
       }
@@ -279,29 +325,63 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
       provinceId: number | null;
       cityId: number | null;
       suburbId: number | null;
+      privateAddress: PrivateAddress | null;
+      latitude: number | null;
+      longitude: number | null;
+      providerLocationPlaceId: string | null;
+      coordinateSource: 'autocomplete' | 'map' | 'manual_confirmed' | null;
+      locationConfirmationState: 'confirmed' | 'needs_confirmation';
+      publicLocationPrecision: 'approximate' | 'exact';
     };
     if (input.asset.mode === 'new') {
-      const location = await resolveRequiredOfficeLocation(input.asset);
+      if (input.asset.confirmPhysicalLocation !== true) {
+        throw new Error('Explicit supplier physical-location confirmation is required.');
+      }
+      const location = await resolveRequiredOfficeLocation({
+        ...input.asset,
+        locationConfirmationState: 'confirmed',
+      });
+      if (location.locationConfirmationState !== 'confirmed') {
+        throw new Error(
+          'Confirm the Office building’s physical location before creating a publish-ready space.',
+        );
+      }
       const assetResult = await tx.insert(commercialAssets).values({
         assetKind: 'office_building',
         name: input.asset.name.trim(),
-        address: input.asset.address || null,
+        address: location.address,
         provinceId: location.provinceId,
         cityId: location.cityId,
         suburbId: location.suburbId,
+        privateAddress: location.privateAddress,
+        latitude: location.latitude == null ? null : String(location.latitude),
+        longitude: location.longitude == null ? null : String(location.longitude),
+        providerLocationPlaceId: location.providerLocationPlaceId,
+        coordinateSource: location.coordinateSource,
+        locationConfirmationState: location.locationConfirmationState,
+        publicLocationPrecision: location.publicLocationPrecision,
+        locationConfirmedByUserId: input.userId,
+        locationConfirmedAt: toMySqlDateTime(),
         createdByUserId: input.userId,
       });
       commercialAssetId = Number(
         (assetResult as any)[0]?.insertId ?? (assetResult as any).insertId,
       );
       listingLocation = {
-        address: input.asset.address || null,
+        address: location.address,
         city: location.city,
         province: location.province,
         suburb: location.suburb,
         provinceId: location.provinceId,
         cityId: location.cityId,
         suburbId: location.suburbId,
+        privateAddress: location.privateAddress,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        providerLocationPlaceId: location.providerLocationPlaceId,
+        coordinateSource: location.coordinateSource,
+        locationConfirmationState: location.locationConfirmationState,
+        publicLocationPrecision: location.publicLocationPrecision,
       };
     } else {
       const [asset] = await tx
@@ -322,14 +402,26 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
         );
       commercialAssetId = asset.id;
       const location = await resolveRequiredOfficeLocation(asset);
+      if (location.locationConfirmationState !== 'confirmed') {
+        throw new Error(
+          'The selected Office building requires physical-location confirmation before another space can be marketed.',
+        );
+      }
       listingLocation = {
-        address: asset.address || null,
+        address: location.address,
         city: location.city,
         province: location.province,
         suburb: location.suburb,
         provinceId: location.provinceId,
         cityId: location.cityId,
         suburbId: location.suburbId,
+        privateAddress: location.privateAddress,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        providerLocationPlaceId: location.providerLocationPlaceId,
+        coordinateSource: location.coordinateSource,
+        locationConfirmationState: location.locationConfirmationState,
+        publicLocationPrecision: location.publicLocationPrecision,
       };
     }
     const spaceResult = await tx.insert(commercialSpaces).values({
@@ -409,6 +501,13 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
       provinceId: listingLocation.provinceId,
       cityId: listingLocation.cityId,
       suburbId: listingLocation.suburbId,
+      privateAddress: listingLocation.privateAddress,
+      latitude: listingLocation.latitude == null ? null : String(listingLocation.latitude),
+      longitude: listingLocation.longitude == null ? null : String(listingLocation.longitude),
+      placeId: listingLocation.providerLocationPlaceId,
+      coordinateSource: listingLocation.coordinateSource,
+      locationConfirmationState: listingLocation.locationConfirmationState,
+      publicLocationPrecision: listingLocation.publicLocationPrecision,
       status: 'draft',
       approvalStatus: 'pending',
       slug: identifier(input.marketing.title),
