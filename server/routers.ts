@@ -94,6 +94,7 @@ import { getAgentEntitlementsForUserId } from './services/agentEntitlementServic
 import { discoveryRouter } from './domains/discovery/router';
 import { landRouter } from './landRouter';
 import { landPublicRouter } from './landPublicRouter';
+import { commercialOfficeRouter } from './commercialOfficeRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -117,6 +118,7 @@ const appRouterConfig = {
   listing: listingRouter,
   land: landRouter,
   landPublic: landPublicRouter,
+  commercialOffice: commercialOfficeRouter,
   upload: uploadRouter,
   settings: settingsRouter,
   savedSearch: savedSearchRouter,

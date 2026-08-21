@@ -698,6 +698,26 @@
       "purpose": "Enforces that known rentable and usable Commercial Space areas are positive physical quantities."
     },
     {
+      "path": "server/migrations/0046_commercial_office_quote_terms.sql",
+      "classification": "canonical active",
+      "purpose": "Adds explicit Commercial quote mode and VAT treatment for Office leasing."
+    },
+    {
+      "path": "server/migrations/0047_commercial_gross_rental_component.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the governed gross-rent Commercial economics component."
+    },
+    {
+      "path": "server/migrations/0048_commercial_lease_terms.sql",
+      "classification": "canonical active",
+      "purpose": "Creates structured Commercial lease decision terms outside listing metadata."
+    },
+    {
+      "path": "server/migrations/0049_commercial_lead_contexts.sql",
+      "classification": "canonical active",
+      "purpose": "Captures immutable Commercial Asset, Space and Availability context with a public lead."
+    },
+    {
       "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."

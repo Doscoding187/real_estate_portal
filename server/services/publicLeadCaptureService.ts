@@ -3,6 +3,7 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
   cataloguePublishers,
+  commercialLeadContexts,
   developerOrganisations,
   developerOrganisationMemberships,
   developmentSupersessions,
@@ -36,6 +37,7 @@ import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibi
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
 import { resolvePublicLandLeadCustody } from './landPublicService';
+import { resolvePublicCommercialOfficeLeadCustody } from './commercialOfficeService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
@@ -54,6 +56,7 @@ export interface PublicLeadCaptureInput {
   /** Set only by an authenticated server boundary; never a public client field. */
   authenticatedUserId?: number;
   listingId?: number;
+  commercialAvailabilityId?: number;
   propertyId?: number;
   developmentId?: number;
   cataloguePublisherId?: number;
@@ -101,6 +104,7 @@ export interface ResolvedLeadOwnership {
   leadDeliveryMethod: 'crm_export' | 'manual';
   brandLeadStatus?: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber';
   reason?: string | null;
+  commercialContext?: { commercialAssetId: number; commercialSpaceId: number; commercialAvailabilityId: number };
 }
 
 export interface PublicLeadCaptureResult {
@@ -412,10 +416,17 @@ export async function resolveLeadOwnership(
 
   const propertyId = positiveId(input.propertyId);
   const listingId = positiveId(input.listingId);
+  const commercialAvailabilityId = positiveId(input.commercialAvailabilityId);
   const requestedDevelopmentId = positiveId(input.developmentId);
   const requestedBrandId = positiveId(input.cataloguePublisherId);
   if (listingId && propertyId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose one canonical enquiry source.' });
   if (listingId) {
+    if (commercialAvailabilityId) {
+      const commercial = await resolvePublicCommercialOfficeLeadCustody({ listingId, commercialAvailabilityId });
+      if (!commercial) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
+      const agentId = positiveId(commercial.agentId); const agencyId = positiveId(commercial.agencyId); const recipientId = agentId ?? agencyId;
+      return { listingId, agentId, agencyId, supplyOrigin: 'customer_managed', leadCustody: recipientId ? 'verified_customer_recipient' : 'attention_required', recipientType: recipientId ? (agentId ? 'agent' : 'agency') : 'manual', recipientId: recipientId ?? null, leadDeliveryMethod: recipientId ? 'crm_export' : 'manual', reason: recipientId ? null : 'The Commercial marketing listing has no deliverable supplier recipient.', commercialContext: { commercialAssetId: commercial.commercialAssetId, commercialSpaceId: commercial.commercialSpaceId, commercialAvailabilityId: commercial.commercialAvailabilityId } };
+    }
     const land = await resolvePublicLandLeadCustody(listingId);
     if (!land) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not available for public enquiries.' });
     const agentId = positiveId(land.agentId); const agencyId = positiveId(land.agencyId); const recipientId = agentId ?? agencyId;
@@ -935,6 +946,16 @@ export async function capturePublicLead(
   }
 
   const leadId = Number(insertResult.insertId);
+
+  if (resolved.commercialContext) {
+    await database.insert(commercialLeadContexts).values({
+      leadId,
+      listingId: resolved.listingId!,
+      commercialAssetId: resolved.commercialContext.commercialAssetId,
+      commercialSpaceId: resolved.commercialContext.commercialSpaceId,
+      commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId,
+    });
+  }
 
   // These are useful counters/analytics, but they are not the custody
   // acknowledgement boundary. A failure here must not make a durably

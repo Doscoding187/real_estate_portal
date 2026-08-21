@@ -160,6 +160,13 @@ export const commercialAvailabilities = mysqlTable(
       .notNull()
       .references(() => commercialSpaces.id, { onDelete: 'restrict' }),
     transactionType: mysqlEnum('transaction_type', ['lease', 'sale']).notNull(),
+    /** Whether the recurring quote is a transparent component schedule or one supplied gross figure. */
+    pricingMode: mysqlEnum('pricing_mode', ['componentised', 'gross_quote'])
+      .default('componentised')
+      .notNull(),
+    vatTreatment: mysqlEnum('vat_treatment', ['included', 'excluded', 'not_applicable', 'unknown'])
+      .default('unknown')
+      .notNull(),
     availabilityState: mysqlEnum('availability_state', [
       'available_confirmed',
       'available_upcoming',
@@ -217,6 +224,7 @@ export const commercialAvailabilityEconomics = mysqlTable(
       .references(() => commercialAvailabilities.id, { onDelete: 'cascade' }),
     componentCode: mysqlEnum('component_code', [
       'base_rent',
+      'gross_rent',
       'operating_costs',
       'rates_recoveries',
       'parking',
@@ -267,6 +275,38 @@ export const commercialAvailabilityEconomics = mysqlTable(
       'chk_commercial_availability_economics_value_state',
       sql.raw(
         "((`value_state` IN ('supplied','estimated')) AND (`amount_minor` IS NOT NULL) AND (`charge_basis` IS NOT NULL)) OR ((`value_state` IN ('unknown','not_applicable')) AND (`amount_minor` IS NULL) AND (`range_maximum_minor` IS NULL) AND (`charge_basis` IS NULL) AND (`annual_escalation_percent` IS NULL))",
+      ),
+    ),
+  ],
+);
+
+/** Material lease decision terms. These are not recurring Cost Passport components. */
+export const commercialAvailabilityLeaseTerms = mysqlTable(
+  'commercial_availability_lease_terms',
+  {
+    id: int().autoincrement().primaryKey(),
+    commercialAvailabilityId: int('commercial_availability_id')
+      .notNull()
+      .references(() => commercialAvailabilities.id, { onDelete: 'cascade' }),
+    minimumLeaseMonths: int('minimum_lease_months'),
+    quotedLeaseMonths: int('quoted_lease_months'),
+    annualEscalationPercent: decimal('annual_escalation_percent', { precision: 5, scale: 2 }),
+    depositMinor: int('deposit_minor'),
+    tenantInstallationAllowanceMinor: int('tenant_installation_allowance_minor'),
+    beneficialOccupationDays: int('beneficial_occupation_days'),
+    sourceLabel: varchar('source_label', { length: 255 }),
+    suppliedAt: timestamp('supplied_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_commercial_availability_lease_terms_availability').on(
+      table.commercialAvailabilityId,
+    ),
+    check(
+      'chk_commercial_lease_terms_nonnegative',
+      sql.raw(
+        '((`minimum_lease_months` IS NULL) OR (`minimum_lease_months` > 0)) AND ((`quoted_lease_months` IS NULL) OR (`quoted_lease_months` > 0)) AND ((`annual_escalation_percent` IS NULL) OR (`annual_escalation_percent` >= 0)) AND ((`deposit_minor` IS NULL) OR (`deposit_minor` >= 0)) AND ((`tenant_installation_allowance_minor` IS NULL) OR (`tenant_installation_allowance_minor` >= 0)) AND ((`beneficial_occupation_days` IS NULL) OR (`beneficial_occupation_days` >= 0))',
       ),
     ),
   ],
