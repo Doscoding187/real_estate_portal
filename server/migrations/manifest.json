@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0044_commercial_positive_availability_provenance.sql",
+  "expectedHead": "0045_commercial_space_positive_area_integrity.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -464,6 +464,17 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "COMM-S0-pre-pr-authority-correction-2026-08-21-Edward"
+    },
+    {
+      "sequence": 45,
+      "filename": "0045_commercial_space_positive_area_integrity.sql",
+      "checksum": "f3708a6df7c6ec47d0665f4b9d012cc7004b4f01cc63c4d8864b9c2475636a28",
+      "parent": "0044_commercial_positive_availability_provenance.sql",
+      "parentChecksum": "eb2f5f1c354eaf32c76c04617cac17445abb5db1e97bdbc9359585b3a923be28",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "COMM-S0-final-material-review-correction-2026-08-21-Edward"
     }
   ]
 }

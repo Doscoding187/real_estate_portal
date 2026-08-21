@@ -1,6 +1,20 @@
 export const COMMERCIAL_SPACE_CLASSES = ['office', 'industrial_logistics', 'retail'] as const;
 export type CommercialSpaceClass = (typeof COMMERCIAL_SPACE_CLASSES)[number];
 
+export function assertCommercialSpaceAreas(input: {
+  rentableAreaM2?: number | null;
+  usableAreaM2?: number | null;
+}): void {
+  for (const [label, value] of [
+    ['rentable area', input.rentableAreaM2],
+    ['usable area', input.usableAreaM2],
+  ] as const) {
+    if (value !== null && value !== undefined && value <= 0) {
+      throw new Error(`Commercial ${label} must be greater than zero when known.`);
+    }
+  }
+}
+
 export const COMMERCIAL_SPECIFICATION_VALUE_KINDS = {
   building_grade: 'text',
   fit_out_condition: 'text',
@@ -180,16 +194,27 @@ export function deriveCommercialMonthlyOccupancyCost(input: {
     if (item.valueState === 'not_applicable' || item.amountMinor === null || !item.chargeBasis)
       continue;
 
-    const multiplier =
+    const requiredQuantity =
       item.chargeBasis === 'per_m2_month'
-        ? Number(input.rentableAreaM2 || 0)
+        ? input.rentableAreaM2
         : item.chargeBasis === 'per_bay_month'
-          ? Number(input.parkingBays || 0)
-          : item.chargeBasis === 'annual'
-            ? 1 / 12
-            : item.chargeBasis === 'fixed_monthly'
-              ? 1
-              : 0;
+          ? input.parkingBays
+          : undefined;
+    if (
+      (item.chargeBasis === 'per_m2_month' || item.chargeBasis === 'per_bay_month') &&
+      (requiredQuantity === null || requiredQuantity === undefined)
+    ) {
+      unknownComponentCodes.push(item.componentCode);
+      continue;
+    }
+    const multiplier =
+      item.chargeBasis === 'per_m2_month' || item.chargeBasis === 'per_bay_month'
+        ? Number(requiredQuantity)
+        : item.chargeBasis === 'annual'
+          ? 1 / 12
+          : item.chargeBasis === 'fixed_monthly'
+            ? 1
+            : 0;
     if (multiplier === 0) continue;
 
     components.push({

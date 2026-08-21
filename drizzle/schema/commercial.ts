@@ -81,6 +81,12 @@ export const commercialSpaces = mysqlTable(
   table => [
     unique('uq_commercial_spaces_asset_identifier').on(table.commercialAssetId, table.identifier),
     index('idx_commercial_spaces_class_status').on(table.spaceClass, table.lifecycleStatus),
+    check(
+      'chk_commercial_spaces_positive_areas',
+      sql.raw(
+        '((`rentable_area_m2` IS NULL) OR (`rentable_area_m2` > 0)) AND ((`usable_area_m2` IS NULL) OR (`usable_area_m2` > 0))',
+      ),
+    ),
   ],
 );
 

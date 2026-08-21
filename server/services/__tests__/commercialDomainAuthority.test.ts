@@ -11,6 +11,7 @@ import {
   assertCommercialAvailabilityFreshness,
   assertCommercialEconomicsInput,
   assertCommercialSpecificationInput,
+  assertCommercialSpaceAreas,
   deriveCommercialMonthlyOccupancyCost,
 } from '../../../shared/commercial-domain';
 
@@ -79,6 +80,115 @@ describe('Commercial canonical authority', () => {
     expect(result.monthlyMaximumMinor).toBe(14_780_000);
     expect(result.unknownComponentCodes).toEqual(['security_service']);
     expect(result.components.every(component => component.valueState === 'calculated')).toBe(true);
+  });
+
+  it('reports missing Cost Passport quantities as unresolved without treating a legitimate zero as missing', () => {
+    const unresolvedArea = deriveCommercialMonthlyOccupancyCost({
+      economics: [
+        {
+          componentCode: 'base_rent',
+          valueState: 'supplied',
+          chargeBasis: 'per_m2_month',
+          amountMinor: 14_500,
+          rangeMaximumMinor: null,
+        },
+        {
+          componentCode: 'operating_costs',
+          valueState: 'estimated',
+          chargeBasis: 'per_m2_month',
+          amountMinor: 2_400,
+          rangeMaximumMinor: 3_000,
+        },
+      ],
+    });
+    expect(unresolvedArea.components).toEqual([]);
+    expect(unresolvedArea.unknownComponentCodes).toEqual(['base_rent', 'operating_costs']);
+
+    const unresolvedParking = deriveCommercialMonthlyOccupancyCost({
+      rentableAreaM2: 100,
+      economics: [
+        {
+          componentCode: 'parking',
+          valueState: 'supplied',
+          chargeBasis: 'per_bay_month',
+          amountMinor: 850_000,
+          rangeMaximumMinor: null,
+        },
+      ],
+    });
+    expect(unresolvedParking.unknownComponentCodes).toEqual(['parking']);
+
+    const knownQuantities = deriveCommercialMonthlyOccupancyCost({
+      rentableAreaM2: 100,
+      parkingBays: 2,
+      economics: [
+        {
+          componentCode: 'base_rent',
+          valueState: 'supplied',
+          chargeBasis: 'per_m2_month',
+          amountMinor: 14_500,
+          rangeMaximumMinor: null,
+        },
+        {
+          componentCode: 'parking',
+          valueState: 'supplied',
+          chargeBasis: 'per_bay_month',
+          amountMinor: 850_000,
+          rangeMaximumMinor: null,
+        },
+        {
+          componentCode: 'utilities',
+          valueState: 'unknown',
+          chargeBasis: null,
+          amountMinor: null,
+          rangeMaximumMinor: null,
+        },
+        {
+          componentCode: 'fixed_levies',
+          valueState: 'supplied',
+          chargeBasis: 'fixed_monthly',
+          amountMinor: 25_000,
+          rangeMaximumMinor: null,
+        },
+        {
+          componentCode: 'other_recovery',
+          valueState: 'supplied',
+          chargeBasis: 'annual',
+          amountMinor: 120_000,
+          rangeMaximumMinor: null,
+        },
+      ],
+    });
+    expect(knownQuantities.monthlyMinimumMinor).toBe(3_185_000);
+    expect(knownQuantities.monthlyMaximumMinor).toBe(3_185_000);
+    expect(knownQuantities.unknownComponentCodes).toEqual(['utilities']);
+
+    const explicitZero = deriveCommercialMonthlyOccupancyCost({
+      rentableAreaM2: 0,
+      economics: [
+        {
+          componentCode: 'base_rent',
+          valueState: 'supplied',
+          chargeBasis: 'per_m2_month',
+          amountMinor: 14_500,
+          rangeMaximumMinor: null,
+        },
+      ],
+    });
+    expect(explicitZero.unknownComponentCodes).toEqual([]);
+    expect(explicitZero.monthlyMinimumMinor).toBe(0);
+  });
+
+  it('requires canonical Commercial areas to be positive when known', () => {
+    expect(() => assertCommercialSpaceAreas({ rentableAreaM2: -1 })).toThrow(
+      'Commercial rentable area must be greater than zero when known.',
+    );
+    expect(() => assertCommercialSpaceAreas({ usableAreaM2: 0 })).toThrow(
+      'Commercial usable area must be greater than zero when known.',
+    );
+    expect(() =>
+      assertCommercialSpaceAreas({ rentableAreaM2: null, usableAreaM2: 120 }),
+    ).not.toThrow();
   });
 
   it('rejects economics that would turn unknowns into hidden authoritative amounts', () => {
