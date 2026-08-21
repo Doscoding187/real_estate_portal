@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import {
   agents,
+  agencies,
   commercialAssets,
   commercialAvailabilities,
   commercialAvailabilityEconomics,
@@ -10,6 +11,7 @@ import {
   commercialSpaces,
   listingMedia,
   listings,
+  users,
 } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import * as listingDb from '../db';
@@ -52,6 +54,66 @@ const identifier = (title: string) =>
 
 export function isCommercialAuthorRole(role: string | null | undefined) {
   return ['agent', 'agency_admin', 'property_developer', 'super_admin'].includes(String(role));
+}
+
+export type OfficeListingSupplierCustody = { agentId: number | null; agencyId: number | null };
+
+/**
+ * Listing custody is materialized when Office marketing is authored. Public
+ * enquiries must never re-resolve the author's later agency membership.
+ */
+export function deriveOfficeListingSupplierCustody(input: {
+  user: { role: string | null; agencyId: number | null };
+  agent: { id: number; agencyId: number | null; status: string } | null;
+  agencyExists: boolean;
+}): OfficeListingSupplierCustody {
+  const ownerAgencyId = input.user.agencyId;
+  const agentAgencyId = input.agent?.agencyId ?? null;
+  if (ownerAgencyId && agentAgencyId && ownerAgencyId !== agentAgencyId) {
+    throw new Error('Commercial supplier and Agent profile belong to different agencies.');
+  }
+  const agencyId = ownerAgencyId || agentAgencyId || null;
+  if (agencyId && !input.agencyExists) {
+    throw new Error('Commercial supplier agency is not an active canonical authority.');
+  }
+  if (input.agent) {
+    if (input.agent.status !== 'approved') {
+      throw new Error('Commercial Office authoring requires an approved Agent profile.');
+    }
+    return { agentId: input.agent.id, agencyId };
+  }
+  if (input.user.role === 'agency_admin' && agencyId) {
+    return { agentId: null, agencyId };
+  }
+  throw new Error(
+    'Commercial Office authoring requires a canonical Agent or agency-principal enquiry recipient.',
+  );
+}
+
+async function resolveOfficeListingSupplierCustody(
+  tx: Database,
+  userId: number,
+): Promise<OfficeListingSupplierCustody> {
+  const [user] = await tx
+    .select({ role: users.role, agencyId: users.agencyId })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!user) throw new Error('Commercial supplier identity was not found.');
+  const [agent] = await tx
+    .select({ id: agents.id, agencyId: agents.agencyId, status: agents.status })
+    .from(agents)
+    .where(eq(agents.userId, userId))
+    .limit(1);
+  const agencyId = user.agencyId || agent?.agencyId || null;
+  const [agency] = agencyId
+    ? await tx.select({ id: agencies.id }).from(agencies).where(eq(agencies.id, agencyId)).limit(1)
+    : [null];
+  return deriveOfficeListingSupplierCustody({
+    user: { role: user.role, agencyId: user.agencyId },
+    agent: agent || null,
+    agencyExists: agencyId ? Boolean(agency) : true,
+  });
 }
 
 export function effectiveCommercialAvailabilityState(
@@ -315,7 +377,7 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
   });
   const db = await database();
   return db.transaction(async tx => {
-    const [agent] = await tx.select().from(agents).where(eq(agents.userId, input.userId)).limit(1);
+    const supplierCustody = await resolveOfficeListingSupplierCustody(tx as Database, input.userId);
     let commercialAssetId: number;
     let listingLocation: {
       address: string | null;
@@ -488,8 +550,8 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
       } as any);
     const listingResult = await tx.insert(listings).values({
       ownerId: input.userId,
-      agentId: agent?.id ?? null,
-      agencyId: agent?.agencyId ?? null,
+      agentId: supplierCustody.agentId,
+      agencyId: supplierCustody.agencyId,
       action: 'rent',
       propertyType: 'commercial',
       title: input.marketing.title.trim(),

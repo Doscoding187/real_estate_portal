@@ -3,7 +3,10 @@ import {
   assertCommercialPricingContract,
   deriveCommercialMonthlyOccupancyCost,
 } from '../../../shared/commercial-domain';
-import { effectiveCommercialAvailabilityState } from '../commercialOfficeService';
+import {
+  deriveOfficeListingSupplierCustody,
+  effectiveCommercialAvailabilityState,
+} from '../commercialOfficeService';
 import { toMySqlDateTime } from '../leadDeliveryService';
 
 describe('Commercial Office public truth', () => {
@@ -94,5 +97,39 @@ describe('Commercial Office public truth', () => {
   it('normalizes ISO API timestamps to strict-MySQL UTC without a timezone shift', () => {
     expect(toMySqlDateTime('2026-08-20T08:00:00.000Z')).toBe('2026-08-20 08:00:00');
     expect(toMySqlDateTime('2026-08-20T10:00:00+02:00')).toBe('2026-08-20 08:00:00');
+  });
+
+  it('materializes agency-principal custody without creating an Agent profile', () => {
+    expect(
+      deriveOfficeListingSupplierCustody({
+        user: { role: 'agency_admin', agencyId: 44 },
+        agent: null,
+        agencyExists: true,
+      }),
+    ).toEqual({ agentId: null, agencyId: 44 });
+  });
+
+  it('preserves approved Agent custody and fails closed without a durable recipient', () => {
+    expect(
+      deriveOfficeListingSupplierCustody({
+        user: { role: 'agent', agencyId: 44 },
+        agent: { id: 9, agencyId: 44, status: 'approved' },
+        agencyExists: true,
+      }),
+    ).toEqual({ agentId: 9, agencyId: 44 });
+    expect(() =>
+      deriveOfficeListingSupplierCustody({
+        user: { role: 'property_developer', agencyId: null },
+        agent: null,
+        agencyExists: true,
+      }),
+    ).toThrow(/canonical Agent or agency-principal/i);
+    expect(() =>
+      deriveOfficeListingSupplierCustody({
+        user: { role: 'agency_admin', agencyId: 44 },
+        agent: null,
+        agencyExists: false,
+      }),
+    ).toThrow(/agency is not an active canonical authority/i);
   });
 });
