@@ -41,7 +41,9 @@ describe('public navigation authority', () => {
 
     expect(hrefs).toContain('/plots-and-land');
     expect(hrefs).not.toContain('/property-for-sale?propertyType=plot');
-    expect(hrefs).toContain('/property-for-sale?propertyType=commercial');
+    expect(hrefs).toContain('/commercial');
+    expect(hrefs).not.toContain('/property-for-sale?propertyType=commercial');
+    expect(hrefs).not.toContain('/property-to-rent?propertyType=commercial');
     expect(hrefs).not.toContain('/property-for-sale?propertyType=land');
     expect(hrefs.some(href => href.includes('propertyType=office'))).toBe(false);
     expect(hrefs.some(href => href.includes('propertyType=retail'))).toBe(false);
@@ -116,7 +118,7 @@ describe('public navigation authority', () => {
       ]),
     );
     expect(visibleItems.some(item => item.href === '/compare')).toBe(false);
-    expect(visibleItems.some(item => item.href.includes('propertyType=commercial'))).toBe(false);
+    expect(visibleItems.map(item => item.href)).toEqual(expect.arrayContaining(['/commercial']));
     expect(visibleItems.some(item => /alert|enquir/i.test(item.label))).toBe(false);
   });
 
@@ -152,12 +154,10 @@ describe('public navigation authority', () => {
         containedProductionRelease,
       ).flatMap(group => group.items);
 
-      expect(
-        localItems,
-      ).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]));
-      expect(
-        productionItems,
-      ).not.toEqual(
+      expect(localItems).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]),
+      );
+      expect(productionItems).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ id: 'buyers-developments' })]),
       );
     }
@@ -177,6 +177,59 @@ describe('public navigation authority', () => {
         .filter(item => item.journey === 'developments')
         .map(item => item.href),
     ).toEqual(['/new-developments']);
+  });
+
+  it('keeps Commercial navigation on its canonical product journey and release gate', () => {
+    const localIntegrationRelease = resolvePublicJourneyReleaseContext({
+      PROD: false,
+      VITE_DEPLOY_ENV: 'development',
+    });
+    const containedHostedRelease = resolvePublicJourneyReleaseContext({
+      PROD: true,
+      VITE_DEPLOY_ENV: 'production',
+    });
+    const explicitHostedRelease = resolvePublicJourneyReleaseContext({
+      PROD: true,
+      VITE_DEPLOY_ENV: 'production',
+      VITE_PUBLIC_JOURNEY_RELEASES: 'commercial',
+    });
+
+    expect(getPublicHeroJourney('commercial', localIntegrationRelease)).toMatchObject({
+      destination: '/commercial',
+      productHomepageVisible: true,
+      productHomepageEnabled: true,
+      homepageVisible: true,
+      homepageEnabled: true,
+    });
+    expect(getPublicHeroJourney('commercial', containedHostedRelease)).toMatchObject({
+      homepageVisible: false,
+      homepageEnabled: false,
+    });
+    expect(getPublicHeroJourney('commercial', explicitHostedRelease)).toMatchObject({
+      homepageVisible: true,
+      homepageEnabled: true,
+    });
+
+    const commercialItems = PUBLIC_NAVIGATION_MENUS.flatMap(menu =>
+      menu.groups.flatMap(group => group.items),
+    ).filter(item => item.journey === 'commercial');
+    expect(commercialItems).toHaveLength(2);
+    expect(commercialItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'buyers-commercial', href: '/commercial' }),
+        expect.objectContaining({ id: 'renters-commercial', href: '/commercial' }),
+      ]),
+    );
+    expect(
+      commercialItems.every(item =>
+        isPublicNavigationVisible(item, 'desktop', localIntegrationRelease),
+      ),
+    ).toBe(true);
+    expect(
+      commercialItems.every(
+        item => !isPublicNavigationVisible(item, 'desktop', containedHostedRelease),
+      ),
+    ).toBe(true);
   });
 
   it('keeps Shared Living independent from the Rent transaction route until its contract exists', () => {
