@@ -26,6 +26,7 @@ import {
 } from '../../shared/commercial-domain';
 import { verifyListingMediaUploadToken } from './listingMediaAuthority';
 import { toMySqlDateTime } from './leadDeliveryService';
+import { resolveCanonicalListingLocation } from './listingLocationResolver';
 
 type Database = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 const positivePublicStates = [
@@ -150,11 +151,8 @@ export type CreateOfficeDraftInput = {
         mode: 'new';
         name: string;
         address?: string | null;
-        province: string;
-        city: string;
-        suburb?: string | null;
-        provinceId?: number | null;
-        cityId?: number | null;
+        provinceId: number;
+        cityId: number;
         suburbId?: number | null;
       }
     | { mode: 'existing'; commercialAssetId: number };
@@ -195,10 +193,42 @@ export type CreateOfficeDraftInput = {
   marketing: { title: string; description: string };
 };
 
+type CanonicalOfficeLocation = {
+  provinceId: number;
+  cityId: number;
+  suburbId: number | null;
+  province: string;
+  city: string;
+  suburb: string | null;
+};
+
+async function resolveRequiredOfficeLocation(input: {
+  provinceId: number | null | undefined;
+  cityId: number | null | undefined;
+  suburbId?: number | null;
+}): Promise<CanonicalOfficeLocation> {
+  const resolved = await resolveCanonicalListingLocation({
+    provinceId: input.provinceId,
+    cityId: input.cityId,
+    suburbId: input.suburbId || null,
+  });
+  if (!resolved.provinceId || !resolved.cityId || !resolved.province || !resolved.city) {
+    throw new Error('Select a valid canonical Province and City for this Office building.');
+  }
+  return {
+    provinceId: resolved.provinceId,
+    cityId: resolved.cityId,
+    suburbId: resolved.suburbId || null,
+    province: resolved.province,
+    city: resolved.city,
+    suburb: resolved.suburb || null,
+  };
+}
+
 /** Assets may only be reused by their original S1 supplier. Supplier sharing is deliberately deferred. */
 export async function reusableOfficeAssetsForAuthor(userId: number) {
   const db = await database();
-  return db
+  const candidates = await db
     .select({
       id: commercialAssets.id,
       name: commercialAssets.name,
@@ -216,6 +246,16 @@ export async function reusableOfficeAssetsForAuthor(userId: number) {
       ),
     )
     .orderBy(commercialAssets.name);
+  const reusable = await Promise.all(
+    candidates.map(async asset => {
+      try {
+        return { ...asset, location: await resolveRequiredOfficeLocation(asset) };
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return reusable.filter((asset): asset is NonNullable<typeof asset> => Boolean(asset));
 }
 
 export async function createOfficeDraft(input: CreateOfficeDraftInput) {
@@ -241,13 +281,14 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
       suburbId: number | null;
     };
     if (input.asset.mode === 'new') {
+      const location = await resolveRequiredOfficeLocation(input.asset);
       const assetResult = await tx.insert(commercialAssets).values({
         assetKind: 'office_building',
         name: input.asset.name.trim(),
         address: input.asset.address || null,
-        provinceId: input.asset.provinceId || null,
-        cityId: input.asset.cityId || null,
-        suburbId: input.asset.suburbId || null,
+        provinceId: location.provinceId,
+        cityId: location.cityId,
+        suburbId: location.suburbId,
         createdByUserId: input.userId,
       });
       commercialAssetId = Number(
@@ -255,12 +296,12 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
       );
       listingLocation = {
         address: input.asset.address || null,
-        city: input.asset.city.trim(),
-        province: input.asset.province.trim(),
-        suburb: input.asset.suburb || null,
-        provinceId: input.asset.provinceId || null,
-        cityId: input.asset.cityId || null,
-        suburbId: input.asset.suburbId || null,
+        city: location.city,
+        province: location.province,
+        suburb: location.suburb,
+        provinceId: location.provinceId,
+        cityId: location.cityId,
+        suburbId: location.suburbId,
       };
     } else {
       const [asset] = await tx
@@ -280,48 +321,15 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
           'The selected Office building is unavailable or you are not authorised to add a space to it.',
         );
       commercialAssetId = asset.id;
-      // A Listing remains marketing authority. Reuse its prior marketing geography; never trust a
-      // client to overwrite an existing Asset's identity or location while adding another suite.
-      const [priorMarketing] = await tx
-        .select({
-          city: listings.city,
-          province: listings.province,
-          suburb: listings.suburb,
-          provinceId: listings.provinceId,
-          cityId: listings.cityId,
-          suburbId: listings.suburbId,
-        })
-        .from(commercialSpaces)
-        .innerJoin(
-          commercialAvailabilities,
-          eq(commercialAvailabilities.commercialSpaceId, commercialSpaces.id),
-        )
-        .innerJoin(
-          commercialAvailabilityListingLinks,
-          and(
-            eq(
-              commercialAvailabilityListingLinks.commercialAvailabilityId,
-              commercialAvailabilities.id,
-            ),
-            eq(commercialAvailabilityListingLinks.linkStatus, 'active'),
-          ),
-        )
-        .innerJoin(listings, eq(listings.id, commercialAvailabilityListingLinks.listingId))
-        .where(eq(commercialSpaces.commercialAssetId, asset.id))
-        .orderBy(desc(listings.createdAt))
-        .limit(1);
-      if (!priorMarketing?.city || !priorMarketing.province)
-        throw new Error(
-          'The selected Office building has no reusable marketing location. Create its first space as a new building instead.',
-        );
+      const location = await resolveRequiredOfficeLocation(asset);
       listingLocation = {
         address: asset.address || null,
-        city: priorMarketing.city,
-        province: priorMarketing.province,
-        suburb: priorMarketing.suburb || null,
-        provinceId: priorMarketing.provinceId || asset.provinceId || null,
-        cityId: priorMarketing.cityId || asset.cityId || null,
-        suburbId: priorMarketing.suburbId || asset.suburbId || null,
+        city: location.city,
+        province: location.province,
+        suburb: location.suburb,
+        provinceId: location.provinceId,
+        cityId: location.cityId,
+        suburbId: location.suburbId,
       };
     }
     const spaceResult = await tx.insert(commercialSpaces).values({

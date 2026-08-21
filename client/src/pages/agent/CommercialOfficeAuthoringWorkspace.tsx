@@ -15,6 +15,18 @@ export default function CommercialOfficeAuthoringWorkspace() {
   const upload = trpc.listing.uploadMedia.useMutation();
   const confirm = trpc.listing.confirmMediaUpload.useMutation();
   const reusableAssets = trpc.commercialOffice.reusableAssets.useQuery();
+  const provinces = trpc.location.getLocationHierarchy.useQuery({ depth: 'province' });
+  const [provinceId, setProvinceId] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [suburbId, setSuburbId] = useState('');
+  const cities = trpc.location.getLocationHierarchy.useQuery(
+    { depth: 'city', provinceId: Number(provinceId) || undefined },
+    { enabled: Boolean(provinceId) },
+  );
+  const suburbs = trpc.location.getLocationHierarchy.useQuery(
+    { depth: 'suburb', cityId: Number(cityId) || undefined },
+    { enabled: Boolean(cityId) },
+  );
   const [listingId, setListingId] = useState<number>();
   const [mode, setMode] = useState<Mode>('componentised');
   const [assetMode, setAssetMode] = useState<'new' | 'existing'>('new');
@@ -23,8 +35,6 @@ export default function CommercialOfficeAuthoringWorkspace() {
   const [f, setF] = useState({
     building: '',
     suite: '',
-    city: '',
-    province: '',
     area: '',
     title: '',
     description: '',
@@ -110,9 +120,17 @@ export default function CommercialOfficeAuthoringWorkspace() {
     try {
       if (assetMode === 'existing' && !commercialAssetId)
         throw new Error('Select the existing Office building for this space.');
+      if (assetMode === 'new' && (!provinceId || !cityId))
+        throw new Error('Select the canonical Province and City for this Office building.');
       const asset =
         assetMode === 'new'
-          ? { mode: 'new' as const, name: f.building, city: f.city, province: f.province }
+          ? {
+              mode: 'new' as const,
+              name: f.building,
+              provinceId: Number(provinceId),
+              cityId: Number(cityId),
+              suburbId: suburbId ? Number(suburbId) : null,
+            }
           : { mode: 'existing' as const, commercialAssetId: Number(commercialAssetId) };
       const result = await create.mutateAsync({
         asset,
@@ -269,8 +287,60 @@ export default function CommercialOfficeAuthoringWorkspace() {
           {assetMode === 'new' ? (
             <>
               {input('Building / asset name', 'building')}
-              {input('City', 'city')}
-              {input('Province', 'province')}
+              <label className="grid gap-1 text-sm">
+                <span>Province</span>
+                <select
+                  className="rounded border p-2"
+                  value={provinceId}
+                  onChange={event => {
+                    setProvinceId(event.target.value);
+                    setCityId('');
+                    setSuburbId('');
+                  }}
+                >
+                  <option value="">Choose Province</option>
+                  {provinces.data?.map(province => (
+                    <option key={province.id} value={province.id}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>City</span>
+                <select
+                  className="rounded border p-2"
+                  value={cityId}
+                  disabled={!provinceId}
+                  onChange={event => {
+                    setCityId(event.target.value);
+                    setSuburbId('');
+                  }}
+                >
+                  <option value="">Choose City</option>
+                  {cities.data?.map(city => (
+                    <option key={city.id} value={city.id}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>Suburb / locality (optional)</span>
+                <select
+                  className="rounded border p-2"
+                  value={suburbId}
+                  disabled={!cityId}
+                  onChange={event => setSuburbId(event.target.value)}
+                >
+                  <option value="">Not specified</option>
+                  {suburbs.data?.map(suburb => (
+                    <option key={suburb.id} value={suburb.id}>
+                      {suburb.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </>
           ) : (
             <>
