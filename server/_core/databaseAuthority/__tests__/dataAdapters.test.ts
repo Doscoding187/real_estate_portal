@@ -343,7 +343,7 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0049_commercial_lead_contexts.sql');
+    expect(plan.migrationHead).toBe('0050_commercial_asset_physical_location.sql');
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {

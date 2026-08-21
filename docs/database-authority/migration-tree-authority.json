@@ -718,6 +718,11 @@
       "purpose": "Captures immutable Commercial Asset, Space and Availability context with a public lead."
     },
     {
+      "path": "server/migrations/0050_commercial_asset_physical_location.sql",
+      "classification": "canonical active",
+      "purpose": "Adds canonical Commercial Asset physical-location authority for Office marketing projection."
+    },
+    {
       "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."
