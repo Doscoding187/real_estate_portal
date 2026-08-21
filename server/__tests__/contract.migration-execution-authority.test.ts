@@ -383,9 +383,20 @@ describe('migration execution authority', () => {
       '0032_land_review_events.sql',
       '0033_land_evidence_access_audit.sql',
       '0034_listing_lead_association.sql',
+      '0035_commercial_assets.sql',
+      '0036_commercial_spaces.sql',
+      '0037_commercial_space_specifications.sql',
+      '0038_commercial_availabilities.sql',
+      '0039_commercial_availability_economics.sql',
+      '0040_commercial_availability_listing_links.sql',
+      '0041_commercial_availability_freshness_semantics.sql',
+      '0042_commercial_economics_value_state_semantics.sql',
+      '0043_commercial_specification_value_state_integrity.sql',
+      '0044_commercial_positive_availability_provenance.sql',
+      '0045_commercial_space_positive_area_integrity.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0034_listing_lead_association.sql',
+      '0045_commercial_space_positive_area_integrity.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

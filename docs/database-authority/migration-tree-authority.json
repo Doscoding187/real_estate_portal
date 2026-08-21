@@ -643,6 +643,61 @@
       "purpose": "Associates listing-generated leads with their durable marketing Listing."
     },
     {
+      "path": "server/migrations/0035_commercial_assets.sql",
+      "classification": "canonical active",
+      "purpose": "Creates persistent Commercial Asset identity independent of marketing listings."
+    },
+    {
+      "path": "server/migrations/0036_commercial_spaces.sql",
+      "classification": "canonical active",
+      "purpose": "Creates independently occupiable Commercial Spaces within a Commercial Asset."
+    },
+    {
+      "path": "server/migrations/0037_commercial_space_specifications.sql",
+      "classification": "canonical active",
+      "purpose": "Creates governed class-specific Commercial Space specifications outside generic listing metadata."
+    },
+    {
+      "path": "server/migrations/0038_commercial_availabilities.sql",
+      "classification": "canonical active",
+      "purpose": "Creates time-sensitive Commercial Availability with distinct availability provenance and freshness."
+    },
+    {
+      "path": "server/migrations/0039_commercial_availability_economics.sql",
+      "classification": "canonical active",
+      "purpose": "Creates Commercial Availability economics with explicit supplied, estimated, unknown and inapplicable states."
+    },
+    {
+      "path": "server/migrations/0040_commercial_availability_listing_links.sql",
+      "classification": "canonical active",
+      "purpose": "Links shared marketing listings to Commercial Availability without giving listings Commercial identity or availability authority."
+    },
+    {
+      "path": "server/migrations/0041_commercial_availability_freshness_semantics.sql",
+      "classification": "canonical active",
+      "purpose": "Enforces that confirmed and upcoming Commercial Availability states carry defensible freshness and occupation semantics."
+    },
+    {
+      "path": "server/migrations/0042_commercial_economics_value_state_semantics.sql",
+      "classification": "canonical active",
+      "purpose": "Enforces that unknown or inapplicable Commercial economics cannot carry amounts, while supplied and estimated economics remain computable."
+    },
+    {
+      "path": "server/migrations/0043_commercial_specification_value_state_integrity.sql",
+      "classification": "canonical active",
+      "purpose": "Enforces that Commercial specifications contain exactly one governed value only when known, and no hidden value otherwise."
+    },
+    {
+      "path": "server/migrations/0044_commercial_positive_availability_provenance.sql",
+      "classification": "canonical active",
+      "purpose": "Extends provenance and freshness requirements to upcoming Commercial Availability, which is also a positive availability claim."
+    },
+    {
+      "path": "server/migrations/0045_commercial_space_positive_area_integrity.sql",
+      "classification": "canonical active",
+      "purpose": "Enforces that known rentable and usable Commercial Space areas are positive physical quantities."
+    },
+    {
       "path": "server/migrations/_archived/rejected-zero-statement/0019_catalogue_publisher_authority_immutability.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the TiDB-incompatible trigger migration rejected after a zero-statement local attempt; it is never executable authority."

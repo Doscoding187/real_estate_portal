@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "71af27485886ac517eb00aa3f4b773e9775e0a104d09ae44ec7637e18d65b4b1",
+  "structuralDigest": "a704f1b1c39c62907a0f1773a7546b69b98a6848f8202e136cb78f7f5c6fca14",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 199,
+  "tableCount": 205,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -51,6 +51,12 @@
     "catalogue_publishers",
     "cities",
     "city_price_analytics",
+    "commercial_assets",
+    "commercial_availabilities",
+    "commercial_availability_economics",
+    "commercial_availability_listing_links",
+    "commercial_space_specifications",
+    "commercial_spaces",
     "commissions",
     "content_approval_queue",
     "content_quality_scores",

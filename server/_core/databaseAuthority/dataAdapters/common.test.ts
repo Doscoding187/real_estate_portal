@@ -89,10 +89,8 @@ describe('durable Database Authority migration guard', () => {
       requiredCapabilities: [PLE_MANUAL_LOCATION_CAPABILITY, COMMERCIAL_INVOICE_TERM_CAPABILITY],
     });
 
-    expect(result.document.expectedHead).toBe(
-      '0034_listing_lead_association.sql',
-    );
-    expect(result.orderedMigrations).toHaveLength(35);
+    expect(result.document.expectedHead).toBe(manifest.document.expectedHead);
+    expect(result.orderedMigrations).toHaveLength(manifest.orderedMigrations.length);
   });
 
   it('rejects an otherwise valid prefix when the database is behind the manifest head', async () => {
