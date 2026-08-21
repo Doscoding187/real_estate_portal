@@ -111,17 +111,23 @@ describe('PLE publication entitlement Database Authority adapter', () => {
     );
   });
 
-  it('classifies the max_active_listings entitlement without silently changing conflicts', () => {
+  it('creates capacity two and permits only the recognized capacity-one fixture upgrade', () => {
     expect(classifyPleFixtureEntitlement([], exactPlan.id)).toEqual({ state: 'created' });
     expect(
       classifyPleFixtureEntitlement(
         [{ id: 1, plan_id: exactPlan.id, feature_key: 'max_active_listings', value_json: 1 }],
         exactPlan.id,
       ),
+    ).toEqual({ state: 'upgraded' });
+    expect(
+      classifyPleFixtureEntitlement(
+        [{ id: 1, plan_id: exactPlan.id, feature_key: 'max_active_listings', value_json: 2 }],
+        exactPlan.id,
+      ),
     ).toEqual({ state: 'reused' });
     expect(() =>
-      assertPleFixtureEntitlementRow(
-        { id: 1, plan_id: exactPlan.id, feature_key: 'max_active_listings', value_json: 2 },
+      classifyPleFixtureEntitlement(
+        [{ id: 1, plan_id: exactPlan.id, feature_key: 'max_active_listings', value_json: 3 }],
         exactPlan.id,
       ),
     ).toThrow('max_active_listings entitlement');

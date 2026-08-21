@@ -24,6 +24,7 @@ import { properties, listings } from './listings';
 import { developments, developerBrandProfiles } from './developments';
 import { cataloguePublishers } from './developerIdentity';
 import { agencies, agents } from './agencies';
+import { commercialAssets, commercialAvailabilities, commercialSpaces } from './commercial';
 
 /**
  * Platform-owned identity for the private prospect journey. This deliberately
@@ -165,6 +166,30 @@ export const leadActivities = mysqlTable('lead_activities', {
   metadata: text(),
   createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
 });
+
+/** Immutable Commercial inventory context captured with a public enquiry. */
+export const commercialLeadContexts = mysqlTable(
+  'commercial_lead_contexts',
+  {
+    id: int().autoincrement().primaryKey(),
+    leadId: int('lead_id').notNull().references(() => leads.id, { onDelete: 'cascade' }),
+    commercialAssetId: int('commercial_asset_id')
+      .notNull()
+      .references(() => commercialAssets.id, { onDelete: 'restrict' }),
+    commercialSpaceId: int('commercial_space_id')
+      .notNull()
+      .references(() => commercialSpaces.id, { onDelete: 'restrict' }),
+    commercialAvailabilityId: int('commercial_availability_id')
+      .notNull()
+      .references(() => commercialAvailabilities.id, { onDelete: 'restrict' }),
+    listingId: int('listing_id').notNull().references(() => listings.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    unique('uq_commercial_lead_contexts_lead').on(table.leadId),
+    index('idx_commercial_lead_contexts_availability').on(table.commercialAvailabilityId),
+  ],
+);
 
 export const prospects = mysqlTable('prospects', {
   id: int().autoincrement().primaryKey(),

@@ -1,0 +1,534 @@
+import { useMemo, useState } from 'react';
+import { AgentAppShell } from '@/components/agent/AgentAppShell';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+
+type Mode = 'componentised' | 'gross_quote';
+const toMinor = (value: string) => Math.round(Number(value || 0) * 100);
+const money = (value: number) =>
+  `R ${(value / 100).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`;
+
+export default function CommercialOfficeAuthoringWorkspace() {
+  const create = trpc.commercialOffice.createDraft.useMutation();
+  const submit = trpc.commercialOffice.submit.useMutation();
+  const attach = trpc.commercialOffice.attachMarketingMedia.useMutation();
+  const upload = trpc.listing.uploadMedia.useMutation();
+  const confirm = trpc.listing.confirmMediaUpload.useMutation();
+  const reusableAssets = trpc.commercialOffice.reusableAssets.useQuery();
+  const provinces = trpc.location.getLocationHierarchy.useQuery({ depth: 'province' });
+  const [provinceId, setProvinceId] = useState('');
+  const [cityId, setCityId] = useState('');
+  const [suburbId, setSuburbId] = useState('');
+  const cities = trpc.location.getLocationHierarchy.useQuery(
+    { depth: 'city', provinceId: Number(provinceId) || undefined },
+    { enabled: Boolean(provinceId) },
+  );
+  const suburbs = trpc.location.getLocationHierarchy.useQuery(
+    { depth: 'suburb', cityId: Number(cityId) || undefined },
+    { enabled: Boolean(cityId) },
+  );
+  const [listingId, setListingId] = useState<number>();
+  const [mode, setMode] = useState<Mode>('componentised');
+  const [assetMode, setAssetMode] = useState<'new' | 'existing'>('new');
+  const [commercialAssetId, setCommercialAssetId] = useState('');
+  const [more, setMore] = useState(false);
+  const [f, setF] = useState({
+    building: '',
+    streetNumber: '',
+    streetName: '',
+    confirmLocation: false,
+    suite: '',
+    area: '',
+    title: '',
+    description: '',
+    base: '',
+    gross: '',
+    operating: '',
+    rates: '',
+    parkingCost: '',
+    fixed: '',
+    utilities: '',
+    vat: 'excluded',
+    minTerm: '',
+    quotedTerm: '',
+    escalation: '',
+    deposit: '',
+    allowance: '',
+    beneficial: '',
+    fitOut: 'fitted',
+    parkingBays: '',
+    backupPower: false,
+    backupWater: false,
+    fibre: false,
+    confirmedAt: new Date().toISOString().slice(0, 16),
+    dueAt: '',
+  });
+  const set = (key: keyof typeof f, value: any) => setF(current => ({ ...current, [key]: value }));
+  const economics = useMemo(() => {
+    const add = (code: string, value: string, basis: any) =>
+      value
+        ? {
+            componentCode: code,
+            valueState: 'supplied',
+            chargeBasis: basis,
+            amountMinor: toMinor(value),
+            rangeMaximumMinor: null,
+          }
+        : {
+            componentCode: code,
+            valueState: 'unknown',
+            chargeBasis: null,
+            amountMinor: null,
+            rangeMaximumMinor: null,
+          };
+    return [
+      mode === 'gross_quote'
+        ? add('gross_rent', f.gross, 'per_m2_month')
+        : add('base_rent', f.base, 'per_m2_month'),
+      mode === 'componentised' ? add('operating_costs', f.operating, 'per_m2_month') : null,
+      mode === 'componentised' ? add('rates_recoveries', f.rates, 'per_m2_month') : null,
+      add('parking', f.parkingCost, 'per_bay_month'),
+      add('fixed_levies', f.fixed, 'fixed_monthly'),
+      add('utilities', f.utilities, 'fixed_monthly'),
+    ].filter(Boolean) as any[];
+  }, [f, mode]);
+  const preview = useMemo(() => {
+    let total = 0;
+    const unresolved: string[] = [];
+    for (const item of economics) {
+      if (item.valueState === 'unknown') {
+        unresolved.push(item.componentCode);
+        continue;
+      }
+      if (item.chargeBasis === 'per_m2_month') total += item.amountMinor * Number(f.area || 0);
+      else if (item.chargeBasis === 'per_bay_month') {
+        if (f.parkingBays) total += item.amountMinor * Number(f.parkingBays);
+        else unresolved.push(item.componentCode);
+      } else total += item.amountMinor;
+    }
+    return { total, unresolved };
+  }, [economics, f.area, f.parkingBays]);
+  const input = (label: string, key: keyof typeof f, type = 'text') => (
+    <label className="grid gap-1 text-sm">
+      <span>{label}</span>
+      <input
+        className="rounded border p-2"
+        type={type}
+        value={f[key] as any}
+        onChange={e => set(key, e.target.value)}
+      />
+    </label>
+  );
+  const save = async () => {
+    try {
+      if (assetMode === 'existing' && !commercialAssetId)
+        throw new Error('Select the existing Office building for this space.');
+      if (assetMode === 'new' && (!provinceId || !cityId))
+        throw new Error('Select the canonical Province and City for this Office building.');
+      if (assetMode === 'new' && (!f.streetName || !f.confirmLocation))
+        throw new Error('Enter the building street and confirm its physical location.');
+      const asset =
+        assetMode === 'new'
+          ? {
+              mode: 'new' as const,
+              name: f.building,
+              provinceId: Number(provinceId),
+              cityId: Number(cityId),
+              suburbId: suburbId ? Number(suburbId) : null,
+              privateAddress: {
+                ...(f.streetNumber ? { streetNumber: f.streetNumber } : {}),
+                streetName: f.streetName,
+                buildingName: f.building,
+              },
+              coordinateSource: 'manual_confirmed' as const,
+              confirmPhysicalLocation: true as const,
+            }
+          : { mode: 'existing' as const, commercialAssetId: Number(commercialAssetId) };
+      const result = await create.mutateAsync({
+        asset,
+        space: { identifier: f.suite, rentableAreaM2: Number(f.area) },
+        availability: {
+          availabilityState: 'available_confirmed',
+          confirmationSource: 'broker',
+          lastConfirmedAt: new Date(f.confirmedAt).toISOString(),
+          reconfirmationDueAt: new Date(f.dueAt || f.confirmedAt).toISOString(),
+          pricingMode: mode,
+          vatTreatment: f.vat as any,
+        },
+        economics,
+        leaseTerms: {
+          minimumLeaseMonths: f.minTerm ? Number(f.minTerm) : null,
+          quotedLeaseMonths: f.quotedTerm ? Number(f.quotedTerm) : null,
+          annualEscalationPercent: f.escalation ? Number(f.escalation) : null,
+          depositMinor: f.deposit ? toMinor(f.deposit) : null,
+          tenantInstallationAllowanceMinor: f.allowance ? toMinor(f.allowance) : null,
+          beneficialOccupationDays: f.beneficial ? Number(f.beneficial) : null,
+        },
+        specifications: [
+          {
+            specificationCode: 'fit_out_condition',
+            valueState: 'known',
+            textValue: f.fitOut,
+            numericValue: null,
+            booleanValue: null,
+          },
+          {
+            specificationCode: 'parking_bays',
+            valueState: f.parkingBays ? 'known' : 'unknown',
+            numericValue: f.parkingBays ? Number(f.parkingBays) : null,
+            textValue: null,
+            booleanValue: null,
+          },
+          {
+            specificationCode: 'backup_power',
+            valueState: 'known',
+            booleanValue: f.backupPower,
+            numericValue: null,
+            textValue: null,
+          },
+          {
+            specificationCode: 'backup_water',
+            valueState: 'known',
+            booleanValue: f.backupWater,
+            numericValue: null,
+            textValue: null,
+          },
+          {
+            specificationCode: 'fibre_connectivity',
+            valueState: 'known',
+            booleanValue: f.fibre,
+            numericValue: null,
+            textValue: null,
+          },
+        ],
+        marketing: { title: f.title, description: f.description },
+      });
+      setListingId(result.listingId);
+      toast.success('Canonical Office draft saved.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to save Office draft.');
+    }
+  };
+  const addMedia = async (file: File | null) => {
+    if (!listingId || !file) return;
+    try {
+      const type = file.type.startsWith('image/')
+        ? 'image'
+        : file.type === 'application/pdf'
+          ? 'pdf'
+          : 'video';
+      const item = await upload.mutateAsync({
+        listingId,
+        type,
+        filename: file.name,
+        contentType: file.type,
+      });
+      const response = await fetch(item.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      if (!response.ok) throw new Error('Marketing media upload failed.');
+      const done = await confirm.mutateAsync({ uploadToken: item.uploadToken });
+      await attach.mutateAsync({ listingId, uploadToken: done.uploadToken });
+      toast.success('Marketing media attached to the Listing.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Unable to attach marketing media.');
+    }
+  };
+  if (listingId)
+    return (
+      <AgentAppShell>
+        <main className="mx-auto max-w-3xl space-y-4 p-6">
+          <h1 className="text-2xl font-semibold">Office draft ready</h1>
+          <p>Listing #{listingId} is linked to the canonical Office availability.</p>
+          <label>
+            Marketing media{' '}
+            <input
+              type="file"
+              accept="image/*,video/*,application/pdf"
+              onChange={e => addMedia(e.target.files?.[0] || null)}
+            />
+          </label>
+          <button
+            className="rounded bg-slate-900 px-3 py-2 text-white"
+            onClick={() => submit.mutate({ listingId })}
+          >
+            Submit through Listing review
+          </button>
+        </main>
+      </AgentAppShell>
+    );
+  const selectedAsset = reusableAssets.data?.find(asset => asset.id === Number(commercialAssetId));
+  return (
+    <AgentAppShell>
+      <main className="mx-auto max-w-3xl space-y-6 p-6">
+        <header>
+          <p className="text-sm font-medium text-sky-700">Commercial · Office leasing</p>
+          <h1 className="text-3xl font-semibold">Create an Office vacancy</h1>
+          <p className="text-slate-600">
+            Enter what is known. Unknown charges remain clearly unresolved for the Cost Passport.
+          </p>
+        </header>
+        <section className="grid gap-3 rounded border p-4">
+          <h2 className="font-semibold">Office identity</h2>
+          <div className="grid gap-2 md:grid-cols-2">
+            <label className="rounded border p-3">
+              <input
+                type="radio"
+                checked={assetMode === 'new'}
+                onChange={() => setAssetMode('new')}
+              />{' '}
+              <b>Create a new building</b>
+              <span className="block text-sm text-slate-600">
+                Use this for the first space in a building.
+              </span>
+            </label>
+            <label className="rounded border p-3">
+              <input
+                type="radio"
+                checked={assetMode === 'existing'}
+                onChange={() => setAssetMode('existing')}
+              />{' '}
+              <b>Add space to an existing building</b>
+              <span className="block text-sm text-slate-600">
+                Only your active Office buildings are available.
+              </span>
+            </label>
+          </div>
+          {assetMode === 'new' ? (
+            <>
+              {input('Building / asset name', 'building')}
+              {input('Street number (optional)', 'streetNumber')}
+              {input('Street name', 'streetName')}
+              <label className="grid gap-1 text-sm">
+                <span>Province</span>
+                <select
+                  className="rounded border p-2"
+                  value={provinceId}
+                  onChange={event => {
+                    setProvinceId(event.target.value);
+                    setCityId('');
+                    setSuburbId('');
+                  }}
+                >
+                  <option value="">Choose Province</option>
+                  {provinces.data?.map(province => (
+                    <option key={province.id} value={province.id}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={f.confirmLocation}
+                  onChange={event => set('confirmLocation', event.target.checked)}
+                />{' '}
+                I confirm this is the physical building location.
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>City</span>
+                <select
+                  className="rounded border p-2"
+                  value={cityId}
+                  disabled={!provinceId}
+                  onChange={event => {
+                    setCityId(event.target.value);
+                    setSuburbId('');
+                  }}
+                >
+                  <option value="">Choose City</option>
+                  {cities.data?.map(city => (
+                    <option key={city.id} value={city.id}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span>Suburb / locality (optional)</span>
+                <select
+                  className="rounded border p-2"
+                  value={suburbId}
+                  disabled={!cityId}
+                  onChange={event => setSuburbId(event.target.value)}
+                >
+                  <option value="">Not specified</option>
+                  {suburbs.data?.map(suburb => (
+                    <option key={suburb.id} value={suburb.id}>
+                      {suburb.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : (
+            <>
+              <label className="grid gap-1 text-sm">
+                <span>Existing Office building</span>
+                <select
+                  className="rounded border p-2"
+                  value={commercialAssetId}
+                  onChange={e => setCommercialAssetId(e.target.value)}
+                >
+                  <option value="">Select a building</option>
+                  {reusableAssets.data?.map(asset => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.name}
+                      {asset.address ? ` — ${asset.address}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {selectedAsset && (
+                <p className="rounded bg-slate-50 p-3 text-sm">
+                  <b>{selectedAsset.name}</b>
+                  {selectedAsset.address ? ` · ${selectedAsset.address}` : ''}
+                  <br />
+                  The building identity and location will not be changed.
+                </p>
+              )}
+            </>
+          )}
+          {input('Suite or floor', 'suite')}
+          {input('Rentable m²', 'area', 'number')}
+          {input('Marketing title', 'title')}
+          <label>
+            Marketing description
+            <textarea
+              className="mt-1 w-full rounded border p-2"
+              value={f.description}
+              onChange={e => set('description', e.target.value)}
+            />
+          </label>
+        </section>
+        <section className="space-y-3 rounded border p-4">
+          <h2 className="font-semibold">How is the rental quoted?</h2>
+          <label className="block rounded border p-3">
+            <input
+              type="radio"
+              checked={mode === 'gross_quote'}
+              onChange={() => setMode('gross_quote')}
+            />{' '}
+            <b>Gross rental</b>
+            <span className="block text-sm text-slate-600">
+              The quoted rent already includes some property charges.
+            </span>
+          </label>
+          <label className="block rounded border p-3">
+            <input
+              type="radio"
+              checked={mode === 'componentised'}
+              onChange={() => setMode('componentised')}
+            />{' '}
+            <b>Componentised rental</b>
+            <span className="block text-sm text-slate-600">
+              Base rent and additional property charges are quoted separately.
+            </span>
+          </label>
+          {mode === 'gross_quote' ? (
+            input('Supplied gross rental (R/m²/month)', 'gross', 'number')
+          ) : (
+            <div className="grid gap-3 md:grid-cols-3">
+              {input('Base / net rent (R/m²)', 'base', 'number')}
+              {input('Operating costs (R/m²)', 'operating', 'number')}
+              {input('Rates / recoveries (R/m²)', 'rates', 'number')}
+            </div>
+          )}
+          <div className="grid gap-3 md:grid-cols-2">
+            {input('Parking charge (R/bay/month)', 'parkingCost', 'number')}
+            {input('Other fixed recurring charge (R/month)', 'fixed', 'number')}
+            {input('Utilities (R/month; blank means unknown)', 'utilities', 'number')}
+          </div>
+          <label>
+            VAT treatment{' '}
+            <select value={f.vat} onChange={e => set('vat', e.target.value)}>
+              <option value="excluded">Excluded</option>
+              <option value="included">Included</option>
+              <option value="unknown">Unknown</option>
+              <option value="not_applicable">Not applicable</option>
+            </select>
+          </label>
+          <div className="rounded bg-slate-50 p-3 text-sm">
+            <b>Cost Passport preview</b>
+            <p>Known recurring monthly cost: {money(preview.total)}</p>
+            <p>
+              {preview.unresolved.length
+                ? `Still unresolved: ${preview.unresolved.join(', ').replace(/_/g, ' ')}`
+                : 'All declared recurring charges are included.'}
+            </p>
+            <p>
+              {mode === 'gross_quote'
+                ? 'Gross rent is the only rental component; net/operating/rates are not added.'
+                : 'Componentised amounts are calculated separately.'}
+            </p>
+          </div>
+        </section>
+        <section className="space-y-3 rounded border p-4">
+          <button className="font-semibold underline" onClick={() => setMore(!more)}>
+            {more ? 'Hide' : 'Add'} lease terms and office facts
+          </button>
+          {more && (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                {input('Minimum lease months', 'minTerm', 'number')}
+                {input('Quoted lease months', 'quotedTerm', 'number')}
+                {input('Annual escalation (%)', 'escalation', 'number')}
+                {input('Deposit (R)', 'deposit', 'number')}
+                {input('Tenant-installation allowance (R)', 'allowance', 'number')}
+                {input('Beneficial / rent-free occupation days', 'beneficial', 'number')}
+              </div>
+              {input('Fit-out condition', 'fitOut')}
+              {input('Parking bays available', 'parkingBays', 'number')}
+              <label>
+                <input
+                  type="checkbox"
+                  checked={f.backupPower}
+                  onChange={e => set('backupPower', e.target.checked)}
+                />{' '}
+                Backup power
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={f.backupWater}
+                  onChange={e => set('backupWater', e.target.checked)}
+                />{' '}
+                Backup water
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={f.fibre}
+                  onChange={e => set('fibre', e.target.checked)}
+                />{' '}
+                Fibre
+              </label>
+              <label>
+                Confirmed at{' '}
+                <input
+                  type="datetime-local"
+                  value={f.confirmedAt}
+                  onChange={e => set('confirmedAt', e.target.value)}
+                />
+              </label>
+              <label>
+                Reconfirm by{' '}
+                <input
+                  type="datetime-local"
+                  value={f.dueAt}
+                  onChange={e => set('dueAt', e.target.value)}
+                />
+              </label>
+            </>
+          )}
+        </section>
+        <button className="rounded bg-slate-900 px-4 py-2 text-white" onClick={save}>
+          Save canonical Office draft
+        </button>
+      </main>
+    </AgentAppShell>
+  );
+}

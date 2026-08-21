@@ -12,6 +12,7 @@ import {
   PLE_REVIEWER_TARGET,
   PLE_REVIEWER_USER_ID,
 } from '../dataAdapters/pleReviewerFixture';
+import { SEARCH_TO_LEAD_DETERMINISTIC_USER_IDS } from '../dataAdapters/searchToLeadScenario';
 
 const EXPECTED_DATABASE = 'listify_wt_ple_acceptance_0123456789ab';
 
@@ -50,7 +51,7 @@ const exactReviewer = {
 
 describe('PLE reviewer Database Authority adapter', () => {
   it('keeps reviewer capability verification separate from global application readiness', () => {
-    expect(PLE_REVIEWER_FIXTURE_VERSION).toBe('ple-reviewer-v2');
+    expect(PLE_REVIEWER_FIXTURE_VERSION).toBe('ple-reviewer-v3');
     const source = readFileSync(
       join(process.cwd(), 'server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts'),
       'utf8',
@@ -107,9 +108,11 @@ describe('PLE reviewer Database Authority adapter', () => {
     ).toThrow('reviewer email');
   });
 
-  it('uses the reserved next fixture ID and isolated identity', () => {
+  it('uses the reserved reviewer block and does not collide with Search-to-Lead users', () => {
+    expect(PLE_REVIEWER_USER_ID).toBeGreaterThan(99099);
+    expect(SEARCH_TO_LEAD_DETERMINISTIC_USER_IDS).not.toContain(PLE_REVIEWER_USER_ID);
     expect({ PLE_REVIEWER_USER_ID, PLE_REVIEWER_EMAIL, PLE_REVIEWER_OPEN_ID }).toEqual({
-      PLE_REVIEWER_USER_ID: 990005,
+      PLE_REVIEWER_USER_ID: 990100,
       PLE_REVIEWER_EMAIL: 'ple-reviewer@listify.local',
       PLE_REVIEWER_OPEN_ID: 'ple-reviewer-v1',
     });

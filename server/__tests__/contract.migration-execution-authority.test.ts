@@ -394,9 +394,14 @@ describe('migration execution authority', () => {
       '0043_commercial_specification_value_state_integrity.sql',
       '0044_commercial_positive_availability_provenance.sql',
       '0045_commercial_space_positive_area_integrity.sql',
+      '0046_commercial_office_quote_terms.sql',
+      '0047_commercial_gross_rental_component.sql',
+      '0048_commercial_lease_terms.sql',
+      '0049_commercial_lead_contexts.sql',
+      '0050_commercial_asset_physical_location.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0045_commercial_space_positive_area_integrity.sql',
+      '0050_commercial_asset_physical_location.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

@@ -73,6 +73,16 @@ const SCENARIO_IDS = Object.freeze({
   unit: '00000000-0000-4000-8000-000000000001',
 });
 
+export const SEARCH_TO_LEAD_DETERMINISTIC_USER_IDS = Object.freeze([
+  SCENARIO_IDS.developerUser,
+  SCENARIO_IDS.agentUser,
+  SCENARIO_IDS.agencyOnlyUser,
+  SCENARIO_IDS.platformOperationsUser,
+  SCENARIO_IDS.unrelatedAgencyAdminUser,
+  SCENARIO_IDS.unrelatedAgentUser,
+  SCENARIO_IDS.unrelatedDeveloperUser,
+] as const);
+
 const SCENARIO_PAYLOAD = Object.freeze({
   version: SEARCH_TO_LEAD_SCENARIO_VERSION,
   ids: SCENARIO_IDS,

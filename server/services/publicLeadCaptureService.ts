@@ -3,6 +3,7 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
   cataloguePublishers,
+  commercialLeadContexts,
   developerOrganisations,
   developerOrganisationMemberships,
   developmentSupersessions,
@@ -36,6 +37,7 @@ import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibi
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { resolvePublicPropertyEligibility } from './publicPropertyEligibilityService';
 import { resolvePublicLandLeadCustody } from './landPublicService';
+import { resolvePublicCommercialOfficeLeadCustody } from './commercialOfficeService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
@@ -54,6 +56,7 @@ export interface PublicLeadCaptureInput {
   /** Set only by an authenticated server boundary; never a public client field. */
   authenticatedUserId?: number;
   listingId?: number;
+  commercialAvailabilityId?: number;
   propertyId?: number;
   developmentId?: number;
   cataloguePublisherId?: number;
@@ -101,6 +104,7 @@ export interface ResolvedLeadOwnership {
   leadDeliveryMethod: 'crm_export' | 'manual';
   brandLeadStatus?: 'captured' | 'delivered_unsubscribed' | 'delivered_subscriber';
   reason?: string | null;
+  commercialContext?: { commercialAssetId: number; commercialSpaceId: number; commercialAvailabilityId: number };
 }
 
 export interface PublicLeadCaptureResult {
@@ -412,10 +416,17 @@ export async function resolveLeadOwnership(
 
   const propertyId = positiveId(input.propertyId);
   const listingId = positiveId(input.listingId);
+  const commercialAvailabilityId = positiveId(input.commercialAvailabilityId);
   const requestedDevelopmentId = positiveId(input.developmentId);
   const requestedBrandId = positiveId(input.cataloguePublisherId);
   if (listingId && propertyId) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Choose one canonical enquiry source.' });
   if (listingId) {
+    if (commercialAvailabilityId) {
+      const commercial = await resolvePublicCommercialOfficeLeadCustody({ listingId, commercialAvailabilityId });
+      if (!commercial) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
+      const agentId = positiveId(commercial.agentId); const agencyId = positiveId(commercial.agencyId); const recipientId = agentId ?? agencyId;
+      return { listingId, agentId, agencyId, supplyOrigin: 'customer_managed', leadCustody: recipientId ? 'verified_customer_recipient' : 'attention_required', recipientType: recipientId ? (agentId ? 'agent' : 'agency') : 'manual', recipientId: recipientId ?? null, leadDeliveryMethod: recipientId ? 'crm_export' : 'manual', reason: recipientId ? null : 'The Commercial marketing listing has no deliverable supplier recipient.', commercialContext: { commercialAssetId: commercial.commercialAssetId, commercialSpaceId: commercial.commercialSpaceId, commercialAvailabilityId: commercial.commercialAvailabilityId } };
+    }
     const land = await resolvePublicLandLeadCustody(listingId);
     if (!land) throw new TRPCError({ code: 'NOT_FOUND', message: 'Listing not available for public enquiries.' });
     const agentId = positiveId(land.agentId); const agencyId = positiveId(land.agencyId); const recipientId = agentId ?? agencyId;
@@ -819,6 +830,12 @@ async function recoverExistingLead(
   }
 
   let durableLead = existing;
+  if (positiveId(input.commercialAvailabilityId)) {
+    const resolvedCommercial = await resolveLeadOwnership(input);
+    if (!resolvedCommercial.commercialContext) throw new TRPCError({ code: 'NOT_FOUND', message: 'Commercial Office space is not available for public enquiries.' });
+    const [context] = await database.select({ id: commercialLeadContexts.id }).from(commercialLeadContexts).where(eq(commercialLeadContexts.leadId, existing.id)).limit(1);
+    if (!context) await database.insert(commercialLeadContexts).values({ leadId: existing.id, listingId: resolvedCommercial.listingId!, commercialAssetId: resolvedCommercial.commercialContext.commercialAssetId, commercialSpaceId: resolvedCommercial.commercialContext.commercialSpaceId, commercialAvailabilityId: resolvedCommercial.commercialContext.commercialAvailabilityId });
+  }
   if (!Array.isArray(existing.deliveryAttempts) || existing.deliveryAttempts.length === 0) {
     const replayResolved = await resolveLeadOwnership(input);
     const replayStatus: LeadDeliveryStatus =
@@ -889,7 +906,8 @@ export async function capturePublicLead(
 
   let insertResult: any;
   try {
-    [insertResult] = await database.insert(leads).values({
+    const persist = async (tx: any) => {
+    [insertResult] = await tx.insert(leads).values({
       listingId: resolved.listingId || null,
       propertyId: resolved.propertyId || null,
       developmentId: resolved.developmentId || null,
@@ -924,6 +942,9 @@ export async function capturePublicLead(
       leadDeliveryMethod: resolved.leadDeliveryMethod,
       ...deliverySummary,
     } satisfies LeadInsert);
+    if (resolved.commercialContext) await tx.insert(commercialLeadContexts).values({ leadId: Number(insertResult.insertId), listingId: resolved.listingId!, commercialAssetId: resolved.commercialContext.commercialAssetId, commercialSpaceId: resolved.commercialContext.commercialSpaceId, commercialAvailabilityId: resolved.commercialContext.commercialAvailabilityId });
+    };
+    if (resolved.commercialContext && typeof (database as any).transaction === 'function') await (database as any).transaction(persist); else await persist(database);
   } catch (error) {
     if (input.captureRequestId && isDuplicateKeyError(error)) {
       const duplicate = await findLeadByCaptureRequestId(database, input.captureRequestId);

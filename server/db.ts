@@ -60,6 +60,10 @@ import {
   partners,
   explorePartners,
   auditLogs,
+  commercialAvailabilityEconomics,
+  commercialAvailabilityListingLinks,
+  commercialAvailabilities,
+  commercialSpaces,
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env';
@@ -101,6 +105,101 @@ import {
   summarizePropertyPresentation,
 } from '../shared/property-presentation';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
+import { assertCommercialPricingContract } from '../shared/commercial-domain';
+
+type CommercialListingApplicability =
+  | { kind: 'not_owned' }
+  | { kind: 'canonical_office' }
+  | { kind: 'invalid_commercial_context'; message: string };
+
+/** Resolves capability ownership from the canonical Listing association, never propertyType. */
+async function resolveCommercialListingApplicability(
+  db: any,
+  listingId: number,
+): Promise<CommercialListingApplicability> {
+  const links = await db
+    .select()
+    .from(commercialAvailabilityListingLinks)
+    .where(eq(commercialAvailabilityListingLinks.listingId, listingId));
+  if (!links.length) return { kind: 'not_owned' };
+  if (links.length !== 1 || links[0].linkStatus !== 'active') {
+    return {
+      kind: 'invalid_commercial_context',
+      message: 'Commercial Listing association is not a single active canonical association.',
+    };
+  }
+  const [availability] = await db
+    .select()
+    .from(commercialAvailabilities)
+    .where(eq(commercialAvailabilities.id, links[0].commercialAvailabilityId))
+    .limit(1);
+  if (!availability) {
+    return {
+      kind: 'invalid_commercial_context',
+      message: 'Commercial Listing association has no canonical Availability.',
+    };
+  }
+  const [space] = await db
+    .select()
+    .from(commercialSpaces)
+    .where(eq(commercialSpaces.id, availability.commercialSpaceId))
+    .limit(1);
+  if (!space || space.spaceClass !== 'office' || availability.transactionType !== 'lease') {
+    return {
+      kind: 'invalid_commercial_context',
+      message: 'Commercial Listing association is not an Office lease Availability.',
+    };
+  }
+  return { kind: 'canonical_office' };
+}
+
+async function validateCommercialOfficeListingPricing(
+  db: any,
+  listingId: number,
+): Promise<CommercialListingApplicability> {
+  const applicability = await resolveCommercialListingApplicability(db, listingId);
+  if (applicability.kind !== 'canonical_office') return applicability;
+  const [link] = await db
+    .select()
+    .from(commercialAvailabilityListingLinks)
+    .where(
+      and(
+        eq(commercialAvailabilityListingLinks.listingId, listingId),
+        eq(commercialAvailabilityListingLinks.linkStatus, 'active'),
+      ),
+    )
+    .limit(1);
+  if (!link)
+    return {
+      kind: 'invalid_commercial_context',
+      message: 'Commercial Listing association disappeared during validation.',
+    };
+  const [availability] = await db
+    .select()
+    .from(commercialAvailabilities)
+    .where(eq(commercialAvailabilities.id, link.commercialAvailabilityId))
+    .limit(1);
+  if (!availability || availability.transactionType !== 'lease')
+    return {
+      kind: 'invalid_commercial_context',
+      message: 'Commercial Office listing has no active lease availability.',
+    };
+  const economics = await db
+    .select()
+    .from(commercialAvailabilityEconomics)
+    .where(eq(commercialAvailabilityEconomics.commercialAvailabilityId, availability.id));
+  assertCommercialPricingContract({
+    pricingMode: availability.pricingMode as any,
+    economics: economics.map((item: any) => ({
+      componentCode: item.componentCode,
+      valueState: item.valueState,
+      chargeBasis: item.chargeBasis,
+      amountMinor: item.amountMinor,
+      rangeMaximumMinor: item.rangeMaximumMinor,
+    })),
+  });
+  return applicability;
+}
 
 // Re-export getDb from the connection module to maintain backward compatibility
 // and break circular dependency with locationResolverService
@@ -2599,12 +2698,18 @@ export async function submitListingForReview(listingId: number, database?: any) 
   if (locationIssues.length > 0) {
     throw new Error(locationIssues.join(' '));
   }
-  const pricingIssues = validatePricingContract(
-    String((transitionListing as any).action),
-    (listing as any)?.pricing,
-    (listing as any)?.propertyDetails,
-    { mode: 'publish', enforceInputShape: false },
-  );
+  const commercialPricing = await validateCommercialOfficeListingPricing(db, listingId);
+  if (commercialPricing.kind === 'invalid_commercial_context')
+    throw new Error(commercialPricing.message);
+  const pricingIssues =
+    commercialPricing.kind === 'canonical_office'
+      ? []
+      : validatePricingContract(
+          String((transitionListing as any).action),
+          (listing as any)?.pricing,
+          (listing as any)?.propertyDetails,
+          { mode: 'publish', enforceInputShape: false },
+        );
   if (pricingIssues.length > 0) {
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
   }
@@ -3072,10 +3177,7 @@ async function syncPublishedListingMediaToPropertyMirrorWithDatabase(
  * Callers that already own a transaction must pass its executor. The wrapper
  * retains standalone atomic behavior for callers outside an approval flow.
  */
-export async function syncPublishedListingMediaToPropertyMirror(
-  listingId: number,
-  database?: any,
-) {
+export async function syncPublishedListingMediaToPropertyMirror(listingId: number, database?: any) {
   const db = database || (await getDb());
   if (!db) throw new Error('Database not available');
 
@@ -3329,28 +3431,22 @@ async function buildCanonicalPublicPropertyProjection(
     featuresContext,
     ...buildCanonicalCorePropertyDetails(String(listing.propertyType) as any, details),
   };
-  const pricingProjection = getPricingProjection(
-    String(listing.action),
-    pricing,
-    canonicalDetails,
-  );
+  const pricingProjection = getPricingProjection(String(listing.action), pricing, canonicalDetails);
   if (pricingProjection.contract) {
     canonicalDetails.pricingContract = pricingProjection.contract;
   }
 
-  const core = buildCorePropertyInformation(
-    String(listing.propertyType) as any,
-    canonicalDetails,
-  );
-  const bedrooms = knownCoreNumber(core.bedrooms) ??
+  const core = buildCorePropertyInformation(String(listing.propertyType) as any, canonicalDetails);
+  const bedrooms =
+    knownCoreNumber(core.bedrooms) ??
     (Number.isFinite(Number(details.bedrooms)) ? Number(details.bedrooms) : null);
-  const bathrooms = knownCoreNumber(core.bathrooms) ??
+  const bathrooms =
+    knownCoreNumber(core.bathrooms) ??
     (Number.isFinite(Number(details.bathrooms)) ? Number(details.bathrooms) : null);
   const internalAreaM2 = knownCoreMeasurement(core.internalArea);
   const erfSizeM2 = knownCoreMeasurement(core.erfArea);
   const landAreaM2 =
-    core.farmLandArea?.status === 'known' &&
-    Number.isFinite(Number(core.farmLandArea.normalizedM2))
+    core.farmLandArea?.status === 'known' && Number.isFinite(Number(core.farmLandArea.normalizedM2))
       ? Number(core.farmLandArea.normalizedM2)
       : null;
   const compatibilityAreaCandidates = [
@@ -3597,12 +3693,18 @@ export async function approveListing(
       : {}),
   });
 
-  const pricingIssues = validatePricingContract(
-    String((listing as any).action),
-    (listing as any).pricing,
-    (listing as any).propertyDetails,
-    { mode: 'publish', enforceInputShape: false },
-  );
+  const commercialPricing = await validateCommercialOfficeListingPricing(db, listingId);
+  if (commercialPricing.kind === 'invalid_commercial_context')
+    throw new Error(commercialPricing.message);
+  const pricingIssues =
+    commercialPricing.kind === 'canonical_office'
+      ? []
+      : validatePricingContract(
+          String((listing as any).action),
+          (listing as any).pricing,
+          (listing as any).propertyDetails,
+          { mode: 'publish', enforceInputShape: false },
+        );
   if (pricingIssues.length > 0) {
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
   }
@@ -4449,13 +4551,13 @@ async function listDeveloperOrganisationRows(
 ) {
   const database = await getDb();
   if (!database) return [];
-  const conditions: SQL[] = [
-    eq(cataloguePublishers.authorityKind, 'developer_first_party'),
-  ];
+  const conditions: SQL[] = [eq(cataloguePublishers.authorityKind, 'developer_first_party')];
   if (status) conditions.push(eq(developerOrganisations.status, status));
-  if (filters?.category) conditions.push(eq(developerOrganisations.category, filters.category as any));
+  if (filters?.category)
+    conditions.push(eq(developerOrganisations.category, filters.category as any));
   if (filters?.city) conditions.push(like(developerOrganisations.city, `%${filters.city}%`));
-  if (filters?.province) conditions.push(like(developerOrganisations.province, `%${filters.province}%`));
+  if (filters?.province)
+    conditions.push(like(developerOrganisations.province, `%${filters.province}%`));
   if (filters?.isVerified !== undefined) {
     conditions.push(eq(developerOrganisations.isVerified, filters.isVerified));
   }
@@ -4556,13 +4658,26 @@ export async function updateDeveloper(
   if (!row) return false;
 
   const organisationValues: Record<string, unknown> = {};
-  for (const key of ['name', 'description', 'website', 'email', 'phone', 'address', 'city', 'province', 'establishedYear'] as const) {
+  for (const key of [
+    'name',
+    'description',
+    'website',
+    'email',
+    'phone',
+    'address',
+    'city',
+    'province',
+    'establishedYear',
+  ] as const) {
     if (data[key] !== undefined) organisationValues[key] = data[key];
   }
   if (data.logo !== undefined) organisationValues.logo = data.logo;
   if (data.specializations !== undefined) organisationValues.specializations = data.specializations;
   if (Object.keys(organisationValues).length) {
-    await database.update(developerOrganisations).set(organisationValues as any).where(eq(developerOrganisations.id, id));
+    await database
+      .update(developerOrganisations)
+      .set(organisationValues as any)
+      .where(eq(developerOrganisations.id, id));
   }
 
   const publisherValues: Record<string, unknown> = {};
@@ -4572,7 +4687,10 @@ export async function updateDeveloper(
   if (data.website !== undefined) publisherValues.websiteUrl = data.website;
   if (data.email !== undefined) publisherValues.publicContactEmail = data.email;
   if (Object.keys(publisherValues).length) {
-    await database.update(cataloguePublishers).set(publisherValues as any).where(eq(cataloguePublishers.id, row.publisher.id));
+    await database
+      .update(cataloguePublishers)
+      .set(publisherValues as any)
+      .where(eq(cataloguePublishers.id, row.publisher.id));
   }
   return true;
 }
@@ -4803,10 +4921,7 @@ export async function getEcosystemStats() {
       .where(sql`${agents.createdAt} > ${dateStr}`),
   ]);
 
-  const firstPartyPublisher = eq(
-    cataloguePublishers.authorityKind,
-    'developer_first_party',
-  );
+  const firstPartyPublisher = eq(cataloguePublishers.authorityKind, 'developer_first_party');
   const [totalDevelopers, activeDevelopers, newDevelopers] = await Promise.all([
     db.select({ count: count() }).from(cataloguePublishers).where(firstPartyPublisher),
     db

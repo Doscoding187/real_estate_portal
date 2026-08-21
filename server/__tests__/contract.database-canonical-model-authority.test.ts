@@ -142,9 +142,9 @@ describe('database canonical model authority', () => {
       match => String(match[1]),
     ).sort();
 
-    expect(inventory.tableCount).toBe(205);
-    expect(inventory.tables).toHaveLength(205);
-    expect(new Set(inventory.tables).size).toBe(205);
+    expect(inventory.tableCount).toBe(207);
+    expect(inventory.tables).toHaveLength(207);
+    expect(new Set(inventory.tables).size).toBe(207);
     expect([...inventory.tables].sort()).toEqual(
       inventory.tables,
     );

@@ -19,10 +19,12 @@ import {
   resolveCentralLocalEnvironment,
 } from '../../../../scripts/localEnvironmentAuthority';
 
-export const PLE_REVIEWER_FIXTURE_VERSION = 'ple-reviewer-v2' as const;
+export const PLE_REVIEWER_FIXTURE_VERSION = 'ple-reviewer-v3' as const;
 export const PLE_REVIEWER_FIXTURE = 'ple-reviewer-acceptance' as const;
 export const PLE_REVIEWER_PASSWORD_VARIABLE = 'LOCAL_PLE_REVIEWER_PASSWORD' as const;
-export const PLE_REVIEWER_USER_ID = 990005 as const;
+// Reviewer identities occupy the 990100+ fixture block, separate from the
+// Search-to-Lead scenario's 990001–990007 user block.
+export const PLE_REVIEWER_USER_ID = 990100 as const;
 export const PLE_REVIEWER_EMAIL = 'ple-reviewer@listify.local' as const;
 export const PLE_REVIEWER_OPEN_ID = 'ple-reviewer-v1' as const;
 

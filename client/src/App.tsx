@@ -90,6 +90,9 @@ const AdminPropertyReview = lazy(() => import('./pages/admin/AdminPropertyReview
 const LandReviewWorkspace = lazy(() => import('./pages/admin/LandReviewWorkspace'));
 const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
 const LandDetail = lazy(() => import('./pages/LandDetail'));
+const CommercialOffice = lazy(() => import('./pages/CommercialOffice'));
+const CommercialOfficeDetail = lazy(() => import('./pages/CommercialOfficeDetail'));
+const CommercialOfficeAuthoringWorkspace = lazy(() => import('./pages/agent/CommercialOfficeAuthoringWorkspace'));
 
 // Import new role-based dashboards
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
@@ -269,6 +272,7 @@ function Router() {
           <Route path="/agent/land/create">
             <RequireRole role="agent"><LandAuthoringWorkspace /></RequireRole>
           </Route>
+          <Route path="/agent/commercial/office/create"><RequireRole role="agent"><CommercialOfficeAuthoringWorkspace /></RequireRole></Route>
           <Route path="/agent/leads">
             <RequireRole role="agent">
               <AgentLeads />
@@ -347,6 +351,8 @@ function Router() {
 
           {/* Canonical Developments Root */}
           <Route path="/new-developments" component={DevelopmentsDemo} />
+          <Route path="/commercial" component={CommercialOffice} />
+          <Route path="/commercial/:slug" component={CommercialOfficeDetail} />
           {/* Redirect Legacy /developments to /new-developments */}
           <Route
             path="/developments"

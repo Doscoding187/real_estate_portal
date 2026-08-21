@@ -24,7 +24,7 @@ describe('PLE-6C manual location without coordinates migration', () => {
       approvalReference: 'PLE-6C-2026-08-10-Edward',
     });
     expect(manifest.expectedHead.filename).toBe(
-      '0045_commercial_space_positive_area_integrity.sql',
+      '0050_commercial_asset_physical_location.sql',
     );
   });
 

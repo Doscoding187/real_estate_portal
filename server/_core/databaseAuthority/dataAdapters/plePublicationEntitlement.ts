@@ -15,7 +15,7 @@ import {
 import type { ResolvedDatabaseAuthority } from '../types';
 import { LISTING_PREVIEW_FIXTURE_IDENTITIES } from './listingPreviewFixture';
 
-export const PLE_PUBLICATION_ENTITLEMENT_VERSION = 'ple-publication-entitlement-v2' as const;
+export const PLE_PUBLICATION_ENTITLEMENT_VERSION = 'ple-publication-entitlement-v3' as const;
 export const PLE_PUBLICATION_ENTITLEMENT_FIXTURE = 'ple-publication-acceptance' as const;
 export const PLE_PUBLICATION_ENTITLEMENT_PLAN_NAME =
   'listing_preview_agency_acceptance_v1' as const;
@@ -56,8 +56,10 @@ const PLAN_EXPECTED = Object.freeze({
 
 const ENTITLEMENT_EXPECTED = Object.freeze({
   featureKey: 'max_active_listings',
-  value: 1,
+  value: 2,
 });
+
+const RECOGNIZED_PRIOR_MAX_ACTIVE_LISTINGS = 1;
 
 const SUBSCRIPTION_EXPECTED = Object.freeze({
   ownerType: 'agency',
@@ -78,7 +80,7 @@ const FIXTURE_PAYLOAD = Object.freeze({
 export const PLE_PUBLICATION_ENTITLEMENT_DIGEST = stableDigest(FIXTURE_PAYLOAD);
 
 type Row = Record<string, unknown>;
-type PreparedState = 'created' | 'reused';
+type PreparedState = 'created' | 'reused' | 'upgraded';
 
 export type PlePublicationFixtureActors = {
   ownerKind: 'agency';
@@ -103,7 +105,7 @@ export type PlePublicationEntitlementEvidence = AdapterEvidence & {
     agencyProfile: true;
     agencyBranding: true;
     plan: true;
-    maxActiveListings: 1;
+    maxActiveListings: 2;
     subscription: true;
     unrelatedOwnersUntouched: true;
     fixtureInvoices: 0;
@@ -225,6 +227,14 @@ export function classifyPleFixtureEntitlement(
 ): { state: PreparedState } {
   const existing = requireOneOrNone(rows, 'fixture entitlement');
   if (!existing) return { state: 'created' };
+  requireExact(rowValue(existing, 'plan_id'), planId, 'entitlement plan');
+  requireExact(
+    rowValue(existing, 'feature_key'),
+    ENTITLEMENT_EXPECTED.featureKey,
+    'entitlement key',
+  );
+  const value = parseJson(rowValue(existing, 'value_json'));
+  if (value === RECOGNIZED_PRIOR_MAX_ACTIVE_LISTINGS) return { state: 'upgraded' };
   assertPleFixtureEntitlementRow(existing, planId);
   return { state: 'reused' };
 }
@@ -596,6 +606,28 @@ export async function preparePlePublicationEntitlement(input: {
          VALUES (?, ?, CAST(? AS JSON))`,
         [planId, ENTITLEMENT_EXPECTED.featureKey, JSON.stringify(ENTITLEMENT_EXPECTED.value)],
       );
+    }
+    if (entitlementDecision.state === 'upgraded') {
+      const entitlementId = asId(existingEntitlement!, 'fixture entitlement');
+      const result = await input.connection.execute(
+        `UPDATE plan_entitlements
+            SET value_json = CAST(? AS JSON)
+          WHERE id = ? AND plan_id = ? AND feature_key = ?
+            AND JSON_EXTRACT(value_json, '$') = CAST(? AS JSON)`,
+        [
+          JSON.stringify(ENTITLEMENT_EXPECTED.value),
+          entitlementId,
+          planId,
+          ENTITLEMENT_EXPECTED.featureKey,
+          JSON.stringify(RECOGNIZED_PRIOR_MAX_ACTIVE_LISTINGS),
+        ],
+      );
+      const affectedRows = Number((Array.isArray(result) ? result[0] : result)?.affectedRows ?? 0);
+      if (affectedRows !== 1) {
+        throw new Error(
+          'PLE publication entitlement fixture refused: recognized prior capacity could not be upgraded exactly.',
+        );
+      }
     }
 
     const existingSubscription = await findAgencySubscription(input.connection, actors.agencyId);

@@ -98,6 +98,33 @@ export type CommercialEconomicChargeBasis =
   | 'annual'
   | 'once';
 
+export type CommercialPricingMode = 'componentised' | 'gross_quote';
+
+const recurringGrossIncludedCodes = new Set(['base_rent', 'operating_costs', 'rates_recoveries']);
+
+/** Gross rent replaces—not supplements—the component schedule it includes. */
+export function assertCommercialPricingContract(input: {
+  pricingMode: CommercialPricingMode;
+  economics: readonly CommercialEconomicsInput[];
+}): void {
+  const codes = new Set(input.economics.map(item => item.componentCode));
+  if (input.pricingMode === 'componentised') {
+    if (codes.has('gross_rent')) {
+      throw new Error('Componentised pricing cannot contain a gross rental component.');
+    }
+    return;
+  }
+  const gross = input.economics.find(item => item.componentCode === 'gross_rent');
+  if (!gross || !['supplied', 'estimated'].includes(gross.valueState)) {
+    throw new Error('Gross-quote pricing requires a supplied or estimated gross rental.');
+  }
+  for (const code of recurringGrossIncludedCodes) {
+    if (codes.has(code)) {
+      throw new Error(`Gross-quote pricing cannot also include ${code}; this would double-count rent.`);
+    }
+  }
+}
+
 export type CommercialEconomicsInput = {
   componentCode: string;
   valueState: CommercialEconomicValueState;
