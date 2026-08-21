@@ -25,6 +25,7 @@ import {
   type CommercialSpecificationInput,
 } from '../../shared/commercial-domain';
 import { verifyListingMediaUploadToken } from './listingMediaAuthority';
+import { toMySqlDateTime } from './leadDeliveryService';
 
 type Database = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 const positivePublicStates = [
@@ -323,97 +324,88 @@ export async function createOfficeDraft(input: CreateOfficeDraftInput) {
         suburbId: priorMarketing.suburbId || asset.suburbId || null,
       };
     }
-    const spaceResult = await tx
-      .insert(commercialSpaces)
-      .values({
-        commercialAssetId,
-        spaceClass: 'office',
-        spaceKind: 'office_suite',
-        identifier: input.space.identifier.trim(),
-        rentableAreaM2: String(input.space.rentableAreaM2),
-        usableAreaM2: input.space.usableAreaM2 == null ? null : String(input.space.usableAreaM2),
-      });
+    const spaceResult = await tx.insert(commercialSpaces).values({
+      commercialAssetId,
+      spaceClass: 'office',
+      spaceKind: 'office_suite',
+      identifier: input.space.identifier.trim(),
+      rentableAreaM2: String(input.space.rentableAreaM2),
+      usableAreaM2: input.space.usableAreaM2 == null ? null : String(input.space.usableAreaM2),
+    });
     const commercialSpaceId = Number(
       (spaceResult as any)[0]?.insertId ?? (spaceResult as any).insertId,
     );
-    await tx
-      .insert(commercialSpaceSpecifications)
-      .values(
-        input.specifications.map(specification => ({
-          commercialSpaceId,
-          specificationCode: specification.specificationCode,
-          valueState: specification.valueState,
-          numericValue:
-            specification.numericValue == null ? null : String(specification.numericValue),
-          textValue: specification.textValue,
-          booleanValue:
-            specification.booleanValue == null ? null : specification.booleanValue ? 1 : 0,
-        })) as any,
-      );
-    const availabilityResult = await tx
-      .insert(commercialAvailabilities)
-      .values({
+    await tx.insert(commercialSpaceSpecifications).values(
+      input.specifications.map(specification => ({
         commercialSpaceId,
-        transactionType: 'lease',
-        availabilityState: input.availability.availabilityState,
-        occupationDate: input.availability.occupationDate || null,
-        confirmationSource: input.availability.confirmationSource,
-        confirmationSourceLabel: input.availability.confirmationSourceLabel || null,
-        lastConfirmedAt: input.availability.lastConfirmedAt,
-        reconfirmationDueAt: input.availability.reconfirmationDueAt,
-        confirmedByUserId: input.userId,
-        pricingMode: input.availability.pricingMode,
-        vatTreatment: input.availability.vatTreatment,
-      });
+        specificationCode: specification.specificationCode,
+        valueState: specification.valueState,
+        numericValue:
+          specification.numericValue == null ? null : String(specification.numericValue),
+        textValue: specification.textValue,
+        booleanValue:
+          specification.booleanValue == null ? null : specification.booleanValue ? 1 : 0,
+      })) as any,
+    );
+    const availabilityResult = await tx.insert(commercialAvailabilities).values({
+      commercialSpaceId,
+      transactionType: 'lease',
+      availabilityState: input.availability.availabilityState,
+      occupationDate: input.availability.occupationDate || null,
+      confirmationSource: input.availability.confirmationSource,
+      confirmationSourceLabel: input.availability.confirmationSourceLabel || null,
+      lastConfirmedAt: toMySqlDateTime(input.availability.lastConfirmedAt),
+      reconfirmationDueAt: toMySqlDateTime(input.availability.reconfirmationDueAt),
+      confirmedByUserId: input.userId,
+      pricingMode: input.availability.pricingMode,
+      vatTreatment: input.availability.vatTreatment,
+    });
     const commercialAvailabilityId = Number(
       (availabilityResult as any)[0]?.insertId ?? (availabilityResult as any).insertId,
     );
-    await tx
-      .insert(commercialAvailabilityEconomics)
-      .values(
-        input.economics.map(item => ({
-          commercialAvailabilityId,
-          componentCode: item.componentCode as any,
-          valueState: item.valueState,
-          chargeBasis: item.chargeBasis,
-          amountMinor: item.amountMinor,
-          rangeMaximumMinor: item.rangeMaximumMinor,
-          vatTreatment: input.availability.vatTreatment,
-        })) as any,
-      );
+    await tx.insert(commercialAvailabilityEconomics).values(
+      input.economics.map(item => ({
+        commercialAvailabilityId,
+        componentCode: item.componentCode as any,
+        valueState: item.valueState,
+        chargeBasis: item.chargeBasis,
+        amountMinor: item.amountMinor,
+        rangeMaximumMinor: item.rangeMaximumMinor,
+        vatTreatment: input.availability.vatTreatment,
+      })) as any,
+    );
     if (input.leaseTerms)
-      await tx
-        .insert(commercialAvailabilityLeaseTerms)
-        .values({
-          commercialAvailabilityId,
-          ...input.leaseTerms,
-          annualEscalationPercent:
-            input.leaseTerms.annualEscalationPercent == null
-              ? null
-              : String(input.leaseTerms.annualEscalationPercent),
-        } as any);
-    const listingResult = await tx
-      .insert(listings)
-      .values({
-        ownerId: input.userId,
-        agentId: agent?.id ?? null,
-        agencyId: agent?.agencyId ?? null,
-        action: 'rent',
-        propertyType: 'commercial',
-        title: input.marketing.title.trim(),
-        description: input.marketing.description.trim(),
-        address: listingLocation.address,
-        city: listingLocation.city,
-        province: listingLocation.province,
-        suburb: listingLocation.suburb,
-        provinceId: listingLocation.provinceId,
-        cityId: listingLocation.cityId,
-        suburbId: listingLocation.suburbId,
-        status: 'draft',
-        approvalStatus: 'pending',
-        slug: identifier(input.marketing.title),
-        propertyDetails: { commercialMarketingProjection: true },
+      await tx.insert(commercialAvailabilityLeaseTerms).values({
+        commercialAvailabilityId,
+        ...input.leaseTerms,
+        suppliedAt: input.leaseTerms.suppliedAt
+          ? toMySqlDateTime(input.leaseTerms.suppliedAt)
+          : null,
+        annualEscalationPercent:
+          input.leaseTerms.annualEscalationPercent == null
+            ? null
+            : String(input.leaseTerms.annualEscalationPercent),
       } as any);
+    const listingResult = await tx.insert(listings).values({
+      ownerId: input.userId,
+      agentId: agent?.id ?? null,
+      agencyId: agent?.agencyId ?? null,
+      action: 'rent',
+      propertyType: 'commercial',
+      title: input.marketing.title.trim(),
+      description: input.marketing.description.trim(),
+      address: listingLocation.address,
+      city: listingLocation.city,
+      province: listingLocation.province,
+      suburb: listingLocation.suburb,
+      provinceId: listingLocation.provinceId,
+      cityId: listingLocation.cityId,
+      suburbId: listingLocation.suburbId,
+      status: 'draft',
+      approvalStatus: 'pending',
+      slug: identifier(input.marketing.title),
+      propertyDetails: { commercialMarketingProjection: true },
+    } as any);
     const listingId = Number(
       (listingResult as any)[0]?.insertId ?? (listingResult as any).insertId,
     );
@@ -500,19 +492,17 @@ export async function attachOfficeMarketingMedia(input: {
     listingId: input.listingId,
     requireConfirmed: true,
   });
-  const result = await db
-    .insert(listingMedia)
-    .values({
-      listingId: input.listingId,
-      mediaType: media.mediaType,
-      originalUrl: media.key,
-      originalFileName: media.fileName,
-      originalFileSize: media.fileSize,
-      processedUrl: media.key,
-      mimeType: media.contentType,
-      processingStatus: 'completed',
-      isPrimary: 0,
-    });
+  const result = await db.insert(listingMedia).values({
+    listingId: input.listingId,
+    mediaType: media.mediaType,
+    originalUrl: media.key,
+    originalFileName: media.fileName,
+    originalFileSize: media.fileSize,
+    processedUrl: media.key,
+    mimeType: media.contentType,
+    processingStatus: 'completed',
+    isPrimary: 0,
+  });
   return { mediaId: Number((result as any)[0]?.insertId ?? (result as any).insertId) };
 }
 
