@@ -70,7 +70,7 @@ describe('EnhancedNavbar buyer discovery menu', () => {
     );
     expect(within(region).getByRole('link', { name: 'Commercial property' })).toHaveAttribute(
       'href',
-      '/property-for-sale?propertyType=commercial',
+      '/commercial',
     );
     expect(within(region).getByRole('link', { name: 'Plan my buying budget' })).toHaveAttribute(
       'href',
