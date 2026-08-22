@@ -361,6 +361,24 @@ describe('public navigation authority', () => {
     expect(getAccountAuthHref('signin', nextPath)).toBe('/login?mode=signin');
   });
 
+  it('builds the developer commercial entry href with a preselected registration role', () => {
+    expect(
+      getAccountAuthHref('register', '/developer/plans', { registerRole: 'property_developer' }),
+    ).toBe('/login?mode=register&next=%2Fdeveloper%2Fplans&role=property_developer');
+  });
+
+  it('ignores the registration role option for sign-in mode or unknown roles', () => {
+    expect(
+      getAccountAuthHref('signin', '/developer/plans', { registerRole: 'property_developer' }),
+    ).toBe('/login?mode=signin&next=%2Fdeveloper%2Fplans');
+    expect(getAccountAuthHref('register', null, { registerRole: 'hacker' })).toBe(
+      '/login?mode=register',
+    );
+    expect(getAccountAuthHref('register', '/developer/plans')).toBe(
+      '/login?mode=register&next=%2Fdeveloper%2Fplans',
+    );
+  });
+
   it('fails closed to the visitor dashboard when the login response has no user', () => {
     expect(getLoginRedirectPath(null, null)).toBe('/user/dashboard');
   });

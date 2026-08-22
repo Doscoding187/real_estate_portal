@@ -144,7 +144,7 @@ describe('commercial catalog projection', () => {
     });
     expect(product.action).toMatchObject({
       mode: 'request_invoice',
-      target: { kind: 'route', value: '/contact' },
+      target: { kind: 'route', value: '/developer/plans' },
     });
     expect(product.promotion).toMatchObject({ status: 'not_configured', offer: null });
   });

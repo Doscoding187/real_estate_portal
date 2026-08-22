@@ -253,18 +253,24 @@ function resolveAction(
   }
 
   if (configuredMode === 'request_invoice') {
-    const target =
-      plan.segment === 'agent' && getCommercialProductKey(plan) === 'agent_launch_access'
-        ? '/agent/select-package'
+    const isAgentLaunchAccess =
+      plan.segment === 'agent' && getCommercialProductKey(plan) === 'agent_launch_access';
+    const isDeveloperLaunchAccess =
+      plan.segment === 'developer' && getCommercialProductKey(plan) === 'developer_launch_access';
+    const target = isAgentLaunchAccess
+      ? '/agent/select-package'
+      : isDeveloperLaunchAccess
+        ? '/developer/plans'
         : '/contact';
 
     return {
       mode: configuredMode,
       target: { kind: 'route', value: target },
       requiresAuthentication: false,
-      reason:
-        target === '/agent/select-package'
-          ? 'Uses the existing authenticated Agent Launch Access invoice and manual-EFT flow.'
+      reason: isAgentLaunchAccess
+        ? 'Uses the existing authenticated Agent Launch Access invoice and manual-EFT flow.'
+        : isDeveloperLaunchAccess
+          ? 'Uses the existing authenticated Developer Launch Access invoice and manual-EFT flow.'
           : 'Paid activation is assisted and requires Property Listify commercial operations.',
     };
   }
