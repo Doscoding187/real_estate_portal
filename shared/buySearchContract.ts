@@ -68,6 +68,13 @@ export function isBuyPropertyType(value: unknown): value is BuyPropertyType {
   );
 }
 
+/** True only for property types that first-party Buy surfaces may newly compose. */
+export function isActiveBuyPropertyType(
+  value: unknown,
+): value is (typeof BUY_PROPERTY_TYPES)[number] {
+  return typeof value === 'string' && (BUY_PROPERTY_TYPES as readonly string[]).includes(value);
+}
+
 function parseFiniteNumber(value: unknown): number | undefined {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : undefined;

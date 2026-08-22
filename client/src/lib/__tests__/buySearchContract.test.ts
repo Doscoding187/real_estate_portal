@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BUY_PROPERTY_TYPES,
+  isActiveBuyPropertyType,
   parseBuySearchParams,
   sanitizeBuySearchFilters,
   toBuyPublicSearchFilters,
@@ -79,6 +80,7 @@ describe('canonical Buy search contract', () => {
 
   it('keeps historical villa searches readable without presenting Villa as an active Buy choice', () => {
     expect(BUY_PROPERTY_TYPES).not.toContain('villa');
+    expect(isActiveBuyPropertyType('villa')).toBe(false);
 
     expect(
       parseBuySearchParams(new URLSearchParams('propertyType=villa&minPrice=2500000')),

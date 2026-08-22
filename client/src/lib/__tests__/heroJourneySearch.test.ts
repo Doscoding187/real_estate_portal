@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BUY_PROPERTY_TYPE_OPTIONS,
   buildBuySearchUrl,
   buildPropertySearchUrl,
   getPriceRangeError,
@@ -134,6 +135,17 @@ describe('Buy journey URL authority', () => {
     });
 
     expect(url).toBe('/property-for-sale?maxPrice=100000');
+  });
+
+  it('composes only active Buy property types while compatibility URLs remain readable elsewhere', () => {
+    expect(BUY_PROPERTY_TYPE_OPTIONS.map(option => option.value)).not.toContain('villa');
+
+    const params = new URL(
+      buildBuySearchUrl({ selectedLocations: [johannesburg], propertyType: 'villa' }),
+      'https://listify.test',
+    ).searchParams;
+
+    expect(params.get('propertyType')).toBeNull();
   });
 
   it('rejects a Google Place ID instead of falling back to its label', () => {
