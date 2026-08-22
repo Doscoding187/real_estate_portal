@@ -42,6 +42,7 @@ import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 import {
   buildConsumerJourneyUrl,
   getConsumerJourneys,
+  LAND_PUBLIC_CLASSIFICATION_OPTIONS,
   type ConsumerJourneyKey,
 } from '@/lib/consumerJourneyRouter';
 import { LocationAutosuggest } from './LocationAutosuggest';
@@ -296,7 +297,7 @@ export function EnhancedHero({
       statuses: ['launching-soon', 'selling', 'sold-out'],
     },
     plot_land: {
-      types: ['Residential', 'Commercial', 'Agricultural', 'Industrial'],
+      types: LAND_PUBLIC_CLASSIFICATION_OPTIONS,
     },
     commercial: {
       useTypes: ['Office', 'Retail', 'Industrial', 'Warehouse', 'Medical', 'Mixed-Use'],
@@ -1216,8 +1217,8 @@ export function EnhancedHero({
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
                                 {filterConfig.plot_land.types.map(type => (
-                                  <SelectItem key={type} value={type}>
-                                    {type}
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

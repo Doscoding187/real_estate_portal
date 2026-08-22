@@ -269,7 +269,7 @@ describe('EnhancedHero explicit journey selection', () => {
     fireEvent.click(screen.getByTestId('select-johannesburg'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
 
-    expect(setLocation).toHaveBeenCalledWith('/commercial');
+    expect(setLocation).toHaveBeenCalledWith('/commercial?location=Johannesburg');
   });
 
   it('supports journey-first selection but waits for a canonical location', () => {

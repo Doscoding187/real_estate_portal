@@ -12,6 +12,12 @@ import {
 export type ConsumerIntent = 'buy' | 'rent';
 export type ConsumerJourneyKey = 'residential' | 'land' | 'farm' | 'commercial' | 'shared_living';
 export type ConsumerJourneyStatus = 'E2E_READY' | 'PUBLIC_SEARCH_READY' | 'TRANSITIONAL' | 'PLANNED' | 'N/A';
+export const LAND_PUBLIC_CLASSIFICATION_OPTIONS = [
+  { value: 'residential_stand', label: 'Residential stand' },
+  { value: 'development_land', label: 'Development land' },
+  { value: 'commercial_industrial_land', label: 'Commercial / industrial land' },
+] as const;
+type LandPublicClassification = (typeof LAND_PUBLIC_CLASSIFICATION_OPTIONS)[number]['value'];
 
 export interface ConsumerJourneyDefinition {
   intent: ConsumerIntent;
@@ -99,19 +105,26 @@ export type ConsumerJourneySearchInput = Omit<PropertySearchInput, 'transactionT
   maxSize?: string | number;
 };
 
-function specialistLocationQuery(selectedLocations: readonly LocationNode[]) {
+function landLocationQuery(selectedLocations: readonly LocationNode[], hasSearchArea: boolean) {
+  if (hasSearchArea) return undefined;
+  if (selectedLocations.length !== 1) return undefined;
   const location = selectedLocations[0];
-  // Land's current public API accepts city/province strings only. Do not turn
-  // a selected suburb into a city-wide query: that would silently widen the
-  // consumer's canonical scope. A future Land canonical-geography contract
-  // can make suburb handoff executable without changing this router.
+  // Land currently compares display names, not canonical IDs. Keep its
+  // destination contract truthful and never widen a suburb to a city.
   if (!location || location.type === 'area' || location.type === 'suburb') return undefined;
   const params = new URLSearchParams();
-  const canonical = location.canonicalLocationId || location.id;
-  if (canonical) params.set('locationId', canonical);
-  if (location.provinceSlug) params.set('province', location.provinceSlug);
-  if (location.citySlug) params.set('city', location.citySlug);
+  if (location.type === 'province') params.set('province', location.name);
+  else params.set('city', location.name);
   return params;
+}
+
+function commercialLocationQuery(selectedLocations: readonly LocationNode[], hasSearchArea: boolean) {
+  if (hasSearchArea || selectedLocations.length !== 1 || !selectedLocations[0] || selectedLocations[0].type === 'area') return undefined;
+  return new URLSearchParams({ location: selectedLocations[0].name });
+}
+
+function isLandPublicClassification(value: unknown): value is LandPublicClassification {
+  return LAND_PUBLIC_CLASSIFICATION_OPTIONS.some(option => option.value === value);
 }
 
 export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): string {
@@ -124,16 +137,18 @@ export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): stri
     return input.intent === 'buy' ? buildBuySearchUrl(args) : buildPropertySearchUrl({ ...args, transactionType: 'to-rent' });
   }
 
-  const params = specialistLocationQuery(input.selectedLocations || []);
-  if (!params) return `${definition.destination}?searchError=canonical-location-required`;
+  const selectedLocations = input.selectedLocations || [];
+  const hasSearchArea = Boolean(input.searchScope);
+  const params = input.journey === 'land'
+    ? landLocationQuery(selectedLocations, hasSearchArea)
+    : commercialLocationQuery(selectedLocations, hasSearchArea);
+  if (!params) return `${definition.destination}?searchError=unsupported-location-scope`;
   if (input.journey === 'land') {
-    if (input.landClassification) params.set('classification', input.landClassification);
+    if (isLandPublicClassification(input.landClassification)) params.set('classification', input.landClassification);
     if (input.minPrice !== undefined && input.minPrice !== '') params.set('minPrice', String(input.minPrice));
     if (input.maxPrice !== undefined && input.maxPrice !== '') params.set('maxPrice', String(input.maxPrice));
     if (input.minSize !== undefined && input.minSize !== '') params.set('minSize', String(input.minSize));
     if (input.maxSize !== undefined && input.maxSize !== '') params.set('maxSize', String(input.maxSize));
   }
-  const selectedLocation = input.selectedLocations?.[0];
-  if (input.journey === 'commercial' && selectedLocation?.name) params.set('location', selectedLocation.name);
   return `${definition.destination}?${params.toString()}`;
 }
