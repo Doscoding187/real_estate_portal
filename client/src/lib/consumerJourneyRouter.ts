@@ -8,16 +8,15 @@ import {
   getPublicHeroJourney,
   type PublicJourneyReleaseContext,
 } from './publicNavigation';
+import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS, type LandPublicClassification } from '@shared/land-domain';
 
 export type ConsumerIntent = 'buy' | 'rent';
 export type ConsumerJourneyKey = 'residential' | 'land' | 'farm' | 'commercial' | 'shared_living';
 export type ConsumerJourneyStatus = 'E2E_READY' | 'PUBLIC_SEARCH_READY' | 'TRANSITIONAL' | 'PLANNED' | 'N/A';
-export const LAND_PUBLIC_CLASSIFICATION_OPTIONS = [
-  { value: 'residential_stand', label: 'Residential stand' },
-  { value: 'development_land', label: 'Development land' },
-  { value: 'commercial_industrial_land', label: 'Commercial / industrial land' },
-] as const;
-type LandPublicClassification = (typeof LAND_PUBLIC_CLASSIFICATION_OPTIONS)[number]['value'];
+export const LAND_PUBLIC_CLASSIFICATION_OPTIONS = LAND_PUBLIC_CLASSIFICATIONS.map(value => ({
+  value,
+  label: LAND_CLASSIFICATION_LABELS[value],
+})) as readonly { value: LandPublicClassification; label: string }[];
 
 export interface ConsumerJourneyDefinition {
   intent: ConsumerIntent;
@@ -48,7 +47,7 @@ export const CONSUMER_JOURNEYS: readonly ConsumerJourneyDefinition[] = [
     clearedFields: ['classification', 'minSize', 'maxSize', 'commercialUseType', 'roomType'],
   },
   {
-    intent: 'buy', key: 'land', label: 'Plots & Land', group: 'Land & Rural', status: 'PUBLIC_SEARCH_READY', enabled: true,
+    intent: 'buy', key: 'land', label: 'Plots & Land', group: 'Land & Rural', status: 'E2E_READY', enabled: true,
     destination: '/plots-and-land', supportedFields: LAND_FIELDS,
     clearedFields: ['propertyType', 'minBedrooms', 'minBathrooms', 'commercialUseType', 'roomType'],
   },
@@ -105,16 +104,16 @@ export type ConsumerJourneySearchInput = Omit<PropertySearchInput, 'transactionT
   maxSize?: string | number;
 };
 
-function landLocationQuery(selectedLocations: readonly LocationNode[], hasSearchArea: boolean) {
-  if (hasSearchArea) return undefined;
-  if (selectedLocations.length !== 1) return undefined;
-  const location = selectedLocations[0];
-  // Land currently compares display names, not canonical IDs. Keep its
-  // destination contract truthful and never widen a suburb to a city.
-  if (!location || location.type === 'area' || location.type === 'suburb') return undefined;
+function landLocationQuery(selectedLocations: readonly LocationNode[], searchScope: ConsumerJourneySearchInput['searchScope']) {
+  if (searchScope?.kind === 'search_area') {
+    return new URLSearchParams({ searchAreaId: searchScope.searchAreaId });
+  }
+  if (selectedLocations.length === 0 || selectedLocations.some(location => location.type === 'area')) return undefined;
+  const ids = selectedLocations.map(location => location.canonicalLocationId || location.id).filter(Boolean);
+  if (ids.length !== selectedLocations.length) return undefined;
   const params = new URLSearchParams();
-  if (location.type === 'province') params.set('province', location.name);
-  else params.set('city', location.name);
+  if (ids.length === 1) params.set('locationId', ids[0]);
+  else ids.forEach(id => params.append('locationIds', id));
   return params;
 }
 
@@ -138,10 +137,9 @@ export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): stri
   }
 
   const selectedLocations = input.selectedLocations || [];
-  const hasSearchArea = Boolean(input.searchScope);
   const params = input.journey === 'land'
-    ? landLocationQuery(selectedLocations, hasSearchArea)
-    : commercialLocationQuery(selectedLocations, hasSearchArea);
+    ? landLocationQuery(selectedLocations, input.searchScope)
+    : commercialLocationQuery(selectedLocations, Boolean(input.searchScope));
   if (!params) return `${definition.destination}?searchError=unsupported-location-scope`;
   if (input.journey === 'land') {
     if (isLandPublicClassification(input.landClassification)) params.set('classification', input.landClassification);
