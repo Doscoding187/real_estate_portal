@@ -496,7 +496,7 @@ export function validateSearchAreaDefinitionShape(
     issues.push({
       code: 'unsupported_journey_configuration',
       field: 'supportedJourneys',
-      message: 'Active Search Areas may only advertise executable Buy and Rent journeys.',
+      message: 'Active Search Areas may only advertise explicitly executable journeys.',
     });
   }
 

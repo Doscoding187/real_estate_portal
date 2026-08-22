@@ -210,6 +210,18 @@ describe('SearchAreaAuthority', () => {
     await expect(
       authority.resolveSearchArea('johannesburg-sandton', { journey: 'rent' }),
     ).resolves.toMatchObject({ status: 'available' });
+    await expect(
+      authority.resolveSearchArea('johannesburg-sandton', { journey: 'plot_land' }),
+    ).resolves.toMatchObject({ status: 'unavailable', reason: 'unsupported_journey' });
+  });
+
+  it('requires explicit plot_land authorization rather than inheriting Buy capability', async () => {
+    const { authority } = authorityFor([
+      activeDefinition({ supportedJourneys: ['buy', 'rent', 'plot_land'] }),
+    ]);
+    await expect(
+      authority.resolveSearchArea('johannesburg-sandton', { journey: 'plot_land' }),
+    ).resolves.toMatchObject({ status: 'available' });
   });
 
   it('rejects active definitions that advertise unsupported executable journeys', async () => {

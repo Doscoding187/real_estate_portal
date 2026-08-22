@@ -21,8 +21,8 @@ export function publicParcelComposition(parcelCount: number) {
 
 async function resolveGeography(input: LandPublicSearchInput): Promise<PublicSearchQueryBoundary | undefined> {
   if (input.searchAreaId) {
-    const resolution = await searchAreaAuthority.resolveSearchArea(input.searchAreaId, { journey: 'buy' });
-    if (resolution.status === 'unavailable' || !resolution.definition.supportedJourneys.includes('buy')) {
+    const resolution = await searchAreaAuthority.resolveSearchArea(input.searchAreaId, { journey: 'plot_land' });
+    if (resolution.status === 'unavailable' || !resolution.definition.supportedJourneys.includes('plot_land')) {
       throw new Error('This Search Area is not available for Land search.');
     }
     const boundary = buildSearchAreaQueryBoundary(resolution);
