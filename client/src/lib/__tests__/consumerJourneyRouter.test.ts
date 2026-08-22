@@ -22,6 +22,7 @@ describe('consumer journey router', () => {
   it('exposes only executable Buy choices', () => {
     expect(getConsumerJourneys('buy').map(item => item.key)).toEqual(['residential', 'land', 'farm']);
     expect(resolveConsumerJourney('buy', 'commercial')).toBeUndefined();
+    expect(resolveConsumerJourney('buy', 'land')?.status).toBe('E2E_READY');
   });
 
   it('keeps residential Buy semantics in the existing search authority', () => {
@@ -29,10 +30,10 @@ describe('consumer journey router', () => {
     expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'residential', selectedLocations: [sandton], propertyType: 'house', minBedrooms: 3 })).toContain('minBedrooms=3');
   });
 
-  it('hands Plots & Land to its display-name API contract and canonical classification values', () => {
+  it('hands Plots & Land canonical geography and classification values', () => {
     const href = buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [capeTown], landClassification: 'residential_stand' });
     expect(href).toContain('/plots-and-land');
-    expect(href).toContain('city=Cape+Town');
+    expect(href).toContain('locationId=city%3A21');
     expect(href).toContain('classification=residential_stand');
     expect(href).not.toContain('minBedrooms');
   });
@@ -42,9 +43,9 @@ describe('consumer journey router', () => {
     expect(href).not.toContain('classification=');
   });
 
-  it('does not widen a suburb to a city when Land cannot execute that scope', () => {
+  it('preserves an exact canonical suburb scope', () => {
     expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [sandton] }))
-      .toBe('/plots-and-land?searchError=unsupported-location-scope');
+      .toBe('/plots-and-land?locationId=suburb%3A34');
   });
 
   it('keeps Farm explicitly transitional while routing through the existing contract', () => {
@@ -57,8 +58,10 @@ describe('consumer journey router', () => {
     expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton] })).toBe('/commercial?location=Sandton');
   });
 
-  it('rejects specialist multi-location and Search Area handoff rather than dropping intent', () => {
-    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] })).toContain('searchError=unsupported-location-scope');
+  it('preserves Land multi-location and Search Area intent', () => {
+    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] })).toContain('locationIds=city%3A12');
+    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [johannesburg, capeTown] })).toContain('locationIds=city%3A21');
+    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations: [sandton], searchScope: { kind: 'search_area', searchAreaId: 'area-1' } })).toBe('/plots-and-land?searchAreaId=area-1');
     expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton], searchScope: { kind: 'search_area', searchAreaId: 'area-1' } })).toContain('searchError=unsupported-location-scope');
   });
 });

@@ -9,14 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { LAND_CLASSIFICATION_LABELS, LAND_PUBLIC_CLASSIFICATIONS, type LandPublicClassification } from '@shared/land-domain';
 
 async function sha256(value: string) {
   const bytes = new TextEncoder().encode(value.trim().toLowerCase());
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-const labels = { residential_stand: 'Residential stand', development_land: 'Development land', commercial_industrial_land: 'Commercial / industrial land' } as const;
-type LandClassification = keyof typeof labels;
+const labels = Object.fromEntries(LAND_PUBLIC_CLASSIFICATIONS.map(value => [value, LAND_CLASSIFICATION_LABELS[value]])) as Record<LandPublicClassification, string>;
+type LandClassification = LandPublicClassification;
 
 export default function LandAuthoringWorkspace() {
   const [, setLocation] = useLocation();
