@@ -34,6 +34,7 @@ export const RequireRole = ({
   role,
   children,
   unauthenticatedAuthEntry,
+  roleMismatchFallback,
 }: {
   role: string;
   children: React.ReactNode;
@@ -43,6 +44,12 @@ export const RequireRole = ({
    * path instead of a context-free /login bounce. Defaults stay unchanged.
    */
   unauthenticatedAuthEntry?: 'signin' | 'register';
+  /**
+   * Optional assisted-entry UI. When set, a signed-in user with the wrong
+   * role sees this fallback instead of being silently redirected to their
+   * role home. It never grants access; authorization stays server-enforced.
+   */
+  roleMismatchFallback?: React.ReactNode;
 }) => {
   const { isAuthenticated, user, loading, error } = useAuth();
   const [, setLocation] = useLocation();
@@ -70,7 +77,7 @@ export const RequireRole = ({
       return;
     }
 
-    if (actualRole !== requiredRole) {
+    if (actualRole !== requiredRole && !roleMismatchFallback) {
       const fallbackPath = getRoleHomePath(actualRole);
       if (window.location.pathname !== fallbackPath) setLocation(fallbackPath);
     }
@@ -83,6 +90,9 @@ export const RequireRole = ({
     requiredRole,
     setLocation,
     unauthenticatedAuthEntry,
+    // The redirect skip only depends on fallback presence; render identity is
+    // controlled by the call site (stable module-level element).
+    roleMismatchFallback !== undefined,
   ]);
 
   if (loading) {
@@ -101,8 +111,12 @@ export const RequireRole = ({
     );
   }
 
-  if (!isAuthenticated || actualRole !== requiredRole) {
+  if (!isAuthenticated) {
     return null;
+  }
+
+  if (actualRole !== requiredRole) {
+    return <>{roleMismatchFallback ?? null}</>;
   }
 
   return <>{children}</>;

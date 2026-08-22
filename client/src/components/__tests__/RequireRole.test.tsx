@@ -155,6 +155,63 @@ describe('RequireRole', () => {
     });
   });
 
+  test('shows an assisted-entry fallback instead of redirecting a signed-in non-agency user', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/agency/setup',
+        search: '',
+        hash: '',
+      },
+      writable: true,
+    });
+
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'agent' },
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    render(
+      <RequireRole
+        role="agency_admin"
+        roleMismatchFallback={<div data-testid="agency-assisted-entry">Assisted entry</div>}
+      >
+        <div data-testid="protected">Protected Content</div>
+      </RequireRole>,
+    );
+
+    expect(await screen.findByTestId('agency-assisted-entry')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected')).not.toBeInTheDocument();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(setLocation).not.toHaveBeenCalled();
+  });
+
+  test('still renders protected children for the matching role when a fallback is configured', async () => {
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { role: 'agency_admin' },
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    render(
+      <RequireRole
+        role="agency_admin"
+        roleMismatchFallback={<div data-testid="agency-assisted-entry">Assisted entry</div>}
+      >
+        <div data-testid="protected">Protected Content</div>
+      </RequireRole>,
+    );
+
+    expect(await screen.findByTestId('protected')).toBeInTheDocument();
+    expect(screen.queryByTestId('agency-assisted-entry')).not.toBeInTheDocument();
+  });
+
   test('redirects to role home when user does not have required role', async () => {
     const setLocation = vi.fn();
     mockUseAuth.mockReturnValue({

@@ -22,6 +22,10 @@ import { buildPropertiesCompatibilityRedirect } from './lib/searchNavigation';
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
 import { RequireRole } from '@/components/RequireRole';
+import AgencySetupAccountBoundary from '@/components/AgencySetupAccountBoundary';
+
+// Stable element identity so RequireRole's effect does not re-run per render.
+const AGENCY_SETUP_ROLE_MISMATCH_FALLBACK = <AgencySetupAccountBoundary />;
 
 // Lazy Imports (Code Split)
 const PropertyDetail = lazy(() => import('./pages/PropertyDetail'));
@@ -368,7 +372,11 @@ function Router() {
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
 
           <Route path="/agency/setup">
-            <RequireRole role="agency_admin" unauthenticatedAuthEntry="register">
+            <RequireRole
+              role="agency_admin"
+              unauthenticatedAuthEntry="register"
+              roleMismatchFallback={AGENCY_SETUP_ROLE_MISMATCH_FALLBACK}
+            >
               <AgencyOnboarding />
             </RequireRole>
           </Route>
