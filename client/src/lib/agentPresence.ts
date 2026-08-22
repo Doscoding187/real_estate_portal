@@ -7,30 +7,15 @@ import {
 import { trpc } from '@/lib/trpc';
 
 /**
- * Shared parsing and interaction helpers for the public Agent surfaces.
+ * Shared parsing for public Agent profile list fields.
  *
- * Agent profile list fields are stored as comma-separated text while some
- * legacy rows contain JSON arrays; every consumer must use the same tolerant
- * parser so discovery and the web presence render identically.
+ * The canonical persisted representation is comma-separated text; values are
+ * split strictly by comma and trimmed. Noncanonical encodings fail closed
+ * rather than being silently reinterpreted as canonical data.
  */
 export function parseDelimitedList(value: unknown): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.filter(Boolean).map(item => String(item).trim());
   if (typeof value !== 'string') return [];
-
-  const trimmed = value.trim();
-  if (!trimmed) return [];
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (Array.isArray(parsed)) {
-      return parsed.filter(Boolean).map(item => String(item).trim());
-    }
-  } catch {
-    // Fall through to comma-separated parsing.
-  }
-
-  return trimmed
+  return value
     .split(',')
     .map(item => item.trim())
     .filter(Boolean);

@@ -108,6 +108,29 @@ describe('Agents public discovery page', () => {
     expect(screen.getByText('Jane Agent')).toBeDefined();
   });
 
+  it('fails closed on noncanonical legacy JSON-encoded list fields', () => {
+    listResult.current = {
+      ...listResult.current,
+      data: [
+        {
+          ...discoveryAgent,
+          id: 99,
+          slug: 'legacy-agent-99',
+          firstName: 'Legacy',
+          lastName: 'Agent',
+          specialization: '["Residential Sales"]',
+        },
+      ],
+    };
+
+    render(<Agents />);
+
+    // The legacy JSON array is never silently reinterpreted into canonical
+    // entries; no clean specialization items may appear from it.
+    expect(screen.queryByText('Residential Sales')).toBeNull();
+    expect(screen.getByText('Legacy Agent')).toBeDefined();
+  });
+
   it('filters client-side across name, specialization and served areas', () => {
     listResult.current = {
       ...listResult.current,

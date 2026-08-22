@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 
 import {
+  agencyAgentMemberships,
   agencies,
   agents,
   cities,
@@ -124,7 +125,6 @@ const AGENT_WEB_PRESENCE_COLUMNS = {
   whatsapp: agents.whatsapp,
   socialLinks: agents.socialLinks,
   licenseNumber: agents.licenseNumber,
-  agencyName: agencies.name,
 };
 
 type WebPresenceRecord = {
@@ -148,25 +148,23 @@ type WebPresenceRecord = {
   areasServed: string | null;
   languages: string | null;
   isVerified: number;
-  agencyName: string | null;
 };
 
 /** Public agency affiliation identity; no public agency route exists yet. */
 export type AgentWebPresenceAgency = { name: string };
 
-export type AgentWebPresenceDto = Omit<WebPresenceRecord, 'slug' | 'isVerified' | 'agencyName'> & {
+export type AgentWebPresenceDto = Omit<WebPresenceRecord, 'slug' | 'isVerified'> & {
   slug: string;
   isVerified: number;
   agency: AgentWebPresenceAgency | null;
 };
 
 export function toAgentWebPresence(record: WebPresenceRecord): AgentWebPresenceDto {
-  const { agencyName, ...agent } = record;
   return {
-    ...agent,
-    isVerified: normalizeFlag(agent.isVerified),
-    slug: buildAgentPublicSlug(agent),
-    agency: agencyName ? { name: agencyName } : null,
+    ...record,
+    isVerified: normalizeFlag(record.isVerified),
+    slug: buildAgentPublicSlug(record),
+    agency: null,
   };
 }
 
@@ -174,7 +172,6 @@ async function findApprovedAgentWebPresenceRow(db: any, slug: string) {
   const [exactMatch] = await db
     .select(AGENT_WEB_PRESENCE_COLUMNS)
     .from(agents)
-    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
     .where(and(eq(agents.slug, slug), APPROVED_AGENT))
     .limit(1);
 
@@ -186,7 +183,6 @@ async function findApprovedAgentWebPresenceRow(db: any, slug: string) {
   const [fallbackRecord] = await db
     .select(AGENT_WEB_PRESENCE_COLUMNS)
     .from(agents)
-    .leftJoin(agencies, eq(agents.agencyId, agencies.id))
     .where(and(eq(agents.id, fallbackId), APPROVED_AGENT))
     .limit(1);
 
@@ -203,12 +199,77 @@ export async function findApprovedAgentWebPresenceBySlug(
   slug: string,
 ): Promise<AgentWebPresenceDto | null> {
   const row = await findApprovedAgentWebPresenceRow(db, slug);
-  return row ? toAgentWebPresence(row) : null;
+  if (!row) return null;
+
+  const profile = toAgentWebPresence(row);
+  profile.agency = await resolveCurrentAgencyAffiliation(db, Number(row.id));
+  return profile;
 }
 
 export async function findApprovedAgentIdBySlug(db: any, slug: string): Promise<number | null> {
   const row = await findApprovedAgentWebPresenceRow(db, slug);
   return row ? Number(row.id) : null;
+}
+
+interface AgencyMembershipRow {
+  id: number;
+  status: 'invited' | 'active' | 'suspended' | 'left';
+  effectiveFrom: string | Date | null;
+  effectiveTo: string | Date | null;
+  agencyName: string;
+}
+
+/**
+ * Canonical current-membership semantics, mirroring the existing discovery
+ * eligibility authority exactly: an affiliation is public only when the
+ * membership is active and its effective window contains the evaluated time.
+ */
+function isCurrentActiveMembership(membership: AgencyMembershipRow, evaluatedAt: Date): boolean {
+  if (membership.status !== 'active') return false;
+
+  const now = evaluatedAt.getTime();
+  const effectiveFrom = membership.effectiveFrom
+    ? new Date(membership.effectiveFrom).getTime()
+    : null;
+  const effectiveTo = membership.effectiveTo ? new Date(membership.effectiveTo).getTime() : null;
+
+  return (
+    (effectiveFrom === null || (Number.isFinite(effectiveFrom) && effectiveFrom <= now)) &&
+    (effectiveTo === null || (Number.isFinite(effectiveTo) && effectiveTo > now))
+  );
+}
+
+/**
+ * Public agency affiliation for a web presence. Fails closed: zero current
+ * memberships and multiple simultaneous current memberships both yield no
+ * affiliation; agents.agencyId never establishes a public affiliation.
+ */
+export async function resolveCurrentAgencyAffiliation(
+  db: any,
+  agentId: number,
+): Promise<AgentWebPresenceAgency | null> {
+  const memberships: AgencyMembershipRow[] = await db
+    .select({
+      id: agencyAgentMemberships.id,
+      status: agencyAgentMemberships.status,
+      effectiveFrom: agencyAgentMemberships.effectiveFrom,
+      effectiveTo: agencyAgentMemberships.effectiveTo,
+      agencyName: agencies.name,
+    })
+    .from(agencyAgentMemberships)
+    .innerJoin(agencies, eq(agencyAgentMemberships.agencyId, agencies.id))
+    .where(eq(agencyAgentMemberships.agentId, agentId));
+
+  const evaluatedAt = new Date();
+  const currentNames = memberships
+    .filter(membership => isCurrentActiveMembership(membership, evaluatedAt))
+    .map(membership => String(membership.agencyName || '').trim())
+    .filter(Boolean);
+
+  const distinctNames = new Set(currentNames);
+  if (distinctNames.size !== 1) return null;
+
+  return { name: distinctNames.values().next().value as string };
 }
 
 export interface CanonicalAgentArea {

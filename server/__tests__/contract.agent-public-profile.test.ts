@@ -103,8 +103,29 @@ const baseAgentRow = {
   areasServed: 'Bryanston, Sandton',
   languages: 'English, isiZulu',
   isVerified: 1,
+};
+
+const ACTIVE_MEMBERSHIP = {
+  id: 901,
+  status: 'active',
+  effectiveFrom: null,
+  effectiveTo: null,
   agencyName: 'Northline Realty',
 };
+
+function makeMembership(overrides: Record<string, unknown> = {}) {
+  return { ...ACTIVE_MEMBERSHIP, ...overrides };
+}
+
+function presenceBatches(
+  profileRow: Record<string, unknown>,
+  memberships: Array<Record<string, unknown>> = [ACTIVE_MEMBERSHIP],
+  suburbs: Array<Record<string, unknown>> = [],
+  cities: Array<Record<string, unknown>> = [],
+  provinces: Array<Record<string, unknown>> = [],
+) {
+  return [[profileRow], memberships, suburbs, cities, provinces];
+}
 
 function makePresenceRow(areasServed: string) {
   return { ...baseAgentRow, areasServed };
@@ -160,7 +181,7 @@ describe('public agent discovery projection', () => {
 
 describe('public agent web presence projection', () => {
   it('returns the deliberate public surface with derived slug and agency relationship', async () => {
-    mockGetDb.mockResolvedValue(recordingDb([[baseAgentRow], [], [], []]).db);
+    mockGetDb.mockResolvedValue(recordingDb(presenceBatches(baseAgentRow)).db);
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
@@ -176,7 +197,7 @@ describe('public agent web presence projection', () => {
 
   it('derives the canonical slug-compatible URL for agents without a stored slug', async () => {
     mockGetDb.mockResolvedValue(
-      recordingDb([[{ ...baseAgentRow, id: 84, slug: null }], [], [], []]).db,
+      recordingDb(presenceBatches({ ...baseAgentRow, id: 84, slug: null })).db,
     );
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent-84' });
@@ -194,9 +215,8 @@ describe('public agent web presence projection', () => {
 
   it('resolves unstructured served areas onto canonical geography only by exact name', async () => {
     mockGetDb.mockResolvedValue(
-      recordingDb([
-        [makePresenceRow('Bryanston, Sandton')],
-        [
+      recordingDb(
+        presenceBatches(makePresenceRow('Bryanston, Sandton'), [ACTIVE_MEMBERSHIP], [
           {
             id: 11,
             name: 'Bryanston',
@@ -204,10 +224,8 @@ describe('public agent web presence projection', () => {
             citySlug: 'sandton',
             provinceSlug: 'gauteng',
           },
-        ],
-        [],
-        [],
-      ]).db,
+        ]),
+      ).db,
     );
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
@@ -219,12 +237,11 @@ describe('public agent web presence projection', () => {
   });
   it('links a uniquely matched city without a suburb of the same name', async () => {
     mockGetDb.mockResolvedValue(
-      recordingDb([
-        [makePresenceRow('Stellenbosch')],
-        [],
-        [{ id: 31, name: 'Stellenbosch', slug: 'stellenbosch', provinceSlug: 'western-cape' }],
-        [],
-      ]).db,
+      recordingDb(
+        presenceBatches(makePresenceRow('Stellenbosch'), [ACTIVE_MEMBERSHIP], [], [
+          { id: 31, name: 'Stellenbosch', slug: 'stellenbosch', provinceSlug: 'western-cape' },
+        ]),
+      ).db,
     );
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
@@ -236,12 +253,11 @@ describe('public agent web presence projection', () => {
 
   it('links a uniquely matched province', async () => {
     mockGetDb.mockResolvedValue(
-      recordingDb([
-        [makePresenceRow('Western Cape')],
-        [],
-        [],
-        [{ id: 5, name: 'Western Cape', slug: 'western-cape' }],
-      ]).db,
+      recordingDb(
+        presenceBatches(makePresenceRow('Western Cape'), [ACTIVE_MEMBERSHIP], [], [], [
+          { id: 5, name: 'Western Cape', slug: 'western-cape' },
+        ]),
+      ).db,
     );
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
@@ -253,9 +269,8 @@ describe('public agent web presence projection', () => {
 
   it('refuses to link when two distinct suburbs share the entry name', async () => {
     mockGetDb.mockResolvedValue(
-      recordingDb([
-        [makePresenceRow('Parklands')],
-        [
+      recordingDb(
+        presenceBatches(makePresenceRow('Parklands'), [ACTIVE_MEMBERSHIP], [
           {
             id: 61,
             name: 'Parklands',
@@ -270,10 +285,8 @@ describe('public agent web presence projection', () => {
             citySlug: 'durban',
             provinceSlug: 'kwazulu-natal',
           },
-        ],
-        [],
-        [],
-      ]).db,
+        ]),
+      ).db,
     );
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
@@ -283,9 +296,8 @@ describe('public agent web presence projection', () => {
 
   it('refuses to link when an entry matches both a suburb and a city', async () => {
     mockGetDb.mockResolvedValue(
-      recordingDb([
-        [makePresenceRow('Sandton')],
-        [
+      recordingDb(
+        presenceBatches(makePresenceRow('Sandton'), [ACTIVE_MEMBERSHIP], [
           {
             id: 71,
             name: 'Sandton',
@@ -293,10 +305,10 @@ describe('public agent web presence projection', () => {
             citySlug: 'johannesburg',
             provinceSlug: 'gauteng',
           },
-        ],
-        [{ id: 72, name: 'Sandton', slug: 'sandton', provinceSlug: 'gauteng' }],
-        [],
-      ]).db,
+        ], [
+          { id: 72, name: 'Sandton', slug: 'sandton', provinceSlug: 'gauteng' },
+        ]),
+      ).db,
     );
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
@@ -313,7 +325,12 @@ describe('public agent web presence projection', () => {
       provinceSlug: 'gauteng',
     };
     mockGetDb.mockResolvedValue(
-      recordingDb([[makePresenceRow('Bryanston')], [bryanston, { ...bryanston }], [], []]).db,
+      recordingDb(
+        presenceBatches(makePresenceRow('Bryanston'), [ACTIVE_MEMBERSHIP], [
+          bryanston,
+          { ...bryanston },
+        ]),
+      ).db,
     );
 
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
@@ -321,6 +338,87 @@ describe('public agent web presence projection', () => {
     expect(profile?.canonicalAreas).toEqual([
       { name: 'Bryanston', type: 'suburb', url: '/gauteng/sandton/bryanston' },
     ]);
+  });
+});
+
+describe('public agency affiliation via canonical memberships', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('exposes the agency for a single current active membership', async () => {
+    mockGetDb.mockResolvedValue(recordingDb(presenceBatches(baseAgentRow)).db);
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.agency).toEqual({ name: 'Northline Realty' });
+  });
+
+  it('omits the agency for a suspended membership', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(presenceBatches(baseAgentRow, [makeMembership({ status: 'suspended' })])).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.agency).toBeNull();
+  });
+
+  it('omits the agency for a left membership', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(presenceBatches(baseAgentRow, [makeMembership({ status: 'left' })])).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.agency).toBeNull();
+  });
+
+  it('omits the agency while an effectiveFrom window has not opened', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(
+        presenceBatches(baseAgentRow, [makeMembership({ effectiveFrom: '2099-01-01T00:00:00Z' })]),
+      ).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.agency).toBeNull();
+  });
+
+  it('omits the agency once an effectiveTo window has closed', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(
+        presenceBatches(baseAgentRow, [makeMembership({ effectiveTo: '2000-01-01T00:00:00Z' })]),
+      ).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.agency).toBeNull();
+  });
+
+  it('omits the agency when no membership exists even though legacy attribution data exists', async () => {
+    mockGetDb.mockResolvedValue(recordingDb(presenceBatches(baseAgentRow, [])).db);
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.agency).toBeNull();
+  });
+
+  it('fails closed when two simultaneous active memberships exist', async () => {
+    mockGetDb.mockResolvedValue(
+      recordingDb(
+        presenceBatches(baseAgentRow, [
+          makeMembership({ id: 901, agencyName: 'Northline Realty' }),
+          makeMembership({ id: 902, agencyName: 'Rival Realty' }),
+        ]),
+      ).db,
+    );
+
+    const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
+
+    expect(profile?.agency).toBeNull();
   });
 });
 
