@@ -7,8 +7,11 @@ import {
   type SearchIntent,
   type SearchIntentValidationCode,
 } from './searchIntent';
-import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
-import { RENT_PUBLIC_PROPERTY_TYPES } from '../../../shared/property-taxonomy';
+import { isActiveBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
+import {
+  BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
+  RENT_PUBLIC_PROPERTY_TYPES,
+} from '../../../shared/property-taxonomy';
 import {
   buildTransactionalGeographyHref,
   createCanonicalSearchLocation,
@@ -22,14 +25,19 @@ import {
   type SearchScope,
 } from '../../../shared/searchScope';
 
-export const BUY_PROPERTY_TYPE_OPTIONS = [
-  { value: 'house', label: 'House' },
-  { value: 'apartment', label: 'Apartment' },
-  { value: 'villa', label: 'Villa' },
-  { value: 'townhouse', label: 'Townhouse' },
-  { value: 'cluster_home', label: 'Cluster home' },
-  { value: 'farm', label: 'Farm' },
-] as const;
+const BUY_PROPERTY_TYPE_LABELS: Record<(typeof BUY_ACTIVE_PUBLIC_PROPERTY_TYPES)[number], string> = {
+  apartment: 'Apartment',
+  house: 'House',
+  townhouse: 'Townhouse',
+  cluster_home: 'Cluster home',
+  farm: 'Farm',
+};
+
+/** Presentation only; canonical active Buy taxonomy owns the selectable values. */
+export const BUY_PROPERTY_TYPE_OPTIONS = BUY_ACTIVE_PUBLIC_PROPERTY_TYPES.map(value => ({
+  value,
+  label: BUY_PROPERTY_TYPE_LABELS[value],
+}));
 
 const RENT_PROPERTY_TYPES = new Set<string>(RENT_PUBLIC_PROPERTY_TYPES);
 
@@ -185,7 +193,7 @@ function addSupportedBuyFilters(input: PropertySearchInput, filters: SearchFilte
     .trim()
     .toLowerCase();
   const normalized = sanitizeBuySearchFilters({
-    propertyType: isBuyPropertyType(propertyType) ? propertyType : undefined,
+    propertyType: isActiveBuyPropertyType(propertyType) ? propertyType : undefined,
     minPrice: input.minPrice,
     maxPrice: input.maxPrice,
     minBedrooms: input.minBedrooms,
