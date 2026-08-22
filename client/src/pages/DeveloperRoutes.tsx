@@ -1,8 +1,10 @@
 import { Route, Switch, Redirect, Link } from 'wouter';
+import { useMemo } from 'react';
 import { DeveloperLayout } from '@/components/developer/DeveloperLayout';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
+import { getAccountAuthHref } from '@/lib/publicNavigation';
 
 // Import content components
 import Overview from '@/components/developer/Overview';
@@ -75,7 +77,22 @@ export function DeveloperRouteBoundary() {
 }
 
 export default function DeveloperRoutes() {
-  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
+  // Commercial entry routes keep the prospect's intent through registration;
+  // every other deep link returns to its original destination after sign-in.
+  const authRedirectPath = useMemo(() => {
+    if (typeof window === 'undefined') return undefined;
+    const currentPath = `${window.location.pathname}${window.location.search || ''}`;
+    const isCommercialEntry =
+      currentPath.startsWith('/developer/plans') ||
+      currentPath.startsWith('/developer/subscription');
+    return isCommercialEntry
+      ? getAccountAuthHref('register', currentPath, { registerRole: 'property_developer' })
+      : getAccountAuthHref('signin', currentPath);
+  }, []);
+  const { user, loading: authLoading } = useAuth({
+    redirectOnUnauthenticated: true,
+    redirectPath: authRedirectPath,
+  });
   const { context: publisherContext } = usePublisherContext();
   const { status, isLoading: statusLoading } = useDeveloperOnboardingStatus();
   const isSuperAdmin = user?.role === 'super_admin';

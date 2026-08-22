@@ -353,19 +353,19 @@ describe('public navigation authority', () => {
   });
 
   it('builds a register href with role preselection and an encoded internal next path', () => {
-    expect(getAccountAuthHref('register', '/agency/setup', 'agency_admin')).toBe(
-      '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
-    );
+    expect(
+      getAccountAuthHref('register', '/agency/setup', { registerRole: 'agency_admin' }),
+    ).toBe('/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin');
   });
 
   it('does not attach role preselection to sign-in hrefs', () => {
-    expect(getAccountAuthHref('signin', '/agency/setup', 'agency_admin')).toBe(
-      '/login?mode=signin&next=%2Fagency%2Fsetup',
-    );
+    expect(
+      getAccountAuthHref('signin', '/agency/setup', { registerRole: 'agency_admin' }),
+    ).toBe('/login?mode=signin&next=%2Fagency%2Fsetup');
   });
 
   it('ignores empty register role preselection', () => {
-    expect(getAccountAuthHref('register', '/agency/setup', null)).toBe(
+    expect(getAccountAuthHref('register', '/agency/setup', {})).toBe(
       '/login?mode=register&next=%2Fagency%2Fsetup',
     );
   });
@@ -377,6 +377,24 @@ describe('public navigation authority', () => {
     '/login?next=/explore/upload',
   ])('does not forward unsafe or looping auth next path %s', nextPath => {
     expect(getAccountAuthHref('signin', nextPath)).toBe('/login?mode=signin');
+  });
+
+  it('builds the developer commercial entry href with a preselected registration role', () => {
+    expect(
+      getAccountAuthHref('register', '/developer/plans', { registerRole: 'property_developer' }),
+    ).toBe('/login?mode=register&next=%2Fdeveloper%2Fplans&role=property_developer');
+  });
+
+  it('ignores the registration role option for sign-in mode or unknown roles', () => {
+    expect(
+      getAccountAuthHref('signin', '/developer/plans', { registerRole: 'property_developer' }),
+    ).toBe('/login?mode=signin&next=%2Fdeveloper%2Fplans');
+    expect(getAccountAuthHref('register', null, { registerRole: 'hacker' })).toBe(
+      '/login?mode=register',
+    );
+    expect(getAccountAuthHref('register', '/developer/plans')).toBe(
+      '/login?mode=register&next=%2Fdeveloper%2Fplans',
+    );
   });
 
   it('fails closed to the visitor dashboard when the login response has no user', () => {

@@ -259,7 +259,9 @@ function resolveAction(
         ? '/agent/select-package'
         : plan.segment === 'agency'
           ? '/agency/setup'
-          : '/contact';
+          : plan.segment === 'developer' && productKey === 'developer_launch_access'
+            ? '/developer/plans'
+            : '/contact';
 
     return {
       mode: configuredMode,
@@ -270,7 +272,9 @@ function resolveAction(
           ? 'Uses the existing authenticated Agent Launch Access invoice and manual-EFT flow.'
           : target === '/agency/setup'
             ? 'Routes Agency Launch Access into canonical agency onboarding, which issues the manual-EFT Launch Access invoice.'
-            : 'Paid activation is assisted and requires Property Listify commercial operations.',
+            : target === '/developer/plans'
+              ? 'Uses the existing authenticated Developer Launch Access invoice and manual-EFT flow.'
+              : 'Paid activation is assisted and requires Property Listify commercial operations.',
     };
   }
 

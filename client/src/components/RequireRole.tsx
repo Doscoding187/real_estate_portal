@@ -70,7 +70,9 @@ export const RequireRole = ({
         if (window.location.pathname === '/agent/select-package') {
           loginPath = getAccountAuthHref('signin', currentPath);
         } else if (unauthenticatedAuthEntry) {
-          loginPath = getAccountAuthHref(unauthenticatedAuthEntry, currentPath, requiredRole);
+          loginPath = getAccountAuthHref(unauthenticatedAuthEntry, currentPath, {
+            registerRole: requiredRole,
+          });
         }
         setLocation(loginPath);
       }

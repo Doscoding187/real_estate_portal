@@ -24,7 +24,9 @@ export function AgencySetupAccountBoundary() {
   const { user } = useAuth();
   const roleLabel = ROLE_LABELS[user?.role ?? ''] ?? 'another account type';
   const isAgent = user?.role === 'agent';
-  const registerHref = getAccountAuthHref('register', AGENCY_SETUP_PATH, 'agency_admin');
+  const registerHref = getAccountAuthHref('register', AGENCY_SETUP_PATH, {
+    registerRole: 'agency_admin',
+  });
 
   return (
     <div className="mx-auto max-w-xl px-4 py-16" data-testid="agency-setup-account-boundary">
