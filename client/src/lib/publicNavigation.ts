@@ -1121,13 +1121,39 @@ export function getSafeNextPath(value: unknown): string | null {
   }
 }
 
-export function getAccountAuthHref(mode: 'signin' | 'register', nextPath: unknown): string {
+const REGISTER_ROLE_VALUES = new Set([
+  'visitor',
+  'agent',
+  'agency_admin',
+  'property_developer',
+  'service_provider',
+]);
+
+/**
+ * Build the auth href used by commercial funnels. `registerRole` preselects the
+ * matching registration audience on the login surface and is ignored unless the
+ * mode is register and the value is a known registration role.
+ */
+export function getAccountAuthHref(
+  mode: 'signin' | 'register',
+  nextPath: unknown,
+  options?: { registerRole?: string },
+): string {
   const params = new URLSearchParams({ mode });
   const safeNextPath = getSafeNextPath(nextPath);
 
   // Never send an auth page back to itself, and never accept an external next path.
   if (safeNextPath && safeNextPath !== '/login' && !safeNextPath.startsWith('/login?')) {
     params.set('next', safeNextPath);
+  }
+
+  const registerRole =
+    mode === 'register' && options?.registerRole && REGISTER_ROLE_VALUES.has(options.registerRole)
+      ? options.registerRole
+      : null;
+
+  if (registerRole) {
+    params.set('role', registerRole);
   }
 
   return `/login?${params.toString()}`;

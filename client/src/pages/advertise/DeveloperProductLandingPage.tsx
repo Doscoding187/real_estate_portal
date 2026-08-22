@@ -531,8 +531,9 @@ function DeveloperLaunchAccessCard({ product }: { product?: CommercialProduct })
           <span>Manual EFT · finance-verified activation</span>
         </div>
         <p className="mt-2">
-          Request an invoice, pay by manual EFT and submit proof through the assisted process.
-          Finance verification starts your access period.{' '}
+          Create your owner account, verify your email, complete your company profile, then request
+          your Launch Access invoice. Pay by manual EFT and submit proof through your authenticated
+          Developer billing flow — finance verification starts your access period.{' '}
           {term.renewalLabel || 'There is no automatic renewal.'}
         </p>
       </div>
@@ -761,8 +762,7 @@ export default function DeveloperProductLandingPage() {
             </div>
             <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-12">
               {DEVELOPER_CAPABILITIES.filter(
-                capability =>
-                  capability.href !== '/new-developments' || developmentsJourneyEnabled,
+                capability => capability.href !== '/new-developments' || developmentsJourneyEnabled,
               ).map((capability, index) => (
                 <CapabilityCard
                   key={capability.label}
