@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { analyticsEvents, agents } from '../../drizzle/schema';
+import { PUBLIC_AGENT_PROFILE_EVENTS } from '../../shared/analytics/public-agent-profile-events';
 import { getDb } from '../db';
 
 export type AgentOsEventType =
@@ -16,7 +17,8 @@ export type AgentOsEventType =
   | 'agent_showing_updated'
   | 'agent_showing_completed'
   | 'agent_dashboard_viewed'
-  | 'agent_analytics_viewed';
+  | 'agent_analytics_viewed'
+  | (typeof PUBLIC_AGENT_PROFILE_EVENTS)[number];
 
 type RequestLike = {
   headers?: Record<string, string | string[] | undefined>;

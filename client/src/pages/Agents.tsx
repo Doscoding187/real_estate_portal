@@ -1,25 +1,60 @@
-// @ts-nocheck
+import { useMemo, useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { Building2, Phone, Mail } from 'lucide-react';
+import { Building2, Phone, Mail, Search, MapPin } from 'lucide-react';
 import { Link } from 'wouter';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { HomeLayout } from '@/layouts/HomeLayout';
+import { parseDelimitedList } from '@/lib/agentPresence';
 
-const parseSpecializations = (specialization?: string | null): string[] => {
-  if (!specialization) return [];
-
-  try {
-    const parsed = JSON.parse(specialization);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+const ROLE_LABELS: Record<string, string> = {
+  agent: 'Property Practitioner',
+  principal_agent: 'Principal Property Practitioner',
+  broker: 'Property Broker',
 };
 
+function agentDisplayName(agent: {
+  displayName?: string | null;
+  firstName: string;
+  lastName: string;
+}) {
+  return agent.displayName?.trim() || `${agent.firstName} ${agent.lastName}`.trim() || 'Agent';
+}
+
+function matchesSearch(
+  agent: Parameters<typeof agentDisplayName>[0] & {
+    specialization?: string | null;
+    areasServed?: string | null;
+  },
+  query: string,
+) {
+  const haystack = [
+    agentDisplayName(agent),
+    ...parseDelimitedList(agent.specialization),
+    ...parseDelimitedList(agent.areasServed),
+  ]
+    .join(' ')
+    .toLowerCase();
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every(term => haystack.includes(term));
+}
+
 export default function Agents() {
-  const { data: agents, isLoading } = trpc.agent.list.useQuery();
+  const [searchQuery, setSearchQuery] = useState('');
+  const agentsQuery = trpc.agent.list.useQuery();
+  const agents = agentsQuery.data;
+
+  const filteredAgents = useMemo(() => {
+    if (!agents) return [];
+    const query = searchQuery.trim();
+    if (!query) return agents;
+    return agents.filter(agent => matchesSearch(agent, query));
+  }, [agents, searchQuery]);
 
   return (
     <HomeLayout>
@@ -32,12 +67,25 @@ export default function Agents() {
               Connect with experienced real estate professionals who can help you find your dream
               property
             </p>
+            {agents && agents.length > 0 && (
+              <div className="mt-8 max-w-xl relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  value={searchQuery}
+                  onChange={event => setSearchQuery(event.target.value)}
+                  placeholder="Search by name, specialization or area"
+                  aria-label="Search agents"
+                  className="pl-9 bg-white/95 text-foreground"
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Agents Grid */}
         <div className="container py-12">
-          {isLoading ? (
+          {agentsQuery.isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
                 <Card key={i} className="animate-pulse">
@@ -49,90 +97,123 @@ export default function Agents() {
                 </Card>
               ))}
             </div>
-          ) : agents && agents.length > 0 ? (
+          ) : agentsQuery.isError ? (
+            <div className="text-center py-16">
+              <Building2 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Something went wrong</h3>
+              <p className="text-muted-foreground mb-6">
+                We could not load the agent directory right now. Please try again.
+              </p>
+              <Button variant="outline" onClick={() => void agentsQuery.refetch()}>
+                Try again
+              </Button>
+            </div>
+          ) : filteredAgents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {agents.map(agent => (
-                <Link key={agent.id} href={`/agents/${agent.slug || agent.id}`}>
-                  <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                    <CardContent className="p-6">
-                      {/* Agent Image */}
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0F4C75] to-[#3282B8] flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                          {agent.firstName?.charAt(0) || '?'}
-                          {agent.lastName?.charAt(0) || '?'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-lg mb-1 truncate">
-                            {agent.displayName || `${agent.firstName} ${agent.lastName}`}
-                          </h3>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-                            <Building2 className="h-4 w-4" />
-                            <span className="capitalize">{(agent.role || '').replace(/_/g, ' ')}</span>
+              {filteredAgents.map(agent => {
+                const specializations = parseDelimitedList(agent.specialization);
+                const areasServed = parseDelimitedList(agent.areasServed);
+                const name = agentDisplayName(agent);
+                return (
+                  <Link key={agent.id} href={`/agents/${agent.slug}`} data-testid="agent-card">
+                    <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                      <CardContent className="p-6 flex flex-col h-full">
+                        {/* Agent Identity */}
+                        <div className="flex items-start gap-4 mb-4">
+                          {agent.profileImage ? (
+                            <img
+                              src={agent.profileImage}
+                              alt={name}
+                              className="w-20 h-20 rounded-full object-cover flex-shrink-0 border border-border"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0F4C75] to-[#3282B8] flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                              {agent.firstName?.charAt(0) || '?'}
+                              {agent.lastName?.charAt(0) || '?'}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-lg mb-1 truncate">{name}</h3>
+                            {agent.role && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                                <Building2 className="h-4 w-4" />
+                                <span>
+                                  {ROLE_LABELS[agent.role] || agent.role.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            )}
+                            {typeof agent.yearsExperience === 'number' &&
+                              agent.yearsExperience > 0 && (
+                                <p className="text-sm text-muted-foreground">
+                                  {agent.yearsExperience}+ years experience
+                                </p>
+                              )}
                           </div>
                         </div>
-                      </div>
 
-                      {/* Bio */}
-                      {agent.bio && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                          {agent.bio}
-                        </p>
-                      )}
+                        {/* Bio */}
+                        {agent.bio && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                            {agent.bio}
+                          </p>
+                        )}
 
-                      {/* Specialization */}
-                      {(() => {
-                        const specializations = parseSpecializations(agent.specialization);
-                        if (specializations.length === 0) return null;
-                        return (
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {specializations.slice(0, 3).map((spec: string, idx: number) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
+                        {/* Specializations */}
+                        {specializations.length > 0 && (
+                          <div
+                            className="flex flex-wrap gap-2 mb-4"
+                            data-testid="agent-specializations"
+                          >
+                            {specializations.slice(0, 3).map(spec => (
+                              <Badge key={spec} variant="secondary" className="text-xs">
                                 {spec}
                               </Badge>
                             ))}
                           </div>
-                        );
-                      })()}
+                        )}
 
-                      {/* Stats */}
-                      <div className="grid grid-cols-2 gap-4 mb-4 pt-4 border-t">
-                        <div>
-                          <div className="text-2xl font-bold text-[#0F4C75]">
-                            {agent.totalSales || 0}
-                          </div>
-                          <div className="text-xs text-muted-foreground">Properties Sold</div>
-                        </div>
-                        <div>
-                          <div className="text-2xl font-bold text-[#0F4C75]">
-                            {agent.yearsExperience || 0}+
-                          </div>
-                          <div className="text-xs text-muted-foreground">Years Experience</div>
-                        </div>
-                      </div>
-
-                      {/* Contact */}
-                      <div className="space-y-2">
-                        {agent.phone && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Phone className="h-4 w-4" />
-                            <span>{agent.phone}</span>
+                        {/* Areas Served */}
+                        {areasServed.length > 0 && (
+                          <div className="flex items-start gap-2 text-sm text-muted-foreground mb-4">
+                            <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <span className="line-clamp-2">{areasServed.join(' · ')}</span>
                           </div>
                         )}
-                        {agent.email && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Mail className="h-4 w-4" />
-                            <span className="truncate">{agent.email}</span>
-                          </div>
-                        )}
-                      </div>
 
-                      {agent.isVerified === 1 && (
-                        <Badge className="mt-4 bg-green-500">Verified Agent</Badge>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+                        {/* Contact */}
+                        <div className="space-y-2 mt-auto pt-4 border-t">
+                          {agent.phone && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Phone className="h-4 w-4" />
+                              <span>{agent.phone}</span>
+                            </div>
+                          )}
+                          {agent.email && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Mail className="h-4 w-4" />
+                              <span className="truncate">{agent.email}</span>
+                            </div>
+                          )}
+                          {agent.isVerified === 1 && (
+                            <Badge className="mt-2 bg-green-500">Verified Agent</Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : searchQuery.trim() ? (
+            <div className="text-center py-12">
+              <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No agents match your search</h3>
+              <p className="text-muted-foreground mb-6">
+                Try a different name, specialization or area.
+              </p>
+              <Button variant="outline" onClick={() => setSearchQuery('')}>
+                Clear search
+              </Button>
             </div>
           ) : (
             <div className="text-center py-12">
