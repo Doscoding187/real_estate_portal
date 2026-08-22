@@ -71,7 +71,7 @@ export const RequireRole = ({
           loginPath = getAccountAuthHref('signin', currentPath);
         } else if (unauthenticatedAuthEntry) {
           loginPath = getAccountAuthHref(unauthenticatedAuthEntry, currentPath, {
-            registerRole: requiredRole,
+            registerRole: requiredRole ?? undefined,
           });
         }
         setLocation(loginPath);
