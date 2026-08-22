@@ -27,7 +27,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { generatePropertyUrl } from '@/lib/urlUtils';
 import {
   getHomepageHeroJourneys,
-  getPublicHeroJourney,
   isHomepageHeroJourneyEnabled,
   normalizePublicHeroJourney,
   type PublicHeroJourneyKey,
@@ -35,12 +34,16 @@ import {
 import {
   buildBuySearchUrl,
   buildDevelopmentsSearchUrl,
-  buildPropertySearchUrl,
   BUY_PROPERTY_TYPE_OPTIONS,
   getPriceRangeError,
   resolveCanonicalLocationSelection,
 } from '@/lib/heroJourneySearch';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
+import {
+  buildConsumerJourneyUrl,
+  getConsumerJourneys,
+  type ConsumerJourneyKey,
+} from '@/lib/consumerJourneyRouter';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import { LocationNode } from '@/types/location';
 import { trpc } from '@/lib/trpc';
@@ -229,7 +232,7 @@ export function EnhancedHero({
   // Filter values
   const [filters, setFilters] = useState({
     // Buy filters
-    propertyIntent: '',
+    propertyIntent: 'residential',
     propertyTypes: [] as string[],
     priceMin: '',
     priceMax: '',
@@ -309,6 +312,13 @@ export function EnhancedHero({
   const handleCategoryClick = (categoryId: string) => {
     setShowIntentResolver(false);
     handleTabChange(categoryId);
+    if (categoryId === 'buy' || categoryId === 'rent') {
+      setFilters(prev => ({ ...prev, propertyIntent: 'residential', propertyTypes: [], minBedrooms: '', minBathrooms: '' }));
+    } else if (categoryId === 'plot_land') {
+      setFilters(prev => ({ ...prev, propertyIntent: 'land', propertyTypes: [], minBedrooms: '', minBathrooms: '' }));
+    } else if (categoryId === 'commercial') {
+      setFilters(prev => ({ ...prev, propertyIntent: 'commercial', propertyTypes: [], minBedrooms: '', minBathrooms: '' }));
+    }
     if (categoryId === 'find_agent') {
       setLocation('/agents');
       setShowFilters(false);
@@ -318,7 +328,20 @@ export function EnhancedHero({
   };
 
   const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters(prev => {
+      if (key !== 'propertyIntent') return { ...prev, [key]: value };
+      return {
+        ...prev,
+        propertyIntent: value,
+        propertyTypes: [],
+        minBedrooms: '',
+        minBathrooms: '',
+        landType: '',
+        sizeMin: '',
+        sizeMax: '',
+        commercialUseType: '',
+      };
+    });
 
     if (key === 'priceMin' || key === 'priceMax') {
       const nextMin = key === 'priceMin' ? value : filters.priceMin;
@@ -375,27 +398,39 @@ export function EnhancedHero({
     }
 
     if (effectiveJourney === 'buy') {
-      submitBuySearch();
+      setLocation(buildConsumerJourneyUrl({
+        intent: 'buy',
+        journey: (filters.propertyIntent || 'residential') as ConsumerJourneyKey,
+        searchQuery,
+        selectedLocations: hasSelectedSearchArea ? [] : selectedLocations,
+        searchScope: selectedSearchArea ? { kind: 'search_area', searchAreaId: selectedSearchArea.searchAreaId } : undefined,
+        searchAreaAvailability: selectedSearchArea?.availability,
+        propertyType: filters.propertyTypes[0],
+        minPrice: filters.priceMin,
+        maxPrice: filters.priceMax,
+        minBedrooms: filters.minBedrooms,
+        minBathrooms: filters.minBathrooms,
+        landClassification: filters.landType,
+        minSize: filters.sizeMin,
+        maxSize: filters.sizeMax,
+      }));
       return;
     }
 
     // Rent remains compatible with its existing route authority while its
     // dedicated journey is completed in the next implementation slice.
     if (effectiveJourney === 'rent') {
-      setLocation(
-        buildPropertySearchUrl({
-          transactionType: 'to-rent',
-          searchQuery,
-          selectedLocations: hasSelectedSearchArea ? [] : selectedLocations,
-          searchScope: selectedSearchArea
-            ? { kind: 'search_area', searchAreaId: selectedSearchArea.searchAreaId }
-            : undefined,
-          searchAreaAvailability: selectedSearchArea?.availability,
-          propertyType: filters.propertyTypes[0],
-          minPrice: filters.budgetMin,
-          maxPrice: filters.budgetMax,
-        }),
-      );
+      setLocation(buildConsumerJourneyUrl({
+        intent: 'rent',
+        journey: (filters.propertyIntent || 'residential') as ConsumerJourneyKey,
+        searchQuery,
+        selectedLocations: hasSelectedSearchArea ? [] : selectedLocations,
+        searchScope: selectedSearchArea ? { kind: 'search_area', searchAreaId: selectedSearchArea.searchAreaId } : undefined,
+        searchAreaAvailability: selectedSearchArea?.availability,
+        propertyType: filters.propertyTypes[0],
+        minPrice: filters.budgetMin,
+        maxPrice: filters.budgetMax,
+      }));
       return;
     }
 
@@ -423,8 +458,13 @@ export function EnhancedHero({
     // Commercial currently exposes the completed Office Leasing journey only.
     // The public Commercial page owns its own bounded Office refinements; do
     // not manufacture sale, use-type, or generic-property filters here.
+    if (effectiveJourney === 'plot_land') {
+      setLocation(buildConsumerJourneyUrl({ intent: 'buy', journey: 'land', selectedLocations, landClassification: filters.landType, minPrice: filters.priceMin, maxPrice: filters.priceMax, minSize: filters.sizeMin, maxSize: filters.sizeMax }));
+      return;
+    }
+
     if (effectiveJourney === 'commercial') {
-      setLocation(getPublicHeroJourney('commercial').destination);
+      setLocation(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations }));
       return;
     }
 
@@ -843,7 +883,28 @@ export function EnhancedHero({
                             </p>
                           )}
 
-                          <div className="space-y-2">
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              What are you looking to buy?
+                            </Label>
+                            <Select
+                              value={filters.propertyIntent}
+                              onValueChange={value => handleFilterChange('propertyIntent', value)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Choose a journey" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getConsumerJourneys('buy').map(journey => (
+                                  <SelectItem key={journey.key} value={journey.key}>
+                                    {journey.label}{journey.status === 'TRANSITIONAL' ? ' · currently supported' : ''}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {filters.propertyIntent === 'residential' && <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                               Property Type
                             </Label>
@@ -856,14 +917,26 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {BUY_PROPERTY_TYPE_OPTIONS.map(option => (
+                                {BUY_PROPERTY_TYPE_OPTIONS.filter(option => option.value !== 'farm').map(option => (
                                   <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
+                          </div>}
+
+                          {filters.propertyIntent === 'land' && (
+                            <p className="md:col-span-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                              You&apos;ll continue in the Land journey with land classification, extent, and price filters.
+                            </p>
+                          )}
+
+                          {filters.propertyIntent === 'farm' && (
+                            <p className="md:col-span-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                              Farm discovery is currently supported through the existing property search while the specialist Farm journey is completed.
+                            </p>
+                          )}
 
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -974,7 +1047,28 @@ export function EnhancedHero({
                       {/* RENTAL FILTERS */}
                       {normalizedActiveTab === 'rent' && (
                         <>
-                          <div className="space-y-2">
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              What are you looking to rent?
+                            </Label>
+                            <Select
+                              value={filters.propertyIntent}
+                              onValueChange={value => handleFilterChange('propertyIntent', value)}
+                            >
+                              <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200">
+                                <SelectValue placeholder="Choose a journey" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getConsumerJourneys('rent').map(journey => (
+                                  <SelectItem key={journey.key} value={journey.key}>
+                                    {journey.label}{journey.status === 'TRANSITIONAL' ? ' · currently supported' : ''}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {filters.propertyIntent === 'residential' && <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                               Property Type
                             </Label>
@@ -987,16 +1081,28 @@ export function EnhancedHero({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Any Type</SelectItem>
-                                {filterConfig.rent.propertyTypes.map((option: any) => (
+                                {filterConfig.rent.propertyTypes.filter((option: any) => option.value !== 'farm').map((option: any) => (
                                   <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
+                          </div>}
 
-                          <div className="space-y-2">
+                          {filters.propertyIntent === 'farm' && (
+                            <p className="md:col-span-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                              Farm rentals currently use the existing rental search as a transitional path.
+                            </p>
+                          )}
+
+                          {filters.propertyIntent === 'commercial' && (
+                            <p className="md:col-span-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                              Commercial rental continues in the Office Leasing journey with its own area, cost, and infrastructure filters.
+                            </p>
+                          )}
+
+                          {(filters.propertyIntent === 'residential' || filters.propertyIntent === 'farm') && <div className="space-y-2">
                             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                               Max monthly rent
                             </Label>
@@ -1014,7 +1120,7 @@ export function EnhancedHero({
                                 <SelectItem value="50000">R 50,000+ / month</SelectItem>
                               </SelectContent>
                             </Select>
-                          </div>
+                          </div>}
                         </>
                       )}
 
