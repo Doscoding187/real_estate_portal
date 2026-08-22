@@ -368,7 +368,7 @@ function Router() {
           {/* NOTE: Developer routes moved to section 2A above legacy wildcards */}
 
           <Route path="/agency/setup">
-            <RequireRole role="agency_admin">
+            <RequireRole role="agency_admin" unauthenticatedAuthEntry="register">
               <AgencyOnboarding />
             </RequireRole>
           </Route>

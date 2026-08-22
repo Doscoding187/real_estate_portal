@@ -253,10 +253,13 @@ function resolveAction(
   }
 
   if (configuredMode === 'request_invoice') {
+    const productKey = getCommercialProductKey(plan);
     const target =
-      plan.segment === 'agent' && getCommercialProductKey(plan) === 'agent_launch_access'
+      plan.segment === 'agent' && productKey === 'agent_launch_access'
         ? '/agent/select-package'
-        : '/contact';
+        : plan.segment === 'agency'
+          ? '/agency/setup'
+          : '/contact';
 
     return {
       mode: configuredMode,
@@ -265,7 +268,9 @@ function resolveAction(
       reason:
         target === '/agent/select-package'
           ? 'Uses the existing authenticated Agent Launch Access invoice and manual-EFT flow.'
-          : 'Paid activation is assisted and requires Property Listify commercial operations.',
+          : target === '/agency/setup'
+            ? 'Routes Agency Launch Access into canonical agency onboarding, which issues the manual-EFT Launch Access invoice.'
+            : 'Paid activation is assisted and requires Property Listify commercial operations.',
     };
   }
 

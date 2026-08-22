@@ -97,6 +97,64 @@ describe('RequireRole', () => {
     });
   });
 
+  test('routes unauthenticated agency setup visitors into contextual agency registration', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/agency/setup',
+        search: '',
+        hash: '',
+      },
+      writable: true,
+    });
+
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    render(
+      <RequireRole role="agency_admin" unauthenticatedAuthEntry="register">
+        <div data-testid="protected">Protected Content</div>
+      </RequireRole>,
+    );
+
+    await waitFor(() => {
+      expect(setLocation).toHaveBeenCalledWith(
+        '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
+      );
+    });
+  });
+
+  test('keeps the default context-free login bounce when no auth entry is configured', async () => {
+    Object.defineProperty(window, 'location', {
+      value: {
+        pathname: '/agency/overview',
+        search: '',
+        hash: '',
+      },
+      writable: true,
+    });
+
+    const setLocation = vi.fn();
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      loading: false,
+    });
+
+    mockUseLocation.mockReturnValue([null, setLocation]);
+
+    renderWithAuth({}, 'agency_admin');
+
+    await waitFor(() => {
+      expect(setLocation).toHaveBeenCalledWith('/login');
+    });
+  });
+
   test('redirects to role home when user does not have required role', async () => {
     const setLocation = vi.fn();
     mockUseAuth.mockReturnValue({

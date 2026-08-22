@@ -1121,13 +1121,23 @@ export function getSafeNextPath(value: unknown): string | null {
   }
 }
 
-export function getAccountAuthHref(mode: 'signin' | 'register', nextPath: unknown): string {
+export function getAccountAuthHref(
+  mode: 'signin' | 'register',
+  nextPath: unknown,
+  registerRole?: string | null,
+): string {
   const params = new URLSearchParams({ mode });
   const safeNextPath = getSafeNextPath(nextPath);
 
   // Never send an auth page back to itself, and never accept an external next path.
   if (safeNextPath && safeNextPath !== '/login' && !safeNextPath.startsWith('/login?')) {
     params.set('next', safeNextPath);
+  }
+
+  // Registration role preselection only applies to register mode; sign-in
+  // always uses the account's stored role.
+  if (mode === 'register' && typeof registerRole === 'string' && registerRole) {
+    params.set('role', registerRole);
   }
 
   return `/login?${params.toString()}`;

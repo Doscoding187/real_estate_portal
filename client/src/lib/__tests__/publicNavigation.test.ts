@@ -352,6 +352,24 @@ describe('public navigation authority', () => {
     );
   });
 
+  it('builds a register href with role preselection and an encoded internal next path', () => {
+    expect(getAccountAuthHref('register', '/agency/setup', 'agency_admin')).toBe(
+      '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
+    );
+  });
+
+  it('does not attach role preselection to sign-in hrefs', () => {
+    expect(getAccountAuthHref('signin', '/agency/setup', 'agency_admin')).toBe(
+      '/login?mode=signin&next=%2Fagency%2Fsetup',
+    );
+  });
+
+  it('ignores empty register role preselection', () => {
+    expect(getAccountAuthHref('register', '/agency/setup', null)).toBe(
+      '/login?mode=register&next=%2Fagency%2Fsetup',
+    );
+  });
+
   it.each([
     'https://example.com/explore/upload',
     '//example.com/explore/upload',
