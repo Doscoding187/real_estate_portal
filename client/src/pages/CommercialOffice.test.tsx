@@ -12,6 +12,18 @@ describe('CommercialOffice handoff', () => {
     window.history.replaceState({}, '', '/commercial?location=Sandton');
     render(<CommercialOffice />);
     expect(screen.getByLabelText('Location')).toHaveValue('Sandton');
-    expect(search).toHaveBeenCalledWith(expect.objectContaining({ location: 'Sandton' }));
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({ location: 'Sandton' }),
+      { enabled: true },
+    );
+  });
+
+  it('fails closed for an unsupported specialist location scope', () => {
+    search.mockClear();
+    window.history.replaceState({}, '', '/commercial?searchError=unsupported-location-scope');
+    render(<CommercialOffice />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose one location');
+    expect(search).toHaveBeenCalledWith(expect.any(Object), { enabled: false });
+    expect(screen.queryByText('No published Office spaces match these requirements.')).not.toBeInTheDocument();
   });
 });
