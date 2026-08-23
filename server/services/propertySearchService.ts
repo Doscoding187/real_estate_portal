@@ -616,6 +616,7 @@ export class PropertySearchService {
         agentWhatsapp: agents.whatsapp,
         agentEmail: agents.email,
         agentProfileImage: agents.profileImage,
+        agentSlug: agents.slug,
         agencyName: agencies.name,
         ownerName: users.name,
         ownerFirstName: users.firstName,
@@ -908,6 +909,7 @@ export class PropertySearchService {
                 email: String(publicIdentity.email || ''),
                 image: publicIdentity.avatarUrl || undefined,
                 agencyId: publicIdentity.agencyId,
+                slug: publicIdentity.agentSlug || undefined,
               }
             : !publicIdentity && hasAgentIdentity
               ? {
@@ -918,6 +920,7 @@ export class PropertySearchService {
                   whatsapp: String(prop.agentWhatsapp || ''),
                   email: String(prop.agentEmail || ''),
                   image: prop.agentProfileImage || undefined,
+                  slug: prop.agentSlug || undefined,
                 }
               : undefined,
         developerBrand,

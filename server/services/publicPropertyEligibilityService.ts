@@ -356,6 +356,7 @@ export function evaluatePublicPropertySupplyEvidence(
         whatsapp: agent.whatsapp || agent.phone,
         email: agent.email,
         agentId: agent.id,
+        agentSlug: agent.slug || undefined,
         agencyId: custody.agencyId || undefined,
       },
     };
