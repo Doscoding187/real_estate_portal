@@ -321,9 +321,7 @@ function UnitTypeCarousel({
             const availability = getUnitAvailabilityState(unit);
             const exactPriceFrom =
               formatExactRand(unitPriceFrom) ||
-              (transactionType === 'for_rent'
-                ? 'Monthly rent on request'
-                : 'Price on request');
+              (transactionType === 'for_rent' ? 'Monthly rent on request' : 'Price on request');
             const exactPriceTo =
               unitPriceTo !== null && unitPriceFrom !== null && unitPriceTo > unitPriceFrom
                 ? formatExactRand(unitPriceTo)
@@ -350,7 +348,7 @@ function UnitTypeCarousel({
                   ? 'Send enquiry'
                   : availability?.primaryLabel || 'Request Callback';
 
-              return (
+            return (
               <CarouselItem
                 key={unit.id}
                 className="pl-4 md:basis-[74%] lg:basis-[54%] xl:basis-[43%]"
@@ -531,82 +529,82 @@ function DevelopmentActionPanel({
 
         <div className="space-y-4 p-4">
           {transactionType === 'for_sale' && canQualify ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Quick Qualification Check
-                </p>
-                <p className="mt-1 text-xs text-slate-600">Enter your monthly household income</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Quick Qualification Check
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">Enter your monthly household income</p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className="border-orange-200 bg-orange-50 text-[11px] text-orange-700"
+                >
+                  60 sec
+                </Badge>
               </div>
-              <Badge
-                variant="outline"
-                className="border-orange-200 bg-orange-50 text-[11px] text-orange-700"
-              >
-                60 sec
-              </Badge>
-            </div>
 
-            <div className="mt-3">
-              <label htmlFor={inputId} className="sr-only">
-                Monthly household income
-              </label>
-              <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
-                <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
-                  R
-                </span>
-                <input
-                  id={inputId}
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="45 000"
-                  value={quickIncome}
-                  onChange={e => onQuickIncomeChange(e.target.value)}
-                  className="h-11 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                />
+              <div className="mt-3">
+                <label htmlFor={inputId} className="sr-only">
+                  Monthly household income
+                </label>
+                <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
+                    R
+                  </span>
+                  <input
+                    id={inputId}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="45 000"
+                    value={quickIncome}
+                    onChange={e => onQuickIncomeChange(e.target.value)}
+                    className="h-11 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="mt-3">
-              <label htmlFor={`${inputId}-deposit`} className="sr-only">
-                Optional deposit
-              </label>
-              <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
-                <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
-                  R
-                </span>
-                <input
-                  id={`${inputId}-deposit`}
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Optional deposit"
-                  value={quickDeposit}
-                  onChange={e => onQuickDepositChange(e.target.value)}
-                  className="h-10 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-xs font-medium text-slate-900 outline-none placeholder:text-slate-400"
-                />
+              <div className="mt-3">
+                <label htmlFor={`${inputId}-deposit`} className="sr-only">
+                  Optional deposit
+                </label>
+                <div className="flex rounded-xl border border-slate-200 bg-white shadow-sm">
+                  <span className="flex items-center px-3 text-sm font-semibold text-slate-500">
+                    R
+                  </span>
+                  <input
+                    id={`${inputId}-deposit`}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Optional deposit"
+                    value={quickDeposit}
+                    onChange={e => onQuickDepositChange(e.target.value)}
+                    className="h-10 w-full rounded-r-xl border-0 bg-transparent px-0 pr-3 text-xs font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500">Optional deposit</p>
               </div>
-              <p className="mt-1 text-[11px] text-slate-500">Optional deposit</p>
-            </div>
 
-            {quickQualification ? (
-              <div
-                className={`mt-3 rounded-xl border p-3 ${
-                  quickQualification.tone === 'success'
-                    ? 'border-emerald-200 bg-emerald-50'
-                    : quickQualification.tone === 'warning'
-                      ? 'border-amber-200 bg-amber-50'
-                      : 'border-slate-200 bg-white'
-                }`}
-              >
-                <p className="text-xs font-semibold text-slate-900">
-                  {quickQualification.headline}
-                </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
-                  {quickQualification.body}
-                </p>
-              </div>
-            ) : null}
-          </div>
+              {quickQualification ? (
+                <div
+                  className={`mt-3 rounded-xl border p-3 ${
+                    quickQualification.tone === 'success'
+                      ? 'border-emerald-200 bg-emerald-50'
+                      : quickQualification.tone === 'warning'
+                        ? 'border-amber-200 bg-amber-50'
+                        : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  <p className="text-xs font-semibold text-slate-900">
+                    {quickQualification.headline}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-600">
+                    {quickQualification.body}
+                  </p>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
               {contactDescription}
@@ -665,8 +663,7 @@ export default function DevelopmentDetail() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const returnToResults = getDevelopmentSearchReturn(search);
-  const withSearchReturn = (path: string) =>
-    appendDevelopmentSearchReturn(path, returnToResults);
+  const withSearchReturn = (path: string) => appendDevelopmentSearchReturn(path, returnToResults);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxTitle, setLightboxTitle] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -676,9 +673,7 @@ export default function DevelopmentDetail() {
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
   const [leadDialogMode, setLeadDialogMode] = useState<
     'brochure' | 'contact' | 'qualification' | 'info'
-  >(
-    'qualification',
-  );
+  >('qualification');
   const [leadDialogLocation, setLeadDialogLocation] = useState('unknown');
   const [activeLeadUnit, setActiveLeadUnit] = useState<any | null>(null);
   const [activeAmenityTab, setActiveAmenityTab] = useState<AmenityTabKey | ''>('');
@@ -791,16 +786,11 @@ export default function DevelopmentDetail() {
   };
 
   const handleUnitFloorPlan = (unit: any) => {
-    const unitPath = withSearchReturn(
-      `/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`,
-    );
+    const unitPath = withSearchReturn(`/development/${slug || ''}/unit/${toUnitRouteKey(unit)}`);
     trackCTAClick({
       ctaLabel: 'View Plan & Details',
       ctaLocation: `unit_card_${unit.id}_floor_plan`,
-      ctaHref:
-        typeof window !== 'undefined'
-          ? `${window.location.origin}${unitPath}`
-          : unitPath,
+      ctaHref: typeof window !== 'undefined' ? `${window.location.origin}${unitPath}` : unitPath,
     });
     setLocation(unitPath);
   };
@@ -1124,7 +1114,7 @@ export default function DevelopmentDetail() {
     developerLogo: publisher.logoUrl,
     developerDescription: publisher.description ?? null,
     developerWebsite: publisher.websiteUrl ?? null,
-    developerSlug: isPlatformReference ? null : publisher.slug ?? null,
+    developerSlug: isPlatformReference ? null : (publisher.slug ?? null),
     developerPublishedDevelopmentCount:
       !isPlatformReference && dev.publisherPublishedDevelopmentCount != null
         ? Number(dev.publisherPublishedDevelopmentCount)
@@ -1324,10 +1314,24 @@ export default function DevelopmentDetail() {
           <Breadcrumbs
             items={[
               { label: 'Home', href: '/' },
-              { label: development.location, href: '#' },
-              { label: development.name, href: `/development/${development.id}` },
+              { label: development.location, href: returnToResults || '/new-developments' },
+              {
+                label: development.name,
+                href: dev.canonicalRoute || `/development/${development.id}`,
+              },
             ]}
           />
+        </div>
+
+        {/* Page identity: the buyer must always know which development they
+            are viewing, and search engines need a real document heading. */}
+        <div className="w-full bg-white border-b border-slate-200">
+          <div className="container max-w-7xl mx-auto px-4 pt-5">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              {development.name}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">{development.location}</p>
+          </div>
         </div>
 
         {/* Gallery Section - CRITICAL: Isolated container with overflow control */}
@@ -1626,32 +1630,32 @@ export default function DevelopmentDetail() {
 
                     <Separator className="bg-slate-100 my-2" />
 
-                    {!isPlatformReference && (() => {
-                      const otherProjects = relatedPublicDevelopments.slice(0, 3);
+                    {!isPlatformReference &&
+                      (() => {
+                        const otherProjects = relatedPublicDevelopments.slice(0, 3);
 
-                      if (otherProjects.length === 0) return null;
+                        if (otherProjects.length === 0) return null;
 
-                      return (
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
-                            <Briefcase className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                            Other Projects
-                          </p>
-                          <div className="space-y-1 pl-1 border-l-2 border-slate-100">
-                            {otherProjects.map((project: any) => (
-                              <a
-                                key={project.id}
-                                href={`/development/${project.slug}`}
-                                className="text-xs text-slate-600 pl-2 hover:text-blue-600 transition-colors block truncate"
-                              >
-                                {project.name}
-                              </a>
-                            ))}
+                        return (
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-900 uppercase tracking-wide mb-2 flex items-center gap-1">
+                              <Briefcase className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                              Other Projects
+                            </p>
+                            <div className="space-y-1 pl-1 border-l-2 border-slate-100">
+                              {otherProjects.map((project: any) => (
+                                <a
+                                  key={project.id}
+                                  href={`/development/${project.slug}`}
+                                  className="text-xs text-slate-600 pl-2 hover:text-blue-600 transition-colors block truncate"
+                                >
+                                  {project.name}
+                                </a>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })()}
-
+                        );
+                      })()}
                   </CardContent>
                 </Card>
               </div>
@@ -1723,7 +1727,8 @@ export default function DevelopmentDetail() {
                     const allUnits = development.units || [];
                     const normalizedUnits = allUnits.map((u: any) => {
                       const bed = u.publicFacts?.bedrooms;
-                      const hasBedroom = typeof bed === 'number' && Number.isFinite(bed) && bed >= 0;
+                      const hasBedroom =
+                        typeof bed === 'number' && Number.isFinite(bed) && bed >= 0;
                       const bedroomKey = hasBedroom ? bed.toString() : 'other';
                       const bedroomLabel = hasBedroom ? `${bed}` : 'Other';
                       return {
@@ -1816,7 +1821,7 @@ export default function DevelopmentDetail() {
                             value={key}
                             className="mt-0 focus-visible:outline-none"
                           >
-                              <UnitTypeCarousel
+                            <UnitTypeCarousel
                               units={bedroomGroups.get(key)?.units || []}
                               transactionType={publicFacts.transactionType}
                               publisherAuthorityKind={publicFacts.publisher.authorityKind}

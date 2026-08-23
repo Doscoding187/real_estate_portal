@@ -104,9 +104,7 @@ function canonicalLocationFromContext(context: {
     name: context.name,
     type: context.type,
     provinceSlug: normalizeLocationKey(context.hierarchy.province),
-    citySlug: context.hierarchy.city
-      ? normalizeLocationKey(context.hierarchy.city)
-      : undefined,
+    citySlug: context.hierarchy.city ? normalizeLocationKey(context.hierarchy.city) : undefined,
   };
 }
 
@@ -116,7 +114,12 @@ export default function DevelopmentsDemo() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const intent = useMemo(
-    () => resolveSearchIntent(location.split('?')[0] || '/new-developments', {}, new URLSearchParams(search)),
+    () =>
+      resolveSearchIntent(
+        location.split('?')[0] || '/new-developments',
+        {},
+        new URLSearchParams(search),
+      ),
     [location, search],
   );
 
@@ -148,13 +151,16 @@ export default function DevelopmentsDemo() {
       city: intent.geography.city,
       suburb: intent.geography.suburb,
       locations: Array.isArray(intent.filters.locations)
-        ? intent.filters.locations.filter((value: unknown): value is string => typeof value === 'string')
+        ? intent.filters.locations.filter(
+            (value: unknown): value is string => typeof value === 'string',
+          )
         : undefined,
       search: typeof intent.filters.search === 'string' ? intent.filters.search : undefined,
       developmentType,
       developmentStatus,
       transactionType:
-        intent.filters.transactionType === 'for_sale' || intent.filters.transactionType === 'for_rent'
+        intent.filters.transactionType === 'for_sale' ||
+        intent.filters.transactionType === 'for_rent'
           ? intent.filters.transactionType
           : undefined,
       minPrice: typeof intent.filters.minPrice === 'number' ? intent.filters.minPrice : undefined,
@@ -184,9 +190,9 @@ export default function DevelopmentsDemo() {
 
     const hasCanonicalGeography = Boolean(
       intent.geography.locationId ||
-        intent.geography.locationIds?.length ||
-        intent.geography.searchAreaId ||
-        intent.geography.searchAreaIds?.length,
+      intent.geography.locationIds?.length ||
+      intent.geography.searchAreaId ||
+      intent.geography.searchAreaIds?.length,
     );
     const shouldCanonicalizeLocation = !hasCanonicalGeography;
     const shouldNormalizePage = data.page !== intent.resultState.page;
@@ -197,22 +203,25 @@ export default function DevelopmentsDemo() {
           level: context.type,
           locationId: context.canonicalLocationId,
           province: normalizeLocationKey(context.hierarchy.province),
-          city: context.hierarchy.city
-            ? normalizeLocationKey(context.hierarchy.city)
-            : undefined,
+          city: context.hierarchy.city ? normalizeLocationKey(context.hierarchy.city) : undefined,
           suburb: context.hierarchy.suburb
             ? normalizeLocationKey(context.hierarchy.suburb)
             : undefined,
         }
       : intent.geography;
 
-    updateIntentUrl(setLocation, intent, {
-      geography: nextGeography,
-      filters: shouldCanonicalizeLocation
-        ? removeTextLocationFilters(intent.filters)
-        : intent.filters,
-      resultState: { page: data.page },
-    }, { replace: true });
+    updateIntentUrl(
+      setLocation,
+      intent,
+      {
+        geography: nextGeography,
+        filters: shouldCanonicalizeLocation
+          ? removeTextLocationFilters(intent.filters)
+          : intent.filters,
+        resultState: { page: data.page },
+      },
+      { replace: true },
+    );
   }, [data, error, intent, setLocation]);
 
   const currentLocation = data?.locationContext
@@ -221,10 +230,10 @@ export default function DevelopmentsDemo() {
   const locationMessage = data?.locationMessage || intent.validation?.message;
   const hasLocationError = Boolean(
     error ||
-      intent.validation ||
-      data?.locationState === 'unavailable' ||
-      data?.locationState === 'unresolved' ||
-      data?.locationState === 'ambiguous',
+    intent.validation ||
+    data?.locationState === 'unavailable' ||
+    data?.locationState === 'unresolved' ||
+    data?.locationState === 'ambiguous',
   );
   const resultCount = data?.total ?? 0;
   const page = data?.page ?? intent.resultState.page;
@@ -428,7 +437,10 @@ export default function DevelopmentsDemo() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <MetaControl />
+      <MetaControl
+        title="New Developments | Property Listify"
+        description="Browse new property developments with current unit availability, pricing and sales progress — direct from the developers marketing them."
+      />
       <EnhancedNavbar />
 
       <div className="container mx-auto px-4 pb-12 pt-24 sm:px-6 lg:px-8">
@@ -473,7 +485,11 @@ export default function DevelopmentsDemo() {
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h1 className="text-xl font-bold text-slate-800">
-                  {resultCount} New Developments Found
+                  {isLoading || (isFetching && !data) ? (
+                    <span className="text-slate-400">Finding developments…</span>
+                  ) : (
+                    `${resultCount} New Developments Found`
+                  )}
                 </h1>
                 <p className="mt-1 text-sm text-slate-500">
                   Development-first results with current unit, price, and availability facts.
