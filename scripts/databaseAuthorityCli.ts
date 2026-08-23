@@ -341,6 +341,12 @@ async function run(command: Command): Promise<void> {
     } finally {
       await connection.end();
     }
+    if (command === 'scenario:verify') {
+      // Contained application acceptance imports the public router graph; its
+      // module-level workers retain event-loop handles after success, so an
+      // explicit exit mirrors the failure path instead of hanging the shell.
+      process.exit(0);
+    }
     return;
   }
 
