@@ -2054,8 +2054,14 @@ async function activateSubscriptionForPaidInvoice(
     .where(eq(plans.id, effectivePlanId || Number(input.invoice.planId || 0)))
     .limit(1);
 
+  let subscription: SubscriptionRow | null = null;
+
   if (activationPlan && resolveCommercialTerm(activationPlan).kind === 'paid_launch_access') {
-    return activatePaidLaunchAccessForOwner({
+    // Launch Access activation delegates to the verified-payment writer and
+    // deliberately does NOT extend the legacy agencies billing shadow with a
+    // new mutable commercial record. Behavioral consumers (invitation
+    // delivery, public agency status) read canonical subscriptions directly.
+    await activatePaidLaunchAccessForOwner({
       ownerType: input.invoice.ownerType as SubscriptionOwnerType,
       ownerId: input.invoice.ownerId,
       planId: activationPlan.id,
@@ -2069,59 +2075,75 @@ async function activateSubscriptionForPaidInvoice(
       metadata,
       db: tx,
     });
-  }
 
-  const activatedAt = new Date();
-  const activationPeriod = resolveActivationPeriod({
-    invoice: input.invoice,
-    subscription: currentSubscription || null,
-    activatedAt,
-  });
-  const periodStart = toDbTimestamp(activationPeriod.periodStart);
-  const periodEnd = toDbTimestamp(activationPeriod.periodEnd);
-
-  await tx
-    .update(subscriptions)
-    .set({
-      planId:
-        Number.isFinite(effectivePlanId) && effectivePlanId > 0
-          ? effectivePlanId
-          : input.invoice.planId,
-      status: 'active',
-      trialEndsAt: null,
-      currentPeriodStart: periodStart,
-      currentPeriodEnd: periodEnd,
-      graceEndsAt: null,
-      cancelAtPeriodEnd: 0,
-      cancelledAt: null,
-      billingCycleAnchor: periodEnd,
-      updatedBy: input.actorUserId,
-      metadata: {
-        ...metadata,
-        billing_provider: 'manual_eft',
-        activated_from_invoice_id: input.invoice.id,
-        activated_at: toDbTimestamp(activatedAt),
-        activation_period_policy: activationPeriod.reason,
-      },
-    })
-    .where(eq(subscriptions.id, input.invoice.subscriptionId));
-
-  const [subscription] = await tx
-    .select()
-    .from(subscriptions)
-    .where(eq(subscriptions.id, input.invoice.subscriptionId))
-    .limit(1);
-
-  if (subscription && input.invoice.ownerType === 'agency') {
-    await syncAgencyBillingShadow(tx, {
-      agencyId: input.invoice.ownerId,
-      planId: subscription.planId,
-      status: 'active',
-      periodEnd: subscription.currentPeriodEnd || periodEnd,
+    if (input.invoice.subscriptionId) {
+      const [activatedRow] = await tx
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.id, input.invoice.subscriptionId))
+        .limit(1);
+      subscription = activatedRow || null;
+    }
+  } else {
+    const activatedAt = new Date();
+    const activationPeriod = resolveActivationPeriod({
+      invoice: input.invoice,
+      subscription: currentSubscription || null,
+      activatedAt,
     });
+    const periodStart = toDbTimestamp(activationPeriod.periodStart);
+    const periodEnd = toDbTimestamp(activationPeriod.periodEnd);
+
+    await tx
+      .update(subscriptions)
+      .set({
+        planId:
+          Number.isFinite(effectivePlanId) && effectivePlanId > 0
+            ? effectivePlanId
+            : input.invoice.planId,
+        status: 'active',
+        trialEndsAt: null,
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd,
+        graceEndsAt: null,
+        cancelAtPeriodEnd: 0,
+        cancelledAt: null,
+        billingCycleAnchor: periodEnd,
+        updatedBy: input.actorUserId,
+        metadata: {
+          ...metadata,
+          billing_provider: 'manual_eft',
+          activated_from_invoice_id: input.invoice.id,
+          activated_at: toDbTimestamp(activatedAt),
+          activation_period_policy: activationPeriod.reason,
+        },
+      })
+      .where(eq(subscriptions.id, input.invoice.subscriptionId));
+
+    const [activatedRow] = await tx
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, input.invoice.subscriptionId))
+      .limit(1);
+
+    if (!activatedRow) return null;
+
+    // Pre-existing recurring-plan behavior: keep the compatibility shadow
+    // coherent for this branch only. No new shadow writes are introduced for
+    // Launch Access products.
+    if (input.invoice.ownerType === 'agency') {
+      await syncAgencyBillingShadow(tx, {
+        agencyId: input.invoice.ownerId,
+        planId: activatedRow.planId,
+        status: 'active',
+        periodEnd: activatedRow.currentPeriodEnd || periodEnd,
+      });
+    }
+
+    subscription = activatedRow;
   }
 
-  return subscription || null;
+  return subscription;
 }
 
 export async function reviewManualPayment(input: {
@@ -2534,7 +2556,7 @@ export async function updateSubscriptionLifecycle(input: {
   if (!subscriptionLookup)
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Subscription not found.' });
 
-  return db.transaction(async tx => {
+  const result = await db.transaction(async tx => {
     const lockedAgencyState =
       subscriptionLookup.ownerType === 'agency'
         ? await lockAgencyBillingState(tx, subscriptionLookup.ownerId)
@@ -2600,6 +2622,28 @@ export async function updateSubscriptionLifecycle(input: {
 
     return { success: true };
   });
+
+  // Any finance-driven activation grants the agency paid access, so queued
+  // onboarding invitations must flush here exactly as they do after a
+  // payment approval. Delivery re-checks canonical access itself.
+  if (
+    subscriptionLookup.ownerType === 'agency' &&
+    (input.status === 'active' || input.status === 'grace_period')
+  ) {
+    try {
+      await deliverPendingAgencyInvitations(subscriptionLookup.ownerId);
+    } catch (error) {
+      console.error(
+        '[Billing] Agency activated via lifecycle override but pending invitation delivery failed',
+        {
+          agencyId: subscriptionLookup.ownerId,
+          error,
+        },
+      );
+    }
+  }
+
+  return result;
 }
 
 export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
