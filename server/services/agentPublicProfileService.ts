@@ -13,6 +13,7 @@ import {
 import { slugify } from '../_core/utils/slug';
 import { resolvePublicPropertyEligibilities } from './publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto } from './publicPropertyDto';
+import { isCurrentActiveAgencyMembership } from './agencyMembershipService';
 
 /**
  * Anonymous public projections for Agent discovery and the Agent web presence.
@@ -220,26 +221,6 @@ interface AgencyMembershipRow {
 }
 
 /**
- * Canonical current-membership semantics, mirroring the existing discovery
- * eligibility authority exactly: an affiliation is public only when the
- * membership is active and its effective window contains the evaluated time.
- */
-function isCurrentActiveMembership(membership: AgencyMembershipRow, evaluatedAt: Date): boolean {
-  if (membership.status !== 'active') return false;
-
-  const now = evaluatedAt.getTime();
-  const effectiveFrom = membership.effectiveFrom
-    ? new Date(membership.effectiveFrom).getTime()
-    : null;
-  const effectiveTo = membership.effectiveTo ? new Date(membership.effectiveTo).getTime() : null;
-
-  return (
-    (effectiveFrom === null || (Number.isFinite(effectiveFrom) && effectiveFrom <= now)) &&
-    (effectiveTo === null || (Number.isFinite(effectiveTo) && effectiveTo > now))
-  );
-}
-
-/**
  * Public agency affiliation for a web presence. Fails closed: zero current
  * memberships and multiple simultaneous current memberships both yield no
  * affiliation; agents.agencyId never establishes a public affiliation.
@@ -262,7 +243,7 @@ export async function resolveCurrentAgencyAffiliation(
 
   const evaluatedAt = new Date();
   const currentNames = memberships
-    .filter(membership => isCurrentActiveMembership(membership, evaluatedAt))
+    .filter(membership => isCurrentActiveAgencyMembership(membership, evaluatedAt))
     .map(membership => String(membership.agencyName || '').trim())
     .filter(Boolean);
 

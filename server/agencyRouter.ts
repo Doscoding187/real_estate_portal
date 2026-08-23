@@ -69,6 +69,7 @@ import {
   setSubscriptionPlanForOwner,
 } from './services/planAccessService';
 import { getManualEftBillingAmount } from './services/billingFoundationService';
+import { maintainAgencyAgentMembership } from './services/agencyMembershipService';
 import { getCommercialProductKey, getConfiguredLaunchFeeMinor, resolveCommercialTerm } from './services/commercialTerm';
 import {
   assertListingPublicationEntitled,
@@ -1511,6 +1512,12 @@ async function ensureAgentProfileForAgencyMember(
         })
         .where(eq(agents.id, existingAgent.id));
     }
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId: existingAgent.id,
+      status: 'active',
+      actorUserId,
+    });
     return existingAgent.id;
   }
 
@@ -1532,7 +1539,17 @@ async function ensureAgentProfileForAgencyMember(
     profileCompletionScore: 35,
   });
 
-  return Number(result.insertId || 0);
+  const agentId = Number(result.insertId || 0);
+  if (agentId) {
+    await maintainAgencyAgentMembership(db, {
+      agencyId,
+      agentId,
+      status: 'active',
+      actorUserId,
+    });
+  }
+
+  return agentId;
 }
 
 function leadOwnerCondition(userId: number, agentId?: number | null) {
@@ -7746,6 +7763,12 @@ export const agencyRouter = router({
               updatedAt: new Date(),
             })
             .where(eq(agents.id, targetAgent.id));
+          await maintainAgencyAgentMembership(db, {
+            agencyId,
+            agentId: targetAgent.id,
+            status: 'suspended',
+            actorUserId: authUser.id,
+          });
         }
 
         await logAudit({
@@ -7855,6 +7878,12 @@ export const agencyRouter = router({
             updatedAt: new Date(),
           })
           .where(eq(agents.id, targetAgent.id));
+        await maintainAgencyAgentMembership(db, {
+          agencyId,
+          agentId: targetAgent.id,
+          status: 'suspended',
+          actorUserId: authUser.id,
+        });
       }
 
       await logAudit({

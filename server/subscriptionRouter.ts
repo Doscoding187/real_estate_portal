@@ -17,11 +17,21 @@ function getUserId(ctx: { user: { id: number } | null }) {
 function rejectLegacyAgentCommercialPath(ctx: {
   user: { id: number; role?: string | null } | null;
 }) {
-  if (requireUser(ctx).role === 'agent') {
+  const role = requireUser(ctx).role;
+  if (role === 'agent') {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message:
         'Legacy agent subscription operations are retired. Use the canonical billing and commercial catalog authorities.',
+    });
+  }
+  // Agency commercial access is answered exclusively by the canonical
+  // subscriptions authority and the Agency billing workspace.
+  if (role === 'agency_admin') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Legacy subscription operations are retired for agencies. Use the Agency billing workspace.',
     });
   }
 }
