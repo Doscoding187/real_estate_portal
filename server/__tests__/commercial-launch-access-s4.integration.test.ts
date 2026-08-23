@@ -41,6 +41,33 @@ const created = {
   developerContexts: [] as DeveloperTestContext[],
 };
 
+const launchPlanNames = [
+  'agent_launch_access',
+  'agency_launch_access',
+  'developer_launch_access',
+] as const;
+
+function selectLaunchProducts<T extends { productKey: string }>(products: readonly T[]) {
+  return products
+    .filter(product => (launchPlanNames as readonly string[]).includes(product.productKey))
+    .sort((left, right) => left.productKey.localeCompare(right.productKey));
+}
+
+describe('S4 Launch Access catalog selection invariant', () => {
+  it('selects the three required products without treating unrelated disposable plans as a failure', () => {
+    expect(selectLaunchProducts([
+      { productKey: 'performance-publication-fixture' },
+      { productKey: 'developer_launch_access' },
+      { productKey: 'agency_launch_access' },
+      { productKey: 'agent_launch_access' },
+    ]).map(product => product.productKey)).toEqual([
+      'agency_launch_access',
+      'agent_launch_access',
+      'developer_launch_access',
+    ]);
+  });
+});
+
 const originalEnvironment: Record<string, string | undefined> = {};
 
 function rememberEnvironment(key: string, value: string) {
@@ -243,14 +270,14 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     }
   });
 
-  it('provisions the three first-class launch products without source plans', async () => {
+  it('provisions the three first-class launch products without assuming exclusive plan inventory', async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
     const launchRows = await db
       .select({ name: plans.name, segment: plans.segment })
       .from(plans)
-      .where(inArray(plans.segment, ['agent', 'agency', 'developer']));
+      .where(inArray(plans.name, launchPlanNames));
     expect(launchRows.map(row => row.name).sort()).toEqual([
       'agency_launch_access',
       'agent_launch_access',
@@ -258,26 +285,27 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     ]);
 
     const catalog = await getCommercialCatalog();
-    expect(catalog.products.map(product => product.productKey)).toEqual([
+    const launchProducts = selectLaunchProducts(catalog.products);
+    expect(launchProducts.map(product => product.productKey)).toEqual([
       'agent_launch_access',
       'agency_launch_access',
       'developer_launch_access',
     ]);
-    expect(catalog.products.map(product => product.pricing.basePrice?.amountMinor)).toEqual([
+    expect(launchProducts.map(product => product.pricing.basePrice?.amountMinor)).toEqual([
       49900,
       99900,
       149900,
     ]);
-    expect(catalog.products.every(product => product.term.kind === 'paid_launch_access')).toBe(true);
-    expect(catalog.products.every(product => product.term.durationDays === 90)).toBe(true);
-    expect(catalog.products.every(product => product.pricing.billingInterval === 'once')).toBe(true);
-    expect(catalog.products.find(product => product.productKey === 'agent_launch_access')?.limits).toEqual({
+    expect(launchProducts.every(product => product.term.kind === 'paid_launch_access')).toBe(true);
+    expect(launchProducts.every(product => product.term.durationDays === 90)).toBe(true);
+    expect(launchProducts.every(product => product.pricing.billingInterval === 'once')).toBe(true);
+    expect(launchProducts.find(product => product.productKey === 'agent_launch_access')?.limits).toEqual({
       max_active_listings: 50,
     });
-    expect(catalog.products.find(product => product.productKey === 'agency_launch_access')?.limits).toEqual({
+    expect(launchProducts.find(product => product.productKey === 'agency_launch_access')?.limits).toEqual({
       max_active_listings: 500,
     });
-    expect(catalog.products.find(product => product.productKey === 'developer_launch_access')?.limits).toMatchObject({
+    expect(launchProducts.find(product => product.productKey === 'developer_launch_access')?.limits).toMatchObject({
       unlimited_development_portfolio: true,
     });
   });
