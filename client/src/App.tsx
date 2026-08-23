@@ -145,8 +145,6 @@ const BankFunnelPage = lazy(() => import('./pages/advertise/BankFunnelPage'));
 const OriginatorFunnelPage = lazy(() => import('./pages/advertise/OriginatorFunnelPage'));
 const AgencyProductLandingPage = lazy(() => import('./pages/advertise/AgencyProductLandingPage'));
 const ActivationGate = lazy(() => import('./pages/dashboard/ActivationGate'));
-const GetStarted = lazy(() => import('./pages/GetStarted'));
-const GetStartedRole = lazy(() => import('./pages/GetStartedRole'));
 const BookStrategy = lazy(() => import('./pages/BookStrategy'));
 const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
@@ -264,7 +262,7 @@ function Router() {
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
           <Route path="/agent/dashboard">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentDashboard />
             </RequireRole>
           </Route>
@@ -323,12 +321,12 @@ function Router() {
             </RequireRole>
           </Route>
           <Route path="/agent/select-package">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentPackageSelection />
             </RequireRole>
           </Route>
           <Route path="/agent/setup">
-            <RequireRole role="agent">
+            <RequireRole role="agent" unauthenticatedAuthEntry="signin">
               <AgentSetup />
             </RequireRole>
           </Route>
@@ -503,9 +501,15 @@ function Router() {
           <Route path="/get-started/referrer">
             <Redirect to="/distribution-network/apply" />
           </Route>
-          <Route path="/get-started/:role/confirmation" component={GetStartedRole} />
-          <Route path="/get-started/:role" component={GetStartedRole} />
-          <Route path="/get-started" component={GetStarted} />
+          <Route path="/get-started/:role/confirmation">
+            <Redirect to="/advertise/sell/agents" />
+          </Route>
+          <Route path="/get-started/:role">
+            <Redirect to="/advertise/sell/agents" />
+          </Route>
+          <Route path="/get-started">
+            <Redirect to="/advertise/sell/agents" />
+          </Route>
           <Route path="/book-strategy" component={BookStrategy} />
           <Route path="/role-selection" component={RoleSelection} />
           <Route path="/advertise/sell/agents/onboarding">

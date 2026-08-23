@@ -22,7 +22,7 @@ const getPostVerificationPath = (role: string | null | undefined): string => {
     case 'super_admin':
       return '/admin/overview?verified=true';
     case 'agent':
-      return '/agent/select-package?verified=true';
+      return '/agent/setup?verified=true';
     case 'agency_admin':
       return '/agency/setup?verified=true';
     case 'property_developer':

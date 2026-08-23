@@ -10,6 +10,10 @@ import { COOKIE_NAME } from '@shared/const';
 import { getSessionCookieOptions } from './_core/cookies';
 import { requireUser } from './_core/requireUser';
 import { deliverAgencyInvitations } from './services/agencyInvitationDeliveryService';
+import {
+  ensureApprovedAgencyAgentProfile,
+  establishCanonicalAgencyMembership,
+} from './services/agencyMembershipService';
 
 /**
  * Invitation Router
@@ -73,79 +77,6 @@ function toInvitationClient(invitation: typeof invitations.$inferSelect, agency?
     updatedAt: invitation.updatedAt,
     history: buildInvitationHistory(invitation),
   };
-}
-
-function getNameParts(user: typeof users.$inferSelect, fallbackEmail: string) {
-  const fromName = String(user.name || '').trim().split(/\s+/).filter(Boolean);
-  const emailStem = fallbackEmail.split('@')[0]?.replace(/[._-]+/g, ' ') || 'Agency agent';
-  const fromEmail = emailStem.split(/\s+/).filter(Boolean);
-  const parts = [
-    String(user.firstName || '').trim(),
-    String(user.lastName || '').trim(),
-  ].filter(Boolean);
-
-  if (parts.length >= 2) {
-    return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
-  }
-
-  const source = fromName.length >= 2 ? fromName : fromEmail;
-  return {
-    firstName: parts[0] || source[0] || 'Agency',
-    lastName: parts[1] || source.slice(1).join(' ') || 'Agent',
-  };
-}
-
-async function ensureAgencyAgentProfile(input: {
-  db: NonNullable<Awaited<ReturnType<typeof getDb>>>;
-  user: typeof users.$inferSelect;
-  agencyId: number;
-  actorUserId: number;
-}) {
-  const { db, user, agencyId, actorUserId } = input;
-  const [existingAgent] = await db
-    .select()
-    .from(agents)
-    .where(eq(agents.userId, user.id))
-    .limit(1);
-
-  if (existingAgent) {
-    if (existingAgent.agencyId !== agencyId || existingAgent.status !== 'approved') {
-      await db
-        .update(agents)
-        .set({
-          agencyId,
-          status: 'approved',
-          approvedBy: actorUserId,
-          approvedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(agents.id, existingAgent.id));
-    }
-    return existingAgent.id;
-  }
-
-  const { firstName, lastName } = getNameParts(user, user.email || 'agent@example.com');
-  const displayName =
-    String(user.name || '').trim() || [firstName, lastName].filter(Boolean).join(' ').trim();
-
-  const [result] = await db.insert(agents).values({
-    userId: user.id,
-    agencyId,
-    firstName,
-    lastName,
-    displayName,
-    email: user.email,
-    phone: user.phone,
-    role: 'agent',
-    isVerified: 0,
-    isFeatured: 0,
-    status: 'approved',
-    approvedBy: actorUserId,
-    approvedAt: new Date(),
-    profileCompletionScore: 35,
-  });
-
-  return Number(result.insertId || 0);
 }
 
 export const invitationRouter = router({
@@ -384,12 +315,22 @@ export const invitationRouter = router({
       })
       .where(eq(users.id, user.id));
 
-    await ensureAgencyAgentProfile({
+    const agentId = await ensureApprovedAgencyAgentProfile({
       db,
       user: currentUser,
       agencyId: invitation.agencyId,
       actorUserId: invitation.invitedBy,
     });
+
+    if (agentId) {
+      await establishCanonicalAgencyMembership({
+        db,
+        agencyId: invitation.agencyId,
+        agentId,
+        actorUserId: user.id,
+        role: 'agent',
+      });
+    }
 
     // Mark invitation as accepted
     await db

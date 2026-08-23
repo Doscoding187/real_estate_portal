@@ -18,9 +18,13 @@ import { useLocation } from 'wouter';
 const mockUseAuth = useAuth as ReturnType<typeof vi.fn>;
 const mockUseLocation = useLocation as ReturnType<typeof vi.fn>;
 
-const renderWithAuth = (authValue: any, role: string) => {
+const renderWithAuth = (
+  authValue: any,
+  role: string,
+  options?: { unauthenticatedAuthEntry?: 'signin' | 'register' },
+) => {
   return render(
-    <RequireRole role={role}>
+    <RequireRole role={role} unauthenticatedAuthEntry={options?.unauthenticatedAuthEntry}>
       <div data-testid="protected">Protected Content</div>
     </RequireRole>,
   );
@@ -90,7 +94,7 @@ describe('RequireRole', () => {
 
     mockUseLocation.mockReturnValue([null, setLocation]);
 
-    renderWithAuth({}, 'agent');
+    renderWithAuth({}, 'agent', { unauthenticatedAuthEntry: 'signin' });
 
     await waitFor(() => {
       expect(setLocation).toHaveBeenCalledWith('/login?mode=signin&next=%2Fagent%2Fselect-package');

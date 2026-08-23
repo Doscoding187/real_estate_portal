@@ -34,18 +34,16 @@ const agentProduct = {
   active: true,
   popular: false,
   benefits: [
-    'Listing creation and management',
-    'Property enquiries',
-    'Agent profile and directory presence',
-    'Analytics and reporting',
-    'Commission tracking',
-    'Revenue dashboard',
+    'Agent listing management',
+    'Lead and enquiry access',
+    'Agent profile and directory',
+    'Agent analytics and reporting',
   ],
   limits: { max_active_listings: 50 },
   entitlements: {
     max_active_listings: 50,
-    has_commission_tracking: true,
-    has_revenue_dashboard: true,
+    has_commission_tracking: false,
+    has_revenue_dashboard: false,
   },
   trial: { days: 0, available: false },
   term: {
@@ -120,9 +118,13 @@ describe('public Agent product landing page', () => {
     expect(screen.getAllByText('R499').length).toBeGreaterThan(0);
     expect(screen.getAllByText('90 days').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Active Listings: 50/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /Request Launch Access invoice/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Get Agent Launch Access/i })).toHaveAttribute(
       'href',
       '/agent/select-package',
+    );
+    expect(screen.getByRole('link', { name: /See agent presences/i })).toHaveAttribute(
+      'href',
+      '/agents',
     );
     expect(
       screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,

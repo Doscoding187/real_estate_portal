@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   BarChart3,
-  DollarSign,
   Download,
   Eye,
   Home,
@@ -55,21 +54,6 @@ type ListingItem = {
   enquiries: number;
 };
 
-type CommissionItem = {
-  id: number;
-  amount: number;
-  status: 'pending' | 'approved' | 'paid' | 'cancelled';
-  createdAt: string;
-  payoutDate: string | null;
-  property?: {
-    id: number;
-    title: string;
-  } | null;
-  client?: {
-    name: string;
-  } | null;
-};
-
 const TIME_RANGES: Array<{ value: TimeRange; label: string; period: PerformancePeriod }> = [
   { value: '7d', label: '7 Days', period: 'week' },
   { value: '30d', label: '30 Days', period: 'month' },
@@ -84,15 +68,6 @@ const PIPELINE_STAGE_META: Array<{ key: PipelineStageKey; label: string; tone: s
   { key: 'offer', label: 'Offer', tone: 'bg-amber-100 text-amber-700' },
   { key: 'closed', label: 'Closed', tone: 'bg-emerald-100 text-emerald-700' },
 ];
-
-function formatCurrency(amountInCents: number) {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format((amountInCents || 0) / 100);
-}
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat('en-ZA', {
@@ -173,14 +148,8 @@ export default function AgentAnalytics() {
     status: 'active',
     limit: 50,
   });
-  const { data: commissionsData, isLoading: commissionsLoading } =
-    trpc.agent.getMyCommissions.useQuery({
-      status: 'all',
-    });
 
-  const analyticsLocked =
-    !statusLoading &&
-    (!status?.fullFeaturesUnlocked || !status?.entitlements?.featureFlags?.hasRevenueDashboard);
+  const analyticsLocked = !statusLoading && !status?.fullFeaturesUnlocked;
 
   const pipeline = useMemo(
     () =>
@@ -194,7 +163,6 @@ export default function AgentAnalytics() {
     [pipelineData],
   );
   const listings = useMemo(() => (listingsData || []) as ListingItem[], [listingsData]);
-  const commissions = useMemo(() => (commissionsData || []) as CommissionItem[], [commissionsData]);
 
   const allLeads = useMemo(
     () =>
@@ -241,27 +209,8 @@ export default function AgentAnalytics() {
       .sort((left, right) => right.count - left.count)
       .slice(0, 6);
   }, [allLeads]);
-  const commissionSummary = useMemo(
-    () =>
-      commissions.reduce(
-        (summary, commission) => {
-          summary.total += commission.amount || 0;
-          summary[commission.status] += commission.amount || 0;
-          return summary;
-        },
-        {
-          total: 0,
-          pending: 0,
-          approved: 0,
-          paid: 0,
-          cancelled: 0,
-        },
-      ),
-    [commissions],
-  );
 
-  const isLoading =
-    statsLoading || performanceLoading || pipelineLoading || listingsLoading || commissionsLoading;
+  const isLoading = statsLoading || performanceLoading || pipelineLoading || listingsLoading;
 
   return (
     <AgentAppShell>
@@ -272,7 +221,7 @@ export default function AgentAnalytics() {
               <div>
                 <h1 className={agentPageStyles.title}>Analytics Dashboard</h1>
                 <p className={cn(agentPageStyles.subtitle, 'mt-1')}>
-                  Live performance across listings, leads, and commission flow.
+                  Live performance across your listings, leads and pipeline.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -312,16 +261,10 @@ export default function AgentAnalytics() {
             />
           ) : analyticsLocked ? (
             <AgentFeatureLockedState
-              title="Analytics unlock after setup and access alignment"
-              description={
-                !status?.fullFeaturesUnlocked
-                  ? 'Complete the remaining onboarding steps to unlock the full analytics workspace and reporting stack.'
-                  : 'Your current access state does not include the full revenue and analytics dashboard yet.'
-              }
-              actionLabel={!status?.fullFeaturesUnlocked ? 'Finish setup' : 'Review access'}
-              onAction={() =>
-                setLocation(!status?.fullFeaturesUnlocked ? '/agent/setup' : '/agent/settings')
-              }
+              title="Analytics unlock after setup"
+              description="Complete the remaining onboarding steps to unlock the full analytics workspace and reporting stack."
+              actionLabel="Finish setup"
+              onAction={() => setLocation('/agent/setup')}
             />
           ) : (
             <>
@@ -344,20 +287,10 @@ export default function AgentAnalytics() {
                   subtitle={`${performance?.convertedLeads ?? 0} converted lead${(performance?.convertedLeads ?? 0) === 1 ? '' : 's'}`}
                   icon={Target}
                 />
-                <MetricCard
-                  title="Commission Pipeline"
-                  value={
-                    isLoading
-                      ? '—'
-                      : formatCurrency(commissionSummary.pending + commissionSummary.approved)
-                  }
-                  subtitle={`Pending ${formatCurrency(stats?.commissionsPending ?? commissionSummary.pending)}`}
-                  icon={DollarSign}
-                />
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className={cn(agentPageStyles.tabsList, 'mt-2 grid w-full grid-cols-4')}>
+                <TabsList className={cn(agentPageStyles.tabsList, 'mt-2 grid w-full grid-cols-3')}>
                   <TabsTrigger value="overview" className={agentPageStyles.tabTrigger}>
                     Overview
                   </TabsTrigger>
@@ -366,9 +299,6 @@ export default function AgentAnalytics() {
                   </TabsTrigger>
                   <TabsTrigger value="leads" className={agentPageStyles.tabTrigger}>
                     Leads
-                  </TabsTrigger>
-                  <TabsTrigger value="revenue" className={agentPageStyles.tabTrigger}>
-                    Revenue
                   </TabsTrigger>
                 </TabsList>
 
@@ -618,69 +548,6 @@ export default function AgentAnalytics() {
                         <EmptyPanel
                           title="No lead activity yet"
                           description="Lead analytics will appear once enquiries start moving through your pipeline."
-                        />
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="revenue" className="mt-6 space-y-6">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <MetricCard
-                      title="Pending"
-                      value={formatCurrency(commissionSummary.pending)}
-                      subtitle="Awaiting payout"
-                      icon={DollarSign}
-                    />
-                    <MetricCard
-                      title="Approved"
-                      value={formatCurrency(commissionSummary.approved)}
-                      subtitle="Ready for payout"
-                      icon={TrendingUp}
-                    />
-                    <MetricCard
-                      title="Paid"
-                      value={formatCurrency(commissionSummary.paid)}
-                      subtitle="Completed commission income"
-                      icon={Target}
-                    />
-                  </div>
-
-                  <Card className={agentPageStyles.panel}>
-                    <CardHeader>
-                      <CardTitle>Recent Commission Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {commissions.length > 0 ? (
-                        <div className="space-y-3">
-                          {commissions.slice(0, 8).map(commission => (
-                            <div
-                              key={commission.id}
-                              className="flex items-center justify-between rounded-[12px] border border-slate-200/70 bg-[#fbfaf7] px-4 py-3"
-                            >
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {commission.property?.title || 'Commission entry'}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                  {commission.client?.name || 'No client linked'}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {formatCurrency(commission.amount)}
-                                </p>
-                                <Badge variant="outline" className="mt-1 rounded-full">
-                                  {formatStatus(commission.status)}
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <EmptyPanel
-                          title="No commission activity yet"
-                          description="Commission analytics will appear here as transactions move into pending, approved, and paid states."
                         />
                       )}
                     </CardContent>

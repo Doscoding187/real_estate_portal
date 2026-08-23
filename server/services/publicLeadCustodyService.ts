@@ -20,6 +20,7 @@ export interface PublicAgentOwnershipCandidate {
   agencyId: number | null;
   status: string | null;
   isVerified?: number | null;
+  hasActivePaidEntitlement?: boolean;
   userRole?: string | null;
 }
 
@@ -97,11 +98,13 @@ function positiveId(value: number | null | undefined): number | null {
   return Number.isSafeInteger(normalized) && normalized > 0 ? normalized : null;
 }
 
-function isVerifiedAgent(agent: PublicAgentOwnershipCandidate | null | undefined): boolean {
+function isEligibleAgentRecipient(agent: PublicAgentOwnershipCandidate | null | undefined): boolean {
+  const professionallyVerified = Number(agent?.isVerified || 0) === 1;
+  const commerciallyEligible = agent?.hasActivePaidEntitlement === true;
   return Boolean(
     agent &&
       agent.status === 'approved' &&
-      Number(agent.isVerified || 0) === 1 &&
+      (professionallyVerified || commerciallyEligible) &&
       positiveId(agent.userId) &&
       agent.userRole === 'agent',
   );
@@ -254,10 +257,10 @@ export function resolvePublicPropertyCustody(
         : null;
 
   if (effectiveAgentId) {
-    if (!isVerifiedAgent(effectiveAgent)) {
+    if (!isEligibleAgentRecipient(effectiveAgent)) {
       return attentionResolution(
         'customer_managed',
-        'The assigned property agent is not an active verified recipient.',
+        'The assigned property agent is not an eligible active recipient.',
         input.brand,
       );
     }

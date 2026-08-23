@@ -767,6 +767,7 @@ export interface Property {
 
   // Legacy/internal property consumers may still carry an agent projection.
   // Canonical public cards and detail use publicIdentity.
+  agentSlug?: string;
   agent?: {
     id: string;
     name: string;
@@ -775,6 +776,7 @@ export interface Property {
     whatsapp: string;
     email: string;
     image?: string;
+    slug?: string;
   };
 
   // Location
@@ -985,6 +987,7 @@ export interface PublicPropertySupplyIdentity {
   whatsapp?: string | null;
   email?: string | null;
   agentId?: number;
+  agentSlug?: string | null;
   agencyId?: number;
   cataloguePublisherId?: number;
 }

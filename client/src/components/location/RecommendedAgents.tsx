@@ -1,17 +1,28 @@
-// @ts-nocheck
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { User, Star, Verified, Phone } from 'lucide-react';
+import { User, Verified } from 'lucide-react';
 import { Link } from 'wouter';
 
 interface RecommendedAgentsProps {
   locationType: 'province' | 'city' | 'suburb';
   locationId: number;
+  areaLabel?: string;
 }
 
-export function RecommendedAgents({ locationType, locationId }: RecommendedAgentsProps) {
+type AgentRecommendation = {
+  id: number;
+  slug: string;
+  firstName: string;
+  lastName: string;
+  profileImage: string | null;
+  agencyName: string | null;
+  agencyLogoUrl: string | null;
+  isVerified: boolean;
+};
+
+export function RecommendedAgents({ locationType, locationId, areaLabel }: RecommendedAgentsProps) {
   const { data: agents, isLoading } = trpc.monetization.getRecommendedAgents.useQuery({
     locationType,
     locationId,
@@ -19,6 +30,11 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
 
   if (isLoading) return null;
   if (!agents || agents.length === 0) return null;
+
+  const recommendations = agents as AgentRecommendation[];
+  const heading = areaLabel
+    ? `Property professionals serving ${areaLabel}`
+    : 'Property professionals in this area';
 
   return (
     <div className="py-12 bg-white">
@@ -29,9 +45,9 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
               <User className="h-5 w-5" />
               <span className="font-semibold uppercase tracking-wider text-sm">Local Experts</span>
             </div>
-            <h2 className="text-3xl font-bold text-slate-900">Recommended Agents</h2>
+            <h2 className="text-3xl font-bold text-slate-900">{heading}</h2>
             <p className="text-slate-500 mt-2 max-w-2xl">
-              Trusted property professionals active in this area
+              Approved practitioners with live Property Listify profiles and inventory in this area
             </p>
           </div>
           <Link href="/agents">
@@ -42,8 +58,8 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {agents.map(agent => (
-            <Link key={agent.id} href={`/agent/${agent.id}`}>
+          {recommendations.map(agent => (
+            <Link key={agent.id} href={`/agents/${agent.slug}`}>
               <Card className="hover:shadow-lg transition-all cursor-pointer group border-slate-200">
                 <CardContent className="p-0">
                   <div className="relative h-48 bg-slate-100 overflow-hidden rounded-t-xl">
@@ -58,19 +74,11 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
                         <User className="h-20 w-20 text-slate-300" />
                       </div>
                     )}
-                    {agent.rating ? (
-                      <div className="absolute top-3 left-3">
-                        <Badge className="bg-white/90 text-slate-900 hover:bg-white shadow-sm flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {(agent.rating / 20).toFixed(1)}
-                        </Badge>
-                      </div>
-                    ) : null}
-                    {agent.agency?.logo && (
+                    {agent.agencyLogoUrl && (
                       <div className="absolute bottom-3 right-3 bg-white p-1 rounded shadow-sm opacity-90">
                         <img
-                          src={agent.agency.logo}
-                          alt={agent.agency.name}
+                          src={agent.agencyLogoUrl}
+                          alt={agent.agencyName || 'Agency'}
                           className="h-6 w-auto object-contain"
                         />
                       </div>
@@ -78,40 +86,31 @@ export function RecommendedAgents({ locationType, locationId }: RecommendedAgent
                   </div>
 
                   <div className="p-5">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2 group-hover:text-primary transition-colors">
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2 group-hover:text-primary transition-colors truncate">
                           {agent.firstName} {agent.lastName}
-                          <Verified className="h-4 w-4 text-blue-500" />
+                          {agent.isVerified && (
+                            <Verified className="h-4 w-4 shrink-0 text-blue-500" aria-label="Verified" />
+                          )}
                         </h3>
-                        <p className="text-sm text-slate-500">
-                          {agent.agency?.name || 'Independent Agent'}
+                        <p className="text-sm text-slate-500 truncate">
+                          {agent.agencyName || 'Independent Agent'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-slate-600 mt-4 pt-4 border-t border-slate-100">
-                      <div>
-                        <span className="font-semibold text-slate-900 block">
-                          {agent.totalSales || 0}
-                        </span>
-                        <span className="text-xs">Sold</span>
-                      </div>
-                      <div className="h-8 w-px bg-slate-100" />
-                      <div>
-                        <span className="font-semibold text-slate-900 block">Verified</span>
-                        <span className="text-xs">Status</span>
-                      </div>
-                      <div className="ml-auto">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+                    {agent.isVerified && (
+                      <div className="flex items-center gap-2 text-sm text-slate-600 mt-4 pt-4 border-t border-slate-100">
+                        <Badge
+                          variant="outline"
+                          className="rounded-full border-blue-200 bg-blue-50 text-blue-700"
                         >
-                          <Phone className="h-4 w-4" />
-                        </Button>
+                          Verified
+                        </Badge>
+                        <span className="text-xs">Evidence-based status</span>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

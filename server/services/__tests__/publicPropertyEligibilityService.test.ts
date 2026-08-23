@@ -115,6 +115,7 @@ describe('public property eligibility authority', () => {
         provenance: 'agent',
         name: 'Amina Nkosi',
         agentId: 33,
+        agentSlug: 'amina-nkosi',
       },
     });
   });

@@ -81,6 +81,10 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
   const [contactIntent, setContactIntent] = useState<'contact' | 'whatsapp' | null>(null);
   const canonicalIdentity = data.identity;
   const contactRole = canonicalIdentity?.role ?? data.contactRole;
+  const agentProfileHref =
+    canonicalIdentity?.agentSlug && contactRole === 'agent'
+      ? `/agents/${canonicalIdentity.agentSlug}`
+      : null;
   const resolvedListingSource =
     data.listingSource === 'development'
       ? 'development'
@@ -359,21 +363,45 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
             )}
 
             <div className="mt-5 flex flex-col gap-3 border-t border-slate-100 pt-3 sm:mt-auto sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-2">
-                <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
-                  <AvatarImage
-                    src={resolvedAvatar || ''}
-                    alt={identityDisplayName}
-                    className={isDevelopmentListing ? 'object-contain p-0.5' : 'object-cover'}
-                  />
-                  <AvatarFallback className="bg-slate-100 text-xs">{agentInitials}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 max-w-[140px] sm:max-w-[180px]">
-                  <p className="line-clamp-1 truncate text-[12px] font-semibold leading-snug text-foreground">
-                    {identityDisplayName}
-                  </p>
-                </div>
-              </div>
+            <div className="flex min-w-0 items-center gap-2">
+              {agentProfileHref ? (
+                <Link
+                  href={agentProfileHref}
+                  className="flex min-w-0 items-center gap-2"
+                  aria-label={`View ${identityDisplayName}'s profile`}
+                >
+                  <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
+                    <AvatarImage
+                      src={resolvedAvatar || ''}
+                      alt={identityDisplayName}
+                      className={isDevelopmentListing ? 'object-contain p-0.5' : 'object-cover'}
+                    />
+                    <AvatarFallback className="bg-slate-100 text-xs">{agentInitials}</AvatarFallback>
+                  </Avatar>
+                  <span className="min-w-0 max-w-[140px] sm:max-w-[180px]">
+                    <span className="line-clamp-1 block truncate text-[12px] font-semibold leading-snug text-foreground">
+                      {identityDisplayName}
+                    </span>
+                  </span>
+                </Link>
+              ) : (
+                <>
+                  <Avatar className="h-10 w-10 shrink-0 border border-slate-200 bg-white ring-2 ring-slate-100">
+                    <AvatarImage
+                      src={resolvedAvatar || ''}
+                      alt={identityDisplayName}
+                      className={isDevelopmentListing ? 'object-contain p-0.5' : 'object-cover'}
+                    />
+                    <AvatarFallback className="bg-slate-100 text-xs">{agentInitials}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 max-w-[140px] sm:max-w-[180px]">
+                    <p className="line-clamp-1 truncate text-[12px] font-semibold leading-snug text-foreground">
+                      {identityDisplayName}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
               <div className="relative z-20 flex w-full min-w-0 gap-2 sm:w-auto sm:justify-end">
                 {whatsappTarget && (
                   <Button

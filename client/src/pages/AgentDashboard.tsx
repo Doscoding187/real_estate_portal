@@ -4,10 +4,10 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { AgentDashboardOverview } from '@/components/agent/AgentDashboardOverview';
+import { AgentStatusStrip } from '@/components/agent/AgentStatusStrip';
 import { apiFetch } from '@/lib/api';
 
 type AgentOnboardingGuard = {
-  packageSelected: boolean;
   dashboardUnlocked: boolean;
 };
 
@@ -36,20 +36,18 @@ export default function AgentDashboard() {
 
     const checkOnboarding = async () => {
       try {
+        // Dashboard access follows professional identity progress. Commercial
+        // capability stays gated by the entitlement authority, surfaced as
+        // guided/locked states rather than entry walls.
         const onboarding = await apiFetch<AgentOnboardingGuard>('/agent/onboarding-status');
         if (cancelled) return;
-
-        if (!onboarding.packageSelected) {
-          setLocation('/agent/select-package');
-          return;
-        }
 
         if (!onboarding.dashboardUnlocked) {
           setLocation('/agent/setup');
         }
       } catch {
         if (!cancelled) {
-          setLocation('/agent/select-package');
+          setLocation('/agent/setup');
         }
       }
     };
@@ -75,7 +73,10 @@ export default function AgentDashboard() {
 
   return (
     <AgentAppShell>
-      <AgentDashboardOverview />
+      <div className="flex flex-col gap-4">
+        <AgentStatusStrip />
+        <AgentDashboardOverview />
+      </div>
     </AgentAppShell>
   );
 }

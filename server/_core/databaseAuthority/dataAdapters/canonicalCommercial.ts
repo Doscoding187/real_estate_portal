@@ -15,7 +15,7 @@ import {
   type AdapterEvidence,
 } from './common';
 
-export const CANONICAL_COMMERCIAL_VERSION = 'canonical-commercial-v1' as const;
+export const CANONICAL_COMMERCIAL_VERSION = 'canonical-commercial-v2' as const;
 
 export type LaunchAudience = 'agent' | 'agency' | 'developer';
 
@@ -119,13 +119,12 @@ export const CANONICAL_AGENT_LAUNCH_ACCESS: LaunchProductReference = Object.free
     'Lead and enquiry access',
     'Agent profile and directory',
     'Agent analytics and reporting',
-    'Commission tracking',
   ],
   limits: { max_active_listings: 50 },
   entitlements: {
     max_active_listings: 50,
-    has_commission_tracking: true,
-    has_revenue_dashboard: true,
+    has_commission_tracking: false,
+    has_revenue_dashboard: false,
   },
   isActive: 1,
   isPopular: 0,
