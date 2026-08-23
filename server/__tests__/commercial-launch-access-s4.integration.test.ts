@@ -287,8 +287,8 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     const catalog = await getCommercialCatalog();
     const launchProducts = selectLaunchProducts(catalog.products);
     expect(launchProducts.map(product => product.productKey)).toEqual([
-      'agent_launch_access',
       'agency_launch_access',
+      'agent_launch_access',
       'developer_launch_access',
     ]);
     expect(launchProducts.map(product => product.pricing.basePrice?.amountMinor)).toEqual([
