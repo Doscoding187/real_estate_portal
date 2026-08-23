@@ -38,6 +38,7 @@ export type SearchJourneyId = (typeof SEARCH_JOURNEY_IDS)[number];
 export const SEARCH_AREA_EXECUTABLE_JOURNEYS = [
   'buy',
   'rent',
+  'plot_land',
 ] as const satisfies readonly SearchJourneyId[];
 
 export type SearchAreaExecutableJourneyId = (typeof SEARCH_AREA_EXECUTABLE_JOURNEYS)[number];

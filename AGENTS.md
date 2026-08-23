@@ -3,6 +3,16 @@
 These instructions apply to the entire repository. Nested `AGENTS.md` files may
 add stricter requirements but may not weaken this authority.
 
+## Land consumer journey rule
+
+For public Land search or authoring work, read
+`docs/architecture/land-consumer-journey-contract.md`. Land geography has one
+authority per request: typed city/province, one canonical location, sibling OR
+locations, or a governed Search Area. Agents must reject mixed authority
+inputs; they must not choose a precedence, merge scopes, widen geography, or
+fall back to display-text geography. Public classifications must remain the
+central `LAND_PUBLIC_CLASSIFICATIONS` allow-list.
+
 ## Mandatory database rule
 
 For database-related agent work, load
