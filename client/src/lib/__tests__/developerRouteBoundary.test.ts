@@ -13,4 +13,11 @@ describe('isPublicDeveloperProfilePath', () => {
     expect(isPublicDeveloperProfilePath('/developer/create-development')).toBe(false);
     expect(isPublicDeveloperProfilePath('/developer/acme-homes/edit')).toBe(false);
   });
+
+  it('never exposes unbuilt workspace segments as public brand slugs', () => {
+    // These were once reachable as fake brand pages (e.g. /developer/activities
+    // rendered a publisher projection for slug "activities").
+    expect(isPublicDeveloperProfilePath('/developer/activities')).toBe(false);
+    expect(isPublicDeveloperProfilePath('/developer/units')).toBe(false);
+  });
 });

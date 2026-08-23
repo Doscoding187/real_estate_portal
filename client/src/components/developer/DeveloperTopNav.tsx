@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,24 +9,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Plus,
-  Search,
   Bell,
   MessageSquare,
-  User,
   Building2,
-  Users,
   FileText,
   Settings,
   LogOut,
   BarChart3,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { cn } from '@/lib/utils';
 
 export function DeveloperTopNav() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = async () => {
     await logout();
@@ -57,14 +51,6 @@ export function DeveloperTopNav() {
               <Building2 className="h-4 w-4 mr-2" />
               Create Development
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/developer/units/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Unit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLocation('/developer/leads/new')}>
-              <Users className="h-4 w-4 mr-2" />
-              Add Lead
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setLocation('/developer/reports')}>
               <FileText className="h-4 w-4 mr-2" />
@@ -76,21 +62,6 @@ export function DeveloperTopNav() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-
-      {/* Center: Search */}
-      <div className="mx-6 hidden max-w-2xl flex-1 sm:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            aria-label="Search developments, leads, units"
-            placeholder="Search developments, leads, units..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          />
-        </div>
       </div>
 
       {/* Right: Notifications, Messages, Profile */}

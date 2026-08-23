@@ -134,4 +134,81 @@ describeWithDb('developer public profile integration', () => {
 
     await expect(caller.getPublicDeveloperBySlug({ slug })).resolves.toBeNull();
   });
+
+  it('bridges development detail to the developer presence with a published-portfolio count', async () => {
+    const db = await getDb();
+    expect(db).toBeTruthy();
+    const suffix = `${Date.now()}-presence`;
+
+    const [userInsert] = await db!.insert(users).values({
+      email: `presence-count-${suffix}@example.com`,
+      name: `Presence Count ${suffix}`,
+      role: 'property_developer',
+      emailVerified: 1,
+    });
+    userId = Number(userInsert.insertId);
+
+    developerContext = await createDeveloperTestContext({
+      userId,
+      name: `Presence Count Developer ${suffix}`,
+      email: `presence-count-${suffix}@example.com`,
+    });
+    await activateDeveloperTestLaunchAccess(developerContext);
+
+    const [publishedInsert] = await db!.insert(developments).values({
+      cataloguePublisherId: developerContext.cataloguePublisherId,
+      name: `Presence Published ${suffix}`,
+      slug: `presence-published-${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'for_sale',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'selling',
+      isPublished: 1,
+      approvalStatus: 'approved',
+    });
+    developmentIds.push(Number(publishedInsert.insertId));
+    const unitTypeId = `presence-unit-${suffix}`;
+    await db!.insert(unitTypes).values({
+      id: unitTypeId,
+      developmentId: Number(publishedInsert.insertId),
+      name: 'Three Bedroom House',
+      bedrooms: 3,
+      bathrooms: '2.0',
+      basePriceFrom: '1800000.00',
+      totalUnits: 5,
+      availableUnits: 5,
+      isActive: 1,
+    });
+    unitTypeIds.push(unitTypeId);
+
+    const [draftInsert] = await db!.insert(developments).values({
+      cataloguePublisherId: developerContext.cataloguePublisherId,
+      name: `Presence Draft ${suffix}`,
+      slug: `presence-draft-${suffix}`,
+      developmentType: 'residential',
+      transactionType: 'for_sale',
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      status: 'launching-soon',
+      isPublished: 0,
+      approvalStatus: 'draft',
+    });
+    developmentIds.push(Number(draftInsert.insertId));
+
+    const caller = developerRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+    const detail = await caller.getPublicDevelopmentBySlug({
+      slugOrId: `presence-published-${suffix}`,
+    });
+
+    expect(detail).toBeTruthy();
+    // The presence bridge counts only publicly eligible work: the draft must
+    // never inflate a developer's published portfolio.
+    expect(detail?.publisherPublishedDevelopmentCount).toBe(1);
+    expect(detail?.publisher?.slug).toBe(developerContext.publisher.slug);
+  });
 });
