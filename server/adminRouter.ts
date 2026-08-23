@@ -20,7 +20,8 @@ import {
   users,
   agencies,
   agencyJoinRequests,
-  // auditLogs,
+  auditLogs,
+  unitTypes,
   properties,
   // platformSettings,
   // commissions,
@@ -1384,6 +1385,42 @@ export const adminRouter = router({
   }),
 
   /**
+   * Admin: Review-time unit inventory for a submitted development. A reviewer
+   * must be able to inspect the sellable stock they are approving without a
+   * public page (which unpublished developments cannot serve).
+   */
+  adminGetReviewUnitTypes: superAdminProcedure
+    .input(z.object({ developmentId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const rows = await db
+        .select({
+          id: unitTypes.id,
+          name: unitTypes.name,
+          label: unitTypes.label,
+          bedrooms: unitTypes.bedrooms,
+          bathrooms: unitTypes.bathrooms,
+          basePriceFrom: unitTypes.basePriceFrom,
+          basePriceTo: unitTypes.basePriceTo,
+          monthlyRentFrom: unitTypes.monthlyRentFrom,
+          monthlyRentTo: unitTypes.monthlyRentTo,
+          totalUnits: unitTypes.totalUnits,
+          availableUnits: unitTypes.availableUnits,
+          reservedUnits: unitTypes.reservedUnits,
+          isActive: unitTypes.isActive,
+          displayOrder: unitTypes.displayOrder,
+          internalNotes: unitTypes.internalNotes,
+        })
+        .from(unitTypes)
+        .where(eq(unitTypes.developmentId, input.developmentId))
+        .orderBy(unitTypes.displayOrder, unitTypes.id);
+
+      return rows;
+    }),
+
+  /**
    * Admin: Approve development
    */
   adminApproveDevelopment: superAdminProcedure
@@ -1393,19 +1430,28 @@ export const adminRouter = router({
         complianceChecks: z.record(z.boolean()).optional(),
       }),
     )
-    .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
-      await developmentService.approveDevelopment(input.developmentId, ctx.user.id, input.complianceChecks);
+    .mutation(async ({ ctx, input }): Promise<{ success: boolean; published: boolean }> => {
+      const reviewed = await developmentService.approveDevelopment(
+        input.developmentId,
+        ctx.user.id,
+        input.complianceChecks,
+      );
+
+      // Approval can land as approve-and-publish OR approved-private when the
+      // developer's Launch Access is inactive. Callers must know which
+      // outcome occurred instead of assuming publication.
+      const published = Number(reviewed?.isPublished ?? 0) === 1;
 
       await logAudit({
         userId: ctx.user.id,
         action: AuditActions.UPDATE_DEVELOPMENT,
         targetType: 'development',
         targetId: input.developmentId,
-        metadata: { action: 'approve', compliance: input.complianceChecks },
+        metadata: { action: 'approve', compliance: input.complianceChecks, published },
         req: ctx.req,
       });
 
-      return { success: true };
+      return { success: true, published };
     }),
 
   /**
@@ -1415,7 +1461,7 @@ export const adminRouter = router({
     .input(
       z.object({
         developmentId: z.number(),
-        reason: z.string(),
+        reason: z.string().trim().min(1, 'A rejection reason is required.'),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
@@ -1441,8 +1487,34 @@ export const adminRouter = router({
         offset: z.number().optional(),
       }),
     )
-    .query(async () => {
-      return { logs: [], total: 0 };
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
+      const offset = Math.max(input.offset ?? 0, 0);
+
+      const rows = await db
+        .select({
+          id: auditLogs.id,
+          action: auditLogs.action,
+          metadata: auditLogs.metadata,
+          createdAt: auditLogs.createdAt,
+          userName: users.name,
+        })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.userId, users.id))
+        .where(
+          and(
+            eq(auditLogs.targetType, 'development'),
+            eq(auditLogs.targetId, input.developmentId),
+          ),
+        )
+        .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+        .limit(limit)
+        .offset(offset);
+
+      return { logs: rows.map(row => ({ ...row, user: { name: row.userName } })), total: rows.length };
     }),
 
   /**
@@ -1452,7 +1524,7 @@ export const adminRouter = router({
     .input(
       z.object({
         developmentId: z.number(),
-        feedback: z.string(),
+        feedback: z.string().trim().min(1, 'Feedback is required.'),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
