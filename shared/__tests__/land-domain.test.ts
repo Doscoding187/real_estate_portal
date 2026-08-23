@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   LAND_CLASSIFICATIONS,
+  LAND_PUBLIC_CLASSIFICATIONS,
   deriveLandTrustState,
   toPublicLandPassportAssertions,
 } from '../land-domain';
@@ -12,6 +13,14 @@ describe('Land domain foundation', () => {
       'residential_stand', 'development_land', 'commercial_industrial_land',
       'agricultural_vacant_land', 'smallholding', 'farm', 'other_land',
     ]);
+  });
+
+  it('exposes only classifications with a complete public Land journey contract', () => {
+    expect(LAND_PUBLIC_CLASSIFICATIONS).toEqual([
+      'residential_stand', 'development_land', 'commercial_industrial_land', 'agricultural_vacant_land',
+    ]);
+    expect(LAND_PUBLIC_CLASSIFICATIONS).not.toContain('farm');
+    expect(LAND_PUBLIC_CLASSIFICATIONS).not.toContain('smallholding');
   });
 
   it('derives Passport trust from authority, assertions, freshness and conflicts', () => {

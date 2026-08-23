@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, router, superAdminProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
+import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
 import {
   accessPrivateLandEvidence,
   addPrivateEvidence,
@@ -30,7 +31,7 @@ function rethrow(error: unknown): never {
 }
 
 export const landRouter = router({
-  createDraft: protectedProcedure.input(z.object({ classification: z.enum(['residential_stand', 'development_land', 'commercial_industrial_land']), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), city: z.string().trim().min(2), province: z.string().trim().min(2), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), identifierHash: z.string().regex(/^[a-f0-9]{64}$/), extentM2: z.number().positive(), provinceId: z.number().int().positive().optional(), cityId: z.number().int().positive().optional(), suburbId: z.number().int().positive().optional(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }) })).mutation(async ({ ctx, input }) => {
+  createDraft: protectedProcedure.input(z.object({ classification: z.enum(LAND_PUBLIC_CLASSIFICATIONS), title: z.string().trim().min(4).max(255), description: z.string().trim().min(20), askingPrice: z.number().positive(), city: z.string().trim().min(2), province: z.string().trim().min(2), address: z.string().trim().optional(), intendedUse: z.string().trim().max(120).optional(), parcel: z.object({ kind: z.enum(['erf', 'portion', 'farm', 'remainder', 'other']), identifier: z.string().trim().min(1).max(500), identifierHash: z.string().regex(/^[a-f0-9]{64}$/), extentM2: z.number().positive(), provinceId: z.number().int().positive().optional(), cityId: z.number().int().positive().optional(), suburbId: z.number().int().positive().optional(), geometryConfidence: z.enum(['unknown', 'approximate', 'confirmed']).optional() }) })).mutation(async ({ ctx, input }) => {
     try { return await createLandDraft({ ...input, userId: author(ctx).id }); } catch (error) { return rethrow(error); }
   }),
   addClaims: protectedProcedure.input(z.object({ listingId: z.number().int().positive(), claims: z.array(claim).min(1) })).mutation(async ({ ctx, input }) => {
