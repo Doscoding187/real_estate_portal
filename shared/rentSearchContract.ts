@@ -99,17 +99,17 @@ function parseNonNegativeNumber(value: unknown): number | undefined {
  * dropped wholesale: half a range is never a truthful representation of the
  * consumer's intent.
  */
-function sanitizeRange(
-  sanitized: Record<string, number | undefined>,
-  minimumKey: string,
-  maximumKey: string,
+function sanitizeRange<K extends string>(
+  state: { [P in K]?: number },
+  minimumKey: K,
+  maximumKey: K,
   minimum: number | undefined,
   maximum: number | undefined,
 ): void {
   if (minimum === undefined && maximum === undefined) return;
   if (minimum !== undefined && maximum !== undefined && minimum > maximum) return;
-  if (minimum !== undefined) sanitized[minimumKey] = minimum;
-  if (maximum !== undefined) sanitized[maximumKey] = maximum;
+  if (minimum !== undefined) state[minimumKey] = minimum;
+  if (maximum !== undefined) state[maximumKey] = maximum;
 }
 
 /**
