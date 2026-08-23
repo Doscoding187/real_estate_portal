@@ -335,3 +335,56 @@ describe('navbar refinement preservation', () => {
     expect(url).toContain('listingSource=development');
   });
 });
+
+describe('navbar refinement preservation (rent)', () => {
+  it('extracts rent-only refinement keys from an active results URL', () => {
+    expect(
+      extractActiveSearchRefinementFilters(
+        '?propertyType=apartment&minPrice=8000&maxPrice=15000&maxBedrooms=3&maxBathrooms=2&minArea=60',
+      ),
+    ).toEqual({
+      propertyType: 'apartment',
+      minPrice: 8_000,
+      maxPrice: 15_000,
+      maxBedrooms: 3,
+      maxBathrooms: 2,
+      minArea: 60,
+    });
+  });
+
+  it('re-enters the Rent journey with a new location while carrying active refinements', () => {
+    const refinements = extractActiveSearchRefinementFilters(
+      '?suburb=42&propertyType=apartment&maxPrice=15000&maxBedrooms=2',
+    );
+    const url = buildPropertySearchUrl({
+      transactionType: 'to-rent',
+      selectedLocations: [sandton],
+      ...refinements,
+    });
+
+    expect(url).toContain('/property-to-rent');
+    expect(url).toContain('propertyType=apartment');
+    expect(url).toContain('maxPrice=15000');
+    expect(url).toContain('maxBedrooms=2');
+  });
+
+  it('never leaks rent-only keys into Buy URLs and vice versa', () => {
+    const buyUrl = buildPropertySearchUrl({
+      transactionType: 'for-sale',
+      selectedLocations: [johannesburg],
+      maxBedrooms: 4,
+      minArea: 80,
+    });
+    expect(buyUrl).not.toContain('maxBedrooms');
+    expect(buyUrl).not.toContain('minArea');
+
+    const rentUrl = buildPropertySearchUrl({
+      transactionType: 'to-rent',
+      selectedLocations: [johannesburg],
+      propertyType: 'apartment',
+      minPrice: 5000,
+    });
+    expect(rentUrl).toContain('propertyType=apartment');
+    expect(rentUrl).toContain('minPrice=5000');
+  });
+});

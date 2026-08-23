@@ -8,6 +8,7 @@ import {
   type SearchIntentValidationCode,
 } from './searchIntent';
 import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
+import { sanitizeRentSearchFilters } from '../../../shared/rentSearchContract';
 import {
   BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
   RENT_PUBLIC_PROPERTY_TYPES,
@@ -54,7 +55,11 @@ export interface PropertySearchInput {
   minPrice?: string | number;
   maxPrice?: string | number;
   minBedrooms?: string | number;
+  maxBedrooms?: string | number;
   minBathrooms?: string | number;
+  maxBathrooms?: string | number;
+  minArea?: string | number;
+  maxArea?: string | number;
 }
 
 export interface DevelopmentsSearchInput {
@@ -217,18 +222,20 @@ function addSupportedRentFilters(input: PropertySearchInput, filters: SearchFilt
   const propertyType = String(input.propertyType || '')
     .trim()
     .toLowerCase();
-  if (RENT_PROPERTY_TYPES.has(propertyType)) {
-    filters.propertyType = propertyType;
-  }
+  const normalized = sanitizeRentSearchFilters({
+    propertyType: RENT_PROPERTY_TYPES.has(propertyType) ? propertyType : undefined,
+    listingSource: input.listingSource,
+    minPrice: input.minPrice,
+    maxPrice: input.maxPrice,
+    minBedrooms: input.minBedrooms,
+    maxBedrooms: input.maxBedrooms,
+    minBathrooms: input.minBathrooms,
+    maxBathrooms: input.maxBathrooms,
+    minArea: input.minArea,
+    maxArea: input.maxArea,
+  });
 
-  const minPrice = parseNonNegativeNumber(input.minPrice);
-  const maxPrice = parseNonNegativeNumber(input.maxPrice);
-  if (minPrice !== undefined && (maxPrice === undefined || minPrice <= maxPrice)) {
-    filters.minPrice = minPrice;
-  }
-  if (maxPrice !== undefined && (minPrice === undefined || minPrice <= maxPrice)) {
-    filters.maxPrice = maxPrice;
-  }
+  Object.assign(filters, normalized);
 }
 
 function addStructuredLocation(location: LocationNode): CanonicalSearchLocation | undefined {
@@ -263,7 +270,11 @@ export function buildPropertySearchUrl({
   minPrice,
   maxPrice,
   minBedrooms,
+  maxBedrooms,
   minBathrooms,
+  maxBathrooms,
+  minArea,
+  maxArea,
 }: PropertySearchInput & { transactionType: 'for-sale' | 'to-rent' }): string {
   const journey = journeyForTransactionType(transactionType);
   if (!journey) return '/';
@@ -277,7 +288,11 @@ export function buildPropertySearchUrl({
     minPrice,
     maxPrice,
     minBedrooms,
+    maxBedrooms,
     minBathrooms,
+    maxBathrooms,
+    minArea,
+    maxArea,
   };
   if (transactionType === 'for-sale') {
     addSupportedBuyFilters(filterInput, filters);
@@ -338,15 +353,20 @@ export interface ActiveSearchRefinementFilters {
   minPrice?: number;
   maxPrice?: number;
   minBedrooms?: number;
+  maxBedrooms?: number;
   minBathrooms?: number;
+  maxBathrooms?: number;
+  minArea?: number;
+  maxArea?: number;
 }
 
 /**
  * Reads the refinement filters a consumer has already applied on the current
  * results URL so journey re-entry (navbar search, location change) can carry
  * them forward instead of silently discarding active intent. Values are raw;
- * `buildPropertySearchUrl` sanitizes them through the canonical contract.
- * Buy-only this phase; the Rent convergence owns extending preservation there.
+ * `buildPropertySearchUrl` sanitizes them through the canonical journey
+ * contract. Rent-only keys are simply absent from Buy URLs, so a single
+ * extractor serves both transactional journeys.
  */
 export function extractActiveSearchRefinementFilters(
   search: string,
@@ -368,14 +388,19 @@ export function extractActiveSearchRefinementFilters(
   if (propertyType) refinements.propertyType = propertyType;
   const listingSource = rawValue('listingSource');
   if (listingSource) refinements.listingSource = listingSource;
-  const minPrice = numericValue('minPrice');
-  if (minPrice !== undefined) refinements.minPrice = minPrice;
-  const maxPrice = numericValue('maxPrice');
-  if (maxPrice !== undefined) refinements.maxPrice = maxPrice;
-  const minBedrooms = numericValue('minBedrooms');
-  if (minBedrooms !== undefined) refinements.minBedrooms = minBedrooms;
-  const minBathrooms = numericValue('minBathrooms');
-  if (minBathrooms !== undefined) refinements.minBathrooms = minBathrooms;
+  for (const key of [
+    'minPrice',
+    'maxPrice',
+    'minBedrooms',
+    'maxBedrooms',
+    'minBathrooms',
+    'maxBathrooms',
+    'minArea',
+    'maxArea',
+  ] as const) {
+    const value = numericValue(key);
+    if (value !== undefined) refinements[key] = value;
+  }
   return refinements;
 }
 
