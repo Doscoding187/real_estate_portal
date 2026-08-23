@@ -62,11 +62,21 @@ export default function Agents() {
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0A2540] to-[#0F4C75] text-white py-16">
           <div className="container">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Find Your Agent</h1>
-            <p className="text-lg text-gray-200 max-w-2xl">
-              Connect with experienced real estate professionals who can help you find your dream
-              property
-            </p>
+            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold mb-4">Find Your Agent</h1>
+                <p className="text-lg text-gray-200 max-w-2xl">
+                  Connect with experienced real estate professionals who can help you find your dream
+                  property
+                </p>
+              </div>
+              <a
+                href="/advertise/sell/agents"
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Are you an agent? Get your own presence
+              </a>
+            </div>
             {agents && agents.length > 0 && (
               <div className="mt-8 max-w-xl relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

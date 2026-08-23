@@ -376,8 +376,14 @@ function LaunchAccessCard({ product }: { product?: CommercialProduct }) {
       >
         {action.label} <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </a>
+      <a
+        href="/agents"
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-4 text-sm font-bold text-slate-950 transition hover:border-slate-950"
+      >
+        See agent presences <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </a>
       <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-        Requesting an invoice is not instant checkout and does not activate access.
+        Activation completes after finance verifies your manual EFT payment.
       </p>
     </div>
   );

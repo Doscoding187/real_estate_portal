@@ -69,20 +69,6 @@ function formatCoverageLabel(location: LocationOption) {
   return location.name;
 }
 
-const AGENT_TIER_LABELS: Record<string, string> = {
-  free: 'Free Trial',
-  starter: 'Starter',
-  professional: 'Professional',
-  elite: 'Elite',
-};
-
-const AGENT_TIER_DESCRIPTIONS: Record<string, string> = {
-  free: 'Trial access while you finish onboarding and publish your profile.',
-  starter: 'Launch tier for early traction, profile visibility, and core lead handling.',
-  professional: 'Growth tier with stronger intelligence, reporting, and publishing capacity.',
-  elite: 'Top tier for scale, priority exposure, and full operational access.',
-};
-
 function formatSubscriptionStatus(status: string | null | undefined) {
   switch (status) {
     case 'trial':
@@ -138,10 +124,8 @@ export default function AgentSettings() {
   const [notifications, setNotifications] = useState({
     emailLeads: true,
     emailShowings: true,
-    emailCommissions: true,
     pushLeads: true,
     pushShowings: false,
-    pushCommissions: true,
     smsShowings: true,
   });
 
@@ -221,11 +205,15 @@ export default function AgentSettings() {
   const handleSaveNotifications = () => {
     toast.success('Notification preferences saved');
   };
-  const currentTierKey = status?.subscriptionTier || 'starter';
-  const currentTierLabel = AGENT_TIER_LABELS[currentTierKey] || 'Selected tier';
-  const currentTierDescription =
-    AGENT_TIER_DESCRIPTIONS[currentTierKey] ||
-    'Your current onboarding tier controls the features available in Agent OS.';
+  const hasActiveCommercialTerm = Boolean(
+    status?.packageSelected && status?.subscriptionStatus !== 'none',
+  );
+  const currentTierLabel = hasActiveCommercialTerm
+    ? 'Agent Launch Access'
+    : 'No active commercial term';
+  const currentTierDescription = hasActiveCommercialTerm
+    ? 'Once-off 90-day access to the supported Agent workspace.'
+    : 'Start Agent Launch Access to publish inventory and receive enquiries.';
   const trialEndsAt = status?.entitlements?.trialStatusDetail?.trialEndsAt
     ? new Date(status.entitlements.trialStatusDetail.trialEndsAt)
     : status?.trialEndsAt
@@ -783,11 +771,6 @@ export default function AgentSettings() {
                             label: 'Showing Requests',
                             description: 'Notifications for new showing requests',
                           },
-                          {
-                            key: 'emailCommissions',
-                            label: 'Commission Updates',
-                            description: 'Updates on commission status changes',
-                          },
                         ].map(item => (
                           <div
                             key={item.key}
@@ -827,11 +810,6 @@ export default function AgentSettings() {
                             key: 'pushShowings',
                             label: 'Showing Reminders',
                             description: '15 min before scheduled showings',
-                          },
-                          {
-                            key: 'pushCommissions',
-                            label: 'Commission Alerts',
-                            description: 'Payment and approval notifications',
                           },
                         ].map(item => (
                           <div
@@ -1036,7 +1014,7 @@ export default function AgentSettings() {
                                   Status: {formatSubscriptionStatus(status?.subscriptionStatus)}
                                 </span>
                                 <span className="rounded-full bg-slate-100 px-3 py-1">
-                                  Placement allowance: {listingLimitLabel}
+                                  Listing allowance: {listingLimitLabel}
                                 </span>
                               </div>
                             </div>

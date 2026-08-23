@@ -118,9 +118,13 @@ describe('public Agent product landing page', () => {
     expect(screen.getAllByText('R499').length).toBeGreaterThan(0);
     expect(screen.getAllByText('90 days').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Active Listings: 50/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole('link', { name: /Request Launch Access invoice/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Get Agent Launch Access/i })).toHaveAttribute(
       'href',
       '/agent/select-package',
+    );
+    expect(screen.getByRole('link', { name: /See agent presences/i })).toHaveAttribute(
+      'href',
+      '/agents',
     );
     expect(
       screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,

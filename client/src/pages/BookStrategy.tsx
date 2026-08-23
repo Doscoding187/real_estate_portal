@@ -5,21 +5,57 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
-import {
-  getAdvertiserRoleFromUnknown,
-  getAdvertiserRoleSlug,
-  setStoredAdvertiserPath,
-  getStoredAdvertiserRole,
-  setStoredAdvertiserRole,
-  type AdvertiserRole,
-} from '@/lib/advertise/onboarding';
+type AdvertiserRole = 'agent' | 'agency' | 'developer' | 'seller' | 'service_provider';
+
+const ADVERTISER_ROLES: AdvertiserRole[] = [
+  'agent',
+  'agency',
+  'developer',
+  'seller',
+  'service_provider',
+];
+
+function getAdvertiserRoleFromUnknown(value: unknown): AdvertiserRole {
+  return ADVERTISER_ROLES.includes(value as AdvertiserRole)
+    ? (value as AdvertiserRole)
+    : 'agent';
+}
+
+function getAdvertiserRoleSlug(role: AdvertiserRole): string {
+  return role;
+}
+
+function setStoredAdvertiserPath(path: string) {
+  try {
+    window.sessionStorage.setItem('advertiser_path', path);
+  } catch {
+    // Session storage is best-effort only.
+  }
+}
+
+function getStoredAdvertiserRole(): AdvertiserRole | null {
+  try {
+    const raw = window.sessionStorage.getItem('advertiser_role');
+    return getAdvertiserRoleFromUnknown(raw);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredAdvertiserRole(role: AdvertiserRole) {
+  try {
+    window.sessionStorage.setItem('advertiser_role', role);
+  } catch {
+    // Session storage is best-effort only.
+  }
+}
 
 type FormState = {
   fullName: string;
   email: string;
   role: AdvertiserRole | '';
   portfolioSize: '1-10' | '11-50' | '51-200' | '200+' | '';
-  budgetBand: 'starter' | 'growth' | 'premium' | 'enterprise' | '';
+  budgetBand: 'growth' | 'premium' | 'enterprise' | '';
 };
 
 const defaultForm: FormState = {
@@ -196,7 +232,6 @@ export default function BookStrategy() {
                     onChange={e => handleChange('budgetBand', e.target.value as FormState['budgetBand'])}
                   >
                     <option value="">Budget Band</option>
-                    <option value="starter">Starter</option>
                     <option value="growth">Growth</option>
                     <option value="premium">Premium</option>
                     <option value="enterprise">Enterprise</option>
