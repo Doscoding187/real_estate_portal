@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
+import { AgentPresenceProof } from '@/components/agent/AgentPresenceProof';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -101,6 +102,7 @@ type AgentDashboardEntitlements = {
 
 type AgentDashboardOnboardingStatus = {
   packageSelected: boolean;
+  approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   onboardingStep: number;
   onboardingComplete: boolean;
   fullFeaturesUnlocked: boolean;
@@ -910,6 +912,8 @@ export function AgentDashboardOverview() {
               </Button>
             </div>
           </CardShell>
+
+          {onboardingStatus?.approvalStatus === 'approved' && <AgentPresenceProof />}
 
           <CardShell className="px-[22px] py-5">
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
