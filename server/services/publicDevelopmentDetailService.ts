@@ -278,22 +278,46 @@ export class PublicDevelopmentDetailService {
       const primaryImageUrl =
         gallery.find((item: any) => item && typeof item.url === 'string')?.url ?? null;
 
+      // Public boundary: project an explicit catalogue whitelist. Raw rows
+      // carry developer-private fields (internalNotes, specOverrides, auction
+      // terms, levies/rates, deposit requirements) that must never cross to
+      // an anonymous caller. Inventory figures come from the clamped shared
+      // projection so impossible persisted states cannot surface here.
       const detailUnit: PublicDevelopmentDetailUnit = {
-        ...unit,
-        ...publicUnit,
-        id: publicUnit.id ?? String(unit.id),
+        id: String(unit.id),
+        developmentId: Number(row.id),
         name: String(unit.name || '').trim() || 'Unit type',
         label: publicUnit.label,
+        isActive: 1,
+        displayOrder: finiteNumber(unit.displayOrder),
         bedrooms: publicUnit.bedrooms,
         bathrooms: publicUnit.bathrooms,
-        totalUnits: publicUnit.totalUnits,
-        availableUnits: publicUnit.availableUnits,
-        developmentId: Number(row.id),
+        unitSize: (unit.unitSize as number | null) ?? null,
+        yardSize: (unit.yardSize as number | null) ?? null,
+        erfSize: (unit.erfSize as number | null) ?? null,
+        parkingType: (unit.parkingType as string | null) ?? null,
+        parkingBays: finiteNumber(unit.parkingBays),
+        ownershipType: (unit.ownershipType as string | null) ?? null,
+        structuralType: (unit.structuralType as string | null) ?? null,
+        floors: finiteNumber(unit.floors),
         basePriceFrom: (unit.basePriceFrom as number | string | null) ?? null,
         basePriceTo: (unit.basePriceTo as number | string | null) ?? null,
+        priceFrom: publicUnit.priceFrom,
+        priceTo: publicUnit.priceTo,
         monthlyRentFrom: (unit.monthlyRentFrom as number | string | null) ?? null,
         monthlyRentTo: (unit.monthlyRentTo as number | string | null) ?? null,
-        reservedUnits: finiteNumber(unit.reservedUnits),
+        totalUnits: publicUnit.totalUnits,
+        availableUnits: publicUnit.availableUnits,
+        // Clamped like the shared projection so a corrupted row can never
+        // publish reserved stock that exceeds total units.
+        reservedUnits: (() => {
+          const total = publicUnit.totalUnits ?? 0;
+          const reserved = Math.max(0, Math.round(Number(unit.reservedUnits ?? 0)) || 0);
+          return total > 0 ? Math.min(reserved, total) : 0;
+        })(),
+        availabilityState: publicUnit.availabilityState,
+        baseFeatures: unit.baseFeatures ?? null,
+        baseFinishes: unit.baseFinishes ?? null,
         baseMedia,
         primaryImageUrl,
         publicFacts: publicUnit,

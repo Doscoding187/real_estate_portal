@@ -281,22 +281,20 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
     },
   );
 
-  const {
-    data: loadedPublisherDraft,
-    error: publisherDraftError,
-  } = trpc.superAdminPublisher.getDraft.useQuery(
-    {
-      cataloguePublisherId: publisherContext?.cataloguePublisherId ?? -1,
-      id: currentDraftId ?? -1,
-    },
-    {
-      enabled: !!currentDraftId && !isEditMode && shouldUsePublisherApi,
-      retry: false,
-      refetchOnWindowFocus: false,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
-    },
-  );
+  const { data: loadedPublisherDraft, error: publisherDraftError } =
+    trpc.superAdminPublisher.getDraft.useQuery(
+      {
+        cataloguePublisherId: publisherContext?.cataloguePublisherId ?? -1,
+        id: currentDraftId ?? -1,
+      },
+      {
+        enabled: !!currentDraftId && !isEditMode && shouldUsePublisherApi,
+        retry: false,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+      },
+    );
 
   const {
     data: developerEditData,
@@ -429,13 +427,40 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
   }, []);
 
   const confirmExit = async () => {
+    // The exit dialog promises a saved draft, so perform the same real server
+    // save as the explicit Save Draft action. The autosave hook is disabled
+    // and its saveNow() is a no-op.
     try {
-      if (isHydrated) await saveNow();
+      if (isHydrated) await handleManualSaveDraft();
+    } catch {
+      // Save failures already surface via toast + apiError; still allow exit.
     } finally {
       reset();
-      setLocation(shouldUsePublisherApi ? '/admin/publisher' : isSuperAdmin ? '/admin/overview' : '/developer');
+      setLocation(
+        shouldUsePublisherApi
+          ? '/admin/publisher'
+          : isSuperAdmin
+            ? '/admin/overview'
+            : '/developer',
+      );
     }
   };
+
+  // Lifecycle truth for edit mode: tell the developer what their edits will
+  // actually do before they submit — under review, live-unpublish on
+  // resubmission, or outstanding reviewer feedback.
+  const editedLifecycle = (() => {
+    if (!isEditMode || isEditLoading || !editData) return null;
+    const row = editData as Record<string, any>;
+    const notes = [row.rejectionNote, row.latestReviewNotes].find(
+      note => typeof note === 'string' && note.trim(),
+    );
+    return {
+      underReview: row.approvalStatus === 'pending',
+      livePublished: row.approvalStatus === 'approved' && Number(row.isPublished) === 1,
+      feedback: notes ? String(notes).trim() : null,
+    };
+  })();
 
   const renderPhase = () => {
     if (isEditMode && isEditLoading) {
@@ -489,6 +514,31 @@ export function DevelopmentWizard({ isModal = false }: DevelopmentWizardProps) {
           lastModified: activeLoadedDraft?.lastModified || undefined,
         }}
       />
+
+      {editedLifecycle && (
+        <div className="mx-auto max-w-5xl px-4 pt-4 sm:px-6">
+          {editedLifecycle.underReview && (
+            <div className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              <strong className="font-semibold">Under review.</strong> Property Listify is reviewing
+              the last submission of this development. Changes you save now will be part of what
+              review sees, and submitting again is blocked until that review completes.
+            </div>
+          )}
+          {editedLifecycle.livePublished && (
+            <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <strong className="font-semibold">This development is live.</strong> Submitting
+              changes takes it off public discovery and sends it back to review until the update is
+              approved.
+            </div>
+          )}
+          {editedLifecycle.feedback && (
+            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+              <strong className="font-semibold">Reviewer feedback:</strong>{' '}
+              {editedLifecycle.feedback}
+            </div>
+          )}
+        </div>
+      )}
 
       {renderPhase()}
 

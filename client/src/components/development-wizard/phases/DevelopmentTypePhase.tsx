@@ -41,19 +41,15 @@ const TRANSACTION_TYPES = [
     label: 'Auction',
     icon: Gavel,
     description: 'Sell via bidding process',
-    enabled: true,
+    // Auction publication is not enabled by the submission authority yet;
+    // offering the workflow would end in a guaranteed submit failure.
+    enabled: false,
   },
 ];
 
 export function DevelopmentTypePhase() {
-  const {
-    developmentType,
-    developmentData,
-    workflowId,
-    setWorkflowSelector,
-    setPhase,
-    resetWizard,
-  } = useDevelopmentWizard();
+  const { developmentType, developmentData, workflowId, setWorkflowSelector, setPhase, reset } =
+    useDevelopmentWizard();
 
   const [selectedTxType, setSelectedTxType] = useState<string | undefined>(
     developmentData?.transactionType,
@@ -95,7 +91,7 @@ export function DevelopmentTypePhase() {
 
   const confirmReset = () => {
     if (pendingTxChange) {
-      resetWizard();
+      reset();
       setSelectedTxType(pendingTxChange); // set local state for next selection
       // Note: resetWizard clears global state, so we are essentially restarting
       // We might need to re-apply the development type selection if we want to keep it?
@@ -304,7 +300,7 @@ export function DevelopmentTypePhase() {
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={() => {
-                resetWizard();
+                reset();
                 setPendingTxChange(null);
                 setShowResetDialog(false);
               }}
