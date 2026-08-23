@@ -285,9 +285,13 @@ async function resolveWritableCataloguePublisherId(
       .limit(1);
 
     if (!brand) {
-      throw createError(`Catalogue Publisher ${explicitCataloguePublisherId} not found`, 'NOT_FOUND', {
-        cataloguePublisherId: explicitCataloguePublisherId,
-      });
+      throw createError(
+        `Catalogue Publisher ${explicitCataloguePublisherId} not found`,
+        'NOT_FOUND',
+        {
+          cataloguePublisherId: explicitCataloguePublisherId,
+        },
+      );
     }
 
     if (
@@ -489,223 +493,6 @@ function buildDeveloperDisplay(dev: any) {
  */
 export async function getPublicDevelopmentBySlug(slugOrId: string) {
   return publicDevelopmentDetailService.getBySlugOrId(slugOrId);
-}
-
-/**
- * Compatibility read retained for non-consumer historical callers. It is not
- * used by the public New Developments detail route.
- */
-export async function getLegacyPublicDevelopmentBySlug(slugOrId: string) {
-  const db = await getDb();
-  if (!db) return null;
-
-  const { isId, value } = parseSlugOrId(slugOrId);
-
-  const whereClause = and(
-    isId ? eq(developments.id, value as number) : eq(developments.slug, value as string),
-    publicDevelopmentEligibilityConditions(),
-  );
-
-  const results = await db
-    .select({
-      developerId: sql<number | null>`NULL`,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      id: developments.id,
-      name: developments.name,
-      slug: developments.slug,
-      description: developments.description,
-      images: developments.images,
-      videos: developments.videos,
-      city: developments.city,
-      province: developments.province,
-      suburb: developments.suburb,
-      address: developments.address,
-      latitude: developments.latitude,
-      longitude: developments.longitude,
-      priceFrom: developments.priceFrom,
-      priceTo: developments.priceTo,
-      monthlyRentFrom: developments.monthlyRentFrom,
-      monthlyRentTo: developments.monthlyRentTo,
-      amenities: developments.amenities,
-      estateSpecs: developments.estateSpecs,
-      floorPlans: developments.floorPlans,
-      brochures: developments.brochures,
-      locationId: developments.locationId,
-      isPublished: developments.isPublished,
-      publishedAt: developments.publishedAt,
-      // ✅ chips + status row + availability bar
-      approvalStatus: developments.approvalStatus,
-      status: developments.status,
-      developmentType: developments.developmentType,
-      ownershipType: developments.ownershipType,
-      transactionType: developments.transactionType,
-      marketingRole: developments.marketingRole,
-      launchDate: developments.launchDate,
-      completionDate: developments.completionDate,
-      totalUnits: developments.totalUnits,
-      availableUnits: developments.availableUnits,
-
-      developer: {
-        id: developerOrganisations.id,
-        name: developerOrganisations.name,
-        slug: developerOrganisations.slug,
-        logo: developerOrganisations.logo,
-        description: developerOrganisations.description,
-        website: developerOrganisations.website,
-      },
-    })
-    .from(developments)
-    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
-    .leftJoin(
-      developerOrganisations,
-      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
-    )
-    .where(whereClause)
-    .limit(1);
-
-  if (!results[0]) return null;
-
-  const dev: any = results[0];
-
-  // Attach the governed public Catalogue Publisher projection.
-  try {
-    if (dev?.cataloguePublisherId) {
-      const [latestReview] = await db
-        .select({ reviewedAt: developmentApprovalQueue.reviewedAt })
-        .from(developmentApprovalQueue)
-        .where(
-          and(
-            eq(developmentApprovalQueue.developmentId, dev.id),
-            isNotNull(developmentApprovalQueue.reviewedAt),
-          ),
-        )
-        .orderBy(desc(developmentApprovalQueue.reviewedAt), desc(developmentApprovalQueue.id))
-        .limit(1);
-
-      const brand = await db
-        .select({
-          id: cataloguePublishers.id,
-          brandName: cataloguePublishers.name,
-          slug: cataloguePublishers.slug,
-          authorityKind: cataloguePublishers.authorityKind,
-          logoUrl: cataloguePublishers.logoUrl,
-          websiteUrl: cataloguePublishers.websiteUrl,
-          about: cataloguePublishers.about,
-          sourceAttribution: cataloguePublishers.sourceAttribution,
-          foundedYear: cataloguePublishers.foundedYear,
-          headOfficeLocation: cataloguePublishers.headOfficeLocation,
-        })
-        .from(cataloguePublishers)
-        .where(eq(cataloguePublishers.id, dev.cataloguePublisherId))
-        .limit(1);
-
-      const bp = brand?.[0];
-      if (bp) {
-        dev.publisher = {
-          id: bp.id,
-          name: bp.brandName,
-          slug: bp.slug,
-          authorityKind: bp.authorityKind,
-          logoUrl: bp.logoUrl ?? null,
-          websiteUrl: bp.websiteUrl ?? null,
-          description: bp.about ?? null,
-          sourceAttribution: bp.sourceAttribution ?? null,
-          lastVerifiedAt: latestReview?.reviewedAt ?? null,
-          foundedYear: bp.foundedYear ?? null,
-          headOfficeLocation: bp.headOfficeLocation ?? null,
-        };
-      }
-    }
-  } catch (err) {
-    console.warn('[getPublicDevelopmentBySlug] Publisher attachment failed (non-fatal):', err);
-  }
-
-  // Units (for unit cards)
-  const units = await db
-    .select()
-    .from(unitTypes)
-    .where(and(eq(unitTypes.developmentId, dev.id), eq(unitTypes.isActive, 1)))
-    .orderBy(unitTypes.basePriceFrom);
-
-  const unitsWithMedia = units.map((u: any) => {
-    let baseMedia = u.baseMedia;
-
-    if (typeof baseMedia === 'string') {
-      try {
-        baseMedia = JSON.parse(baseMedia);
-        if (typeof baseMedia === 'string') baseMedia = JSON.parse(baseMedia);
-      } catch {
-        baseMedia = { gallery: [] };
-      }
-    }
-
-    const gallery = Array.isArray(baseMedia?.gallery) ? baseMedia.gallery : [];
-    const primary = gallery[0];
-
-    return {
-      ...u,
-      baseMedia,
-      primaryImageUrl: primary?.url ?? null,
-    };
-  });
-
-  // Sales metrics (drives progress bar vs "Sales data unavailable")
-  let salesMetrics: null | {
-    totalUnits: number;
-    availableUnits: number;
-    reservedUnits: number;
-    soldUnits: number;
-    soldPct: number;
-  } = null;
-
-  if (unitsWithMedia.length > 0) {
-    const totals = unitsWithMedia.reduce(
-      (acc: { total: number; available: number; reserved: number }, u: any) => {
-        const total = Math.max(0, Number(u?.totalUnits || 0));
-        const reserved = Math.min(Math.max(0, Number(u?.reservedUnits || 0)), total);
-        const available = Math.min(Math.max(0, Number(u?.availableUnits || 0)), total - reserved);
-        return {
-          total: acc.total + total,
-          available: acc.available + available,
-          reserved: acc.reserved + reserved,
-        };
-      },
-      { total: 0, available: 0, reserved: 0 },
-    );
-
-    if (totals.total > 0) {
-      const soldUnits = Math.max(totals.total - totals.available - totals.reserved, 0);
-      const soldPct = Math.round((soldUnits / totals.total) * 100);
-      salesMetrics = {
-        totalUnits: totals.total,
-        availableUnits: totals.available,
-        reservedUnits: totals.reserved,
-        soldUnits,
-        soldPct,
-      };
-    }
-  }
-
-  return {
-    ...dev,
-    developerDisplay: buildDeveloperDisplay(dev),
-
-    images: parseJsonField(dev.images),
-    videos: parseJsonField(dev.videos),
-    floorPlans: parseJsonField(dev.floorPlans),
-    brochures: parseJsonField(dev.brochures),
-    amenities: normalizeAmenities(dev.amenities),
-
-    estateSpecs:
-      typeof dev.estateSpecs === 'string'
-        ? (parseJsonMaybeTwice(dev.estateSpecs, {}) as any)
-        : (dev.estateSpecs ?? {}),
-
-    publisher: dev.publisher,
-
-    unitTypes: unitsWithMedia,
-    salesMetrics,
-  };
 }
 
 export async function getPublicDevelopment(id: number) {
@@ -1065,7 +852,10 @@ export async function createDevelopment(
     const validBrand =
       user?.role === 'super_admin'
         ? await developerIdentityService.getPlatformPublisherById(targetBrandId)
-        : await developerIdentityService.assertPublisherForOrganisation(targetBrandId, developerProfileId!);
+        : await developerIdentityService.assertPublisherForOrganisation(
+            targetBrandId,
+            developerProfileId!,
+          );
     if (!validBrand) {
       throw new TRPCError({
         code: user?.role === 'super_admin' ? 'FORBIDDEN' : 'NOT_FOUND',
@@ -1819,7 +1609,10 @@ export async function updateDevelopment(
             eq(developments.id, id),
             eq(developments.cataloguePublisherId, superAdminCataloguePublisherId),
           )
-        : and(eq(developments.id, id), eq(developments.cataloguePublisherId, developerPublisherId!));
+        : and(
+            eq(developments.id, id),
+            eq(developments.cataloguePublisherId, developerPublisherId!),
+          );
 
     await writeDb.update(developments).set(persistedPayload).where(ownershipPredicate);
 
@@ -2567,7 +2360,10 @@ async function createPhase(developmentId: number, developerId: number, data: any
     .select({ id: developments.id })
     .from(developments)
     .where(
-      and(eq(developments.id, developmentId), eq(developments.cataloguePublisherId, devProfile.publisherId)),
+      and(
+        eq(developments.id, developmentId),
+        eq(developments.cataloguePublisherId, devProfile.publisherId),
+      ),
     )
     .limit(1);
 
@@ -2687,7 +2483,12 @@ async function publishDevelopment(
     const [ownedDevelopment] = await tx
       .select()
       .from(developments)
-      .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile!.publisherId)))
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.cataloguePublisherId, devProfile!.publisherId),
+        ),
+      )
       .limit(1)
       .for('update');
     if (!ownedDevelopment) {
@@ -2773,7 +2574,12 @@ async function publishDevelopment(
     await tx
       .update(developments)
       .set({ approvalStatus: 'pending', isPublished: 0, publishedAt: null, rejectionNote: null })
-      .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile!.publisherId)));
+      .where(
+        and(
+          eq(developments.id, id),
+          eq(developments.cataloguePublisherId, devProfile!.publisherId),
+        ),
+      );
     await tx.insert(developmentApprovalQueue).values({
       developmentId: id,
       submittedBy: userId,
@@ -2812,7 +2618,8 @@ export async function submitPlatformCuratedDevelopment(
     if (!operatingContext?.cataloguePublisherId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'An explicit platform curator publisher context is required to submit a development.',
+        message:
+          'An explicit platform curator publisher context is required to submit a development.',
       });
     }
 
@@ -2854,7 +2661,8 @@ export async function submitPlatformCuratedDevelopment(
     if (!String(publisher.sourceAttribution ?? '').trim()) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'Platform-curated submission requires source attribution on the Catalogue Publisher.',
+        message:
+          'Platform-curated submission requires source attribution on the Catalogue Publisher.',
       });
     }
 
@@ -3021,11 +2829,7 @@ export async function reviewPlatformCuratedDevelopment(
     }
 
     await completeReviewInTransaction(tx, id, reviewerId, decision, details);
-    const [reviewed] = await tx
-      .select()
-      .from(developments)
-      .where(eq(developments.id, id))
-      .limit(1);
+    const [reviewed] = await tx.select().from(developments).where(eq(developments.id, id)).limit(1);
     return reviewed;
   });
 }
@@ -3042,7 +2846,8 @@ export async function unpublishPlatformCuratedDevelopment(
     if (!operatingContext?.cataloguePublisherId) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'An explicit platform curator publisher context is required to unpublish a development.',
+        message:
+          'An explicit platform curator publisher context is required to unpublish a development.',
       });
     }
 
@@ -3129,7 +2934,8 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
   if (!operatingContext?.cataloguePublisherId) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
-      message: 'An explicit platform curator publisher context is required to publish a development.',
+      message:
+        'An explicit platform curator publisher context is required to publish a development.',
     });
   }
 
@@ -3188,10 +2994,13 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
     if (!String(brand.sourceAttribution ?? '').trim()) {
       throw new TRPCError({
         code: 'PRECONDITION_FAILED',
-        message: 'Platform-curated publication requires source attribution on the Catalogue Publisher.',
+        message:
+          'Platform-curated publication requires source attribution on the Catalogue Publisher.',
       });
     }
-    if (Number(existingDev.cataloguePublisherId) !== Number(operatingContext.cataloguePublisherId)) {
+    if (
+      Number(existingDev.cataloguePublisherId) !== Number(operatingContext.cataloguePublisherId)
+    ) {
       throw new TRPCError({
         code: 'NOT_FOUND',
         message: 'Development not found in the selected platform curator context.',
@@ -3501,7 +3310,10 @@ export async function publishDeveloperOwnedDevelopmentInTransaction(
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Replacement development not found.' });
   }
   const [publisher] = await tx
-    .select({ authorityKind: cataloguePublishers.authorityKind, developerOrganisationId: cataloguePublishers.developerOrganisationId })
+    .select({
+      authorityKind: cataloguePublishers.authorityKind,
+      developerOrganisationId: cataloguePublishers.developerOrganisationId,
+    })
     .from(cataloguePublishers)
     .where(eq(cataloguePublishers.id, development.cataloguePublisherId))
     .limit(1);
@@ -3614,7 +3426,9 @@ async function unpublishDevelopment(id: number, userId: number) {
     const [ownedDevelopment] = await tx
       .select({ id: developments.id })
       .from(developments)
-      .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile.publisherId)))
+      .where(
+        and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile.publisherId)),
+      )
       .limit(1)
       .for('update');
 
@@ -3734,7 +3548,12 @@ async function deleteDevelopment(
       const [owned] = await db
         .select({ id: developments.id })
         .from(developments)
-        .where(and(eq(developments.id, id), eq(developments.cataloguePublisherId, devProfile.publisherId)))
+        .where(
+          and(
+            eq(developments.id, id),
+            eq(developments.cataloguePublisherId, devProfile.publisherId),
+          ),
+        )
         .limit(1);
 
       if (!owned) {
