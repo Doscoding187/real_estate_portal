@@ -221,6 +221,74 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     ).toBe(true);
   });
 
+  it('mirrors reviewer feedback, refuses empty feedback, and approves privately when Launch Access lapsed', async () => {
+    const owner = await createFixture(undefined, { launchAccess: false });
+    const reviewer = await createFixture('super_admin');
+    const development = await createDevelopmentFor(owner);
+    const developmentId = Number(development.id);
+
+    const ownerCaller = callerFor(owner.userId, 'property_developer');
+    const submission = await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    expect(submission).toMatchObject({ approvalStatus: 'pending', isPublished: 0 });
+
+    // Reviewer feedback must carry substance: whitespace-only feedback is a
+    // contract violation, because the developer-facing correction loop depends
+    // on actionable notes.
+    const reviewerCaller = callerFor(reviewer.userId, 'super_admin');
+    await expect(
+      reviewerCaller.admin.adminRequestChanges({ developmentId, feedback: '   ' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+
+    await reviewerCaller.admin.adminRequestChanges({
+      developmentId,
+      feedback: 'Replace the hero image and clarify the levy range.',
+    });
+
+    const db = await getDb();
+    const [changesRow] = await db!
+      .select()
+      .from(developmentApprovalQueue)
+      .where(eq(developmentApprovalQueue.developmentId, developmentId));
+    expect(changesRow).toMatchObject({
+      status: 'changes_requested',
+      reviewedBy: reviewer.userId,
+    });
+    const [draftAfterChanges] = await db!
+      .select()
+      .from(developments)
+      .where(eq(developments.id, developmentId));
+    expect(draftAfterChanges).toMatchObject({
+      approvalStatus: 'draft',
+      isPublished: 0,
+    });
+    // Feedback mirrors onto the developer-visible rejection note.
+    expect(draftAfterChanges.rejectionNote).toContain('Replace the hero image');
+
+    // The corrected resubmission re-enters the queue as an update.
+    const resubmission = await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    expect(resubmission).toMatchObject({ approvalStatus: 'pending', isPublished: 0 });
+
+    // Approving with Launch Access inactive must land approved-private, and
+    // the admin surface must report that outcome instead of assuming publish.
+    const approveResult = await reviewerCaller.admin.adminApproveDevelopment({ developmentId });
+    expect(approveResult).toMatchObject({ success: true, published: false });
+
+    const [approvedPrivate] = await db!
+      .select()
+      .from(developments)
+      .where(eq(developments.id, developmentId));
+    expect(approvedPrivate).toMatchObject({ approvalStatus: 'approved', isPublished: 0 });
+    expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toBeNull();
+
+    // Once Launch Access activates, the approved catalogue can be published.
+    await activateDeveloperTestLaunchAccess(owner.developerContext!);
+    const publication = await ownerCaller.developer.publishDevelopment({ id: developmentId });
+    expect(publication).toMatchObject({ approvalStatus: 'approved', isPublished: 1 });
+    expect(
+      await developmentService.getPublicDevelopmentBySlug(String(developmentId)),
+    ).toMatchObject({ id: developmentId, isPublished: 1 });
+  });
+
   it('keeps live external availability updates public and owner-scoped', async () => {
     const owner = await createFixture();
     const otherDeveloper = await createFixture();
