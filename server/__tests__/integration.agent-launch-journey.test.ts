@@ -300,7 +300,7 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       (await import('drizzle-orm')).sql`
         select n.type, n.title
         from notifications n
-        where n.user_id = ${created.userId}
+        where n.userId = ${created.userId}
           and n.type = 'lead_assigned'
         order by n.id desc limit 1`,
     ).then((r: any) => (Array.isArray(r) ? r[0] : (r?.rows ?? [])[0]));

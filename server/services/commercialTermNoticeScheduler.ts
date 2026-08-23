@@ -44,7 +44,7 @@ async function sendDueNotices(window: NoticeWindow): Promise<number> {
       and s.current_period_end <= date_add(now(), interval ${window.daysRemaining} day)
       and not exists (
         select 1 from notifications n
-        where n.user_id = s.owner_id
+        where n.userId = s.owner_id
           and n.type = 'system_alert'
           and json_unquote(json_extract(n.data, '$.notice')) = ${window.key}
       )
