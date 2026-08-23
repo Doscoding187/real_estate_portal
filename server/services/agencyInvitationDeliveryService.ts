@@ -6,6 +6,43 @@ import { getDb } from '../db';
 
 const ACTIVE_AGENCY_SUBSCRIPTION_STATUSES = new Set(['active', 'grace_period']);
 
+type CanonicalGateSubscription = {
+  status: string | null;
+  currentPeriodEnd: string | Date | null;
+  graceEndsAt: string | Date | null;
+};
+
+/**
+ * Effective paid access mirrors the canonical gates: an active/grace status
+ * whose term (or grace window) has already elapsed is treated as expired,
+ * so a finance lifecycle override cannot email invitations for access the
+ * rest of the platform denies.
+ */
+export function hasEffectiveAgencyPaidAccess(subscription: CanonicalGateSubscription): boolean {
+  if (!subscription || !ACTIVE_AGENCY_SUBSCRIPTION_STATUSES.has(String(subscription.status || ''))) {
+    return false;
+  }
+
+  const now = Date.now();
+  const toDate = (value: string | Date | null | undefined) => {
+    if (!value) return null;
+    const parsed = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const periodEnd = toDate(subscription.currentPeriodEnd);
+  if (subscription.status === 'active' && periodEnd && periodEnd.getTime() <= now) {
+    return false;
+  }
+
+  const graceEndsAt = toDate(subscription.graceEndsAt);
+  if (subscription.status === 'grace_period' && graceEndsAt && graceEndsAt.getTime() <= now) {
+    return false;
+  }
+
+  return true;
+}
+
 export type AgencyInvitationDeliveryResult = {
   deferred: boolean;
   attempted: number;
@@ -51,15 +88,16 @@ export async function deliverAgencyInvitations(input: {
   if (!agency) throw new Error('Agency not found');
 
   const [subscription] = await db
-    .select({ status: subscriptions.status })
+    .select({
+      status: subscriptions.status,
+      currentPeriodEnd: subscriptions.currentPeriodEnd,
+      graceEndsAt: subscriptions.graceEndsAt,
+    })
     .from(subscriptions)
     .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, input.agencyId)))
     .limit(1);
 
-  if (
-    !subscription ||
-    !ACTIVE_AGENCY_SUBSCRIPTION_STATUSES.has(String(subscription.status || ''))
-  ) {
+  if (!hasEffectiveAgencyPaidAccess(subscription ?? null)) {
     return { deferred: true, attempted: 0, sent: 0, failed: 0 };
   }
 

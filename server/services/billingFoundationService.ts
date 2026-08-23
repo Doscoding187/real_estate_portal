@@ -2057,12 +2057,11 @@ async function activateSubscriptionForPaidInvoice(
   let subscription: SubscriptionRow | null = null;
 
   if (activationPlan && resolveCommercialTerm(activationPlan).kind === 'paid_launch_access') {
-    // Launch Access activation delegates to the verified-payment writer.
-    // Re-read the canonical row inside this transaction so both activation
-    // branches converge on the same shadow-sync and return shape below;
-    // delegating without re-reading left the legacy agency shadow stranded
-    // at its pre-activation status and silently deferred team invitations.
-    const activated = await activatePaidLaunchAccessForOwner({
+    // Launch Access activation delegates to the verified-payment writer and
+    // deliberately does NOT extend the legacy agencies billing shadow with a
+    // new mutable commercial record. Behavioral consumers (invitation
+    // delivery, public agency status) read canonical subscriptions directly.
+    await activatePaidLaunchAccessForOwner({
       ownerType: input.invoice.ownerType as SubscriptionOwnerType,
       ownerId: input.invoice.ownerId,
       planId: activationPlan.id,
@@ -2077,7 +2076,7 @@ async function activateSubscriptionForPaidInvoice(
       db: tx,
     });
 
-    if (activated && input.invoice.subscriptionId) {
+    if (input.invoice.subscriptionId) {
       const [activatedRow] = await tx
         .select()
         .from(subscriptions)
@@ -2127,18 +2126,21 @@ async function activateSubscriptionForPaidInvoice(
       .where(eq(subscriptions.id, input.invoice.subscriptionId))
       .limit(1);
 
-    if (activatedRow) {
-      subscription = activatedRow;
-    }
-  }
+    if (!activatedRow) return null;
 
-  if (subscription && input.invoice.ownerType === 'agency') {
-    await syncAgencyBillingShadow(tx, {
-      agencyId: input.invoice.ownerId,
-      planId: subscription.planId,
-      status: 'active',
-      periodEnd: subscription.currentPeriodEnd || null,
-    });
+    // Pre-existing recurring-plan behavior: keep the compatibility shadow
+    // coherent for this branch only. No new shadow writes are introduced for
+    // Launch Access products.
+    if (input.invoice.ownerType === 'agency') {
+      await syncAgencyBillingShadow(tx, {
+        agencyId: input.invoice.ownerId,
+        planId: activatedRow.planId,
+        status: 'active',
+        periodEnd: activatedRow.currentPeriodEnd || periodEnd,
+      });
+    }
+
+    subscription = activatedRow;
   }
 
   return subscription;

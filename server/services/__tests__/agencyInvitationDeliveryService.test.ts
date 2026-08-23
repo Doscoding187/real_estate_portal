@@ -13,7 +13,10 @@ vi.mock('../../_core/emailService', () => ({
   },
 }));
 
-import { deliverAgencyInvitations } from '../agencyInvitationDeliveryService';
+import {
+  deliverAgencyInvitations,
+  hasEffectiveAgencyPaidAccess,
+} from '../agencyInvitationDeliveryService';
 
 function limitedRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
@@ -34,12 +37,27 @@ describe('agency invitation delivery (canonical access gate)', () => {
     mockGetDb.mockResolvedValue({ select: mockSelect });
   });
 
-  function mockCanonicalGate(status: string | null) {
+  function mockCanonicalGate(
+    status: string | null,
+    dates: { currentPeriodEnd?: string | null; graceEndsAt?: string | null } = {},
+  ) {
     mockSelect
       // Agency existence lookup.
       .mockImplementationOnce(() => limitedRows([{ id: 44, name: 'Canonical Realty' }]))
       // Canonical subscriptions row — the single commercial-access authority.
-      .mockImplementationOnce(() => limitedRows([{ status }]));
+      .mockImplementationOnce(() =>
+        limitedRows([
+          {
+            status,
+            currentPeriodEnd: dates.currentPeriodEnd ?? null,
+            graceEndsAt: dates.graceEndsAt ?? null,
+          },
+        ]),
+      );
+  }
+
+  function futureDate(daysFromNow: number) {
+    return new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000).toISOString();
   }
 
   function pendingInvitation() {
@@ -128,5 +146,33 @@ describe('agency invitation delivery (canonical access gate)', () => {
 
     expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
     expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+  });
+
+  it('defers an active subscription whose fixed term has already elapsed', async () => {
+    // A finance lifecycle override that sets 'active' without refreshing
+    // dates must not email invitations for access the canonical gates deny.
+    mockCanonicalGate('active', { currentPeriodEnd: futureDate(-3) });
+
+    const result = await deliverAgencyInvitations({ agencyId: 44, invitationIds: [99] });
+
+    expect(result).toEqual({ deferred: true, attempted: 0, sent: 0, failed: 0 });
+    expect(mockSendAgencyInvitationEmail).not.toHaveBeenCalled();
+  });
+
+  it('delivers within a live grace window and defers an exhausted one', () => {
+    expect(
+      hasEffectiveAgencyPaidAccess({
+        status: 'grace_period',
+        currentPeriodEnd: futureDate(-10),
+        graceEndsAt: futureDate(4),
+      }),
+    ).toBe(true);
+    expect(
+      hasEffectiveAgencyPaidAccess({
+        status: 'grace_period',
+        currentPeriodEnd: futureDate(-30),
+        graceEndsAt: futureDate(-2),
+      }),
+    ).toBe(false);
   });
 });
