@@ -8,10 +8,10 @@ import {
   type SearchIntentValidationCode,
 } from './searchIntent';
 import { isBuyPropertyType, sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
-import { sanitizeRentSearchFilters } from '../../../shared/rentSearchContract';
+import { isRentPropertyType, sanitizeRentSearchFilters } from '../../../shared/rentSearchContract';
 import {
-  BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
-  RENT_PUBLIC_PROPERTY_TYPES,
+  HOMES_BUY_SELECTABLE_PROPERTY_TYPES,
+  HOMES_RENT_SELECTABLE_PROPERTY_TYPES,
 } from '../../../shared/property-taxonomy';
 import {
   buildTransactionalGeographyHref,
@@ -26,22 +26,26 @@ import {
   type SearchScope,
 } from '../../../shared/searchScope';
 
-const BUY_PROPERTY_TYPE_LABELS: Record<(typeof BUY_ACTIVE_PUBLIC_PROPERTY_TYPES)[number], string> =
-  {
-    apartment: 'Apartment',
-    house: 'House',
-    townhouse: 'Townhouse',
-    cluster_home: 'Cluster home',
-    farm: 'Farm',
-  };
+const BUY_PROPERTY_TYPE_LABELS: Record<
+  (typeof HOMES_BUY_SELECTABLE_PROPERTY_TYPES)[number],
+  string
+> = {
+  apartment: 'Apartment',
+  house: 'House',
+  townhouse: 'Townhouse',
+  cluster_home: 'Cluster home',
+};
 
-/** Presentation only; canonical active Buy taxonomy owns the selectable values. */
-export const BUY_PROPERTY_TYPE_OPTIONS = BUY_ACTIVE_PUBLIC_PROPERTY_TYPES.map(value => ({
+/** Presentation only; the Homes selection vocabulary owns the offered values. */
+export const BUY_PROPERTY_TYPE_OPTIONS = HOMES_BUY_SELECTABLE_PROPERTY_TYPES.map(value => ({
   value,
   label: BUY_PROPERTY_TYPE_LABELS[value],
 }));
 
-const RENT_PROPERTY_TYPES = new Set<string>(RENT_PUBLIC_PROPERTY_TYPES);
+export const RENT_PROPERTY_TYPE_OPTIONS = HOMES_RENT_SELECTABLE_PROPERTY_TYPES.map(value => ({
+  value,
+  label: value === 'cluster_home' ? 'Cluster home' : value.charAt(0).toUpperCase() + value.slice(1),
+}));
 
 export interface PropertySearchInput {
   searchQuery?: string;
@@ -223,7 +227,7 @@ function addSupportedRentFilters(input: PropertySearchInput, filters: SearchFilt
     .trim()
     .toLowerCase();
   const normalized = sanitizeRentSearchFilters({
-    propertyType: RENT_PROPERTY_TYPES.has(propertyType) ? propertyType : undefined,
+    propertyType: isRentPropertyType(propertyType) ? propertyType : undefined,
     listingSource: input.listingSource,
     minPrice: input.minPrice,
     maxPrice: input.maxPrice,

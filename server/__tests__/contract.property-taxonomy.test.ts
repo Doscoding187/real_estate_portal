@@ -4,6 +4,8 @@ import {
   BUY_ACTIVE_PUBLIC_PROPERTY_TYPES,
   BUY_LEGACY_PUBLIC_PROPERTY_TYPES,
   BUY_PUBLIC_PROPERTY_TYPES,
+  HOMES_BUY_SELECTABLE_PROPERTY_TYPES,
+  HOMES_RENT_SELECTABLE_PROPERTY_TYPES,
   RENT_PUBLIC_PROPERTY_TYPES,
   getAuthorablePropertyTypes,
   getListingAuthoringValidationMessage,
@@ -68,5 +70,20 @@ describe('canonical manual property taxonomy', () => {
     expect(toPublicPropertyType('townhouse')).toBe('townhouse');
     expect(toPublicPropertyType('cluster_home')).toBe('cluster_home');
     expect(() => toPublicPropertyType('unknown')).toThrow(/unsupported listing property type/i);
+  });
+
+  it('reserves farm composition for the specialist Farms & Smallholdings journey', () => {
+    // Farm remains readable/authorable inventory, but Homes surfaces must not
+    // offer it as an ordinary property-type refinement.
+    expect(BUY_ACTIVE_PUBLIC_PROPERTY_TYPES).toContain('farm');
+    expect(HOMES_BUY_SELECTABLE_PROPERTY_TYPES).not.toContain('farm');
+    expect(HOMES_RENT_SELECTABLE_PROPERTY_TYPES).not.toContain('farm');
+    expect(HOMES_BUY_SELECTABLE_PROPERTY_TYPES).toEqual([
+      'apartment',
+      'house',
+      'townhouse',
+      'cluster_home',
+    ]);
+    expect(HOMES_RENT_SELECTABLE_PROPERTY_TYPES).toEqual(HOMES_BUY_SELECTABLE_PROPERTY_TYPES);
   });
 });
