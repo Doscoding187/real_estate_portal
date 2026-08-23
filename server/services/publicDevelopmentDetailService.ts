@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 
 import {
   cataloguePublishers,
@@ -94,7 +94,10 @@ function buildSalesMetrics(
     if (total === null || reserved === null) return sum;
     return sum + Math.min(Math.max(Math.round(reserved), 0), Math.max(Math.round(total), 0));
   }, 0);
-  const soldUnits = Math.max(publicFacts.totalUnits - publicFacts.availableUnits - reservedUnits, 0);
+  const soldUnits = Math.max(
+    publicFacts.totalUnits - publicFacts.availableUnits - reservedUnits,
+    0,
+  );
 
   return {
     totalUnits: publicFacts.totalUnits,
@@ -192,8 +195,10 @@ export class PublicDevelopmentDetailService {
       city: String(row.city || ''),
       suburb: (row.suburb as string | null) ?? null,
       province: String(row.province || ''),
-      developmentType: row.developmentType as PublicDevelopmentProjectionDevelopment['developmentType'],
-      transactionType: row.transactionType as PublicDevelopmentProjectionDevelopment['transactionType'],
+      developmentType:
+        row.developmentType as PublicDevelopmentProjectionDevelopment['developmentType'],
+      transactionType:
+        row.transactionType as PublicDevelopmentProjectionDevelopment['transactionType'],
       status: row.status as PublicDevelopmentProjectionDevelopment['status'],
       nature: row.nature as PublicDevelopmentProjectionDevelopment['nature'],
       launchDate: (row.launchDate as string | null) ?? null,
@@ -202,7 +207,10 @@ export class PublicDevelopmentDetailService {
       isFeatured: row.isFeatured,
       rating: row.rating,
       highlights: row.highlights,
-      canonicalRoute: buildDevelopmentRootPath({ id: Number(row.id), slug: row.slug as string | null }),
+      canonicalRoute: buildDevelopmentRootPath({
+        id: Number(row.id),
+        slug: row.slug as string | null,
+      }),
       cataloguePublisherId: (row.cataloguePublisherId as number | null) ?? null,
       publisherName: (row.publisherName as string | null) ?? null,
       publisherLogoUrl: (row.publisherLogoUrl as string | null) ?? null,
@@ -242,6 +250,23 @@ export class PublicDevelopmentDetailService {
 
     const publicFacts = projectPublicDevelopmentFacts(development, projectionUnits);
     if (!publicFacts) return null;
+
+    // Developer Digital Presence bridge: count this organisation's publicly
+    // eligible portfolio from the same eligibility authority used for every
+    // other public read. Never expose drafts, rejected or unpublished work.
+    let publisherPublishedDevelopmentCount: number | null = null;
+    if (publicFacts.publisher.id) {
+      const [countRow] = (await db
+        .select({ total: sql<number>`count(*)` })
+        .from(developments)
+        .where(
+          and(
+            publicDevelopmentEligibilityConditions(),
+            eq(developments.cataloguePublisherId, publicFacts.publisher.id),
+          ),
+        )) as Array<{ total: number }>;
+      publisherPublishedDevelopmentCount = Number(countRow?.total ?? 0);
+    }
 
     const detailUnits = units.map((unit, index) => {
       const publicUnit = publicFacts.unitTypes[index];
@@ -285,7 +310,8 @@ export class PublicDevelopmentDetailService {
     const detail: PublicDevelopmentDetail = {
       ...publicFacts,
       publicFacts,
-      address: Number(row.showHouseAddress || 0) === 1 ? ((row.address as string | null) ?? null) : null,
+      address:
+        Number(row.showHouseAddress || 0) === 1 ? ((row.address as string | null) ?? null) : null,
       showHouseAddress: Number(row.showHouseAddress || 0) === 1,
       locationId: (row.locationId as number | null) ?? null,
       latitude: coordinatesAreZeroPair ? null : latitude,
@@ -304,6 +330,7 @@ export class PublicDevelopmentDetailService {
       isPublished: Number(row.isPublished || 0),
       approvalStatus: (row.approvalStatus as PublicDevelopmentDetail['approvalStatus']) ?? null,
       cataloguePublisherId: publicFacts.publisher.id,
+      publisherPublishedDevelopmentCount,
       unitTypes: detailUnits,
       salesMetrics: buildSalesMetrics(publicFacts, units),
     };

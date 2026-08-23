@@ -28,6 +28,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCommercialStatus, formatInvoiceStatus } from '@/lib/developerStatusVocabulary';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -226,7 +227,9 @@ export default function BillingPanel() {
 
   const isTrial = subscription.commercial?.commercialTerm?.kind === 'free_trial';
   const isLaunchAccess = subscription.commercial?.commercialTerm?.kind === 'paid_launch_access';
-  const launchAccessExpired = isLaunchAccess && subscription.commercial?.entitled !== true;
+  // Only the canonical expired status means expired. Unpaid invoices and
+  // payment proofs under review are pending commercial states, not expiries.
+  const launchAccessExpired = isLaunchAccess && subscription.commercial?.status === 'expired';
   const tierConfig = isTrial ? PLAN_PRESENTATION.trial : PLAN_PRESENTATION.standard;
   const TierIcon = tierConfig.icon;
 
@@ -245,7 +248,7 @@ export default function BillingPanel() {
                 <CardTitle className="text-2xl flex items-center gap-2">
                   {subscription.commercial?.planDisplayName || 'Current developer plan'}
                   <Badge variant="outline" className={cn('ml-2', tierConfig.color)}>
-                    {subscription.commercial?.status || 'Unavailable'}
+                    {formatCommercialStatus(subscription.commercial?.status)}
                   </Badge>
                 </CardTitle>
                 <CardDescription className="mt-1">
@@ -437,7 +440,7 @@ export default function BillingPanel() {
                     </TableCell>
                     <TableCell>{formatInvoiceAmount(invoice.amountDue)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{invoice.status}</Badge>
+                      <Badge variant="outline">{formatInvoiceStatus(invoice.status)}</Badge>
                     </TableCell>
                     <TableCell>{invoice.paymentReference || '—'}</TableCell>
                   </TableRow>
@@ -531,7 +534,7 @@ function DeveloperManualEftPanel({
           <div>
             <p className="text-slate-500">Status</p>
             <Badge variant="outline" className="mt-1">
-              {invoice.status === 'submitted' ? 'Proof under review' : invoice.status}
+              {formatInvoiceStatus(invoice.status)}
             </Badge>
           </div>
         </div>

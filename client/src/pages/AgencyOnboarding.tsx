@@ -30,6 +30,11 @@ import {
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { useOnboardingDraft } from '@/hooks/useOnboardingDraft';
+import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
+import {
+  getCommercialPricePresentation,
+  getCommercialTermPresentation,
+} from '@/lib/commercialCatalog';
 import { onboardingConfig } from '@/lib/config/onboarding';
 import {
   Dialog,
@@ -82,7 +87,7 @@ const STEPS = [
   { id: 1, title: 'Basic Info', description: 'Tell us about your agency' },
   { id: 2, title: 'Branding', description: 'Customize your look' },
   { id: 3, title: 'Team Setup', description: 'Invite your team members' },
-  { id: 4, title: 'Plan Selection', description: 'Choose your subscription' },
+  { id: 4, title: 'Plan Selection', description: 'Choose your plan' },
   { id: 5, title: 'Payment', description: 'Complete your setup' },
 ];
 
@@ -102,8 +107,11 @@ const AgencyOnboarding: React.FC = () => {
   // Draft persistence
   const { saveDraft, loadDraft, clearDraft } = useOnboardingDraft();
 
-  // API calls
-  const { data: plans, isLoading: plansLoading } = trpc.billing.plans.useQuery();
+  // API calls. The plan step reads the same canonical commercial catalog as
+  // the public proposition so once-off Launch Access terms cannot be
+  // misrepresented by legacy price/interval storage columns.
+  const { data: commercialCatalog } = useCommercialCatalog('agency');
+  const plans: CommercialProduct[] = commercialCatalog?.products ?? [];
   const createAgencyMutation = trpc.agency.createOnboarding.useMutation();
   const createCheckoutMutation = trpc.billing.createCheckoutSession.useMutation();
 
@@ -653,11 +661,47 @@ const TeamSetupStep: React.FC<StepProps> = ({ onNext, onPrev }) => {
   );
 };
 
-interface PlanSelectionStepProps extends StepProps {
-  plans: any[];
+export interface PlanSelectionStepProps extends StepProps {
+  plans: CommercialProduct[];
 }
 
-const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onNext, onPrev }) => {
+/**
+ * Present a catalog product's billing truth. Once-off Launch Access products
+ * must never inherit the legacy "/{interval}" price rendering; recurring
+ * plans keep their recurring interval presentation.
+ */
+export function describeAgencyPlanBilling(product: CommercialProduct): {
+  priceLabel: string;
+  periodSuffix: string | null;
+  termNote: string | null;
+} {
+  const price = getCommercialPricePresentation(product);
+  const term = getCommercialTermPresentation(product);
+
+  if (price.kind !== 'fixed') {
+    return { priceLabel: price.label, periodSuffix: null, termNote: null };
+  }
+
+  if (product.pricing.billingInterval === 'once') {
+    const noteParts = [
+      product.term.durationDays ? `Access period: ${term.label}` : null,
+      term.renewalLabel,
+    ].filter(Boolean);
+    return {
+      priceLabel: price.label,
+      periodSuffix: 'once-off',
+      termNote: noteParts.length > 0 ? noteParts.join(' · ') : null,
+    };
+  }
+
+  return {
+    priceLabel: price.label,
+    periodSuffix: price.period ? price.period.trim() : null,
+    termNote: term.renewalLabel,
+  };
+}
+
+export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onNext, onPrev }) => {
   const {
     register,
     handleSubmit,
@@ -671,29 +715,6 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onNext, on
   const selectedPlanId = watch('selectedPlanId');
   const agreeToTerms = watch('agreeToTerms');
 
-  const formatPrice = (price: number, interval: string) => {
-    const amount = (price / 100).toLocaleString('en-ZA', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return `R ${amount}/${interval}`;
-  };
-
-  const parsePlanFeatures = (value?: string | string[] | null) => {
-    if (!value) return [];
-    if (Array.isArray(value)) return value.map(String);
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed.map(String);
-    } catch {
-      return value
-        .split(',')
-        .map(item => item.trim())
-        .filter(Boolean);
-    }
-    return [];
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
@@ -703,59 +724,79 @@ const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onNext, on
 
       <Alert>
         <AlertDescription>
-          Select the plan that best fits your agency's needs. You can change your plan anytime.
+          Select the plan that best fits your agency's needs. Your selection determines the invoice
+          issued at the end of this wizard.
         </AlertDescription>
       </Alert>
 
       <form onSubmit={handleSubmit(onNext)} className="space-y-6">
+        {plans.length === 0 ? (
+          <p className="text-sm text-gray-500" role="status">
+            Loading available agency plans…
+          </p>
+        ) : null}
         <RadioGroup
           value={selectedPlanId?.toString()}
           onValueChange={value => setValue('selectedPlanId', parseInt(value))}
           className="grid grid-cols-1 md:grid-cols-3 gap-4"
         >
-          {plans.map(plan => (
-            <div key={plan.id} className="relative">
-              <RadioGroupItem
-                value={plan.id.toString()}
-                id={`plan-${plan.id}`}
-                className="sr-only"
-              />
-              <Label
-                htmlFor={`plan-${plan.id}`}
-                className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                  selectedPlanId === plan.id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-gray-200 hover:border-gray-300'
-                } ${plan.isPopular ? 'ring-2 ring-primary/20' : ''}`}
-              >
-                {plan.isPopular && (
-                  <Badge className="absolute -top-2 left-4 bg-primary">Most Popular</Badge>
-                )}
+          {plans.map(plan => {
+            const planValue = plan.source.planId;
+            const billing = describeAgencyPlanBilling(plan);
+            return (
+              <div key={planValue} className="relative">
+                <RadioGroupItem
+                  value={planValue.toString()}
+                  id={`plan-${planValue}`}
+                  className="sr-only"
+                />
+                <Label
+                  htmlFor={`plan-${planValue}`}
+                  className={`block p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    selectedPlanId === planValue
+                      ? 'border-primary bg-primary/5'
+                      : 'border-gray-200 hover:border-gray-300'
+                  } ${plan.popular ? 'ring-2 ring-primary/20' : ''}`}
+                >
+                  {plan.popular && (
+                    <Badge className="absolute -top-2 left-4 bg-primary">Most Popular</Badge>
+                  )}
 
-                <div className="text-center">
-                  <h4 className="text-lg font-semibold">{plan.displayName}</h4>
-                  <div className="text-2xl font-bold text-primary my-2">
-                    {formatPrice(plan.price, plan.interval)}
+                  <div className="text-center">
+                    <h4 className="text-lg font-semibold">{plan.displayName}</h4>
+                    <div className="text-2xl font-bold text-primary my-2" data-testid="plan-price">
+                      {billing.priceLabel}
+                      {billing.periodSuffix ? (
+                        <span className="ml-1 text-sm font-semibold text-gray-600">
+                          {billing.periodSuffix}
+                        </span>
+                      ) : null}
+                    </div>
+                    {billing.termNote ? (
+                      <p className="text-xs font-medium text-gray-500 mb-2" data-testid="plan-term-note">
+                        {billing.termNote}
+                      </p>
+                    ) : null}
+
+                    {plan.description && (
+                      <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
+                    )}
+
+                    {plan.benefits.length > 0 && (
+                      <ul className="text-sm text-left space-y-1">
+                        {plan.benefits.map((feature: string, index: number) => (
+                          <li key={index} className="flex items-center">
+                            <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-
-                  {plan.description && (
-                    <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
-                  )}
-
-                  {parsePlanFeatures(plan.features).length > 0 && (
-                    <ul className="text-sm text-left space-y-1">
-                      {parsePlanFeatures(plan.features).map((feature: string, index: number) => (
-                        <li key={index} className="flex items-center">
-                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </Label>
-            </div>
-          ))}
+                </Label>
+              </div>
+            );
+          })}
         </RadioGroup>
 
         {errors.selectedPlanId && (

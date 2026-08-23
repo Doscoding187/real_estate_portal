@@ -65,7 +65,7 @@ const agencyProduct = {
   promotion: { status: 'not_configured', offer: null },
   action: {
     mode: 'request_invoice',
-    target: { kind: 'route', value: '/contact' },
+    target: { kind: 'route', value: '/agency/setup' },
     requiresAuthentication: false,
   },
 } as unknown as CommercialProduct;
@@ -137,7 +137,7 @@ describe('public Agency product landing page', () => {
     expect(screen.getAllByText(/Active Listings: 500/i).length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /Request Launch Access invoice/i })).toHaveAttribute(
       'href',
-      '/contact',
+      '/agency/setup',
     );
     expect(
       screen.getAllByRole('link', { name: /Contact Property Listify/i }).length,

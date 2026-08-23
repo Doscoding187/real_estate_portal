@@ -163,8 +163,14 @@ export default function DeveloperSetupWizardEnhanced() {
     },
   );
 
-  // Check for draft on mount and show resume dialog
+  // Check for draft on mount and show resume dialog. An existing developer
+  // organisation makes any local registration draft stale — never offer it.
   useEffect(() => {
+    if (getProfile.data) {
+      setShowResumeDraftDialog(false);
+      return;
+    }
+
     const savedDraft = localStorage.getItem('developer-registration-draft');
 
     if (savedDraft) {
@@ -183,7 +189,7 @@ export default function DeveloperSetupWizardEnhanced() {
         localStorage.removeItem('developer-registration-draft');
       }
     }
-  }, []);
+  }, [getProfile.data]);
 
   // Handle resume draft decision
   const handleResumeDraft = () => {
@@ -359,6 +365,7 @@ export default function DeveloperSetupWizardEnhanced() {
 
       await createProfile.mutateAsync({
         name: data.name,
+        category: data.category || null,
         specializations: data.specializations as any,
         establishedYear: data.establishedYear ? Number(data.establishedYear) : null,
         description: data.description || null,
@@ -374,7 +381,11 @@ export default function DeveloperSetupWizardEnhanced() {
         logo: data.logo || null,
       });
 
-      toast.success('Profile submitted. Continue in your dashboard while we review it.');
+      toast.success(
+        profileStatus === 'rejected'
+          ? 'Resubmission received. Continue in your dashboard while your organisation is reviewed.'
+          : 'Profile submitted. Continue in your dashboard while we review it.',
+      );
 
       // Clear the draft from localStorage
       localStorage.removeItem('developer-registration-draft');
@@ -394,6 +405,60 @@ export default function DeveloperSetupWizardEnhanced() {
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const profileStatus = getProfile.data?.status ?? null;
+  const rejectionReason = getProfile.data?.rejectionReason || '';
+
+  if (profileStatus === 'approved') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4">
+        <div className="max-w-lg w-full rounded-2xl bg-white/90 shadow-xl border border-white p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 flex items-center justify-center">
+            <Check className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Developer Organisation approved</h1>
+          <p className="mt-3 text-sm leading-6 text-gray-600">
+            Your organisation identity is approved, so there is nothing to register again. Company
+            details stay under review protection — contact Property Listify if a detail must change.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLocation('/developer/dashboard')}
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+          >
+            Open Developer Workspace
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (profileStatus === 'pending') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 px-4">
+        <div className="max-w-lg w-full rounded-2xl bg-white/90 shadow-xl border border-white p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+            <FileText className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900">Application under review</h1>
+          <p className="mt-3 text-sm leading-6 text-gray-600">
+            Property Listify is reviewing your organisation details. You will stay on the review
+            state until the review completes — submitting this form again cannot change the outcome.
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            You are waiting on Property Listify. No payment action is required from you right now.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLocation('/developer/dashboard')}
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -464,6 +529,17 @@ export default function DeveloperSetupWizardEnhanced() {
           role="main"
           aria-label="Developer registration form"
         >
+          {profileStatus === 'rejected' && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
+              <p className="text-sm font-semibold text-amber-900">
+                Your previous application was rejected
+              </p>
+              <p className="mt-1 text-sm leading-6 text-amber-800">
+                {rejectionReason ||
+                  'Review your organisation details below, correct them, and resubmit for another review.'}
+              </p>
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Step 1: Basic Info */}
             {step === 1 && (
@@ -616,7 +692,7 @@ export default function DeveloperSetupWizardEnhanced() {
                     loading={createProfile.isPending}
                     disabled={!formValues.termsAccepted}
                   >
-                    Submit Application
+                    {profileStatus === 'rejected' ? 'Resubmit Application' : 'Submit Application'}
                   </GradientButton>
                 )}
               </div>
