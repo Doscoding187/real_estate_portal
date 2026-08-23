@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import { agencyAgentMemberships, agents, listings, properties } from '../../../../drizzle/schema';
 import { getDb } from '../../../db';
+import { isCurrentActiveAgencyMembership } from '../../../services/agencyMembershipService';
 
 export type OptionAEligibleProfessionalProfile = {
   professionalProfileId: number;
@@ -31,24 +32,6 @@ function displayNameForProfile(profile: typeof agents.$inferSelect): string {
 
 function isEligibleProfessionalProfile(profile: typeof agents.$inferSelect): boolean {
   return Number(profile.isVerified) === 1 && profile.status === 'approved';
-}
-
-function isCurrentActiveMembership(
-  membership: typeof agencyAgentMemberships.$inferSelect,
-  evaluatedAt: Date,
-): boolean {
-  if (membership.status !== 'active') return false;
-
-  const now = evaluatedAt.getTime();
-  const effectiveFrom = membership.effectiveFrom
-    ? new Date(membership.effectiveFrom).getTime()
-    : null;
-  const effectiveTo = membership.effectiveTo ? new Date(membership.effectiveTo).getTime() : null;
-
-  return (
-    (effectiveFrom === null || (Number.isFinite(effectiveFrom) && effectiveFrom <= now)) &&
-    (effectiveTo === null || (Number.isFinite(effectiveTo) && effectiveTo > now))
-  );
 }
 
 class ExploreOptionAEligibilityService {
@@ -117,7 +100,7 @@ class ExploreOptionAEligibilityService {
     const activeAgencyIds = new Set(
       memberships
         .filter((membership: typeof agencyAgentMemberships.$inferSelect) =>
-          isCurrentActiveMembership(membership, evaluatedAt),
+          isCurrentActiveAgencyMembership(membership, evaluatedAt),
         )
         .map((membership: typeof agencyAgentMemberships.$inferSelect) => membership.agencyId),
     );

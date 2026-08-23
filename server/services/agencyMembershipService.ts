@@ -1,7 +1,63 @@
-import { and, eq, inArray, ne } from 'drizzle-orm';
-
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { agencyAgentMemberships, agents, users } from '../../drizzle/schema';
 import { getDb } from '../db';
+
+export type AgencyMembershipRow = typeof agencyAgentMemberships.$inferSelect;
+
+export type AgencyMembershipLifecycleStatus = 'active' | 'suspended' | 'left';
+
+type DatabaseHandle = {
+  select: (fields?: unknown) => any;
+  insert: (table: unknown) => any;
+  update: (table: unknown) => any;
+};
+
+/**
+ * Canonical current-membership semantics for agency↔agent affiliation:
+ * a membership is current only while it is `active` and its half-open
+ * effective window `[effectiveFrom, effectiveTo)` contains the evaluated
+ * time. This predicate is the single authority; discovery eligibility and
+ * public web presence must not fork private copies of it.
+ */
+export function isCurrentActiveAgencyMembership(
+  membership: {
+    status: AgencyMembershipRow['status'] | string | null | undefined;
+    effectiveFrom: string | Date | null | undefined;
+    effectiveTo: string | Date | null | undefined;
+  },
+  evaluatedAt: Date = new Date(),
+): boolean {
+  if (membership.status !== 'active') return false;
+
+  const now = evaluatedAt.getTime();
+  const effectiveFrom = membership.effectiveFrom
+    ? new Date(membership.effectiveFrom).getTime()
+    : null;
+  const effectiveTo = membership.effectiveTo ? new Date(membership.effectiveTo).getTime() : null;
+
+  return (
+    (effectiveFrom === null || (Number.isFinite(effectiveFrom) && effectiveFrom <= now)) &&
+    (effectiveTo === null || (Number.isFinite(effectiveTo) && effectiveTo > now))
+  );
+}
+
+export async function listCurrentAgencyMembershipsForAgent(
+  db: DatabaseHandle,
+  agentId: number,
+  evaluatedAt: Date = new Date(),
+): Promise<AgencyMembershipRow[]> {
+  const rows = await db
+    .select()
+    .from(agencyAgentMemberships)
+    .where(eq(agencyAgentMemberships.agentId, agentId));
+
+  return rows.filter(row => isCurrentActiveAgencyMembership(row, evaluatedAt));
+}
+
+function toDbTimestamp(value: Date): string {
+  return value.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 
 export type AgencyMembershipDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -23,78 +79,70 @@ export interface EndCanonicalAgencyMembershipInput {
   actorUserId: number;
 }
 
-export async function establishCanonicalAgencyMembership(
-  input: EstablishCanonicalAgencyMembershipInput,
-): Promise<{ state: 'created' | 'reactivated' }> {
-  const { db, agencyId, agentId, actorUserId } = input;
-  const role = input.role ?? 'agent';
-  const now = new Date();
 
-  await closeCompetingCanonicalMemberships({ db, agentId, keepAgencyId: agencyId, actorUserId });
+/**
+ * Maintain the authoritative membership row for an agency↔agent pair.
+ *
+ * Concurrency authority: the table's unique (agencyId, agentId) pair is the
+ * arbiter. Maintenance is a single atomic INSERT … ON DUPLICATE KEY UPDATE
+ * against that constraint, so repeated or racing calls converge on exactly
+ * one canonical row instead of a second caller failing after losing an
+ * exists-check race. Window semantics are evaluated by MySQL against the
+ * row's current values inside the same statement:
+ *
+ * - activating: keep an already-open window, otherwise start a fresh one,
+ *   and always clear any close date;
+ * - suspending/leaving: keep the original start and stamp the close date
+ *   only when it is not already set (first closure wins).
+ *
+ * Accepts a transaction handle so membership truth is written in the same
+ * transaction as the user/profile changes that imply it.
+ */
+export async function maintainAgencyAgentMembership(
+  db: DatabaseHandle,
+  input: {
+    agencyId: number;
+    agentId: number;
+    status: AgencyMembershipLifecycleStatus;
+    role?: 'agent' | 'team_lead' | 'manager';
+    actorUserId?: number | null;
+  },
+): Promise<void> {
+  const nowTs = toDbTimestamp(new Date());
 
-  const [existing] = await db
-    .select()
-    .from(agencyAgentMemberships)
-    .where(
-      and(
-        eq(agencyAgentMemberships.agencyId, agencyId),
-        eq(agencyAgentMemberships.agentId, agentId),
-      ),
-    )
-    .limit(1);
-
-  if (existing) {
-    const effectiveFrom = existing.effectiveFrom ? new Date(existing.effectiveFrom) : now;
-    await db
-      .update(agencyAgentMemberships)
-      .set({
-        status: 'active',
-        governanceMode: existing.governanceMode ?? 'affiliated',
-        role: existing.role ?? role,
-        permissionsOverrides: existing.permissionsOverrides ?? null,
-        effectiveFrom,
-        effectiveTo: null,
-        updatedBy: actorUserId,
-        updatedAt: now,
-      })
-      .where(eq(agencyAgentMemberships.id, existing.id));
-    return { state: 'reactivated' };
-  }
-
-  await db.insert(agencyAgentMemberships).values({
-    agencyId,
-    agentId,
-    status: 'active',
+  const insertValues: typeof agencyAgentMemberships.$inferInsert = {
+    agencyId: input.agencyId,
+    agentId: input.agentId,
+    status: input.status,
+    role: input.role ?? 'agent',
     governanceMode: 'affiliated',
-    role,
-    effectiveFrom: now,
-    createdBy: actorUserId,
-    updatedBy: actorUserId,
-  });
-  return { state: 'created' };
-}
+    effectiveFrom: input.status === 'active' ? nowTs : null,
+    effectiveTo: input.status === 'active' ? null : nowTs,
+    createdBy: input.actorUserId ?? null,
+    updatedBy: input.actorUserId ?? null,
+  };
 
-export async function endCanonicalAgencyMembership(input: EndCanonicalAgencyMembershipInput): Promise<boolean> {
-  const { db, agencyId, agentId, terminalStatus, actorUserId } = input;
-  const now = new Date();
+  const duplicateSet =
+    input.status === 'active'
+      ? {
+          status: input.status as AgencyMembershipLifecycleStatus,
+          updatedBy: input.actorUserId ?? null,
+          // Reactivation preserves the original tenure start when present
+          // (matching main's established semantics) and always clears any
+          // prior closure.
+          effectiveFrom: sql`COALESCE(${agencyAgentMemberships.effectiveFrom}, ${nowTs})`,
+          effectiveTo: sql`NULL`,
+        }
+      : {
+          status: input.status as AgencyMembershipLifecycleStatus,
+          updatedBy: input.actorUserId ?? null,
+          effectiveTo: sql`COALESCE(${agencyAgentMemberships.effectiveTo}, ${nowTs})`,
+        };
 
-  const result = await db
-    .update(agencyAgentMemberships)
-    .set({
-      status: terminalStatus,
-      effectiveTo: now,
-      updatedBy: actorUserId,
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(agencyAgentMemberships.agencyId, agencyId),
-        eq(agencyAgentMemberships.agentId, agentId),
-        inArray(agencyAgentMemberships.status, ['invited', 'active']),
-      ),
-    );
-
-  return Array.isArray(result) ? result.length > 0 : true;
+  await db
+    .insert(agencyAgentMemberships)
+    .values(insertValues)
+    .onDuplicateKeyUpdate({ set: duplicateSet });
 }
 
 export async function closeCompetingCanonicalMemberships(input: {
@@ -142,6 +190,56 @@ function getNameParts(user: typeof users.$inferSelect, fallbackEmail: string) {
   };
 }
 
+/**
+ * Establish an active canonical affiliation for an agent, closing any
+ * competing open memberships in other agencies first (single-affiliation
+ * invariant), then delegating to the atomic unique-pair maintenance.
+ */
+export async function establishCanonicalAgencyMembership(
+  input: EstablishCanonicalAgencyMembershipInput & { status?: AgencyMembershipLifecycleStatus },
+): Promise<{ state: 'created' | 'reactivated' | 'maintained' }> {
+  const role = input.role ?? 'agent';
+  await closeCompetingCanonicalMemberships({
+    db: input.db,
+    agentId: input.agentId,
+    keepAgencyId: input.agencyId,
+    actorUserId: input.actorUserId,
+  });
+
+  const [existing] = await input.db
+    .select({ id: agencyAgentMemberships.id })
+    .from(agencyAgentMemberships)
+    .where(
+      and(
+        eq(agencyAgentMemberships.agencyId, input.agencyId),
+        eq(agencyAgentMemberships.agentId, input.agentId),
+      ),
+    )
+    .limit(1);
+
+  await maintainAgencyAgentMembership(input.db, {
+    agencyId: input.agencyId,
+    agentId: input.agentId,
+    status: 'active',
+    role,
+    actorUserId: input.actorUserId,
+  });
+
+  return { state: existing ? 'reactivated' : 'created' };
+}
+
+
+export async function endCanonicalAgencyMembership(input: EndCanonicalAgencyMembershipInput): Promise<boolean> {
+  await maintainAgencyAgentMembership(input.db, {
+    agencyId: input.agencyId,
+    agentId: input.agentId,
+    status: input.terminalStatus,
+    actorUserId: input.actorUserId,
+  });
+  return true;
+}
+
+
 export async function ensureApprovedAgencyAgentProfile(input: {
   db: AgencyMembershipDb;
   user: typeof users.$inferSelect;
@@ -168,6 +266,13 @@ export async function ensureApprovedAgencyAgentProfile(input: {
         })
         .where(eq(agents.id, existingAgent.id));
     }
+    // Approved affiliation implies a maintained canonical membership row.
+    await maintainAgencyAgentMembership(db as DatabaseHandle, {
+      agencyId,
+      agentId: existingAgent.id,
+      status: 'active',
+      actorUserId,
+    });
     return existingAgent.id;
   }
 
@@ -192,5 +297,15 @@ export async function ensureApprovedAgencyAgentProfile(input: {
     profileCompletionScore: 35,
   });
 
-  return Number(result.insertId || 0);
+  const agentId = Number(result.insertId || 0);
+  if (agentId) {
+    // Approved affiliation implies a maintained canonical membership row.
+    await maintainAgencyAgentMembership(db as DatabaseHandle, {
+      agencyId,
+      agentId,
+      status: 'active',
+      actorUserId,
+    });
+  }
+  return agentId;
 }

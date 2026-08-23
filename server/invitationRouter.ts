@@ -10,10 +10,7 @@ import { COOKIE_NAME } from '@shared/const';
 import { getSessionCookieOptions } from './_core/cookies';
 import { requireUser } from './_core/requireUser';
 import { deliverAgencyInvitations } from './services/agencyInvitationDeliveryService';
-import {
-  ensureApprovedAgencyAgentProfile,
-  establishCanonicalAgencyMembership,
-} from './services/agencyMembershipService';
+import { ensureApprovedAgencyAgentProfile } from './services/agencyMembershipService';
 
 /**
  * Invitation Router
@@ -304,43 +301,53 @@ export const invitationRouter = router({
       throw new Error('This account type cannot join an agency team');
     }
 
-    // Update user's agency and role
-    await db
-      .update(users)
-      .set({
-        agencyId: invitation.agencyId,
-        role: invitation.role as any,
-        isSubaccount: 1,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, user.id));
+    // Principal conversion is not allowed through invitation acceptance:
+    // agency_admin invites are for fresh owner accounts, mirroring the
+    // createOnboarding rule that refuses principals carrying an agent
+    // identity. Existing teams promote roles from the Agency workspace.
+    if (invitation.role === 'agency_admin') {
+      const [existingAgentProfile] = await db
+        .select({ id: agents.id, agencyId: agents.agencyId })
+        .from(agents)
+        .where(eq(agents.userId, currentUser.id))
+        .limit(1);
 
-    const agentId = await ensureApprovedAgencyAgentProfile({
-      db,
-      user: currentUser,
-      agencyId: invitation.agencyId,
-      actorUserId: invitation.invitedBy,
-    });
-
-    if (agentId) {
-      await establishCanonicalAgencyMembership({
-        db,
-        agencyId: invitation.agencyId,
-        agentId,
-        actorUserId: user.id,
-        role: 'agent',
-      });
+      if (existingAgentProfile) {
+        throw new Error(
+          'This account already carries an agent profile and cannot be converted into an agency owner account. Ask the agency to promote your team role instead.',
+        );
+      }
     }
 
-    // Mark invitation as accepted
-    await db
-      .update(invitations)
-      .set({
-        status: 'accepted',
-        acceptedAt: new Date(),
-        acceptedBy: user.id,
-      })
-      .where(eq(invitations.id, invitation.id));
+    // All membership writes commit together: user affiliation, agent profile
+    // with its canonical membership row, and invitation acceptance.
+    await db.transaction(async tx => {
+      await tx
+        .update(users)
+        .set({
+          agencyId: invitation.agencyId,
+          role: invitation.role as any,
+          isSubaccount: 1,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
+      await ensureApprovedAgencyAgentProfile({
+        db: tx,
+        user: currentUser,
+        agencyId: invitation.agencyId,
+        actorUserId: invitation.invitedBy,
+      });
+
+      await tx
+        .update(invitations)
+        .set({
+          status: 'accepted',
+          acceptedAt: new Date(),
+          acceptedBy: user.id,
+        })
+        .where(eq(invitations.id, invitation.id));
+    });
 
     // Issue new JWT cookie with updated role
     const [updatedUser] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
