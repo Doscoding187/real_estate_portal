@@ -226,7 +226,9 @@ export default function BillingPanel() {
 
   const isTrial = subscription.commercial?.commercialTerm?.kind === 'free_trial';
   const isLaunchAccess = subscription.commercial?.commercialTerm?.kind === 'paid_launch_access';
-  const launchAccessExpired = isLaunchAccess && subscription.commercial?.entitled !== true;
+  // Only the canonical expired status means expired. Unpaid invoices and
+  // payment proofs under review are pending commercial states, not expiries.
+  const launchAccessExpired = isLaunchAccess && subscription.commercial?.status === 'expired';
   const tierConfig = isTrial ? PLAN_PRESENTATION.trial : PLAN_PRESENTATION.standard;
   const TierIcon = tierConfig.icon;
 

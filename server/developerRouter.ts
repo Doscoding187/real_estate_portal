@@ -507,7 +507,36 @@ export const developerRouter = router({
       }
 
       const existingProfile = await getDeveloperByUserId(user.id);
-      if (existingProfile) return existingProfile;
+      if (existingProfile) {
+        // Identity transitions are explicit: a rejected organisation may be
+        // corrected and resubmitted for review; pending/approved identities
+        // are never silently overwritten by resubmitting the same form.
+        if (existingProfile.organisation.status === 'rejected') {
+          return await developerIdentityService.resubmitRejectedDeveloperOrganisation({
+            organisationId: existingProfile.organisationId,
+            name: input.name,
+            description: input.description ?? null,
+            logo: input.logo ?? null,
+            website: input.website ?? null,
+            email: input.email,
+            phone: input.phone ?? null,
+            address: input.address ?? null,
+            city: input.city,
+            province: input.province,
+            category: (input.category as any) || 'residential',
+            establishedYear: input.establishedYear ?? null,
+            specializations: input.specializations ?? [],
+          });
+        }
+
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            existingProfile.organisation.status === 'pending'
+              ? 'Your developer organisation is already pending review.'
+              : 'Your developer organisation is already approved.',
+        });
+      }
 
       const profile = await developerIdentityService.createDeveloperOrganisation({
         name: input.name,
@@ -826,7 +855,11 @@ export const developerRouter = router({
         href: `/development/${dev.slug || dev.id}`,
       });
 
-      const mapPublicDevelopment = (development: Awaited<ReturnType<typeof publicDevelopmentSearchService.search>>['items'][number]): FeedItem => ({
+      const mapPublicDevelopment = (
+        development: Awaited<
+          ReturnType<typeof publicDevelopmentSearchService.search>
+        >['items'][number],
+      ): FeedItem => ({
         id: String(development.id),
         kind: 'development' as const,
         title: development.name,
